@@ -55,7 +55,7 @@ cdef route_local_recharge(
     time(&start)
 
     #load a base raster so we can determine the n_rows/cols
-    outflow_direction_raster = gdal.Open(outflow_direction_path)
+    outflow_direction_raster = gdal.OpenEx(outflow_direction_path)
     cdef int n_cols = outflow_direction_raster.RasterXSize
     cdef int n_rows = outflow_direction_raster.RasterYSize
     outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
@@ -117,7 +117,7 @@ cdef route_local_recharge(
             (et0_path_list, et0_raster_list, et0_band_list),
             (precip_path_list, precip_datset_list, precip_band_list)]:
         for index, path in enumerate(path_list):
-            raster_list.append(gdal.Open(path))
+            raster_list.append(gdal.OpenEx(path))
             band_list.append(raster_list[index].GetRasterBand(1))
 
     cdef float precip_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(precip_path_list[0])
@@ -126,11 +126,11 @@ cdef route_local_recharge(
     qfi_datset_list = []
     qfi_band_list = []
 
-    outflow_weights_raster = gdal.Open(outflow_weights_path)
+    outflow_weights_raster = gdal.OpenEx(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
     cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
-    stream_raster = gdal.Open(stream_path)
+    stream_raster = gdal.OpenEx(stream_path)
     stream_band = stream_raster.GetRasterBand(1)
 
     #Create output arrays qfi and local_recharge and local_recharge_avail
@@ -138,24 +138,24 @@ cdef route_local_recharge(
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, li_path, 'GTiff', local_recharge_nodata,
         gdal.GDT_Float32)
-    li_raster = gdal.Open(li_path, gdal.GA_Update)
+    li_raster = gdal.OpenEx(li_path, gdal.GA_Update)
     li_band = li_raster.GetRasterBand(1)
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, li_avail_path, 'GTiff', local_recharge_nodata,
         gdal.GDT_Float32)
-    li_avail_raster = gdal.Open(li_avail_path, gdal.GA_Update)
+    li_avail_raster = gdal.OpenEx(li_avail_path, gdal.GA_Update)
     li_avail_band = li_avail_raster.GetRasterBand(1)
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
        outflow_direction_path, l_sum_avail_path, 'GTiff', local_recharge_nodata,
        gdal.GDT_Float32)
-    l_sum_avail_raster = gdal.Open(l_sum_avail_path, gdal.GA_Update)
+    l_sum_avail_raster = gdal.OpenEx(l_sum_avail_path, gdal.GA_Update)
     l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
 
     cdef float aet_nodata = -99999
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, aet_path, 'GTiff', aet_nodata,
         gdal.GDT_Float32)
-    aet_raster = gdal.Open(aet_path, gdal.GA_Update)
+    aet_raster = gdal.OpenEx(aet_path, gdal.GA_Update)
     aet_band = aet_raster.GetRasterBand(1)
 
     qfi_raster_list = []
@@ -166,9 +166,9 @@ cdef route_local_recharge(
         qfi_path_list[0])
     for index, (qfi_path, kc_path) in enumerate(
             zip(qfi_path_list, kc_path_list)):
-        qfi_raster_list.append(gdal.Open(qfi_path, gdal.GA_ReadOnly))
+        qfi_raster_list.append(gdal.OpenEx(qfi_path, gdal.GA_ReadOnly))
         qfi_band_list.append(qfi_raster_list[index].GetRasterBand(1))
-        kc_raster_list.append(gdal.Open(kc_path, gdal.GA_ReadOnly))
+        kc_raster_list.append(gdal.OpenEx(kc_path, gdal.GA_ReadOnly))
         kc_band_list.append(kc_raster_list[index].GetRasterBand(1))
 
     band_list = ([
@@ -413,7 +413,7 @@ def calculate_r_sum_avail_pour(
         l_sum_avail_pour_path):
     """Calculate how r_sum_avail r_sum_avail_pours directly into its neighbors"""
     out_dir = os.path.dirname(l_sum_avail_path)
-    l_sum_avail_raster = gdal.Open(l_sum_avail_path)
+    l_sum_avail_raster = gdal.OpenEx(l_sum_avail_path)
     l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
     block_col_size, block_row_size = l_sum_avail_band.GetBlockSize()
     r_sum_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
@@ -423,7 +423,7 @@ def calculate_r_sum_avail_pour(
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         l_sum_avail_path, l_sum_avail_pour_path, 'GTiff', r_sum_avail_pour_nodata,
         gdal.GDT_Float32)
-    l_sum_avail_pour_raster = gdal.Open(l_sum_avail_pour_path, gdal.GA_Update)
+    l_sum_avail_pour_raster = gdal.OpenEx(l_sum_avail_pour_path, gdal.GA_Update)
     l_sum_avail_pour_band = l_sum_avail_pour_raster.GetRasterBand(1)
 
     n_rows = l_sum_avail_band.YSize
@@ -444,11 +444,11 @@ def calculate_r_sum_avail_pour(
     cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
         (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
 
-    outflow_direction_raster = gdal.Open(outflow_direction_path)
+    outflow_direction_raster = gdal.OpenEx(outflow_direction_path)
     outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
     cdef float outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_path)
-    outflow_weights_raster = gdal.Open(outflow_weights_path)
+    outflow_weights_raster = gdal.OpenEx(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
     cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
@@ -562,7 +562,7 @@ def route_baseflow_sum(
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dem_path) ** 2)
 
     #load a base raster so we can determine the n_rows/cols
-    outflow_direction_raster = gdal.Open(outflow_direction_path, gdal.GA_ReadOnly)
+    outflow_direction_raster = gdal.OpenEx(outflow_direction_path, gdal.GA_ReadOnly)
     cdef int n_cols = outflow_direction_raster.RasterXSize
     cdef int n_rows = outflow_direction_raster.RasterYSize
     outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
@@ -603,28 +603,28 @@ def route_baseflow_sum(
     cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_direction_path)
 
-    outflow_weights_raster = gdal.Open(outflow_weights_path)
+    outflow_weights_raster = gdal.OpenEx(outflow_weights_path)
     outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
     cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         outflow_weights_path)
 
     #Create output arrays qfi and local_recharge and local_recharge_avail
-    l_raster = gdal.Open(l_path)
+    l_raster = gdal.OpenEx(l_path)
     l_band = l_raster.GetRasterBand(1)
-    l_avail_raster = gdal.Open(l_avail_path)
+    l_avail_raster = gdal.OpenEx(l_avail_path)
     l_avail_band = l_avail_raster.GetRasterBand(1)
-    l_sum_raster = gdal.Open(l_sum_path)
+    l_sum_raster = gdal.OpenEx(l_sum_path)
     l_sum_band = l_sum_raster.GetRasterBand(1)
     cdef float l_sum_nodata = l_sum_band.GetNoDataValue()
 
-    stream_raster = gdal.Open(stream_path)
+    stream_raster = gdal.OpenEx(stream_path)
     stream_band = stream_raster.GetRasterBand(1)
 
     cdef float b_sum_nodata = -9999.0
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         outflow_direction_path, b_sum_path, 'GTiff', b_sum_nodata,
         gdal.GDT_Float32, fill_value=b_sum_nodata)
-    b_sum_raster = gdal.Open(b_sum_path, gdal.GA_Update)
+    b_sum_raster = gdal.OpenEx(b_sum_path, gdal.GA_Update)
     b_sum_band = b_sum_raster.GetRasterBand(1)
 
     band_list = [

@@ -241,13 +241,13 @@ def _aggregate_carbon_map(
     Returns:
         None
     """
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_serviceshed_datasource = ogr.Open(aoi_uri)
+    original_serviceshed_datasource = gdal.OpenEx(aoi_uri, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(aoi_datasource_filename):
         os.remove(aoi_datasource_filename)
-    serviceshed_result = esri_driver.CopyDataSource(
-        original_serviceshed_datasource, aoi_datasource_filename)
+    serviceshed_result = driver.CreateCopy(
+        aoi_datasource_filename, original_serviceshed_datasource)
     original_serviceshed_datasource = None
     serviceshed_layer = serviceshed_result.GetLayer()
 
@@ -441,7 +441,7 @@ def _build_spatial_index(
         tropical_forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
         carbon_model_reproject_uri)
 
-    model_shape_ds = ogr.Open(carbon_model_reproject_uri)
+    model_shape_ds = gdal.OpenEx(carbon_model_reproject_uri)
     model_shape_layer = model_shape_ds.GetLayer()
 
     kd_points = []
@@ -506,7 +506,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
         edge_distance_uri, tropical_forest_edge_carbon_map_uri, 'GTiff',
         CARBON_MAP_NODATA, gdal.GDT_Float32, fill_value=CARBON_MAP_NODATA)
-    edge_carbon_dataset = gdal.Open(
+    edge_carbon_dataset = gdal.OpenEx(
         tropical_forest_edge_carbon_map_uri, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
@@ -722,13 +722,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

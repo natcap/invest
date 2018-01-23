@@ -421,7 +421,7 @@ def get_num_blocks(raster_uri):
     Returns:
         num_blocks (int): number of blocks in raster
     """
-    ds = gdal.Open(raster_uri)
+    ds = gdal.OpenEx(raster_uri)
     n_rows = ds.RasterYSize
     n_cols = ds.RasterXSize
 
@@ -523,7 +523,7 @@ def write_to_raster(output_raster, array, xoff, yoff):
         xoff (int): offset index for x-dimension
         yoff (int): offset index for y-dimension
     """
-    ds = gdal.Open(output_raster, gdal.GA_Update)
+    ds = gdal.OpenEx(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
     if numpy.issubdtype(array.dtype, float):
         array[numpy.isnan(array)] = NODATA_FLOAT
@@ -544,7 +544,7 @@ def read_from_raster(input_raster, offset_block):
     Returns:
         array (numpy.array): a blocked array of the input raster
     """
-    ds = gdal.Open(input_raster)
+    ds = gdal.OpenEx(input_raster)
     band = ds.GetRasterBand(1)
     array = band.ReadAsArray(**offset_block)
     ds = None
@@ -1014,7 +1014,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('lulc_baseline_map_uri', None):
         with utils.capture_gdal_logging():
-            raster = gdal.Open(args['lulc_baseline_map_uri'])
+            raster = gdal.OpenEx(args['lulc_baseline_map_uri'])
         if raster is None:
             warnings.append((['lulc_baseline_map_uri'],
                              ('Parameter must be a filepath to a '
@@ -1048,7 +1048,7 @@ def validate(args, limit_to=None):
         with utils.capture_gdal_logging():
             for index, raster_path in enumerate(
                     args['lulc_transition_maps_list']):
-                raster = gdal.Open(raster_path)
+                raster = gdal.OpenEx(raster_path)
                 if raster is None:
                     warnings.append((['lulc_transition_maps_list'],
                                     ('Raster %s must be a path to a '

@@ -9,7 +9,7 @@ import csv
 import struct
 import itertools
 
-import numpy as np
+import numpy
 from osgeo import gdal
 import osgeo.osr as osr
 from osgeo import ogr
@@ -222,7 +222,7 @@ def execute(args):
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
 
     # Set nodata value and datatype for new rasters
-    nodata = float(np.finfo(np.float32).min) + 1.0
+    nodata = float(numpy.finfo(numpy.float32).min) + 1.0
     datatype = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
@@ -250,7 +250,7 @@ def execute(args):
                 analysis_area_points_uri, clipped_wave_shape_path)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_size = (float(dem_gt[1]) + np.absolute(float(dem_gt[5]))) / 2.0
+        pixel_size = (float(dem_gt[1]) + numpy.absolute(float(dem_gt[5]))) / 2.0
         LOGGER.debug('Pixel size in meters : %f', pixel_size)
 
         # Create a coordinate transformation, because it is used below when
@@ -349,7 +349,7 @@ def execute(args):
         # cause the global biophysical run to crash
         tmp_dem_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
-        clipped_wave_shape = ogr.Open(point_shape_uri, 1)
+        clipped_wave_shape = gdal.OpenEx(point_shape_uri, 1)
         dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dataset_uri)
         dem_matrix = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.load_memory_mapped_array(
             dataset_uri, tmp_dem_path, array_type=None)
@@ -538,11 +538,11 @@ def execute(args):
     smlpm = float(machine_econ['smlpm'])
 
     # The NPV is for a 25 year period
-    year = 25.0
+    year = 25
 
     # A numpy array of length 25, representing the npv of a farm for
     # each year
-    time = np.linspace(0.0, year - 1.0, year)
+    time = numpy.linspace(0, year - 1, year)
 
     # The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
@@ -590,7 +590,7 @@ def execute(args):
             land_to_grid_dist - a numpy array of distance values
 
             returns - Nothing"""
-        wave_data_shape = ogr.Open(wave_shape_uri, 1)
+        wave_data_shape = gdal.OpenEx(wave_shape_uri, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store
         # the distances
@@ -654,7 +654,7 @@ def execute(args):
 
             returns - Nothing"""
 
-        wave_points = ogr.Open(wave_points_uri, 1)
+        wave_points = gdal.OpenEx(wave_points_uri, 1)
         wave_data_layer = wave_points.GetLayer()
         # Add Net Present Value field, Total Captured Wave Energy field,
         # and Units field to shapefile
@@ -687,13 +687,13 @@ def execute(args):
             # Create a numpy array of length 25, filled with the
             # captured wave energy in kW/h. Represents the
             # lifetime of this wave farm.
-            captured_we = np.ones(len(time)) * (
+            captured_we = numpy.ones(len(time)) * (
                     int(captured_wave_energy) * 1000.0)
             # It is expected that there is no revenue from the
             # first year
             captured_we[0] = 0
             # Compute values to determine NPV
-            lenml = 3.0 * np.absolute(depth)
+            lenml = 3.0 * numpy.absolute(depth)
             install_cost = units * cap_max * capital_cost
             mooring_cost = smlpm * lenml * cml * units
             trans_cost = (wave_to_land * cul / 1000.0) + (
@@ -801,7 +801,7 @@ def get_points_geometries(shape_uri):
               geometries.
     """
     point = []
-    shape = ogr.Open(shape_uri)
+    shape = gdal.OpenEx(shape_uri)
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
     while feat is not None:
@@ -811,7 +811,7 @@ def get_points_geometries(shape_uri):
         feat = None
         feat = layer.GetNextFeature()
 
-    return np.array(point)
+    return numpy.array(point)
 
 def calculate_distance(xy_1, xy_2):
     """For all points in xy_1, this function calculates the distance
@@ -827,12 +827,12 @@ def calculate_distance(xy_1, xy_2):
               of id's corresponding to the array of shortest distances
     """
     #Create two numpy array of zeros with length set to as many points in xy_1
-    min_dist = np.zeros(len(xy_1))
-    min_id = np.zeros(len(xy_1))
+    min_dist = numpy.zeros(len(xy_1))
+    min_id = numpy.zeros(len(xy_1))
     #For all points xy_point in xy_1 calcuate the distance from xy_point to xy_2
     #and save the shortest distance found.
     for index, xy_point in enumerate(xy_1):
-        dists = np.sqrt(np.sum((xy_point - xy_2) ** 2, axis=1))
+        dists = numpy.sqrt(numpy.sum((xy_point - xy_2) ** 2, axis=1))
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
 
@@ -885,11 +885,11 @@ def load_binary_wave_data(wave_file_uri):
         line = wave_file.read(8)
         if len(line) == 0:
             # end of file
-            wave_dict['bin_matrix'][key] = np.array(wave_array)
+            wave_dict['bin_matrix'][key] = numpy.array(wave_array)
             break
 
         if key != None:
-            wave_dict['bin_matrix'][key] = np.array(wave_array)
+            wave_dict['bin_matrix'][key] = numpy.array(wave_array)
 
         # Clear out array
         wave_array = []
@@ -904,9 +904,9 @@ def load_binary_wave_data(wave_file_uri):
     wave_file.close()
     # Add row/col header to dictionary
     LOGGER.debug('WaveData col %s', wave_periods)
-    wave_dict['periods'] = np.array(wave_periods, dtype='f')
+    wave_dict['periods'] = numpy.array(wave_periods, dtype='f')
     LOGGER.debug('WaveData row %s', wave_heights)
-    wave_dict['heights'] = np.array(wave_heights, dtype='f')
+    wave_dict['heights'] = numpy.array(wave_heights, dtype='f')
     LOGGER.debug('Finished extrapolating wave data to dictionary')
     return wave_dict
 
@@ -924,7 +924,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
         returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
-    shape = ogr.Open(shape_path)
+    shape = gdal.OpenEx(shape_path)
 
     # Get a point in the clipped shape to determine output grid size
     feat = shape.GetLayer(0).GetNextFeature()
@@ -1026,7 +1026,7 @@ def create_percentile_rasters(
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
-    percentile_groups = np.arange(1, len(percentiles) + 1)
+    percentile_groups = numpy.arange(1, len(percentiles) + 1)
 
     # Get the pixel count for each group
     pixel_count = count_pixels_groups(output_path, percentile_groups)
@@ -1133,7 +1133,7 @@ def wave_power(shape_uri):
             wave farm
 
         returns - Nothing"""
-    shape = ogr.Open(shape_uri, 1)
+    shape = gdal.OpenEx(shape_uri, 1)
 
     # Sea water density constant (kg/m^3)
     swd = 1028
@@ -1160,29 +1160,29 @@ def wave_power(shape_uri):
         period = feat.GetFieldAsDouble(period_index)
         depth = feat.GetFieldAsInteger(depth_index)
 
-        depth = np.absolute(depth)
+        depth = numpy.absolute(depth)
         # wave frequency calculation (used to calculate wave number k)
         tem = (2.0 * math.pi) / (period * alfa)
         # wave number calculation (expressed as a function of
         # wave frequency and water depth)
-        k = np.square(tem) / (grav * np.sqrt(np.tanh((np.square(tem)) *
+        k = numpy.square(tem) / (grav * numpy.sqrt(numpy.tanh((numpy.square(tem)) *
                                                      (depth / grav))))
-        # Setting numpy overlow error to ignore because when np.sinh
+        # Setting numpy overlow error to ignore because when numpy.sinh
         # gets a really large number it pushes a warning, but Rich
         # and Doug have agreed it's nothing we need to worry about.
-        np.seterr(over='ignore')
+        numpy.seterr(over='ignore')
 
         # wave group velocity calculation (expressed as a
         # function of wave energy period and water depth)
         wave_group_velocity = (
-            ((1 + ((2 * k * depth) / np.sinh(2 * k * depth))) *
-             np.sqrt((grav / k) * np.tanh(k * depth))) / 2)
+            ((1 + ((2 * k * depth) / numpy.sinh(2 * k * depth))) *
+             numpy.sqrt((grav / k) * numpy.tanh(k * depth))) / 2)
 
         # Reset the overflow error to print future warnings
-        np.seterr(over='print')
+        numpy.seterr(over='print')
 
         # wave power calculation
-        wave_pow = ((((swd * grav) / 16) * (np.square(height)) *
+        wave_pow = ((((swd * grav) / 16) * (numpy.square(height)) *
                     wave_group_velocity) / 1000)
 
         feat.SetField(wp_index, wave_pow)
@@ -1213,8 +1213,8 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(output_path)
 
-    shape_to_clip = ogr.Open(shape_to_clip_path)
-    binding_shape = ogr.Open(binding_shape_path)
+    shape_to_clip = gdal.OpenEx(shape_to_clip_path)
+    binding_shape = gdal.OpenEx(binding_shape_path)
 
     input_layer = shape_to_clip.GetLayer()
     binding_layer = binding_shape.GetLayer()
@@ -1261,9 +1261,9 @@ def wave_energy_interp(wave_data, machine_perf):
     returns - The interpolated matrix
     """
     # Get ranges and matrix for machine performance table
-    x_range = np.array(machine_perf['periods'], dtype='f')
-    y_range = np.array(machine_perf['heights'], dtype='f')
-    z_matrix = np.array(machine_perf['bin_matrix'], dtype='f')
+    x_range = numpy.array(machine_perf['periods'], dtype='f')
+    y_range = numpy.array(machine_perf['heights'], dtype='f')
+    z_matrix = numpy.array(machine_perf['bin_matrix'], dtype='f')
     # Get new ranges to interpolate to, from wave_data table
     new_x = wave_data['periods']
     new_y = wave_data['heights']
@@ -1313,7 +1313,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     # It seems that the capacity max is already set to it's limit in
     # the machine performance table. However, if it needed to be
     # restricted the following line will do it
-    interp_z = np.array(interp_z)
+    interp_z = numpy.array(interp_z)
     interp_z[interp_z > cap_max] = cap_max
 
     # Set position variables to use as a check and as an end
@@ -1341,8 +1341,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     # interpolated machine performance matrix to get the captured wave energy
     for key, val in wave_data['bin_matrix'].iteritems():
         # Convert all values to type float
-        temp_matrix = np.array(val, dtype='f')
-        mult_matrix = np.multiply(temp_matrix, interp_z)
+        temp_matrix = numpy.array(val, dtype='f')
+        mult_matrix = numpy.multiply(temp_matrix, interp_z)
         # Set any value that is outside the restricting ranges provided by
         # machine parameters to zero
         if period_max_index != -1:
@@ -1376,7 +1376,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         returns - Nothing"""
 
     cap_we_field = 'CAPWE_MWHY'
-    wave_shape = ogr.Open(wave_shape_uri, 1)
+    wave_shape = gdal.OpenEx(wave_shape_uri, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1411,7 +1411,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         returns - a list of values corresponding to the percentiles
             from the percentiles list
     """
-    raster = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    raster = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
 
     def numbers_from_file(fle):
         """Generates an iterator from a file by loading all the numbers
@@ -1419,7 +1419,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
 
             fle = file object
         """
-        arr = np.load(fle)
+        arr = numpy.load(fle)
         for num in arr:
             yield num
 
@@ -1453,13 +1453,13 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()
         # Remove nodata values from array and thus percentile calculation
-        arr = np.delete(arr, np.where(arr == nodata))
+        arr = numpy.delete(arr, numpy.where(arr == nodata))
         # Tally the number of values relevant for calculating percentiles
         n_elements += len(arr)
         # Sort array before saving
-        arr = np.sort(arr)
+        arr = numpy.sort(arr)
 
-        np.save(tmp_file, arr)
+        numpy.save(tmp_file, arr)
         tmp_file.close()
         tmp_file = open(tmp_uri, 'rb')
         tmp_file.seek(0)
@@ -1506,9 +1506,9 @@ def count_pixels_groups(raster_uri, group_values):
             found at the same index
     """
     # Initialize a list that will hold pixel counts for each group
-    pixel_count = np.zeros(len(group_values))
+    pixel_count = numpy.zeros(len(group_values))
 
-    dataset = gdal.Open(raster_uri, gdal.GA_ReadOnly)
+    dataset = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
     band = dataset.GetRasterBand(1)
 
     n_rows = dataset.RasterYSize
@@ -1541,9 +1541,9 @@ def count_pixels_groups(raster_uri, group_values):
             # in 'group_values'
             for index in xrange(len(group_values)):
                 val = group_values[index]
-                count_mask = np.zeros(dataset_block.shape)
-                np.equal(dataset_block, val, count_mask)
-                pixel_count[index] += np.count_nonzero(count_mask)
+                count_mask = numpy.zeros(dataset_block.shape)
+                numpy.equal(dataset_block, val, count_mask)
+                pixel_count[index] += numpy.count_nonzero(count_mask)
 
     dataset_block = None
     band = None
@@ -1573,7 +1573,7 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri)
     # Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
@@ -1611,7 +1611,7 @@ def _create_rat(dataset_path, attr_dict, column_name):
            {integer_id_1: value_1, ... integer_id_n: value_n}
         column_name (string): a string for the column name that maps the values
     """
-    dataset = gdal.Open(dataset_path, gdal.GA_Update)
+    dataset = gdal.OpenEx(dataset_path, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     rat = gdal.RasterAttributeTable()
     rat.SetRowCount(len(attr_dict))
@@ -1690,7 +1690,7 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_uri'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args['aoi_uri'])
+                    vector = gdal.OpenEx(args['aoi_uri'])
                     layer = vector.GetLayer()
                     geometry_type = layer.GetGeomType()
                     if geometry_type != ogr.wkbPolygon:
@@ -1735,7 +1735,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('dem_uri', None):
         with utils.capture_gdal_logging():
-            raster = gdal.Open(args['dem_uri'])
+            raster = gdal.OpenEx(args['dem_uri'])
         if raster is None:
             warnings.append((
                 ['dem_uri'],

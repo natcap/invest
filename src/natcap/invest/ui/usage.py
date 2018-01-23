@@ -120,7 +120,7 @@ def _calculate_args_bounding_box(args_dict):
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
-                    raster = gdal.Open(arg)
+                    raster = gdal.OpenEx(arg, gdal.OF_RASTER)
                     if raster is not None:
                         return True
             return False
@@ -130,7 +130,7 @@ def _calculate_args_bounding_box(args_dict):
             if (isinstance(arg, str) or
                     isinstance(arg, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(arg)
+                    vector = gdal.OpenEx(arg, gdal.OF_VECTOR)
                     if vector is not None:
                         # OGR opens CSV files.  For now, we should not
                         # consider these to be vectors.

@@ -243,7 +243,7 @@ def execute(args):
         # Need to check that this shapefile contains the correct attribute name.
         # Later, this is where the uppercase/lowercase dictionary can be
         # implimented.
-        shape = ogr.Open(args['aoi_tables'])
+        shape = gdal.OpenEx(args['aoi_tables'])
         layer = shape.GetLayer()
 
         lower_attrib = None
@@ -1010,7 +1010,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # The path coming in from the criteria should be of the form
             # dir/h_s_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
-            shape = ogr.Open(c_path)
+            shape = gdal.OpenEx(c_path)
             layer = shape.GetLayer()
 
             # Since all features will contain the same set of attributes,
@@ -1085,7 +1085,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # The path coming in from the criteria should be of the form
             # dir/h_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
-            shape = ogr.Open(c_path)
+            shape = gdal.OpenEx(c_path)
             layer = shape.GetLayer()
 
             # Since all features will contain the same set of attributes,
@@ -1158,7 +1158,7 @@ def add_crit_rasters(dir, crit_dict, habitats, h_s_e, h_s_c, grid_size):
             # The path coming in from the criteria should be of the form
             # dir/h_s_critname.shp.
             filename = os.path.splitext(os.path.split(c_path)[1])[0]
-            shape = ogr.Open(c_path)
+            shape = gdal.OpenEx(c_path)
             layer = shape.GetLayer()
 
             # Since all features will contain the same set of attributes,
@@ -1340,7 +1340,7 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_tables'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args['aoi_tables'])
+                    vector = gdal.OpenEx(args['aoi_tables'])
                     if vector is None:
                         warnings.append(
                             (['aoi_tables'],

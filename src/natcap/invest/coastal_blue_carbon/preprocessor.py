@@ -225,7 +225,7 @@ def read_from_raster(input_raster, offset_block):
     Returns:
         a (np.array): the raster block.
     """
-    ds = gdal.Open(input_raster)
+    ds = gdal.OpenEx(input_raster)
     band = ds.GetRasterBand(1)
     a = band.ReadAsArray(**offset_block)
     ds = None
@@ -418,7 +418,7 @@ def validate(args, limit_to=None):
             with utils.capture_gdal_logging():
                 for index, raster_path in enumerate(
                         args['lulc_snapshot_list']):
-                    raster = gdal.Open(raster_path)
+                    raster = gdal.OpenEx(raster_path)
                     if raster is None:
                         warnings.append(
                             (['lulc_snapshot_list'],

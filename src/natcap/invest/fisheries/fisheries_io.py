@@ -7,7 +7,8 @@ import os
 import csv
 
 from osgeo import ogr
-import numpy as np
+from osgeo import gdal
+import numpy
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.testing
@@ -63,21 +64,21 @@ def fetch_args(args, create_outputs=True):
 
                 # Pop Params
                 'population_csv_uri': 'path/to/csv_uri',
-                'Survnaturalfrac': np.array(
+                'Survnaturalfrac': numpy.array(
                     [[[...], [...]], [[...], [...]], ...]),
-                'Classes': np.array([...]),
-                'Vulnfishing': np.array([...], [...]),
-                'Maturity': np.array([...], [...]),
-                'Duration': np.array([...], [...]),
-                'Weight': np.array([...], [...]),
-                'Fecundity': np.array([...], [...]),
-                'Regions': np.array([...]),
-                'Exploitationfraction': np.array([...]),
-                'Larvaldispersal': np.array([...]),
+                'Classes': numpy.array([...]),
+                'Vulnfishing': numpy.array([...], [...]),
+                'Maturity': numpy.array([...], [...]),
+                'Duration': numpy.array([...], [...]),
+                'Weight': numpy.array([...], [...]),
+                'Fecundity': numpy.array([...], [...]),
+                'Regions': numpy.array([...]),
+                'Exploitationfraction': numpy.array([...]),
+                'Larvaldispersal': numpy.array([...]),
 
                 # Mig Params
                 'migration_dir': 'path/to/mig_dir',
-                'Migration': [np.matrix, np.matrix, ...]
+                'Migration': [numpy.matrix, numpy.matrix, ...]
             },
             {
                 ...  # additional dictionary doesn't exist when 'do_batch'
@@ -135,21 +136,21 @@ def read_population_csvs(args):
 
         pop_list = [
             {
-                'Survnaturalfrac': np.array(
+                'Survnaturalfrac': numpy.array(
                     [[...], [...]], [[...], [...]], ...),
 
                 # Class Vectors
-                'Classes': np.array([...]),
-                'Vulnfishing': np.array([...], [...]),
-                'Maturity': np.array([...], [...]),
-                'Duration': np.array([...], [...]),
-                'Weight': np.array([...], [...]),
-                'Fecundity': np.array([...], [...]),
+                'Classes': numpy.array([...]),
+                'Vulnfishing': numpy.array([...], [...]),
+                'Maturity': numpy.array([...], [...]),
+                'Duration': numpy.array([...], [...]),
+                'Weight': numpy.array([...], [...]),
+                'Fecundity': numpy.array([...], [...]),
 
                 # Region Vectors
-                'Regions': np.array([...]),
-                'Exploitationfraction': np.array([...]),
-                'Larvaldispersal': np.array([...]),
+                'Regions': numpy.array([...]),
+                'Exploitationfraction': numpy.array([...]),
+                'Larvaldispersal': numpy.array([...]),
             },
             {
                 ...
@@ -197,21 +198,21 @@ def read_population_csv(args, uri):
 
         pop_dict = {
             'population_csv_uri': 'path/to/csv',
-            'Survnaturalfrac': np.array(
+            'Survnaturalfrac': numpy.array(
                 [[...], [...]], [[...], [...]], ...),
 
             # Class Vectors
-            'Classes': np.array([...]),
-            'Vulnfishing': np.array([...], [...]),
-            'Maturity': np.array([...], [...]),
-            'Duration': np.array([...], [...]),
-            'Weight': np.array([...], [...]),
-            'Fecundity': np.array([...], [...]),
+            'Classes': numpy.array([...]),
+            'Vulnfishing': numpy.array([...], [...]),
+            'Maturity': numpy.array([...], [...]),
+            'Duration': numpy.array([...], [...]),
+            'Weight': numpy.array([...], [...]),
+            'Fecundity': numpy.array([...], [...]),
 
             # Region Vectors
-            'Regions': np.array([...]),
-            'Exploitationfraction': np.array([...]),
-            'Larvaldispersal': np.array([...]),
+            'Regions': numpy.array([...]),
+            'Exploitationfraction': numpy.array([...]),
+            'Larvaldispersal': numpy.array([...]),
         }
     '''
     pop_dict = _parse_population_csv(uri, args['sexsp'])
@@ -254,7 +255,7 @@ def read_population_csv(args, uri):
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
         num_regions = len(pop_dict['Regions'])
-        pop_dict['Larvaldispersal'] = (np.array(np.ones(num_regions) /
+        pop_dict['Larvaldispersal'] = (numpy.array(numpy.ones(num_regions) /
                                        num_regions))
 
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
@@ -280,7 +281,7 @@ def read_population_csv(args, uri):
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
-        pop_dict['Duration'] = np.array(
+        pop_dict['Duration'] = numpy.array(
             pop_dict['Duration'], dtype=int)
 
     # Fill in unused keys with null values
@@ -315,9 +316,9 @@ def _parse_population_csv(uri, sexsp):
     Example Returns:
 
         pop_dict = {
-            'Survnaturalfrac': np.array(
+            'Survnaturalfrac': numpy.array(
                 [[...], [...]], [[...], [...]], ...),
-            'Vulnfishing': np.array([...], [...]),
+            'Vulnfishing': numpy.array([...], [...]),
             ...
         }
     '''
@@ -354,13 +355,13 @@ def _parse_population_csv(uri, sexsp):
     assert sexsp in (1, 2), 'Sex-specificity must be one of (1, 2)'
     if sexsp == 1:
         # Sex Neutral
-        pop_dict['Survnaturalfrac'] = np.array(
-            [surv_table], dtype=np.float_).swapaxes(1, 2).swapaxes(0, 1)
+        pop_dict['Survnaturalfrac'] = numpy.array(
+            [surv_table], dtype=numpy.float_).swapaxes(1, 2).swapaxes(0, 1)
     elif sexsp == 2:
         # Sex Specific
-        female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
-        male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
-        pop_dict['Survnaturalfrac'] = np.array(
+        female = numpy.array(surv_table[0:len(surv_table)/sexsp], dtype=numpy.float_)
+        male = numpy.array(surv_table[len(surv_table)/sexsp:], dtype=numpy.float_)
+        pop_dict['Survnaturalfrac'] = numpy.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
     for col in range(0, len(class_attributes_table[0])):
@@ -390,7 +391,7 @@ def read_migration_tables(args, class_list, region_list):
     Example Returns::
 
         mig_dict = {
-            'Migration': [np.matrix, np.matrix, ...]
+            'Migration': [numpy.matrix, numpy.matrix, ...]
         }
 
     Note:
@@ -405,7 +406,7 @@ def read_migration_tables(args, class_list, region_list):
     # Create indexed list
     matrix_list = map(lambda x: None, class_list)
 
-    # Map np.matrices to indices in list
+    # Map numpy.matrices to indices in list
     for i in range(0, len(class_list)):
         if class_list[i] in mig_dict.keys():
             matrix_list[i] = mig_dict[class_list[i]]
@@ -413,14 +414,14 @@ def read_migration_tables(args, class_list, region_list):
     # Fill in rest with identity matrices
     for i in range(0, len(matrix_list)):
         if matrix_list[i] is None:
-            matrix_list[i] = np.matrix(np.identity(len(region_list)))
+            matrix_list[i] = numpy.matrix(numpy.identity(len(region_list)))
 
     # Check migration regions are equal across matrices
     assert all((x.shape == matrix_list[0].shape for x in matrix_list)), (
         "Shape of migration matrices are not equal across lifecycle classes")
 
     # Check that all migration vectors approximately sum to one
-    if not all((np.allclose(vector.sum(), 1)
+    if not all((numpy.allclose(vector.sum(), 1)
                 for matrix in matrix_list for vector in matrix)):
         LOGGER.warning("Elements in at least one migration matrices source "
                        "vector do not sum to one")
@@ -447,8 +448,8 @@ def _parse_migration_tables(args, class_list):
     Example Returns::
 
         mig_dict = {
-            {'stage1': np.matrix},
-            {'stage2': np.matrix},
+            {'stage1': numpy.matrix},
+            {'stage2': numpy.matrix},
             # ...
         }
     '''
@@ -475,7 +476,7 @@ def _parse_migration_tables(args, class_list):
                             array.append(float(lines[row][entry]))
                         matrix.append(array)
 
-                    Migration = np.matrix(matrix)
+                    Migration = numpy.matrix(matrix)
 
                 mig_dict[class_name] = Migration
 
@@ -628,15 +629,15 @@ def _get_table_col_end_indexes(lsts, top):
 
 def _vectorize_attribute(lst, rows):
     d = {}
-    a = np.array(lst[1:], dtype=np.float_)
-    a = np.reshape(a, (rows, a.shape[0] / rows))
+    a = numpy.array(lst[1:], dtype=numpy.float_)
+    a = numpy.reshape(a, (rows, a.shape[0] / rows))
     d[lst[0].strip().capitalize()] = a
     return d
 
 
 def _vectorize_reg_attribute(lst):
     d = {}
-    a = np.array(lst[1:], dtype=np.float_)
+    a = numpy.array(lst[1:], dtype=numpy.float_)
     d[lst[0].strip().capitalize()] = a
     return d
 
@@ -998,7 +999,7 @@ def _create_results_aoi(vars_dict):
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
 
     # Append attributes to Shapefile
-    ds = ogr.Open(output_aoi_uri, update=1)
+    ds = gdal.OpenEx(output_aoi_uri, gdal.GA_Update)
     layer = ds.GetLayer()
 
     # Set Harvest

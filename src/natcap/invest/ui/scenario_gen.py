@@ -307,7 +307,7 @@ class ScenarioGenerator(model.InVESTModel):
     def _load_colnames(self, new_interactivity, vector_input, dropdown_input):
         if new_interactivity:
             vector_path = vector_input.value()
-            vector = ogr.Open(vector_path)
+            vector = gdal.OpenEx(vector_path)
             layer = vector.GetLayer()
             colnames = [defn.GetName() for defn in layer.schema]
             dropdown_input.set_options(colnames)

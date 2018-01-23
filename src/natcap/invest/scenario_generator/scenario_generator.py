@@ -477,14 +477,14 @@ def filter_fragments(input_uri, size, output_uri):
         "Filtering patches smaller than %i from %s...", size, input_uri)
 
     # clump and sieve
-    src_ds = gdal.Open(input_uri)
+    src_ds = gdal.OpenEx(input_uri)
     src_band = src_ds.GetRasterBand(1)
     src_array = src_band.ReadAsArray()
 
     driver = gdal.GetDriverByName("GTiff")
     driver.CreateCopy(output_uri, src_ds, 0)
 
-    dst_ds = gdal.Open(output_uri, 1)
+    dst_ds = gdal.OpenEx(output_uri, 1)
     dst_band = dst_ds.GetRasterBand(1)
     dst_array = np.copy(src_array)
 
@@ -828,7 +828,7 @@ def execute(args):
                     exception_flag="values_required")
 
                 # Change nodata value so 0's no longer nodata
-                dataset = gdal.Open(transition_raster_fpath, 1)
+                dataset = gdal.OpenEx(transition_raster_fpath, 1)
                 band = dataset.GetRasterBand(1)
                 nodata = band.SetNoDataValue(transition_nodata)
                 dataset = None
@@ -1145,7 +1145,7 @@ def execute(args):
             option_list=option_list+constraints_field)
 
         # Check that the values make sense
-        raster = gdal.Open(constraints_ds_uri)
+        raster = gdal.OpenEx(constraints_ds_uri)
         band = raster.GetRasterBand(1)
         array = band.ReadAsArray()
         unique = np.unique(array)
@@ -1327,7 +1327,7 @@ def execute(args):
     # copy initial LULC
     scenario_uri = file_registry['scenario_uri']
 
-    src_ds = gdal.Open(landcover_uri)
+    src_ds = gdal.OpenEx(landcover_uri)
     n_cols = src_ds.RasterXSize
     n_rows = src_ds.RasterYSize
 
@@ -1382,7 +1382,7 @@ def execute(args):
     change_list.sort(reverse=True)
 
     # change pixels
-    scenario_ds = gdal.Open(scenario_uri, 1)
+    scenario_ds = gdal.OpenEx(scenario_uri, 1)
     scenario_band = scenario_ds.GetRasterBand(1)
     scenario_array = scenario_band.ReadAsArray()
 
@@ -1396,13 +1396,13 @@ def execute(args):
         update_bands = {}
         update_arrays = {}
         for _, update_id, _ in change_list[index+1:]:
-            update_ds[update_id] = gdal.Open(suitability_dict[update_id], 1)
+            update_ds[update_id] = gdal.OpenEx(suitability_dict[update_id], 1)
             update_bands[update_id] = update_ds[update_id].GetRasterBand(1)
             update_arrays[update_id] = update_bands[update_id].ReadAsArray()
 
         # select pixels
         # open suitability raster
-        src_ds = gdal.Open(suitability_dict[cover_id], 1)
+        src_ds = gdal.OpenEx(suitability_dict[cover_id], 1)
         src_band = src_ds.GetRasterBand(1)
         src_array = src_band.ReadAsArray()
 
@@ -1532,9 +1532,9 @@ def execute(args):
             "Overriding pixels using values from field %s...",
             args["override_field"])
 
-        datasource = ogr.Open(args["override"])
+        datasource = gdal.OpenEx(args["override"])
         layer = datasource.GetLayer()
-        dataset = gdal.Open(scenario_uri, 1)
+        dataset = gdal.OpenEx(scenario_uri, 1)
 
         if dataset is None:
             msg = "Could not open landcover transition raster."
@@ -1789,13 +1789,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

@@ -7,6 +7,7 @@ import os
 import logging
 
 from osgeo import ogr
+from osgeo import gdal
 
 LOGGER = logging.getLogger('natcap.invest.overlap_analysis.mz_core')
 
@@ -41,11 +42,6 @@ def execute(args):
 
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
-    #Want to run through all polygons in the AOI, and see if any intersect or
-    #contain all shapefiles from all other layers. Little bit gnarly in terms
-    #of runtime, but at least doable.
-
-    driver = ogr.GetDriverByName('ESRI Shapefile')
     zone_shape_old = args['zone_layer_file']
     layers_dict = args['over_layer_dict']
 
@@ -56,7 +52,8 @@ def execute(args):
     #This creates a new shapefile that is a copy of the old one, but at the path
     #location. That way we can edit without worrying about changing the Input
     #file.
-    mz_freq_shape = driver.CopyDataSource(zone_shape_old, path)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    mz_freq_shape = driver.CreateCopy(path, zone_shape_old)
 
     mz_freq_layer = mz_freq_shape.GetLayer()
     LOGGER.debug(mz_freq_layer)

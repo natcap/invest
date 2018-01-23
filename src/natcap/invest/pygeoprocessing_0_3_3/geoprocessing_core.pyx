@@ -82,11 +82,11 @@ def _cython_calculate_slope(dem_dataset_uri, slope_uri):
     cdef float a,b,c,d,e,f,g,h,i,dem_nodata,z
     cdef int row_index, col_index, n_rows, n_cols
 
-    dem_dataset = gdal.Open(dem_dataset_uri)
+    dem_dataset = gdal.OpenEx(dem_dataset_uri)
     dem_band = dem_dataset.GetRasterBand(1)
     dem_nodata = dem_band.GetNoDataValue()
 
-    slope_dataset = gdal.Open(slope_uri, gdal.GA_Update)
+    slope_dataset = gdal.OpenEx(slope_uri, gdal.GA_Update)
     slope_band = slope_dataset.GetRasterBand(1)
     slope_nodata = slope_band.GetNoDataValue()
 
@@ -233,7 +233,7 @@ def distance_transform_edt(input_mask_uri, output_distance_uri):
 
         returns nothing"""
 
-    input_mask_ds = gdal.Open(input_mask_uri)
+    input_mask_ds = gdal.OpenEx(input_mask_uri)
     input_mask_band = input_mask_ds.GetRasterBand(1)
     cdef int n_cols = input_mask_ds.RasterXSize
     cdef int n_rows = input_mask_ds.RasterYSize
@@ -425,7 +425,7 @@ def new_raster_from_base_uri(base_uri, *args, **kwargs):
 
         Returns nothing.
         """
-    base_raster = gdal.Open(base_uri)
+    base_raster = gdal.OpenEx(base_uri)
     if base_raster is None:
         raise IOError("%s not found when opening GDAL raster")
     new_raster = new_raster_from_base(base_raster, *args, **kwargs)

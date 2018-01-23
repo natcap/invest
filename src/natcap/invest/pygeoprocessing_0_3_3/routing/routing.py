@@ -392,7 +392,7 @@ def delineate_watershed(
     Returns
         None
     """
-    dem_ds = gdal.Open(dem_uri)
+    dem_ds = gdal.OpenEx(dem_uri)
     dem_band = dem_ds.GetRasterBand(1)
     block_size = dem_band.GetBlockSize()
     if ((block_size[0] != 256 or block_size[1] != 256) and

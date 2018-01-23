@@ -453,10 +453,10 @@ def execute(args):
     # delete it then copy the input shapefile into the designated output folder
     if os.path.isfile(watershed_output_datasource_uri):
         os.remove(watershed_output_datasource_uri)
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_datasource = ogr.Open(args['watersheds_path'])
-    output_datasource = esri_driver.CopyDataSource(
-        original_datasource, watershed_output_datasource_uri)
+    original_datasource = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    output_datasource = driver.CreateCopy(
+        watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
 
     # need this for low level route_flux function
@@ -817,13 +817,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

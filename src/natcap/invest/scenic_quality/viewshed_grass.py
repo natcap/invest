@@ -80,7 +80,7 @@ def viewshed(dataset_uri, feature_set_uri, dataset_out_uri):
                  str(grass.script.parse_command("g.list", _type="vect")))
 
     LOGGER.debug("Computing viewshed for each point.")
-    shapefile = ogr.Open(feature_set_uri)
+    shapefile = gdal.OpenEx(feature_set_uri)
     layer = shapefile.GetLayer()
     feature_count = layer.GetFeatureCount()
     for feature_id in xrange(feature_count):

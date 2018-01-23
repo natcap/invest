@@ -51,8 +51,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'mz_frequency.shp'),
-            os.path.join(self.workspace_dir, 'output', 'mz_frequency.shp'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'mz_frequency.shp'))
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -82,8 +81,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -110,8 +108,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore_human_intra.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -142,8 +139,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore_human_inter.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'))
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -171,8 +167,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore_intra_only.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -198,8 +193,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_impscore_inter_only.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_impscore.tif'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -224,8 +218,7 @@ class OverlapAnalysisTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'hu_freq_all_disabled.tif'),
-            os.path.join(self.workspace_dir, 'output', 'hu_freq.tif'),
-            1e-6)
+            os.path.join(self.workspace_dir, 'output', 'hu_freq.tif'))
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):

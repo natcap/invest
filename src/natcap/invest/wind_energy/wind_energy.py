@@ -447,7 +447,7 @@ def execute(args):
 
             returns - nothing"""
         # Open the wind points file to edit
-        wind_points = ogr.Open(wind_pts_uri, 1)
+        wind_points = gdal.OpenEx(wind_pts_uri, 1)
         wind_points_layer = wind_points.GetLayer()
 
         # Get a feature so that we can get field indices that we will use
@@ -1136,7 +1136,7 @@ def add_field_to_shape_given_list(shape_ds_uri, value_list, field_name):
 
         returns - nothing"""
     LOGGER.debug('Entering add_field_to_shape_given_list')
-    shape_ds = ogr.Open(shape_ds_uri, 1)
+    shape_ds = gdal.OpenEx(shape_ds_uri, 1)
     layer = shape_ds.GetLayer()
 
     # Create new field
@@ -1170,8 +1170,8 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
             meters
 
         returns - a list of the distances from each point"""
-    poly_ds = ogr.Open(poly_ds_uri)
-    point_ds = ogr.Open(point_ds_uri)
+    poly_ds = gdal.OpenEx(poly_ds_uri)
+    point_ds = gdal.OpenEx(point_ds_uri)
 
     poly_layer = poly_ds.GetLayer()
     # List to store the polygons geometries as shapely objects
@@ -1342,7 +1342,7 @@ def get_highest_harvested_geom(wind_points_uri):
         returns - the geometry of the point with the highest harvested value
     """
 
-    wind_points = ogr.Open(wind_points_uri)
+    wind_points = gdal.OpenEx(wind_points_uri)
     layer = wind_points.GetLayer()
 
     # Initiate some variables to use
@@ -1647,8 +1647,8 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
 
     LOGGER.debug('Entering clip_datasource')
 
-    aoi_ds = ogr.Open(aoi_uri)
-    orig_ds = ogr.Open(orig_ds_uri)
+    aoi_ds = gdal.OpenEx(aoi_uri)
+    orig_ds = gdal.OpenEx(orig_ds_uri)
 
     orig_layer = orig_ds.GetLayer()
     aoi_layer = aoi_ds.GetLayer()
@@ -1733,7 +1733,7 @@ def calculate_distances_land_grid(
         returns - Nothing
     """
     # Open the point shapefile and get the layer
-    land_points = ogr.Open(land_shape_uri)
+    land_points = gdal.OpenEx(land_shape_uri)
     land_pts_layer = land_points.GetLayer()
     # A list to hold the land to grid distances in order for each point
     # features 'L2G' field
@@ -1910,7 +1910,7 @@ def pixel_size_based_on_coordinate_transform_uri(
     Returns:
         result (tuple): (pixel_width_meters, pixel_height_meters)
     """
-    dataset = gdal.Open(dataset_uri)
+    dataset = gdal.OpenEx(dataset_uri, gdal.OF_RASTER)
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
@@ -1985,7 +1985,7 @@ def validate(args, limit_to=None):
         try:
             if args[vector_key] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args[vector_key])
+                    vector = gdal.OpenEx(args[vector_key])
                     if vector is None:
                         warnings.append(
                             ([vector_key],
@@ -1997,7 +1997,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('bathymetry_uri', None):
         with utils.capture_gdal_logging():
-            raster = gdal.Open(args['bathymetry_uri'])
+            raster = gdal.OpenEx(args['bathymetry_uri'])
         if raster is None:
             warnings.append((['bathymetry_uri'],
                              ('Parameter must be a path to a GDAL-compatible '
@@ -2047,7 +2047,7 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_uri'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args['aoi_uri'])
+                    vector = gdal.OpenEx(args['aoi_uri'])
                     layer = vector.GetLayer()
                     srs = layer.GetSpatialRef()
                     units = srs.GetLinearUnitsName().lower()
