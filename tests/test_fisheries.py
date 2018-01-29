@@ -356,6 +356,41 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
+    @scm.skip_if_data_missing(TEST_DATA)
+    def test_sampledata_shrimp_multiple_regions(self):
+        """Fisheries: Verify shrimp run on multiple identical regions."""
+        from natcap.invest.fisheries import fisheries
+
+        args = {
+            u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+                                     'shapefile_galveston',
+                                     'Galveston_Subregion.shp'),
+            u'do_batch': False,
+            u'harvest_units': 'Weight',
+            u'migr_cont': False,
+            u'population_csv_uri': os.path.join(TEST_DATA,
+                                                'shrimp_multiregion_pop_params.csv'),
+            u'population_type': 'Stage-Based',
+            u'recruitment_type': 'Fixed',
+            u'sexsp': 'No',
+            u'spawn_units': 'Individuals',  # TODO: supposedly ignored w/Fixed
+            u'total_init_recruits': 1e5,
+            u'total_recur_recruits': 2.16e11,
+            u'total_timesteps': 300,
+            u'val_cont': False,
+            u'results_suffix': 'foo',
+            u'workspace_dir': self.workspace_dir,
+
+        }
+        fisheries.execute(args)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir, 'results_table_foo.csv')
+        self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
+        self.assertEqual(final_timestep_data['harvest'], 3120557.88)
+
+
 
 class FisheriesHSTTest(unittest.TestCase):
     """Tests for the Fisheries Habitat Suitability Tool."""
