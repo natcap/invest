@@ -65,35 +65,6 @@ def no_cythonize(extensions, **_):
         extension.sources[:] = sources
     return extensions
 
-class ExtraCompilerFlagsBuilder(build_ext):
-    """
-    Subclass of build_ext for adding specific compiler flags required
-    for compilation on some platforms.  If we're using GNU compilers, we
-    want to statically link libgcc and libstdc++ so that we don't need to
-    package shared objects/dynamically linked libraries with this python
-    package.
-
-    Trying to statically link these two libraries on unix (mac) will crash, so
-    this is only for windows ports of GNU GCC compilers.
-    """
-    def build_extensions(self):
-        import numpy
-        numpy_include_dirs = numpy.get_include()
-        compiler_type = self.compiler.compiler_type
-
-        for ext in self.extensions:
-            if compiler_type in ['mingw32', 'cygwin']:
-                ext.extra_link_args = [
-                    '-static-libgcc',
-                    '-static-libstdc++',
-                ]
-            try:
-                ext.include_dirs.append(numpy_include_dirs)
-            except AttributeError:
-                ext.include_dirs = [numpy_include_dirs]
-        build_ext.build_extensions(self)
-
-CMDCLASS['build_ext'] = ExtraCompilerFlagsBuilder
 
 EXTENSION_LIST = ([
     Extension(
