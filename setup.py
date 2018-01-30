@@ -150,28 +150,29 @@ def requirements(*pkgnames):
     Raises:
         ValueError: When a packagename requested is not in requirements.txt
     """
+    install_everything = False
+    if len(pkgnames) == 0:
+        install_everything = True
     desired_pkgnames = set(pkgnames)
 
     found_pkgnames = {}
-    with open('requirements.txt') as requirements:
-        for line in requirements:
+    with open('requirements.txt') as _requirements:
+        for line in _requirements:
             try:
                 package_req = pkg_resources.Requirement.parse(line)
             except ValueError:
                 continue
             else:
                 project_name = package_req.project_name
-                if project_name in desired_pkgnames:
+                if project_name in desired_pkgnames or install_everything:
                     found_pkgnames[project_name] = str(package_req)
 
-    if len(desired_pkgnames) != len(found_pkgnames):
+    if len(desired_pkgnames) != len(found_pkgnames) and not install_everything:
         missing_pkgs = desired_pkgnames - set(found_pkgnames.keys())
         raise ValueError(('Could not find package '
                           'requirements for %s') % list(missing_pkgs))
     return found_pkgnames.values()
 
-BUILD_REQUIREMENTS = ['cython', 'numpy'] + requirements('pygeoprocessing',
-                                                        'natcap.versioner')
 
 setup(
     name='natcap.invest',
@@ -211,7 +212,7 @@ setup(
     },
     natcap_version='src/natcap/invest/version.py',
     include_package_data=True,
-    install_requires=BUILD_REQUIREMENTS,
+    install_requires=requirements(),
     setup_requires=requirements('natcap.versioner'),
     license='BSD',
     zip_safe=False,
