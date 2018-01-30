@@ -367,6 +367,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
   File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
   ; invest-autotest.bat is here to help automate testing the UIs.
   File invest-autotest.bat
+  File InVEST-2.ico
 
   SetOutPath "$INSTDIR\documentation"
   File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*
