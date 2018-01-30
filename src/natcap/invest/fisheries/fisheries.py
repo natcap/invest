@@ -272,7 +272,8 @@ def validate(args, limit_to=None):
         warnings.append((keys_with_empty_values,
                          'Argument must have a value.'))
 
-    if limit_to in ('aoi_uri', None):
+    if (limit_to in ('aoi_uri', None) and
+            'aoi_uri' in args and args['aoi_uri'] != ''):
         with utils.capture_gdal_logging():
             dataset = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
         if dataset is None:
@@ -301,8 +302,9 @@ def validate(args, limit_to=None):
 
     for directory_key in ('population_csv_dir', 'migration_dir'):
         try:
-            if (limit_to in (directory_key, None) and not
-                    os.path.isdir(args[directory_key])):
+            if all((limit_to in (directory_key, None),
+                    args['directory_key'] != '',
+                    not os.path.isdir(args[directory_key]))):
                 warnings.append(([directory_key],
                                 'Directory could not be found.'))
         except KeyError:
