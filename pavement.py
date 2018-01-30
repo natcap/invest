@@ -1958,51 +1958,6 @@ def check(options):
         # below, and the error message will be formatted there.
         pass
 
-    # pywin32 is required for pyinstaller builds
-    if platform.system() == 'Windows':
-        # Wheel has an issue with namespace packages on windows.
-        # See https://bitbucket.org/pypa/wheel/issues/91
-        # I've implemented cgohlke's fix and pushed it to my fork of wheel.
-        # To install a working wheel package, do this on your windows install:
-        #   pip install hg+https://bitbucket.org/jdouglass/wheel@default
-        #
-        # This requires that you have command-line hg installed.
-        # Setuptools >= 8.0 is required.  Local version notation (+...)
-        # will not work with setuptools < 8.0.
-        requirements.append(('wheel>=0.25.0+natcap.1', required, None, (
-            'pip install --upgrade hg+https://bitbucket.org/jdouglass/wheel'
-        )))
-
-        # paver has a restriction within @paver.virtual.virtualenv where it
-        # (unnecessarily) always treats the activation of a virtualenv like
-        # it's on a POSIX system.  I've submitted a PR to fix this to the
-        # upstream paver repo (https://github.com/paver/paver/pull/153),
-        # which was merged, but an official release of paver that includes this
-        # version has not been made just yet.
-        requirements.append(('paver==1.2.4+natcap.1', required, None, (
-            'pip install --upgrade '
-            'git+https://github.com/phargogh/paver@natcap-version'
-        )))
-
-        try:
-            # pywin32 is required by pyinstaller.
-            requirements.append(('pywin32', required, 'pywin', None))
-
-            # Get the pywin32 version here, as demonstrated by
-            # http://stackoverflow.com/a/5071777.  If we can't import pywin,
-            # the __version__ attribute (below) will never be reached.
-            import pywin
-            import win32api
-            fixed_file_info = win32api.GetFileVersionInfo(
-                win32api.__file__, '\\')
-            pywin.__version__ = fixed_file_info['FileVersionLS'] >> 16
-        except ImportError:
-            pass
-    else:
-        # Non-windows OSes also require wheel,just not a special installation
-        # of it.
-        requirements.append(('wheel', required, None, None))
-
     # Don't need to try/except this ... paver is imported at the top of
     # this file so we know that paver exists.  If it doesn't have a version
     # module, the ImportError should definitely be raised.
