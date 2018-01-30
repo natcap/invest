@@ -991,7 +991,7 @@ def after_install(options, home_dir):
         # Installing as egg grants pygeoprocessing greater precendence in the
         # import order.  If I install as a wheel, the system install of
         # pygeoprocessing takes precedence.  I believe this to be a bug in
-        # pygeoprocessing (poster, for example, does not have this issue!).
+        # pygeoprocessing.
         install_string += (
             "    subprocess.call([join(home_dir, bindir, 'pip'), 'install', "
             "'--no-deps', '-I', '--upgrade', {compiler_flags} "
@@ -1929,7 +1929,6 @@ def check(options):
         ('paramiko', suggested, None, None),
         ('gdal', lib_needed,  'osgeo.gdal', None),
         ('shapely', lib_needed,  None, None),
-        ('poster', lib_needed,  None, None),
         ('pygeoprocessing', install_managed, None, None),
         ('PyQt4', lib_needed, 'PyQt4', None),
     ]
@@ -1947,15 +1946,6 @@ def check(options):
         sip.setapi('QTime', 2)
         sip.setapi('QUrl', 2)
     except ImportError:
-        pass
-
-    try:
-        # poster stores its version in a triple of ints
-        import poster
-        poster.__version__ = '.'.join([str(i) for i in poster.version])
-    except ImportError:
-        # If the package can't be found, this will be caught by pkg_resources
-        # below, and the error message will be formatted there.
         pass
 
     try:
