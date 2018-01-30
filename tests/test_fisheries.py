@@ -391,6 +391,27 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
 
+        # verify that two identical subregions were found.
+        in_subregion = False
+        subregions = {}
+        harvest_table_path = os.path.join(self.workspace_dir, 'output',
+                                          'results_table_foo.csv')
+        with open(harvest_table_path) as harvest_table:
+            for line in harvest_table:
+                if in_subregion:
+                    if line.lower().startswith('total'):
+                        break
+                    else:
+                        subregion_id, harvest = line.strip().split(',')
+                        subregions[int(subregion_id)] = float(harvest)
+                else:
+                    if line.lower().startswith('subregion'):
+                        in_subregion = True
+
+        # we should only have two subregions, and their values should match.
+        self.assertEqual(len(subregions), 2)
+        self.assertEqual(len(set(subregions.values())), 1)
+
 
 class FisheriesHSTTest(unittest.TestCase):
     """Tests for the Fisheries Habitat Suitability Tool."""
