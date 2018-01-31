@@ -188,6 +188,7 @@ def execute(args, create_outputs=True):
         type(spawners) is float
 
     """
+    args = args.copy()
 
     # Parse Inputs
     model_list = io.fetch_args(args, create_outputs=create_outputs)
