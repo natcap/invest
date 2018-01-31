@@ -208,7 +208,7 @@ setup(
         ],
     },
     extras_require={
-        'ui': ('qtpy', 'qtawesome', 'six'),
+        'ui': ('qtpy', 'qtawesome', 'six', 'faulthandler'),
     },
     cmdclass=CMDCLASS,
     package_data={
