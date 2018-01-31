@@ -64,8 +64,7 @@ is:
     $ pip install natcap.invest
 
 If you are working within virtual environments, there is a `documented issue
-with namespaces 
-<https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version>`__
+with namespaces <https://github.com/pypa/setuptools/issues/250>`__
 in setuptools that may cause problems when importing packages within the
 ``natcap`` namespace.  The current workaround is to use these extra pip flags:
 
