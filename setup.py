@@ -181,10 +181,11 @@ setup(
     package_dir={
         'natcap': 'src/natcap'
     },
-    natcap_version='src/natcap/invest/version.py',
+    use_scm_version={'version_scheme': 'post-release',
+                     'local_scheme': 'node-and-date'},
     include_package_data=True,
     install_requires=requirements(),
-    setup_requires=requirements('natcap.versioner'),
+    setup_requires=['setuptools_scm'],
     license='BSD',
     zip_safe=False,
     keywords='gis invest',

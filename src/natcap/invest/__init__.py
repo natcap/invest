@@ -7,8 +7,6 @@ import logging
 import pkg_resources
 import natcap.invest.pygeoprocessing_0_3_3
 import pygeoprocessing
-import natcap.versioner
-import pygeoprocessing
 
 
 LOGGER = logging.getLogger('natcap.invest')
@@ -31,7 +29,11 @@ if (pkg_resources.parse_version(pygeoprocessing.__version__) <
                           req_version=PYGEOPROCESSING_REQUIRED,
                           found_ver=pygeoprocessing.__version__))
 
-__version__ = natcap.versioner.get_version('natcap.invest')
+try:
+    __version__ = pkg_resources.get_distribution(__name__).version
+except pkg_resources.DistributionNotFound:
+    # package is not installed.
+    pass
 
 
 def local_dir(source_file):
