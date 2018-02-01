@@ -11,10 +11,15 @@
 Pyro4==4.41
 gdal>=2.0,<3.0
 matplotlib
-pygeoprocessing>=0.6.0,<0.7.0
 numpy>=1.11.0
 rtree>=0.8.2
 scipy>=0.16.1
 shapely
 six
-taskgraph[niced_processes]>=0.2.3,<0.3.0
+
+# pygeoprocessing>=0.6.0,<0.7.0
+hg+https://bitbucket.org/jdouglass/pygeoprocessing@908b323
+
+#taskgraph[niced_processes]>=0.2.3,<0.3.0
+hg+https://bitbucket.org/jdouglass/taskgraph@58555b7
+psutil
