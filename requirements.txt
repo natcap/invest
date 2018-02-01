@@ -3,6 +3,8 @@
 # This file records the packages and requirements needed in order for
 # all models of natcap.invest to work as expected.
 #
+# Packages required for extras (like the UI) are in setup.py.
+#
 # Note that there may be some OS-specific requirements, so be sure to run
 # `paver check` to verify you have all the required packages.
 
@@ -14,7 +16,5 @@ numpy>=1.11.0
 rtree>=0.8.2
 scipy>=0.16.1
 shapely
-qtpy>1.3
-qtawesome
 six
 taskgraph[niced_processes]>=0.2.3,<0.3.0
