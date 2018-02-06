@@ -7,22 +7,27 @@ install:
 
 binaries:
 	rm -rf build/pyi-build dist/invest
-	pyinstaller \
-		--onedir \
-		--workpath build/pyi-build \
-		--clean \
-		--specpath=exe2 \
-		--noupx \
-		--name invest \
-		--additional-hooks-dir exe2/hooks \
-		--runtime-hook exe2/hooks/rthook.py \
-		--console \
-		exe2/entrypoint.py
+	#pyinstaller \
+	#	--onedir \
+	#	--workpath build/pyi-build \
+	#	--clean \
+	#	--specpath=exe2 \
+	#	--noupx \
+	#	--name invest \
+	#	--additional-hooks-dir exe2/hooks \
+	#	--runtime-hook exe2/hooks/rthook.py \
+	#	--console \
+	#	exe2/entrypoint.py
+
+	pyinstaller --clean exe/invest.spec
 	# Overwrite the matplotlib libpng with the homebrew one.
 	cp /usr/local/Cellar/libpng/1.6.34/lib/libpng16.16.dylib ./dist/invest/libpng16.16.dylib
 	
 	# try listing available modules as a basic test.
 	./dist/invest/invest --list
+
+	# try opening up a model
+	./dist/invest/invest carbon
 
 apidocs:
 	# TODO: allow this to be able to access the natcap.invest package.  Egg?
@@ -38,4 +43,4 @@ userguide:
 .PHONY: clean
 clean:
 	python setup.py clean
-	rm -f build dist exe/dist exe/build natcap.invest.egg-info release_env test_env
+	rm -rf build dist exe/dist exe/build natcap.invest.egg-info release_env test_env
