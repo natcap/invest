@@ -9,7 +9,7 @@ import socket
 import urllib
 import os
 
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+from pygeoprocessing.testing import scm
 import numpy.testing
 
 import Pyro4
