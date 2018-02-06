@@ -4,18 +4,21 @@ install:
 	python setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist/
 
 binaries:
+	rm -rf build/pyi-build dist/invest
 	pyinstaller \
-		--workpath pyi-dist \
-		--clean \
 		--onedir \
+		--workpath build/pyi-build \
+		--clean \
+		--specpath=exe2 \
+		--noupx \
 		--name invest \
 		--additional-hooks-dir exe2/hooks \
 		--runtime-hook exe2/hooks/rthook.py \
 		--console \
-		src/natcap/invest/cli.py
+		exe2/entrypoint.py
 	
 	# try listing available modules as a basic test.
-	./pyi-dist/invest/invest --list
+	./dist/invest/invest --list
 
 apidocs:
 	# TODO: allow this to be able to access the natcap.invest package.  Egg?
