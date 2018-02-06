@@ -33,26 +33,22 @@ if os.path.exists(env_path_base) and sys.executable.startswith(release_env_dir):
 print 'PATH EXT: %s' % path_extension
 
 kwargs = {
-    'hookspath': [os.path.join(current_dir, 'hooks')],
+    'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
     'excludes': None,
     'pathex': path_extension,
-    'runtime_hooks': [os.path.join(current_dir, 'hooks', 'rthook.py')],
+    'runtime_hooks': [os.path.join(current_dir, 'exe', 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
         'natcap.invest',
-        'natcap.versioner',
-        'natcap.versioner.version',
-        'natcap.invest.version',
         'natcap.invest.ui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
-        'taskgraph.version',
     ],
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
+cli_file = os.path.join(current_dir, 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
