@@ -1,4 +1,6 @@
 
+env:
+	python2 -m virtualenv --system-site-packages test_env
 
 install:
 	python setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist/
@@ -16,6 +18,8 @@ binaries:
 		--runtime-hook exe2/hooks/rthook.py \
 		--console \
 		exe2/entrypoint.py
+	# Overwrite the matplotlib libpng with the homebrew one.
+	cp /usr/local/Cellar/libpng/1.6.34/lib/libpng16.16.dylib ./dist/invest/libpng16.16.dylib
 	
 	# try listing available modules as a basic test.
 	./dist/invest/invest --list
