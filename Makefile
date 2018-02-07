@@ -1,6 +1,27 @@
+SVN_DATA_REPO           = "svn://scm.naturalcapitalproject.org/svn/invest-data"
+SVN_DATA_REPO_PATH      = "data/invest-data"
+SVN_DATA_REPO_REV       = 171
+
+SVN_TEST_DATA_REPO      = "svn://scm.naturalcapitalproject.org/svn/invest-test-data"
+SVN_TEST_DATA_REPO_PATH = "data/invest-test-data"
+SVN_TEST_DATA_REPO_REV  = 139
+
+HG_UG_REPO              = "https://bitbucket.org/natcap/invest.users-guide"
+HG_UG_REPO_PATH         = "doc/users-guide"
+HG_UG_REPO_REV          = "ae4705d8c9ad"
 
 env:
 	python2 -m virtualenv --system-site-packages test_env
+
+fetch:
+	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
+		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
+
+	svn update $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH) || \
+		svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
+
+	svn update $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
+		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 
 install:
