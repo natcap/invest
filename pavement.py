@@ -1585,6 +1585,18 @@ def build_docs(options):
     else:
         print "Skipping the API docs"
 
+    # Copy PDF docs into the new folder
+    try:
+        pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
+                                     'latex', '*.pdf'))[0]
+    except IndexError:
+        print "Skipping pdf, since pdf was not built."
+    else:
+        out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
+        out_pdf = out_pdf.replace('+VERSION+', invest_version)
+        dry('cp %s %s' % (pdf, out_pdf),
+            shutil.copyfile, pdf, out_pdf)
+
 
 @task
 @no_help  # users should use `paver version` to see the repo states.
@@ -3068,6 +3080,8 @@ def collect_release_files(options):
     # make a distribution folder for this build version.
     # rstrip to take off the newline
     invest_version = _invest_version(options.collect_release_files.python)
+    LOGGER.debug(invest_version)
+    sys.exit(0)
     dist_dir = os.path.join('dist', 'release_%s' % invest_version)
     if not os.path.exists(dist_dir):
         dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
