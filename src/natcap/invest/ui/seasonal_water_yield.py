@@ -108,7 +108,8 @@ class SeasonalWaterYield(model.InVESTModel):
         self.climate_zone_container = inputs.Container(
             args_key=u'user_defined_climate_zones',
             expandable=True,
-            label=u'Climate Zones (Advanced)')
+            label=u'Climate Zones (Advanced)',
+            expanded=False)
         self.add_input(self.climate_zone_container)
         self.climate_zone_table_path = inputs.File(
             args_key=u'climate_zone_table_path',
@@ -126,7 +127,8 @@ class SeasonalWaterYield(model.InVESTModel):
         self.user_defined_local_recharge_container = inputs.Container(
             args_key=u'user_defined_local_recharge',
             expandable=True,
-            label=u'User Defined Recharge Layer (Advanced)')
+            label=u'User Defined Recharge Layer (Advanced)',
+            expanded=False)
         self.add_input(self.user_defined_local_recharge_container)
         self.l_path = inputs.File(
             args_key=u'l_path',
@@ -136,7 +138,8 @@ class SeasonalWaterYield(model.InVESTModel):
         self.monthly_alpha_container = inputs.Container(
             args_key=u'monthly_alpha',
             expandable=True,
-            label=u'Monthly Alpha Table (Advanced)')
+            label=u'Monthly Alpha Table (Advanced)',
+            expanded=False)
         self.add_input(self.monthly_alpha_container)
         self.monthly_alpha_path = inputs.File(
             args_key=u'monthly_alpha_path',
@@ -149,12 +152,16 @@ class SeasonalWaterYield(model.InVESTModel):
             self._toggle_user_defined_local_recharge)
         self.monthly_alpha_container.sufficiency_changed.connect(
             self._toggle_monthly_alpha)
+        self.climate_zone_container.sufficiency_changed.connect(
+            self._toggle_climate_zone)
+
+    def _toggle_climate_zone(self, use_climate_zones):
+        self.rain_events_table_path.set_interactive(not use_climate_zones)
 
     def _toggle_user_defined_local_recharge(self, use_local_recharge):
         self.et0_dir.set_interactive(not use_local_recharge)
         self.precip_dir.set_interactive(not use_local_recharge)
         self.soil_group_path.set_interactive(not use_local_recharge)
-        self.rain_events_table_path.set_interactive(not use_local_recharge)
 
     def _toggle_monthly_alpha(self, use_monthly_alpha):
         self.alpha_m.set_interactive(not use_monthly_alpha)
