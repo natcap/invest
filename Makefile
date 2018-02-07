@@ -1,14 +1,14 @@
-SVN_DATA_REPO           = "svn://scm.naturalcapitalproject.org/svn/invest-data"
-SVN_DATA_REPO_PATH      = "data/invest-data"
+SVN_DATA_REPO           = svn://scm.naturalcapitalproject.org/svn/invest-data
+SVN_DATA_REPO_PATH      = data/invest-data
 SVN_DATA_REPO_REV       = 171
 
-SVN_TEST_DATA_REPO      = "svn://scm.naturalcapitalproject.org/svn/invest-test-data"
-SVN_TEST_DATA_REPO_PATH = "data/invest-test-data"
+SVN_TEST_DATA_REPO      = svn://scm.naturalcapitalproject.org/svn/invest-test-data
+SVN_TEST_DATA_REPO_PATH = data/invest-test-data
 SVN_TEST_DATA_REPO_REV  = 139
 
-HG_UG_REPO              = "https://bitbucket.org/natcap/invest.users-guide"
-HG_UG_REPO_PATH         = "doc/users-guide"
-HG_UG_REPO_REV          = "ae4705d8c9ad"
+HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
+HG_UG_REPO_PATH         = doc/users-guide
+HG_UG_REPO_REV          = ae4705d8c9ad
 
 env:
 	python2 -m virtualenv --system-site-packages test_env
