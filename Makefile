@@ -7,25 +7,13 @@ install:
 
 binaries:
 	rm -rf build/pyi-build dist/invest
-	#pyinstaller \
-	#	--onedir \
-	#	--workpath build/pyi-build \
-	#	--clean \
-	#	--specpath=exe2 \
-	#	--noupx \
-	#	--name invest \
-	#	--additional-hooks-dir exe2/hooks \
-	#	--runtime-hook exe2/hooks/rthook.py \
-	#	--console \
-	#	exe2/entrypoint.py
-
-	pyinstaller --clean exe/invest.spec
-	# Overwrite the matplotlib libpng with the homebrew one.
-	cp /usr/local/Cellar/libpng/1.6.34/lib/libpng16.16.dylib ./dist/invest/libpng16.16.dylib
-	
+	pyinstaller \
+		--workpath build/pyi-build \
+		--clean \
+		--distpath dist \
+		exe/invest.spec
 	# try listing available modules as a basic test.
 	./dist/invest/invest --list
-
 	# try opening up a model
 	./dist/invest/invest carbon
 
