@@ -1537,10 +1537,6 @@ def build_docs(options):
     archive_template = os.path.join(
         'dist', 'invest-%s-%s' % (invest_version, '%s'))
 
-    dist_dir = os.path.join('dist', 'release_%s' % invest_version)
-    if not os.path.exists(dist_dir):
-        dry('mkdir %s' % dist_dir, os.makedirs, dist_dir)
-
     print 'Using this template for the archive name: %s' % archive_template
 
     # If the user has not provided the skip-guide flag, build the User's guide.
@@ -1590,17 +1586,15 @@ def build_docs(options):
     else:
         print "Skipping the API docs"
 
-    # Copy PDF docs into the new folder
+    # Copy PDF docs into its distribution name
     try:
-        pdf = glob.glob(os.path.join('doc', 'users-guide', 'build',
+        pdf_path = glob.glob(os.path.join('doc', 'users-guide', 'build',
                                      'latex', '*.pdf'))[0]
     except IndexError:
         print "Skipping pdf, since pdf was not built."
     else:
-        out_pdf = os.path.join(dist_dir, os.path.basename(pdf))
-        out_pdf = out_pdf.replace('+VERSION+', invest_version)
-        dry('cp %s %s' % (pdf, out_pdf),
-            shutil.copyfile, pdf, out_pdf)
+        out_pdf = pdf_path.replace('+VERSION+', invest_version)
+        dry('cp %s %s' % (pdf, out_pdf), shutil.copyfile, pdf, out_pdf)
 
 
 @task
