@@ -18,10 +18,7 @@ binaries:
 	./dist/invest/invest carbon
 
 apidocs:
-	# TODO: allow this to be able to access the natcap.invest package.  Egg?
-	# This works: $ PYTHONPATH=dist/natcap.invest-3.4.2.post56+n3175d6cdcf27-py2.7-linux-x86_64.egg:$PYTHONPATH python -c "import natcap.invest"
-	# Note that this works as expected within an activated virtual environment.
-	python setup.py build_sphinx
+	python setup.py build_sphinx -a --source-dir doc/api-docs
 
 
 userguide:
