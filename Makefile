@@ -44,7 +44,19 @@ apidocs:
 
 
 userguide:
-	cd doc/users-guide && make html latex && cd build/latex && make all-pdf
+	cd doc/users-guide && $(MAKE) html latex && cd build/latex && $(MAKE) all-pdf
+
+
+SUBDIRS := $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*))
+ZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
+
+$(ZIPS):
+	cd $(SVN_DATA_REPO_PATH) && \
+		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
+
+.PHONY: sampledata
+sampledata: $(ZIPS)
+
 
 .PHONY: test
 test:
