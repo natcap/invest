@@ -1594,7 +1594,8 @@ def build_docs(options):
         print "Skipping pdf, since pdf was not built."
     else:
         out_pdf = pdf_path.replace('+VERSION+', invest_version)
-        dry('cp %s %s' % (pdf, out_pdf), shutil.copyfile, pdf, out_pdf)
+        dry(
+            'cp %s %s' % (pdf_path, out_pdf), shutil.copyfile, pdf_path, out_pdf)
 
 
 @task
