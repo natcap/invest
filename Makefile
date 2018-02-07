@@ -17,10 +17,10 @@ fetch:
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
 
-	svn update $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH) || \
+	svn update -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH) || \
 		svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
 
-	svn update $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
+	svn update -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
 		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 
