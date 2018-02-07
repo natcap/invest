@@ -61,4 +61,4 @@ test:
 .PHONY: clean
 clean:
 	python setup.py clean
-	rm -rf build dist exe/dist exe/build natcap.invest.egg-info release_env test_env
+	-rm -r build dist natcap.invest.egg-info
