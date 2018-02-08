@@ -1,11 +1,8 @@
 ; Variables needed at the command line:
 ; VERSION         - the version of InVEST we're building (example: 3.4.5)
-; VERSION_DISK    - the windows-safe version of InVEST we're building
-;                   This needs to be a valid filename on windows (no : , etc),
-;                   but could represent a development build.
+;                   This string must not contain characters that are
+;                   problematic in Windows paths (no : , etc)
 ; INVEST_3_FOLDER - The local folder of binaries to include.
-; SHORT_VERSION   - The short version name.  Usually a tagname such as 'tip',
-;                   'default', or 3.4.5.
 ; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
@@ -68,7 +65,7 @@
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
-!define PDF_NAME "InVEST_${SHORT_VERSION}_Documentation.pdf"
+!define PDF_NAME "InVEST_${VERSION}_Documentation.pdf"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
 !define PRODUCT_WEB_SITE "http://www.naturalcapitalproject.org"
 !define MUI_COMPONENTSPAGE_NODESC
@@ -141,10 +138,10 @@ SetCompressor zlib
 
 ; MUI end ------
 
-!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
+!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 OutFile ${INSTALLER_NAME}
-InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
+InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
 ShowInstDetails show
 RequestExecutionLevel admin
 
@@ -289,7 +286,7 @@ Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
 
   ; Write the uninstaller to disk
   SetOutPath "$INSTDIR"
-  !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION_DISK}.exe"
+  !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
   writeUninstaller "${UNINSTALL_PATH}"
 
   ; Create start  menu shortcuts.
