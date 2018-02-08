@@ -74,11 +74,11 @@ dist/data:
 	mkdir -p dist/data
 
 
-dist/InVEST_%_Setup.exe:
+dist/InVEST_%_Setup.exe: binaries userguide
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
 	makensis
 
-dist/InVEST%.dmg: binaries
+dist/InVEST%.dmg: binaries userguide
 	cd installer/darwin && bash -c "./build_dmg.sh"
 	cp installer/darwin/InVEST*.dmg dist
 
