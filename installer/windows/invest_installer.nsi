@@ -271,15 +271,19 @@ Function Un.onInit
     !insertmacro CheckProgramRunning "invest"
 FunctionEnd
 
+; Copied into the invest folder later in the NSIS script
+!define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
+!define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
+!macro StartMenuLink linkName modelName
+    CreateShortCut "${linkName}.lnk" "$INSTDIR\${INVEST_3_FOLDER}\invest.exe ${modelName}" "" "${INVEST_ICON}"
+!macroend
+
 Section "InVEST Tools" Section_InVEST_Tools
   SetShellVarContext all
   SectionIn RO ;require this section
 
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
 
-  ; Copied into the invest folder later in the NSIS script
-  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
-  !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
   !define HRA "${SMPATH}\Habitat Risk Assessment"
   !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -296,46 +300,45 @@ Section "InVEST Tools" Section_InVEST_Tools
   ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
   SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
 
-  CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (Percentile).lnk" "${INVEST_DATA}\invest_crop_production_percentile.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Crop Production (Regression).lnk" "${INVEST_DATA}\invest_crop_production_regression.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenic Quality (unstable).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Habitat Quality.lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Carbon.lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Forest Carbon Edge Effect.lnk" "${INVEST_DATA}\invest_forest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\GLOBIO.lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Pollination.lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Finfish Aquaculture.lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
-  CreateDirectory "${OVERLAP}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis.lnk" "${INVEST_DATA}\invest_overlap_analysis.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wave Energy.lnk" "${INVEST_DATA}\invest_wave_energy.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wind Energy.lnk" "${INVEST_DATA}\invest_wind_energy.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Coastal Vulnerability.lnk" "${INVEST_DATA}\invest_coastal_vulnerability.bat" "" "${INVEST_ICON}"
+    CreateDirectory "${SMPATH}"
+    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
+    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
+    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality (unstable)" "scenic_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
+    !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
+    !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
+    !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
+    !insertmacro StartMenuLink "${SMPATH}\Finfish Aquaculture" "finfish_aquaculture"
+    !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
+    !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
+    !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
+    !insertmacro StartMenuLink "${SMPATH}\SDR" "sdr"
+    !insertmacro StartMenuLink "${SMPATH}\NDR" "ndr"
+    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Rule Based" "sg"
+    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
+    !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
+    !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
+    !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
+    !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
+    !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
 
-  CreateDirectory "${COASTALBLUECARBON}"
-  CreateShortCut "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor.lnk" "${INVEST_DATA}\invest_coastal_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${COASTALBLUECARBON}\(2) Coastal Blue Carbon.lnk" "${INVEST_DATA}\invest_coastal_blue_carbon.bat" "" "${INVEST_ICON}"
+    CreateDirectory "${OVERLAP}"
+    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis (Management Zones)" "oa_mz"
+    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis" "oa"
 
-  CreateDirectory "${FISHERIES}"
-  CreateShortCut "${FISHERIES}\(1) Fisheries.lnk" "${INVEST_DATA}\invest_fisheries.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${FISHERIES}\(2) Fisheries Habitat Scenario Tool.lnk" "${INVEST_DATA}\invest_fisheries_hst.bat" "" "${INVEST_ICON}"
+    CreateDirectory "${COASTALBLUECARBON}"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor" "cbc_pre"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(2) Coastal Blue Carbon" "cbc"
 
-  CreateDirectory "${HRA}"
-  CreateShortCut "${HRA}\(1) Habitat Risk Assessment Preprocessor.lnk" "${INVEST_DATA}\invest_hra_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${HRA}\(2) Habitat Risk Assessment.lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\SDR.lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\NDR.lnk" "${INVEST_DATA}\invest_ndr.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Rule Based.lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based.lnk" "${INVEST_DATA}\invest_scenario_gen_proximity.bat" "" "${INVEST_ICON}"
+    CreateDirectory "${FISHERIES}"
+    !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
+    !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
 
-  CreateShortCut "${SMPATH}\Water Yield.lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Seasonal Water Yield.lnk" "${INVEST_DATA}\invest_seasonal_water_yield.bat" "" "${INVEST_ICON}"
+    CreateDirectory "${HRA}"
+    !insertmacro StartMenuLink "${HRA}\(1) Habitat Risk Assessment Preprocessor" "hra_pre"
+    !insertmacro StartMenuLink "${HRA}\(2) Habitat Risk Assessment" "hra"
 
-  CreateShortCut "${SMPATH}\RouteDEM.lnk" "${INVEST_DATA}\invest_routedem.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\DelineateIt.lnk" "${INVEST_DATA}\invest_delineateit.bat" "" "${INVEST_ICON}"
-
-  CreateShortCut "${SMPATH}\Recreation.lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
 
   ; Write registry keys for convenient uninstallation via add/remove programs.
   ; Inspired by the example at
