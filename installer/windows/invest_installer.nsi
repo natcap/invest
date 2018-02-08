@@ -425,9 +425,9 @@ Var INSTALLER_DIR
        Call DumpLog
 !macroend
 
-!macro downloadData Title Filename AdditionalSize
+!macro downloadData Title Filename AdditionalSizeKb
   Section "${Title}"
-    AddSize "${AdditionalSize}"
+    AddSize "${AdditionalSizeKb}"
 
     ; Check to see if the user defined an 'advanced options' zipfile.
     ; If yes, then we should skip all of this checking, since we only want to use
