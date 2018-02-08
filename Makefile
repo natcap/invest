@@ -57,17 +57,15 @@ userguide:
 	cd doc/users-guide && $(MAKE) html latex && cd build/latex && $(MAKE) all-pdf
 
 
-SUBDIRS := $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*))
-NORMALDIRS := $(filter-out Base_Data, $(SUBDIRS))
-BASEDATADIRS := $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
-NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(NORMALDIRS)))
-BASEDATAZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
-
-$(NORMALZIPS):
+SUBDIRS := $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
+NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
+$(NORMALZIPS): dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
 
-$(BASEDATAZIPS):
+BASEDATADIRS := $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
+BASEDATAZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
+$(BASEDATAZIPS): dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
@@ -76,7 +74,7 @@ dist/data:
 	mkdir -p dist/data
 
 .PHONY: sampledata
-sampledata: dist/data $(NORMALZIPS) $(BASEDATAZIPS)
+sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
 
 .PHONY: test
