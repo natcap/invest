@@ -11,7 +11,10 @@ HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
 env:
-	python2 -m virtualenv --system-site-packages test_env
+	python2 -m virtualenv --system-site-packages env
+	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
+	bash -c "source env/bin/activate && pip install -I nose mock"
+	bash -c "source env/bin/activate && $(MAKE) install"
 
 fetch:
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
