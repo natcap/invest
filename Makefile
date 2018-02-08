@@ -10,6 +10,9 @@ HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
+VERSION = $(shell python2 setup.py --version)
+
+
 env:
 	python2 -m virtualenv --system-site-packages env
 	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
@@ -32,10 +35,11 @@ fetch: data
 	svn update -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
 		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
-
+.PHONY: install
 install:
-	python setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist/
+	python2 setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist/
 
+.PHONY: binaries
 binaries:
 	rm -rf build/pyi-build dist/invest
 	pyinstaller \
@@ -43,15 +47,12 @@ binaries:
 		--clean \
 		--distpath dist \
 		exe/invest.spec
-	# try listing available modules as a basic test.
-	./dist/invest/invest --list
-	# try opening up a model
-	./dist/invest/invest carbon
 
+.PHONY: apidocs
 apidocs:
 	python setup.py build_sphinx -a --source-dir doc/api-docs
 
-
+.PHONY: userguide
 userguide:
 	cd doc/users-guide && $(MAKE) html latex && cd build/latex && $(MAKE) all-pdf
 
