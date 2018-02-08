@@ -62,8 +62,11 @@ $(BASEDATAZIPS):
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
 
+dist/data:
+	mkdir -p dist/data
+
 .PHONY: sampledata
-sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
+sampledata: dist/data $(NORMALZIPS) $(BASEDATAZIPS)
 
 
 .PHONY: test
