@@ -279,27 +279,18 @@ FunctionEnd
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
-  SetShellVarContext all
-  SectionIn RO ;require this section
+    SetShellVarContext all
+    SectionIn RO ;require this section
 
-  !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
+    ; Write the uninstaller to disk
+    SetOutPath "$INSTDIR"
+    !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
+    writeUninstaller "${UNINSTALL_PATH}"
 
-  !define OVERLAP "${SMPATH}\Overlap Analysis"
-  !define HRA "${SMPATH}\Habitat Risk Assessment"
-  !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
-  !define FISHERIES "${SMPATH}\Fisheries"
-  !define HYDROPOWER "${SMPATH}\Hydropower"
-
-  ; Write the uninstaller to disk
-  SetOutPath "$INSTDIR"
-  !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
-  writeUninstaller "${UNINSTALL_PATH}"
-
-  ; Create start  menu shortcuts.
-  ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
-  ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
-  SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
-
+    ; Create start  menu shortcuts.
+    ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
+    ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
+    !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
     CreateDirectory "${SMPATH}"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
@@ -323,66 +314,70 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
 
+    !define OVERLAP "${SMPATH}\Overlap Analysis"
     CreateDirectory "${OVERLAP}"
     !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis (Management Zones)" "oa_mz"
     !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis" "oa"
 
+    !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
     !insertmacro StartMenuLink "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor" "cbc_pre"
     !insertmacro StartMenuLink "${COASTALBLUECARBON}\(2) Coastal Blue Carbon" "cbc"
 
+    !define FISHERIES "${SMPATH}\Fisheries"
     CreateDirectory "${FISHERIES}"
     !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
     !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
 
+    !define HRA "${SMPATH}\Habitat Risk Assessment"
     CreateDirectory "${HRA}"
     !insertmacro StartMenuLink "${HRA}\(1) Habitat Risk Assessment Preprocessor" "hra_pre"
     !insertmacro StartMenuLink "${HRA}\(2) Habitat Risk Assessment" "hra"
 
 
-  ; Write registry keys for convenient uninstallation via add/remove programs.
-  ; Inspired by the example at
-  ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
-  !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
-  WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
-  WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
-
-
-  ; Actually install the information we want to disk.
-  SetOutPath "$INSTDIR"
-  File ..\..\LICENSE.txt
-  File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
-  file ..\..\HISTORY.rst
-
-  ; Copy over all the sample parameter files
-  File ..\..\data\invest-data\*.invs.json
-
-  SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
-  File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
-  ; invest-autotest.bat is here to help automate testing the UIs.
-  File invest-autotest.bat
-  File InVEST-2.ico
-
-  SetOutPath "$INSTDIR\documentation"
-  File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*
-
-  ; If the user has provided a custom data zipfile, unzip the data.
-  ${If} $LocalDataZipFile != ""
-    nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
-  ${EndIf}
-
-  ; Write the install log to a text file on disk.
-  StrCpy $0 "$INSTDIR\install_log.txt"
-  Push $0
-  Call DumpLog
+    ; Write registry keys for convenient uninstallation via add/remove programs.
+    ; Inspired by the example at
+    ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
+    !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
+    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
+    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
+  
+  
+    ; Actually install the information we want to disk.
+    SetOutPath "$INSTDIR"
+    File ..\..\LICENSE.txt
+    File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
+    file ..\..\HISTORY.rst
+  
+    ; Copy over all the sample parameter files
+    File ..\..\data\invest-data\*.invs.json
+  
+    SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
+    File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
+    ; invest-autotest.bat is here to help automate testing the UIs.
+    File invest-autotest.bat
+    File InVEST-2.ico
+  
+    SetOutPath "$INSTDIR\documentation"
+    File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*
+  
+    ; If the user has provided a custom data zipfile, unzip the data.
+    ${If} $LocalDataZipFile != ""
+      nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
+    ${EndIf}
+  
+    ; Write the install log to a text file on disk.
+    StrCpy $0 "$INSTDIR\install_log.txt"
+    Push $0
+    Call DumpLog
 
 SectionEnd
 
