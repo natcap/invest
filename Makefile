@@ -16,7 +16,13 @@ env:
 	bash -c "source env/bin/activate && pip install -I nose mock"
 	bash -c "source env/bin/activate && $(MAKE) install"
 
-fetch:
+
+data:
+	mkdir data
+
+
+.PHONY: fetch
+fetch: data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
 
