@@ -73,6 +73,15 @@ $(BASEDATAZIPS): dist/data
 dist/data:
 	mkdir -p dist/data
 
+
+dist/InVEST_%_Setup.exe:
+	makensis
+
+dist/InVEST%.dmg: binaries
+	cd installer/darwin && bash -c "./build_dmg.sh"
+	cp installer/darwin/InVEST*.dmg dist
+
+
 .PHONY: sampledata
 sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
@@ -92,4 +101,4 @@ test:
 .PHONY: clean
 clean:
 	python setup.py clean
-	-rm -r build dist natcap.invest.egg-info
+	-rm -r build dist natcap.invest.egg-info installer/darwin/*.dmg
