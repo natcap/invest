@@ -1,4 +1,4 @@
-SVN_DATA_REPO           = svn://scm.naturalcapitalproject.org/svn/invest-data
+SVN_DATA_REPO           = svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      = data/invest-data
 SVN_DATA_REPO_REV       = 171
 
