@@ -276,6 +276,8 @@ Section "InVEST Tools" Section_InVEST_Tools
   SectionIn RO ;require this section
 
   !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
+
+  ; Copied into the invest folder later in the NSIS script
   !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
   !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
   !define OVERLAP "${SMPATH}\Overlap Analysis"
@@ -382,7 +384,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 SectionEnd
 
 ; Only add this section if we're running the installer on Windows 7 or below.
-; See InVEST Issue #3515.
+; See InVEST Issue #3515 (https://bitbucket.org/natcap/invest/issues/3515)
 ; This section is disabled in .onInit if we're running Windows 8 or later.
 Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     File vcredist_x86.exe
