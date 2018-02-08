@@ -279,6 +279,7 @@ FunctionEnd
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
+    AddSize 230793  ; This size is based on Windows build of InVEST 3.4.0
     SetShellVarContext all
     SectionIn RO ;require this section
 
