@@ -271,7 +271,7 @@ Function Un.onInit
     !insertmacro CheckProgramRunning "invest"
 FunctionEnd
 
-Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
+Section "InVEST Tools" Section_InVEST_Tools
   SetShellVarContext all
   SectionIn RO ;require this section
 
