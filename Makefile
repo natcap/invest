@@ -48,14 +48,22 @@ userguide:
 
 
 SUBDIRS := $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*))
-ZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
+NORMALDIRS := $(filter-out Base_Data, $(SUBDIRS))
+BASEDATADIRS := $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
+NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(NORMALDIRS)))
+BASEDATAZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
 
-$(ZIPS):
+$(NORMALZIPS):
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
 
+$(BASEDATAZIPS):
+	cd $(SVN_DATA_REPO_PATH) && \
+		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
+
+
 .PHONY: sampledata
-sampledata: $(ZIPS)
+sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
 
 .PHONY: test
