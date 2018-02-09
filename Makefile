@@ -61,7 +61,8 @@ fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 .PHONY: install
 install: dist
-	python2 setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist
+	python2 setup.py bdist_wheel && \
+		pip install --no-index --use-wheel --find-links=dist natcap.invest 
 
 .PHONY: binaries
 binaries: dist build
