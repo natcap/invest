@@ -73,13 +73,24 @@ binaries: dist build
 		--distpath dist \
 		exe/invest.spec
 
-.PHONY: apidocs
-apidocs:
+dist/apidocs:
 	python setup.py build_sphinx -a --source-dir doc/api-docs
+	cp -r build/sphinx/html dist/apidocs
+
+.PHONY: apidocs
+apidocs: dist/apidocs
+
+dist/%.pdf:
+	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
+	cd build/userguide/latex && make all-pdf
+	cp build/userguide/latex/InVEST*.pdf dist
+
+dist/userguide:
+	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
+	cp -r build/userguide/html dist/userguide
 
 .PHONY: userguide
-userguide:
-	cd doc/users-guide && $(MAKE) html latex && cd build/latex && $(MAKE) all-pdf
+userguide: dist/userguide dist/%.pdf
 
 
 SUBDIRS := $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
