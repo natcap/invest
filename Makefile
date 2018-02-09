@@ -10,6 +10,7 @@ HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
+NOSETESTS = python -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
 VERSION = $(shell python2 setup.py --version)
 PYTHON_ARCH = $(shell python2 -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
@@ -27,7 +28,6 @@ DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSIO
 env:
 	python2 -m virtualenv --system-site-packages env
 	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
-	bash -c "source env/bin/activate && pip install -I nose mock"
 	bash -c "source env/bin/activate && $(MAKE) install"
 
 
@@ -120,18 +120,13 @@ windows_installer:
 .PHONY: sampledata
 sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
-
 .PHONY: test
 test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
-	nosetests -vsP \
-		--with-coverage \
-		--cover-package=natcap.invest \
-		--cover-erase \
-		--with-xunit \
-		--cover-tests \
-		--cover-html \
-		--logging-filter=None \
-		tests/*.py ui_tests/*.py
+	$(NOSETESTS) tests
+
+.PHONY: test_ui
+test_ui:
+	$(NOSETESTS) ui_tests
 
 .PHONY: clean
 clean:
