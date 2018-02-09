@@ -64,14 +64,17 @@ install: dist
 	python2 setup.py bdist_wheel && \
 		pip install --no-index --use-wheel --find-links=dist natcap.invest 
 
-.PHONY: binaries
-binaries: dist build
+dist/invest: dist
 	-rm -r build/pyi-build dist/invest
 	pyinstaller \
 		--workpath build/pyi-build \
 		--clean \
 		--distpath dist \
 		exe/invest.spec
+
+.PHONY: binaries
+binaries: build
+	$(MAKE) dist/invest
 
 dist/apidocs:
 	python setup.py build_sphinx -a --source-dir doc/api-docs
@@ -110,7 +113,8 @@ build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 
-dist/InVEST_%_Setup.exe: dist build binaries userguide build/vcredist_x86.exe
+.PHONY: windows_installer
+windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 	makensis \
 		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
@@ -119,14 +123,9 @@ dist/InVEST_%_Setup.exe: dist build binaries userguide build/vcredist_x86.exe
 		/DFORKNAME=$(FORKNAME) \
 		/DDATA_LOCATION=$(DATA_BASE_URL)
 
-dist/InVEST%.dmg: binaries userguide
-	cd installer/darwin && bash -c "./build_dmg.sh"
-	cp installer/darwin/InVEST*.dmg dist
-
-.PHONY: windows_installer
-windows_installer:
-	$(MAKE) dist$(/)InVEST_$(VERSION)_Setup.exe
-
+.PHONY: mac_installer
+mac_installer: dist/invest dist/userguide
+	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
 
 .PHONY: sampledata
 sampledata: $(NORMALZIPS) $(BASEDATAZIPS)

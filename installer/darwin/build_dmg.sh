@@ -1,19 +1,22 @@
 #!/bin/bash -ve
 #
+# This script is assumed to be executed from the project root.
+#
 # Arguments:
 #  $1 = the version string to use
 #  $2 = the path to the binary dir to package.
+#  $3 = the path to the directory of html documentation to include.
 #
 # Script adapted from http://stackoverflow.com/a/1513578/299084
 # TODO: unmount any existing disk images with the same name.
 
+CONFIG_DIR="installer/darwin"
 appdirname="InVEST_${1}_unstable"  # the name of the folder the user will drag from the DMG to their applications folder.
 title="InVEST ${1}"  # the name of the volume the DMG provides.
-finalDMGName="InVEST ${1}"  # the name of the final DMG file.
+finalDMGName="dist/InVEST ${1}.dmg"  # the name of the final DMG file.
 
 # remove temp files that can get in the way
-tempdir=temp/"$appdirname"
-rm -f *.dmg
+tempdir="build/dmg/$appdirname"
 if [ -d "$tempdir" ]
 then
     rm -rfd "$tempdir"
@@ -33,10 +36,10 @@ mkdir -p "${_MACOSDIR}"
 mkdir -p "${_RESOURCEDIR}"
 cp -r "$2" "$_MACOSDIR/invest_dist"
 new_command_file="$_MACOSDIR/$new_basename"
-cp invest.icns "$_RESOURCEDIR/invest.icns"
+cp $CONFIG_DIR/invest.icns "$_RESOURCEDIR/invest.icns"
 
 new_plist_file="$_APPDIR/Contents/Info.plist"
-cp Info.plist "$new_plist_file"
+cp $CONFIG_DIR/Info.plist "$new_plist_file"
 
 # replace the version and application name strings in the Info.plist file
 sed -i '' "s|++NAME++|$new_basename|g" "$new_plist_file"
@@ -48,11 +51,11 @@ echo '`dirname $0`/invest_dist/invest launcher' >> $new_command_file
 chmod a+x $new_command_file
 
 # copy the docs into the dmg
-docsdir=../../doc/users-guide/build/html
+docsdir="$3"
 if [ -d $docsdir ]
 then
     cp -r $docsdir $tempdir/documentation
 fi
 
-dmgbuild -Dinvestdir="$tempdir" -s dmgconf.py "$title" "$finalDMGName"
+dmgbuild -Dinvestdir="$tempdir" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
     
