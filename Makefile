@@ -70,12 +70,12 @@ dist/apidocs:
 
 apidocs: dist/apidocs
 
-dist/%.pdf:
+dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
 	cd build/userguide/latex && make all-pdf
 	cp build/userguide/latex/InVEST*.pdf dist
 
-dist/userguide:
+dist/userguide: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
 	cp -r build/userguide/html dist/userguide
 
