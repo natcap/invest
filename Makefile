@@ -62,9 +62,7 @@ dist/invest: dist build
 		--distpath dist \
 		exe/invest.spec
 
-.PHONY: binaries
-binaries: build
-	$(MAKE) dist/invest
+binaries: dist/invest
 
 dist/apidocs:
 	python setup.py build_sphinx -a --source-dir doc/api-docs
@@ -85,13 +83,13 @@ userguide: dist/userguide dist/%.pdf
 
 SUBDIRS := $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
 NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
-$(NORMALZIPS): dist/data
+$(NORMALZIPS): $(SVN_DATA_REPO_PATH) dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
 
 BASEDATADIRS := $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
 BASEDATAZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
-$(BASEDATAZIPS): dist/data
+$(BASEDATAZIPS): $(SVN_DATA_REPO_PATH) dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
@@ -121,4 +119,4 @@ test_ui:
 
 clean:
 	python setup.py clean
-	-rm -r build dist natcap.invest.egg-info installer/darwin/*.dmg
+	-rm -r build natcap.invest.egg-info
