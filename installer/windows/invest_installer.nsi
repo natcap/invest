@@ -67,7 +67,7 @@
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
 !define PDF_NAME "InVEST_${VERSION}_Documentation.pdf"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
-!define PRODUCT_WEB_SITE "http://www.naturalcapitalproject.org"
+!define PRODUCT_WEB_SITE "https://www.naturalcapitalproject.org"
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
@@ -140,7 +140,7 @@ SetCompressor zlib
 
 !define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile ${INSTALLER_NAME}
+OutFile ..\dist\${INSTALLER_NAME}
 InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
 ShowInstDetails show
 RequestExecutionLevel admin
@@ -386,9 +386,9 @@ SectionEnd
 ; See InVEST Issue #3515 (https://bitbucket.org/natcap/invest/issues/3515)
 ; This section is disabled in .onInit if we're running Windows 8 or later.
 Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
-    File vcredist_x86.exe
+    SetOutPath "$INSTDIR"
+    File ..\build\vcredist_x86.exe
     ExecWait "vcredist_x86.exe /q"
-    Delete vcredist_x86.exe
 SectionEnd
 
 Section "uninstall"
