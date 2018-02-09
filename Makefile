@@ -14,6 +14,7 @@ NOSETESTS = python -m nose -vsP --with-coverage --cover-package=natcap.invest --
 VERSION = $(shell python2 setup.py --version)
 PYTHON_ARCH = $(shell python2 -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
+DIRS = build data dist dist/data
 
 # These are intended to be overridden by a jenkins build.
 # When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
@@ -24,24 +25,15 @@ DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latest
 FORKNAME = ""
 DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean
 
 env:
 	python2 -m virtualenv --system-site-packages env
 	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
 	bash -c "source env/bin/activate && $(MAKE) install"
 
-
-build:
-	mkdir build
-
-data:
-	mkdir data
-
-dist:
-	mkdir dist
-
-dist/data: dist
-	mkdir dist/data
+$(DIRS):
+	mkdir -p $@
 
 $(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
@@ -55,16 +47,14 @@ $(SVN_TEST_DATA_REPO_PATH): data
 	svn update -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
 		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
-.PHONY: fetch
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 
-.PHONY: install
 install: dist
 	python2 setup.py bdist_wheel && \
 		pip install --no-index --use-wheel --find-links=dist natcap.invest 
 
-dist/invest: dist
+dist/invest: dist build
 	-rm -r build/pyi-build dist/invest
 	pyinstaller \
 		--workpath build/pyi-build \
@@ -80,7 +70,6 @@ dist/apidocs:
 	python setup.py build_sphinx -a --source-dir doc/api-docs
 	cp -r build/sphinx/html dist/apidocs
 
-.PHONY: apidocs
 apidocs: dist/apidocs
 
 dist/%.pdf:
@@ -92,9 +81,7 @@ dist/userguide:
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
 	cp -r build/userguide/html dist/userguide
 
-.PHONY: userguide
 userguide: dist/userguide dist/%.pdf
-
 
 SUBDIRS := $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
 NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
@@ -108,12 +95,12 @@ $(BASEDATAZIPS): dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
+sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 
-.PHONY: windows_installer
 windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 	makensis \
 		/O=build\nsis.log \
@@ -123,22 +110,15 @@ windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 		/DFORKNAME=$(FORKNAME) \
 		/DDATA_LOCATION=$(DATA_BASE_URL)
 
-.PHONY: mac_installer
 mac_installer: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
 
-.PHONY: sampledata
-sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
-
-.PHONY: test
 test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 	$(NOSETESTS) tests
 
-.PHONY: test_ui
 test_ui:
 	$(NOSETESTS) ui_tests
 
-.PHONY: clean
 clean:
 	python setup.py clean
 	-rm -r build dist natcap.invest.egg-info installer/darwin/*.dmg
