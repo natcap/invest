@@ -37,6 +37,12 @@ build:
 data:
 	mkdir data
 
+dist:
+	mkdir dist
+
+dist/data: dist
+	mkdir dist/data
+
 
 .PHONY: fetch
 fetch: data
@@ -50,11 +56,11 @@ fetch: data
 		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 .PHONY: install
-install:
-	python2 setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist/
+install: dist
+	python2 setup.py bdist_wheel && wheel install natcap.invest --wheel-dir=dist
 
 .PHONY: binaries
-binaries:
+binaries: dist build
 	-rm -r build/pyi-build dist/invest
 	pyinstaller \
 		--workpath build/pyi-build \
@@ -84,15 +90,11 @@ $(BASEDATAZIPS): dist/data
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
 
-dist/data:
-	mkdir -p dist/data
-
-
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
 
-dist/InVEST_%_Setup.exe: build binaries userguide build/vcredist_x86.exe
+dist/InVEST_%_Setup.exe: dist build binaries userguide build/vcredist_x86.exe
 	makensis \
 		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
