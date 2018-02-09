@@ -11,6 +11,17 @@ HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
 VERSION = $(shell python2 setup.py --version)
+PYTHON_ARCH = $(shell python2 -c "import struct; print(8*struct.calcsize('P'))")
+DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
+
+# These are intended to be overridden by a jenkins build.
+# When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
+# to wherever the datasets will be available based on the forkname and where
+# we're storing the datasets.
+# These defaults assume that we're storing datasets for an InVEST release.
+# DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
+FORKNAME = ""
+DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
 
 env:
@@ -19,6 +30,9 @@ env:
 	bash -c "source env/bin/activate && pip install -I nose mock"
 	bash -c "source env/bin/activate && $(MAKE) install"
 
+
+build:
+	mkdir build
 
 data:
 	mkdir data
@@ -41,7 +55,7 @@ install:
 
 .PHONY: binaries
 binaries:
-	rm -rf build/pyi-build dist/invest
+	-rm -r build/pyi-build dist/invest
 	pyinstaller \
 		--workpath build/pyi-build \
 		--clean \
@@ -74,9 +88,18 @@ dist/data:
 	mkdir -p dist/data
 
 
-dist/InVEST_%_Setup.exe: binaries userguide
-	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe"
-	makensis
+build/vcredist_x86.exe: build
+	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
+
+
+dist/InVEST_%_Setup.exe: build binaries userguide build/vcredist_x86.exe
+	makensis \
+		/O=build\nsis.log \
+		/DVERSION=$(VERSION) \
+		/DBINDIR=dist\invest \
+		/DARCHITECTURE=$(PYTHON_ARCH) \
+		/DFORKNAME=$(FORKNAME) \
+		/DDATA_LOCATION=$(DATA_BASE_URL)
 
 dist/InVEST%.dmg: binaries userguide
 	cd installer/darwin && bash -c "./build_dmg.sh"
