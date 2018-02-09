@@ -43,20 +43,20 @@ dist:
 dist/data: dist
 	mkdir dist/data
 
-data/$(HG_UG_REPO_PATH): data
+$(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
 
-data/$(SVN_DATA_REPO_PATH): data
+$(SVN_DATA_REPO_PATH): data
 	svn update -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH) || \
 		svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
 
-data/$(SVN_TEST_DATA_REPO_PATH): data
+$(SVN_TEST_DATA_REPO_PATH): data
 	svn update -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH) || \
 		svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 .PHONY: fetch
-fetch: data/$(HG_UG_REPO_PATH) data/$(SVN_DATA_REPO_PATH) data/$(SVN_TEST_DATA_REPO_PATH)
+fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 
 .PHONY: install
@@ -121,7 +121,7 @@ sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
 
 
 .PHONY: test
-test: data/$(SVN_DATA_REPO_PATH) data/$(SVN_TEST_DATA_REPO_PATH)
+test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 	nosetests -vsP \
 		--with-coverage \
 		--cover-package=natcap.invest \
