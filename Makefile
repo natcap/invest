@@ -25,7 +25,23 @@ DIRS = build data dist dist/data
 FORKNAME = ""
 DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help
+
+help:
+	@echo "Please use \`make <target>' where <target> is one of"
+	@echo "  env               to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
+	@echo "  fetch             to clone all managed repositories"
+	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
+	@echo "  binaries          to build pyinstaller binaries"
+	@echo "  apidocs           to build HTML API documentation"
+	@echo "  userguide         to build HTML and PDF versions of the user's guide"
+	@echo "  windows_installer to build an NSIS installer for distribution"
+	@echo "  mac_installer     to build a disk image for distribution"
+	@echo "  sampledata        to build sample data zipfiles"
+	@echo "  test              to run nosetests on the tests directory"
+	@echo "  ui_test           to run nosetests on the ui_tests directory"
+	@echo "  clean             to remove temporary directories (but not dist/)"
+	@echo "  help              to print this help and exit"
 
 env:
 	python2 -m virtualenv --system-site-packages env
