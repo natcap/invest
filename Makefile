@@ -107,6 +107,10 @@ dist/InVEST%.dmg: binaries userguide
 	cd installer/darwin && bash -c "./build_dmg.sh"
 	cp installer/darwin/InVEST*.dmg dist
 
+.PHONY: windows_installer
+windows_installer:
+	$(MAKE) dist$(/)InVEST_$(VERSION)_Setup.exe
+
 
 .PHONY: sampledata
 sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
