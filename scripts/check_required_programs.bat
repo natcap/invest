@@ -10,11 +10,11 @@ REM     .\check_required_programs.bat program1 program2 program3
 REM
 REM No fun colors here ... standard CMD prompt doesn't support it.
 
-FOR %a in (%*) DO (
-    @where /Q %a
+FOR %%a in (%*) DO (
+    @where /Q %%a
     IF %ERRORLEVEL% NEQ 0 (
-        echo MISSING: %a
+        echo MISSING: %%a
     ) ELSE (
-        echo OK: %a
+        echo OK: %%a
     )
 )
