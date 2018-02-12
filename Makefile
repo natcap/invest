@@ -152,8 +152,8 @@ clean:
 	-rm -r build natcap.invest.egg-info
 
 check:
-	@echo "Checking required applications"
+	@echo Checking required applications
 	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
-	@echo ""
-	@echo "Checking python packages"
-	@pip freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL) && pip check
+	@echo 
+	@echo Checking python packages
+	@pip freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
