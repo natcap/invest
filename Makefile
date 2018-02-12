@@ -139,3 +139,7 @@ test_ui:
 clean:
 	python setup.py clean
 	-rm -r build natcap.invest.egg-info
+
+check:
+	# Still need a way to check binaries on PATH.
+	pip freeze --all -r requirements.txt -r requirements-dev.txt > /dev/null && pip check

@@ -9,17 +9,17 @@
 # `paver check` to verify you have all the required packages.
 
 Pyro4==4.41
-gdal>=2.0,<3.0
+GDAL>=2.0,<3.0
 matplotlib
 numpy>=1.11.0
-rtree>=0.8.2
+Rtree>=0.8.2
 scipy>=0.16.1
-shapely
+Shapely
 six
 
 # pygeoprocessing>=0.6.0,<0.7.0
-hg+https://bitbucket.org/jdouglass/pygeoprocessing@908b323
+hg+https://bitbucket.org/jdouglass/pygeoprocessing@908b323#egg=pygeoprocessing
 
 #taskgraph[niced_processes]>=0.2.3,<0.3.0
-hg+https://bitbucket.org/jdouglass/taskgraph@58555b7
+hg+https://bitbucket.org/jdouglass/taskgraph@58555b7#egg=taskgraph
 psutil
