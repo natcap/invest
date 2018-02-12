@@ -61,11 +61,11 @@ class FisheriesSampleDataTests(unittest.TestCase):
         """Fisheries: Verify run on Shrimp sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
-            u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'alpha': 6050000.0,
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
-            u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'beta': 4.14e-08,
             u'do_batch': False,
             u'harvest_units': 'Weight',
             u'migr_cont': False,
@@ -75,7 +75,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'population_type': 'Stage-Based',
             u'recruitment_type': 'Fixed',
             u'sexsp': 'No',
-            u'spawn_units': 'Individuals',  # TODO: supposedly ignored w/Fixed
+            u'spawn_units': 'Individuals',
             u'total_init_recruits': 1e5,
             u'total_recur_recruits': 2.16e11,
             u'total_timesteps': 300,
@@ -272,12 +272,12 @@ class FisheriesSampleDataTests(unittest.TestCase):
         """
         args = FisheriesSampleDataTests.fecundity_args(workspace)
         args.update({
-            u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'alpha': 6050000.0,
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
-            u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
-            u'harvest_units': 'Individuals',  # TODO: supposedly ignored w/Fixed, keyerror
+            u'beta': 4.14e-08,
+            u'harvest_units': 'Individuals',
             u'spawn_units': 'Individuals',
             u'total_timesteps': 300,
         })
@@ -362,8 +362,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         from natcap.invest.fisheries import fisheries
 
         args = {
-            u'alpha': 6050000.0,  # TODO: supposedly ignored w/Fixed, keyerror
-            u'beta': 4.14e-08,  # TODO: supposedly ignored w/Fixed, keyerror
+            u'alpha': 6050000.0,
+            u'beta': 4.14e-08,
             u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
@@ -375,7 +375,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'population_type': 'Stage-Based',
             u'recruitment_type': 'Fixed',
             u'sexsp': 'No',
-            u'spawn_units': 'Individuals',  # TODO: supposedly ignored w/Fixed
+            u'spawn_units': 'Individuals',
             u'total_init_recruits': 1e5,
             u'total_recur_recruits': 2.16e11,
             u'total_timesteps': 300,
