@@ -183,11 +183,12 @@ def _calculate_args_bounding_box(args_dict):
                     local_bb, bb_intersection, 'intersection')
                 bb_union = _merge_bounding_boxes(
                     local_bb, bb_union, 'union')
-            except Exception as e:
+            except Exception as transform_error:
                 # All kinds of exceptions from bad transforms or CSV files
                 # or dbf files could get us to this point, just don't bother
                 # with the local_bb at all
-                LOGGER.exception('Error when transforming coordinates')
+                LOGGER.exception('Error when transforming coordinates: %s',
+                                 transform_error)
 
         return bb_intersection, bb_union
 
