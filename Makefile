@@ -11,10 +11,13 @@ HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
 NOSETESTS = python -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
-VERSION = $(shell python2 setup.py --version)
-PYTHON_ARCH = $(shell python2 -c "import struct; print(8*struct.calcsize('P'))")
+PYTHON = python2
+VERSION = $(shell $(PYTHON) setup.py --version)
+PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 DIRS = build data dist dist/data
+WHICH = which  # where on windows.  https://stackoverflow.com/a/4002828
+REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
 
 # These are intended to be overridden by a jenkins build.
 # When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
@@ -44,7 +47,7 @@ help:
 	@echo "  help              to print this help and exit"
 
 env:
-	python2 -m virtualenv --system-site-packages env
+	$(PYTHON) -m virtualenv --system-site-packages env
 	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
 	bash -c "source env/bin/activate && $(MAKE) install"
 
@@ -67,7 +70,7 @@ fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 
 install: dist
-	python2 setup.py bdist_wheel && \
+	$(PYTHON) setup.py bdist_wheel && \
 		pip install --no-index --use-wheel --find-links=dist natcap.invest 
 
 dist/invest: dist build
