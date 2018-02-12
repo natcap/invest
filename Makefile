@@ -154,6 +154,6 @@ clean:
 check:
 	@echo Checking required applications
 	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
-	@echo 
+	@echo ----------------------------
 	@echo Checking python packages
 	@pip freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
