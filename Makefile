@@ -16,8 +16,18 @@ VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 DIRS = build data dist dist/data
-WHICH = which  # where on windows.  https://stackoverflow.com/a/4002828
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
+
+ifeq ($(OS),Windows_NT)
+	WHICH = where
+	NULL = NUL
+	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
+else
+	WHICH = which
+	NULL = /dev/null
+	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
+endif
+
 
 # These are intended to be overridden by a jenkins build.
 # When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
@@ -28,10 +38,11 @@ REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
 FORKNAME = ""
 DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
+	@echo "  check             to verify all needed programs and packages are installed"
 	@echo "  env               to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
 	@echo "  fetch             to clone all managed repositories"
 	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
@@ -141,5 +152,8 @@ clean:
 	-rm -r build natcap.invest.egg-info
 
 check:
-	# Still need a way to check binaries on PATH.
-	pip freeze --all -r requirements.txt -r requirements-dev.txt > /dev/null && pip check
+	@echo "Checking required applications"
+	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
+	@echo ""
+	@echo "Checking python packages"
+	@pip freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL) && pip check
