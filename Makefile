@@ -24,11 +24,13 @@ ifeq ($(OS),Windows_NT)
 	NULL = NUL
 	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
+	CP = copy /Y
 else
 	NULL = /dev/null
 	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
+	CP = cp -r
 endif
 
 
@@ -102,20 +104,19 @@ dist/invest: dist build
 
 binaries: dist/invest
 
+apidocs: dist/apidocs
 dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	cp -r build/sphinx/html dist/apidocs
-
-apidocs: dist/apidocs
+	$(CP) build/sphinx/html dist/apidocs
 
 dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
 	cd build/userguide/latex && $(MAKE) all-pdf
-	cp build/userguide/latex/InVEST*.pdf dist
+	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 dist/userguide: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
-	cp -r build/userguide/html dist/userguide
+	$(CP) build/userguide/html dist/userguide
 
 userguide: dist/userguide dist/%.pdf
 
