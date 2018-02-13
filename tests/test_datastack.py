@@ -6,6 +6,7 @@ import json
 import tarfile
 import textwrap
 
+
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 from osgeo import ogr
