@@ -78,7 +78,7 @@ fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 install: dist
 	$(PYTHON) setup.py bdist_wheel && \
-		pip install --no-index --use-wheel --find-links=dist natcap.invest 
+		pip install --use-wheel --find-links=dist natcap.invest 
 
 dist/invest: dist build
 	-rm -r build/pyi-build dist/invest
