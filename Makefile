@@ -12,12 +12,13 @@ HG_UG_REPO_REV          = ae4705d8c9ad
 
 ENV = env
 PYTHON = python2
+PIP = pip
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
 VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 DIRS = build data dist dist/data
-REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
+REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 ifeq ($(OS),Windows_NT)
 	NULL = NUL
@@ -61,7 +62,7 @@ help:
 
 env:
 	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(ENV_ACTIVATE) && pip install -r requirements.txt -r requirements-dev.txt
+	$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt
 	$(ENV_ACTIVATE) && $(MAKE) install
 
 $(DIRS):
@@ -156,4 +157,4 @@ check:
 	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
 	@echo ----------------------------
 	@echo Checking python packages
-	@pip freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
+	@$(PIP) freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
