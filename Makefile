@@ -41,7 +41,7 @@ endif
 FORKNAME = ""
 DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) python_packages
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -52,6 +52,7 @@ help:
 	@echo "  binaries          to build pyinstaller binaries"
 	@echo "  apidocs           to build HTML API documentation"
 	@echo "  userguide         to build HTML and PDF versions of the user's guide"
+	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
@@ -80,10 +81,16 @@ $(SVN_TEST_DATA_REPO_PATH): data
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
+dist/natcap.invest%.whl: dist
+	$(PYTHON) setup.py bdist_wheel
 
-install: dist
-	$(PYTHON) setup.py bdist_wheel && \
-		pip install --use-wheel --find-links=dist natcap.invest 
+dist/natcap.invest%.zip: dist
+	$(PYTHON) setup.py sdist --formats=zip
+
+python_packages: dist/natcap.invest%.whl dist/natcap.invest%.zip
+
+install: dist/natcap.invest*.whl
+	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
 dist/invest: dist build
 	-rm -r build/pyi-build dist/invest
@@ -103,7 +110,7 @@ apidocs: dist/apidocs
 
 dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
-	cd build/userguide/latex && make all-pdf
+	cd build/userguide/latex && $(MAKE) all-pdf
 	cp build/userguide/latex/InVEST*.pdf dist
 
 dist/userguide: $(HG_UG_REPO_PATH)
