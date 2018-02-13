@@ -3417,7 +3417,7 @@ def test(args):
                 '--cover-xml '
                 '--cover-tests '
                 '--logging-filter=None '
-                '--nologcapture '
+                '--debug=natcap,pygeoprocessing'
             )
         else:
             flags = _coverage_flags + '--cover-html '
@@ -3556,7 +3556,7 @@ def test_ui(args):
                 '--cover-xml '
                 '--cover-tests '
                 '--logging-filter=None '
-                '--nologcapture '
+                '--debug=natcap,pygeoprocessing'
             )
         else:
             flags = _coverage_flags + '--cover-html '
