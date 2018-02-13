@@ -13,7 +13,7 @@ HG_UG_REPO_REV          = ae4705d8c9ad
 ENV = env
 PYTHON = python2
 PIP = pip
-NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --debug=natcap,pygeoprocessing
+NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
