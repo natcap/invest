@@ -68,7 +68,7 @@
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
-!define PDF_NAME "InVEST_${SHORT_VERSION}_Documentation.pdf"
+!define PDF_NAME "InVEST_${VERSION}_Documentation.pdf"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
 !define PRODUCT_WEB_SITE "http://www.naturalcapitalproject.org"
 !define MUI_COMPONENTSPAGE_NODESC
