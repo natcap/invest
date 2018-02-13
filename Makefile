@@ -10,8 +10,8 @@ HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
-NOSETESTS = python -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
 PYTHON = python2
+NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
 VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
@@ -95,7 +95,7 @@ dist/invest: dist build
 binaries: dist/invest
 
 dist/apidocs:
-	python setup.py build_sphinx -a --source-dir doc/api-docs
+	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	cp -r build/sphinx/html dist/apidocs
 
 apidocs: dist/apidocs
@@ -148,7 +148,7 @@ test_ui:
 	$(NOSETESTS) ui_tests
 
 clean:
-	python setup.py clean
+	$(PYTHON) setup.py clean
 	-rm -r build natcap.invest.egg-info
 
 check:
