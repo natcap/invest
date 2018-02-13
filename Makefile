@@ -19,11 +19,9 @@ DIRS = build data dist dist/data
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
 
 ifeq ($(OS),Windows_NT)
-	WHICH = where
 	NULL = NUL
 	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
 else
-	WHICH = which
 	NULL = /dev/null
 	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
 endif
@@ -38,7 +36,7 @@ endif
 FORKNAME = ""
 DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -53,7 +51,7 @@ help:
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
 	@echo "  test              to run nosetests on the tests directory"
-	@echo "  ui_test           to run nosetests on the ui_tests directory"
+	@echo "  test_ui           to run nosetests on the ui_tests directory"
 	@echo "  clean             to remove temporary directories (but not dist/)"
 	@echo "  help              to print this help and exit"
 
