@@ -10,6 +10,7 @@ HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = ae4705d8c9ad
 
+ENV = env
 PYTHON = python2
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-filter=None
 VERSION = $(shell $(PYTHON) setup.py --version)
@@ -21,9 +22,12 @@ REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex pip makensis
 ifeq ($(OS),Windows_NT)
 	NULL = NUL
 	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
+	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
 else
 	NULL = /dev/null
 	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
+	ENV_ACTIVATE = source $(ENV)/bin/activate
+	SHELL := /bin/bash
 endif
 
 
@@ -56,9 +60,9 @@ help:
 	@echo "  help              to print this help and exit"
 
 env:
-	$(PYTHON) -m virtualenv --system-site-packages env
-	bash -c "source env/bin/activate && pip install -r requirements.txt -r requirements-dev.txt"
-	bash -c "source env/bin/activate && $(MAKE) install"
+	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
+	$(ENV_ACTIVATE) && pip install -r requirements.txt -r requirements-dev.txt
+	$(ENV_ACTIVATE) && $(MAKE) install
 
 $(DIRS):
 	mkdir -p $@
