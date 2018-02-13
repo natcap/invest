@@ -43,56 +43,9 @@ class Executor(QtCore.QObject, threading.Thread):
             kwargs = {}
         self.kwargs = kwargs
 
-        self.mutex = QtCore.QMutex()
-
-        self._failed = False
-        self._exception = None
-        self._traceback = None
-
-    @property
-    def exception(self):
-        """Property getter for self.exception, guarded by a mutex."""
-        self.mutex.lock()
-        exception = self._exception
-        self.mutex.unlock()
-        return exception
-
-    @exception.setter
-    def exception(self, exception):
-        """Property setter for self.exception, guarded by a mutex."""
-        self.mutex.lock()
-        self._exception = exception
-        self.mutex.unlock()
-
-    @property
-    def failed(self):
-        """Property getter for self.failed, guarded by a mutex."""
-        self.mutex.lock()
-        failed = self._failed
-        self.mutex.unlock()
-        return failed
-
-    @failed.setter
-    def failed(self, run_failed):
-        """Property setter for self.exception, guarded by a mutex."""
-        self.mutex.lock()
-        self._failed = run_failed
-        self.mutex.unlock()
-
-    @property
-    def traceback(self):
-        """Property getter for self.traceback, guarded by a mutex."""
-        self.mutex.lock()
-        _traceback = self._traceback
-        self.mutex.unlock()
-        return _traceback
-
-    @traceback.setter
-    def traceback(self, traceback_stack):
-        """Property setter for self.exception, guarded by a mutex."""
-        self.mutex.lock()
-        self._traceback = traceback_stack
-        self.mutex.unlock()
+        self.failed = False
+        self.exception = None
+        self.traceback = None
 
     def run(self):
         """Run the target callable in a separate thread of control.
