@@ -608,6 +608,7 @@ def execute(args):
         sub_effective_retention_path = (
             f_reg['sub_effective_retention_%s_path' % nutrient])
         LOGGER.info('calculate subsurface effective retention')
+        sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
         ndr_core.ndr_eff_calculation(
             f_reg['flow_direction_path'], f_reg['stream_path'], sub_eff_path,
             sub_crit_len_path, sub_effective_retention_path)
