@@ -496,7 +496,7 @@ class TextTest(GriddedInputTest):
     def test_set_value_latin1(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('gr\xe3\xa9gory')  # Latin-1 bytestring
+        input_instance.set_value('gr\xe9gory')  # Latin-1 bytestring
         self.assertEqual(input_instance.value(), u'grégory')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
