@@ -359,7 +359,8 @@ def set_cycle_func(vars_dict, rec_func):
             # See the note in age_based_cycle_func
             N_next[0] = N_next_0_xsa
 
-        N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0])) * S[0]
+        N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0][0])) * S[0]
+
 
         for i in range(1, num_classes):
             G_comp = np.array(map(lambda x: Migration[i-1].dot(
