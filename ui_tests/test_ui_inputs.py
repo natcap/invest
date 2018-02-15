@@ -497,21 +497,26 @@ class TextTest(GriddedInputTest):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('gr\xe9gory')  # Latin-1 bytestring
-        self.assertEqual(input_instance.value(), u'grégory')
+        self.assertEqual(input_instance.value(),
+                         unicode('gr\xc3\xa9gory', 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_str(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('fooДЖЩя')  # UTF-8 encoded bytestring
-        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        self.assertEqual(input_instance.value(),
+                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
+                                 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_unicode(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value(u'fooДЖЩя')  # already UTF-8 unicode
-        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        self.assertEqual(input_instance.value(),
+                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
+                                 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_int(self):
