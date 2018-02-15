@@ -43,6 +43,12 @@ QT_APP = QApplication.instance()
 if QT_APP is None:
     QT_APP = QApplication(sys.argv)  # pragma: no cover
 
+# If we're running PyQt4, we need to instruct Qt to use UTF-8 strings
+# internally.
+if qtpy.API in ('pyqt', 'pyqt4'):
+    QtCore.QTextCodec.setCodecForCStrings(
+        QtCore.QTextCodec.codecForName('UTF-8'))
+
 LOGGER = logging.getLogger(__name__)
 ICON_FOLDER = qtawesome.icon('fa.folder-o')
 ICON_FILE = qtawesome.icon('fa.file-o')

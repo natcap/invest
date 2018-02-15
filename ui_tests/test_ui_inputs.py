@@ -63,6 +63,13 @@ class _QtTest(unittest.TestCase):
             QApplication = QtWidgets.QApplication
 
         self.qt_app = QApplication.instance()
+
+        # If we're running PyQt4, we need to instruct Qt to use UTF-8 strings
+        # internally.
+        if qtpy.API in ('pyqt', 'pyqt4'):
+            QtCore.QTextCodec.setCodecForCStrings(
+                QtCore.QTextCodec.codecForName('UTF-8'))
+
         if self.qt_app is None:
             self.qt_app = QApplication(sys.argv)
 
