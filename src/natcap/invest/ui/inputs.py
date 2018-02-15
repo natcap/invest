@@ -1561,7 +1561,7 @@ class Text(GriddedInput):
             # If we can't encode or decode, there's a serious problem.  Log to
             # the console and allow the user to provide their own input
             # directly to the text element.
-            LOGGER.exception('Could not set the value of this input.')
+            LOGGER.exception('Could determine encoding; using value as-is.')
 
         if len(encoded_value) > 0 and self.hideable:
             self.set_hidden(False)
