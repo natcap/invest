@@ -22,3 +22,4 @@ six
 taskgraph>=0.2.3,<0.3.0
 # psutil is used, but not required, by taskgraph to lower process priority
 psutil>=5.2.2
+chardet
