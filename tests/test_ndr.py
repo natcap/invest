@@ -1,5 +1,5 @@
 """InVEST NDR model tests."""
-
+import collections
 import unittest
 import tempfile
 import shutil
@@ -42,7 +42,7 @@ class NDRTests(unittest.TestCase):
             'runoff_proxy_path': os.path.join(SAMPLE_DATA, 'precip'),
             'subsurface_critical_length_n': 150,
             'subsurface_critical_length_p': '150',
-            'subsurface_eff_n': 0.8,
+            'subsurface_eff_n': 0.4,
             'subsurface_eff_p': '0.8',
             'threshold_flow_accumulation': '1000',
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
@@ -67,7 +67,7 @@ class NDRTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_nutrient_selected(self):
-        """NDR no nutrient selected should raise a ValuError."""
+        """NDR no nutrient selected should raise a ValueError."""
         from natcap.invest.ndr import ndr
 
         # use predefined directory so test can clean up files during teardown
@@ -147,6 +147,7 @@ class NDRTests(unittest.TestCase):
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
         tolerance_places = 3
 
+        error_results = collections.defaultdict(dict)
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
                 fid, p_load_tot, p_exp_tot, n_load_tot, n_exp_tot = [
@@ -157,15 +158,19 @@ class NDRTests(unittest.TestCase):
                         ('p_exp_tot', p_exp_tot),
                         ('n_load_tot', n_load_tot),
                         ('n_exp_tot', n_exp_tot)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
+                    if not numpy.isclose(feature.GetField(field), value):
+                        error_results[fid][field] = (
+                            feature.GetField(field), value)
+
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
-
         result_layer = None
         ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
+        if error_results:
+            raise AssertionError(
+                "The following values are not equal: %s" % error_results)
+
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
