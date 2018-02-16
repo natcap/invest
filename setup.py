@@ -16,8 +16,7 @@ import numpy
 # Read in requirements.txt and populate the python readme with the non-comment
 # contents.
 _REQUIREMENTS = [req for req in open('requirements.txt').readlines()
-                 if not req.startswith('#') and len(req) > 0 and not
-                 req.startswith('hg+')]
+                 if not req.startswith(('#', 'hg+')) and len(req) > 0]
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
@@ -86,18 +85,18 @@ setup(
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(
-            name="scenic_quality_cython_core",
+            name="natcap.invest.scenic_quality.scenic_quality_cython_core",
             sources=[
                 'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(
-            name="ndr_core",
+            name="natcap.invest.ndr.ndr_core",
             sources=['src/natcap/invest/ndr/ndr_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(
-            name="seasonal_water_yield_core",
+            name="natcap.invest.seasonal_water_yield.seasonal_water_yield_core",
             sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),

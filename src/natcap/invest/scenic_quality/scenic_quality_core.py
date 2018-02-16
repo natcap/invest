@@ -7,7 +7,7 @@ import logging
 from osgeo import gdal
 
 from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
-import scenic_quality_cython_core
+from natcap.invest.scenic_quality import scenic_quality_cython_core
 
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.core')
