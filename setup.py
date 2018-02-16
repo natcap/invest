@@ -7,9 +7,9 @@ Common functionality provided by setup.py:
 
 For other commands, try `python setup.py --help-commands`
 """
-from Cython.Build import cythonize
 from setuptools.extension import Extension
 from setuptools import setup
+import Cython.Build
 import numpy
 
 
@@ -77,7 +77,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
-    ext_modules=cythonize([
+    ext_modules=[
         Extension(
             name="natcap.invest.recreation.out_of_core_quadtree",
             sources=[
@@ -112,7 +112,8 @@ setup(
                 'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++")
-    ]),
+    ],
+    cmdclass={'build_ext': Cython.Build.build_ext},
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
