@@ -120,19 +120,19 @@ dist/userguide: $(HG_UG_REPO_PATH)
 
 userguide: dist/userguide dist/%.pdf
 
-SUBDIRS := $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
-NORMALZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
+SUBDIRS = $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
+NORMALZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
 $(NORMALZIPS): $(SVN_DATA_REPO_PATH) dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
 
-BASEDATADIRS := $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
-BASEDATAZIPS := $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
+BASEDATADIRS = $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
+BASEDATAZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
 $(BASEDATAZIPS): $(SVN_DATA_REPO_PATH) dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
-sampledata: $(NORMALZIPS) $(BASEDATAZIPS)
+sampledata: $(SVN_DATA_REPO_PATH) $(NORMALZIPS) $(BASEDATAZIPS)
 
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
