@@ -13,5 +13,6 @@ apt-get update && apt-get install -y \
     python-sphinx=1.4.9-2 \
     python-setuptools=33.1.1-1 \
     cython=0.25.2-1 \
+    python-numpy=1:1.12.1-3 \
     python-sphinx-rtd-theme=0.1.9-1 \
     python-mock=2.0.0-3
