@@ -6,9 +6,9 @@ SVN_TEST_DATA_REPO      = svn://scm.naturalcapitalproject.org/svn/invest-test-da
 SVN_TEST_DATA_REPO_PATH = data/invest-test-data
 SVN_TEST_DATA_REPO_REV  = 139
 
-HG_UG_REPO              = https://bitbucket.org/natcap/invest.users-guide
+HG_UG_REPO              = https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
-HG_UG_REPO_REV          = ae4705d8c9ad
+HG_UG_REPO_REV          = feature/debian-stretch-build
 
 ENV = env
 PYTHON = python2
