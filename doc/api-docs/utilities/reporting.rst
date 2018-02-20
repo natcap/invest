@@ -1,13 +1,6 @@
 Reporting Package
 =================
 
-Style
------
-
-.. automodule:: natcap.invest.reporting.style
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 Table Generator
 ---------------
