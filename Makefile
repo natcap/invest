@@ -115,7 +115,7 @@ dist/%.pdf: $(HG_UG_REPO_PATH)
 	$(CP) build/userguide/latex/InVEST_+VERSION+_Documentation.pdf \
 		dist/InVEST_$(VERSION)_Documentation.pdf
 
-dist/userguide: $(HG_UG_REPO_PATH)
+dist/userguide: $(HG_UG_REPO_PATH) dist
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
 	$(CP) build/userguide/html dist/userguide
 
