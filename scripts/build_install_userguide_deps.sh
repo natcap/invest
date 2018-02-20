@@ -20,7 +20,8 @@ apt-get update && apt-get install -y \
     texlive-latex-recommended=2016.20170123-5 \
     texlive-fonts-recommended=2016.20170123-5 \
     texlive-latex-extra=2016.20170123-5 \
-    python-pip=9.0.1-2
+    python-pip=9.0.1-2 \
+    dvipng=1.14-2+b3
 
 pip install setuptools_scm==1.15.7
     
