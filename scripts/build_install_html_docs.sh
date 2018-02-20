@@ -10,6 +10,7 @@ apt-get update && apt-get install -y \
     make=4.1-9.1 \
     mercurial=4.0-1+deb9u1 \
     pandoc=1.17.2~dfsg-3 \
+    build-essential=12.3 \
     python-sphinx=1.4.9-2 \
     python-setuptools=33.1.1-1 \
     cython=0.25.2-1 \
