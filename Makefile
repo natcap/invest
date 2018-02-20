@@ -17,7 +17,7 @@ NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest
 VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
-DIRS = build data dist dist/data
+DIRS = build data dist dist/data dist/apidocs
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 ifeq ($(OS),Windows_NT)
