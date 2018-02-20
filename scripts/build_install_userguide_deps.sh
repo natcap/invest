@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+######################################################################
+# @file        : build_install_userguide_deps
+#
+# @description : Install apt packages to build HTML, PDF userguides.
+######################################################################
+
+apt-get update && apt-get install -y \
+    make=4.1-9.1 \
+    mercurial=4.0-1+deb9u1 \
+    pandoc=1.17.2~dfsg-3 \
+    python-setuptools=33.1.1-1 \
+    cython=0.25.2-1 \
+    python-numpy=1:1.12.1-3 \
+    python-sphinx=1.4.9-2 \
+    texlive-latex-base=2016.20170123-5 \
+    texlive-generic-extra=2016.20170123-5 \
+    texlive-latex-recommended=2016.20170123-5 \
+    texlive-fonts-recommended=2016.20170123-5 \
+    texlive-latex-extra=2016.20170123-5
+    
+

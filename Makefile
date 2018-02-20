@@ -112,7 +112,8 @@ dist/apidocs:
 dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
 	cd build/userguide/latex && $(MAKE) all-pdf
-	$(CP) build/userguide/latex/InVEST*.pdf dist
+	$(CP) build/userguide/latex/InVEST_+VERSION+_Documentation.pdf \
+		dist/InVEST_$(VERSION)_Documentation.pdf
 
 dist/userguide: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
