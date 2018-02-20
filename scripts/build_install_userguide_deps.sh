@@ -4,6 +4,7 @@
 # @file        : build_install_userguide_deps
 #
 # @description : Install apt packages to build HTML, PDF userguides.
+#                Assumes we're running on debian:stretch.
 ######################################################################
 
 apt-get update && apt-get install -y \
