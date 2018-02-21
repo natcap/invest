@@ -121,19 +121,59 @@ dist/userguide: $(HG_UG_REPO_PATH) dist
 
 userguide: dist/userguide dist/%.pdf
 
-SUBDIRS = $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
-NORMALZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
-$(NORMALZIPS): $(SVN_DATA_REPO_PATH) dist/data
-	cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
+#SUBDIRS = $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
+#NORMALZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
+#$(NORMALZIPS): $(SVN_DATA_REPO_PATH) dist/data
+#	cd $(SVN_DATA_REPO_PATH) && \
+#		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
+#
+#BASEDATADIRS = $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
+#BASEDATAZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
+#$(BASEDATAZIPS): $(SVN_DATA_REPO_PATH) dist/data
+#	cd $(SVN_DATA_REPO_PATH) && \
+#		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
-BASEDATADIRS = $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
-BASEDATAZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
-$(BASEDATAZIPS): $(SVN_DATA_REPO_PATH) dist/data
+zipdirs = AestheticQuality \
+		  Aquaculture \
+		  Base_Data/Freshwater \
+		  Base_Data/Marine \
+		  Base_Data/Terrestrial \
+		  carbon \
+		  CoastalBlueCarbon \
+		  CoastalProtection \
+		  CropProduction \
+		  Fisheries \
+		  forest_carbon_edge_effect \
+		  globio \
+		  GridSeascape \
+		  HabitatQuality \
+		  HabitatRiskAssess \
+		  habitat_suitability \
+		  Hydropower \
+		  Malaria \
+		  OverlapAnalysis \
+		  pollination \
+		  recreation \
+		  ScenarioGenerator \
+		  scenario_proximity \
+		  ScenicQuality \
+		  seasonal_water_yield \
+		  storm_impact \
+		  WaveEnergy \
+		  WindEnergy
+
+print-%  : ; @echo $* = $($*)
+
+dist/data/Freshwater.zip dist/data/Marine.zip dist/data/Terrestrial.zip: $(SVN_DATA_REPO_PATH)
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
 
-sampledata: $(SVN_DATA_REPO_PATH) $(NORMALZIPS) $(BASEDATAZIPS)
+ziptargets = $(foreach dirname,$(zipdirs),$(addprefix dist/data/,$(dirname)).zip)
+$(ziptargets): $(SVN_DATA_REPO_PATH)
+	cd $(SVN_DATA_REPO_PATH) && \
+		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
+
+sampledata: $(ziptargets)
 
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
