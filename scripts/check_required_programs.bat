@@ -12,9 +12,9 @@ REM No fun colors here ... standard CMD prompt doesn't support it.
 
 FOR %%a in (%*) DO (
     @where /Q %%a
-    IF %ERRORLEVEL% NEQ 0 (
-        echo MISSING: %%a
-    ) ELSE (
+    IF %ERRORLEVEL% == 0 (
         echo OK: %%a
+    ) ELSE (
+        echo MISSING: %%a
     )
 )
