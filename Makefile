@@ -17,7 +17,7 @@ NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest
 VERSION = $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
-DIRS = build data dist dist/data dist/apidocs
+DIRS = build data dist dist/data
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 ifeq ($(OS),Windows_NT)
@@ -104,7 +104,7 @@ dist/invest: dist build
 
 binaries: dist/invest
 
-apidocs: dist/apidocs
+apidocs: dist
 dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html dist/apidocs
@@ -120,19 +120,46 @@ dist/userguide: $(HG_UG_REPO_PATH) dist
 
 userguide: dist/userguide dist/%.pdf
 
-SUBDIRS = $(filter-out Base_data, $(filter-out %.json,$(wildcard $(SVN_DATA_REPO_PATH)/*)))
-NORMALZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH),dist/data,$(SUBDIRS)))
-$(NORMALZIPS): $(SVN_DATA_REPO_PATH) dist/data
-	cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst dist/data/,,$(subst .zip,,$@))
+ZIPDIRS = AestheticQuality \
+		  Aquaculture \
+		  Base_Data/Freshwater \
+		  Base_Data/Marine \
+		  Base_Data/Terrestrial \
+		  carbon \
+		  CoastalBlueCarbon \
+		  CoastalProtection \
+		  CropProduction \
+		  Fisheries \
+		  forest_carbon_edge_effect \
+		  globio \
+		  GridSeascape \
+		  HabitatQuality \
+		  HabitatRiskAssess \
+		  habitat_suitability \
+		  Hydropower \
+		  Malaria \
+		  OverlapAnalysis \
+		  pollination \
+		  recreation \
+		  ScenarioGenerator \
+		  scenario_proximity \
+		  ScenicQuality \
+		  seasonal_water_yield \
+		  storm_impact \
+		  WaveEnergy \
+		  WindEnergy
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(subst Base_Data/,,$(dirname))).zip)
 
-BASEDATADIRS = $(wildcard $(SVN_DATA_REPO_PATH)/Base_Data/*)
-BASEDATAZIPS = $(addsuffix .zip,$(subst $(SVN_DATA_REPO_PATH)/Base_Data,dist/data,$(BASEDATADIRS)))
-$(BASEDATAZIPS): $(SVN_DATA_REPO_PATH) dist/data
-	cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst dist/data/,Base_Data/,$(subst .zip,,$@))
+print-%  : ; @echo $* = $($*)
 
-sampledata: $(SVN_DATA_REPO_PATH) $(NORMALZIPS) $(BASEDATAZIPS)
+dist/data/Freshwater.zip: DATADIR=Base_Data/
+dist/data/Marine.zip: DATADIR=Base_Data/
+dist/data/Terrestrial.zip: DATADIR=Base_Data/
+$(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
+	cd $(SVN_DATA_REPO_PATH) && \
+		zip -r $(addprefix ../../,$(subst $(DATADIR),,$@)) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
+
+sampledata: $(ZIPTARGETS)
 
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
