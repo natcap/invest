@@ -223,8 +223,13 @@ Function ValidateAdvZipFile
     ${EndIf}
 FunctionEnd
 
-!define LVM_GETITEMCOUNT 0x1004
-!define LVM_GETITEMTEXT 0x102D
+; NSIS 3.x defines these variables, NSIS 2.x does not.  This supports both versions.
+!ifndef LVM_GETITEMCOUNT
+    !define LVM_GETITEMCOUNT 0x1004
+!endif
+!ifndef LVM_GETITEMTEXT
+    !define LVM_GETITEMTEXT 0x102D
+!endif
 
 Function DumpLog
     Exch $5
