@@ -373,7 +373,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     File InVEST-2.ico
   
     SetOutPath "$INSTDIR\documentation"
-    File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*
+    File /r /x *.hg* /x *.svn* ..\..\dist\userguide
+    File ..\..\dist\InVEST*.pdf
   
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
