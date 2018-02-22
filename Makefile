@@ -11,13 +11,10 @@ HG_UG_REPO_PATH         = doc/users-guide
 HG_UG_REPO_REV          = e1d238acd5e6
 
 ENV = env
-PYTHON = python2
-PIP = pip
+PIP = $(PYTHON) -m pip
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 VERSION = $(shell $(PYTHON) setup.py --version)
-PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
-DIRS = build data dist dist/data
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 ifeq ($(OS),Windows_NT)
@@ -28,6 +25,8 @@ ifeq ($(OS),Windows_NT)
 	COPYDIR = (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
 	MKDIR = mkdir
 	RM = rmdir /S
+	PYTHON = python  # Windows doesn't install a python2 binary.
+	MAKE = "$(MAKE)"
 else
 	NULL = /dev/null
 	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
@@ -37,6 +36,7 @@ else
 	COPYDIR = $(CP)
 	MKDIR = mkdir -p
 	RM = rm -r
+	PYTHON = python2
 endif
 
 
@@ -46,10 +46,14 @@ endif
 # we're storing the datasets.
 # These defaults assume that we're storing datasets for an InVEST release.
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME = ""
-DATA_BASE_URL = "http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)"
+FORKNAME = 
+DATA_BASE_URL = http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) python_packages
+
+# Very useful for debugging variables!
+# $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
+print-%  : ; @echo $* = $($*)
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -74,7 +78,7 @@ env:
 	$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt
 	$(ENV_ACTIVATE) && $(MAKE) install
 
-$(DIRS):
+build data dist dist/data:
 	$(MKDIR) $@
 
 $(HG_UG_REPO_PATH): data
@@ -89,17 +93,17 @@ $(SVN_TEST_DATA_REPO_PATH): data
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
+python_packages: dist/natcap.invest%.whl dist/natcap.invest%.zip
 dist/natcap.invest%.whl: dist
 	$(PYTHON) setup.py bdist_wheel
 
 dist/natcap.invest%.zip: dist
 	$(PYTHON) setup.py sdist --formats=zip
 
-python_packages: dist/natcap.invest%.whl dist/natcap.invest%.zip
-
 install: dist/natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
+binaries: dist/invest
 dist/invest: dist build
 	-$(RM) build/pyi-build
 	-$(RM) dist/invest
@@ -108,8 +112,6 @@ dist/invest: dist build
 		--clean \
 		--distpath dist \
 		exe/invest.spec
-
-binaries: dist/invest
 
 apidocs: dist/apidocs
 dist/apidocs:
@@ -157,8 +159,6 @@ ZIPDIRS = AestheticQuality \
 		  WindEnergy
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(subst Base_Data/,,$(dirname))).zip)
 
-print-%  : ; @echo $* = $($*)
-
 dist/data/Freshwater.zip: DATADIR=Base_Data/
 dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
@@ -171,8 +171,8 @@ sampledata: $(ZIPTARGETS)
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
-
 windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
+	$(eval PYTHON_ARCH := $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))"))
 	makensis \
 		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
