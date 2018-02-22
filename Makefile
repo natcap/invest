@@ -25,8 +25,10 @@ ifeq ($(OS),Windows_NT)
 	COPYDIR := (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
 	MKDIR := mkdir
 	RM := rmdir /S
-	PYTHON = python  # Windows doesn't install a python2 binary.
-	MAKE = "$(MAKE)"  # Might be installed with spaces in the absolute path.
+	# Windows doesn't install a python2 binary, just python.
+	PYTHON = python
+	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
+	MAKE := make
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -36,7 +38,8 @@ else
 	COPYDIR := $(CP)
 	MKDIR := mkdir -p
 	RM := rm -r
-	PYTHON = python2  # linux, mac distinguish between python2 and python3.
+	# linux, mac distinguish between python2 and python3
+	PYTHON = python2
 endif
 
 
