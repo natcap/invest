@@ -1,14 +1,14 @@
-SVN_DATA_REPO           = svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      = data/invest-data
-SVN_DATA_REPO_REV       = 171
+SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
+SVN_DATA_REPO_PATH      := data/invest-data
+SVN_DATA_REPO_REV       := 171
 
-SVN_TEST_DATA_REPO      = svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH = data/invest-test-data
-SVN_TEST_DATA_REPO_REV  = 139
+SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
+SVN_TEST_DATA_REPO_PATH := data/invest-test-data
+SVN_TEST_DATA_REPO_REV  := 139
 
-HG_UG_REPO              = https://bitbucket.org/jdouglass/invest.users-guide
-HG_UG_REPO_PATH         = doc/users-guide
-HG_UG_REPO_REV          = e1d238acd5e6
+HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
+HG_UG_REPO_PATH         := doc/users-guide
+HG_UG_REPO_REV          := e1d238acd5e6
 
 ENV = env
 PIP = $(PYTHON) -m pip
@@ -18,25 +18,25 @@ DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latest
 REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 ifeq ($(OS),Windows_NT)
-	NULL = NUL
-	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
+	NULL := NUL
+	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
-	CP = copy /Y
-	COPYDIR = (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
-	MKDIR = mkdir
-	RM = rmdir /S
+	CP := copy /Y
+	COPYDIR := (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
+	MKDIR := mkdir
+	RM := rmdir /S
 	PYTHON = python  # Windows doesn't install a python2 binary.
-	MAKE = "$(MAKE)"
+	MAKE = "$(MAKE)"  # Might be installed with spaces in the absolute path.
 else
-	NULL = /dev/null
-	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
+	NULL := /dev/null
+	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
-	CP = cp -r
-	COPYDIR = $(CP)
-	MKDIR = mkdir -p
-	RM = rm -r
-	PYTHON = python2
+	CP := cp -r
+	COPYDIR := $(CP)
+	MKDIR := mkdir -p
+	RM := rm -r
+	PYTHON = python2  # linux, mac distinguish between python2 and python3.
 endif
 
 
