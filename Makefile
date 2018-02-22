@@ -73,14 +73,28 @@ help:
 	@echo "  clean             to remove temporary directories (but not dist/)"
 	@echo "  help              to print this help and exit"
 
-env:
-	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt
-	$(ENV_ACTIVATE) && $(MAKE) install
-
 build data dist dist/data:
 	$(MKDIR) $@
 
+test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+	$(NOSETESTS) tests
+
+test_ui:
+	$(NOSETESTS) ui_tests
+
+clean:
+	$(PYTHON) setup.py clean
+	-$(RM) build natcap.invest.egg-info
+
+check:
+	@echo Checking required applications
+	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
+	@echo ----------------------------
+	@echo Checking python packages
+	@$(PIP) freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
+
+
+# Subrepository management.
 $(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
@@ -93,6 +107,18 @@ $(SVN_TEST_DATA_REPO_PATH): data
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 
+
+# Python environment management
+env:
+	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
+	$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt
+	$(ENV_ACTIVATE) && $(MAKE) install
+
+install: dist/natcap.invest*.whl
+	$(PIP) install --use-wheel --find-links=dist natcap.invest 
+
+
+# Bulid python packages and put them in dist/
 python_packages: dist/natcap.invest%.whl dist/natcap.invest%.zip
 dist/natcap.invest%.whl: dist
 	$(PYTHON) setup.py bdist_wheel
@@ -100,9 +126,8 @@ dist/natcap.invest%.whl: dist
 dist/natcap.invest%.zip: dist
 	$(PYTHON) setup.py sdist --formats=zip
 
-install: dist/natcap.invest*.whl
-	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
+# Build binaries and put them in dist/invest
 binaries: dist/invest
 dist/invest: dist build
 	-$(RM) build/pyi-build
@@ -113,11 +138,16 @@ dist/invest: dist build
 		--distpath dist \
 		exe/invest.spec
 
+# Documentation.
+# API docs are copied to dist/apidocs
+# Userguide HTML docs are copied to dist/userguide
+# Userguide PDF file is copied to dist/InVEST_<version>_.pdf
 apidocs: dist/apidocs
 dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html dist/apidocs
 
+userguide: dist/userguide dist/%.pdf
 dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
 	cd build/userguide/latex && $(MAKE) all-pdf
@@ -127,8 +157,12 @@ dist/userguide: $(HG_UG_REPO_PATH) dist
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
 	$(call COPYDIR,build/userguide/html,dist/userguide)
 
-userguide: dist/userguide dist/%.pdf
 
+# Zipping up the sample data zipfiles is a little odd because of the presence
+# of the Base_Data folder, where its subdirectories are zipped up separately.
+# Tracking the expected zipfiles here avoids a race condition where we can't
+# know which data zipfiles to create until the data repo is cloned.
+# All data zipfiles are written to dist/data/*.zip
 ZIPDIRS = AestheticQuality \
 		  Aquaculture \
 		  Base_Data/Freshwater \
@@ -159,6 +193,7 @@ ZIPDIRS = AestheticQuality \
 		  WindEnergy
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(subst Base_Data/,,$(dirname))).zip)
 
+sampledata: $(ZIPTARGETS)
 dist/data/Freshwater.zip: DATADIR=Base_Data/
 dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
@@ -166,8 +201,10 @@ $(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$(subst $(DATADIR),,$@)) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
 
-sampledata: $(ZIPTARGETS)
 
+# Installers for each platform.
+# Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
+# Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 build/vcredist_x86.exe: build
 	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
 
@@ -183,20 +220,3 @@ windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 
 mac_installer: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
-
-test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
-	$(NOSETESTS) tests
-
-test_ui:
-	$(NOSETESTS) ui_tests
-
-clean:
-	$(PYTHON) setup.py clean
-	-$(RM) build natcap.invest.egg-info
-
-check:
-	@echo Checking required applications
-	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
-	@echo ----------------------------
-	@echo Checking python packages
-	@$(PIP) freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
