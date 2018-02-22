@@ -11,7 +11,7 @@ HG_UG_REPO_PATH         := doc/users-guide
 HG_UG_REPO_REV          := e1d238acd5e6
 
 ENV = env
-PIP = $(PYTHON) -m pip
+PIP = pip
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 VERSION = $(shell $(PYTHON) setup.py --version)
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
