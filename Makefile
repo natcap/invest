@@ -8,7 +8,7 @@ SVN_TEST_DATA_REPO_REV  = 139
 
 HG_UG_REPO              = https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         = doc/users-guide
-HG_UG_REPO_REV          = feature/debian-stretch-build
+HG_UG_REPO_REV          = e1d238acd5e6
 
 ENV = env
 PYTHON = python2
@@ -25,12 +25,18 @@ ifeq ($(OS),Windows_NT)
 	PROGRAM_CHECK_SCRIPT = .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
 	CP = copy /Y
+	COPYDIR = (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
+	MKDIR = mkdir
+	RM = rmdir /S
 else
 	NULL = /dev/null
 	PROGRAM_CHECK_SCRIPT = ./scripts/check_required_programs.sh
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
 	CP = cp -r
+	COPYDIR = $(CP)
+	MKDIR = mkdir -p
+	RM = rm -r
 endif
 
 
@@ -69,7 +75,7 @@ env:
 	$(ENV_ACTIVATE) && $(MAKE) install
 
 $(DIRS):
-	mkdir -p $@
+	$(MKDIR) $@
 
 $(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
@@ -95,7 +101,8 @@ install: dist/natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
 dist/invest: dist build
-	-rm -r build/pyi-build dist/invest
+	-$(RM) build/pyi-build
+	-$(RM) dist/invest
 	pyinstaller \
 		--workpath build/pyi-build \
 		--clean \
@@ -104,7 +111,7 @@ dist/invest: dist build
 
 binaries: dist/invest
 
-apidocs: dist
+apidocs: dist/apidocs
 dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html dist/apidocs
@@ -116,7 +123,7 @@ dist/%.pdf: $(HG_UG_REPO_PATH)
 
 dist/userguide: $(HG_UG_REPO_PATH) dist
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
-	$(CP) build/userguide/html dist/userguide
+	$(call COPYDIR,build/userguide/html,dist/userguide)
 
 userguide: dist/userguide dist/%.pdf
 
@@ -185,7 +192,7 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-rm -r build natcap.invest.egg-info
+	-$(RM) build natcap.invest.egg-info
 
 check:
 	@echo Checking required applications
