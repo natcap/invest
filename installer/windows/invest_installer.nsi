@@ -2,7 +2,7 @@
 ; VERSION         - the version of InVEST we're building (example: 3.4.5)
 ;                   This string must not contain characters that are
 ;                   problematic in Windows paths (no : , etc)
-; INVEST_3_FOLDER - The local folder of binaries to include.
+; BINDIR          - The local folder of binaries to include.
 ; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
@@ -277,10 +277,10 @@ Function Un.onInit
 FunctionEnd
 
 ; Copied into the invest folder later in the NSIS script
-!define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
-!define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
+!define INVEST_BINARIES = "$INSTDIR\invest-3-x86"
+!define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !macro StartMenuLink linkName modelName
-    CreateShortCut "${linkName}.lnk" "$INSTDIR\${INVEST_3_FOLDER}\invest.exe ${modelName}" "" "${INVEST_ICON}"
+    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe ${modelName}" "" "${INVEST_ICON}"
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
@@ -366,8 +366,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     ; Copy over all the sample parameter files
     File ..\..\data\invest-data\*.invs.json
   
-    SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
-    File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
+    SetOutPath "${INVEST_BINARIES}"
+    File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.
     File invest-autotest.bat
     File InVEST-2.ico
