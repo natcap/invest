@@ -277,7 +277,7 @@ Function Un.onInit
 FunctionEnd
 
 ; Copied into the invest folder later in the NSIS script
-!define INVEST_BINARIES = "$INSTDIR\invest-3-x86"
+!define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !macro StartMenuLink linkName modelName
     CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe ${modelName}" "" "${INVEST_ICON}"
