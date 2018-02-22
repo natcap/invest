@@ -208,10 +208,8 @@ $(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-build/vcredist_x86.exe: build
-	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
-
-windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
+windows_installer: dist/InVEST_*_Setup.exe
+dist/InVEST_%_Setup.exe: dist dist/invest dist/userguide build/vcredist_x86.exe
 	$(eval PYTHON_ARCH := $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))"))
 	makensis \
 		/O=build\nsis.log \
@@ -222,5 +220,10 @@ windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 		/DDATA_LOCATION=$(DATA_BASE_URL) \
 		installer\windows\invest_installer.nsi
 
-mac_installer: dist/invest dist/userguide
+mac_installer: dist/InVEST*.dmg
+dist/InVEST%.dmg: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
+
+build/vcredist_x86.exe: build
+	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
+
