@@ -21,14 +21,15 @@ ifeq ($(OS),Windows_NT)
 	NULL := NUL
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
-	CP := copy /Y
-	COPYDIR := (robocopy /S $(1) $(2)) ^& IF %ERRORLEVEL% LEQ 1 exit 0
+	CP := Copy-Item
+	COPYDIR := Copy-Item -Recurse
 	MKDIR := mkdir
 	RM := rmdir /S
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
+	SHELL := powershell.exe
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -150,7 +151,7 @@ dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html dist/apidocs
 
-userguide: dist/userguide dist/%.pdf
+userguide: dist/userguide dist/InVEST%.pdf
 dist/%.pdf: $(HG_UG_REPO_PATH)
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
 	cd build/userguide/latex && $(MAKE) all-pdf
@@ -225,5 +226,5 @@ dist/InVEST%.dmg: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
 
 build/vcredist_x86.exe: build
-	powershell.exe -command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
+	Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe
 
