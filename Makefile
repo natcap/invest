@@ -219,7 +219,8 @@ windows_installer: dist dist/invest dist/userguide build/vcredist_x86.exe
 		/DBINDIR=dist\invest \
 		/DARCHITECTURE=$(PYTHON_ARCH) \
 		/DFORKNAME=$(FORKNAME) \
-		/DDATA_LOCATION=$(DATA_BASE_URL)
+		/DDATA_LOCATION=$(DATA_BASE_URL) \
+		installer\windows\invest_installer.nsi
 
 mac_installer: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
