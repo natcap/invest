@@ -138,9 +138,8 @@ SetCompressor zlib
 
 ; MUI end ------
 
-!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile ..\dist\${INSTALLER_NAME}
+OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
 InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
 ShowInstDetails show
 RequestExecutionLevel admin
