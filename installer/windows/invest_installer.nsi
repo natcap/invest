@@ -392,7 +392,7 @@ SectionEnd
 ; This section is disabled in .onInit if we're running Windows 8 or later.
 Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
     SetOutPath "$INSTDIR"
-    File ..\build\vcredist_x86.exe
+    File ..\..\build\vcredist_x86.exe
     ExecWait "vcredist_x86.exe /q"
 SectionEnd
 
