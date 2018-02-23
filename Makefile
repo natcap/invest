@@ -207,7 +207,7 @@ sampledata: $(ZIPTARGETS)
 dist/data/Freshwater.zip: DATADIR=Base_Data/
 dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
-$(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
+dist/data/%.zip: $(SVN_DATA_REPO_PATH)
 	cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$(subst $(DATADIR),,$@)) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
 
