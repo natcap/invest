@@ -12,6 +12,7 @@ HG_UG_REPO_REV          := e1d238acd5e6
 
 ENV = env
 PIP = pip
+PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 VERSION = $(shell $(PYTHON) setup.py --version)
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
@@ -24,7 +25,7 @@ ifeq ($(OS),Windows_NT)
 	CP := Copy-Item
 	COPYDIR := Copy-Item -Recurse
 	MKDIR := mkdir
-	RM := rmdir /S
+	RM := Remove-Item -Force
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
@@ -52,14 +53,15 @@ endif
 # we're storing the datasets.
 # These defaults assume that we're storing datasets for an InVEST release.
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME = 
+FORKNAME =
 DATA_BASE_URL = http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) python_packages
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
-print-%  : ; @echo $* = $($*)
+print-%:
+	@echo "$* = $($*)"
 
 help:
 	@echo "Please use \`make <target>' where <target> is one of"
@@ -101,7 +103,7 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH): SHELL = $(BASHLIKE_SHELL)
+$(HG_UG_REPO_PATH): SHELL := $(BASHLIKE_SHELL)
 $(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
@@ -162,7 +164,8 @@ dist/%.pdf: $(HG_UG_REPO_PATH)
 
 dist/userguide: $(HG_UG_REPO_PATH) dist
 	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
-	$(call COPYDIR,build/userguide/html,dist/userguide)
+	$(RM) dist/userguide
+	$(COPYDIR) build/userguide/html dist/userguide
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
@@ -212,9 +215,8 @@ $(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-windows_installer: dist/InVEST_*_Setup.exe
-dist/InVEST_%_Setup.exe: dist dist/invest dist/userguide build/vcredist_x86.exe
-	$(eval PYTHON_ARCH := $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))"))
+windows_installer: dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe:
+dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe: dist/invest dist/userguide build/vcredist_x86.exe
 	makensis \
 		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
