@@ -30,11 +30,13 @@ ifeq ($(OS),Windows_NT)
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
 	SHELL := powershell.exe
+	BASHLIKE_SHELL := cmd.exe
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
+	BASHLIKE_SHELL := $(SHELL)
 	CP := cp -r
 	COPYDIR := $(CP)
 	MKDIR := mkdir -p
@@ -99,6 +101,7 @@ check:
 
 
 # Subrepository management.
+$(HG_UG_REPO_PATH): SHELL = $(BASHLIKE_SHELL)
 $(HG_UG_REPO_PATH): data
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
 		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
@@ -226,5 +229,7 @@ dist/InVEST%.dmg: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
 
 build/vcredist_x86.exe: build
-	Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe
+	Start-BitsTransfer \
+		-Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe \
+		-Destination build\vcredist_x86.exe
 
