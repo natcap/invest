@@ -215,7 +215,7 @@ $(ZIPTARGETS): $(SVN_DATA_REPO_PATH) dist/data
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-windows_installer: dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe:
+windows_installer: dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe: dist/invest dist/userguide build/vcredist_x86.exe
 	makensis \
 		/O=build\nsis.log \
