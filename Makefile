@@ -175,9 +175,9 @@ dist/userguide: $(HG_UG_REPO_PATH) dist
 # All data zipfiles are written to dist/data/*.zip
 ZIPDIRS = AestheticQuality \
 		  Aquaculture \
-		  Base_Data/Freshwater \
-		  Base_Data/Marine \
-		  Base_Data/Terrestrial \
+		  Freshwater \
+		  Marine \
+		  Terrestrial \
 		  carbon \
 		  CoastalBlueCarbon \
 		  CoastalProtection \
@@ -201,7 +201,7 @@ ZIPDIRS = AestheticQuality \
 		  storm_impact \
 		  WaveEnergy \
 		  WindEnergy
-ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(subst Base_Data/,,$(dirname))).zip)
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
 dist/data/Freshwater.zip: DATADIR=Base_Data/
@@ -209,7 +209,7 @@ dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
 dist/data/%.zip: $(SVN_DATA_REPO_PATH)
 	cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$(subst $(DATADIR),,$@)) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
+		zip -r $(addprefix ../../,$@) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
 
 
 # Installers for each platform.
