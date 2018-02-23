@@ -23,21 +23,21 @@ ifeq ($(OS),Windows_NT)
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
 	CP := Copy-Item
-	COPYDIR := Copy-Item -Recurse
+	COPYDIR := powershell.exe Copy-Item -Recurse
 	MKDIR := mkdir
-	RM := Remove-Item -Force
+	RM := powershell.exe Remove-Item -Force -Recurse -Path
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
 	SHELL := powershell.exe
-	BASHLIKE_SHELL := cmd.exe
+	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
-	BASHLIKE_SHELL := $(SHELL)
+	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp -r
 	COPYDIR := $(CP)
 	MKDIR := mkdir -p
@@ -103,10 +103,9 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH): SHELL := $(BASHLIKE_SHELL)
 $(HG_UG_REPO_PATH): data
-	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
-		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)
+	$(BASHLIKE_SHELL_COMMAND) "hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
+		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)"
 
 $(SVN_DATA_REPO_PATH): data
 	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
@@ -156,15 +155,15 @@ dist/apidocs:
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html dist/apidocs
 
-userguide: dist/userguide dist/InVEST%.pdf
-dist/%.pdf: $(HG_UG_REPO_PATH)
-	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex
-	cd build/userguide/latex && $(MAKE) all-pdf
+userguide: dist/userguide dist/InVEST_$(VERSION)_Documentation.pdf
+dist/InVEST_$(VERSION)_Documentation.pdf: $(HG_UG_REPO_PATH)
+	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex"
+	$(BASHLIKE_SHELL_COMMAND) "cd build/userguide/latex && $(MAKE) all-pdf"
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 dist/userguide: $(HG_UG_REPO_PATH) dist
-	cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html
-	$(RM) dist/userguide
+	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html"
+	-$(RM) dist/userguide
 	$(COPYDIR) build/userguide/html dist/userguide
 
 
@@ -216,7 +215,7 @@ dist/data/%.zip: $(SVN_DATA_REPO_PATH)
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 windows_installer: dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe: dist/invest dist/userguide build/vcredist_x86.exe $(SVN_DATA_REPO_PATH)
+dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe: dist/invest dist/userguide build/vcredist_x86.exe $(SVN_DATA_REPO_PATH) dist/InVEST_$(VERSION)_Documentation.pdf
 	makensis \
 		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
@@ -231,7 +230,4 @@ dist/InVEST%.dmg: dist/invest dist/userguide
 	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
 
 build/vcredist_x86.exe: build
-	Start-BitsTransfer \
-		-Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe \
-		-Destination build\vcredist_x86.exe
-
+	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
