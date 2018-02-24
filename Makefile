@@ -12,12 +12,6 @@ HG_UG_REPO_REV          := e1d238acd5e6
 
 ENV = env
 PIP = pip
-PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print('x86' if 8*struct.calcsize('P') == 32 else 'x64')")
-NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
-VERSION = $(shell $(PYTHON) setup.py --version)
-DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
-REQUIRED_PROGRAMS = make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
-
 ifeq ($(OS),Windows_NT)
 	NULL := NUL
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
@@ -45,6 +39,11 @@ else
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
 endif
+VERSION := $(shell $(PYTHON) setup.py --version)
+PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
+NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
+DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 
 # These are intended to be overridden by a jenkins build.
@@ -53,8 +52,8 @@ endif
 # we're storing the datasets.
 # These defaults assume that we're storing datasets for an InVEST release.
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME =
-DATA_BASE_URL = http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+FORKNAME :=
+DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) python_packages
 
@@ -206,7 +205,7 @@ sampledata: $(ZIPTARGETS)
 dist/data/Freshwater.zip: DATADIR=Base_Data/
 dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
-dist/data/%.zip: $(SVN_DATA_REPO_PATH)
+dist/data/%.zip: dist/data $(SVN_DATA_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
 		zip -r $(addprefix ../../,$@) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))"
 
