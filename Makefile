@@ -12,7 +12,7 @@ HG_UG_REPO_REV          := e1d238acd5e6
 
 ENV = env
 PIP = pip
-PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print(8*struct.calcsize('P'))")
+PYTHON_ARCH = $(shell $(PYTHON) -c "import struct; print('x86' if 8*struct.calcsize('P') == 32 else 'x64')")
 NOSETESTS = $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 VERSION = $(shell $(PYTHON) setup.py --version)
 DEST_VERSION = $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
