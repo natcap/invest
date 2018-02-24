@@ -119,8 +119,8 @@ fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 # Python environment management
 env:
 	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt
-	$(ENV_ACTIVATE) && $(MAKE) install
+	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
 install: dist/natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
@@ -207,8 +207,8 @@ dist/data/Freshwater.zip: DATADIR=Base_Data/
 dist/data/Marine.zip: DATADIR=Base_Data/
 dist/data/Terrestrial.zip: DATADIR=Base_Data/
 dist/data/%.zip: $(SVN_DATA_REPO_PATH)
-	cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))
+	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
+		zip -r $(addprefix ../../,$@) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))"
 
 
 # Installers for each platform.
