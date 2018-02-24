@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 ######################################################################
-# @file        : build_install_zipfiles
 # @description : Install apt packages to be able to build sampledata zipfiles. 
 #                Assumes debian:stretch.
 ######################################################################

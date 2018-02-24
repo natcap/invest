@@ -1,7 +1,6 @@
 #!/usr/bin/env sh
 
 ######################################################################
-# @file        : build_install_html_docs
 # @description : Install apt packages to build API documentation.
 #                Assumes we're running on debian:stretch.
 ######################################################################
