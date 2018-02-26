@@ -444,7 +444,20 @@ def build_lookup_from_csv(
         that can be represented as floats are, otherwise unicode.
     """
     with open(table_path, 'rbU') as table_file:
-        reader = csv.reader(table_file)
+        # Detect the dialect
+        # From experience, dialect detection only works on whole lines.
+        try:
+            dialect = csv.Sniffer().sniff('\n'.join(table_file.readlines(20)),
+                                          delimiters=',;')
+        except csv.Error as error:
+            # When the table is malformed, assume the CSV default dialect.
+            LOGGER.exception('Assuming dialect to be "excel"')
+            dialect = 'excel'
+        finally:
+            table_file.seek(0)
+
+        # Read the table now that we know the dialect.
+        reader = csv.reader(table_file, dialect=dialect)
         header_row = reader.next()
         header_row = [unicode(x) for x in header_row]
         key_field = unicode(key_field)
