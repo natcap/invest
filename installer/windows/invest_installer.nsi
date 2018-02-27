@@ -453,7 +453,7 @@ Var INSTALLER_DIR
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
         SetOutPath "$INSTDIR"
-        !insertmacro downloadFile "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${Filename}" "${Filename}"
+        !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
 !macroend
