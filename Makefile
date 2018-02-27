@@ -115,9 +115,10 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH): data
-	$(BASHLIKE_SHELL_COMMAND) "hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH) || \
-		hg clone $(HG_UG_REPO) -u $(HG_UG_REPO_REV) $(HG_UG_REPO_PATH)"
+$(HG_UG_REPO_PATH): 
+	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
+	-hg pull -R $(HG_UG_REPO_PATH)
+	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
 $(SVN_DATA_REPO_PATH): data
 	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
@@ -169,14 +170,14 @@ $(APIDOCS_HTML_DIR): dist
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH)
-	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex"
-	$(BASHLIKE_SHELL_COMMAND) "cd build/userguide/latex && $(MAKE) all-pdf"
-	$(CP) build/userguide/latex/InVEST*.pdf dist
+	$(MAKE) -C doc$(/)users-guide BUILDDIR=..$(/)..$(/)build$(/)userguide latex
+	$(MAKE) -C build$(/)userguide$(/)latex all-pdf
+	$(CP) build$(/)userguide$(/)latex$(/)InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html"
+	$(MAKE) -C doc$(/)users-guide BUILDDIR=..$(/)..$(/)build$(/)userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
-	$(COPYDIR) build/userguide/html dist/userguide
+	$(COPYDIR) build$(/)userguide$(/)html dist$(/)userguide
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
