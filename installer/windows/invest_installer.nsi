@@ -413,7 +413,7 @@ Var INSTALLER_DIR
     ; Using inetc instead of the included NSISdl because inetc plugin supports downloading over HTTPS.
     ; NSISdl only supports downloading over HTTP.  This will be a problem when serving datasets from
     ; storage buckets, which is only done over HTTPS.
-    inetc::get "${RemooteFilepath}" "${LocalFilepath}"
+    inetc::get "${RemoteFilepath}" "${LocalFilepath}"
     Pop $R0 ;Get the status of the file downloaded
     StrCmp $R0 "success" got_it failed
     got_it:
