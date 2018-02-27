@@ -49,7 +49,6 @@ HG_UG_REPO_PATH         := doc$(/)users-guide$(/)
 HG_UG_REPO_REV          := e1d238acd5e6
 
 
-
 # Target names.
 INVEST_BINARIES_DIR := dist$(/)invest$(/)
 APIDOCS_HTML_DIR := dist$(/)apidocs$(/)
@@ -93,7 +92,7 @@ help:
 	@echo "  clean             to remove temporary directories (but not dist/)"
 	@echo "  help              to print this help and exit"
 
-build data dist dist/data:
+build$(/) data$(/) dist$(/) dist$(/)data$(/):
 	$(MKDIR) $@
 
 test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
@@ -120,10 +119,10 @@ $(HG_UG_REPO_PATH):
 	-hg pull -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
-$(SVN_DATA_REPO_PATH): data
+$(SVN_DATA_REPO_PATH): data$(/)
 	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
 
-$(SVN_TEST_DATA_REPO_PATH): data
+$(SVN_TEST_DATA_REPO_PATH): data$(/)
 	svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
@@ -135,23 +134,23 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
-install: dist/natcap.invest*.whl
+install: dist$(/)natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
 
 # Bulid python packages and put them in dist/
-python_packages: dist/natcap.invest%.whl dist/natcap.invest%.zip
-dist/natcap.invest%.whl: dist
+python_packages: dist$(/)natcap.invest%.whl dist$(/)natcap.invest%.zip
+dist$(/)natcap.invest%.whl: dist$(/)
 	$(PYTHON) setup.py bdist_wheel
 
-dist/natcap.invest%.zip: dist
+dist$(/)natcap.invest%.zip: dist$(/)
 	$(PYTHON) setup.py sdist --formats=zip
 
 
 # Build binaries and put them in dist/invest
 binaries: $(INVEST_BINARIES_DIR)
-$(INVEST_BINARIES_DIR): dist build
-	-$(RM) build/pyi-build
+$(INVEST_BINARIES_DIR): dist$(/) build$(/)
+	-$(RM) build$(/)pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
 	pyinstaller \
 		--workpath build/pyi-build \
@@ -164,20 +163,20 @@ $(INVEST_BINARIES_DIR): dist build
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
 apidocs: $(APIDOCS_HTML_DIR)
-$(APIDOCS_HTML_DIR): dist
+$(APIDOCS_HTML_DIR): dist$(/)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH)
-	$(MAKE) -C doc$(/)users-guide BUILDDIR=..$(/)..$(/)build$(/)userguide latex
-	$(MAKE) -C build$(/)userguide$(/)latex all-pdf
-	$(CP) build$(/)userguide$(/)latex$(/)InVEST*.pdf dist
+	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
+	$(MAKE) -C build/userguide/latex all-pdf
+	$(CP) build/userguide/latex/InVEST*.pdf dist
 
-$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) dist
-	$(MAKE) -C doc$(/)users-guide BUILDDIR=..$(/)..$(/)build$(/)userguide html 
+$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) dist$(/)
+	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
-	$(COPYDIR) build$(/)userguide$(/)html dist$(/)userguide
+	$(COPYDIR) build/userguide/html dist/userguide
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
@@ -213,15 +212,15 @@ ZIPDIRS = AestheticQuality \
 		  storm_impact \
 		  WaveEnergy \
 		  WindEnergy
-ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist/data/,$(dirname).zip))
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist$(/)data$(/),$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-dist/data/Freshwater.zip: DATADIR=Base_Data/
-dist/data/Marine.zip: DATADIR=Base_Data/
-dist/data/Terrestrial.zip: DATADIR=Base_Data/
-dist/data/%.zip: dist/data $(SVN_DATA_REPO_PATH)
+dist/data/Freshwater.zip: DATADIR=Base_Data$(/)
+dist/data/Marine.zip: DATADIR=Base_Data$(/)
+dist/data/Terrestrial.zip: DATADIR=Base_Data$(/)
+dist/data/%.zip: dist$(/)data$(/) $(SVN_DATA_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst dist/data/,$(DATADIR),$(subst .zip,,$@))"
+		zip -r $(addprefix ..$(/)..$(/),$@) $(subst dist$(/)data$(/),$(DATADIR),$(subst .zip,,$@))"
 
 
 # Installers for each platform.
@@ -231,7 +230,7 @@ windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 							$(USERGUIDE_HTML_DIR) \
 							$(USERGUIDE_PDF_FILE) \
-							build/vcredist_x86.exe \
+							build$(/)vcredist_x86.exe \
 							$(SVN_DATA_REPO_PATH) 
 	makensis \
 		/DVERSION=$(VERSION) \
@@ -245,5 +244,5 @@ mac_installer: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
 
-build/vcredist_x86.exe: build
+build$(/)vcredist_x86.exe: build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
