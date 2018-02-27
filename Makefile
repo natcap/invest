@@ -71,7 +71,7 @@ HG_UG_REPO_REV          := 93f00e0917d1
 FORKNAME :=
 DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) python_packages
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata test test_ui clean help check python_packages
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
