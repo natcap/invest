@@ -4,8 +4,8 @@ ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
-	CP := Copy-Item
-	COPYDIR := powershell.exe Copy-Item -Recurse
+	CP := powershell.exe Copy-Item
+	COPYDIR := $(CP) -Recurse
 	MKDIR := mkdir
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
 	# Windows doesn't install a python2 binary, just python.
@@ -20,8 +20,8 @@ else
 	ENV_ACTIVATE = source $(ENV)/bin/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
-	CP := cp -r
-	COPYDIR := $(CP)
+	CP := cp
+	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
 	# linux, mac distinguish between python2 and python3
@@ -169,7 +169,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 apidocs: $(APIDOCS_HTML_DIR)
 $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	$(CP) build/sphinx/html $(APIDOCS_HTML_DIR)
+	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
