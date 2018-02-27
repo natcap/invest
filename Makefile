@@ -1,15 +1,3 @@
-SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := data/invest-data
-SVN_DATA_REPO_REV       := 171
-
-SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := data/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 139
-
-HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
-HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := e1d238acd5e6
-
 ENV = env
 PIP = pip
 ifeq ($(OS),Windows_NT)
@@ -26,6 +14,7 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
+	/ := \\
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -38,12 +27,36 @@ else
 	RM := rm -r
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
+	/ := /
 endif
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
+
+# Repositories managed by the makefile task tree
+SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
+SVN_DATA_REPO_PATH      := data$(/)invest-data$(/)
+SVN_DATA_REPO_REV       := 171
+
+SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
+SVN_TEST_DATA_REPO_PATH := data$(/)invest-test-data$(/)
+SVN_TEST_DATA_REPO_REV  := 139
+
+HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
+HG_UG_REPO_PATH         := doc$(/)users-guide$(/)
+HG_UG_REPO_REV          := e1d238acd5e6
+
+
+
+# Target names.
+INVEST_BINARIES_DIR := dist$(/)invest$(/)
+APIDOCS_HTML_DIR := dist$(/)apidocs$(/)
+USERGUIDE_HTML_DIR := dist$(/)userguide$(/)
+USERGUIDE_PDF_FILE := dist$(/)InVEST_$(VERSION)_Documentation.pdf
+WINDOWS_INSTALLER_FILE := dist$(/)InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+MAC_DISK_IMAGE_FILE := dist$(/)InVEST $(VERSION).dmg
 
 
 # These are intended to be overridden by a jenkins build.
@@ -135,10 +148,10 @@ dist/natcap.invest%.zip: dist
 
 
 # Build binaries and put them in dist/invest
-binaries: dist/invest
-dist/invest: dist build
+binaries: $(INVEST_BINARIES_DIR)
+$(INVEST_BINARIES_DIR): dist build
 	-$(RM) build/pyi-build
-	-$(RM) dist/invest
+	-$(RM) $(INVEST_BINARIES_DIR)
 	pyinstaller \
 		--workpath build/pyi-build \
 		--clean \
@@ -149,20 +162,20 @@ dist/invest: dist build
 # API docs are copied to dist/apidocs
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: dist/apidocs
-dist/apidocs:
+apidocs: $(APIDOCS_HTML_DIR)
+$(APIDOCS_HTML_DIR): dist
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
-	$(CP) build/sphinx/html dist/apidocs
+	$(CP) build/sphinx/html $(APIDOCS_HTML_DIR)
 
-userguide: dist/userguide dist/InVEST_$(VERSION)_Documentation.pdf
-dist/InVEST_$(VERSION)_Documentation.pdf: $(HG_UG_REPO_PATH)
+userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
+$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide latex"
 	$(BASHLIKE_SHELL_COMMAND) "cd build/userguide/latex && $(MAKE) all-pdf"
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
-dist/userguide: $(HG_UG_REPO_PATH) dist
+$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) dist
 	$(BASHLIKE_SHELL_COMMAND) "cd doc/users-guide && $(MAKE) BUILDDIR=../../build/userguide html"
-	-$(RM) dist/userguide
+	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
 
@@ -213,20 +226,23 @@ dist/data/%.zip: dist/data $(SVN_DATA_REPO_PATH)
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
-windows_installer: dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-dist/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe: dist/invest dist/userguide build/vcredist_x86.exe $(SVN_DATA_REPO_PATH) dist/InVEST_$(VERSION)_Documentation.pdf
+windows_installer: $(WINDOWS_INSTALLER_FILE)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
+							$(USERGUIDE_HTML_DIR) \
+							$(USERGUIDE_PDF_FILE) \
+							build/vcredist_x86.exe \
+							$(SVN_DATA_REPO_PATH) 
 	makensis \
-		/O=build\nsis.log \
 		/DVERSION=$(VERSION) \
-		/DBINDIR=dist\invest \
+		/DBINDIR=$(INVEST_BINARIES_DIR) \
 		/DARCHITECTURE=$(PYTHON_ARCH) \
 		/DFORKNAME=$(FORKNAME) \
 		/DDATA_LOCATION=$(DATA_BASE_URL) \
 		installer\windows\invest_installer.nsi
 
-mac_installer: dist/InVEST*.dmg
-dist/InVEST%.dmg: dist/invest dist/userguide
-	./installer/darwin/build_dmg.sh "$(VERSION)" "dist/invest" "dist/userguide"
+mac_installer: $(MAC_DISK_IMAGE_FILE)
+$(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
+	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
