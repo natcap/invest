@@ -6,7 +6,7 @@ ifeq ($(OS),Windows_NT)
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
 	CP := powershell.exe Copy-Item
 	COPYDIR := $(CP) -Recurse
-	MKDIR := mkdir
+	MKDIR := powershell.exe mkdir -Force -Path
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
