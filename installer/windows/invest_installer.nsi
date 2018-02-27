@@ -65,7 +65,6 @@
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
-!define PDF_NAME "InVEST_${VERSION}_Documentation.pdf"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
 !define PRODUCT_WEB_SITE "https://www.naturalcapitalproject.org"
 !define MUI_COMPONENTSPAGE_NODESC
@@ -124,7 +123,6 @@ SetCompressor zlib
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-;!define MUI_FINISHPAGE_SHOWREADME ${PDF_NAME}
 !insertmacro MUI_PAGE_FINISH
 
 ; MUI Uninstaller settings---------------
@@ -359,7 +357,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
     File ..\..\LICENSE.txt
-    File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
     file ..\..\HISTORY.rst
   
     ; Copy over all the sample parameter files
@@ -373,7 +370,7 @@ Section "InVEST Tools" Section_InVEST_Tools
   
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
-    File ..\..\dist\InVEST*.pdf
+    File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
   
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
