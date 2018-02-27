@@ -14,7 +14,6 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
-	/ := \\
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -27,7 +26,6 @@ else
 	RM := rm -r
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
-	/ := /
 endif
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
@@ -37,31 +35,31 @@ REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) ma
 
 
 # Output directory names
-DIST_DIR := dist$(/)
-DIST_DATA_DIR := $(DIST_DIR)data$(/)
-BUILD_DIR := build$(/)
-DATA_DIR := data$(/)
+DIST_DIR := dist
+DIST_DATA_DIR := $(DIST_DIR)/data
+BUILD_DIR := build
+DATA_DIR := data
 
 # Target names.
-INVEST_BINARIES_DIR := $(DIST_DIR)invest$(/)
-APIDOCS_HTML_DIR := $(DIST_DIR)apidocs$(/)
-USERGUIDE_HTML_DIR := $(DIST_DIR)userguide$(/)
-USERGUIDE_PDF_FILE := $(DIST_DIR)InVEST_$(VERSION)_Documentation.pdf
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-MAC_DISK_IMAGE_FILE := $(DIST_DIR)InVEST $(VERSION).dmg
+INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
+USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+MAC_DISK_IMAGE_FILE := $(DIST_DIR)/InVEST $(VERSION).dmg
 
 # Repositories managed by the makefile task tree
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := $(DATA_DIR)invest-data$(/)
+SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
 SVN_DATA_REPO_REV       := 171
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)invest-test-data$(/)
+SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
 SVN_TEST_DATA_REPO_REV  := 139
 
 HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
-HG_UG_REPO_PATH         := doc$(/)users-guide$(/)
-HG_UG_REPO_REV          := e1d238acd5e6
+HG_UG_REPO_PATH         := doc/users-guide
+HG_UG_REPO_REV          := 93f00e0917d1
 
 
 # These are intended to be overridden by a jenkins build.
@@ -125,10 +123,10 @@ $(HG_UG_REPO_PATH):
 	-hg pull -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
-$(SVN_DATA_REPO_PATH): $(DATA_DIR)
+$(SVN_DATA_REPO_PATH): | $(DATA_DIR)
 	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
 
-$(SVN_TEST_DATA_REPO_PATH): $(DATA_DIR)
+$(SVN_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
@@ -140,26 +138,26 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
-install: $(DIST_DIR)natcap.invest*.whl
+install: $(DIST_DIR)/natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
 
 # Bulid python packages and put them in dist/
-python_packages: $(DIST_DIR)atcap.invest%.whl $(DIST_DIR)natcap.invest%.zip
-$(DIST_DIR)natcap.invest%.whl: $(DIST_DIR)
+python_packages: $(DIST_DIR)/natcap.invest%.whl $(DIST_DIR)/natcap.invest%.zip
+$(DIST_DIR)/natcap.invest%.whl: | $(DIST_DIR)
 	$(PYTHON) setup.py bdist_wheel
 
-$(DIST_DIR)natcap.invest%.zip: $(DIST_DIR)
+$(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 	$(PYTHON) setup.py sdist --formats=zip
 
 
 # Build binaries and put them in dist/invest
 binaries: $(INVEST_BINARIES_DIR)
-$(INVEST_BINARIES_DIR): $(DIST_DIR) $(BUILD_DIR)
-	-$(RM) $(BUILD_DIR)pyi-build
+$(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
+	-$(RM) $(BUILD_DIR)/pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
 	pyinstaller \
-		--workpath $(BUILD_DIR)pyi-build \
+		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
@@ -169,17 +167,17 @@ $(INVEST_BINARIES_DIR): $(DIST_DIR) $(BUILD_DIR)
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
 apidocs: $(APIDOCS_HTML_DIR)
-$(APIDOCS_HTML_DIR): $(DIST_DIR)
+$(APIDOCS_HTML_DIR): | $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
-$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) $(DIST_DIR)
+$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
-$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) $(DIST_DIR)
+$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
@@ -226,7 +224,7 @@ $(DIST_DATA_DIR)Marine.zip: DATADIR=Base_Data$(/)
 $(DIST_DATA_DIR)Terrestrial.zip: DATADIR=Base_Data$(/)
 $(DIST_DATA_DIR)%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ..$(/)..$(/),$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
+		zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
 
 
 # Installers for each platform.
@@ -236,7 +234,7 @@ windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 							$(USERGUIDE_HTML_DIR) \
 							$(USERGUIDE_PDF_FILE) \
-							build$(/)vcredist_x86.exe \
+							build/vcredist_x86.exe \
 							$(SVN_DATA_REPO_PATH) 
 	makensis \
 		/DVERSION=$(VERSION) \
@@ -250,5 +248,5 @@ mac_installer: $(MAC_DISK_IMAGE_FILE)
 $(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
 
-build$(/)vcredist_x86.exe: build
+build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
