@@ -236,6 +236,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 							$(USERGUIDE_PDF_FILE) \
 							build/vcredist_x86.exe \
 							$(SVN_DATA_REPO_PATH) 
+	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis \
 		/DVERSION=$(VERSION) \
 		/DBINDIR=$(INVEST_BINARIES_DIR) \
