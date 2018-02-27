@@ -35,27 +35,33 @@ NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.inves
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
+
+# Output directory names
+DIST_DIR := dist$(/)
+DIST_DATA_DIR := $(DIST_DIR)data$(/)
+BUILD_DIR := build$(/)
+DATA_DIR := data$(/)
+
+# Target names.
+INVEST_BINARIES_DIR := $(DIST_DIR)invest$(/)
+APIDOCS_HTML_DIR := $(DIST_DIR)apidocs$(/)
+USERGUIDE_HTML_DIR := $(DIST_DIR)userguide$(/)
+USERGUIDE_PDF_FILE := $(DIST_DIR)InVEST_$(VERSION)_Documentation.pdf
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+MAC_DISK_IMAGE_FILE := $(DIST_DIR)InVEST $(VERSION).dmg
+
 # Repositories managed by the makefile task tree
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := data$(/)invest-data$(/)
+SVN_DATA_REPO_PATH      := $(DATA_DIR)invest-data$(/)
 SVN_DATA_REPO_REV       := 171
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := data$(/)invest-test-data$(/)
+SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)invest-test-data$(/)
 SVN_TEST_DATA_REPO_REV  := 139
 
 HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         := doc$(/)users-guide$(/)
 HG_UG_REPO_REV          := e1d238acd5e6
-
-
-# Target names.
-INVEST_BINARIES_DIR := dist$(/)invest$(/)
-APIDOCS_HTML_DIR := dist$(/)apidocs$(/)
-USERGUIDE_HTML_DIR := dist$(/)userguide$(/)
-USERGUIDE_PDF_FILE := dist$(/)InVEST_$(VERSION)_Documentation.pdf
-WINDOWS_INSTALLER_FILE := dist$(/)InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-MAC_DISK_IMAGE_FILE := dist$(/)InVEST $(VERSION).dmg
 
 
 # These are intended to be overridden by a jenkins build.
@@ -92,7 +98,7 @@ help:
 	@echo "  clean             to remove temporary directories (but not dist/)"
 	@echo "  help              to print this help and exit"
 
-build$(/) data$(/) dist$(/) dist$(/)data$(/):
+$(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
@@ -119,10 +125,10 @@ $(HG_UG_REPO_PATH):
 	-hg pull -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
-$(SVN_DATA_REPO_PATH): data$(/)
+$(SVN_DATA_REPO_PATH): $(DATA_DIR)
 	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
 
-$(SVN_TEST_DATA_REPO_PATH): data$(/)
+$(SVN_TEST_DATA_REPO_PATH): $(DATA_DIR)
 	svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
 
 fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
@@ -134,28 +140,28 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
-install: dist$(/)natcap.invest*.whl
+install: $(DIST_DIR)natcap.invest*.whl
 	$(PIP) install --use-wheel --find-links=dist natcap.invest 
 
 
 # Bulid python packages and put them in dist/
-python_packages: dist$(/)natcap.invest%.whl dist$(/)natcap.invest%.zip
-dist$(/)natcap.invest%.whl: dist$(/)
+python_packages: $(DIST_DIR)atcap.invest%.whl $(DIST_DIR)natcap.invest%.zip
+$(DIST_DIR)natcap.invest%.whl: $(DIST_DIR)
 	$(PYTHON) setup.py bdist_wheel
 
-dist$(/)natcap.invest%.zip: dist$(/)
+$(DIST_DIR)natcap.invest%.zip: $(DIST_DIR)
 	$(PYTHON) setup.py sdist --formats=zip
 
 
 # Build binaries and put them in dist/invest
 binaries: $(INVEST_BINARIES_DIR)
-$(INVEST_BINARIES_DIR): dist$(/) build$(/)
-	-$(RM) build$(/)pyi-build
+$(INVEST_BINARIES_DIR): $(DIST_DIR) $(BUILD_DIR)
+	-$(RM) $(BUILD_DIR)pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
 	pyinstaller \
-		--workpath build/pyi-build \
+		--workpath $(BUILD_DIR)pyi-build \
 		--clean \
-		--distpath dist \
+		--distpath $(DIST_DIR) \
 		exe/invest.spec
 
 # Documentation.
@@ -163,17 +169,17 @@ $(INVEST_BINARIES_DIR): dist$(/) build$(/)
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
 apidocs: $(APIDOCS_HTML_DIR)
-$(APIDOCS_HTML_DIR): dist$(/)
+$(APIDOCS_HTML_DIR): $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(CP) build/sphinx/html $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
-$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH)
+$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
-$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) dist$(/)
+$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
@@ -212,15 +218,15 @@ ZIPDIRS = AestheticQuality \
 		  storm_impact \
 		  WaveEnergy \
 		  WindEnergy
-ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix dist$(/)data$(/),$(dirname).zip))
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR),$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-dist/data/Freshwater.zip: DATADIR=Base_Data$(/)
-dist/data/Marine.zip: DATADIR=Base_Data$(/)
-dist/data/Terrestrial.zip: DATADIR=Base_Data$(/)
-dist/data/%.zip: dist$(/)data$(/) $(SVN_DATA_REPO_PATH)
+$(DIST_DATA_DIR)Freshwater.zip: DATADIR=Base_Data$(/)
+$(DIST_DATA_DIR)Marine.zip: DATADIR=Base_Data$(/)
+$(DIST_DATA_DIR)Terrestrial.zip: DATADIR=Base_Data$(/)
+$(DIST_DATA_DIR)%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ..$(/)..$(/),$@) $(subst dist$(/)data$(/),$(DATADIR),$(subst .zip,,$@))"
+		zip -r $(addprefix ..$(/)..$(/),$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
 
 
 # Installers for each platform.
