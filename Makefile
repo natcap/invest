@@ -1,7 +1,7 @@
 ENV = env
 PIP = pip
 ifeq ($(OS),Windows_NT)
-	NULL := NUL
+	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
 	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
 	CP := Copy-Item
@@ -110,10 +110,10 @@ clean:
 	-$(RM) build natcap.invest.egg-info
 
 check:
-	@echo Checking required applications
+	@echo "Checking required applications"
 	@$(PROGRAM_CHECK_SCRIPT) $(REQUIRED_PROGRAMS)
-	@echo ----------------------------
-	@echo Checking python packages
+	@echo "----------------------------"
+	@echo "Checking python packages"
 	@$(PIP) freeze --all -r requirements.txt -r requirements-dev.txt > $(NULL)
 
 
