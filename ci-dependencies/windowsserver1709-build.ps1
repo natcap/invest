@@ -22,7 +22,7 @@ scoop install mercurial@4.5
 scoop install make@4.2
 
 # InVEST setup
-choco install -y miniconda --version 4.3.21
+choco install -y miniconda --forcex86 --version 4.3.21
 $env:Path += ";C:\ProgramData\Miniconda2\Scripts"
 $env:PYTHONIOENCODING="UTF-8"  # corrects issue with cp65001 as default encoding in powershell/cmd
 
