@@ -20,3 +20,15 @@ scoop install git-with-openssh@2.16.2.windows.1
 scoop install sliksvn@1.9.7
 scoop install mercurial@4.5
 scoop install make@4.2
+
+# InVEST setup
+choco install miniconda --version 4.3.21
+$env:Path += ";C:\ProgramData\Miniconda2\Scripts"
+$env:PYTHONIOENCODING="UTF-8"  # corrects issue with cp65001 as default encoding in powershell/cmd
+
+# create an env for InVEST
+conda create -n invest-env python=2.7
+
+
+
+
