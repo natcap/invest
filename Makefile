@@ -46,7 +46,7 @@ APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST $(VERSION).dmg"
+MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
 # Repositories managed by the makefile task tree
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
