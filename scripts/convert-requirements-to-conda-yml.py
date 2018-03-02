@@ -43,9 +43,11 @@ def main():
             pip_requirements.add(line)
 
     conda_deps_string = '\n'.join(['- %s' % dep for dep in
-                                   sorted(conda_requirements)])
+                                   sorted(conda_requirements,
+                                          key=lambda x: x.lower())])
     pip_deps_string = '- pip:\n' + '\n'.join(['  - %s' % dep for dep in
-                                              sorted(pip_requirements)])
+                                              sorted(pip_requirements,
+                                                     key=lambda x: x.lower())])
     print YML_TEMPLATE.format(
         conda_dependencies=conda_deps_string,
         pip_dependencies=pip_deps_string)
