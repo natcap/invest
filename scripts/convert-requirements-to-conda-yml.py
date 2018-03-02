@@ -15,6 +15,11 @@ dependencies:
 {pip_dependencies}
 """
 
+SCM_MAP = {
+    'hg': 'mercurial',
+    'git': 'git',
+}
+
 
 def main():
     pip_requirements = set([])
@@ -24,8 +29,9 @@ def main():
         if len(line) == 0 or line.startswith('#'):
             continue
 
-        if line.startswith(('hg', 'git', 'svn', 'bzr')):
+        if line.startswith(tuple(SCM_MAP.keys())):
             pip_requirements.add(line)
+            conda_requirements.add(SCM_MAP[line.split('+')[0]])
             continue
 
         requirement = pkg_resources.Requirement.parse(line)
