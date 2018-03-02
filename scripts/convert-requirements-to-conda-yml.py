@@ -37,7 +37,8 @@ def main():
         requirement = pkg_resources.Requirement.parse(line)
         conda_forge_url = FEEDSTOCK_URL.format(
             package=requirement.project_name.lower())
-        if requests.get(conda_forge_url).status_code == 200:
+        if (requests.get(conda_forge_url).status_code == 200 and not
+                line.endswith('# pip-only')):
             conda_requirements.add(line)
         else:
             pip_requirements.add(line)

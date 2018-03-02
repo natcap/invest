@@ -6,9 +6,13 @@
 # Packages required for extras (like the UI) are in setup.py.
 #
 # Note that there may be some OS-specific requirements, so be sure to run
-# `paver check` to verify you have all the required packages.
+# `make check` to verify you have all the required packages.
+#
+# Any lines with "# pip-only" at the end will be processed by
+# scripts/convert-requirements-to-conda-yml.py as though it can only be found
+# on pip.
 
-Pyro4==4.41
+Pyro4==4.41  # pip-only
 GDAL>=2.0,<3.0
 matplotlib
 numpy>=1.11.0
