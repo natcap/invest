@@ -45,3 +45,7 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+# TODO: document
+# TODO: add argparse UI
+# TODO: resolve dependencies by calling conda?
