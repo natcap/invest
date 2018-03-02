@@ -399,10 +399,11 @@ def main():
         sip.setapi('QString', 2)
 
         from natcap.invest.ui import inputs
-    except ImportError:
+    except ImportError as error:
         # Can't import UI, exit with nonzero exit code
-        parser.error('UI not installed:\n'
-                     '    pip install natcap.invest[ui]')
+        parser.error(('Unable to import the UI (failed with "%s")\n'
+                      'Is the UI installed?\n'
+                      '    pip install natcap.invest[ui]') % error)
 
     if args.model == 'launcher':
         from natcap.invest.ui import launcher
