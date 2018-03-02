@@ -23,7 +23,7 @@ SCM_MAP = {
 
 def main():
     pip_requirements = set([])
-    conda_requirements = set([])
+    conda_requirements = set(['python=2.7'])
     for line in open('requirements.txt'):
         line = line.strip()
         if len(line) == 0 or line.startswith('#'):
