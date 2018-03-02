@@ -401,6 +401,7 @@ def main():
         from natcap.invest.ui import inputs
     except ImportError as error:
         # Can't import UI, exit with nonzero exit code
+        LOGGER.exception('Unable to import the UI')
         parser.error(('Unable to import the UI (failed with "%s")\n'
                       'Is the UI installed?\n'
                       '    pip install natcap.invest[ui]') % error)
