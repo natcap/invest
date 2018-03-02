@@ -29,7 +29,7 @@ $env:PYTHONIOENCODING="UTF-8"  # corrects issue with cp65001 as default encoding
 # InVEST stuff.
 conda install -y python=2.7
 cmd.exe /C "activate root && python scripts/convert-requirements-to-conda-yml.py > invest-environment.yml"
-conda create -y -p conda-env -f invest-environment.yml
+conda env create --force -p conda-env -f invest-environment.yml
 
 
 
