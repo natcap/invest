@@ -1,6 +1,6 @@
+"""Grand script to one step builds and other InVEST synchronicity."""
 import argparse
 import ast
-import codecs
 import distutils
 import distutils.ccompiler
 from distutils.version import StrictVersion
@@ -27,15 +27,15 @@ import warnings
 import zipfile
 from types import DictType
 import urllib
-
-import pkg_resources
 import paver.svn
 import paver.path
 import paver.virtual
 from paver.easy import task, cmdopts, consume_args, might_call,\
     dry, sh, call_task, BuildFailure, no_help, Bunch
-import virtualenv
 import yaml
+
+import virtualenv
+import pkg_resources
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
     %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
@@ -167,7 +167,7 @@ def find_executable(program):
     if platform.system() == 'Windows' and not program.endswith('.exe'):
         program += '.exe'
 
-    fpath, fname = os.path.split(program)
+    fpath, _ = os.path.split(program)
     if fpath:  # fpath is not '' when an absolute path is given.
         if is_exe(program):
             return program
@@ -201,8 +201,8 @@ def user_os_installer():
             rpm_path = os.path.join(path, 'rpm')
             if is_exe(rpm_path):
                 # https://ask.fedoraproject.org/en/question/49738/how-to-check-if-system-is-rpm-or-debian-based/?answer=49850#post-id-49850
-                # -q -f /path/to/rpm checks to see if RPM owns RPM.
-                # If it's not owned by RPM, we can assume it's owned by apt/dpkg.
+                # -q -f /path/to/rpm checks to see if RPM owns RPM. If it's
+                # not owned by RPM, we can assume it's owned by apt/dpkg.
                 exit_code = subprocess.call([rpm_path, '-q', '-f', rpm_path])
                 if exit_code == 0:
                     return 'rpm'
@@ -395,7 +395,7 @@ class Repository(object):
             A string representation of the tracked version.
         """
         tracked_rev = json.load(open('versions.json'))[self.local_path]
-        if type(tracked_rev) is DictType:
+        if isinstance(tracked_rev, DictType):
             user_os = platform.system()
             return tracked_rev[user_os]
         elif tracked_rev.startswith('REQUIREMENTS_TXT'):
@@ -1534,7 +1534,8 @@ def build_docs(options):
     """
 
     invest_version = _invest_version(options.build_docs.python)
-    archive_template = os.path.join('dist', 'invest-%s-%s' % (invest_version, '%s'))
+    archive_template = os.path.join(
+        'dist', 'invest-%s-%s' % (invest_version, '%s'))
 
     print 'Using this template for the archive name: %s' % archive_template
 
@@ -1584,6 +1585,17 @@ def build_docs(options):
         call_task('zip', args=[archive_name, 'build/sphinx/html', 'apidocs'])
     else:
         print "Skipping the API docs"
+
+    # Copy PDF docs into its distribution name
+    try:
+        pdf_path = glob.glob(os.path.join('doc', 'users-guide', 'build',
+                                     'latex', '*.pdf'))[0]
+    except IndexError:
+        print "Skipping pdf, since pdf was not built."
+    else:
+        out_pdf = pdf_path.replace('+VERSION+', invest_version)
+        dry(
+            'cp %s %s' % (pdf_path, out_pdf), shutil.copyfile, pdf_path, out_pdf)
 
 
 @task
@@ -3416,8 +3428,7 @@ def test(args):
                 '--with-xunit '
                 '--cover-xml '
                 '--cover-tests '
-                '--logging-filter=None '
-                '--nologcapture '
+                '--logging-level=DEBUG '
             )
         else:
             flags = _coverage_flags + '--cover-html '
@@ -3435,7 +3446,7 @@ def test(args):
             # If the user gave us some test names to run, run those instead!
             tests = parsed_args.nose_args
 
-        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+        sh(('nosetests -vsP {opts} {tests}').format(
                 opts=flags,
                 tests=' '.join(tests)
             ))
@@ -3555,14 +3566,13 @@ def test_ui(args):
                 '--with-xunit '
                 '--cover-xml '
                 '--cover-tests '
-                '--logging-filter=None '
-                '--nologcapture '
+                '--logging-level=DEBUG '
             )
         else:
             flags = _coverage_flags + '--cover-html '
 
         tests = glob.glob(os.path.join('ui_tests', '*.py'))
-        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+        sh(('nosetests -vsP {opts} {tests}').format(
                 opts=flags,
                 tests=' '.join(tests)
             ))

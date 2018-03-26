@@ -10,6 +10,7 @@ import datetime
 import logging
 
 from osgeo import ogr
+from osgeo import gdal
 import matplotlib
 matplotlib.use('AGG')  # Use the Anti-Grain Geometry back-end (for PNG files)
 import matplotlib.pyplot as plt
@@ -98,9 +99,9 @@ def execute(args):
         # Remove so we can re-create.
         os.remove(out_path)
 
-    curr_shp_file = ogr.Open(args['ff_farm_file'])
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    sf_copy = driver.CopyDataSource(curr_shp_file, out_path)
+    curr_shp_file = gdal.OpenEx(args['ff_farm_file'], gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    sf_copy = driver.CreateCopy(out_path, curr_shp_file)
     layer = sf_copy.GetLayer()
 
     #This adds the number of cycles completed by each farm to their shapefile

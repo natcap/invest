@@ -5,7 +5,7 @@ import os
 import csv
 import logging
 
-from osgeo import ogr
+from osgeo import gdal
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import validation
@@ -328,7 +328,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('ff_farm_loc', None):
         with utils.capture_gdal_logging():
-            vector = ogr.Open(args['ff_farm_loc'])
+            vector = gdal.OpenEx(args['ff_farm_loc'], gdal.OF_VECTOR)
             if vector is None:
                 warnings.append((['ff_farm_loc'],
                                  ('Parameter must be a filepath to an '

@@ -774,15 +774,13 @@ def _aggregate_recharge(
             aggregate_vector_path)
         os.remove(aggregate_vector_path)
 
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-    original_aoi_vector = ogr.Open(aoi_path)
+    original_aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
 
-    esri_driver.CopyDataSource(
-        original_aoi_vector, aggregate_vector_path)
-    esri_driver = None
-    ogr.DataSource.__swig_destroy__(original_aoi_vector)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver.CreateCopy(aggregate_vector_path, original_aoi_vector)
+    gdal.Dataset.__swig_destroy__(original_aoi_vector)
     original_aoi_vector = None
-    aggregate_vector = ogr.Open(aggregate_vector_path, 1)
+    aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
     # make an identifying id per polygon that can be used for aggregation
@@ -832,7 +830,7 @@ def _aggregate_recharge(
         serviceshed_defn.GetFieldIndex(poly_id_field))
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
-    ogr.DataSource.__swig_destroy__(aggregate_vector)
+    gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
 
 
@@ -890,12 +888,6 @@ def validate(args, limit_to=None):
         'beta_i',
         'gamma']
 
-    if ('user_defined_climate_zones' in args and
-            args['user_defined_climate_zones']):
-        required_keys.extend([
-            'climate_zone_table_path',
-            'climate_zone_raster_path'])
-
     if 'user_defined_local_recharge' in args:
         if args['user_defined_local_recharge']:
             required_keys.append('l_path')
@@ -903,8 +895,15 @@ def validate(args, limit_to=None):
             required_keys.extend([
                 'et0_dir',
                 'precip_dir',
-                'soil_group_path',
-                'rain_events_table_path'])
+                'soil_group_path'])
+
+    if ('user_defined_climate_zones' in args and
+            args['user_defined_climate_zones']):
+        required_keys.extend([
+            'climate_zone_table_path',
+            'climate_zone_raster_path'])
+    else:
+        required_keys.extend(['rain_events_table_path'])
 
     if 'monthly_alpha_path' in args:
         if args['monthly_alpha_path']:
@@ -951,13 +950,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

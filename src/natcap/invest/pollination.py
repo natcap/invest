@@ -678,7 +678,7 @@ def execute(args):
                 (total_pollinator_abundance_index_path, 1),
                 target_farm_result_path, fid_field_id))
 
-    target_farm_vector = ogr.Open(target_farm_result_path, 1)
+    target_farm_vector = gdal.OpenEx(target_farm_result_path, 1)
     target_farm_layer = target_farm_vector.GetLayer()
 
     # aggregate results per farm
@@ -739,12 +739,12 @@ def _rasterize_vector_onto_base(
     Returns:
         None.
     """
-    base_raster = gdal.Open(base_raster_path)
-    raster_driver = base_raster.GetDriver()
+    base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    raster_driver = gdal.GetDriverByName('GTiff')
     target_raster = raster_driver.CreateCopy(target_raster_path, base_raster)
     base_raster = None
 
-    vector = ogr.Open(base_vector_path)
+    vector = gdal.OpenEx(base_vector_path)
     layer = vector.GetLayer()
 
     if filter_string is not None:
@@ -777,13 +777,12 @@ def _create_farm_result_vector(
     Returns:
         None.
     """
-    esri_driver = ogr.GetDriverByName("ESRI Shapefile")
-    base_vector = ogr.Open(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
-    base_defn = base_layer.GetLayerDefn()
 
-    target_vector = esri_driver.CopyDataSource(
-        base_vector, target_vector_path)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_vector = driver.CreateCopy(
+        target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()
     target_layer.CreateField(ogr.FieldDefn(fid_field_id, ogr.OFTInteger))
     for feature in target_layer:
@@ -815,7 +814,7 @@ def _create_farm_result_vector(
     target_layer.CreateField(wild_pol_farm_yield_field_defn)
 
     target_layer = None
-    target_vector.SyncToDisk()
+    target_vector.FlushCache()
     target_vector = None
 
 
@@ -901,7 +900,7 @@ def _parse_scenario_variables(args):
     farm_vector = None
     if farm_vector_path is not None:
         LOGGER.info('Checking that farm polygon has expected headers')
-        farm_vector = ogr.Open(farm_vector_path)
+        farm_vector = gdal.OpenEx(farm_vector_path)
         farm_layer = farm_vector.GetLayer()
         if farm_layer.GetGeomType() not in [
                 ogr.wkbPolygon, ogr.wkbMultiPolygon]:
@@ -1386,13 +1385,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

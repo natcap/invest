@@ -208,14 +208,6 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         result_vector = ogr.Open(result_vector_path)
         result_layer = result_vector.GetLayer()
 
-        # The tolerance of 3 digits after the decimal was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        tolerance_places = 3
-
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
                 fid, c_sum, c_ha_mean = [float(x) for x in line.split(',')]
@@ -223,9 +215,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 for field, value in [
                         ('c_sum', c_sum),
                         ('c_ha_mean', c_ha_mean)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
+                    numpy.testing.assert_allclose(
+                        feature.GetField(field), value)
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
 

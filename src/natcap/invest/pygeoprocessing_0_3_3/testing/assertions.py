@@ -20,8 +20,8 @@ from . import utils
 # decimal numbers.  See https://en.wikipedia.org/wiki/Machine_epsilon for more
 # information on machine epsilons.  This is the default allowable relative
 # error due to rounding for our assertions.
-REL_TOL_DEFAULT = 1e-09
-ABS_TOL_DEFAULT = 0.0
+REL_TOL_DEFAULT = 1e-5
+ABS_TOL_DEFAULT = 1e-8
 LOGGER = logging.getLogger('pygeoprocessing.testing.assertions')
 
 
@@ -125,8 +125,8 @@ def assert_rasters_equal(
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    a_dataset = gdal.Open(a_uri)
-    b_dataset = gdal.Open(b_uri)
+    a_dataset = gdal.OpenEx(a_uri, gdal.OF_RASTER)
+    b_dataset = gdal.OpenEx(b_uri, gdal.OF_RASTER)
 
     try:
         if a_dataset.RasterXSize != b_dataset.RasterXSize:
@@ -198,7 +198,7 @@ def assert_rasters_equal(
         b_dataset = None
 
 
-def assert_vectors_equal(a_uri, b_uri, field_tolerance):
+def assert_vectors_equal(a_uri, b_uri):
     """Assert that the vectors at a_uri and b_uri are equal to each other.
 
     This assertion method asserts the equality of these vector
@@ -222,8 +222,6 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
     Args:
         a_uri (string): a URI to an OGR vector
         b_uri (string): a URI to an OGR vector
-        field_tolerance (int or float): The relative numerical tolerance to
-            which field values should be asserted.
 
     Raises:
         IOError: Raised if one of the input files is not found on disk.
@@ -237,8 +235,8 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
         if not os.path.exists(uri):
             raise IOError('File "%s" not found on disk' % uri)
 
-    shape = ogr.Open(a_uri)
-    shape_regression = ogr.Open(b_uri)
+    shape = gdal.OpenEx(a_uri, gdal.OF_VECTOR)
+    shape_regression = gdal.OpenEx(b_uri, gdal.OF_VECTOR)
 
     try:
         # Check that the shapefiles have the same number of layers
@@ -318,9 +316,7 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
                         try:
                             float_field = float(field)
                             float_field_regression = float(field_regression)
-                            assert_close(
-                                float_field, float_field_regression,
-                                field_tolerance)
+                            assert_close(float_field, float_field_regression)
                         except (ValueError, TypeError):
                             # ValueError happens when strings cast to float
                             # TypeError when casting non-string or non-number.
@@ -355,16 +351,18 @@ def assert_vectors_equal(a_uri, b_uri, field_tolerance):
                     reg_feature_fid = feat_regression.GetFID()
                     raise AssertionError(
                         'Geometries are not equal in feature %s, '
-                        'regression feature %s in layer %s' % (
-                            feature_fid, reg_feature_fid, layer_num))
+                        'regression feature %s in layer %s %s %s' % (
+                            feature_fid, reg_feature_fid, layer_num,
+                            geom.ExportToWkt(),
+                            geom_regression.ExportToWkt()))
 
                 feat = None
                 feat_regression = None
                 feat = layer.GetNextFeature()
                 feat_regression = layer_regression.GetNextFeature()
     finally:
-        ogr.DataSource.__swig_destroy__(shape)
-        ogr.DataSource.__swig_destroy__(shape_regression)
+        gdal.Dataset.__swig_destroy__(shape)
+        gdal.Dataset.__swig_destroy__(shape_regression)
         shape = None
         shape_regression = None
 

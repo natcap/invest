@@ -5,7 +5,7 @@ can be used by either of the secondary modules within the OA model.
 import os
 import fnmatch
 
-from osgeo import ogr
+from osgeo import gdal
 
 
 def get_files_dict(folder):
@@ -23,7 +23,7 @@ def get_files_dict(folder):
                 extension), and the value is the open shapefile.
     '''
 
-    #Glob.glob gets all of the files that fall into the form .shp, and makes 
+    #Glob.glob gets all of the files that fall into the form .shp, and makes
     #them into a list. Then, each item in the list is added to a dictionary as
     #an open file with the key of it's filename without the extension, and that
     #whole dictionary is made an argument of the mz_args dictionary
@@ -36,10 +36,10 @@ def get_files_dict(folder):
         #The return of os.path.split is a tuple where everything after the final
         #slash is returned as the 'tail' in the second element of the tuple
         #path.splitext returns a tuple such that the first element is what comes
-        #before the file extension, and the second is the extension itself 
+        #before the file extension, and the second is the extension itself
         name = os.path.splitext(os.path.split(file)[1])[0]
 
-        file_dict[name] = ogr.Open(file)
+        file_dict[name] = gdal.OpenEx(file)
 
     return file_dict
 

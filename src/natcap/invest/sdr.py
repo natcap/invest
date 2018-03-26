@@ -893,8 +893,6 @@ def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
         watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, and sed retention fields."""
-    esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-
     field_summaries = {
         'usle_tot': pygeoprocessing.zonal_statistics(
             (usle_path, 1), watersheds_path, 'ws_id'),
@@ -904,12 +902,13 @@ def _generate_report(
             (sed_retention_path, 1), watersheds_path, 'ws_id'),
         }
 
-    original_datasource = ogr.Open(watersheds_path)
+    original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     # Delete if existing shapefile with the same name and path
     if os.path.isfile(watershed_results_sdr_path):
         os.remove(watershed_results_sdr_path)
-    datasource_copy = esri_driver.CopyDataSource(
-        original_datasource, watershed_results_sdr_path)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    datasource_copy = driver.CreateCopy(
+        watershed_results_sdr_path, original_datasource)
     layer = datasource_copy.GetLayer()
 
     for field_name in field_summaries:
@@ -926,8 +925,6 @@ def _generate_report(
             feature.SetField(
                 field_name, float(field_summaries[field_name][ws_id]['sum']))
         layer.SetFeature(feature)
-    original_datasource.Destroy()
-    datasource_copy.Destroy()
 
 
 @validation.invest_validator
@@ -1004,7 +1001,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
@@ -1015,7 +1012,8 @@ def validate(args, limit_to=None):
             # that all their fields are defined
             if os.path.exists(args['watersheds_path']):
                 try:
-                    watersheds_vector = ogr.Open(args['watersheds_path'])
+                    watersheds_vector = gdal.OpenEx(
+                        args['watersheds_path'], gdal.OF_VECTOR)
                     if watersheds_vector is None:
                         validation_error_list.append(
                             (['watersheds_path'], 'not a vector'))

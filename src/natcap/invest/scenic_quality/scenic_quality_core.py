@@ -1118,7 +1118,7 @@ def viewshed(input_array, cell_size, array_shape, nodata, output_uri, \
     obs_elev, tgt_elev, max_dist, cell_size, refraction_coeff, alg_version)
 
     # Save the output in the output URI
-    output_raster = gdal.Open(output_uri, gdal.GA_Update)
+    output_raster = gdal.OpenEx(output_uri, gdal.GA_Update)
     message = 'Cannot open file ' + output_uri
     assert output_raster is not None, message
     output_raster.GetRasterBand(1).WriteArray(output_array)

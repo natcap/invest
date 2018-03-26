@@ -563,7 +563,7 @@ def _convert_by_score(
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
 
-    out_ds = gdal.Open(out_raster_uri, gdal.GA_Update)
+    out_ds = gdal.OpenEx(out_raster_uri, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
     out_block_col_size, out_block_row_size = out_band.GetBlockSize()
     n_rows = out_band.YSize
@@ -737,13 +737,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

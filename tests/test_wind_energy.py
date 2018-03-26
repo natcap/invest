@@ -183,7 +183,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_results = [.15, .1, .05, .05]
 
         for dist_a, dist_b in zip(results, exp_results):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(dist_a, dist_b, 1e-9)
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
+                dist_a, dist_b)
 
     def test_add_field_to_shape_given_list(self):
         """WindEnergy: testing 'add_field_to_shape_given_list' function."""
@@ -229,7 +230,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field_name)
                     natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
-                        results[pt_id][field_name], field_val, 1e-9)
+                        results[pt_id][field_name], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field_name)
@@ -325,7 +326,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             spat_ref, start_point, x_len, y_len, out_path)
         # Compare results
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_path, farm_ds_path, 1e-9)
+            out_path, farm_ds_path)
 
     def test_get_highest_harvested_geom(self):
         """WindEnergy: testing 'get_highest_harvested_geom' function."""
@@ -414,11 +415,11 @@ class WindEnergyUnitTests(unittest.TestCase):
         result = wind_energy.pixel_size_based_on_coordinate_transform_uri(
             raster_path, coord_trans, point)
 
-        expected_res = (5576.152641937137, 1166.6139341676608)
+        expected_res = (5553.93306384, 1187.37081348)
 
         # Compare
         for res, exp in zip(result, expected_res):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(res, exp, 1e-9)
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(res, exp)
 
     def test_calculate_distances_grid(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
@@ -620,8 +621,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricetable', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricetable', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -630,8 +630,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricetable', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricetable', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -649,8 +648,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -659,8 +657,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -681,8 +678,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -691,8 +687,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -700,7 +695,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        workspace_dir = 'expected_result'
+        args = WindEnergyRegressionTests.generate_base_args(
+            workspace_dir)#self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -715,8 +712,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'nodistances', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -725,8 +721,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nodistances', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -751,8 +746,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'novaluation', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'novaluation', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -761,8 +755,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'novaluation', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'novaluation', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -796,8 +789,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricetablegridpts', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricetablegridpts',
+                    raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -806,8 +799,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricetablegridpts', vector_path),
-                1e-9)
+                os.path.join(
+                    REGRESSION_DATA, 'pricetablegridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -840,8 +833,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'priceval', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -850,15 +842,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'priceval', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
-
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
@@ -885,8 +875,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -895,15 +884,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
-
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
@@ -934,8 +921,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -944,8 +930,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path),
-                1e-9)
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

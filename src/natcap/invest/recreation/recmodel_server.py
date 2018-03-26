@@ -19,6 +19,7 @@ import Pyro4
 import numpy
 from osgeo import ogr
 from osgeo import osr
+from osgeo import gdal
 import shapely.ops
 import shapely.wkt
 import shapely.geometry
@@ -226,7 +227,7 @@ class RecModel(object):
             a path to an ESRI shapefile copy of `aoi_path` updated with a
             "PUD" field which contains the metric per polygon.
         """
-        aoi_vector = ogr.Open(aoi_path)
+        aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
         # append a _pud to the aoi filename
         out_aoi_pud_path = os.path.join(workspace_path, out_vector_filename)
 
@@ -350,10 +351,8 @@ class RecModel(object):
 
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
-        esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        LOGGER.debug(out_aoi_pud_path)
-        pud_aoi_vector = esri_driver.CopyDataSource(
-            aoi_vector, out_aoi_pud_path)
+        driver = gdal.GetDriverByName('ESRI Shapefile')
+        pud_aoi_vector = driver.CreateCopy(out_aoi_pud_path, aoi_vector)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
         pud_id_suffix_list = [
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
@@ -421,7 +420,8 @@ class RecModel(object):
 
         LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
-        pud_aoi_vector.SyncToDisk()
+        pud_aoi_vector.FlushCache()
+        pud_aoi_vector = None
 
         LOGGER.info('returning out shapefile path')
         return out_aoi_pud_path, monthly_table_path
@@ -661,7 +661,7 @@ def _calc_poly_pud(
     local_qt = pickle.load(open(local_qt_pickle_path, 'rb'))
     LOGGER.info('local qt load took %.2fs', time.time() - start_time)
 
-    aoi_vector = ogr.Open(aoi_path)
+    aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
     aoi_layer = aoi_vector.GetLayer()
 
     for poly_id in iter(poly_test_queue.get, 'STOP'):

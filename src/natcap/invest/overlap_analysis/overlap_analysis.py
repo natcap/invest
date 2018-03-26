@@ -7,7 +7,6 @@ import shutil
 import fnmatch
 
 import numpy
-from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from osgeo import gdal
 from scipy import ndimage
@@ -109,7 +108,7 @@ def execute(args):
         hubs_out_uri = os.path.join(intermediate_dir, "hubs_raster.tif")
         create_hubs_raster(
             args['hubs_uri'], args['decay'], aoi_dataset_uri, hubs_out_uri)
-        hubs_rast = gdal.Open(hubs_out_uri)
+        hubs_rast = gdal.OpenEx(hubs_out_uri)
     else:
         hubs_rast = None
         hubs_out_uri = None
@@ -219,7 +218,7 @@ def create_hubs_raster(hubs_shape_uri, decay, aoi_raster_uri, hubs_out_uri):
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
         hubs_out_uri, hubs_shape_uri, burn_values=[0])
 
-    dataset = gdal.Open(hubs_out_uri, gdal.GA_Update)
+    dataset = gdal.OpenEx(hubs_out_uri, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     matrix = band.ReadAsArray()
     cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(aoi_raster_uri)
@@ -390,7 +389,7 @@ def create_weighted_raster(
         max_intra_weights = {}
         for layer_uri in layers_dict:
             layer_name = os.path.splitext(os.path.basename(layer_uri))[0]
-            datasource = ogr.Open(layer_uri)
+            datasource = gdal.OpenEx(layer_uri)
             layer = datasource.GetLayer()
             for feature in layer:
                 attribute = feature.items()[intra_name]
@@ -699,7 +698,7 @@ def validate(args, limit_to=None):
         try:
             if args[vector_key] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = ogr.Open(args[vector_key])
+                    vector = gdal.OpenEx(args[vector_key])
                     if vector is None:
                         warnings.append(([vector_key],
                                          ('Parameter must be a path to an '

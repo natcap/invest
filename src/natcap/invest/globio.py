@@ -280,16 +280,16 @@ def execute(args):
     # ensure that aoi_uri is defined and it's not an empty string
     if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
         # copy the aoi to an output shapefile
-        original_datasource = ogr.Open(args['aoi_uri'])
+        original_datasource = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
         summary_aoi_uri = os.path.join(
             output_dir, 'aoi_summary%s.shp' % file_suffix)
         # Delete if existing shapefile with the same name
         if os.path.isfile(summary_aoi_uri):
             os.remove(summary_aoi_uri)
         # Copy the input shapefile into the designated output folder
-        esri_driver = ogr.GetDriverByName('ESRI Shapefile')
-        datasource_copy = esri_driver.CopyDataSource(
-            original_datasource, summary_aoi_uri)
+        driver = gdal.GetDriverByName('ESRI Shapefile')
+        datasource_copy = driver.CreateCopy(
+            summary_aoi_uri, original_datasource)
         layer = datasource_copy.GetLayer()
         msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
         msa_summary_field_def.SetWidth(24)
@@ -761,13 +761,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.Open(args[key])
+                    raster = gdal.OpenEx(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
+                    vector = gdal.OpenEx(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))
