@@ -5,6 +5,7 @@
 3.4.3 (2018-03-26)
 ------------------
 * Fixed a critical issue in the carbon model UI that would incorrectly state the user needed a "REDD Priority Raster" when none was required.
+* Fixed an issue in annual water yield model that required subwatersheds even though it is an optional field.
 
 3.4.2 (2017-12-15)
 ------------------
