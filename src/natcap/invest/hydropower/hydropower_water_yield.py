@@ -1028,11 +1028,14 @@ def validate(args, limit_to=None):
         ('depth_to_root_rest_layer_uri', 'raster'),
         ('pawc_uri', 'raster'),
         ('watersheds_uri', 'vector'),
-        ('sub_watersheds_uri', 'vector'),
         ('biophysical_table_uri', 'table'),
         ('demand_table_uri', 'table'),
         ('valuation_table_uri', 'table'),
         ]
+
+    if ('sub_watersheds_uri' in args and
+            args['sub_watersheds_uri'] != ''):
+        file_type_list.append(('sub_watersheds_uri', 'vector'))
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
