@@ -2,6 +2,10 @@
 
 .. Unreleased Changes
 
+3.4.3 (2018-03-26)
+------------------
+* Fixed a critical issue in the carbon model UI that would incorrectly state the user needed a "REDD Priority Raster" when none was required.
+
 3.4.2 (2017-12-15)
 ------------------
 * Fixed a cross-platform issue with the UI where logfiles could not be dropped onto UI windows.
