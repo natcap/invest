@@ -477,7 +477,8 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key) and
+                    key in args and key in required_keys):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))
