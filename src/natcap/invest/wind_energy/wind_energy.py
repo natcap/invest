@@ -1953,20 +1953,35 @@ def validate(args, limit_to=None):
     keys_missing_value = set([])
     missing_keys = set([])
 
-    for required_key in ('workspace_dir',
-                         'wind_data_uri',
-                         'bathymetry_uri',
-                         'global_wind_parameters_uri',
-                         'turbine_parameters_uri',
-                         'number_of_turbines',
-                         'min_depth',
-                         'max_depth',
-                         'foundation_cost',
-                         'discount_rate',
-                         'avg_grid_distance',
-                         'wind_schedule',
-                         'wind_price',
-                         'rate_change'):
+    required_keys = [
+        'workspace_dir',
+        'wind_data_uri',
+        'bathymetry_uri',
+        'global_wind_parameters_uri',
+        'turbine_parameters_uri',
+        'number_of_turbines',
+        'min_depth',
+        'max_depth',
+        ]
+
+    # If we're doing valuation, min and max distance are required.
+    if 'valuation_container' in args and args['valuation_container']:
+        for key in ('min_distance', 'max_distance'):
+            if args[key] in ('', None):
+                warnings.append(([key], 'Value must be defined.'))
+
+        required_keys.extend([
+            'discount_rate', 'foundation_cost', 'avg_grid_distance',])
+        if limit_to in ('price_table', None):
+            if 'price_table' in args and args['price_table'] not in (True, False):
+                warnings.append((['price_table'],
+                                 'Parameter must be either True or False'))
+            if args['price_table']:
+                required_keys.append('wind_schedule')
+            else:
+                required_keys.extend(['wind_price', 'rate_change'])
+
+    for required_key in required_keys:
         try:
             if args[required_key] in ('', None):
                 keys_missing_value.add(required_key)
@@ -1974,8 +1989,9 @@ def validate(args, limit_to=None):
             missing_keys.add(required_key)
 
     if len(missing_keys) > 0:
-        raise KeyError('Required keys are missing from args: %s'
-                       % ', '.join(sorted(missing_keys)))
+        return [
+            (missing_keys, 'Required keys are missing from args: %s' %
+             ', '.join(sorted(missing_keys)))]
 
     if len(keys_missing_value) > 0:
         warnings.append((keys_missing_value,
@@ -2141,7 +2157,8 @@ def validate(args, limit_to=None):
             warnings.append((['grid_points_uri'],
                              'Could not open CSV file.'))
 
-    if limit_to in ('wind_schedule', None):
+    if limit_to in ('wind_schedule', None) and (
+            'price_table' in args and args['price_table'] == True):
         try:
             table_dict = utils.build_lookup_from_csv(
                 args['wind_schedule'], 'year')
@@ -2176,14 +2193,11 @@ def validate(args, limit_to=None):
                 pass
         except IOError:
             warnings.append((['wind_schedule'], 'Could not locate file.'))
+        except KeyError:
+            warnings.append((['wind_schedule'], 'Key Undefined.'))
         except csv.Error:
             warnings.append((['wind_schedule'],
                              'Could not open CSV file.'))
-
-    if limit_to in ('price_table', None):
-        if args['price_table'] not in (True, False):
-            warnings.append((['price_table'],
-                             'Parameter must be either True or False'))
 
     if limit_to is None:
         # Require land_polygon_uri if any of min_distance, max_distance, or
@@ -2199,11 +2213,5 @@ def validate(args, limit_to=None):
             # It's possible for some of these args to be missing, in which case
             # the land polygon isn't required.
             pass
-
-        # If we're doing valuation, min and max distance are required.
-        if args['valuation_container']:
-            for key in ('min_distance', 'max_distance'):
-                if args[key] in ('', None):
-                    warnings.append(([key], 'Value must be defined.'))
 
     return warnings
