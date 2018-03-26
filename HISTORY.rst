@@ -6,6 +6,7 @@
 ------------------
 * Fixed a critical issue in the carbon model UI that would incorrectly state the user needed a "REDD Priority Raster" when none was required.
 * Fixed an issue in annual water yield model that required subwatersheds even though it is an optional field.
+* Fixed an issue in wind energy UI that was incorrectly validating most of the inputs.
 
 3.4.2 (2017-12-15)
 ------------------
