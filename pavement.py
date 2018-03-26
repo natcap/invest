@@ -3428,8 +3428,7 @@ def test(args):
                 '--with-xunit '
                 '--cover-xml '
                 '--cover-tests '
-                '--logging-filter=None '
-                '--nologcapture '
+                '--logging-level=DEBUG '
             )
         else:
             flags = _coverage_flags + '--cover-html '
@@ -3447,7 +3446,7 @@ def test(args):
             # If the user gave us some test names to run, run those instead!
             tests = parsed_args.nose_args
 
-        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+        sh(('nosetests -vsP {opts} {tests}').format(
                 opts=flags,
                 tests=' '.join(tests)
             ))
@@ -3567,14 +3566,13 @@ def test_ui(args):
                 '--with-xunit '
                 '--cover-xml '
                 '--cover-tests '
-                '--logging-filter=None '
-                '--nologcapture '
+                '--logging-level=DEBUG '
             )
         else:
             flags = _coverage_flags + '--cover-html '
 
         tests = glob.glob(os.path.join('ui_tests', '*.py'))
-        sh(('nosetests -vsP --nologcapture {opts} {tests}').format(
+        sh(('nosetests -vsP {opts} {tests}').format(
                 opts=flags,
                 tests=' '.join(tests)
             ))

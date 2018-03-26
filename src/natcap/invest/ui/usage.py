@@ -14,7 +14,6 @@ import urllib2
 import uuid
 
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 import natcap.invest
 import pygeoprocessing
@@ -22,6 +21,7 @@ import pygeoprocessing
 from .. import utils
 
 ENCODING = sys.getfilesystemencoding()
+LOGGER = logging.getLogger(__name__)
 
 _ENDPOINTS_INDEX_URL = (
     'http://data.naturalcapitalproject.org/server_registry/'
@@ -134,7 +134,7 @@ def _calculate_args_bounding_box(args_dict):
                     if vector is not None:
                         # OGR opens CSV files.  For now, we should not
                         # consider these to be vectors.
-                        driver_name = vector.GetDriver().GetName()
+                        driver_name = vector.GetDriver().ShortName
                         if driver_name == 'CSV':
                             return False
                         return True
@@ -157,7 +157,7 @@ def _calculate_args_bounding_box(args_dict):
             local_bb = [0., 0., 0., 0.]
             if _is_gdal(arg):
                 raster_info = pygeoprocessing.get_raster_info(arg)
-                local_bb = raster_info['bounding_box'][0]
+                local_bb = raster_info['bounding_box']
                 projection_wkt = raster_info['projection']
                 spatial_ref = osr.SpatialReference()
                 spatial_ref.ImportFromWkt(projection_wkt)
@@ -183,11 +183,12 @@ def _calculate_args_bounding_box(args_dict):
                     local_bb, bb_intersection, 'intersection')
                 bb_union = _merge_bounding_boxes(
                     local_bb, bb_union, 'union')
-            except Exception:
+            except Exception as transform_error:
                 # All kinds of exceptions from bad transforms or CSV files
                 # or dbf files could get us to this point, just don't bother
                 # with the local_bb at all
-                pass
+                LOGGER.exception('Error when transforming coordinates: %s',
+                                 transform_error)
 
         return bb_intersection, bb_union
 
