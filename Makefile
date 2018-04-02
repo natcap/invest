@@ -71,7 +71,7 @@ HG_UG_REPO_REV          := 93f00e0917d1
 FORKNAME :=
 DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata-single test test_ui clean help check python_packages
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -91,7 +91,7 @@ help:
 	@echo "  windows_installer to build an NSIS installer for distribution"
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
-	@echo "  sampledata-single to build a single self-contained data zipfile.  Used for 'advanced' NSIS install."
+	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for 'advanced' NSIS install."
 	@echo "  test              to run nosetests on the tests directory"
 	@echo "  test_ui           to run nosetests on the ui_tests directory"
 	@echo "  clean             to remove temporary directories (but not dist/)"
@@ -228,7 +228,7 @@ $(DIST_DATA_DIR)%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
 		zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
-sampledata-single: $(SAMPLEDATA_SINGLE_ARCHIVE)
+sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
