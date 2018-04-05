@@ -1,6 +1,7 @@
 ENV = env
 PIP = pip
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP)
+
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
@@ -16,6 +17,7 @@ ifeq ($(OS),Windows_NT)
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	REQUIRED_PROGRAMS += makensis
+	.DEFAULT_GOAL := windows_installer 
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -28,6 +30,12 @@ else
 	RM := rm -r
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
+
+	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
+		.DEFAULT_GOAL := mac_installer
+	else
+		.DEFAULT_GOAL := binaries 
+	endif
 endif
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
