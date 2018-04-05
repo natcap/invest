@@ -26,4 +26,5 @@ hg+https://bitbucket.org/jdouglass/pygeoprocessing@908b323#egg=pygeoprocessing
 
 #taskgraph[niced_processes]>=0.2.3,<0.3.0
 hg+https://bitbucket.org/jdouglass/taskgraph@58555b7#egg=taskgraph
-psutil
+psutil>=5.2.2
+chardet>=3.0.4

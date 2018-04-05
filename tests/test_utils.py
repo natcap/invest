@@ -556,3 +556,24 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
         self.assertEqual(lookup_dict[1]['header1'], 1)
+
+    def test_csv_dialect_detection_semicolon_delimited(self):
+        """utils: test that we can parse semicolon-delimited CSVs."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header1;HEADER2;header3;
+                1;2;3;
+                4;FOO;bar;
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1', to_lower=False)
+
+        self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
+        self.assertEqual(lookup_dict[4]['header3'], 'bar')
+        self.assertEqual(lookup_dict[1]['header1'], 1)

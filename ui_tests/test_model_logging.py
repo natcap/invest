@@ -7,9 +7,16 @@ import tempfile
 import shutil
 import socket
 import urllib
+import os
+
+from pygeoprocessing.testing import scm
+import numpy.testing
 
 import Pyro4
 import mock
+
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data')
 
 
 class ModelLoggingTests(unittest.TestCase):
@@ -99,3 +106,21 @@ class ModelLoggingTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             logging_server.log_invest_run(sample_data, 'bad_mode')
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_bounding_boxes(self):
+        """Usage logger test that we can extract bounding boxes."""
+        from natcap.invest.ui import usage
+
+        freshwater_dir = os.path.join(SAMPLE_DATA, 'Base_Data', 'Freshwater')
+        model_args = {
+            'raster': os.path.join(freshwater_dir, 'dem'),
+            'vector': os.path.join(freshwater_dir, 'subwatersheds.shp')
+        }
+
+        bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
+
+        numpy.testing.assert_allclose(
+            bb_inter, [-123.584877, 44.273852, -123.400091, 44.726233])
+        numpy.testing.assert_allclose(
+            bb_union, [-123.658275, 44.415778, -123.253863, 44.725814])

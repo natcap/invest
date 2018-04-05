@@ -888,12 +888,6 @@ def validate(args, limit_to=None):
         'beta_i',
         'gamma']
 
-    if ('user_defined_climate_zones' in args and
-            args['user_defined_climate_zones']):
-        required_keys.extend([
-            'climate_zone_table_path',
-            'climate_zone_raster_path'])
-
     if 'user_defined_local_recharge' in args:
         if args['user_defined_local_recharge']:
             required_keys.append('l_path')
@@ -901,8 +895,15 @@ def validate(args, limit_to=None):
             required_keys.extend([
                 'et0_dir',
                 'precip_dir',
-                'soil_group_path',
-                'rain_events_table_path'])
+                'soil_group_path'])
+
+    if ('user_defined_climate_zones' in args and
+            args['user_defined_climate_zones']):
+        required_keys.extend([
+            'climate_zone_table_path',
+            'climate_zone_raster_path'])
+    else:
+        required_keys.extend(['rain_events_table_path'])
 
     if 'monthly_alpha_path' in args:
         if args['monthly_alpha_path']:

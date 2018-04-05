@@ -22,6 +22,7 @@ from qtpy import QtCore
 from qtpy import QtGui
 import six
 import qtawesome
+import chardet
 
 try:
     import faulthandler
@@ -41,6 +42,12 @@ except AttributeError:
 QT_APP = QApplication.instance()
 if QT_APP is None:
     QT_APP = QApplication(sys.argv)  # pragma: no cover
+
+# If we're running PyQt4, we need to instruct Qt to use UTF-8 strings
+# internally.
+if qtpy.API in ('pyqt', 'pyqt4'):
+    QtCore.QTextCodec.setCodecForCStrings(
+        QtCore.QTextCodec.codecForName('UTF-8'))
 
 LOGGER = logging.getLogger(__name__)
 ICON_FOLDER = qtawesome.icon('fa.folder-o')
@@ -1540,15 +1547,32 @@ class Text(GriddedInput):
         try:
             if isinstance(value, (int, float)):
                 value = str(value)
-            value = unicode(value, 'utf-8')
-        except TypeError:
-            # value is already unicode, can't decode it further.
-            pass
 
-        if len(value) > 0 and self.hideable:
+            # If it isn't a unicode string, attempt to detect the source
+            # encoding.
+            if not isinstance(value, unicode):
+                most_likely_encoding = chardet.detect(value)['encoding']
+                if most_likely_encoding is None:
+                    # When string is empty, assume UTF-8
+                    most_likely_encoding = 'UTF-8'
+
+                LOGGER.info('Guessing that string "%s" is encoded as %s ',
+                            value, most_likely_encoding)
+                encoded_value = value.decode(
+                    most_likely_encoding).encode('utf-8')
+            else:
+                # value is already unicode, should be UTF-8 or ASCII.
+                encoded_value = value
+        except (UnicodeEncodeError, UnicodeDecodeError):
+            # If we can't encode or decode, there's a serious problem.  Log to
+            # the console and allow the user to provide their own input
+            # directly to the text element.
+            LOGGER.exception('Could determine encoding; using value as-is.')
+
+        if len(encoded_value) > 0 and self.hideable:
             self.set_hidden(False)
 
-        self.textfield.setText(value)
+        self.textfield.setText(encoded_value)
 
     def clear(self):
         """Reset the input to a 'blank' state.

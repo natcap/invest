@@ -66,8 +66,15 @@ class Executor(QtCore.QObject, threading.Thread):
         """
         try:
             self.target(*self.args, **self.kwargs)
-        except Exception as error:
-            # We deliberately want to catch all possible exceptions.
+        except BaseException as error:
+            # We deliberately want to catch all possible exceptions, so
+            # BaseException is the way to go.  This is in part because we have
+            # a flaky test that failed where self.exception wasn't set and we
+            # don't know if that's because this exception handler wasn't being
+            # called (we were only capturing Exception at the time), or if
+            # there was something else very strange going on.
+            # Failed build:
+            # http://builds.naturalcapitalproject.org/job/test-natcap.invest.ui/100/
             LOGGER.exception('Target %s failed with exception', self.target)
             self.failed = True
             self.exception = error
