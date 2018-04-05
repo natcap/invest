@@ -29,7 +29,6 @@ else
 endif
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
-NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
@@ -39,14 +38,6 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 DATA_DIR := data
-
-# Target names.
-INVEST_BINARIES_DIR := $(DIST_DIR)/invest
-APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
-USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
-USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
-MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
 # Repositories managed by the makefile task tree
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
@@ -70,6 +61,17 @@ HG_UG_REPO_REV          := ae4705d8c9ad
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
 FORKNAME :=
 DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
+
+
+# Target names.
+INVEST_BINARIES_DIR := $(DIST_DIR)/invest
+APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
+USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
+
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages
 
