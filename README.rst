@@ -26,9 +26,6 @@ InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
 
 
-About  InVEST
-=============
-
 InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is a family
 of tools for quantifying the values of natural capital in clear, credible, and
 practical ways. In promising a return (of societal benefits) on investments in
@@ -48,6 +45,23 @@ but have almost all been ported over to a purely open-source python environment.
     InVEST <= 3.2.0, use the archived release-framework repository at
     https://bitbucket.org/natcap/invest-natcap.release-framework, and the InVEST repository
     at https://bitbucket.org/natcap/invest-natcap.invest-3.
+
+
+General Information
+-------------------
+
+* Website: https://naturalcapitalproject.org/invest
+* Source code: https://bitbucket.org/natcap/invest
+* Issue tracker: https://bitbucket.org/natcap/invest/issues
+* Users' guide: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/
+* API documentation: http://invest.readthedocs.io/en/latest/
+
+
+InVEST Dependencies
+-------------------
+
+Run ``make check`` to test if all required dependencies are installed on your system.
+OS-specific installation instructions are found at http://invest.readthedocs.io/en/latest/installing.html
 
 
 Contributing to Development
