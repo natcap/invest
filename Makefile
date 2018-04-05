@@ -1,5 +1,6 @@
 ENV = env
 PIP = pip
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP)
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
@@ -14,6 +15,7 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
+	REQUIRED_PROGRAMS += makensis
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
@@ -30,7 +32,6 @@ endif
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP) makensis
 
 
 # Output directory names
