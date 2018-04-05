@@ -70,7 +70,7 @@ HG_UG_REPO_REV          := ae4705d8c9ad
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
 FORKNAME :=
 DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
-NOSETESTS := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
+TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
 
 
 # Target names.
@@ -112,10 +112,10 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
 test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
-	$(NOSETESTS) tests
+	$(TESTRUNNER) tests
 
 test_ui:
-	$(NOSETESTS) ui_tests
+	$(TESTRUNNER) ui_tests
 
 clean:
 	$(PYTHON) setup.py clean
