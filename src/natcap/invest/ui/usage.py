@@ -115,26 +115,14 @@ def _calculate_args_bounding_box(args_dict):
             inputs.  None, None if no arguments were GIS data types and input
             bounding boxes are None.
         """
-        def _is_gdal(arg):
-            """Test if input argument is a path to a gdal raster."""
-            if (isinstance(arg, str) or
-                    isinstance(arg, unicode)) and os.path.exists(arg):
+        def _is_spatial(arg):
+            if isinstance(arg, (str, unicode)) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
-                    raster = gdal.OpenEx(arg, gdal.OF_RASTER)
-                    if raster is not None:
-                        return True
-            return False
-
-        def _is_ogr(arg):
-            """Test if input argument is a path to an ogr vector."""
-            if (isinstance(arg, str) or
-                    isinstance(arg, unicode)) and os.path.exists(arg):
-                with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(arg, gdal.OF_VECTOR)
-                    if vector is not None:
+                    dataset = gdal.OpenEx(arg)
+                    if dataset is not None:
                         # OGR opens CSV files.  For now, we should not
                         # consider these to be vectors.
-                        driver_name = vector.GetDriver().ShortName
+                        driver_name = dataset.GetDriver().ShortName
                         if driver_name == 'CSV':
                             return False
                         return True
@@ -154,15 +142,19 @@ def _calculate_args_bounding_box(args_dict):
             # singular value, test if GIS type, if not, don't update bb's
             # this is an undefined bounding box that gets returned when ogr
             # opens a table only
-            if _is_gdal(arg):
-                spatial_info = pygeoprocessing.get_raster_info(arg)
-            elif _is_ogr(arg):
-                spatial_info = pygeoprocessing.get_vector_info(arg)
-            else:
-                # File is not geospatial!
-                spatial_info = None
+            if _is_spatial(arg):
+                with utils.capture_gdal_logging():
+                    dataset = gdal.OpenEx(arg)
+                    driver_metadata = dataset.GetDriver().GetMetadata()
+                    for key, spatial_info_func in (
+                            ('DCAP_RASTER', pygeoprocessing.get_raster_info),
+                            ('DCAP_VECTOR', pygeoprocessing.get_vector_info)):
+                        try:
+                            if driver_metadata[key] == 'YES':
+                                spatial_info = spatial_info_func(arg)
+                        except KeyError:
+                            continue
 
-            if spatial_info is not None:
                 local_bb = [0., 0., 0., 0.]
                 local_bb = spatial_info['bounding_box']
                 projection_wkt = spatial_info['projection']
@@ -171,7 +163,8 @@ def _calculate_args_bounding_box(args_dict):
 
                 try:
                     # means there's a GIS type with a well defined bounding box
-                    # create transform, and reproject local bounding box to lat/lng
+                    # create transform, and reproject local bounding box to
+                    # lat/lng
                     lat_lng_ref = osr.SpatialReference()
                     lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
                     to_lat_trans = osr.CoordinateTransformation(
@@ -179,7 +172,8 @@ def _calculate_args_bounding_box(args_dict):
                     for point_index in [0, 2]:
                         local_bb[point_index], local_bb[point_index + 1], _ = (
                             to_lat_trans.TransformPoint(
-                                local_bb[point_index], local_bb[point_index + 1]))
+                                local_bb[point_index],
+                                local_bb[point_index+1]))
 
                     bb_intersection = _merge_bounding_boxes(
                         local_bb, bb_intersection, 'intersection')
@@ -187,8 +181,8 @@ def _calculate_args_bounding_box(args_dict):
                         local_bb, bb_union, 'union')
                 except Exception as transform_error:
                     # All kinds of exceptions from bad transforms or CSV files
-                    # or dbf files could get us to this point, just don't bother
-                    # with the local_bb at all
+                    # or dbf files could get us to this point, just don't
+                    # bother with the local_bb at all
                     LOGGER.exception('Error when transforming coordinates: %s',
                                      transform_error)
 
