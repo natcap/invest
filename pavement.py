@@ -2544,8 +2544,8 @@ def build_bin(options):
 
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
-    sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
-        '> package_versions.txt').format(python=python_exe), cwd=bindir)
+    sh(('{python} -m pip freeze > package_versions.txt').format(
+        python=python_exe), cwd=bindir)
 
     # Record the hg path, branch, sha1 of this repo to a text file. This will
     # help us down the road to differentiate between built binaries from
