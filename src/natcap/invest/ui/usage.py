@@ -144,16 +144,10 @@ def _calculate_args_bounding_box(args_dict):
             # opens a table only
             if _is_spatial(arg):
                 with utils.capture_gdal_logging():
-                    dataset = gdal.OpenEx(arg)
-                    driver_metadata = dataset.GetDriver().GetMetadata()
-                    for key, spatial_info_func in (
-                            ('DCAP_RASTER', pygeoprocessing.get_raster_info),
-                            ('DCAP_VECTOR', pygeoprocessing.get_vector_info)):
-                        try:
-                            if driver_metadata[key] == 'YES':
-                                spatial_info = spatial_info_func(arg)
-                        except KeyError:
-                            continue
+                    try:
+                        spatial_info = pygeoprocessing.get_raster_info(arg)
+                    except AttributeError:
+                        spatial_info = pygeoprocessing.get_vector_info(arg)
 
                 local_bb = [0., 0., 0., 0.]
                 local_bb = spatial_info['bounding_box']
