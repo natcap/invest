@@ -2597,7 +2597,7 @@ def build_bin(options):
             versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
-            sh(("{python} -m pip install --no-deps {no_wheel}"
+            sh(("{python} -m pip install --no-deps {no_wheel} "
                 "--download {distdir} {versioner}").format(
                     python=python_exe,
                     no_wheel=NO_WHEEL_SH,
