@@ -2845,8 +2845,8 @@ def _build_nsis(version, bindir, arch):
 
 def _build_dmg(version, bindir):
     bindir = os.path.abspath(bindir)
-    sh('./build_dmg.sh %s %s' % (version, bindir), cwd='installer/darwin')
-    sh('cp installer/darwin/InVEST*.dmg dist')
+    sh('bash -c "./build_dmg.sh %s %s"' % (version, bindir), cwd='installer/darwin')
+    sh('bash -c "cp installer/darwin/InVEST*.dmg dist"')
 
 
 def _get_local_version():
