@@ -2599,9 +2599,9 @@ def build_bin(options):
 
             # Download a valid source tarball to the dist dir.
             if int(pip.__version__.split('.')[0]) >= 8:
-                sh("{python} -m pip download {versioner} --no-binary :all:".format(
+                sh('{python} -m pip download "{versioner}" --no-binary :all:'.format(
                     python=python_exe,
-                    versioner=versioner_spec))
+                    versioner=versioner_spec), cwd='dist')
             else:
                 # pip 10 deprecates pip install --download in favor of
                 # pip download.
