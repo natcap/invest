@@ -35,6 +35,7 @@ from paver.easy import task, cmdopts, consume_args, might_call,\
 import yaml
 
 import virtualenv
+import pip
 import pkg_resources
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -2597,13 +2598,20 @@ def build_bin(options):
             versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
-            sh(("{python} -m pip install --no-deps {no_wheel} "
-                "--download {distdir} {versioner}").format(
+            if int(pip.__version__.split('.')[0]) >= 8:
+                sh("{python} -m pip download {versioner}".format(
                     python=python_exe,
-                    no_wheel=NO_WHEEL_SH,
-                    distdir='dist',
-                    versioner=versioner_spec
-            ))
+                    versioner=versioner_spec))
+            else:
+                # pip 10 deprecates pip install --download in favor of
+                # pip download.
+                sh(("{python} -m pip install --no-deps {no_wheel} "
+                    "--download {distdir} {versioner}").format(
+                        python=python_exe,
+                        no_wheel=NO_WHEEL_SH,
+                        distdir='dist',
+                        versioner=versioner_spec
+                ))
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
