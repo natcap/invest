@@ -57,5 +57,8 @@ then
     cp -r $docsdir $tempdir/documentation
 fi
 
+# Copy the release notes (HISTORY.rst) into the dmg as an HTML doc.
+pandoc HISTORY.rst -o $tempdir/HISTORY.html
+
 dmgbuild -Dinvestdir="$tempdir" -s $CONFIG_DIR/dmgconf.py "$title" "$finalDMGName"
     
