@@ -48,6 +48,7 @@ logging.getLogger('pip').setLevel(logging.ERROR)
 # currently use pip 6.x
 # virtualenv 13.0.0 upgraded pip to 7.0.0, but the older flags still work for
 # now.
+# pip 10 removes --no-use-wheel entirely.
 try:
     pkg_resources.require('pip>=7.0.0')
     pkg_resources.require('virtualenv>=13.0.0')
@@ -1023,7 +1024,7 @@ def after_install(options, home_dir):
         # Pyinstaller seems to work best with namespace packages that are all
         # in a single source tree, though python will happily import multiple
         # eggs from different places.
-        pkg_pip_params['natcap.versioner'] += ['--egg', '--no-use-wheel']
+        pkg_pip_params['natcap.versioner'] += ['--egg'] + NO_WHEEL_SH.split()
 
     def _format_params(param_list):
         """
@@ -2596,9 +2597,10 @@ def build_bin(options):
             versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
-            sh(("{python} -m pip install --no-deps --no-use-wheel "
+            sh(("{python} -m pip install --no-deps {no_wheel}"
                 "--download {distdir} {versioner}").format(
                     python=python_exe,
+                    no_wheel=NO_WHEEL_SH,
                     distdir='dist',
                     versioner=versioner_spec
             ))
