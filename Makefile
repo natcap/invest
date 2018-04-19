@@ -150,8 +150,9 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
+# compatible with pip>=7.0.0
 install: $(DIST_DIR)/natcap.invest*.whl
-	$(PIP) install --use-wheel --find-links=dist natcap.invest 
+	$(PIP) install --only-binary --find-links=dist natcap.invest 
 
 
 # Bulid python packages and put them in dist/
