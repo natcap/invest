@@ -144,11 +144,10 @@ def _calculate_args_bounding_box(args_dict):
             # opens a table only
             if _is_spatial(arg):
                 with utils.capture_gdal_logging():
-                    try:
+                    if gdal.OpenEx(arg, gdal.OF_RASTER) is not None:
                         spatial_info = pygeoprocessing.get_raster_info(arg)
-                    except AttributeError:
-                        # Raised when get_raster_info() is passed a vector, so
-                        # we get spatial information as a vector instead.
+                    else:
+                        # If it isn't a raster, it should be a vector!
                         spatial_info = pygeoprocessing.get_vector_info(arg)
 
                 local_bb = [0., 0., 0., 0.]
