@@ -35,6 +35,7 @@ from paver.easy import task, cmdopts, consume_args, might_call,\
 import yaml
 
 import virtualenv
+import pip
 import pkg_resources
 
 logging.basicConfig(format='%(asctime)s %(name)-18s %(levelname)-8s \
@@ -48,6 +49,7 @@ logging.getLogger('pip').setLevel(logging.ERROR)
 # currently use pip 6.x
 # virtualenv 13.0.0 upgraded pip to 7.0.0, but the older flags still work for
 # now.
+# pip 10 removes --no-use-wheel entirely.
 try:
     pkg_resources.require('pip>=7.0.0')
     pkg_resources.require('virtualenv>=13.0.0')
@@ -1023,7 +1025,7 @@ def after_install(options, home_dir):
         # Pyinstaller seems to work best with namespace packages that are all
         # in a single source tree, though python will happily import multiple
         # eggs from different places.
-        pkg_pip_params['natcap.versioner'] += ['--egg', '--no-use-wheel']
+        pkg_pip_params['natcap.versioner'] += ['--egg'] + NO_WHEEL_SH.split()
 
     def _format_params(param_list):
         """
@@ -2544,8 +2546,8 @@ def build_bin(options):
 
     # Write the package versions to a text file for the record.
     # Assume we're in a virtualenv
-    sh(('{python} -c "import pip; pip.main([\'freeze\'])" '
-        '> package_versions.txt').format(python=python_exe), cwd=bindir)
+    sh(('{python} -m pip freeze > package_versions.txt').format(
+        python=python_exe), cwd=bindir)
 
     # Record the hg path, branch, sha1 of this repo to a text file. This will
     # help us down the road to differentiate between built binaries from
@@ -2596,14 +2598,20 @@ def build_bin(options):
             versioner_spec = _read_requirements_dict()['natcap.versioner']
 
             # Download a valid source tarball to the dist dir.
-            sh(("{python} -c "
-                "\"import pip; pip.main(["
-                "'install', '--no-deps', '--no-use-wheel', '--download', "
-                "'{distdir}', \'{versioner}\'])\"").format(
+            if int(pip.__version__.split('.')[0]) >= 8:
+                sh('{python} -m pip download "{versioner}" --no-binary :all:'.format(
                     python=python_exe,
-                    distdir='dist',
-                    versioner=versioner_spec
-            ))
+                    versioner=versioner_spec), cwd='dist')
+            else:
+                # pip 10 deprecates pip install --download in favor of
+                # pip download.
+                sh(("{python} -m pip install --no-deps {no_wheel} "
+                    "--download {distdir} {versioner}").format(
+                        python=python_exe,
+                        no_wheel=NO_WHEEL_SH,
+                        distdir='dist',
+                        versioner=versioner_spec
+                ))
 
             cwd = os.getcwd()
             # Unzip the tar.gz and run bdist_egg on it.
@@ -2837,8 +2845,8 @@ def _build_nsis(version, bindir, arch):
 
 def _build_dmg(version, bindir):
     bindir = os.path.abspath(bindir)
-    sh('./build_dmg.sh %s %s' % (version, bindir), cwd='installer/darwin')
-    sh('cp installer/darwin/InVEST*.dmg dist')
+    sh('bash -c "./build_dmg.sh %s %s"' % (version, bindir), cwd='installer/darwin')
+    sh('bash -c "cp installer/darwin/InVEST*.dmg dist"')
 
 
 def _get_local_version():
