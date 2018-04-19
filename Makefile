@@ -78,6 +78,7 @@ INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
+USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
@@ -184,7 +185,7 @@ $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
 
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
+userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
@@ -194,6 +195,10 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
+
+$(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && \
+		zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
