@@ -186,12 +186,12 @@ $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
