@@ -152,7 +152,7 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
 # compatible with pip>=7.0.0
-install: $(DIST_DIR)/natcap.invest*.whl
+install: $(DIST_DIR)/natcap.invest%.whl
 	$(PIP) install --only-binary --find-links=dist natcap.invest 
 
 
