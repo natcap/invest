@@ -234,15 +234,15 @@ ZIPDIRS = AestheticQuality \
 		  storm_impact \
 		  WaveEnergy \
 		  WindEnergy
-ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR),$(dirname).zip))
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)Freshwater.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)Marine.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)Terrestrial.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
+$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
+		zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
