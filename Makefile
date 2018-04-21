@@ -15,7 +15,7 @@ ifeq ($(OS),Windows_NT)
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	REQUIRED_PROGRAMS += makensis
 	.DEFAULT_GOAL := windows_installer 
-	/ := \\
+	/ := "\"
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
