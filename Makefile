@@ -1,7 +1,8 @@
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
-	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
+	ENV_SCRIPTS = .\$(ENV)\Scripts
+	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
 	CP := powershell.exe Copy-Item
 	COPYDIR := $(CP) -Recurse
 	MKDIR := powershell.exe mkdir -Force -Path
@@ -14,16 +15,19 @@ ifeq ($(OS),Windows_NT)
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	REQUIRED_PROGRAMS += makensis
 	.DEFAULT_GOAL := windows_installer 
+	/ := \\
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
-	ENV_ACTIVATE = source $(ENV)/bin/activate
+	ENV_SCRIPTS = $(ENV)/bin
+	ENV_ACTIVATE = source $(ENV_SCRIPTS)/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
+	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
 
@@ -169,7 +173,7 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RM) $(BUILD_DIR)/pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
-	$(PYTHON) -m PyInstaller \
+	$(ENV_SCRIPTS)$(/)pyinstaller \
 		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
 		--distpath $(DIST_DIR) \
