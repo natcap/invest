@@ -1,7 +1,7 @@
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
-	ENV_SCRIPTS = .\$(ENV)\Scripts
+	ENV_SCRIPTS = $(ENV)\Scripts
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
 	CP := powershell.exe Copy-Item
 	COPYDIR := $(CP) -Recurse
