@@ -62,7 +62,7 @@ SVN_TEST_DATA_REPO_REV  := 141
 
 HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := ae4705d8c9ad
+HG_UG_REPO_REV          := aae3c6453d8b
 
 
 # These are intended to be overridden by a jenkins build.
@@ -136,7 +136,7 @@ check:
 # Subrepository management.
 $(HG_UG_REPO_PATH): 
 	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
-	-hg pull -R $(HG_UG_REPO_PATH)
+	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
 $(SVN_DATA_REPO_PATH): | $(DATA_DIR)
