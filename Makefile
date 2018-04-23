@@ -201,8 +201,7 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
-	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && \
-		zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
@@ -251,8 +250,7 @@ SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
 
 
 # Installers for each platform.
