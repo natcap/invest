@@ -13,7 +13,6 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
-	REQUIRED_PROGRAMS += makensis
 	.DEFAULT_GOAL := windows_installer 
 	/ := '\'
 else
@@ -37,9 +36,14 @@ else
 		.DEFAULT_GOAL := binaries 
 	endif
 endif
+
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk
+ifeq ($(OS),Windows_NT)
+	REQUIRED_PROGRAMS += makensis
+endif
+
 ENV = env
 PIP = $(PYTHON) -m pip
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP)
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
