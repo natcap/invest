@@ -66,7 +66,7 @@ SVN_TEST_DATA_REPO_REV  := 141
 
 HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := aae3c6453d8b
+HG_UG_REPO_REV          := abdc4f9a5df0
 
 
 # These are intended to be overridden by a jenkins build.
