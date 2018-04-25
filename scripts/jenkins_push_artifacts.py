@@ -14,8 +14,11 @@ import setuptools_scm
 
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig()
-JENKINS_PRIVATE_KEY_PATH = os.path.expanduser(
-    os.path.join('~', '.ssh', 'dataportal-id_rsa'))
+if platform.system() == 'Windows':
+    _HOME_DIR = os.path.join('C:', 'cygwin', 'home', 'SYSTEM')
+else:
+    _HOME_DIR = os.path.expanduser('~')
+JENKINS_PRIVATE_KEY_PATH = os.path.join(_HOME_DIR, '.ssh', 'dataportal-id_rsa')
 DATAPORTAL_USER = 'dataportal'
 DATAPORTAL_HOST = 'data.naturalcapitalproject.org'
 DIST_DIR = 'dist'
@@ -128,7 +131,8 @@ def push(target_dir, files_to_push, files_to_unzip=None):
     ssh.close()
 
 
-if __name__ == '__main__':
+def main():
+    """Determine which and where to upload files."""
     hg_path = subprocess.check_output('hg showconfig paths.default',
                                       shell=True).rstrip()
 
@@ -164,7 +168,11 @@ if __name__ == '__main__':
                              glob.glob(os.path.join(DIST_DIR, '*.*')))
     files_to_unzip = filter(lambda x: 'userguide' in x or 'apidocs' in x,
                             files_to_upload)
-    print files_to_upload
-    print files_to_unzip
+    LOGGER.debug('Files to upload: %s', files_to_upload)
+    LOGGER.debug('Files to unzip on remote: %s', files_to_unzip)
     LOGGER.info('Uploading non-data files, unzipping documentation')
     push(release_dir, files_to_upload, files_to_unzip)
+
+
+if __name__ == '__main__':
+    main()
