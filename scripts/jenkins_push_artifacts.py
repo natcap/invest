@@ -22,7 +22,15 @@ DIST_DIR = 'dist'
 
 
 def _fix_path(path):
-    """Fix up a windows path to work on linux"""
+    """Fix up a windows path to work on linux.
+
+    Converts any windows-specific path separators to linux.
+
+    Parameters:
+        path (string): The path to modify.
+
+    Returns:
+        The modified path."""
     # destination OS is linux, so adjust windows filepaths to match
     if platform.system() == 'Windows':
         return path.replace(os.sep, '/')
@@ -30,6 +38,7 @@ def _fix_path(path):
 
 
 def _sftp_callback(bytes_transferred, total_bytes):
+    """Callback to display progress when uploading files via SFTP."""
     try:
         current_time = time.time()
         if current_time - _sftp_callback.last_time > 2:
