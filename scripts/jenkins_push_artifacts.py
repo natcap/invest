@@ -65,24 +65,24 @@ def push(target_dir, files_to_push, files_to_unzip=None):
     LOGGER.info('Writing paramiko logging to paramiko-log.txt')
     paramiko.util.log_to_file('paramiko-log.txt')
 
-    #ssh = SSHClient()
-    #ssh.load_system_host_keys()
+    ssh = SSHClient()
+    ssh.load_system_host_keys()
 
     # Automatically add host key if needed
-    #ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    #private_key = paramiko.RSAKey.from_private_key_file(
-    #    JENKINS_PRIVATE_KEY_PATH)
+    ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    private_key = paramiko.RSAKey.from_private_key_file(
+        JENKINS_PRIVATE_KEY_PATH)
 
-    #ssh.connect(DATAPORTAL_HOST, 22, username=DATAPORTAL_USER, password=None,
-    #            pkey=private_key)
+    ssh.connect(DATAPORTAL_HOST, 22, username=DATAPORTAL_USER, password=None,
+                pkey=private_key)
 
     # Make folders on remote if needed.
-    #ssh.exec_command(
-    #    'if [ ! -d "{dir}" ]\nthen\nmkdir -p -v {dir}\nfi'.format(
-    #        dir=target_dir))
+    ssh.exec_command(
+        'if [ ! -d "{dir}" ]\nthen\nmkdir -p -v {dir}\nfi'.format(
+            dir=target_dir))
 
     print 'Opening SCP connection'
-    #sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
+    sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
 
     for transfer_file in files_to_push:
         target_filename = os.path.join(target_dir,
@@ -92,7 +92,6 @@ def push(target_dir, files_to_push, files_to_unzip=None):
         target_filename = _fix_path(target_filename)
         print 'Transferring %s -> %s ' % (transfer_file,
                                           target_filename)
-        continue
         for repeat in [True, True, False]:
             try:
                 sftp.put(transfer_file, target_filename,
@@ -103,7 +102,6 @@ def push(target_dir, files_to_push, files_to_unzip=None):
                 if not repeat:
                     raise filesize_inconsistency
 
-    return
 
     # correct the filepath from Windows to Linux
     if platform.system() == 'Windows':
