@@ -83,6 +83,7 @@ TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.inve
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
@@ -188,10 +189,13 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 # API docs are copied to dist/apidocs
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: $(APIDOCS_HTML_DIR)
+apidocs: $(APIDOCS_HTML_DIR) $(APIDOCS_ZIP_FILE)
 $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
+
+$(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
