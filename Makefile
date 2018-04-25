@@ -1,3 +1,4 @@
+ENV = env
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
@@ -42,7 +43,6 @@ ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
 
-ENV = env
 PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
