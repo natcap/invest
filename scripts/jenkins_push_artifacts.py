@@ -102,20 +102,12 @@ def push(target_dir, files_to_push, files_to_unzip=None):
                 if not repeat:
                     raise filesize_inconsistency
 
-
-    # correct the filepath from Windows to Linux
-    if platform.system() == 'Windows':
-        target_dir = target_dir.replace(os.sep, '/')
-
-    if target_dir.startswith('public_html/'):
-        target_dir = target_dir.replace('public_html/', '')
-
-    for filename in files_to_unzip: 
+    for filename in files_to_unzip:
         print 'Unzipping %s on remote' % filename
         ssh.exec_command(
-            ('cd public_html/{releasedir}; '
+            ('cd {releasedir}; '
              'unzip -o `ls -tr {zipfile} | tail -n 1`').format(
-                 releasedir=target_dir,
+                 releasedir=_fix_path(target_dir),
                  zipfile=filename
              )
         )
