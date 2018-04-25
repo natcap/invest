@@ -15,7 +15,7 @@ import setuptools_scm
 LOGGER = logging.getLogger(__name__)
 logging.basicConfig()
 if platform.system() == 'Windows':
-    _HOME_DIR = os.path.join('C:', 'cygwin', 'home', 'SYSTEM')
+    _HOME_DIR = os.path.join('C:\\', 'cygwin', 'home', 'SYSTEM')
 else:
     _HOME_DIR = os.path.expanduser('~')
 JENKINS_PRIVATE_KEY_PATH = os.path.join(_HOME_DIR, '.ssh', 'dataportal-id_rsa')
