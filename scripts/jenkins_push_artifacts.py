@@ -116,13 +116,20 @@ def push(target_dir, files_to_push, files_to_unzip=None):
 
     for filename in files_to_unzip:
         print 'Unzipping %s on remote' % filename
-        ssh.exec_command(
+        _, stdout, stderr = ssh.exec_command(
             ('cd {releasedir}; '
              'unzip -o `ls -tr {zipfile} | tail -n 1`').format(
                  releasedir=_fix_path(target_dir),
                  zipfile=filename
              )
         )
+        print "STDOUT:"
+        for line in stdout:
+            print line
+
+        print "STDERR:"
+        for line in stderr:
+            print line
 
     print 'Closing down SCP'
     sftp.close()
