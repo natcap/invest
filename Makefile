@@ -131,7 +131,8 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-$(RM) build natcap.invest.egg-info
+	-$(RM) build
+	-$(RM) natcap.invest.egg-info
 
 check:
 	@echo "Checking required applications"
