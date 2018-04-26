@@ -366,6 +366,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.
     File invest-autotest.bat
+    File ..\..\scripts\invest-autotest.py
     File InVEST-2.ico
   
     SetOutPath "$INSTDIR\documentation"
