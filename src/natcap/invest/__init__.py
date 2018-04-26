@@ -31,8 +31,8 @@ if (pkg_resources.parse_version(pygeoprocessing.__version__) <
 try:
     __version__ = pkg_resources.get_distribution(__name__).version
 except pkg_resources.DistributionNotFound:
-    # package is not installed.
-    pass
+    # package is not installed.  Log the exception for debugging.
+    LOGGER.exception('Could not load natcap.invest version information')
 
 
 def local_dir(source_file):
