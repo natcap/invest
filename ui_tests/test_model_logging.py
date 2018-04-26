@@ -8,6 +8,7 @@ import shutil
 import socket
 import urllib
 import os
+import logging
 
 from pygeoprocessing.testing import scm
 import numpy.testing
@@ -110,17 +111,25 @@ class ModelLoggingTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_bounding_boxes(self):
         """Usage logger test that we can extract bounding boxes."""
+        from natcap.invest import utils
         from natcap.invest.ui import usage
 
         freshwater_dir = os.path.join(SAMPLE_DATA, 'Base_Data', 'Freshwater')
         model_args = {
             'raster': os.path.join(freshwater_dir, 'dem'),
-            'vector': os.path.join(freshwater_dir, 'subwatersheds.shp')
+            'vector': os.path.join(freshwater_dir, 'subwatersheds.shp'),
+            'not_a_gis_input': 'foobar'
         }
 
-        bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
+        output_logfile = os.path.join(self.workspace_dir, 'logfile.txt')
+        with utils.log_to_file(output_logfile):
+            bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
 
         numpy.testing.assert_allclose(
             bb_inter, [-123.584877, 44.273852, -123.400091, 44.726233])
         numpy.testing.assert_allclose(
             bb_union, [-123.658275, 44.415778, -123.253863, 44.725814])
+
+        # Verify that no errors were raised in calculating the bounding boxes.
+        self.assertTrue('ERROR' not in open(output_logfile).read(),
+                        'Exception logged when there should not have been.')
