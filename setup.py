@@ -17,6 +17,8 @@ import numpy
 # contents.
 _REQUIREMENTS = [req for req in open('requirements.txt').readlines()
                  if not req.startswith(('#', 'hg+')) and len(req) > 0]
+_GUI_REQUIREMENTS = [req for req in open('requirements-gui.txt').readlines()
+                     if not req.startswith(('#', 'hg+')) and len(req) > 0]
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
@@ -120,7 +122,7 @@ setup(
         ],
     },
     extras_require={
-        'ui': ('qtpy>1.3', 'qtawesome', 'faulthandler'),
+        'ui': _GUI_REQUIREMENTS,
     },
     package_data={
         'natcap.invest.reporting': [

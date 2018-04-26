@@ -4,3 +4,4 @@ include HISTORY.rst
 include LICENSE.txt
 include requirements.txt
 include requirements-dev.txt
+include requirements-gui.txt

@@ -8,9 +8,8 @@
 # ``make jenkins`` target on a mac.
 
 make env
-env/bin/python.exe -m pip install --upgrade .
+env/bin/python -m pip install --upgrade .
+env/bin/python -m pip install -r requirements-gui.txt
 make PYTHON=env/bin/python mac_installer userguide 
 env/bin/python setup.py bdist_wheel
 env/bin/python scripts/jenkins_push_artifacts.py
-
-
