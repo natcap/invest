@@ -122,9 +122,7 @@ def push(target_dir, files_to_push, files_to_unzip=None):
             ('cd {releasedir}; '
              'unzip -o `ls -tr {zipfile} | tail -n 1`').format(
                  releasedir=_fix_path(target_dir),
-                 zipfile=_fix_path(remote_zipfile_path)
-             )
-        )
+                 zipfile=os.path.basename(remote_zipfile_path)))
         print "STDOUT:"
         for line in stdout:
             print line
