@@ -15,6 +15,7 @@ ifeq ($(OS),Windows_NT)
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	.DEFAULT_GOAL := windows_installer 
+	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	/ := '\'
 else
 	NULL := /dev/null
@@ -33,8 +34,10 @@ else
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
+		JENKINS_BUILD_SCRIPT := ./scripts/jenkins-build.sh
 	else
 		.DEFAULT_GOAL := binaries 
+		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
 endif
 
@@ -91,7 +94,7 @@ WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -286,3 +289,6 @@ $(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
+
+jenkins:
+	$(JENKINS_BUILD_SCRIPT)
