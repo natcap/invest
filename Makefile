@@ -188,7 +188,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
-	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)$(/)package_versions.txt"
+	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
 # API docs are copied to dist/apidocs
