@@ -298,9 +298,9 @@ jenkins:
 jenkins_test_ui: env
 	$(ENV_SCRIPTS)/python -m pip install --upgrade .
 	$(ENV_SCRIPTS)/python -m pip install -r requirements-dev.txt
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
+	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
 jenkins_test: env $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 	$(ENV_SCRIPTS)/python -m pip install --upgrade .
 	$(ENV_SCRIPTS)/python -m pip install -r requirements-dev.txt
-	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
+	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
