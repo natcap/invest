@@ -165,7 +165,10 @@ env:
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
 # compatible with pip>=7.0.0
+# REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
+# of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
+	-$(RM) natcap.invest.egg-info
 	$(PIP) install --only-binary --find-links=dist natcap.invest 
 
 
