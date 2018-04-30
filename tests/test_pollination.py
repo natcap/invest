@@ -157,7 +157,7 @@ class PollinationTests(unittest.TestCase):
         pollination.execute(args)
         result_raster_path = os.path.join(
             self.workspace_dir, 'pollinator_abundance_apis_spring.tif')
-        result_sum = 0.0
+        result_sum = numpy.float32(0.0)
         for _, data_block in pygeoprocessing.iterblocks(result_raster_path):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum is when I inspected a run
