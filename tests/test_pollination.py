@@ -35,7 +35,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_regression(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         args = {
             'results_suffix': u'',
@@ -80,7 +80,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_missing_farm_header(self):
         """Pollination: regression testing missing farm headers."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         args = {
             'results_suffix': u'',
@@ -101,7 +101,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_too_many_farm_seasons(self):
         """Pollination: regression testing too many seasons in farm."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         args = {
             'results_suffix': u'',
@@ -122,7 +122,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_missing_guild_header(self):
         """Pollination: regression testing extra guild headers."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         args = {
             'results_suffix': u'',
@@ -143,7 +143,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_no_farm_regression(self):
         """Pollination: regression testing sample data with no farms."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         args = {
             'results_suffix': u'',
@@ -169,7 +169,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_bad_guild_headers(self):
         """Pollination: testing that model detects bad guild headers."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
@@ -198,7 +198,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_bad_biophysical_headers(self):
         """Pollination: testing that model detects bad biophysical headers."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_biophysical_table_path = os.path.join(
@@ -223,7 +223,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_bad_cross_table_headers(self):
         """Pollination: ensure detection of missing headers in one table."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_biophysical_table_path = os.path.join(
@@ -258,7 +258,7 @@ class PollinationTests(unittest.TestCase):
     def test_pollination_bad_farm_type(self):
         """Pollination: ensure detection of bad farm geometry type."""
         from natcap.invest import pollination
-        pollination._N_WORKERS = 0
+        pollination._N_WORKERS = -1
 
         # make some fake farm points
         point_geom = [shapely.geometry.Point(20, - 20)]
