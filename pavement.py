@@ -1025,7 +1025,7 @@ def after_install(options, home_dir):
         # Pyinstaller seems to work best with namespace packages that are all
         # in a single source tree, though python will happily import multiple
         # eggs from different places.
-        pkg_pip_params['natcap.versioner'] += ['--egg'] + NO_WHEEL_SH.split()
+        pkg_pip_params['natcap.versioner'] += NO_WHEEL_SH.split()
 
     def _format_params(param_list):
         """
@@ -1100,7 +1100,7 @@ def after_install(options, home_dir):
                 # preferable) to install natcap namespace packages as flat
                 # eggs.
                 "    subprocess.call([join(home_dir, bindir, 'pip'), "
-                "'install', '--egg', {no_wheel_flag}, {compiler_flags}"
+                "'install', {no_wheel_flag}, {compiler_flags}"
                 " invest_sdist])\n"
             ).format(no_wheel_flag=NO_WHEEL_SUBPROCESS,
                      compiler_flags=compiler_string)
