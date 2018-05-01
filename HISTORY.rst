@@ -1,9 +1,12 @@
 .. :changelog:
 
-.. Unreleased Changes
-3.4.4 (2018-03-26)
+Unreleased Changes
 ------------------
 * InVEST now uses a Makefile to automate the build processes.  GNU Make is required to use the Makefile.  See ``README.rst`` for instructions on building InVEST.  This replaces the old ``pavement.py`` build entrypoint, which has been removed.
+
+
+3.4.4 (2018-03-26)
+------------------
 * InVEST now requires GDAL 2.0.0 and has been tested up to GDAL 2.2.3. Any API users of InVEST will need to use GDAL version >= 2.0. When upgrading GDAL we noticed slight numerical differences in our test suite in both numerical raster differences, geometry transforms, and occasionally a single pixel difference when using `gdal.RasterizeLayer`. Each of these differences in the InVEST test suite is within a reasonable numerical tolerance and we have updated our regression test suite appropriately. Users comparing runs between previous versions of InVEST may also notice reasonable numerical differences between runs.
 * Added a UI keyboard shortcut for showing documentation. On Mac OSX, this will be Command-?. On Windows, GNOME and KDE, this will be F1.
 * Patching an issue in NDR that was using the nitrogen subsurface retention efficiency for both nitrogen and phosphorous.
