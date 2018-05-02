@@ -5,6 +5,9 @@ Unreleased Changes
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
   names from override and constraint layers were not being loaded.  This bug
   caused the field 'UNKNOWN' to be passed to the model, causing an error.
+* Fixed an issue with the InVEST UI (all models), where attempting to
+  drag-and-drop a directory onto a model input would cause the application to
+  crash.
 
 3.4.4 (2018-03-26)
 ------------------
