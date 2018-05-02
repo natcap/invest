@@ -5,7 +5,7 @@ Unreleased Changes
 * Fixed an issue with the InVEST UI (all models), where attempting to
   drag-and-drop a directory onto a model input would cause the application to
   crash.
-* Coastal Vulnderability UI now specifies a number of reasonable defaults for
+* Coastal Vulnerability UI now specifies a number of reasonable defaults for
   some numeric inputs.
 
 3.4.4 (2018-03-26)
