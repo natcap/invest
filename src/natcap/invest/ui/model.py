@@ -76,14 +76,18 @@ def wait_on_signal(signal, timeout=250):
 
 
 def is_probably_datastack(filepath):
-    """Check to see if the file provided is probably a datastack.
+    """Check to see if the path provided is probably a datastack.
 
     Parameters:
-        filepath (string): A path to a file on disk.
+        filepath (string): A path to a location on disk.
 
     Returns:
-        True if the filepath is likely to be a datastack.  False otherwise.
+        True if the path is likely to be a datastack.  False otherwise.
     """
+    # If the filepath provided is a directory, it's not a datastack.
+    if os.path.isdir(filepath):
+        return False
+
     # Does the extension indicate that it's probably a datastack?
     if filepath.endswith((datastack.DATASTACK_EXTENSION,
                           datastack.PARAMETER_SET_EXTENSION)):

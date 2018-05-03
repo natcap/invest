@@ -3021,6 +3021,14 @@ class IsProbablyDatastackTests(unittest.TestCase):
         """Clean up the workspace created for each test."""
         shutil.rmtree(self.workspace)
 
+    def test_directory(self):
+        """Model UI datastack: directory is not a datastack."""
+        from natcap.invest.ui import model
+
+        dirpath = os.path.join(self.workspace, 'foo_dir')
+        os.makedirs(dirpath)
+        self.assertFalse(model.is_probably_datastack(dirpath))
+
     def test_json_extension(self):
         """Model UI datastack: invest.json extension is a datastack"""
         from natcap.invest.ui import model

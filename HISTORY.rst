@@ -2,8 +2,13 @@
 
 Unreleased Changes
 ------------------
-* InVEST now uses a Makefile to automate the build processes.  GNU Make is required to use the Makefile.  See ``README.rst`` for instructions on building InVEST.  This replaces the old ``pavement.py`` build entrypoint, which has been removed.
-
+* InVEST now uses a Makefile to automate the build processes.  GNU Make is
+  required to use the Makefile.  See ``README.rst`` for instructions on
+  building InVEST.  This replaces the old ``pavement.py`` build entrypoint,
+  which has been removed.
+* Fixed an issue with the InVEST UI (all models), where attempting to
+  drag-and-drop a directory onto a model input would cause the application to
+  crash.
 
 3.4.4 (2018-03-26)
 ------------------
