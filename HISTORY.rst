@@ -5,6 +5,9 @@ Unreleased Changes
 * Fixed an issue with the InVEST UI (all models), where attempting to
   drag-and-drop a directory onto a model input would cause the application to
   crash.
+* Fixed an issue with the Fisheries UI where alpha and beta parameter inputs
+  were incorrectly disabled for the Ricker recruitment function.
+
 
 3.4.4 (2018-03-26)
 ------------------
