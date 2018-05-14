@@ -438,9 +438,7 @@ def build_lookup_from_csv(
         converted to lowercase unicode.
     """
     table = pandas.read_csv(table_path)
-
     header_row = list(table)
-    print header_row
     key_field = unicode(key_field)
     if to_lower:
         key_field = key_field.lower()
@@ -459,8 +457,8 @@ def build_lookup_from_csv(
             row = [
                 x if not isinstance(x, basestring) else x.lower()
                 for x in row]
-        null_row = row.isnull()
-        if not (~null_row).values.any():
+        # check if every single element in the row is null
+        if row.isnull().values.all():
             LOGGER.warn(
                 "Encountered an entirely blank row on line %d", index+2)
             continue

@@ -367,7 +367,7 @@ class BuildLookupFromCsvTests(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(table_str)
         result = utils.build_lookup_from_csv(
-            table_path, 'a', to_lower=True, numerical_cast=True)
+            table_path, 'a', to_lower=True)
         expected_dict = {
             0.0: {
                 'a': 0.0,
@@ -531,7 +531,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             ).strip())
 
         lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1', to_lower=True, numerical_cast=False)
+            csv_file, 'header1', to_lower=True)
 
         self.assertEqual(lookup_dict['4']['header2'], 'foo')
         self.assertEqual(lookup_dict['1']['header2'], '2')
