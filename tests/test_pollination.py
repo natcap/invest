@@ -70,7 +70,7 @@ class PollinationTests(unittest.TestCase):
                 for yield_type in expected_yields:
                     self.assertAlmostEqual(
                         expected_yields[yield_type],
-                        feature.GetField(yield_type))
+                        feature.GetField(yield_type), places=3)
         finally:
             # make sure vector is closed before removing the workspace
             result_layer = None
@@ -162,7 +162,7 @@ class PollinationTests(unittest.TestCase):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum is when I inspected a run
         # that appeared to work.
-        self.assertAlmostEqual(result_sum, 4790.4365234375)
+        self.assertAlmostEqual(result_sum, 4790.436, places=3)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)

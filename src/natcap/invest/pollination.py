@@ -279,6 +279,7 @@ def execute(args):
                 substrate] = farm_nesting_substrate_index_path
             farm_substrate_rasterize_task_list.append(
                 task_graph.add_task(
+                    task_name='rasterize_nesting_substrate_%s' % substrate,
                     func=_rasterize_vector_onto_base,
                     args=(
                         scenario_variables['nesting_substrate_index_path'][
@@ -353,6 +354,7 @@ def execute(args):
 
             # override the relative floral task because we'll need this one
             relative_floral_abudance_task = task_graph.add_task(
+                task_name='relative_floral_abudance_task_%s' % season,
                 func=_rasterize_vector_onto_base,
                 args=(
                     relative_floral_abundance_index_path,
@@ -572,6 +574,7 @@ def execute(args):
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
                 season, file_suffix))
         half_saturation_task = task_graph.add_task(
+            task_name='half_saturation_rasterize_%s' % season,
             func=_rasterize_vector_onto_base,
             args=(
                 blank_raster_path, farm_vector_path,
