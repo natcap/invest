@@ -2,7 +2,6 @@
 
 Unreleased Changes
 ------------------
-<<<<<<< working copy
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
   names from override and constraint layers were not being loaded.  This bug
   caused the field 'UNKNOWN' to be passed to the model, causing an error.
