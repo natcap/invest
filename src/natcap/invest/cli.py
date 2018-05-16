@@ -445,7 +445,7 @@ def main():
                 model_warnings = []
                 try:
                     model_warnings = getattr(
-                        target_mod, 'validate')(paramset.args)
+                        model_module, 'validate')(paramset.args)
                 except AttributeError:
                     LOGGER.warn(
                         '%s does not have a defined validation function.',

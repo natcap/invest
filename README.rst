@@ -88,6 +88,10 @@ Or on Windows, use the following instead from a CMD prompt::
     > make env
     > .\env\bin\activate
 
+This makefile target is included for convenience ... you may of course choose to
+manage your own virtual environment.  ``requirements.txt`` and
+``requirements-dev.txt`` list the python dependencies needed.
+
 Using a different environment name
 """"""""""""""""""""""""""""""""""
 If you prefer a different name for your environment, you may pass the environment name as
@@ -139,6 +143,10 @@ Once the appropriate dependencies are available, InVEST can also be built as a
 standalone application::
 
     $ make binaries
+
+An important detail about building binaries is that ``natcap.invest`` must be
+installed as a wheel to ensure that the distribution information is in the
+correct location.
 
 This will create a directory at ``dist/invest`` holding the application binaries
 and relevant shared libraries.

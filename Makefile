@@ -14,13 +14,11 @@ HG_UG_REPO_REV          := ae4705d8c9ad
 
 
 ENV = env
-PIP = pip
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP)
-
 ifeq ($(OS),Windows_NT)
 	NULL := $$null
 	PROGRAM_CHECK_SCRIPT := .\scripts\check_required_programs.bat
-	ENV_ACTIVATE = .\$(ENV)\Scripts\activate
+	ENV_SCRIPTS = $(ENV)\Scripts
+	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
 	CP := powershell.exe Copy-Item
 	COPYDIR := $(CP) -Recurse
 	MKDIR := powershell.exe mkdir -Force -Path
@@ -31,27 +29,39 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
-	REQUIRED_PROGRAMS += makensis
 	.DEFAULT_GOAL := windows_installer 
+	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
+	/ := '\'
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
-	ENV_ACTIVATE = source $(ENV)/bin/activate
+	ENV_SCRIPTS = $(ENV)/bin
+	ENV_ACTIVATE = source $(ENV_SCRIPTS)/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
+	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
+		JENKINS_BUILD_SCRIPT := ./scripts/jenkins-build.sh
 	else
 		.DEFAULT_GOAL := binaries 
+		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
 endif
+
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk
+ifeq ($(OS),Windows_NT)
+	REQUIRED_PROGRAMS += makensis
+endif
+
+PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
@@ -70,19 +80,21 @@ BUILD_DIR := build
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
 FORKNAME :=
 DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
-TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --logging-level=DEBUG
+TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG
 
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
+APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
+USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -119,7 +131,8 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-$(RM) build natcap.invest.egg-info
+	-$(RM) build
+	-$(RM) natcap.invest.egg-info
 
 check:
 	@echo "Checking required applications"
@@ -132,7 +145,7 @@ check:
 # Subrepository management.
 $(HG_UG_REPO_PATH): 
 	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
-	-hg pull -R $(HG_UG_REPO_PATH)
+	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
 $(SVN_DATA_REPO_PATH): | $(DATA_DIR)
@@ -147,11 +160,16 @@ fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
 # Python environment management
 env:
 	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-dev.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
 	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
 
-install: $(DIST_DIR)/natcap.invest*.whl
-	$(PIP) install --use-wheel --find-links=dist natcap.invest 
+# compatible with pip>=7.0.0
+# REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
+# of pip don't think CWD is a valid package.
+install: $(DIST_DIR)/natcap.invest%.whl
+	-$(RM) natcap.invest.egg-info
+	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest 
 
 
 # Bulid python packages and put them in dist/
@@ -168,31 +186,39 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RM) $(BUILD_DIR)/pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
-	pyinstaller \
+	$(ENV_SCRIPTS)$(/)pyinstaller \
 		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
+	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
 # API docs are copied to dist/apidocs
 # Userguide HTML docs are copied to dist/userguide
 # Userguide PDF file is copied to dist/InVEST_<version>_.pdf
-apidocs: $(APIDOCS_HTML_DIR)
+apidocs: $(APIDOCS_HTML_DIR) $(APIDOCS_ZIP_FILE)
 $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 	$(PYTHON) setup.py build_sphinx -a --source-dir doc/api-docs
 	$(COPYDIR) build/sphinx/html $(APIDOCS_HTML_DIR)
 
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) 
+$(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
+
+userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE) 
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide latex
+	-$(RM) build/userguide/latex
+	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide BUILDDIR=../../build/userguide html 
+	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide html 
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
+
+$(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
+	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
 
 # Zipping up the sample data zipfiles is a little odd because of the presence
@@ -228,22 +254,20 @@ ZIPDIRS = AestheticQuality \
 		  storm_impact \
 		  WaveEnergy \
 		  WindEnergy
-ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR),$(dirname).zip))
+ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)Freshwater.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)Marine.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)Terrestrial.zip: DATADIR=Base_Data$(/)
-$(DIST_DATA_DIR)%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
-	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR),$(DATADIR),$(subst .zip,,$@))"
+$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
+$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
+	cd $(SVN_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
 $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && \
-		zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
+	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
 
 
 # Installers for each platform.
@@ -270,3 +294,12 @@ $(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
+
+jenkins:
+	$(JENKINS_BUILD_SCRIPT)
+
+jenkins_test_ui: env
+	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
+
+jenkins_test: env $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test

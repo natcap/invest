@@ -277,7 +277,7 @@ FunctionEnd
 !define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !macro StartMenuLink linkName modelName
-    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe ${modelName}" "" "${INVEST_ICON}"
+    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "${modelName}" "${INVEST_ICON}"
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
@@ -366,6 +366,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.
     File invest-autotest.bat
+    File ..\..\scripts\invest-autotest.py
     File InVEST-2.ico
   
     SetOutPath "$INSTDIR\documentation"

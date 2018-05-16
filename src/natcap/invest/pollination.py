@@ -21,9 +21,9 @@ from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-# We're hardcoding this to 0 now which makes taskgraph run in threading mode
+# We're hardcoding this to -1 now which makes taskgraph run in serial mode
 # we'll do that until we're comfortable with taskgraph in the wild.
-_N_WORKERS = 0
+_N_WORKERS = -1
 
 _INDEX_NODATA = -1.0
 

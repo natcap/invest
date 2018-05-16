@@ -14,6 +14,7 @@ exename = 'invest'
 kwargs = {
     'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
     'excludes': None,
+    'pathex': sys.path,
     'runtime_hooks': [os.path.join(current_dir, 'exe', 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
