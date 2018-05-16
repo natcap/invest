@@ -1,3 +1,18 @@
+# Repositories managed by the makefile task tree
+DATA_DIR := data
+SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
+SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
+SVN_DATA_REPO_REV       := 171
+
+SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
+SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
+SVN_TEST_DATA_REPO_REV  := 141
+
+HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
+HG_UG_REPO_PATH         := doc/users-guide
+HG_UG_REPO_REV          := ae4705d8c9ad
+
+
 ENV = env
 PIP = pip
 REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk $(PIP)
@@ -46,21 +61,6 @@ DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',lates
 DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
-DATA_DIR := data
-
-# Repositories managed by the makefile task tree
-SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 171
-
-SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 141
-
-HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
-HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := ae4705d8c9ad
-
 
 # These are intended to be overridden by a jenkins build.
 # When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
