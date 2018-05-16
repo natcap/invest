@@ -269,5 +269,5 @@ Copyright and license information
 ---------------------------------
 
 A file called ``LICENSE.txt`` should have accompanied this distribution.  If it
-is missing, the license may be found on our proejct page,
+is missing, the license may be found on our project page,
 https://bitbucket.org/natcap/invest
