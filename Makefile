@@ -31,6 +31,7 @@ ifeq ($(OS),Windows_NT)
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
 	.DEFAULT_GOAL := windows_installer 
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
+	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
 else
 	NULL := /dev/null
@@ -46,6 +47,7 @@ else
 	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
+	RM_DATA_DIR := yes | rm -r $(DATA_DIR)
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
 		.DEFAULT_GOAL := mac_installer
@@ -94,7 +96,7 @@ WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins purge
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -131,8 +133,15 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-$(RM) build
+	-$(RM) $(BUILD_DIR)
 	-$(RM) natcap.invest.egg-info
+	-$(RM) cover
+	-$(RM) coverage.xml
+
+purge: clean
+	-$(RM_DATA_DIR)
+	-$(RM) $(HG_UG_REPO_PATH)
+	-$(RM) $(ENV)
 
 check:
 	@echo "Checking required applications"
