@@ -119,7 +119,8 @@ help:
 	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for 'advanced' NSIS install."
 	@echo "  test              to run nosetests on the tests directory"
 	@echo "  test_ui           to run nosetests on the ui_tests directory"
-	@echo "  clean             to remove temporary directories (but not dist/)"
+	@echo "  clean             to remove temporary directories and files (but not dist/)"
+	@echo "  purge             to remove temporary directories, cloned repositories and the built environment."
 	@echo "  help              to print this help and exit"
 
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
