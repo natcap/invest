@@ -1,4 +1,6 @@
 import os
+CWD = os.path.join('installer', 'darwin')
+
 def get_size(start_path = '.'):
     total_size = 0
     for dirpath, dirnames, filenames in os.walk(start_path):
@@ -12,7 +14,7 @@ print 'Volume size: %s' % size
 print 'Packaging dirname %s' % defines['investdir']
 _invest_dirname = os.path.basename(defines['investdir'])
 
-badge_icon = 'invest.icns'
+badge_icon = os.path.join(CWD, 'invest.icns')
 symlinks = {'Applications': '/Applications'}
 files = [defines['investdir']]
 
@@ -25,7 +27,7 @@ text_size = 12
 
 # Window Settings
 window_rect = ((0, 10000), (450, 375))
-background = 'background.png'
+background = os.path.join(CWD, 'background.png')
 #background = 'builtin-arrow'
 default_view = 'icon-view'
 

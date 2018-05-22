@@ -482,8 +482,6 @@ class AboutDialog(QtWidgets.QDialog):
                 ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
                 ('matplotlib', 'BSD', 'http://matplotlib.org'),
-                ('natcap.versioner', 'BSD',
-                 'http://bitbucket.org/jdouglass/versioner'),
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',

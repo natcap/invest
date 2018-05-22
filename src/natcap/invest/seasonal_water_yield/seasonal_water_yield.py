@@ -19,7 +19,7 @@ import pygeoprocessing
 from .. import utils
 from .. import validation
 
-import seasonal_water_yield_core  #pylint: disable=import-error
+from natcap.invest.seasonal_water_yield import seasonal_water_yield_core  #pylint: disable=import-error
 
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')

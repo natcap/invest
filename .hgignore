@@ -21,7 +21,6 @@ __pycache__/
 ^sdist/
 ^natcap\.invest\.egg-info/
 \.egg$
-^src/natcap/invest/version\.py$
 
 # Unit test / coverage reports
 ^htmlcov/
@@ -38,6 +37,3 @@ __pycache__/
 # Repositories (tracked in their own SCMs)
 ^data/invest-data
 ^data/invest-test-data
-^data/crop-model-data
-^data/invest-crop-production-data
-^src/pyinstaller
