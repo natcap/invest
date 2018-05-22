@@ -422,7 +422,7 @@ def build_lookup_from_csv(
             can uniquely identify each row in the table.  If `numerical_cast`
             is true the values will be cast to floats/ints/unicode if
             possible.
-        to_lower (string): if True, converts all unicode in the CSV,
+        to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values.
         warn_if_missing (bool): If True, warnings are logged if there are
@@ -443,6 +443,7 @@ def build_lookup_from_csv(
     if to_lower:
         key_field = key_field.lower()
         header_row = [x.lower() for x in header_row]
+
     if key_field not in header_row:
         raise ValueError(
             '%s expected in %s for the CSV file at %s' % (
@@ -450,22 +451,24 @@ def build_lookup_from_csv(
     if warn_if_missing and '' in header_row:
         LOGGER.warn(
             "There are empty strings in the header row at %s", table_path)
+
     key_index = header_row.index(key_field)
     lookup_dict = {}
     for index, row in table.iterrows():
         if to_lower:
-            row = [
+            row = pandas.Series([
                 x if not isinstance(x, basestring) else x.lower()
-                for x in row]
+                for x in row])
         # check if every single element in the row is null
         if row.isnull().values.all():
             LOGGER.warn(
                 "Encountered an entirely blank row on line %d", index+2)
             continue
         if row.isnull().values.any():
-            LOGGER.warn(
-                "There are empty strings in row %s in %s: %s", index+2,
-                table_path, row)
+            row = row.fillna('')
+            #LOGGER.warn(
+            #    "There are empty strings in row %s in %s: %s", index+2,
+            #    table_path, row)
         lookup_dict[row[key_index]] = dict(zip(header_row, row))
     return lookup_dict
 
