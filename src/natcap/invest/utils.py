@@ -458,10 +458,6 @@ def build_lookup_from_csv(
             continue
         if row.isnull().values.any():
             row = row.fillna('')
-            #LOGGER.warn(
-            #    "There are empty strings in row %s in %s: %s", index+2,
-            #    table_path, row)
-        print row, [type(x) for x in row]
         lookup_dict[row[key_index]] = dict(zip(header_row, row))
     return lookup_dict
 
