@@ -398,14 +398,6 @@ def build_file_registry(base_file_path_list, file_suffix):
     return f_reg
 
 
-def _attempt_float(value):
-    """Attempt to cast `value` to a float.  If fail, return original value."""
-    try:
-        return float(value)
-    except ValueError:
-        return value
-
-
 def build_lookup_from_csv(
         table_path, key_field, to_lower=True, warn_if_missing=True):
     """Read a CSV table into a dictionary indexed by `key_field`.
@@ -419,9 +411,7 @@ def build_lookup_from_csv(
         table_path (string): path to a CSV file containing at
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table.  If `numerical_cast`
-            is true the values will be cast to floats/ints/unicode if
-            possible.
+            can uniquely identify each row in the table.
         to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values.
@@ -442,7 +432,9 @@ def build_lookup_from_csv(
     key_field = unicode(key_field)
     if to_lower:
         key_field = key_field.lower()
-        header_row = [x.lower() for x in header_row]
+        header_row = [
+            x if not isinstance(x, basestring) else x.lower()
+            for x in header_row]
 
     if key_field not in header_row:
         raise ValueError(
@@ -469,6 +461,7 @@ def build_lookup_from_csv(
             #LOGGER.warn(
             #    "There are empty strings in row %s in %s: %s", index+2,
             #    table_path, row)
+        print row, [type(x) for x in row]
         lookup_dict[row[key_index]] = dict(zip(header_row, row))
     return lookup_dict
 
