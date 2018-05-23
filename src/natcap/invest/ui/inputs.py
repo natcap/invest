@@ -2103,15 +2103,20 @@ class Dropdown(GriddedInput):
         """
         # If we have known mapped values, try to match the value with the
         # return value map we know about.
+        inverted_map = None
         if self.return_value_map is not None:
             inverted_map = dict((v, k) for (k, v) in
                                 self.return_value_map.iteritems())
-            value = inverted_map[value]
 
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
         for options_attr in ('options', 'user_options'):
             try:
+                if inverted_map is not None:
+                    try:
+                        value = inverted_map[value]
+                    except KeyError:
+                        pass
                 index = getattr(self, options_attr).index(value)
                 self.dropdown.setCurrentIndex(index)
                 return
