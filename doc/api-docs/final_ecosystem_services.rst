@@ -18,8 +18,6 @@ Final Ecosystem Services
     final_ecosystem_services/recreation.rst
     final_ecosystem_services/scenic_quality.rst
     final_ecosystem_services/sdr.rst
-    final_ecosystem_services/sediment.rst
-    final_ecosystem_services/timber.rst
     final_ecosystem_services/wave_energy.rst
     final_ecosystem_services/wind_energy.rst
 

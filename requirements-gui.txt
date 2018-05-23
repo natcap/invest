@@ -1,0 +1,8 @@
+# requirements-gui.txt
+# --------------------
+# This file records the packages and requirements needed in order for the
+# InVEST GUI to work as expected.
+
+qtpy>1.3
+qtawesome
+faulthandler

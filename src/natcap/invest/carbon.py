@@ -6,6 +6,7 @@ import os
 import time
 
 from osgeo import gdal
+from osgeo import ogr
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3
 
@@ -476,19 +477,20 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key) and
+                    key in args and key in required_keys):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.Open(args[key])
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = ogr.Open(args[key])
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

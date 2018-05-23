@@ -1,11 +1,8 @@
 ; Variables needed at the command line:
 ; VERSION         - the version of InVEST we're building (example: 3.4.5)
-; VERSION_DISK    - the windows-safe version of InVEST we're building
-;                   This needs to be a valid filename on windows (no : , etc),
-;                   but could represent a development build.
-; INVEST_3_FOLDER - The local folder of binaries to include.
-; SHORT_VERSION   - The short version name.  Usually a tagname such as 'tip',
-;                   'default', or 3.4.5.
+;                   This string must not contain characters that are
+;                   problematic in Windows paths (no : , etc)
+; BINDIR          - The local folder of binaries to include.
 ; ARCHITECTURE    - The architecture we're building for.  Generally this is x86.
 ; FORKNAME        - The username of the InVEST fork we're building off of.
 ; DATA_LOCATION   - Where (relative to datportal) the data should be downloaded
@@ -68,9 +65,8 @@
 ; HM NIS Edit Wizard helper defines
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
-!define PDF_NAME "InVEST_${VERSION}_Documentation.pdf"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
-!define PRODUCT_WEB_SITE "http://www.naturalcapitalproject.org"
+!define PRODUCT_WEB_SITE "https://www.naturalcapitalproject.org"
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
@@ -127,7 +123,6 @@ SetCompressor zlib
 !insertmacro MUI_PAGE_COMPONENTS
 !insertmacro MUI_PAGE_DIRECTORY
 !insertmacro MUI_PAGE_INSTFILES
-;!define MUI_FINISHPAGE_SHOWREADME ${PDF_NAME}
 !insertmacro MUI_PAGE_FINISH
 
 ; MUI Uninstaller settings---------------
@@ -141,10 +136,9 @@ SetCompressor zlib
 
 ; MUI end ------
 
-!define INSTALLER_NAME "InVEST_${FORKNAME}${VERSION_DISK}_${ARCHITECTURE}_Setup.exe"
 Name "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-OutFile ${INSTALLER_NAME}
-InstallDir "C:\InVEST_${VERSION_DISK}_${ARCHITECTURE}"
+OutFile ..\..\dist\InVEST_${FORKNAME}${VERSION}_${ARCHITECTURE}_Setup.exe
+InstallDir "C:\InVEST_${VERSION}_${ARCHITECTURE}"
 ShowInstDetails show
 RequestExecutionLevel admin
 
@@ -226,8 +220,13 @@ Function ValidateAdvZipFile
     ${EndIf}
 FunctionEnd
 
-!define LVM_GETITEMCOUNT 0x1004
-!define LVM_GETITEMTEXT 0x102D
+; NSIS 3.x defines these variables, NSIS 2.x does not.  This supports both versions.
+!ifndef LVM_GETITEMCOUNT
+    !define LVM_GETITEMCOUNT 0x1004
+!endif
+!ifndef LVM_GETITEMTEXT
+    !define LVM_GETITEMTEXT 0x102D
+!endif
 
 Function DumpLog
     Exch $5
@@ -274,122 +273,125 @@ Function Un.onInit
     !insertmacro CheckProgramRunning "invest"
 FunctionEnd
 
-Section "InVEST Tools and ArcGIS toolbox" Section_InVEST_Tools
-  SetShellVarContext all
-  SectionIn RO ;require this section
+; Copied into the invest folder later in the NSIS script
+!define INVEST_BINARIES "$INSTDIR\invest-3-x86"
+!define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!macro StartMenuLink linkName modelName
+    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "${modelName}" "${INVEST_ICON}"
+!macroend
 
-  !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
-  !define INVEST_ICON "$INSTDIR\${INVEST_3_FOLDER}\InVEST-2.ico"
-  !define INVEST_DATA "$INSTDIR\${INVEST_3_FOLDER}"
-  !define OVERLAP "${SMPATH}\Overlap Analysis"
-  !define HRA "${SMPATH}\Habitat Risk Assessment"
-  !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
-  !define FISHERIES "${SMPATH}\Fisheries"
-  !define HYDROPOWER "${SMPATH}\Hydropower"
+Section "InVEST Tools" Section_InVEST_Tools
+    AddSize 230793  ; This size is based on Windows build of InVEST 3.4.0
+    SetShellVarContext all
+    SectionIn RO ;require this section
 
-  ; Write the uninstaller to disk
-  SetOutPath "$INSTDIR"
-  !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION_DISK}.exe"
-  writeUninstaller "${UNINSTALL_PATH}"
+    ; Write the uninstaller to disk
+    SetOutPath "$INSTDIR"
+    !define UNINSTALL_PATH "$INSTDIR\Uninstall_${VERSION}.exe"
+    writeUninstaller "${UNINSTALL_PATH}"
 
-  ; Create start  menu shortcuts.
-  ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
-  ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
-  SetOutPath "$INSTDIR\${INVEST_3_FOLDER}"
+    ; Create start  menu shortcuts.
+    ; These shortcut paths are set in the appropriate places based on the SetShellVarConext flag.
+    ; This flag is automatically set based on the MULTIUSER installation mode selected by the user.
+    !define SMPATH "$SMPROGRAMS\${PACKAGE_NAME}"
+    CreateDirectory "${SMPATH}"
+    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
+    !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
+    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality (unstable)" "scenic_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
+    !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
+    !insertmacro StartMenuLink "${SMPATH}\GLOBIO" "globio"
+    !insertmacro StartMenuLink "${SMPATH}\Pollination" "pollination"
+    !insertmacro StartMenuLink "${SMPATH}\Finfish Aquaculture" "finfish_aquaculture"
+    !insertmacro StartMenuLink "${SMPATH}\Wave Energy" "wave_energy"
+    !insertmacro StartMenuLink "${SMPATH}\Wind Energy" "wind_energy"
+    !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
+    !insertmacro StartMenuLink "${SMPATH}\SDR" "sdr"
+    !insertmacro StartMenuLink "${SMPATH}\NDR" "ndr"
+    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Rule Based" "sg"
+    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
+    !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
+    !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
+    !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
+    !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
+    !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
 
-  CreateDirectory "${SMPATH}"
-  CreateShortCut "${SMPATH}\Crop Production (Percentile) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_percentile.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Crop Production (Regression) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_crop_production_regression.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenic Quality (unstable) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenic_quality.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Habitat Quality (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_habitat_quality.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_carbon.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Forest Carbon Edge Effect (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_forest_carbon_edge_effect.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\GLOBIO (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_globio.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Pollination (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_pollination.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Finfish Aquaculture (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_finfish_aquaculture.bat" "" "${INVEST_ICON}"
-  CreateDirectory "${OVERLAP}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis (Management Zones) (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis_mz.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${OVERLAP}\Overlap Analysis (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_overlap_analysis.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wave Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wave_energy.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Wind Energy (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_wind_energy.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Coastal Vulnerability (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_vulnerability.bat" "" "${INVEST_ICON}"
+    !define OVERLAP "${SMPATH}\Overlap Analysis"
+    CreateDirectory "${OVERLAP}"
+    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis (Management Zones)" "oa_mz"
+    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis" "oa"
 
-  CreateDirectory "${COASTALBLUECARBON}"
-  CreateShortCut "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${COASTALBLUECARBON}\(2) Coastal Blue Carbon (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_coastal_blue_carbon.bat" "" "${INVEST_ICON}"
+    !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
+    CreateDirectory "${COASTALBLUECARBON}"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(1) Coastal Blue Carbon Preprocessor" "cbc_pre"
+    !insertmacro StartMenuLink "${COASTALBLUECARBON}\(2) Coastal Blue Carbon" "cbc"
 
-  CreateDirectory "${FISHERIES}"
-  CreateShortCut "${FISHERIES}\(1) Fisheries (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${FISHERIES}\(2) Fisheries Habitat Scenario Tool (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_fisheries_hst.bat" "" "${INVEST_ICON}"
+    !define FISHERIES "${SMPATH}\Fisheries"
+    CreateDirectory "${FISHERIES}"
+    !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
+    !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
 
-  CreateDirectory "${HRA}"
-  CreateShortCut "${HRA}\(1) Habitat Risk Assessment Preprocessor (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra_preprocessor.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${HRA}\(2) Habitat Risk Assessment (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hra.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\SDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_sdr.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\NDR (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_ndr.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Rule Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_generator.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Scenario Generator: Proximity Based (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_scenario_gen_proximity.bat" "" "${INVEST_ICON}"
-
-  CreateShortCut "${SMPATH}\Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_hydropower_water_yield.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\Seasonal Water Yield (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_seasonal_water_yield.bat" "" "${INVEST_ICON}"
-
-  CreateShortCut "${SMPATH}\RouteDEM (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_routedem.bat" "" "${INVEST_ICON}"
-  CreateShortCut "${SMPATH}\DelineateIt (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_delineateit.bat" "" "${INVEST_ICON}"
-
-  CreateShortCut "${SMPATH}\Recreation (${ARCHITECTURE}).lnk" "${INVEST_DATA}\invest_recreation.bat" "" "${INVEST_ICON}"
-
-  ; Write registry keys for convenient uninstallation via add/remove programs.
-  ; Inspired by the example at
-  ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
-  !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
-  WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
-  WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
-  WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
+    !define HRA "${SMPATH}\Habitat Risk Assessment"
+    CreateDirectory "${HRA}"
+    !insertmacro StartMenuLink "${HRA}\(1) Habitat Risk Assessment Preprocessor" "hra_pre"
+    !insertmacro StartMenuLink "${HRA}\(2) Habitat Risk Assessment" "hra"
 
 
-  ; Actually install the information we want to disk.
-  SetOutPath "$INSTDIR"
-  File ..\..\LICENSE.txt
-  File /nonfatal ..\..\doc\users-guide\build\latex\${PDF_NAME}
-  file ..\..\HISTORY.rst
-
-  ; Copy over all the sample parameter files
-  File ..\..\data\invest-data\*.invs.json
-
-  SetOutPath "$INSTDIR\${INVEST_3_FOLDER}\"
-  File /r /x *.hg* /x *.svn* ..\..\${INVEST_3_FOLDER}\*
-  ; invest-autotest.bat is here to help automate testing the UIs.
-  File invest-autotest.bat
-
-  SetOutPath "$INSTDIR\documentation"
-  File /r /x *.hg* /x *.svn* ..\..\doc\users-guide\build\html\*
-
-  ; If the user has provided a custom data zipfile, unzip the data.
-  ${If} $LocalDataZipFile != ""
-    nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
-  ${EndIf}
-
-  ; Write the install log to a text file on disk.
-  StrCpy $0 "$INSTDIR\install_log.txt"
-  Push $0
-  Call DumpLog
+    ; Write registry keys for convenient uninstallation via add/remove programs.
+    ; Inspired by the example at
+    ; nsis.sourceforge.net/A_simple_installer_with_start_menu_shortcut_and_uninstaller
+    !define REGISTRY_PATH "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_PUBLISHER} ${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayName"          "${PRODUCT_NAME} ${PRODUCT_VERSION}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "UninstallString"      "${UNINSTALL_PATH}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "QuietUninstallString" "${UNINSTALL_PATH} /S"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "InstallLocation"      "$INSTDIR"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayIcon"          "${INVEST_ICON}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "Publisher"            "${PRODUCT_PUBLISHER}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "URLInfoAbout"         "${PRODUCT_WEB_SITE}"
+    WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
+    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
+    WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
+  
+  
+    ; Actually install the information we want to disk.
+    SetOutPath "$INSTDIR"
+    File ..\..\LICENSE.txt
+    file ..\..\HISTORY.rst
+  
+    ; Copy over all the sample parameter files
+    File ..\..\data\invest-data\*.invs.json
+  
+    SetOutPath "${INVEST_BINARIES}"
+    File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
+    ; invest-autotest.bat is here to help automate testing the UIs.
+    File invest-autotest.bat
+    File ..\..\scripts\invest-autotest.py
+    File InVEST-2.ico
+  
+    SetOutPath "$INSTDIR\documentation"
+    File /r /x *.hg* /x *.svn* ..\..\dist\userguide
+    File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
+  
+    ; If the user has provided a custom data zipfile, unzip the data.
+    ${If} $LocalDataZipFile != ""
+      nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
+    ${EndIf}
+  
+    ; Write the install log to a text file on disk.
+    StrCpy $0 "$INSTDIR\install_log.txt"
+    Push $0
+    Call DumpLog
 
 SectionEnd
 
 ; Only add this section if we're running the installer on Windows 7 or below.
-; See InVEST Issue #3515.
+; See InVEST Issue #3515 (https://bitbucket.org/natcap/invest/issues/3515)
 ; This section is disabled in .onInit if we're running Windows 8 or later.
 Section "MSVCRT 2008 Runtime (Recommended)" Sec_VCRedist2008
-    File vcredist_x86.exe
+    SetOutPath "$INSTDIR"
+    File ..\..\build\vcredist_x86.exe
     ExecWait "vcredist_x86.exe /q"
-    Delete vcredist_x86.exe
 SectionEnd
 
 Section "uninstall"
@@ -409,9 +411,12 @@ Var LocalDataZip
 Var INSTALLER_DIR
 
 !macro downloadFile RemoteFilepath LocalFilepath
-    NSISdl::download "${RemoteFilepath}" ${LocalFilepath}
+    ; Using inetc instead of the included NSISdl because inetc plugin supports downloading over HTTPS.
+    ; NSISdl only supports downloading over HTTP.  This will be a problem when serving datasets from
+    ; storage buckets, which is only done over HTTPS.
+    inetc::get "${RemoteFilepath}" "${LocalFilepath}" /END
     Pop $R0 ;Get the status of the file downloaded
-    StrCmp $R0 "success" got_it failed
+    StrCmp $R0 "OK" got_it failed
     got_it:
        nsisunz::UnzipToLog ${LocalFilepath} "."
        Delete ${LocalFilepath}
@@ -425,9 +430,9 @@ Var INSTALLER_DIR
        Call DumpLog
 !macroend
 
-!macro downloadData Title Filename AdditionalSize
+!macro downloadData Title Filename AdditionalSizeKb
   Section "${Title}"
-    AddSize "${AdditionalSize}"
+    AddSize "${AdditionalSizeKb}"
 
     ; Check to see if the user defined an 'advanced options' zipfile.
     ; If yes, then we should skip all of this checking, since we only want to use
@@ -449,7 +454,7 @@ Var INSTALLER_DIR
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
         SetOutPath "$INSTDIR"
-        !insertmacro downloadFile "http://data.naturalcapitalproject.org/~dataportal/${DATA_LOCATION}/${Filename}" "${Filename}"
+        !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
 !macroend
@@ -459,35 +464,35 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
   SectionGroup "Freshwater Datasets" SEC_FRESHWATER_DATA
-    !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 4710
-    !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 100
-    !insertmacro downloadData "Seasonal Water Yield: (optional)" "seasonal_water_yield.zip" 500000
+    !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 102544
+    !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 20
+    !insertmacro downloadData "Seasonal Water Yield: (optional)" "seasonal_water_yield.zip" 512640
   SectionGroupEnd
 
   SectionGroup "Marine Datasets" SEC_MARINE_DATA
-    !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 1784696
-    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 856
-    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 856
-    !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 117760
-    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 784
-    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 8116
-    !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3692
-    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 9421
-    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831620
-    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 4804
-    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 24
+    !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 583388
+    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 144
+    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 356
+    !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 191156
+    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
+    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
+    !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3680
+    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
+    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831616
+    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 8056
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5976
   SectionGroupEnd
 
   SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
-    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 0
-    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 0
-    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8270
-    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 728
-    !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 587776
-    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 160768
-    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 176
-    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 0
-    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7511
+    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 94336
+    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 1896040
+    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8160
+    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 9820
+    !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 4656
+    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
+    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
+    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 1452
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
   SectionGroupEnd
 SectionGroupEnd
 

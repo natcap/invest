@@ -399,10 +399,12 @@ def main():
         sip.setapi('QString', 2)
 
         from natcap.invest.ui import inputs
-    except ImportError:
+    except ImportError as error:
         # Can't import UI, exit with nonzero exit code
-        parser.error('UI not installed:\n'
-                     '    pip install natcap.invest[ui]')
+        LOGGER.exception('Unable to import the UI')
+        parser.error(('Unable to import the UI (failed with "%s")\n'
+                      'Is the UI installed?\n'
+                      '    pip install natcap.invest[ui]') % error)
 
     if args.model == 'launcher':
         from natcap.invest.ui import launcher
@@ -443,7 +445,7 @@ def main():
                 model_warnings = []
                 try:
                     model_warnings = getattr(
-                        target_mod, 'validate')(paramset.args)
+                        model_module, 'validate')(paramset.args)
                 except AttributeError:
                     LOGGER.warn(
                         '%s does not have a defined validation function.',

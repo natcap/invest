@@ -5,17 +5,12 @@ import sys
 import logging
 
 import pkg_resources
-import natcap.invest.pygeoprocessing_0_3_3
-import pygeoprocessing
-import natcap.versioner
 import pygeoprocessing
 
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
 __all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
-
-__version__ = natcap.versioner.get_version('natcap.invest')
 
 
 def local_dir(source_file):

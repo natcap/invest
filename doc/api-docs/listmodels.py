@@ -9,7 +9,8 @@ import warnings
 
 import natcap.invest
 
-LOGGER = logging.getLogger('listmodels.py')
+logging.basicConfig()
+LOGGER = logging.getLogger('listmodels')
 
 MODEL_RST_TEMPLATE = """
 .. _models:
