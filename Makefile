@@ -196,7 +196,7 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RM) $(BUILD_DIR)/pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
-	$(ENV_SCRIPTS)$(/)pyinstaller \
+	$(PYTHON) -m PyInstaller \
 		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
 		--distpath $(DIST_DIR) \
