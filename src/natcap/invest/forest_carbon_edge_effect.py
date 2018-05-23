@@ -707,7 +707,7 @@ def validate(args, limit_to=None):
             validation_error_list.append(
                 ([key], 'not found on disk'))
 
-    optional_file_type_list = [('lulc_uri', 'raster')]
+    optional_file_type_list = [('lulc_uri', 'raster', True)]
     if args['compute_forest_edge_effects']:
         optional_file_type_list.extend(
             [('tropical_forest_edge_carbon_model_shape_uri', 'vector', True),
@@ -717,19 +717,22 @@ def validate(args, limit_to=None):
     with utils.capture_gdal_logging():
         for key, key_type, required in optional_file_type_list:
             if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]) and required:
+                if len(args[key]) == 0 and not required:
+                    continue
+
+                if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
                     raster = gdal.OpenEx(args[key])
-                    if raster is None and required:
+                    if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
                     vector = gdal.OpenEx(args[key])
-                    if vector is None and required:
+                    if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))
                     del vector
