@@ -10,7 +10,7 @@ SVN_TEST_DATA_REPO_REV  := 141
 
 HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := ae4705d8c9ad
+HG_UG_REPO_REV          := 1448fa07b52c 
 
 
 ENV = env
