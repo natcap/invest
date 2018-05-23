@@ -299,7 +299,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 		installer\windows\invest_installer.nsi
 
 mac_installer: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: | build
