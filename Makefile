@@ -202,6 +202,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
 	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(CP) exe/qt.conf $(INVEST_BINARIES_DIR)/qt.conf
 
 # Documentation.
 # API docs are copied to dist/apidocs
