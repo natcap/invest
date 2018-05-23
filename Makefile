@@ -8,7 +8,7 @@ SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-d
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
 SVN_TEST_DATA_REPO_REV  := 141
 
-HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
+HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
 HG_UG_REPO_REV          := 1448fa07b52c 
 
