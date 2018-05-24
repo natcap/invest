@@ -12,6 +12,12 @@ LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
 __all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
 
+try:
+    __version__ = pkg_resources.get_distribution(__name__).version
+except pkg_resources.DistributionNotFound:
+    # package is not installed.  Log the exception for debugging.
+    LOGGER.exception('Could not load natcap.invest version information')
+
 
 def local_dir(source_file):
     """Return the path to where `source_file` would be on disk.
