@@ -25,6 +25,7 @@ kwargs = {
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
     ],
+    'datas': [('qt.conf', '.')],
     'cipher': block_cipher,
 }
 
