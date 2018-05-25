@@ -131,16 +131,8 @@ def execute(args):
         sub_sheds_uri = args['sub_watersheds_uri']
 
     # Open/read in the csv file into a dictionary and add to arguments
-    bio_dict = {}
-    biophysical_table_file = open(args['biophysical_table_uri'], 'rU')
-    reader = csv.DictReader(biophysical_table_file)
-    for row in reader:
-        bio_dict[int(row['lucode'])] = {
-            'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']),
-            'LULC_veg':float(row['LULC_veg'])
-            }
-
-    biophysical_table_file.close()
+    bio_dict = utils.build_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode', to_lower=True)
 
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -175,8 +167,8 @@ def execute(args):
     vegetated_dict = {}
 
     for lulc_code in bio_dict:
-        Kc_dict[lulc_code] = bio_dict[lulc_code]['Kc']
-        vegetated_dict[lulc_code] = bio_dict[lulc_code]['LULC_veg']
+        Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
+        vegetated_dict[lulc_code] = bio_dict[lulc_code]['lulc_veg']
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
