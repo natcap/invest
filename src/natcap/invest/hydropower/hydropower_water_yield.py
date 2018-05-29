@@ -442,7 +442,7 @@ def execute(args):
             wyield_values_sws, field_list_sws)
 
         # Write sub-watershed CSV table
-        write_new_table(subwatershed_results_csv_uri, wyield_value_dict_sws)
+        _write_table(subwatershed_results_csv_uri, wyield_value_dict_sws)
 
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
@@ -501,7 +501,7 @@ def execute(args):
     if not water_scarcity_checked:
         # Since Scarcity and Valuation are not selected write out
         # the CSV table
-        write_new_table(watershed_results_csv_uri, wyield_value_dict_ws)
+        _write_table(watershed_results_csv_uri, wyield_value_dict_ws)
         # The rest of the function is water scarcity and valuation, so we can
         # quit now
         try:
@@ -575,7 +575,7 @@ def execute(args):
         LOGGER.debug('Valuation Not Selected')
         # Since Valuation are not selected write out
         # the CSV table
-        write_new_table(watershed_results_csv_uri, watershed_dict)
+        _write_table(watershed_results_csv_uri, watershed_dict)
         # The rest of the function is valuation, so we can quit now
         return
 
@@ -604,7 +604,7 @@ def execute(args):
     watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
     # Write out the CSV Table
-    write_new_table(watershed_results_csv_uri, watershed_dict_ws)
+    _write_table(watershed_results_csv_uri, watershed_dict_ws)
 
 def compute_watershed_valuation(watersheds_uri, val_dict):
     """Computes and adds the net present value and energy for the watersheds to
@@ -752,25 +752,29 @@ def filter_dictionary(dict_data, values):
     return new_dict
 
 
-def write_new_table(filename, data):
-    """Create a new csv table from a dictionary
+def _write_table(target_path, data_row_map):
+    """Create a csv table from a dictionary.
 
-        filename - a URI path for the new table to be written to disk
+    Parameters:
 
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
+        target_path (string): a file path for the new table
+
+        data_row_map (mappable): a mapping of row number to a mappable of
+            column name to value. The column names should be identical for
+            all rows. Example:
+
+            data_row_map = {
+                0 : {'id':1, 'precip':43, 'total': 65},
+                1 : {'id':2, 'precip':65, 'total': 94}}
 
     Returns:
         None.
 
     """
     #  Sort the keys so that the rows are written in order
-    sorted_row_index_list = sorted(data.keys())
-    sorted_column_names = sorted(data.itervalues().next().keys())
-    with open(filename, 'wb') as csv_file:
+    sorted_row_index_list = sorted(data_row_map.keys())
+    sorted_column_names = sorted(data_row_map.itervalues().next().keys())
+    with open(target_path, 'wb') as csv_file:
         #  Write the columns as the first row in the table
         csv_file.write(','.join(sorted_column_names))
         csv_file.write('\n')
@@ -778,7 +782,7 @@ def write_new_table(filename, data):
         # Write the rows from the dictionary
         for row_index in sorted_row_index_list:
             csv_file.write(','.join(
-                [str(data[row_index][key]) for key in sorted_column_names]))
+                [str(data_row_map[row_index][key]) for key in sorted_column_names]))
             csv_file.write('\n')
     csv_file.close()
 

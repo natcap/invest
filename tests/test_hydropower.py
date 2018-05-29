@@ -49,7 +49,7 @@ class HydropowerUnitTests(unittest.TestCase):
         self.assertDictEqual(results, exp_results)
 
     def test_write_new_table(self):
-        """Hydro: testing 'write_new_table' function."""
+        """Hydro: testing '_write_table' function."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         temp_dir = self.workspace_dir
@@ -60,7 +60,7 @@ class HydropowerUnitTests(unittest.TestCase):
                 1: {'id':2, 'precip': 150, 'volume': 350},
                 2: {'id':3, 'precip': 170, 'volume': 250}}
 
-        hydropower_water_yield.write_new_table(filename, data)
+        hydropower_water_yield._write_table(filename, data)
         # expected results as a dictionary, note that reading from csv will
         # leave values as strings
         exp_data = {0: {'id': '1', 'precip': '100', 'volume': '150'},
