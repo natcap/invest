@@ -54,14 +54,13 @@ class HydropowerUnitTests(unittest.TestCase):
 
         temp_dir = self.workspace_dir
         filename = os.path.join(temp_dir, 'test_csv.csv')
-
-        fields = ['id', 'precip', 'volume']
+        filename = 'test.csv'
 
         data = {0: {'id':1, 'precip': 100, 'volume': 150},
                 1: {'id':2, 'precip': 150, 'volume': 350},
                 2: {'id':3, 'precip': 170, 'volume': 250}}
 
-        hydropower_water_yield.write_new_table(filename, fields, data)
+        hydropower_water_yield.write_new_table(filename, data)
         # expected results as a dictionary, note that reading from csv will
         # leave values as strings
         exp_data = {0: {'id': '1', 'precip': '100', 'volume': '150'},
@@ -72,10 +71,12 @@ class HydropowerUnitTests(unittest.TestCase):
         csv_file = open(filename, 'rb')
         reader = csv.DictReader(csv_file)
         # assert fieldnames are the same
+        fields = ['id', 'precip', 'volume']
         if fields != reader.fieldnames:
             raise AssertionError(
                 "The fields from the CSV file are not correct. "
-                "Expected vs Returned: %s vs %s", (fields, reader.fieldnames))
+                "Expected vs Returned: %s vs %s" % (
+                    fields, reader.fieldnames))
 
         data_row = 0
         for row in reader:
