@@ -111,12 +111,14 @@ class HydropowerUnitTests(unittest.TestCase):
         # make a copy of the shapefile that can take edits
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(shape_uri, vector_uri)
 
-        field_dict = {1: 50.0, 2: 10.5}
+        field_dict = {
+            1: {'sum': 50.0},
+            2: {'sum': 10.5}}
         field_name = 'precip'
         key = 'ws_id'
 
         hydropower_water_yield.add_dict_to_shape(
-            vector_uri, field_dict, field_name, key)
+            vector_uri, field_dict, field_name, key, 'sum')
 
         expected_results = {1: {'precip': 50.0}, 2: {'precip': 10.5}}
 
