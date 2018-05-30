@@ -326,6 +326,8 @@ class HydropowerRegressionTests(unittest.TestCase):
         args['sub_watersheds_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
 
+        args['workspace_dir'] = 'test_scarcity_subshed_workspace'
+
         hydropower_water_yield.execute(args)
 
         raster_results = ['aet.tif', 'fractp.tif', 'wyield.tif']
