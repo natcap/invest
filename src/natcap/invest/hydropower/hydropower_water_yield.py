@@ -76,22 +76,27 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
-        args['demand_table_uri'] (string): a uri to an input CSV table of
-            LULC classes, showing consumptive water use for each landuse /
-            land-cover type (cubic meters per year) (required for water
-            scarcity)
+        args['demand_table_uri'] (string): (optional) if a non-empty string,
+            a path to an input CSV
+            table of LULC classes, showing consumptive water use for each
+            landuse / land-cover type (cubic meters per year) to calculate
+            water scarcity.
 
-        args['valuation_table_uri'] (string): a uri to an input CSV table of
-            hydropower stations with the following fields (required for
-            valuation):
-            ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
-            'cost', 'height', 'kw_price')
+        args['valuation_table_uri'] (string): (optional) if a non-empty
+            string, a path to an input CSV table of
+            hydropower stations with the following fields to calculate
+            valuation:
+                ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+                'cost', 'height', 'kw_price')
 
     Returns:
         None
 
     """
-    LOGGER.info('Starting Water Yield Core Calculations')
+    LOGGER.info('Validating arguments')
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     # Construct folder paths
     workspace_dir = args['workspace_dir']
@@ -990,15 +995,7 @@ def validate(args, limit_to=None):
         'lulc_uri',
         'watersheds_uri',
         'biophysical_table_uri',
-        'seasonality_constant',
-        'calculate_water_scarcity',
-        'calculate_valuation']
-
-    if 'calculate_water_scarcity' in args and args['calculate_water_scarcity']:
-        required_keys.append('demand_table_uri')
-
-    if 'calculate_valuation' in args and args['calculate_valuation']:
-        required_keys.append('valuation_table_uri')
+        'seasonality_constant']
 
     for key in required_keys:
         if limit_to is None or limit_to == key:
@@ -1042,13 +1039,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

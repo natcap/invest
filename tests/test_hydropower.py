@@ -5,8 +5,6 @@ import shutil
 import os
 
 import pandas
-import gdal
-import numpy
 from osgeo import ogr
 
 import pygeoprocessing.testing
@@ -18,119 +16,7 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 
 
-class HydropowerUnitTests(unittest.TestCase):
-    """Unit tests for Annual Water Yield Hydropower Model."""
-
-    def setUp(self):
-        """Overriding setUp function to create temporary workspace directory."""
-        # this lets us delete the workspace after its done no matter the
-        # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
-
-    def tearDown(self):
-        """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
-
-    def test_filter_dictionary(self):
-        """Hydro: testing 'filter_dictionary' function."""
-        from natcap.invest.hydropower import hydropower_water_yield
-
-        test_dict = {
-            0: {'field_1': 'hi', 'field_2': 'bye', 'field_3': 0},
-            1: {'field_1': 'aloha', 'field_2': 'aloha', 'field_3': 1},
-            2: {'field_1': 'hola', 'field_2': 'adios', 'field_3': 2}}
-
-        keep_fields = ['field_1', 'field_3']
-
-        results = hydropower_water_yield.filter_dictionary(test_dict, keep_fields)
-
-        exp_results = {
-            0: {'field_1': 'hi', 'field_3': 0},
-            1: {'field_1': 'aloha', 'field_3': 1},
-            2: {'field_1': 'hola', 'field_3': 2}}
-
-        self.assertDictEqual(results, exp_results)
-
-    def test_write_new_table(self):
-        """Hydro: testing '_write_table' function."""
-        from natcap.invest.hydropower import hydropower_water_yield
-
-        temp_dir = self.workspace_dir
-        base_table_path = os.path.join(temp_dir, 'test_csv.csv')
-
-        data = {0: {'id': 1, 'precip': 100, 'volume': 150},
-                1: {'id': 2, 'precip': 150, 'volume': 350},
-                2: {'id': 3, 'precip': 170, 'volume': 250}}
-
-        hydropower_water_yield._write_table(base_table_path, data)
-        expected_table_path = os.path.join(temp_dir, 'expected_table.csv')
-        with open(expected_table_path, 'wb') as expected_table_file:
-            expected_table_file.write('id,precip,volume\n')
-            expected_table_file.write('1,100,150\n')
-            expected_table_file.write('2,150,350\n')
-            expected_table_file.write('3,170,250\n')
-
-        # to test the CSV was written correctly, we'll read back the data
-        base_table = pandas.read_csv(base_table_path)
-        expected_table = pandas.read_csv(expected_table_path)
-        pandas.testing.assert_frame_equal(base_table, expected_table)
-
-
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_add_zonal_stats_dict_to_shape(self):
-        """Hydro: testing '_add_zonal_stats_dict_to_shape' function."""
-        from natcap.invest.hydropower import hydropower_water_yield
-
-        # 'two_poly_shape.shp was created with fields:
-        # ['ws_id': 'int', 'wyield_mn': 'real', 'wyield_vol': 'real']
-        # and with values of:
-        # {'ws_id': 1, 'wyield_mn': 1000, 'wyield_vol': 1000},
-        # {'ws_id': 2, 'wyield_mn': 1000, 'wyield_vol': 800}
-        # using the script 'create_polygon_shapefile.py'
-        shape_uri = os.path.join(
-            REGRESSION_DATA, 'two_polygon_shape.shp')
-
-        temp_dir = self.workspace_dir
-        vector_uri = os.path.join(temp_dir, 'vector.shp')
-        # make a copy of the shapefile that can take edits
-        esri_driver = gdal.GetDriverByName('ESRI Shapefile')
-        base_vector = gdal.OpenEx(shape_uri, gdal.OF_VECTOR)
-        esri_driver.CreateCopy(vector_uri, base_vector)
-
-        field_dict = {
-            1: {'sum': 50.0},
-            2: {'sum': 10.5}}
-        field_name = 'precip'
-        key = 'ws_id'
-
-        hydropower_water_yield._add_zonal_stats_dict_to_shape(
-            vector_uri, field_dict, field_name, key, 'sum')
-
-        expected_results = {1: {'precip': 50.0}, 2: {'precip': 10.5}}
-
-        # open the shapefile and check that the edits were made correctly.
-        shape = ogr.Open(vector_uri)
-        layer_count = shape.GetLayerCount()
-
-        for layer_num in range(layer_count):
-            layer = shape.GetLayer(layer_num)
-
-            feat = layer.GetNextFeature()
-            while feat is not None:
-                ws_id = feat.GetField('ws_id')
-
-                try:
-                    field_val = feat.GetField(field_name)
-                    numpy.testing.assert_almost_equal(
-                        expected_results[ws_id][field_name], field_val)
-                except ValueError:
-                    raise AssertionError(
-                        'Could not find field %s' % field_name)
-
-                feat = layer.GetNextFeature()
-
-
-class HydropowerRegressionTests(unittest.TestCase):
+class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
 
     def setUp(self):
@@ -173,7 +59,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing valuation component with no subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
         args['water_scarcity_container'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
@@ -212,7 +98,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing water yield component only."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         hydropower_water_yield.execute(args)
 
@@ -245,7 +131,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         args['sub_watersheds_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
@@ -283,7 +169,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing Scarcity component."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         args['water_scarcity_container'] = True
         args['demand_table_uri'] = os.path.join(
@@ -320,7 +206,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing Scarcity component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         args['water_scarcity_container'] = True
         args['demand_table_uri'] = os.path.join(
@@ -361,7 +247,7 @@ class HydropowerRegressionTests(unittest.TestCase):
         """Hydro: testing Valuation component w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerRegressionTests.generate_base_args(self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         args['water_scarcity_container'] = True
         args['demand_table_uri'] = os.path.join(
@@ -509,3 +395,34 @@ class HydropowerRegressionTests(unittest.TestCase):
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    def test_validation(self):
+        """Hydro: test failure cases on the validation function."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerTests.generate_base_args(
+            self.workspace_dir)
+
+        # default args should be fine
+        self.assertEqual(hydropower_water_yield.validate(args), [])
+
+        args_bad_vector = args.copy()
+        args_bad_vector['watersheds_uri'] = args_bad_vector['eto_uri']
+        bad_vector_list = hydropower_water_yield.validate(args_bad_vector)
+        self.assertEqual(bad_vector_list[0][1], 'not a vector')
+
+        args_bad_raster = args.copy()
+        args_bad_raster['eto_uri'] = args_bad_raster['watersheds_uri']
+        bad_raster_list = hydropower_water_yield.validate(args_bad_raster)
+        self.assertEqual(bad_raster_list[0][1], 'not a raster')
+
+        args_bad_file = args.copy()
+        args_bad_file['eto_uri'] = 'non_existant_file.tif'
+        bad_file_list = hydropower_water_yield.validate(args_bad_file)
+        self.assertEqual(bad_file_list[0][1], 'not found on disk')
+
+        args_missing_key = args.copy()
+        del args_missing_key['eto_uri']
+        with self.assertRaises(KeyError):
+            hydropower_water_yield.validate(args_missing_key)
