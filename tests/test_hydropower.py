@@ -93,8 +93,8 @@ class HydropowerUnitTests(unittest.TestCase):
         csv_file.close()
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_add_dict_to_shape(self):
-        """Hydro: testing 'add_dict_to_shape' function."""
+    def test_add_zonal_stats_dict_to_shape(self):
+        """Hydro: testing '_add_zonal_stats_dict_to_shape' function."""
         from natcap.invest.hydropower import hydropower_water_yield
 
         # 'two_poly_shape.shp was created with fields:
@@ -117,7 +117,7 @@ class HydropowerUnitTests(unittest.TestCase):
         field_name = 'precip'
         key = 'ws_id'
 
-        hydropower_water_yield.add_dict_to_shape(
+        hydropower_water_yield._add_zonal_stats_dict_to_shape(
             vector_uri, field_dict, field_name, key, 'sum')
 
         expected_results = {1: {'precip': 50.0}, 2: {'precip': 10.5}}
@@ -142,6 +142,7 @@ class HydropowerUnitTests(unittest.TestCase):
                         'Could not find field %s' % field_name)
 
                 feat = layer.GetNextFeature()
+
 
 class HydropowerRegressionTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
@@ -325,8 +326,6 @@ class HydropowerRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
         args['sub_watersheds_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
-
-        args['workspace_dir'] = 'test_scarcity_subshed_workspace'
 
         hydropower_water_yield.execute(args)
 

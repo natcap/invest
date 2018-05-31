@@ -49,8 +49,9 @@ def execute(args):
         args['eto_uri'] (string): a uri to an input raster describing the
             annual average evapotranspiration value for each cell. Potential
             evapotranspiration is the potential loss of water from soil by
-            both evaporation from the soil and transpiration by healthy Alfalfa
-            (or grass) if sufficient water is available (mm) (required)
+            both evaporation from the soil and transpiration by healthy
+            Alfalfa (or grass) if sufficient water is available (mm)
+            (required)
 
         args['watersheds_uri'] (string): a uri to an input shapefile of the
             watersheds of interest as polygons. (required)
@@ -87,8 +88,9 @@ def execute(args):
             'cost', 'height', 'kw_price')
 
     Returns:
-        None"""
+        None
 
+    """
     LOGGER.info('Starting Water Yield Core Calculations')
 
     # Construct folder paths
@@ -192,8 +194,8 @@ def execute(args):
         temp_dir, 'root_depth.tif')
 
     pygeoprocessing.reclassify_raster(
-        (clipped_lulc_uri, 1), root_dict, tmp_root_raster_uri, gdal.GDT_Float64,
-        out_nodata)
+        (clipped_lulc_uri, 1), root_dict, tmp_root_raster_uri,
+        gdal.GDT_Float64, out_nodata)
 
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
@@ -208,7 +210,8 @@ def execute(args):
     Kc_nodata = pygeoprocessing.get_raster_info(tmp_Kc_raster_uri)['nodata'][0]
     root_nodata = pygeoprocessing.get_raster_info(
         tmp_root_raster_uri)['nodata'][0]
-    veg_nodata = pygeoprocessing.get_raster_info(tmp_veg_raster_uri)['nodata'][0]
+    veg_nodata = pygeoprocessing.get_raster_info(
+        tmp_veg_raster_uri)['nodata'][0]
     precip_nodata = pygeoprocessing.get_raster_info(precip_uri)['nodata'][0]
     eto_nodata = pygeoprocessing.get_raster_info(eto_uri)['nodata'][0]
     root_rest_layer_nodata = pygeoprocessing.get_raster_info(
@@ -216,13 +219,15 @@ def execute(args):
     pawc_nodata = pygeoprocessing.get_raster_info(pawc_uri)['nodata'][0]
 
     def pet_op(eto_pix, Kc_pix):
-        """Vectorize operation for calculating the plant potential
-            evapotranspiration
+        """Calculate the plant potential evapotranspiration.
 
-            eto_pix - a float value for ETo
-            Kc_pix - a float value for Kc coefficient
+        eto_pix (numpy.ndarray): a numpy array of ETo
+        Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
 
-            returns - a float value for pet"""
+        Returns:
+            PET.
+
+        """
         return numpy.where(
             (eto_pix == eto_nodata) | (Kc_pix == Kc_nodata),
             out_nodata, eto_pix * Kc_pix)
@@ -235,40 +240,30 @@ def execute(args):
         [(eto_uri, 1), (tmp_Kc_raster_uri, 1)], pet_op, tmp_pet_uri,
         gdal.GDT_Float64, out_nodata)
 
-    # Dictionary of out_nodata values corresponding to values for fractp_op
-    # that will help avoid any out_nodata calculation issues
-    fractp_nodata_dict = {
-        'Kc':Kc_nodata,
-        'eto':eto_nodata,
-        'precip':precip_nodata,
-        'root':root_nodata,
-        'veg':veg_nodata,
-        'soil':root_rest_layer_nodata,
-        'pawc':pawc_nodata,
-        }
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
-        """Function that calculates the fractp (actual evapotranspiration
-            fraction of precipitation) raster
+        """Calculate actual evapotranspiration fraction of precipitation.
 
-        Kc - numpy array with the Kc (plant evapotranspiration
+        Parameters:
+            Kc (numpy.ndarray): Kc (plant evapotranspiration
               coefficient) raster values
-        eto - numpy array with the potential evapotranspiration raster
+            eto (numpy.ndarray): potential evapotranspiration raster
               values (mm)
-        precip - numpy array with the precipitation raster values (mm)
-        root - numpy array with the root depth (maximum root depth for
+            precip (numpy.ndarray): precipitation raster values (mm)
+            root (numpy.ndarray): root depth (maximum root depth for
                vegetated land use classes) raster values (mm)
-        soil - numpy array with the depth to root restricted layer raster
-            values (mm)
-        pawc - numpy array with the plant available water content raster
+            soil (numpy.ndarray): depth to root restricted layer raster
+                values (mm)
+            pawc (numpy.ndarray): plant available water content raster
                values
-        veg - numpy array with a 1 or 0 where 1 depicts the land type as
+            veg (numpy.ndarray): 1 or 0 where 1 depicts the land type as
                 vegetation and 0 depicts the land type as non
                 vegetation (wetlands, urban, water, etc...). If 1 use
                 regular AET equation if 0 use: AET = Kc * ETo
 
-        returns - fractp value
-        """
+        Returns:
+            fractp.
 
+        """
         valid_mask = (
             (Kc != Kc_nodata) & (eto != eto_nodata) &
             (precip != precip_nodata) & (root != root_nodata) &
@@ -330,12 +325,16 @@ def execute(args):
         gdal.GDT_Float64, out_nodata)
 
     def wyield_op(fractp, precip):
-        """Function that calculates the water yeild raster
+        """Calculate water yield.
 
-           fractp - numpy array with the fractp raster values
-           precip - numpy array with the precipitation raster values (mm)
+        Parameters:
+           fractp (numpy.ndarray): fractp raster values
+           precip (numpy.ndarray): precipitation raster values (mm)
 
-           returns - water yield value (mm)"""
+        Returns:
+            numpy.ndarray of water yield value (mm).
+
+        """
         return numpy.where(
             (fractp == out_nodata) | (precip == precip_nodata),
             out_nodata, (1.0 - fractp) * precip)
@@ -364,17 +363,20 @@ def execute(args):
         subwatershed_vector = None
 
     def aet_op(fractp, precip, veg):
-        """Function to compute the actual evapotranspiration values
+        """Compute actual evapotranspiration values.
 
-            fractp - numpy array with the fractp raster values
-            precip - numpy array with the precipitation raster values (mm)
-            veg - numpy array that depicts which AET equation was used in
+        Parameters:
+            fractp (numpy.ndarray): fractp raster values
+            precip (numpy.ndarray): precipitation raster values (mm)
+            veg (numpy.ndarray): value which AET equation was used in
                 calculations of fractp. Value of 1.0 indicates original
                 equation was used, value of 0.0 indicates the alternate
                 version was used (AET = Kc * ETo)
 
-            returns - actual evapotranspiration values (mm)"""
+        Returns:
+            numpy.ndarray of actual evapotranspiration values (mm).
 
+        """
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
         return numpy.where(
@@ -387,10 +389,6 @@ def execute(args):
         [(x, 1) for x in [
             fractp_clipped_path, precip_uri, tmp_veg_raster_uri]],
         aet_op, aet_path, gdal.GDT_Float64, out_nodata)
-
-    # Get the area of the pixel to use in later calculations for volume
-    wyield_pixel_area = abs(pygeoprocessing.get_raster_info(
-        wyield_clipped_path)['pixel_size'][0]) ** 2
 
     if sub_sheds_uri is not None:
         # Create a list of tuples that pair up field names and raster uris so
@@ -422,11 +420,10 @@ def execute(args):
             subwatershed_results_uri, agg_wyield_stat_dict, 'wyield_mn',
             'subws_id', 'mean')
 
-        # Compute the water yield volume and water yield volume per hectare. The
-        # values per sub-watershed will be added as fields in the sub-watersheds
-        # shapefile
-        compute_water_yield_volume(
-            subwatershed_results_uri, wyield_pixel_area)
+        # Compute the water yield volume and water yield volume per hectare.
+        # The values per sub-watershed will be added as fields in the
+        # sub-watersheds shapefile.
+        compute_water_yield_volume(subwatershed_results_uri)
 
         # List of wanted fields to output in the subwatershed CSV table
         field_list_sws = [
@@ -468,7 +465,7 @@ def execute(args):
         watershed_results_uri, wyield_stats_dict, 'wyield_mn', 'ws_id',
         'mean')
 
-    compute_water_yield_volume(watershed_results_uri, wyield_pixel_area)
+    compute_water_yield_volume(watershed_results_uri)
 
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
@@ -482,8 +479,7 @@ def execute(args):
 
     wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
-    #clear out the temporary filenames, doing this because a giant run of
-    #hydropower water yield chews up all available disk space
+    # removing temporary files
     for temp_path in [
             tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri,
             tmp_veg_raster_uri]:
@@ -606,18 +602,22 @@ def execute(args):
     # Write out the CSV Table
     _write_table(watershed_results_csv_uri, watershed_dict_ws)
 
-def compute_watershed_valuation(watersheds_uri, val_dict):
-    """Computes and adds the net present value and energy for the watersheds to
-        an output shapefile.
 
-        watersheds_uri - a URI path to an OGR shapefile for the
+def compute_watershed_valuation(watersheds_uri, val_dict):
+    """Compute net present value and energy for the watersheds.
+
+    Parameters:
+        watersheds_uri (string): - a URI path to an OGR shapefile for the
             watershed results. Where the results will be added.
 
-        val_dict - a python dictionary that has all the valuation parameters for
-            each watershed
+        val_dict (mappable): - a python dictionary that has all the valuation
+            parameters for each watershed
 
-        returns - Nothing
+    Returns:
+        None.
+
     """
+    LOGGER.debug(val_dict)
     ws_ds = gdal.OpenEx(watersheds_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
@@ -652,16 +652,19 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
 
         # Compute hydropower energy production (KWH)
         # This is from the equation given in the Users' Guide
-        energy = val_row['efficiency'] * val_row['fraction'] * val_row['height'] * rsupply_vl * 0.00272
+        energy = (
+            val_row['efficiency'] * val_row['fraction'] * val_row['height'] *
+            rsupply_vl * 0.00272)
 
-        dsum = 0
+        dsum = 0.
         # Divide by 100 because it is input at a percent and we need
         # decimal value
-        disc = val_row['discount'] / 100
+        disc = val_row['discount'] / 100.0
         # To calculate the summation of the discount rate term over the life
         # span of the dam we can use a geometric series
-        ratio = 1 / (1 + disc)
-        dsum = (1 - math.pow(ratio, val_row['time_span'])) / (1 - ratio)
+        ratio = 1. / (1. + disc)
+        if ratio != 1.:
+            dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
 
         npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
@@ -671,15 +674,23 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
 
         ws_layer.SetFeature(ws_feat)
 
+
 def compute_rsupply_volume(watershed_results_uri):
-    """Calculate the total realized water supply volume and the mean realized
+    """Calculate the total realized water supply volume.
+
+     and the mean realized
         water supply volume per hectare for the given sheds. Output units in
         cubic meters and cubic meters per hectare respectively.
 
-        watershed_results_uri - a URI path to an OGR shapefile to get water yield
-            values from
+    Parameters:
+        watershed_results_uri (string): a path to a vector that contains
+            fields 'rsupply_vl' and 'rsupply_mn' to caluclate water supply
+            volumne per hectare and cubic meters.
 
-        returns - Nothing"""
+    Returns:
+        None.
+
+    """
     ws_ds = gdal.OpenEx(watershed_results_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
@@ -723,6 +734,7 @@ def compute_rsupply_volume(watershed_results_uri):
 
         ws_layer.SetFeature(ws_feat)
 
+
 def filter_dictionary(dict_data, values):
     """
     Create a subset of a dictionary given keys found in a list.
@@ -733,13 +745,15 @@ def filter_dictionary(dict_data, values):
         in the values list.
 
     Parameters:
-        dict_data (dictionary): a dictionary that has keys which point to
-            dictionary's.
-        values (list): a list of keys to keep from the inner dictionary's
-            of 'dict_data'
+        dict_data (mappable): A dictionary containing values that are also
+            dictionaries.
+        values (list): a list of keys to copy from the second level
+            dictionaries in `dict_data`.
 
     Returns:
-        a dictionary
+        a dictionary that's a copy of `dict_data` with `values` removed from
+        it.
+
     """
     new_dict = {}
 
@@ -756,7 +770,6 @@ def _write_table(target_path, data_row_map):
     """Create a csv table from a dictionary.
 
     Parameters:
-
         target_path (string): a file path for the new table, if 'ws_id' is
             contained in the field names it will be placed as the first
             column in the table, otherwise columns output in alphabetical
@@ -791,22 +804,24 @@ def _write_table(target_path, data_row_map):
         # Write the rows from the dictionary
         for row_index in sorted_row_index_list:
             csv_file.write(','.join(
-                [str(data_row_map[row_index][key]) for key in sorted_column_names]))
+                [str(data_row_map[row_index][key])
+                 for key in sorted_column_names]))
             csv_file.write('\n')
     csv_file.close()
 
-def compute_water_yield_volume(shape_uri, pixel_area):
+
+def compute_water_yield_volume(shape_uri):
     """Calculate the water yield volume per sub-watershed or watershed.
-        Add results to shape_uri, units are cubic meters
 
-        shape_uri - a URI path to an ogr datasource for the sub-watershed
+        shape_uri - a URI path a vector for the sub-watershed
             or watershed shapefile. This shapefiles features should have a
-            'wyield_mn' attribute, which calculations are derived from
+            'wyield_mn' attribute. Results are added to a 'wyield_vol' field
+            in `shape_uri` whose units are in cubic meters.
 
-        pixel_area - the area in meters squared of a pixel from the wyield
-            raster.
+    Returns:
+        None.
 
-        returns - Nothing"""
+    """
     shape = gdal.OpenEx(shape_uri, 1)
     layer = shape.GetLayer()
 
@@ -827,13 +842,14 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         wyield_mn = feat.GetField(wyield_mn_id)
         geom = feat.GetGeometryRef()
         # Calculate water yield volume,
-        #1000 is for converting the mm of wyield to meters
+        # 1000 is for converting the mm of wyield to meters
         vol = wyield_mn * geom.Area() / 1000.0
         # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)
         feat.SetField(vol_index, vol)
 
         layer.SetFeature(feat)
+
 
 def _add_zonal_stats_dict_to_shape(
         shape_path, stats_map, field_name, key, aggregate_field_id):
@@ -904,7 +920,7 @@ def _extract_vector_table_by_key(vector_path, key_field):
     Create a dictionary lookup table of the features in the attribute table
     of the vector referenced by vector_path.
 
-    Args:
+    Parameters:
         vector_path (string): a path to an OGR vector
         key_field: a field in vector_path that refers to a key value
             for each row such as a polygon id.
@@ -912,6 +928,7 @@ def _extract_vector_table_by_key(vector_path, key_field):
     Returns:
         attribute_dictionary (dict): returns a dictionary of the
             form {key_field_0: {field_0: value0, field_1: value1}...}
+
     """
     # Pull apart the vector
     vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
@@ -958,6 +975,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
