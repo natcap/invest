@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import shutil
 import os
-import csv
 
 import pandas
 import gdal
@@ -57,44 +56,25 @@ class HydropowerUnitTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         temp_dir = self.workspace_dir
-        filename = os.path.join(temp_dir, 'test_csv.csv')
-        filename = 'test.csv'
+        base_table_path = os.path.join(temp_dir, 'test_csv.csv')
 
         data = {0: {'id': 1, 'precip': 100, 'volume': 150},
                 1: {'id': 2, 'precip': 150, 'volume': 350},
                 2: {'id': 3, 'precip': 170, 'volume': 250}}
 
-        hydropower_water_yield._write_table(filename, data)
-        # expected results as a dictionary, note that reading from csv will
-        # leave values as strings
-        exp_data = {0: {'id': '1', 'precip': '100', 'volume': '150'},
-                    1: {'id': '2', 'precip': '150', 'volume': '350'},
-                    2: {'id': '3', 'precip': '170', 'volume': '250'}}
+        hydropower_water_yield._write_table(base_table_path, data)
+        expected_table_path = os.path.join(temp_dir, 'expected_table.csv')
+        with open(expected_table_path, 'wb') as expected_table_file:
+            expected_table_file.write('id,precip,volume\n')
+            expected_table_file.write('1,100,150\n')
+            expected_table_file.write('2,150,350\n')
+            expected_table_file.write('3,170,250\n')
 
         # to test the CSV was written correctly, we'll read back the data
-        csv_file = open(filename, 'rb')
-        reader = csv.DictReader(csv_file)
-        # assert fieldnames are the same
-        fields = ['id', 'precip', 'volume']
-        if fields != reader.fieldnames:
-            raise AssertionError(
-                "The fields from the CSV file are not correct. "
-                "Expected vs Returned: %s vs %s" % (
-                    fields, reader.fieldnames))
+        base_table = pandas.read_csv(base_table_path)
+        expected_table = pandas.read_csv(expected_table_path)
+        pandas.testing.assert_frame_equal(base_table, expected_table)
 
-        data_row = 0
-        for row in reader:
-            # we expect there to only be 3 rows, as indicated by the dict
-            # keys 0,1,2. If we come across more than 3 rows give assertion
-            # error, instead of letting it error on 'keyerror'
-            if data_row > 2:
-                raise AssertionError(
-                    "Expected 3 rows, got at least 4 returned. "
-                    "4th row found is the following: %s", row)
-            self.assertDictEqual(row, exp_data[data_row])
-            data_row += 1
-
-        csv_file.close()
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_add_zonal_stats_dict_to_shape(self):
