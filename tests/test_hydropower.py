@@ -5,6 +5,7 @@ import shutil
 import os
 import csv
 
+import pandas
 import gdal
 import numpy
 from osgeo import ogr
@@ -59,9 +60,9 @@ class HydropowerUnitTests(unittest.TestCase):
         filename = os.path.join(temp_dir, 'test_csv.csv')
         filename = 'test.csv'
 
-        data = {0: {'id':1, 'precip': 100, 'volume': 150},
-                1: {'id':2, 'precip': 150, 'volume': 350},
-                2: {'id':3, 'precip': 170, 'volume': 250}}
+        data = {0: {'id': 1, 'precip': 100, 'volume': 150},
+                1: {'id': 2, 'precip': 150, 'volume': 350},
+                2: {'id': 3, 'precip': 170, 'volume': 250}}
 
         hydropower_water_yield._write_table(filename, data)
         # expected results as a dictionary, note that reading from csv will
@@ -219,10 +220,11 @@ class HydropowerRegressionTests(unittest.TestCase):
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'valuation', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'valuation', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -250,10 +252,12 @@ class HydropowerRegressionTests(unittest.TestCase):
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'water_yield', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -286,10 +290,12 @@ class HydropowerRegressionTests(unittest.TestCase):
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'water_yield', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'water_yield', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -321,10 +327,12 @@ class HydropowerRegressionTests(unittest.TestCase):
 
         table_results = ['watershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'scarcity', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -360,10 +368,12 @@ class HydropowerRegressionTests(unittest.TestCase):
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'scarcity', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'scarcity', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -403,10 +413,12 @@ class HydropowerRegressionTests(unittest.TestCase):
         table_results = ['watershed_results_wyield.csv',
                          'subwatershed_results_wyield.csv']
         for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'valuation', table_path),
-                rel_tol=1e-3)
+            base_table = pandas.read_csv(
+                os.path.join(args['workspace_dir'], 'output', table_path))
+            expected_table = pandas.read_csv(
+                os.path.join(REGRESSION_DATA, 'valuation', table_path))
+            pandas.testing.assert_frame_equal(base_table, expected_table)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
