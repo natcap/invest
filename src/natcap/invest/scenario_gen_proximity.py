@@ -1,5 +1,4 @@
 """Scenario Generation: Proximity Based."""
-
 from __future__ import absolute_import
 
 import math
@@ -11,12 +10,10 @@ import struct
 import heapq
 import time
 import collections
-import csv
 
 import numpy
 from osgeo import osr
 from osgeo import gdal
-from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
 import scipy
 
@@ -320,14 +317,12 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
         None
     """
     with open(stats_uri, 'wb') as csv_output_file:
-        stats_writer = csv.writer(
-            csv_output_file, delimiter=',', quotechar=',',
-            quoting=csv.QUOTE_MINIMAL)
-        stats_writer.writerow(
-            ['lucode', 'area converted (Ha)', 'pixels converted'])
+        csv_output_file.write('lucode,area converted (Ha),pixels converted\n')
         for lucode in sorted(stats_cache):
-            stats_writer.writerow([
-                lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
+            csv_output_file.write(
+                '%s,%s,%s\n' % (
+                    lucode, stats_cache[lucode] * pixel_area,
+                    stats_cache[lucode]))
 
 
 def _sort_to_disk(dataset_uri, score_weight=1.0):
