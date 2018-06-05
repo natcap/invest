@@ -8,7 +8,6 @@ import math
 import itertools
 import time
 import re
-import csv
 import pandas
 
 import numpy
@@ -1013,8 +1012,8 @@ def validate(args, limit_to=None):
                      % ', '.join(sorted(missing_headers)))))
         except IOError:
             warnings.append(([csv_key], 'File not found.'))
-        except csv.Error:
-            warnings.append(([csv_key], 'Could not open CSV'))
+        except Exception as e:
+            warnings.append(([csv_key], 'Unknown exception %s' % e))
 
     if limit_to in ('lulc_baseline_map_uri', None):
         with utils.capture_gdal_logging():
