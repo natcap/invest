@@ -15,6 +15,7 @@ import numpy
 from osgeo import osr
 from osgeo import gdal
 import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 import scipy
 
 from . import validation
@@ -93,7 +94,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
+    utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
     f_reg = utils.build_file_registry(
@@ -113,9 +114,12 @@ def execute(args):
     shutil.copy(args['base_lulc_path'], f_reg['base_lulc_path'])
     if 'aoi_path' in args and args['aoi_path'] != '':
         # clip base lulc to a new raster
-        natcap.invest.pygeoprocessing_0_3_3.clip_dataset_uri(
-            args['base_lulc_path'], args['aoi_path'], f_reg['base_lulc_path'],
-            assert_projections=True, all_touched=False)
+        target_pixel_size = pygeoprocessing.get_raster_info(
+            args['base_lulc_path'])['pixel_size']
+        pygeoprocessing.align_and_resize_raster_stack(
+            [args['base_lulc_path']], [f_reg['base_lulc_path']], ['nearest'],
+            target_pixel_size, 'intersection',
+            base_vector_path_list=[args['aoi_path']])
 
     scenarios = [
         (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
