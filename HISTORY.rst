@@ -17,6 +17,10 @@ Unreleased Changes
 * Fixed an issue with the InVEST UI (all models), where attempting to
   drag-and-drop a directory onto a model input would cause the application to
   crash.
+* Fixed an issue with Forest Carbon Edge Effect where the UI layer was always
+  causing the model to run with only the aboveground carbon pool
+* Added functionality to the InVEST UI so that ``Dropdown`` inputs can now map
+  dropdown values to different output values.
 
 3.4.4 (2018-03-26)
 ------------------

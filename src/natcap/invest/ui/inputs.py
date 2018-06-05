@@ -1947,7 +1947,7 @@ class Dropdown(GriddedInput):
     """An InVESTModelInput for selecting one out of a set of defined options."""
 
     def __init__(self, label, helptext=None, interactive=True, args_key=None,
-                 hideable=False, options=()):
+                 hideable=False, options=(), return_value_map=None):
         """Initialize a Dropdown instance.
 
         Like the Checkbox class, a Dropdown is always valid.
@@ -1966,6 +1966,10 @@ class Dropdown(GriddedInput):
                 component widgets in this InVESTModelInput.
             options=() (iterable): An iterable of options for this Dropdown.
                 Options will be added in the order they exist in the iterable.
+            return_value_map=None (dict or None): If a dict, keys must exactly
+                match the values of ``options``.  Values will be returned when
+                the user selects the option indicated by the key.  If ``None``,
+                the option selected by the user will be returned verbatim.
 
         Returns:
             ``None``
@@ -1975,10 +1979,11 @@ class Dropdown(GriddedInput):
                               hideable=hideable, validator=None)
         self.dropdown = QtWidgets.QComboBox()
         self.widgets[2] = self.dropdown
-        self.set_options(options)
+        self.set_options(options, return_value_map)
         self.dropdown.currentIndexChanged.connect(self._index_changed)
         self.satisfied = True
         self._valid = True  # Dropdown is always valid!
+        self._return_value_map = return_value_map
 
         # Init hideability if needed
         if self.hideable:
@@ -2021,25 +2026,44 @@ class Dropdown(GriddedInput):
             value = None
         self.value_changed.emit(value)
 
-    def set_options(self, options):
+    def set_options(self, options, return_value_map=None):
         """Set the available options for this dropdown.
 
         Parameters:
             options (iterable): The new options for the dropdown.
+            return_value_map=None (dict or None): If a dict, keys must exactly
+                match the values of ``options``.  Values will be returned when
+                the user selects the option indicated by the key.  If ``None``,
+                the option selected by the user will be returned verbatim.
 
         Returns:
             ``None``
         """
+        if (return_value_map is not None and
+                len(set(options) ^ set(return_value_map.keys())) > 0):
+            raise ValueError('Options must exactly match keys in '
+                             'return_value_map')
+
+        def _cast_value(value):
+            if isinstance(value, (int, float)):
+                value = str(value)
+            try:
+                return six.text_type(value, 'utf-8')
+            except TypeError:
+                # It's already unicode, so can't decode further.
+                return value 
+
+        # make sure all values in the return value map are text
+        if return_value_map is not None:
+            return_value_map = dict(
+                (_cast_value(key), _cast_value(value)) for (key, value) in
+                return_value_map.iteritems())
+        self.return_value_map = return_value_map
+
         self.dropdown.clear()
         cast_options = []
         for label in options:
-            if isinstance(label, (int, float)):
-                label = str(label)
-            try:
-                cast_value = six.text_type(label, 'utf-8')
-            except TypeError:
-                # It's already unicode, so can't decode further.
-                cast_value = label
+            cast_value = _cast_value(label)
             self.dropdown.addItem(cast_value)
             cast_options.append(cast_value)
         self.options = cast_options
@@ -2053,7 +2077,11 @@ class Dropdown(GriddedInput):
             provided that were not strings, the string version of the option
             is returned.
         """
-        return self.dropdown.currentText()
+        dropdown_text = self.dropdown.currentText()
+        if self.return_value_map is not None:
+            return self.return_value_map[dropdown_text]
+
+        return dropdown_text
 
     def set_value(self, value):
         """Set the current index of the dropdown based on the value.
@@ -2073,18 +2101,33 @@ class Dropdown(GriddedInput):
         Returns:
             ``None``
         """
+        # If we have known mapped values, try to match the value with the
+        # return value map we know about.
+        inverted_map = None
+        if self.return_value_map is not None:
+            inverted_map = dict((v, k) for (k, v) in
+                                self.return_value_map.iteritems())
+
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
         for options_attr in ('options', 'user_options'):
             try:
+                if inverted_map is not None:
+                    try:
+                        value = inverted_map[value]
+                    except KeyError:
+                        pass
                 index = getattr(self, options_attr).index(value)
                 self.dropdown.setCurrentIndex(index)
                 return
             except ValueError:
                 # ValueError when the value is not in the list
                 pass
-        raise ValueError('Value %s not in options %s or user options %s' % (
-            value, self.options, self.user_options))
+
+        raise ValueError(('Value %s not in options %s, user options %s '
+                          'or return value map %s') % (
+                              value, self.options, self.user_options,
+                              self.return_value_map))
 
 
 class Label(QtWidgets.QLabel):

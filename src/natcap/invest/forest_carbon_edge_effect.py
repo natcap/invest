@@ -681,7 +681,7 @@ def validate(args, limit_to=None):
             'tropical_forest_edge_carbon_model_shape_uri',
             'n_nearest_model_points',
             'biomass_to_carbon_conversion_factor',
-            'aoi_uri']:
+        ]:
         if limit_to is None or limit_to == key:
             if key not in args:
                 missing_key_list.append(key)
@@ -707,16 +707,19 @@ def validate(args, limit_to=None):
             validation_error_list.append(
                 ([key], 'not found on disk'))
 
-    optional_file_type_list = [('lulc_uri', 'raster')]
+    optional_file_type_list = [('lulc_uri', 'raster', True)]
     if args['compute_forest_edge_effects']:
         optional_file_type_list.extend(
-            [('tropical_forest_edge_carbon_model_shape_uri', 'vector'),
-             ('aoi_uri', 'vector')])
+            [('tropical_forest_edge_carbon_model_shape_uri', 'vector', True),
+             ('aoi_uri', 'vector', False)])
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
-        for key, key_type in optional_file_type_list:
+        for key, key_type, required in optional_file_type_list:
             if (limit_to is None or limit_to == key) and key in args:
+                if len(args[key]) == 0 and not required:
+                    continue
+
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))

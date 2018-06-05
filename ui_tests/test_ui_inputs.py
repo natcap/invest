@@ -965,6 +965,21 @@ class DropdownTest(GriddedInputTest):
             label='label', options=('foo', 'bar', 'baz'))
         self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
 
+    def test_options_with_return_value_map(self):
+        return_value_map = {'foo': 1, 'bar': 2, 'baz': 3}
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'),
+            return_value_map=return_value_map)
+        self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
+        self.assertEqual(input_instance.return_value_map,
+                         {'foo': '1', 'bar': '2', 'baz': '3'})
+
+    def test_options_return_value_mismatch(self):
+        with self.assertRaises(ValueError):
+            self.__class__.create_input(
+                label='label', options=(1, 2, 3),
+                return_value_map={'foo': 4, 1: 'bar'})
+
     def test_options_typecast(self):
         input_instance = self.__class__.create_input(
             label='label', options=(1, 2, 3))
@@ -1008,6 +1023,19 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(1, 2, 3))
         with self.assertRaises(ValueError):
             input_instance.set_value('foo')
+
+    def test_set_value_from_return_map(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=(1, 2, 3),
+            return_value_map={1: 'a', 2: 'b', 3: 'c'}
+        )
+        input_instance.set_value('a')
+        self.assertEqual(input_instance.value(), 'a')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 0)
+
+        input_instance.set_value(3)
+        self.assertEqual(input_instance.value(), 'c')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 2)
 
     def test_value(self):
         input_instance = self.__class__.create_input(
