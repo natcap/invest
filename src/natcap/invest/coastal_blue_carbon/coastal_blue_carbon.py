@@ -9,6 +9,7 @@ import itertools
 import time
 import re
 import csv
+import pandas
 
 import numpy
 from osgeo import gdal
@@ -1002,10 +1003,10 @@ def validate(args, limit_to=None):
                                            'soil-half-life')),
             ('price_table_uri', ('year', 'price'))):
         try:
-            table = csv.reader(open(args[csv_key]))
-            headers = set([field.lower() for field in table.next()])
+            table = pandas.read_csv(args[csv_key], sep=None, engine='python')
+            headers = list(table)
             missing_headers = set(required_fields) - headers
-            if len(missing_headers) > 0:
+            if missing_headers:
                 warnings.append((
                     [csv_key],
                     ('Table is missing required columns: %s'
