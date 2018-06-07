@@ -142,6 +142,43 @@ def execute(args):
             output_landscape_raster_uri, stats_uri)
 
 
+def _mask_raster_by_vector(
+        base_raster_path_band, vector_path, target_raster_path):
+    """Mask pixels outside of the vector to nodata.
+
+    Parameters:
+        base_raster_path (string): path/band tuple to raster to process
+        vector_path (string): path to single layer raster that is used to
+            indicate areas to preserve from the base raster.  Areas outside
+            of this vector are set to nodata.
+        target_raster_path (string): path to a single band raster that will be
+            created of the same dimensions and data type as
+            `base_raster_path_band` where any pixels that lie outside of
+            `vector_path` coverage will be set to nodata.
+
+    Returns:
+        None.
+
+    """
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path_band)
+    nodata = base_raster_info['nodata'][base_raster_path_band[1]]
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path_band[0], target_raster_path,
+        base_raster_info['datatype'], [nodata], fill_value_list=[nodata])
+
+    tmp_dir = tempfile.mkdtemp()
+    mask_raster_path = os.path.join(tmp_dir, 'mask.tif')
+
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path_band[0], mask_raster_path,
+        gdal.GDT_Byte, [0], fill_value_list=[0])
+
+    pygeoprocessing.rasterize(vector_path, mask_raster_path, [1], None)
+
+    # TODO: iterblocks in parallel over base raster and mask raster and copy when
+    # mask raster == 1
+
+
 def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
