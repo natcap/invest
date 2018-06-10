@@ -160,8 +160,9 @@ def _mask_raster_by_vector(
         None.
 
     """
-    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path_band)
-    nodata = base_raster_info['nodata'][base_raster_path_band[1]]
+    base_raster_info = pygeoprocessing.get_raster_info(
+        base_raster_path_band[0])
+    nodata = base_raster_info['nodata'][base_raster_path_band[1]-1]
     pygeoprocessing.new_raster_from_base(
         base_raster_path_band[0], target_raster_path,
         base_raster_info['datatype'], [nodata], fill_value_list=[nodata])
@@ -175,8 +176,32 @@ def _mask_raster_by_vector(
 
     pygeoprocessing.rasterize(vector_path, mask_raster_path, [1], None)
 
-    # TODO: iterblocks in parallel over base raster and mask raster and copy when
-    # mask raster == 1
+    target_raster = gdal.OpenEx(
+        target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
+    target_band = target_raster.GetRasterBand(1)
+
+    mask_raster = gdal.OpenEx(mask_raster_path, gdal.OF_RASTER)
+    mask_band = mask_raster.GetRasterBand(1)
+
+    base_raster = gdal.OpenEx(base_raster_path_band[0], gdal.OF_RASTER)
+    base_band = base_raster.GetRasterBand(base_raster_path_band[1])
+
+    for offset_dict in pygeoprocessing.iterblocks(
+            mask_raster_path, offset_only=True):
+        base_array = base_band.ReadAsArray(**offset_dict)
+        mask_array = mask_band.ReadAsArray(**offset_dict)
+        base_array[mask_array != 1] = nodata
+        target_band.WriteArray(
+            base_array, xoff=offset_dict['xoff'], yoff=offset_dict['yoff'])
+    target_band.FlushCache()
+    target_band = None
+    target_raster = None
+    mask_band = None
+    mask_raster = None
+    try:
+        shutil.rmtree(tmp_dir)
+    except OSError:
+        LOGGER.warn("Unable to delete temporary file %s", mask_raster_path)
 
 
 def _convert_landscape(
