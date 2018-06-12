@@ -139,7 +139,8 @@ def execute(args):
             f_reg['base_lulc_path'], replacement_lucode, area_to_convert,
             focal_landcover_codes, convertible_type_list, score_weight,
             int(args['n_fragmentation_steps']), distance_from_edge_uri,
-            output_landscape_raster_uri, stats_uri)
+            output_landscape_raster_uri, stats_uri,
+            args['workspace_dir'])
 
 
 def _mask_raster_by_vector(
@@ -208,7 +209,7 @@ def _convert_landscape(
         base_lulc_uri, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
         smooth_distance_from_edge_uri, output_landscape_raster_uri,
-        stats_uri):
+        stats_uri, workspace_dir):
     """Expand replacement lucodes in relation to the focal lucodes.
 
     If the sign on `score_weight` is positive, expansion occurs marches
@@ -241,20 +242,28 @@ def _convert_landscape(
             contain the final fragmented forest layer.
         stats_uri (string): a path to an output csv that records the number
             type, and area of pixels converted in `output_landscape_raster_uri`
+        workspace_dir (string): workspace directory that will be used to
+            hold temporary files. On a successful run of this function,
+            the temporary directory will be removed.
 
     Returns:
         None.
     """
+    temp_dir = tempfile.mkdtemp(prefix='temp_dir', dir=workspace_dir)
     tmp_file_registry = {
-        'non_base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'gaussian_kernel': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_base_mask_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_non_base_mask_edge':
-            natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'convertible_distances': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'smooth_distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'non_base_mask': os.path.join(temp_dir, 'non_base_mask.tif'),
+        'base_mask': os.path.join(temp_dir, 'base_mask.tif'),
+        'gaussian_kernel': os.path.join(temp_dir, 'gaussian_kernel.tif'),
+        'distance_from_base_mask_edge': os.path.join(
+            temp_dir, 'distance_from_base_mask_edge.tif'),
+        'distance_from_non_base_mask_edge': os.path.join(
+            temp_dir, 'distance_from_non_base_mask_edge.tif'),
+        'convertible_distances': os.path.join(
+            temp_dir, 'convertible_distances.tif'),
+        'smooth_distance_from_edge': os.path.join(
+            temp_dir, 'smooth_distance_from_edge.tif'),
+        'distance_from_edge': os.path.join(
+            temp_dir, 'distance_from_edge.tif'),
     }
     # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
     # since a pixel is the 1.0 unit
@@ -364,8 +373,11 @@ def _convert_landscape(
             score_weight)
 
     _log_stats(stats_cache, pixel_area_ha, stats_uri)
-    for filename in tmp_file_registry.values():
-        os.remove(filename)
+    try:
+        shutil.rmtree(temp_dir)
+    except OSError:
+        LOGGER.warn(
+            "Could not delete temporary working directory '%s'", temp_dir)
 
 
 def _log_stats(stats_cache, pixel_area, stats_uri):
