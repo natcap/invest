@@ -8,9 +8,9 @@ SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-d
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
 SVN_TEST_DATA_REPO_REV  := 143
 
-HG_UG_REPO              := https://bitbucket.org/jdouglass/invest.users-guide
+HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := ae4705d8c9ad
+HG_UG_REPO_REV          := 1448fa07b52c 
 
 
 ENV = env
@@ -196,7 +196,7 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RM) $(BUILD_DIR)/pyi-build
 	-$(RM) $(INVEST_BINARIES_DIR)
-	$(ENV_SCRIPTS)$(/)pyinstaller \
+	$(PYTHON) -m PyInstaller \
 		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
 		--distpath $(DIST_DIR) \
@@ -299,7 +299,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 		installer\windows\invest_installer.nsi
 
 mac_installer: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
 	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: | build
