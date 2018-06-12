@@ -270,10 +270,9 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     # Make some kind of geotransform, it doesn't matter what but
     # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
     srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
+    srs.SetWellKnownGeogCS('WGS84')
     kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
