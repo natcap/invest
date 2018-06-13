@@ -29,7 +29,8 @@ _INTERMEDIATE_BASE_FILES = {
     }
 
 _TMP_BASE_FILES = {
-    'base_lulc_path': 'base_lulc.tif'
+    'base_lulc_path': 'base_lulc.tif',
+    'masked_lulc_path': 'masked_lulc.tif'
     }
 
 # This sets the largest number of elements that will be packed at once and
@@ -119,6 +120,9 @@ def execute(args):
             [args['base_lulc_path']], [f_reg['base_lulc_path']], ['nearest'],
             target_pixel_size, 'intersection',
             base_vector_path_list=[args['aoi_path']])
+        _mask_raster_by_vector(
+            (f_reg['base_lulc_path'], 1), args['aoi_path'],
+            f_reg['masked_lulc_path'])
 
     scenarios = [
         (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
@@ -135,7 +139,7 @@ def execute(args):
         distance_from_edge_path = os.path.join(
             intermediate_output_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
-            f_reg['base_lulc_path'], replacement_lucode, area_to_convert,
+            f_reg['masked_lulc_path'], replacement_lucode, area_to_convert,
             focal_landcover_codes, convertible_type_list, score_weight,
             int(args['n_fragmentation_steps']), distance_from_edge_path,
             output_landscape_raster_path, stats_path,
