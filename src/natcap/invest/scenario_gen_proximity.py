@@ -271,17 +271,18 @@ def _convert_landscape(
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
-    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_path(base_lulc_path)
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_path(base_lulc_path)
+    lulc_raster_info = pygeoprocessing.get_raster_info(base_lulc_path)
+    lulc_nodata = lulc_raster_info['nodata'][0]
+    #pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_path(base_lulc_path)
     mask_nodata = 2
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [base_lulc_path], lambda x: x, output_landscape_raster_path,
-        gdal.GDT_Int32, lulc_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(base_lulc_path, 1)], lambda x: x, output_landscape_raster_path,
+        gdal.GDT_Int32, lulc_nodata)
 
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
-        natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_path(base_lulc_path)**2 / 10000.0)
+        abs(lulc_raster_info['pixel_size'][0]) *
+        abs(lulc_raster_info['pixel_size'][1])) / 10000.0
     max_pixels_to_convert = int(math.ceil(area_to_convert / pixel_area_ha))
     convertible_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
@@ -316,19 +317,18 @@ def _convert_landscape(
                     base_mask = ~base_mask
                 return numpy.where(
                     lulc_array == lulc_nodata, mask_nodata, base_mask)
-            natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-                [output_landscape_raster_path], _mask_base_op,
+            pygeoprocessing.raster_calculator(
+                [(output_landscape_raster_path, 1)], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
-                mask_nodata, pixel_size_out, "intersection",
-                vectorize_op=False, datasets_are_pre_aligned=True)
+                mask_nodata)
 
             # create distance transform for the current mask
             natcap.invest.pygeoprocessing_0_3_3.distance_transform_edt(
                 tmp_file_registry[mask_id], tmp_file_registry[distance_id])
 
         # combine inner and outer distance transforms into one
-        distance_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_path(
-            tmp_file_registry['distance_from_base_mask_edge'])
+        distance_nodata = pygeoprocessing.get_raster_info(
+            tmp_file_registry['distance_from_base_mask_edge'])['nodata'][0]
 
         def _combine_masks(base_distance_array, non_base_distance_array):
             """create a mask of valid non-base pixels only."""
@@ -336,17 +336,16 @@ def _convert_landscape(
             valid_base_mask = base_distance_array > 0.0
             result[valid_base_mask] = base_distance_array[valid_base_mask]
             return result
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [tmp_file_registry['distance_from_base_mask_edge'],
-             tmp_file_registry['distance_from_non_base_mask_edge']],
+        pygeoprocessing.raster_calculator(
+            [(tmp_file_registry['distance_from_base_mask_edge'], 1),
+             (tmp_file_registry['distance_from_non_base_mask_edge'], 1)],
             _combine_masks, tmp_file_registry['distance_from_edge'],
-            gdal.GDT_Float32, distance_nodata, pixel_size_out, "intersection",
-            vectorize_op=False, datasets_are_pre_aligned=True)
+            gdal.GDT_Float32, distance_nodata)
 
         # smooth the distance transform to avoid scanline artifacts
-        natcap.invest.pygeoprocessing_0_3_3.convolve_2d_path(
-            tmp_file_registry['distance_from_edge'],
-            tmp_file_registry['gaussian_kernel'],
+        pygeoprocessing.convolve_2d(
+            (tmp_file_registry['distance_from_edge'], 1),
+            (tmp_file_registry['gaussian_kernel'], 1),
             smooth_distance_from_edge_path)
 
         # turn inside and outside masks into a single mask
@@ -357,12 +356,12 @@ def _convert_landscape(
             return numpy.where(
                 convertible_mask, distance_from_base_edge,
                 convertible_type_nodata)
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [smooth_distance_from_edge_path, output_landscape_raster_path],
+        pygeoprocessing.raster_calculator(
+            [(smooth_distance_from_edge_path, 1),
+             (output_landscape_raster_path, 1)],
             _mask_to_convertible_codes,
             tmp_file_registry['convertible_distances'], gdal.GDT_Float32,
-            convertible_type_nodata, pixel_size_out, "intersection",
-            vectorize_op=False, datasets_are_pre_aligned=True)
+            convertible_type_nodata)
 
         LOGGER.info(
             'convert %d pixels to lucode %d', pixels_to_convert,
@@ -500,15 +499,16 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
 
         return _read_score_index_from_disk(score_file_path, index_file_path)
 
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_path(dataset_path)
+    dataset_info = pygeoprocessing.get_raster_info(dataset_path)
+    nodata = dataset_info['nodata'][0]
     nodata *= score_weight  # scale the nodata so they can be filtered out
 
     # This will be a list of file iterators we'll pass to heap.merge
     iters = []
 
-    _, n_cols = natcap.invest.pygeoprocessing_0_3_3.get_row_col_from_path(dataset_path)
+    n_cols = dataset_info['raster_size'][0]
 
-    for scores_data, scores_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
+    for scores_data, scores_block in pygeoprocessing.iterblocks(
             dataset_path, largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
