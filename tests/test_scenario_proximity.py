@@ -47,7 +47,7 @@ class ScenarioProximityTests(unittest.TestCase):
             'focal_landcover_codes': '1 2 3 4 5',
             'n_fragmentation_steps': '1',
             'replacment_lucode': '12',
-            'workspace_dir': 'test_scenario_workspace', #self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         scenario_gen_proximity.execute(args)
@@ -55,7 +55,6 @@ class ScenarioProximityTests(unittest.TestCase):
             os.path.join(
                 REGRESSION_DATA, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
-
 
         base_table = pandas.read_csv(
             os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
