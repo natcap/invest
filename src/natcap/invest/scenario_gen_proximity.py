@@ -14,7 +14,6 @@ import collections
 import numpy
 from osgeo import osr
 from osgeo import gdal
-import natcap.invest.pygeoprocessing_0_3_3
 import pygeoprocessing
 import scipy
 
@@ -273,7 +272,6 @@ def _convert_landscape(
     # be looped on for each step
     lulc_raster_info = pygeoprocessing.get_raster_info(base_lulc_path)
     lulc_nodata = lulc_raster_info['nodata'][0]
-    #pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_path(base_lulc_path)
     mask_nodata = 2
     pygeoprocessing.raster_calculator(
         [(base_lulc_path, 1)], lambda x: x, output_landscape_raster_path,
@@ -323,8 +321,10 @@ def _convert_landscape(
                 mask_nodata)
 
             # create distance transform for the current mask
-            natcap.invest.pygeoprocessing_0_3_3.distance_transform_edt(
-                tmp_file_registry[mask_id], tmp_file_registry[distance_id])
+            pygeoprocessing.distance_transform_edt(
+                (tmp_file_registry[mask_id], 1),
+                tmp_file_registry[distance_id],
+                working_dir=temp_dir)
 
         # combine inner and outer distance transforms into one
         distance_nodata = pygeoprocessing.get_raster_info(
