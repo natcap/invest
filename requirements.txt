@@ -14,7 +14,7 @@
 
 Pyro4==4.41  # pip-only
 GDAL>=2.0,<3.0
-matplotlib
+pandas>=0.22.0
 pygeoprocessing>=1.0.0
 numpy>=1.11.0
 Rtree>=0.8.2
@@ -24,5 +24,5 @@ six
 taskgraph>=0.2.3
 # psutil is used, but not required, by taskgraph to lower process priority
 psutil>=5.2.2
-pandas>=0.22.0
 chardet>=3.0.4
+matplotlib
