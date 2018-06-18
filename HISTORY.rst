@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue with the InVEST binary build where binaries on Windows would
+  crash with an error saying Python27.dll could not be loaded.
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
   names from override and constraint layers were not being loaded.  This bug
   caused the field 'UNKNOWN' to be passed to the model, causing an error.

@@ -67,7 +67,6 @@ elif is_win:
 
 exe = EXE(
     pyz,
-    a.binaries,
     a.scripts,
     name=exename,
     exclude_binaries=True,
