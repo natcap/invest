@@ -14,8 +14,8 @@ import collections
 import numpy
 from osgeo import osr
 from osgeo import gdal
-import pygeoprocessing
 import scipy
+import pygeoprocessing
 
 from . import validation
 from . import utils
@@ -80,6 +80,7 @@ def execute(args):
 
     Returns:
         None.
+
     """
     if (not args['convert_farthest_from_edge'] and
             not args['convert_nearest_to_edge']):
@@ -251,6 +252,7 @@ def _convert_landscape(
 
     Returns:
         None.
+
     """
     temp_dir = tempfile.mkdtemp(prefix='temp_dir', dir=workspace_dir)
     tmp_file_registry = {
@@ -335,7 +337,7 @@ def _convert_landscape(
             tmp_file_registry['distance_from_base_mask_edge'])['nodata'][0]
 
         def _combine_masks(base_distance_array, non_base_distance_array):
-            """create a mask of valid non-base pixels only."""
+            """Create a mask of valid non-base pixels only."""
             result = non_base_distance_array
             valid_base_mask = base_distance_array > 0.0
             result[valid_base_mask] = base_distance_array[valid_base_mask]
@@ -396,6 +398,7 @@ def _log_stats(stats_cache, pixel_area, stats_path):
 
     Returns:
         None
+
     """
     with open(stats_path, 'wb') as csv_output_file:
         csv_output_file.write('lucode,area converted (Ha),pixels converted\n')
@@ -417,10 +420,11 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
     Returns:
         an iterable that produces (value * score_weight, flat_index) in
         decreasing sorted order by value * score_weight
+
     """
     def _read_score_index_from_disk(
             score_file_path, index_file_path):
-        """Generator to yield a float/int value from the given filenames.
+        """Create generator of float/int value from the given filenames.
 
         Reads a buffer of `buffer_size` big before to avoid keeping the
         file open between generations.
@@ -432,6 +436,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
 
         Yields:
             next (score, index) tuple in the given score and index files.
+
         """
         try:
             score_buffer = ''
@@ -480,6 +485,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
 
         Returns:
             Iterable to visit scores/indexes in increasing score order.
+
         """
         # sort the whole bunch to disk
         score_file = tempfile.NamedTemporaryFile(delete=False)
@@ -572,6 +578,7 @@ def _convert_by_score(
 
     Returns:
         None.
+
     """
     def _flush_cache_to_band(
             data_array, row_array, col_array, valid_index, dirty_blocks,
@@ -601,6 +608,7 @@ def _convert_by_score(
 
         Returns:
             None
+
         """
         # construct sparse matrix so it can be indexed later
         sparse_matrix = scipy.sparse.csc_matrix(
@@ -700,6 +708,7 @@ def _make_gaussian_kernel_path(sigma, kernel_path):
 
     Returns:
         None.
+
     """
     # going 3.0 times out from the sigma gives you over 99% of area under
     # the guassian curve
@@ -761,6 +770,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
@@ -785,13 +795,13 @@ def validate(args, limit_to=None):
             elif args[key] in ['', None]:
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
+    if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
             "The following keys were expected in `args` but were missing " +
             ', '.join(missing_key_list))
 
-    if len(no_value_list) > 0:
+    if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 
