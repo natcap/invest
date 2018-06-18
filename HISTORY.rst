@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue with the InVEST binary build where binaries on Windows would
+  crash with an error saying Python27.dll could not be loaded.
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
   names from override and constraint layers were not being loaded.  This bug
   caused the field 'UNKNOWN' to be passed to the model, causing an error.
@@ -21,6 +23,8 @@ Unreleased Changes
   causing the model to run with only the aboveground carbon pool
 * Added functionality to the InVEST UI so that ``Dropdown`` inputs can now map
   dropdown values to different output values.
+* Fixed an issue in the Crop Production Percentile model that would treat the
+  optional AOI vector field as a filename and crash on a run if it were empty.
 
 3.4.4 (2018-03-26)
 ------------------
