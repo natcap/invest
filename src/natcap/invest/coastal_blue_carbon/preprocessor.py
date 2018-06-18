@@ -2,7 +2,6 @@
 """Coastal Blue Carbon Preprocessor."""
 from __future__ import absolute_import
 import os
-import csv
 import itertools
 from itertools import product
 import logging
@@ -10,6 +9,7 @@ import copy
 
 from osgeo import gdal
 import numpy
+import pandas
 import pygeoprocessing
 
 from .. import utils
@@ -311,15 +311,14 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
-    with open(filepath, 'w') as csv_file:
+    with open(filepath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
+        csv_file.write(','.join(fieldnames)+'\n')
         for code in code_list:
             lulc_class = code_to_lulc_dict[code]
-            row = dict([('lulc-class', lulc_class)] +
-                       transition_by_lulc_class_dict[lulc_class].items())
-            writer.writerow(row)
+            row = [lulc_class] + (
+                transition_by_lulc_class_dict[lulc_class].values())
+            csv_file.writerow(','.join(row)+'\n')
 
     # Append legend
     with open(filepath, 'a') as csv_file:
@@ -339,12 +338,10 @@ def _create_carbon_pool_initial_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'biomass', 'soil', 'litter'])
+    with open(filepath, 'wb') as csv_file:
+        csv_file.write('code,lulc-class,biomass,soil,litter\n')
         for code in code_to_lulc_dict.iterkeys():
-            row = [code, code_to_lulc_dict[code]] + ['', '', '']
-            writer.writerow(row)
+            csv_file.write('%s,%s,,,\n' % (code, code_to_lulc_dict[code]))
 
 
 def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
@@ -354,19 +351,16 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'biomass-half-life',
-                         'biomass-low-impact-disturb',
-                         'biomass-med-impact-disturb',
-                         'biomass-high-impact-disturb',
-                         'biomass-yearly-accumulation',
-                         'soil-half-life', 'soil-low-impact-disturb',
-                         'soil-med-impact-disturb', 'soil-high-impact-disturb',
-                         'soil-yearly-accumulation'])
+    with open(filepath, 'wb') as csv_file:
+        csv_file.write(
+            'code,lulc-class,biomass-half-life,biomass-low-impact-disturb,'
+            'biomass-med-impact-disturb,biomass-high-impact-disturb,'
+            'biomass-yearly-accumulation,soil-half-life,'
+            'soil-low-impact-disturb,soil-med-impact-disturb,'
+            'soil-high-impact-disturb,soil-yearly-accumulation\n')
         for code in code_to_lulc_dict.iterkeys():
-            row = [code, code_to_lulc_dict[code]] + [''] * 10
-            writer.writerow(row)
+            csv_file.write('%s,%s,,,,,,,,,,\n' % (
+                code, code_to_lulc_dict[code]))
 
 
 @validation.invest_validator
@@ -393,21 +387,21 @@ def validate(args, limit_to=None):
         except KeyError:
             missing_keys.append(required_key)
 
-    if len(missing_keys) > 0:
+    if missing_keys:
         raise KeyError('Args is missing these keys: %s'
                        % ', '.join(missing_keys))
 
-    if len(keys_missing_value) > 0:
+    if keys_missing_value:
         warnings.append((keys_missing_value,
                          'Parameter must have a value.'))
 
     if limit_to in ('lulc_lookup_uri', None):
-        try:
-            csv.reader(open(args['lulc_lookup_uri']))
-        except IOError:
+        if not os.path.exists(args['lulc_lookup_uri']):
             warnings.append((['lulc_lookup_uri'], 'File not found.'))
-        except csv.Error:
-            warnings.append((['lulc_lookup_uri'], 'Could not open CSV'))
+        try:
+            pandas.read_csv(args['lulc_lookup_uri'])
+        except:
+            warnings.append((['lulc_lookup_uri'], 'Could not open CSV.'))
 
     if limit_to in ('lulc_snapshot_list', None):
         try:
