@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 
 import os
-import csv
 import logging
 
 from osgeo import gdal
@@ -215,50 +214,34 @@ def format_temp_table(temp_path, ff_aqua_args):
 
     Returns nothing.
     '''
-
-    #EXPLICIT STRINGS FROM "Temp_Daily"
-    water_temp_file = open(temp_path)
-
     new_dict_temp = {}
-    line = None
+    water_temp_table = pandas.read_csv(temp_path, sep=None, engine='python')
+    water_temp_rows = list(water_temp_table.iterrows())
 
-    #This allows us to dynamically determine if the CSV file is comma
-    #separated, or semicolon separated.
-    dialect = csv.Sniffer().sniff(water_temp_file.read())
-    water_temp_file.seek(0)
-    delim = dialect.delimiter
-    end_line = dialect.lineterminator
-
-    #The farm ID numbers that fall under this column heading in the CSV will
-    #be used as the keys in the second level of the dictionary.
+    # The farm ID numbers that fall under this column heading in the CSV will
+    # be used as the keys in the second level of the dictionary.
     day_marker = 'Day #'
 
-    while True:
-        line = water_temp_file.readline().rstrip(end_line)
-        if day_marker in line:
+    for row_index, row in enumerate(water_temp_rows):
+        if day_marker == row[1][0]:
+            start_row_index = row_index+1
             break
 
     #this is explicitly telling it the fields that I want to get data for, and
     #am removing the Day/Month Field Since it's unnecessary
-    fieldnames = line.split(delim)
-
-    reader = csv.DictReader(
-        water_temp_file,
-        fieldnames,
-        dialect=dialect)
-
-    for row in reader:
-
+    fieldnames = [
+        str(int(x)) if isinstance(x, float) else x
+        for x in water_temp_rows[start_row_index-1][1]]
+    print fieldnames
+    for row in water_temp_rows[start_row_index::]:
         sub_dict = {}
-
-        for key in row:
+        for key, value in zip(fieldnames, row[1]):
             if (key != day_marker and key != ''):
-                sub_dict[key] = row[key]
-
+                sub_dict[key] = value
         del sub_dict['Day/Month']
 
         #Subtract 1 here so that the day in the temp table allows for % 365
-        new_dict_temp[str(int(row[day_marker]) - 1)] = sub_dict
+        new_dict_temp[str(int(row[1][0]) - 1)] = sub_dict
 
     ff_aqua_args['water_temp_dict'] = new_dict_temp
 
