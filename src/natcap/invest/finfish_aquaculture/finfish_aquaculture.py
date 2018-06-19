@@ -1,4 +1,4 @@
-"""inVEST finfish aquaculture filehandler for biophysical and valuation data"""
+"""InVEST finfish aquaculture model."""
 from __future__ import absolute_import
 
 import os
@@ -6,13 +6,15 @@ import csv
 import logging
 
 from osgeo import gdal
+import pandas
 
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import validation
 from .. import utils
 
 
-LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
+LOGGER = logging.getLogger(
+    'natcap.invest.finfish_aquaculture.finfish_aquaculture')
 
 
 def execute(args):
@@ -154,69 +156,45 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
     Returns nothing.
     '''
 
-    #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
-    #do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm
-    #Operations" table.
-
     new_dict_op = {}
-    csv_file = open(op_path)
+    op_table = pandas.read_csv(op_path, sep=None, engine='python')
 
-    #this will be separate arguments that are passed along straight into
-    #biophysical_args
+    # this will be separate arguments that are passed along straight into
+    # biophysical_args
     general_ops = {}
-    line = None
 
-    dialect = csv.Sniffer().sniff(csv_file.read())
-    csv_file.seek(0)
-
-    delim = dialect.delimiter
-    end_line = dialect.lineterminator
-
-    while True:
-        line = csv_file.readline().rstrip(end_line)
-
-        if farm_ID in line:
+    table_rows = list(op_table.iterrows())
+    for index, row in enumerate(table_rows):
+        if farm_ID == row[1][0]:
+            farm_row = index+1
+            fieldnames = row[1][1::]
             break
 
-        split_line = line.split(delim)
-        if 'Fraction of fish remaining after processing' in split_line[0]:
-            general_ops['frac_post_process'] = float(split_line[1][:-1])/100
+        if row[1][0] == 'Fraction of fish remaining after processing':
+            # this is a string that ends in a % sign, so strip that
+            general_ops['frac_post_process'] = float(row[1][1][0:-1])/100
 
-        if 'Natural mortality rate on the farm (daily)' in split_line[0]:
-            general_ops['mort_rate_daily'] = split_line[1]
+        if row[1][0] == 'Natural mortality rate on the farm (daily)':
+            general_ops['mort_rate_daily'] = float(row[1][1])
 
-        if 'Duration of simulation (years)' in split_line[0]:
-            general_ops['duration'] = split_line[1]
+        if row[1][0] == 'Duration of simulation (years)':
+            general_ops['duration'] = float(row[1][1])
 
-    #this is explicitly telling it the fields that I want to get data for
-    #want to remove the 'Total Value' field, since there is not data inside
-    #there, then tell the dictreader to set up a reader with dictionaries of
-    #only those fields, where the overarching dictionary uses the Farm ID as
-    #the key for each of the sub dictionaries
-    fieldnames = line.split(delim)
-
-    reader = csv.DictReader(
-        csv_file,
-        fieldnames=fieldnames,
-        dialect=dialect,
-        quoting=csv.QUOTE_NONE)
-
-    for row in reader:
-
+    for row in table_rows[farm_row::]:
+        if row[1][0] == '':
+            continue
         sub_dict = {}
-
-        for key in row:
-            if (key != farm_ID):
-                sub_dict[key] = row[key]
-
-        if row[farm_ID] != '':
-            new_dict_op[row[farm_ID]] = sub_dict
+        for key, value in zip(fieldnames, row[1][1::]):
+            if key != farm_ID:
+                sub_dict[key] = value
+        new_dict_op[row[1][0]] = sub_dict
 
     ff_aqua_args['farm_op_dict'] = new_dict_op
 
     #add the gen args in
-    for key in general_ops.keys():
+    for key in general_ops:
         ff_aqua_args[key] = general_ops[key]
+
 
 
 def format_temp_table(temp_path, ff_aqua_args):
@@ -343,19 +321,23 @@ def validate(args, limit_to=None):
                     try:
                         float(args[float_key])
                     except ValueError:
-                        warnings.append(([float_key],
-                                        'Parameter must be a number.'))
+                        warnings.append(
+                            ([float_key], 'Parameter must be a number.'))
             except KeyError:
                 # Not all of these parameters are required.
                 pass
 
     for csv_key in ('water_temp_tbl', 'farm_op_tbl'):
         if limit_to in (csv_key, None):
-            try:
-                csv.reader(open(args[csv_key], 'r'))
-            except (csv.Error, IOError):
-                warnings.append(([csv_key],
-                                 'Parameter must be a valid CSV file.'))
+            if not os.path.exists(args[csv_key]):
+                warnings.append(([csv_key], 'File does not exist.'))
+            else:
+                try:
+                    _ = pandas.read_csv(
+                        args[csv_key], 'r', sep=None, engine='python')
+                except:
+                    warnings.append(
+                        ([csv_key], 'Parameter must be a valid CSV file.'))
 
     if limit_to in ('do_valuation', None):
         if args['do_valuation'] not in (True, False):
