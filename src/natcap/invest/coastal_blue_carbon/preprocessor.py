@@ -311,14 +311,17 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
+    print transition_by_lulc_class_dict
+
     with open(filepath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         csv_file.write(','.join(fieldnames)+'\n')
         for code in code_list:
             lulc_class = code_to_lulc_dict[code]
-            row = [lulc_class] + (
-                transition_by_lulc_class_dict[lulc_class].values())
-            csv_file.writerow(','.join(row)+'\n')
+            row = [lulc_class] + [
+                transition_by_lulc_class_dict[lulc_class][x]
+                for x in lulc_class_list_sorted]
+            csv_file.write(','.join(row)+'\n')
 
     # Append legend
     with open(filepath, 'a') as csv_file:
