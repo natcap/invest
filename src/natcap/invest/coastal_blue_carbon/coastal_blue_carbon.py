@@ -730,7 +730,6 @@ def get_inputs(args):
             d['price_t'] = (1 + inflation_rate) ** numpy.arange(
                 0, float(d['timesteps'])+1) * price
 
-        LOGGER.debug("d['price_t'] %s", d['price_t'])
         d['price_t'] /= (1 + discount_rate) ** numpy.arange(0, d['timesteps']+1)
 
     # Create Output Rasters
@@ -939,7 +938,6 @@ def _get_price_table(price_table_uri, start_year, end_year):
     """
     price_dict = utils.build_lookup_from_csv(
         price_table_uri, 'year')
-    LOGGER.debug("price dict: %s", price_dict)
     try:
         return numpy.array(
             [price_dict[year]['price']
