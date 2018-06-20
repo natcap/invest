@@ -4,7 +4,6 @@ import tempfile
 import shutil
 import os
 
-import pandas
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
@@ -56,19 +55,16 @@ class ScenarioProximityTests(unittest.TestCase):
                 REGRESSION_DATA, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
 
-        base_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
-        expected_table = pandas.read_csv(
+        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
-                REGRESSION_DATA, 'farthest_from_edge_regression.csv'))
-        pandas.testing.assert_frame_equal(base_table, expected_table)
+                REGRESSION_DATA, 'farthest_from_edge_regression.csv'),
+            rel_tol=1e-6)
 
-        base_table = pandas.read_csv(
-            os.path.join(self.workspace_dir, 'nearest_to_edge.csv'))
-        expected_table = pandas.read_csv(
-            os.path.join(
-                REGRESSION_DATA, 'nearest_to_edge_regression.csv'))
-        pandas.testing.assert_frame_equal(base_table, expected_table)
+        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
+            os.path.join(self.workspace_dir, 'nearest_to_edge.csv'),
+            os.path.join(REGRESSION_DATA, 'nearest_to_edge_regression.csv'),
+            rel_tol=1e-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
