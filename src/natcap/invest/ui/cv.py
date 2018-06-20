@@ -31,7 +31,8 @@ class CoastalVulnerability(model.InVESTModel):
             args_key=u'aoi_uri',
             helptext=(
                 u"An OGR-supported, single-feature polygon vector "
-                u"file.  All outputs will be in the AOI's projection."),
+                u"file. Must have a projected coordinate system. "
+                u"All outputs will be in the AOI's projection."),
             label=u'Area of Interest (Vector)',
             validator=self.validator)
         self.general_tab.add_input(self.area_of_interest)
@@ -90,9 +91,10 @@ class CoastalVulnerability(model.InVESTModel):
         self.cell_size = inputs.Text(
             args_key=u'cell_size',
             helptext=(
-                u"Cell size in meters.  The higher the value, the "
-                u"faster the computation, but the coarser the output "
-                u"rasters produced by the model."),
+                u"Cell size measured in the projection units of the AOI. "
+                u"For example, UTM projections use meters. "
+                u"The higher the value, the faster the computation, "
+                u"but the coarser the output rasters produced by the model."),
             label=u'Model Resolution (Segment Size)',
             validator=self.validator)
         self.general_tab.add_input(self.cell_size)
