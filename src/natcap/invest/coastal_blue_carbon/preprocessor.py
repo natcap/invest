@@ -311,8 +311,6 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
-    print transition_by_lulc_class_dict
-
     with open(filepath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         csv_file.write(','.join(fieldnames)+'\n')
