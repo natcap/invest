@@ -25,11 +25,10 @@ Unreleased Changes
   dropdown values to different output values.
 * Fixed an issue in the Crop Production Percentile model that would treat the
   optional AOI vector field as a filename and crash on a run if it were empty.
-* Using `pandas` as the table reader for the core InVEST utilities as well as
-  a few additional models.
 * Fixing an issue in the Pollination Model that would cause occasional crashes
   due to a missing dependent task; it had previously been patched by setting
-  taskgraph to operate in single thread mode. This restores multithreading.
+  taskgraph to operate in single thread mode. This restores multithreading
+  in the pollination model.
 
 3.4.4 (2018-03-26)
 ------------------
