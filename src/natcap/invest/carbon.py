@@ -122,28 +122,30 @@ def execute(args):
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
-    cell_sizes = []
+    cell_size_set = set()
+    raster_size_set = set()
     valid_lulc_keys = []
     valid_scenarios = []
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and args[lulc_key]:
-            cell_sizes.append(
-                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-                    args[lulc_key]))
+            raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
+            cell_size_set.add(raster_info['pixel_size'])
+            raster_size_set.add(raster_info['raster_size'])
             valid_lulc_keys.append(lulc_key)
             valid_scenarios.append(scenario_type)
-    pixel_size_out = min(cell_sizes)
-
-    # align the input datasets
-    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
-        [args[_] for _ in valid_lulc_keys],
-        [file_registry['aligned_' + _] for _ in valid_lulc_keys],
-        ['nearest'] * len(valid_lulc_keys),
-        pixel_size_out, 'intersection', 0, assert_datasets_projected=True)
+    if len(cell_size_set) > 1:
+        raise ValueError(
+            "the pixel sizes of %s are not equivalent. Here are the "
+            "different sets that were found in processing: %s" % (
+                valid_lulc_keys, cell_size_set))
+    if len(raster_size_set) > 1:
+        raise ValueError(
+            "the raster dimensions of %s are not equivalent. Here are the "
+            "different sizes that were found in processing: %s" % (
+                valid_lulc_keys, raster_size_set))
 
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
-    aligned_lulc_key = None
     pool_storage_path_lookup = collections.defaultdict(list)
     summary_stats = []  # use to aggregate storage, value, and more
     for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
@@ -151,17 +153,19 @@ def execute(args):
             (lucode, float(carbon_pool_table[lucode][pool_type]))
             for lucode in carbon_pool_table])
         for scenario_type in valid_scenarios:
-            aligned_lulc_key = 'aligned_lulc_%s_path' % scenario_type
+            lulc_key = 'lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)
             LOGGER.info(
                 "Mapping carbon from '%s' to '%s' scenario.",
-                aligned_lulc_key, storage_key)
+                lulc_key, storage_key)
             _generate_carbon_map(
-                file_registry[aligned_lulc_key], carbon_pool_by_type,
+                args[lulc_key], carbon_pool_by_type,
                 file_registry[storage_key])
             # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
+
+    # TODO: left off here for pgp 1.0 conversion
 
     # Sum the individual carbon storage pool paths per scenario
     for scenario_type, storage_path_list in (
