@@ -423,7 +423,8 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories(
+            [self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -451,7 +452,8 @@ class TestRecServer(unittest.TestCase):
         server_thread.start()
 
         args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'aoi_path': os.path.join(
+                REGRESSION_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': '2005',
@@ -465,7 +467,7 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'local_recreation-results', #self.workspace_dir,
         }
 
         recmodel_client.execute(args)
@@ -474,7 +476,7 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
+            os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
 
     def tearDown(self):
         """Delete workspace."""
