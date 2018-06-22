@@ -8,6 +8,7 @@ import time
 from osgeo import gdal
 from osgeo import ogr
 import numpy
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import validation
@@ -110,7 +111,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([intermediate_output_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -118,7 +119,7 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    carbon_pool_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
+    carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
     cell_sizes = []
@@ -126,7 +127,7 @@ def execute(args):
     valid_scenarios = []
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if lulc_key in args and len(args[lulc_key]) > 0:
+        if lulc_key in args and args[lulc_key]:
             cell_sizes.append(
                 natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
                     args[lulc_key]))
