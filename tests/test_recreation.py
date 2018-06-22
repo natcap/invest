@@ -456,6 +456,8 @@ class TestRecServer(unittest.TestCase):
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
+            'hostname': 'localhost',
+            'port': port,
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -629,9 +631,7 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['sum'][0], 0)
         numpy.testing.assert_equal(fid_values['mean'][0], 0)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(50.0)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
@@ -681,8 +681,7 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_all_metrics(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
@@ -735,8 +734,7 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
