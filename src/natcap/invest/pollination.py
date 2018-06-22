@@ -317,7 +317,7 @@ def execute(args):
             scenario_variables['habitat_nesting_index_path'][species])
 
         habitat_nesting_tasks[species] = task_graph.add_task(
-            task_name='calculate_habitat_nesting',
+            task_name='calculate_habitat_nesting_%s' % species,
             func=calculate_habitat_nesting_index_op,
             dependent_task_list=dependent_task_list,
             target_path_list=[
