@@ -2,16 +2,15 @@
 """Coastal Blue Carbon Preprocessor."""
 from __future__ import absolute_import
 import os
-import csv
+import itertools
 from itertools import product
 import logging
-import ast
 import copy
-import itertools
 
 from osgeo import gdal
-import pygeoprocessing
 import numpy
+import pandas
+import pygeoprocessing
 
 from .. import utils
 from .. import validation
@@ -84,7 +83,7 @@ def execute(args):
     # Outputs
     _create_transition_table(
         reg['transitions'],
-        vars_dict['lulc_to_code_dict'].keys(),
+        vars_dict['lulc_to_code_dict'].iterkeys(),
         vars_dict['transition_matrix_dict'],
         vars_dict['code_to_lulc_dict'])
 
@@ -116,19 +115,17 @@ def _get_inputs(args):
     lulc_lookup_dict = utils.build_lookup_from_csv(
         args['lulc_lookup_uri'], 'code')
 
-    for code in lulc_lookup_dict.keys():
+    for code in lulc_lookup_dict.iterkeys():
         sub_dict = lulc_lookup_dict[code]
-        val = sub_dict['is_coastal_blue_carbon_habitat'].strip().capitalize()
-        if val in ['True', 'False']:
-            sub_dict['is_coastal_blue_carbon_habitat'] = ast.literal_eval(val)
-        else:
-            raise ValueError('All land cover types must have an '
-                             '\'is_coastal_blue_carbon_habitat\' '
-                             'attribute set to either \'True\' or \'False\'')
+        if not isinstance(sub_dict['is_coastal_blue_carbon_habitat'], bool):
+            raise ValueError(
+                'All land cover types must have an '
+                '\'is_coastal_blue_carbon_habitat\' '
+                'attribute set to either \'True\' or \'False\'')
         lulc_lookup_dict[code] = sub_dict
 
     code_to_lulc_dict = {key: lulc_lookup_dict[key][
-        'lulc-class'] for key in lulc_lookup_dict.keys()}
+        'lulc-class'] for key in lulc_lookup_dict.iterkeys()}
     lulc_to_code_dict = {v: k for k, v in code_to_lulc_dict.items()}
 
     # Create workspace and output directories
@@ -174,7 +171,7 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
                         for snapshot in lulc_snapshot_list),
         numpy.array([])))
 
-    code_set = set(lulc_lookup_dict.keys())
+    code_set = set(lulc_lookup_dict.iterkeys())
     code_set.add(
         pygeoprocessing.get_raster_info(lulc_snapshot_list[0])['nodata'][0])
 
@@ -273,7 +270,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
 
     # Transition Matrix
     transition_matrix_dict = dict(
-        (i, '') for i in product(lulc_lookup_dict.keys(), repeat=2))
+        (i, '') for i in product(lulc_lookup_dict.iterkeys(), repeat=2))
 
     # Determine Transitions and Directions
     for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
@@ -300,14 +297,13 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
     """
     LOGGER.info('Creating transition table as output...')
 
-    code_list = code_to_lulc_dict.keys()
-    code_list.sort()
+    code_list = sorted(code_to_lulc_dict.iterkeys())
     lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
 
     transition_by_lulc_class_dict = dict(
         (lulc_class, {}) for lulc_class in lulc_class_list)
 
-    for transition in transition_matrix_dict.keys():
+    for transition in transition_matrix_dict.iterkeys():
         top_dict = transition_by_lulc_class_dict[
             code_to_lulc_dict[transition[0]]]
         top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[
@@ -315,15 +311,15 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
-    with open(filepath, 'w') as csv_file:
+    with open(filepath, 'wb') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writeheader()
+        csv_file.write(','.join(fieldnames)+'\n')
         for code in code_list:
             lulc_class = code_to_lulc_dict[code]
-            row = dict([('lulc-class', lulc_class)] +
-                       transition_by_lulc_class_dict[lulc_class].items())
-            writer.writerow(row)
+            row = [lulc_class] + [
+                transition_by_lulc_class_dict[lulc_class][x]
+                for x in lulc_class_list_sorted]
+            csv_file.write(','.join(row)+'\n')
 
     # Append legend
     with open(filepath, 'a') as csv_file:
@@ -343,12 +339,10 @@ def _create_carbon_pool_initial_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'biomass', 'soil', 'litter'])
-        for code in code_to_lulc_dict.keys():
-            row = [code, code_to_lulc_dict[code]] + ['', '', '']
-            writer.writerow(row)
+    with open(filepath, 'wb') as csv_file:
+        csv_file.write('code,lulc-class,biomass,soil,litter\n')
+        for code in code_to_lulc_dict.iterkeys():
+            csv_file.write('%s,%s,,,\n' % (code, code_to_lulc_dict[code]))
 
 
 def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
@@ -358,19 +352,16 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'w') as csv_file:
-        writer = csv.writer(csv_file)
-        writer.writerow(['code', 'lulc-class', 'biomass-half-life',
-                         'biomass-low-impact-disturb',
-                         'biomass-med-impact-disturb',
-                         'biomass-high-impact-disturb',
-                         'biomass-yearly-accumulation',
-                         'soil-half-life', 'soil-low-impact-disturb',
-                         'soil-med-impact-disturb', 'soil-high-impact-disturb',
-                         'soil-yearly-accumulation'])
-        for code in code_to_lulc_dict.keys():
-            row = [code, code_to_lulc_dict[code]] + [''] * 10
-            writer.writerow(row)
+    with open(filepath, 'wb') as csv_file:
+        csv_file.write(
+            'code,lulc-class,biomass-half-life,biomass-low-impact-disturb,'
+            'biomass-med-impact-disturb,biomass-high-impact-disturb,'
+            'biomass-yearly-accumulation,soil-half-life,'
+            'soil-low-impact-disturb,soil-med-impact-disturb,'
+            'soil-high-impact-disturb,soil-yearly-accumulation\n')
+        for code in code_to_lulc_dict.iterkeys():
+            csv_file.write('%s,%s,,,,,,,,,,\n' % (
+                code, code_to_lulc_dict[code]))
 
 
 @validation.invest_validator
@@ -397,21 +388,21 @@ def validate(args, limit_to=None):
         except KeyError:
             missing_keys.append(required_key)
 
-    if len(missing_keys) > 0:
+    if missing_keys:
         raise KeyError('Args is missing these keys: %s'
                        % ', '.join(missing_keys))
 
-    if len(keys_missing_value) > 0:
+    if keys_missing_value:
         warnings.append((keys_missing_value,
                          'Parameter must have a value.'))
 
     if limit_to in ('lulc_lookup_uri', None):
-        try:
-            csv.reader(open(args['lulc_lookup_uri']))
-        except IOError:
+        if not os.path.exists(args['lulc_lookup_uri']):
             warnings.append((['lulc_lookup_uri'], 'File not found.'))
-        except csv.Error:
-            warnings.append((['lulc_lookup_uri'], 'Could not open CSV'))
+        try:
+            pandas.read_csv(args['lulc_lookup_uri'])
+        except:
+            warnings.append((['lulc_lookup_uri'], 'Could not open CSV.'))
 
     if limit_to in ('lulc_snapshot_list', None):
         try:

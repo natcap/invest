@@ -409,7 +409,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_mark_transition_type(self):
         """Coastal Blue Carbon: Test mark_transition_type."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
 
         band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -421,12 +421,12 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                self.workspace, 'raster_1.tif'))
+                self.workspace_dir, 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            self.workspace,
+            self.workspace_dir,
             'workspace',
             'outputs_preprocessor',
             'transitions_test.csv')

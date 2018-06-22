@@ -423,7 +423,8 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories(
+            [self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -451,11 +452,14 @@ class TestRecServer(unittest.TestCase):
         server_thread.start()
 
         args = {
-            'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
+            'aoi_path': os.path.join(
+                REGRESSION_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
+            'hostname': 'localhost',
+            'port': port,
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -463,7 +467,7 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'local_recreation-results', #self.workspace_dir,
         }
 
         recmodel_client.execute(args)
@@ -472,7 +476,7 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
+            os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
 
     def tearDown(self):
         """Delete workspace."""
@@ -629,9 +633,7 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['sum'][0], 0)
         numpy.testing.assert_equal(fid_values['mean'][0], 0)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    @_timeout(50.0)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
@@ -681,8 +683,7 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_all_metrics(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
@@ -735,8 +736,7 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client

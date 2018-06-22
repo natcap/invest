@@ -10,23 +10,7 @@ import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
-__all__ = ['local_dir', 'PYGEOPROCESSING_REQUIRED']
-
-
-# Verify that the installed PyGeoprocessing meets the minimum requirements.
-# Pyinstaller binaries do not allow us to use pkg_resources.require(), as
-# no EGG_INFO is included in the binary distribution.
-# pkg_resources is preferred over distutils.StrictVersion and
-# distutils.LooseVersion, since pkg_resources.parse_version is
-# PEP440-compliant and it's very likely that a dev version of PyGeoprocessing
-# will be found.
-PYGEOPROCESSING_REQUIRED = '0.5.0'
-if (pkg_resources.parse_version(pygeoprocessing.__version__) <
-        pkg_resources.parse_version(PYGEOPROCESSING_REQUIRED)):
-    raise ValueError(('Pygeoprocessing >= {req_version} required, '
-                      'but version {found_ver} was found').format(
-                          req_version=PYGEOPROCESSING_REQUIRED,
-                          found_ver=pygeoprocessing.__version__))
+__all__ = ['local_dir',]
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version

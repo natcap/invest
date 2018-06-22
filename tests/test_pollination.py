@@ -69,7 +69,7 @@ class PollinationTests(unittest.TestCase):
                 for yield_type in expected_yields:
                     self.assertAlmostEqual(
                         expected_yields[yield_type],
-                        feature.GetField(yield_type))
+                        feature.GetField(yield_type), places=2)
         finally:
             # make sure vector is closed before removing the workspace
             result_layer = None
@@ -155,9 +155,9 @@ class PollinationTests(unittest.TestCase):
         result_sum = numpy.float32(0.0)
         for _, data_block in pygeoprocessing.iterblocks(result_raster_path):
             result_sum += numpy.sum(data_block)
-        # the number below is just what the sum is when I inspected a run
-        # that appeared to work.
-        self.assertAlmostEqual(result_sum, 4790.4365234375)
+        # the number below is just what the sum rounded to two decimal places
+        # when I manually inspected a run that appeared to be correct.
+        self.assertAlmostEqual(result_sum, 4790.44, places=2)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
