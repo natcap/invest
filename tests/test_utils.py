@@ -194,7 +194,6 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel_100.tif')
         utils.exponential_decay_kernel_raster(
             expected_distance, kernel_filepath)
-        shutil.copyfile(kernel_filepath, 'kernel.tif')
 
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(
