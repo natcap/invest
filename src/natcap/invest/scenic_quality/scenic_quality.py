@@ -240,6 +240,24 @@ def execute(args):
                                                           point.GetFID()))
             viewshed_tasks.append(viewshed_task)
 
+    viewshed_sum_task = graph.add_task(
+        _count_visible_structures,
+        args=(viewshed_files,
+              file_registry['clipped_dem_path'],
+              file_registry['viewshed_counts']),
+        target_path_list=[file_registry['viewshed_counts']],
+        dependent_task_list=viewshed_tasks,
+        task_name='sum_visibility_for_all_structures')
+
+    visual_quality_task = graph.add_task(
+        _calculate_visual_quality,
+        args=(file_registry['viewshed_counts'],
+              file_registry['viewshed_quality_path']),
+        dependent_task_list=[viewshed_sum_task],
+        target_path_list=[file_registry['viewshed_quality_path']],
+        task_name='calculate_visual_quality'
+    )
+
 
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
@@ -1157,3 +1175,30 @@ def _clip_dem(dem_path, aoi_path, target_path):
     pygeoprocessing.warp_raster(
         dem_path, pixel_size, target_path, 'nearest',
         target_bbox=aoi_vector_info['bounding_box'])
+
+
+def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
+    target_nodata = -1
+    pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
+                                         [target_nodata])
+    dem_nodata = pygeoprocessing.get_raster_info(clipped_dem)['nodata'][0]
+
+    target_raster = gdal.Open(target_path)
+    target_band = target_raster.GetRasterBand(1)
+    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem,
+                                                             offset_only=True):
+        visibility_sum = numpy.empty((block_info['win_ysize'],
+                                      block_info['win_xsize']),
+                                     dtype=numpy.int32)
+        valid_mask = (dem_matrix != dem_nodata)
+        visibility_sum[~valid_mask] = target_nodata
+        for visibility_path in visibility_rasters:
+            visibility_raster = gdal.Open(visibility_path)
+            visibility_band = visibility_raster.GetRasterBand(1)
+            visibility_matrix = visibility_band.ReadAsArray(**block_info)
+            visibility_sum[valid_mask] += visibility_matrix[valid_mask]
+
+        target_band.WriteArray(buffer, xoff=block_info['xoff'],
+                               yoff=block_info['yoff'])
+    target_band = None
+    target_raster = None
