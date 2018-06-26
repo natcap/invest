@@ -261,3 +261,392 @@ class ScenicQualityRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'exponential', raster_path),
                 1e-9)
+
+
+class ViewshedTests(unittest.TestCase):
+    """Tests for pygeoprocessing's viewshed."""
+
+    def setUp(self):
+        """Create a temporary workspace that's deleted later."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Clean up remaining files."""
+        shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def create_dem(matrix, filepath, pixel_size=(1, -1)):
+        """Create a DEM in WGS84 coordinate system.
+
+        Parameters:
+            matrix (numpy.array): A 2D numpy array of pixel values.
+            filepath (string): The filepath where the new raster file will be
+                written.
+            pixel_size=(1, -1): The pixel size to use for the output raster.
+
+        Returns:
+            ``None``.
+        """
+        from pygeoprocessing.testing import create_raster_on_disk
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)  # WGS84
+        wkt = srs.ExportToWkt()
+        create_raster_on_disk(
+            [matrix],
+            origin=(0, 0),
+            projection_wkt=wkt,
+            nodata=-1,
+            pixel_size=pixel_size,
+            filename=filepath)
+
+    def test_pixels_not_square(self):
+        """Viewshed: exception raised when pixels are not square."""
+        import pygeoprocessing
+        matrix = numpy.ones((20, 20))
+        viewpoint = (10, 10)
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath,
+                                 pixel_size=(1.111111, 1.12))
+
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        with self.assertRaises(AssertionError):
+            pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
+                                     visibility_filepath)
+
+    def test_viewpoint_not_overlapping_dem(self):
+        """Viewshed: exception raised when viewpoint is not over the DEM."""
+        import pygeoprocessing
+        matrix = numpy.ones((20, 20))
+        viewpoint = (-10, -10)
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+
+        with self.assertRaises(ValueError):
+            pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
+                                     visibility_filepath,
+                                     aux_filepath=os.path.join(self.workspace_dir,
+                                                               'auxulliary.tif'))
+
+    def test_max_distance(self):
+        """Viewshed: setting a max distance limits visibility distance."""
+        import pygeoprocessing
+        matrix = numpy.ones((10, 10))
+        viewpoint = (9, 9)
+        max_dist = 4
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+
+        pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
+                                 visibility_filepath,
+                                 aux_filepath=os.path.join(self.workspace_dir,
+                                                           'auxulliary.tif'),
+                                 refraction_coeff=1.0,
+                                 max_distance=max_dist)
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        expected_visibility = numpy.zeros(matrix.shape)
+
+        expected_visibility = numpy.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+                                           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
+                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
+                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]],
+                                          dtype=numpy.uint8)
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_refractivity(self):
+        """Viewshed: refractivity partly compensates for earth's curvature."""
+        import pygeoprocessing
+        # TODO: verify this height.
+        matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
+        viewpoint = (0, 0)
+        matrix[viewpoint] = 2
+        matrix[0, 3] = 2
+        pixel_size = (1000, -1000)
+
+        # pixels are 1km.  With the viewpoint at an elevation of 1m,
+        # the horizon should be about 3.6km out.  A 50m structure 10km out
+        # should be visible above the horizon.
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath,
+                                 pixel_size=pixel_size)
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+
+        pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
+                                 visibility_filepath,
+                                 aux_filepath=os.path.join(self.workspace_dir,
+                                                           'auxulliary.tif'),
+                                 refraction_coeff=0.1)
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+
+        # Because of refractivity calculations (and the size of the pixels),
+        # the pixels farther to the right are visible despite being 'hidden'
+        # behind the hill at (0,3).  This is due to refractivity.
+        expected_visibility = numpy.array(
+            [[1, 1, 1, 1, 0, 0, 0, 0, 0, 1]], dtype=numpy.uint8)
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_block_size_check(self):
+        """Viewshed: exception raised when blocks not equal, power of 2."""
+        import pygeoprocessing
+        import pygeoprocessing.testing
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        pygeoprocessing.testing.create_raster_on_disk(
+            [numpy.ones((10, 10))],
+            (0, 0), projection_wkt=srs.ExportToWkt(), nodata=-1,
+            pixel_size=(1, -1), dataset_opts=(
+                'TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
+                'BLOCKXSIZE=20', 'BLOCKYSIZE=40'), filename=dem_filepath)
+
+        with self.assertRaises(ValueError):
+            pygeoprocessing.viewshed(
+                (dem_filepath, 1), (0, 0), visibility_filepath,
+                aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            )
+
+    def test_view_from_valley(self):
+        """Viewshed: test visibility from within a pit."""
+        import pygeoprocessing
+        matrix = numpy.zeros((9, 9))
+        matrix[5:8,5:8] = 2
+        matrix[4:7,4:7] = 1
+        matrix[5,5] = 0
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
+                                 visibility_filepath, refraction_coeff=1.0,
+                                 aux_filepath=os.path.join(self.workspace_dir,
+                                                           'auxulliary.tif')
+                                 )
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+
+        expected_visibility = numpy.zeros(visibility_matrix.shape)
+        expected_visibility[matrix!=0] = 1
+        expected_visibility[5,5] = 1
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_tower_view_from_valley(self):
+        """Viewshed: test visibility from a 'tower' within a pit."""
+        import pygeoprocessing
+        matrix = numpy.zeros((9, 9))
+        matrix[5:8,5:8] = 2
+        matrix[4:7,4:7] = 1
+        matrix[5,5] = 0
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
+                                 visibility_filepath, viewpoint_height=10,
+                                 aux_filepath=os.path.join(self.workspace_dir,
+                                                           'auxulliary.tif')
+                                 )
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+
+        expected_visibility = numpy.ones(visibility_matrix.shape)
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_primitive_peak(self):
+        """Viewshed: looking down from a peak renders everything visible."""
+        import pygeoprocessing
+        matrix = numpy.zeros((8, 8))
+        matrix[4:7,4:7] = 1
+        matrix[5,5] = 2
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
+                                 visibility_filepath,
+                                 aux_filepath=os.path.join(self.workspace_dir,
+                                                           'auxulliary.tif'),
+                                 refraction_coeff=1.0)
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, numpy.ones(matrix.shape))
+
+    def test_cliff_bottom_half_visibility(self):
+        """Viewshed: visibility for a cliff on bottom half of DEM."""
+        import pygeoprocessing
+        matrix = numpy.empty((20,20))
+        matrix.fill(2)
+        matrix[7:] = 10  # cliff at row 7
+        viewpoint = (5, 10)
+        matrix[viewpoint] = 5  # viewpoint
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed(
+            dem_raster_path_band=(dem_filepath, 1),
+            viewpoint=(viewpoint[1], viewpoint[0]),
+            visibility_filepath=visibility_filepath,
+            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+        )
+
+        expected_visibility = numpy.ones(matrix.shape)
+        expected_visibility[8:] = 0
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_cliff_top_half_visibility(self):
+        """Viewshed: visibility for a cliff on top half of DEM."""
+        import pygeoprocessing
+        matrix = numpy.empty((20,20))
+        matrix.fill(2)
+        matrix[:8] = 10  # cliff at row 8
+        viewpoint = (10, 10)
+        matrix[viewpoint] = 5  # viewpoint
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed(
+            dem_raster_path_band=(dem_filepath, 1),
+            viewpoint=viewpoint,
+            visibility_filepath=visibility_filepath,
+            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+        )
+        expected_visibility = numpy.ones(matrix.shape)
+        expected_visibility[:7] = 0
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_cliff_left_half_visibility(self):
+        """Viewshed: visibility for a cliff on left half of DEM."""
+        import pygeoprocessing
+        matrix = numpy.empty((20,20))
+        matrix.fill(2)
+        matrix[:,:8] = 10  # cliff at column 8
+        viewpoint = (10, 10)
+        matrix[viewpoint] = 5  # viewpoint
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed(
+            dem_raster_path_band=(dem_filepath, 1),
+            viewpoint=viewpoint,
+            visibility_filepath=visibility_filepath,
+            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+        )
+        expected_visibility = numpy.ones(matrix.shape)
+        expected_visibility[:,:7] = 0
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_cliff_right_half_visibility(self):
+        """Viewshed: visibility for a cliff on right half of DEM."""
+        import pygeoprocessing
+        matrix = numpy.empty((20,20))
+        matrix.fill(2)
+        matrix[:,12:] = 10  # cliff at column 8
+        viewpoint = (10, 10)
+        matrix[viewpoint] = 5  # viewpoint
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed(
+            dem_raster_path_band=(dem_filepath, 1),
+            viewpoint=viewpoint,
+            visibility_filepath=visibility_filepath,
+            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+        )
+        expected_visibility = numpy.ones(matrix.shape)
+        expected_visibility[:,13:] = 0
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_pillars(self):
+        """Viewshed: put a few pillars in a field, can't see behind them."""
+        import pygeoprocessing
+        matrix = numpy.empty((20,20))
+        matrix.fill(2)
+
+        # Put a couple of pillars in there.
+        for pillar in (
+                (2, 5),
+                (18, 5),
+                (7, 18)):
+            matrix[pillar] = 10
+
+        viewpoint = (10, 10)
+        matrix[viewpoint] = 5  # so it stands out in the DEM
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath)
+        pygeoprocessing.viewshed(
+            dem_raster_path_band=(dem_filepath, 1),
+            viewpoint=viewpoint,
+            visibility_filepath=visibility_filepath,
+            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+        )
+
+        expected_visibility= numpy.array(
+            [[1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+             [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
