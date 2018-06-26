@@ -132,7 +132,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     aoi_vector_info = pygeoprocessing.get_vector_info(args['aoi_path'])
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
@@ -154,6 +153,16 @@ def execute(args):
         target_path_list=[file_registry['structures_projected_path']],
         task_name='reproject_structures_to_dem')
 
+    clipped_viewpoints_task = graph.add_task(
+        clip_datasource_layer,
+        args=(file_registry['structures_projected_path'],
+              file_registry['aoi_proj_dem_path'],
+              file_registry['structures_clipped_path']),
+        target_path_list=[file_registry['structures_clipped_path']],
+        dependent_task_list=[reprojected_aoi_task,
+                             reprojected_viewpoints_task],
+        task_name='clip_reprojected_structures_to_aoi')
+
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
             args['population_path'])
@@ -168,7 +177,9 @@ def execute(args):
                   file_registry['population_projected'],
                   'nearest',
                   target_bbox,
-                  aoi_vector_info['projection'])
+                  aoi_vector_info['projection']),
+            target_path_list=[file_registry['population_projected']],
+            task_name='reprojected_clipped_population_task')
 
         # TODO: HTML summary table task, depends on sum of visibilities 
 
