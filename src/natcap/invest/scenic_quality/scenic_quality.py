@@ -1,10 +1,12 @@
-from __future__ import absolute_import
+"""InVEST Scenic Quality Model."""
 import os
 import sys
 import math
+import heapq
 
-import numpy as np
-import scipy.stats
+import numpy
+from bisect import bisect
+
 import shutil
 import logging
 
@@ -12,853 +14,1004 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing
-from natcap.invest.scenic_quality import scenic_quality_core
-#from natcap.invest.overlap_analysis import overlap_analysis
-from .. import validation
-from .. import utils
+import pygeoprocessing
+import natcap.invest.utils
+import natcap.invest.reporting
 
+logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
+%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
 
-def old_reproject_dataset_uri(original_dataset_uri, *args, **kwargs):
-    """A URI wrapper for reproject dataset that opens the original_dataset_uri
-        before passing it to reproject_dataset.
 
-       original_dataset_uri - a URI to a gdal Dataset on disk
+class ValuationContainerError(Exception):
+    """A custom error message for missing Valuation parameters."""
+
+    pass
+
+_OUTPUT_BASE_FILES = {
+    'viewshed_valuation_path': 'vshed.tif',
+    'viewshed_path': 'viewshed_counts.tif',
+    'viewshed_quality_path': 'vshed_qual.tif',
+    'pop_stats_path': 'populationStats.html',
+    'overlap_projected_path': 'vp_overlap.shp'
+    }
+
+_INTERMEDIATE_BASE_FILES = {
+    'pop_affected_path': 'affected_population.tif',
+    'pop_unaffected_path': 'unaffected_population.tif',
+    'aligned_pop_path': 'aligned_pop.tif',
+    'aligned_viewshed_path': 'aligned_viewshed.tif',
+    'viewshed_no_zeros_path': 'view_no_zeros.tif'
+    }
+
+_TMP_BASE_FILES = {
+    'aoi_proj_dem_path': 'aoi_proj_to_dem.shp',
+    'aoi_proj_pop_path': 'aoi_proj_to_pop.shp',
+    'aoi_proj_struct_path': 'aoi_proj_to_struct.shp',
+    'structures_clipped_path': 'structures_clipped.shp',
+    'structures_projected_path': 'structures_projected.shp',
+    'aoi_proj_overlap_path': 'aoi_proj_to_overlap.shp',
+    'overlap_clipped_path': 'overlap_clipped.shp',
+    'clipped_dem_path': 'dem_clipped.tif',
+    'dem_proj_to_aoi_path': 'dem_proj_to_aoi.tif',
+    'clipped_pop_path': 'pop_clipped.tif',
+    'pop_proj_to_aoi_path': 'pop_proj_to_aoi.tif',
+    'single_point_path': 'tmp_viewpoint_path.shp'
+    }
 
-       All other arguments to reproject_dataset are passed in.
-
-       return - nothing"""
-
-    original_dataset = gdal.OpenEx(original_dataset_uri)
-    reproject_dataset(original_dataset, *args, **kwargs)
-
-    geoprocessing.calculate_raster_stats_uri(original_dataset_uri)
-
-def reproject_dataset_uri(original_dataset_uri, output_wkt, output_uri,
-                      output_type = gdal.GDT_Float32):
-    """A function to reproject and resample a GDAL dataset given an output pixel size
-        and output reference and uri.
-
-       original_dataset - a gdal Dataset to reproject
-       pixel_spacing - output dataset pixel size in projected linear units (probably meters)
-       output_wkt - output project in Well Known Text (the result of ds.GetProjection())
-       output_uri - location on disk to dump the reprojected dataset
-       output_type - gdal type of the output
-
-       return projected dataset"""
-
-    original_dataset = gdal.OpenEx(original_dataset_uri)
-
-    original_sr = osr.SpatialReference()
-    original_sr.ImportFromWkt(original_dataset.GetProjection())
-
-    output_sr = osr.SpatialReference()
-    output_sr.ImportFromWkt(output_wkt)
-
-    vrt = gdal.AutoCreateWarpedVRT(original_dataset, None, output_wkt, gdal.GRA_Bilinear)
-
-    # Get the Geotransform vector
-    geo_t = vrt.GetGeoTransform()
-    x_size = vrt.RasterXSize # Raster xsize
-    y_size = vrt.RasterYSize # Raster ysize
-
-    # Work out the boundaries of the new dataset in the target projection
-
-
-    gdal_driver = gdal.GetDriverByName('GTiff')
-    # The size of the raster is given the new projection and pixel spacing
-    # Using the values we calculated above. Also, setting it to store one band
-    # and to use Float32 data type.
-
-    output_dataset = gdal_driver.Create(output_uri, x_size,
-                              y_size, 1, output_type)
-
-    # Set the nodata value
-    original_band = original_dataset.GetRasterBand(1)
-    out_nodata = original_band.GetNoDataValue()
-    original_band.SetNoDataValue(out_nodata)
-
-    # Set the geotransform
-    output_dataset.SetGeoTransform(geo_t)
-    output_dataset.SetProjection (output_sr.ExportToWkt())
-
-    # Perform the projection/resampling
-    gdal.ReprojectImage(original_dataset, output_dataset,
-                        original_sr.ExportToWkt(), output_sr.ExportToWkt(),
-                        gdal.GRA_Bilinear)
-
-    geoprocessing.calculate_raster_stats_uri(output_uri)
-
-
-def reclassify_quantile_dataset_uri( \
-    dataset_uri, quantile_list, dataset_out_uri, datatype_out, nodata_out):
-
-    nodata_ds = geoprocessing.get_nodata_from_uri(dataset_uri)
-
-    memory_file_uri = geoprocessing.temporary_filename()
-    memory_array = geoprocessing.load_memory_mapped_array(dataset_uri, memory_file_uri)
-    memory_array_flat = memory_array.reshape((-1,))
-
-    quantile_breaks = [0]
-    for quantile in quantile_list:
-        quantile_breaks.append(scipy.stats.scoreatpercentile(
-                memory_array_flat, quantile, (0.0, np.amax(memory_array_flat))))
-        LOGGER.debug('quantile %f: %f', quantile, quantile_breaks[-1])
-
-    def reclass(value):
-        if value == nodata_ds:
-            return nodata_out
-        else:
-            for new_value,quantile_break in enumerate(quantile_breaks):
-                if value <= quantile_break:
-                    return new_value
-        raise ValueError, "Value was not within quantiles."
-
-    cell_size = geoprocessing.get_cell_size_from_uri(dataset_uri)
-
-    geoprocessing.vectorize_datasets([dataset_uri],
-                                    reclass,
-                                    dataset_out_uri,
-                                    datatype_out,
-                                    nodata_out,
-                                    cell_size,
-                                    "union",
-                                    dataset_to_align_index=0)
-
-    geoprocessing.calculate_raster_stats_uri(dataset_out_uri)
-
-def get_data_type_uri(ds_uri):
-    raster_ds = gdal.OpenEx(ds_uri)
-    band = raster_ds.GetRasterBand(1)
-    raster_data_type = band.DataType
-    band = None
-    raster_ds = None
-
-    return raster_data_type
-
-def compute_viewshed_uri(in_dem_uri, out_viewshed_uri, in_structure_uri,
-    curvature_correction, refr_coeff, args):
-    """ Compute the viewshed as it is defined in ArcGIS where the inputs are:
-
-        -in_dem_uri: URI to input surface raster
-        -out_viewshed_uri: URI to the output raster
-        -in_structure_uri: URI to a point shapefile that contains the location
-        of the observers and the viewshed radius in (negative) meters
-        -curvature_correction: flag for the curvature of the earth. Either
-        FLAT_EARTH or CURVED_EARTH. Not used yet.
-        -refraction: refraction index between 0 (max effect) and 1 (no effect).
-        Default is 0.13."""
-
-    # Extract cell size from input DEM
-    cell_size = geoprocessing.get_cell_size_from_uri(in_dem_uri)
-
-    # Extract nodata
-    nodata = geoprocessing.get_nodata_from_uri(in_dem_uri)
-
-    ## Build I and J arrays, and save them to disk
-    rows, cols = geoprocessing.get_row_col_from_uri(in_dem_uri)
-    I, J = np.meshgrid(range(rows), range(cols), indexing = 'ij')
-    # Base path uri
-    base_uri = os.path.split(out_viewshed_uri)[0]
-    I_uri = os.path.join(base_uri, 'I.tif')
-    J_uri = os.path.join(base_uri, 'J.tif')
-    #I_uri = geoprocessing.temporary_filename()
-    #J_uri = geoprocessing.temporary_filename()
-    geoprocessing.new_raster_from_base_uri(in_dem_uri, I_uri, 'GTiff', \
-        -32768., gdal.GDT_Float32, fill_value = -32768.)
-    I_raster = gdal.OpenEx(I_uri, gdal.GA_Update)
-    I_band = I_raster.GetRasterBand(1)
-    I_band.WriteArray(I)
-    I_band = None
-    I_raster = None
-    geoprocessing.new_raster_from_base_uri(in_dem_uri, J_uri, 'GTiff', \
-        -32768., gdal.GDT_Float32, fill_value = -32768.)
-    J_raster = gdal.OpenEx(J_uri, gdal.GA_Update)
-    J_band = J_raster.GetRasterBand(1)
-    J_band.WriteArray(J)
-    J_band = None
-    J_raster = None
-    # Extract the input raster geotransform
-    GT = geoprocessing.get_geotransform_uri(in_dem_uri)
-
-    # Open the input URI and extract the numpy array
-    input_raster = gdal.OpenEx(in_dem_uri)
-    input_array = input_raster.GetRasterBand(1).ReadAsArray()
-    input_raster = None
-
-    # Create a raster from base before passing it to viewshed
-    visibility_uri = out_viewshed_uri #geoprocessing.temporary_filename()
-    geoprocessing.new_raster_from_base_uri(in_dem_uri, visibility_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
-
-    # Call the non-uri version of viewshed.
-    #compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri,
-    compute_viewshed(input_array, visibility_uri, in_structure_uri,
-    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction,
-    refr_coeff, args)
-
-
-#def compute_viewshed(in_dem_uri, visibility_uri, in_structure_uri, \
-def compute_viewshed(input_array, visibility_uri, in_structure_uri, \
-    cell_size, rows, cols, nodata, GT, I_uri, J_uri, curvature_correction, \
-    refr_coeff, args):
-    """ array-based function that computes the viewshed as is defined in ArcGIS
-    """
-    # default parameter values that are not passed to this function but that
-    # scenic_quality_core.viewshed needs
-    obs_elev = 1.0 # Observator's elevation in meters
-    tgt_elev = 0.0  # Extra elevation applied to all the DEM
-    max_dist = -1.0 # max. viewing distance(m). Distance is infinite if negative
-    coefficient = 1.0 # Used to weight the importance of individual viewsheds
-    height = 0.0 # Per viewpoint height offset--updated as we read file info
-
-    #input_raster = gdal.OpenEx(in_dem_uri)
-    #input_band = input_raster.GetRasterBand(1)
-    #input_array = input_band.ReadAsArray()
-    #input_band = None
-    #input_raster = None
-
-    # Compute the distance for each point
-    def compute_distance(vi, vj, cell_size):
-        def compute(i, j, v):
-            if v == 1:
-                return ((vi - i)**2 + (vj - j)**2)**.5 * cell_size
-            else:
-                return -1.
-        return compute
-
-    # Apply the valuation functions to the distance
-    def polynomial(a, b, c, d, max_valuation_radius):
-        def compute(x, v):
-            if v==1:
-                if x < 1000:
-                    return a + b*1000 + c*1000**2 + d*1000**3 - \
-                        (b + 2*c*1000 + 3*d*1000**2)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*x + c*x**2 + d*x**3
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
-
-    def logarithmic(a, b, max_valuation_radius):
-        def compute(x, v):
-            if v==1:
-                if x < 1000:
-                    return a + b*math.log(1000) - (b/1000)*(1000-x)
-                elif x <= max_valuation_radius:
-                    return a + b*math.log(x)
-                else:
-                    return 0.
-            else:
-                return 0.
-        return compute
-
-    # Multiply a value by a constant
-    def multiply(c):
-        def compute(x):
-            return x*c
-        return compute
-
-
-    # Setup valuation function
-    a = args["a_coefficient"]
-    b = args["b_coefficient"]
-    c = args["c_coefficient"]
-    d = args["d_coefficient"]
-
-    valuation_function = None
-    max_valuation_radius = args['max_valuation_radius']
-    if "polynomial" in args["valuation_function"]:
-        print("Polynomial")
-        valuation_function = polynomial(a, b, c, d, max_valuation_radius)
-    elif "logarithmic" in args['valuation_function']:
-        print("logarithmic")
-        valuation_function = logarithmic(a, b, max_valuation_radius)
-
-    assert valuation_function is not None
-
-    # Make sure the values don't become too small at max_valuation_radius:
-    edge_value = valuation_function(max_valuation_radius, 1)
-    message = "Valuation function can't be negative if evaluated at " + \
-    str(max_valuation_radius) + " meters (value is " + str(edge_value) + ")"
-    assert edge_value >= 0., message
-
-    # Base path uri
-    base_uri = os.path.split(visibility_uri)[0]
-
-    # Temporary files that will be used
-    distance_uri = geoprocessing.temporary_filename()
-    viewshed_uri = geoprocessing.temporary_filename()
-
-
-    # The model extracts each viewpoint from the shapefile
-    point_list = []
-    shapefile = gdal.OpenEx(in_structure_uri)
-    assert shapefile is not None
-    layer = shapefile.GetLayer(0)
-    assert layer is not None
-    iGT = gdal.InvGeoTransform(GT)
-    feature_count = layer.GetFeatureCount()
-    viewshed_uri_list = []
-    print('Number of viewpoints: ' + str(feature_count))
-    for f in range(feature_count):
-        print("feature " + str(f))
-        feature = layer.GetFeature(f)
-        field_count = feature.GetFieldCount()
-        # Check for feature information (radius, coeff, height)
-        for field in range(field_count):
-            field_def = feature.GetFieldDefnRef(field)
-            field_name = field_def.GetNameRef()
-            if (field_name.upper() == 'RADIUS2') or \
-                (field_name.upper() == 'RADIUS'):
-                max_dist = abs(int(feature.GetField(field)))
-                assert max_dist is not None, "max distance can't be None"
-                if max_dist < args['max_valuation_radius']:
-                    LOGGER.warning( \
-                        'Valuation radius > maximum visibility distance: ' + \
-                        '(' + str(args['max_valuation_radius']) + ' < ' + \
-                        str(max_dist) + ')')
-                    LOGGER.warning( \
-                        'The valuation is performed beyond what is visible')
-                max_dist = int(max_dist/cell_size)
-            if field_name.lower() == 'coeff':
-                coefficient = float(feature.GetField(field))
-                assert coefficient is not None, "feature coeff can't be None"
-            if field_name.lower() == 'OFFSETA':
-                obs_elev = float(feature.GetField(field))
-                assert obs_elev is not None, "OFFSETA can't be None"
-            if field_name.lower() == 'OFFSETB':
-                tgt_elev = float(feature.GetField(field))
-                assert tgt_elev is not None, "OFFSETB can't be None"
-
-        geometry = feature.GetGeometryRef()
-        assert geometry is not None
-        message = 'geometry type is ' + str(geometry.GetGeometryName()) + \
-        ' point is "POINT"'
-        assert geometry.GetGeometryName() == 'POINT', message
-        x = geometry.GetX()
-        y = geometry.GetY()
-        j = int((iGT[0] + x*iGT[1] + y*iGT[2]))
-        i = int((iGT[3] + x*iGT[4] + y*iGT[5]))
-
-        array_shape = (rows, cols)
-
-        #tmp_visibility_uri = geoprocessing.temporary_filename()
-        tmp_visibility_uri = os.path.join(base_uri, 'visibility_' + str(f) + '.tif')
-        geoprocessing.new_raster_from_base_uri( \
-            visibility_uri, tmp_visibility_uri, 'GTiff', \
-            255, gdal.GDT_Float64, fill_value=255)
-        scenic_quality_core.viewshed(input_array, cell_size, \
-        array_shape, nodata, tmp_visibility_uri, (i,j), obs_elev, tgt_elev, \
-        max_dist, refr_coeff)
-
-        # Compute the distance
-        #tmp_distance_uri = geoprocessing.temporary_filename()
-        tmp_distance_uri = os.path.join(base_uri, 'distance_' + str(f) + '.tif')
-        geoprocessing.new_raster_from_base_uri(visibility_uri, \
-        tmp_distance_uri, 'GTiff', \
-        255, gdal.GDT_Byte, fill_value = 255)
-        distance_fn = compute_distance(i,j, cell_size)
-        geoprocessing.vectorize_datasets([I_uri, J_uri, tmp_visibility_uri], \
-        distance_fn, tmp_distance_uri, gdal.GDT_Float64, -1., cell_size, "union")
-        # Apply the valuation function
-        #tmp_viewshed_uri = geoprocessing.temporary_filename()
-        tmp_viewshed_uri = os.path.join(base_uri, 'viewshed_' + str(f) + '.tif')
-
-        geoprocessing.vectorize_datasets(
-            [tmp_distance_uri, tmp_visibility_uri],
-            valuation_function, tmp_viewshed_uri, gdal.GDT_Float64, -9999.0, cell_size,
-            "union")
-
-
-        # Multiply the viewshed by its coefficient
-        scaled_viewshed_uri = geoprocessing.temporary_filename()
-        #os.path.join(base_uri, 'vshed_' + str(f) + '.tif') #geoprocessing.temporary_filename()
-        apply_coefficient = multiply(coefficient)
-        geoprocessing.vectorize_datasets([tmp_viewshed_uri], apply_coefficient, \
-        scaled_viewshed_uri, gdal.GDT_Float64, 0., cell_size, "union")
-        viewshed_uri_list.append(scaled_viewshed_uri)
-
-    layer = None
-    shapefile = None
-    # Accumulate result to combined raster
-    def sum_rasters(*x):
-        return np.sum(x, axis = 0)
-    LOGGER.debug('Summing up everything using vectorize_datasets...')
-    LOGGER.debug('visibility_uri' + visibility_uri)
-    LOGGER.debug('viewshed_uri_list: ' + str(viewshed_uri_list))
-    geoprocessing.vectorize_datasets( \
-        viewshed_uri_list, sum_rasters, \
-        visibility_uri, gdal.GDT_Float64, -1., cell_size, "union", vectorize_op=False)
-
-def add_field_feature_set_uri(fs_uri, field_name, field_type):
-    shapefile = gdal.OpenEx(fs_uri, 1)
-    layer = shapefile.GetLayer()
-    new_field = ogr.FieldDefn(field_name, field_type)
-    layer.CreateField(new_field)
-    shapefile = None
-
-def add_id_feature_set_uri(fs_uri, id_name):
-    shapefile = gdal.OpenEx(fs_uri, 1)
-    message = "Failed to open " + fs_uri + ": can't add new field."
-    assert shapefile is not None, message
-    layer = shapefile.GetLayer()
-    new_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
-    layer.CreateField(new_field)
-
-    for feature_id in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_id)
-        feature.SetField(id_name, feature_id)
-        layer.SetFeature(feature)
-    shapefile = None
-
-def set_field_by_op_feature_set_uri(fs_uri, value_field_name, op):
-    shapefile = gdal.OpenEx(fs_uri, 1)
-    layer = shapefile.GetLayer()
-
-    for feature_id in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_id)
-        feature.SetField(value_field_name, op(feature))
-        layer.SetFeature(feature)
-    shapefile = None
-
-def get_count_feature_set_uri(fs_uri):
-    shapefile = gdal.OpenEx(fs_uri)
-    layer = shapefile.GetLayer()
-    count = layer.GetFeatureCount()
-    shapefile = None
-
-    return count
 
 def execute(args):
-    """Scenic Quality.
-
-    .. Warning::
-        The Scenic Quality model is under active development and is currently
-        unstable.
+    """Run the Scenic Quality Model.
 
     Parameters:
-        workspace_dir (string):  The selected folder is used as the workspace
-            where all intermediate and output files will be written. If the
-            selected folder does not exist, it will be created. If
-            datasets already exist in the selected folder, they will be
-            overwritten. (required)
-        aoi_uri (string):  An OGR-supported vector file.  This AOI instructs
-            the model where to clip the input data and the extent of analysis.
-            Users will create a polygon feature layer that defines their area of
-            interest. The AOI must intersect the Digital Elevation Model (DEM).
-            (required)
-        cell_size (float):  Length (in meters) of each side of the (square)
-            cell. (optional)
-        structure_uri (string):  An OGR-supported vector file.  The user
-            must specify a point feature layer that indicates locations of objects
-            that contribute to negative scenic quality, such as aquaculture
-            netpens or wave energy facilities. In order for the viewshed
-            analysis to run correctly, the projection of this input must be
-            consistent with the project of the DEM input. (required)
-        dem_uri (string):  A GDAL-supported raster file. An elevation raster
-            layer is required to conduct viewshed analysis. Elevation data allows the
-            model to determine areas within the AOI's land-seascape where point
-            features contributing to negative scenic quality are visible.
-            (required)
-        refraction (float):  The earth curvature correction option corrects
-            for the curvature of the earth and refraction of visible light in air.
-            Changes in air density curve the light downward causing an observer
-            to see further and the earth to appear less curved. While the
-            magnitude of this effect varies with atmospheric conditions, a
-            standard rule of thumb is that refraction of visible light reduces
-            the apparent curvature of the earth by one-seventh. By default, this
-            model corrects for the curvature of the earth and sets the
-            refractivity coefficient to 0.13. (required)
-        pop_uri (string):  A GDAL-supported raster file.  A population raster
-            layer is required to determine population within the AOI's land-seascape
-            where point features contributing to negative scenic quality are
-            visible and not visible. (optional)
-        overlap_uri (string):  An OGR-supported vector file.  The user has
-            the option of providing a polygon feature layer where they would like
-            to determine the impact of objects on visual quality. This input
-            must be a polygon and projected in meters. The model will use this
-            layer to determine what percent of the total area of each polygon
-            feature can see at least one of the point features impacting scenic
-            quality.optional
-        valuation_function (string): Either 'polynomial' or 'logarithmic'.
-            This field indicates the functional form f(x) the model will use
-            to value the visual impact for each viewpoint. For distances less
-            than 1 km (x<1), the model uses a linear form g(x) where the line
-            passes through f(1) (i.e. g(1) == f(1)) and extends to zero with
-            the same slope as f(1) (i.e. g'(x) == f'(1)). (optional)
-        a_coefficient (float):  First coefficient used either by the polynomial
-            or by the logarithmic valuation function. (required)
-        b_coefficient (float):  Second coefficient used either by the polynomial
-            or by the logarithmic valuation function. (required)
-        c_coefficient (float):  Third coefficient for the polynomial's quadratic
-            term. (required)
-        d_coefficient (float):  Fourth coefficient for the polynomial's
-            cubic exponent. (required)
-        max_valuation_radius (float):  Radius beyond which the valuation
-            is set to zero. The valuation function 'f' cannot be negative at the
-            radius 'r' (f(r)>=0). (required)
-
-    Returns:
-        ``None``
+        args['workspace_dir'] (string): (required) output directory for
+            intermediate, temporary, and final files.
+        args['aoi_path'] (string): (required) path to a vector that
+            indicates the area over which the model should be run.
+        args['structure_path'] (string): (required) path to a point vector
+            that has the features for the viewpoints. Optional fields:
+            'WEIGHT', 'RADIUS' / 'RADIUS2', 'HEIGHT'
+        args['keep_feat_viewsheds'] : a Boolean for whether individual feature
+            viewsheds should be saved to disk.
+        args['keep_val_viewsheds'] : a Boolean for whether individual feature
+            viewsheds that have been adjusted for valuation should be saved
+            to disk.
+        args['dem_path'] (string): (required) path to a digital elevation model
+            raster.
+        args['refraction'] (float): (optional) number indicating the refraction
+            coefficient to use for calculating curvature of the earth.
+        args['population_path'] (string): (optional) path to a raster for
+            population data.
+        args['overlap_path'] (string): (optional) path to a polygon shapefile.
+        args['results_suffix] (string): (optional) string to append to any
+            output file.
+        args['valuation_function'] (int): type of economic function to use
+            for valuation. Either 3rd degree polynomial (0), logarithmic (1) or
+            exponential decay (2).
+        args['poly_a_coef'] (float): 1st coefficient for polynomial function.
+        args['poly_b_coef'] (float): 2nd coefficient for polynomial function.
+        args['poly_c_coef'] (float): 3rd coefficient for polynomial function.
+        args['poly_d_coef'] (float): 4th coefficient for polynomial function.
+        args['log_a_coef'] (float): 1st coefficient for logarithmic function.
+        args['log_b_coef'] (float): 2nd coefficient for logarithmic function.
+        args['exp_a_coef'] (float): 1st coefficient for exponential function.
+        args['exp_b_coef'] (float): 2nd coefficient for exponential function.
+        args['max_valuation_radius'] (float): (required) distance in
+            meters for maximum radius of valuation calculations.
     """
     LOGGER.info("Start Scenic Quality Model")
 
-    #create copy of args
-    aq_args=args.copy()
-    for float_key in ('cell_size', 'refraction', 'a_coefficient',
-                      'b_coefficient', 'c_coefficient', 'd_coefficient',
-                      'max_valuation_radius'):
-        try:
-            aq_args[float_key] = float(aq_args[float_key])
-        except (KeyError, ValueError):
-            LOGGER.debug('Key %s not in args or could not be cast to float',
-                         float_key)
+    # Check that the Validation container is selected since the UI can not
+    val_ordinal = args['valuation_function']
+    val_containers = {
+        '0': 'polynomial_container', '1': 'log_container',
+        '2': 'exponential_container'}
 
-    #validate input
-    LOGGER.debug("Validating parameters.")
-    dem_cell_size=geoprocessing.get_cell_size_from_uri(args['dem_uri'])
-    LOGGER.debug("DEM cell size: %f" % dem_cell_size)
-    if "cell_size" in aq_args:
-        if aq_args['cell_size'] < dem_cell_size:
-            raise ValueError, "The cell size cannot be downsampled below %f" % dem_cell_size
-    else:
-        aq_args['cell_size'] = dem_cell_size
+    if args[val_containers[val_ordinal]] == False:
+        raise ValuationContainerError(
+            'The container for the selected valuation functions '
+            'coefficients was not selected.')
 
-    intermediate_dir = os.path.join(aq_args['workspace_dir'], 'intermediate')
-    if not os.path.isdir(intermediate_dir):
-        os.makedirs(intermediate_dir)
+    # Create output and intermediate directory
+    output_dir = os.path.join(args['workspace_dir'], 'output')
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    viewshed_dir = os.path.join(intermediate_dir, 'viewpoint_rasters')
+    pygeoprocessing.create_directories(
+        [output_dir, intermediate_dir, viewshed_dir])
 
-    output_dir = os.path.join(aq_args['workspace_dir'], 'output')
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir)
+    file_suffix = natcap.invest.utils.make_suffix_string(
+        args, 'results_suffix')
 
-    #local variables
-    LOGGER.debug("Setting local variables.")
-    z_factor=1
-    curvature_correction=aq_args['refraction']
+    LOGGER.info('Building file registry')
+    file_registry = natcap.invest.utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir),
+         (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    #intermediate files
-    aoi_dem_uri=os.path.join(intermediate_dir,"aoi_dem.shp")
-    aoi_pop_uri=os.path.join(intermediate_dir,"aoi_pop.shp")
+    dem_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(args['dem_path'])
+    # Reproject AOI to DEM to clip DEM by AOI.
+    pygeoprocessing.reproject_datasource_uri(
+        args['aoi_path'], dem_wkt, file_registry['aoi_proj_dem_path'])
 
-    viewshed_dem_uri=os.path.join(intermediate_dir,"dem_vs.tif")
-    viewshed_dem_reclass_uri=os.path.join(intermediate_dir,"dem_vs_re.tif")
+    # Clip DEM by AOI
+    pygeoprocessing.clip_dataset_uri(
+        args['dem_path'], file_registry['aoi_proj_dem_path'],
+        file_registry['clipped_dem_path'], assert_projections=False)
 
-    pop_clip_uri=os.path.join(intermediate_dir,"pop_clip.tif")
-    pop_prj_uri=os.path.join(intermediate_dir,"pop_prj.tif")
-    pop_vs_uri=os.path.join(intermediate_dir,"pop_vs.tif")
+    # Reproject AOI to viewpoint structures in order to clip
+    structures_srs = pygeoprocessing.get_spatial_ref_uri(
+        args['structure_path'])
+    structures_wkt = structures_srs.ExportToWkt()
+    pygeoprocessing.reproject_datasource_uri(
+        args['aoi_path'], structures_wkt,
+        file_registry['aoi_proj_struct_path'])
 
-    viewshed_reclass_uri=os.path.join(intermediate_dir,"vshed_bool.tif")
-    viewshed_polygon_uri=os.path.join(intermediate_dir,"vshed.shp")
+    # Clip viewpoint structures by AOI
+    clip_datasource_layer(
+        args['structure_path'], file_registry['aoi_proj_struct_path'],
+        file_registry['structures_clipped_path'])
 
-    #outputs
-    viewshed_uri=os.path.join(output_dir,"vshed.tif")
-    viewshed_quality_uri=os.path.join(output_dir,"vshed_qual.tif")
-    pop_stats_uri=os.path.join(output_dir,"populationStats.html")
-    overlap_uri=os.path.join(output_dir,"vp_overlap.shp")
+    aoi_srs = pygeoprocessing.get_spatial_ref_uri(args['aoi_path'])
+    aoi_wkt = aoi_srs.ExportToWkt()
+    # Project viewpoint structures to AOI
+    pygeoprocessing.reproject_datasource_uri(
+        file_registry['structures_clipped_path'], aoi_wkt,
+        file_registry['structures_projected_path'])
 
-    #determining best data type for viewshed
-    features = get_count_feature_set_uri(aq_args['structure_uri'])
-    if features < 2 ** 16:
-        viewshed_type = gdal.GDT_UInt16
-        viewshed_nodata = (2 ** 16) - 1
-    elif features < 2 ** 32:
-        viewshed_type = gdal.GDT_UInt32
-        viewshed_nodata = (2 ** 32) - 1
-    else:
-        raise ValueError, "Too many structures."
+    pixel_size = projected_pixel_size(
+        file_registry['clipped_dem_path'], aoi_srs)
 
-    #clip DEM by AOI and reclass
-    LOGGER.info("Clipping DEM by AOI.")
+    LOGGER.debug('Projected Pixel Size: %s', pixel_size)
 
-    LOGGER.debug("Projecting AOI for DEM.")
-    dem_wkt = geoprocessing.get_dataset_projection_wkt_uri(aq_args['dem_uri'])
-    geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'], dem_wkt, aoi_dem_uri)
+    # Project DEM to AOI
+    pygeoprocessing.reproject_dataset_uri(
+        file_registry['clipped_dem_path'], pixel_size, aoi_wkt,
+        'bilinear', file_registry['dem_proj_to_aoi_path'])
 
-    LOGGER.debug("Clipping DEM by projected AOI.")
-    LOGGER.debug("DEM: %s, AIO: %s", aq_args['dem_uri'], aoi_dem_uri)
-    geoprocessing.clip_dataset_uri(aq_args['dem_uri'], aoi_dem_uri, viewshed_dem_uri, False)
+    # Read in valuation coefficients
+    val_coeffs = {'0': 'poly', '1': 'log', '2': 'exp'}
+    coef_a = float(args['%s_a_coeff' % val_coeffs[val_ordinal]])
+    coef_b = float(args['%s_b_coeff' % val_coeffs[val_ordinal]])
 
-    LOGGER.info("Reclassifying DEM to account for water at sea-level and resampling to specified cell size.")
-    LOGGER.debug("Reclassifying DEM so negative values zero and resampling to save on computation.")
+    # If 3rd degree polynomial, get the other two coefficients
+    if val_ordinal == '0':
+        coef_c = float(args['poly_c_coeff'])
+        coef_d = float(args['poly_d_coeff'])
 
-    nodata_dem = geoprocessing.get_nodata_from_uri(aq_args['dem_uri'])
+    max_val_radius = float(args['max_valuation_radius'])
 
-    def no_zeros(value):
-        if value == nodata_dem:
-            return nodata_dem
-        elif value < 0:
-            return 0
-        else:
-            return value
+    def polynomial_val(dist, weight):
+        """Third Degree Polynomial Valuation function.
 
-    geoprocessing.vectorize_datasets([viewshed_dem_uri],
-                                    no_zeros,
-                                    viewshed_dem_reclass_uri,
-                                    get_data_type_uri(viewshed_dem_uri),
-                                    nodata_dem,
-                                    aq_args["cell_size"],
-                                    "union")
+        This represents equation 2 in the User Guide with the added weighted
+        factor.
 
-    #calculate viewshed
-    LOGGER.info("Calculating viewshed.")
-    compute_viewshed_uri(viewshed_dem_reclass_uri,
-             viewshed_uri,
-             aq_args['structure_uri'],
-             curvature_correction,
-             aq_args['refraction'],
-             aq_args)
+        Parameters:
+            dist (numpy.array): pixels are distances to a viewpoint.
+            weight (numpy.array): pixels are constant weight values used to
+                scale the valuation output
 
-    LOGGER.info("Ranking viewshed.")
-    #rank viewshed
-    quantile_list = [25,50,75,100]
-    LOGGER.debug('reclassify input %s', viewshed_uri)
-    LOGGER.debug('reclassify output %s', viewshed_quality_uri)
-    reclassify_quantile_dataset_uri(viewshed_uri,
-                                    quantile_list,
-                                    viewshed_quality_uri,
-                                    viewshed_type,
-                                    viewshed_nodata)
-
-    if "pop_uri" in args:
-        #tabulate population impact
-        LOGGER.info("Tabulating population impact.")
-        LOGGER.debug("Tabulating unaffected population.")
-        nodata_pop = geoprocessing.get_nodata_from_uri(aq_args["pop_uri"])
-        LOGGER.debug("The no data value for the population raster is %s.", str(nodata_pop))
-        nodata_viewshed = geoprocessing.get_nodata_from_uri(viewshed_uri)
-        LOGGER.debug("The no data value for the viewshed raster is %s.", str(nodata_viewshed))
-
-        #clip population
-        LOGGER.debug("Projecting AOI for population raster clip.")
-        pop_wkt = geoprocessing.get_dataset_projection_wkt_uri(aq_args['pop_uri'])
-        geoprocessing.reproject_datasource_uri(aq_args['aoi_uri'],
-                                              pop_wkt,
-                                              aoi_pop_uri)
-
-        LOGGER.debug("Clipping population raster by projected AOI.")
-        geoprocessing.clip_dataset_uri(aq_args['pop_uri'],
-                                      aoi_pop_uri,
-                                      pop_clip_uri,
-                                      False)
-
-        #reproject clipped population
-        LOGGER.debug("Reprojecting clipped population raster.")
-        vs_wkt = geoprocessing.get_dataset_projection_wkt_uri(viewshed_uri)
-        reproject_dataset_uri(pop_clip_uri,
-                                           vs_wkt,
-                                           pop_prj_uri,
-                                           get_data_type_uri(pop_clip_uri))
-
-        #align and resample population
-        def copy(value1, value2):
-            if value2 == nodata_viewshed:
-                return nodata_pop
-            else:
-                return value1
-
-        LOGGER.debug("Resampling and aligning population raster.")
-        geoprocessing.vectorize_datasets([pop_prj_uri, viewshed_uri],
-                                       copy,
-                                       pop_vs_uri,
-                                       get_data_type_uri(pop_prj_uri),
-                                       nodata_pop,
-                                       aq_args["cell_size"],
-                                       "intersection",
-                                       ["bilinear", "bilinear"],
-                                       1)
-
-        pop = gdal.OpenEx(pop_vs_uri)
-        pop_band = pop.GetRasterBand(1)
-        vs = gdal.OpenEx(viewshed_uri)
-        vs_band = vs.GetRasterBand(1)
-
-        affected_pop = 0
-        unaffected_pop = 0
-        for row_index in range(vs_band.YSize):
-            pop_row = pop_band.ReadAsArray(0, row_index, pop_band.XSize, 1)
-            vs_row = vs_band.ReadAsArray(0, row_index, vs_band.XSize, 1).astype(np.float64)
-
-            pop_row[pop_row == nodata_pop]=0.0
-            vs_row[vs_row == nodata_viewshed]=-1
-
-            affected_pop += np.sum(pop_row[vs_row > 0])
-            unaffected_pop += np.sum(pop_row[vs_row == 0])
-
-        pop_band = None
-        pop = None
-        vs_band = None
-        vs = None
-
-        table="""
-        <html>
-        <title>Marine InVEST</title>
-        <center><H1>Scenic Quality Model</H1><H2>(Visual Impact from Objects)</H2></center>
-        <br><br><HR><br>
-        <H2>Population Statistics</H2>
-
-        <table border="1", cellpadding="0">
-        <tr><td align="center"><b>Number of Features Visible</b></td><td align="center"><b>Population (estimate)</b></td></tr>
-        <tr><td align="center">None visible<br> (unaffected)</td><td align="center">%i</td>
-        <tr><td align="center">1 or more<br>visible</td><td align="center">%i</td>
-        </table>
-        </html>
+        Returns:
+            numpy.array
         """
+        # Based off of Equation 2 in the Users Guide
+        return numpy.where(
+            (dist != nodata) & (weight != nodata),
+            ((coef_a + coef_b * dist + coef_c * dist**2 +
+                coef_d * dist**3) * weight),
+            nodata)
 
-        outfile = open(pop_stats_uri, 'w')
-        outfile.write(table % (unaffected_pop, affected_pop))
-        outfile.close()
+    def log_val(dist, weight):
+        """Logarithmic Valuation function.
 
-    #perform overlap analysis
-    LOGGER.info("Performing overlap analysis.")
+        This represents equation 1 in the User Guide with the added weighted
+        factor.
 
-    LOGGER.debug("Reclassifying viewshed")
+        Parameters:
+            dist (numpy.array): pixels are distances to a viewpoint.
+            weight (numpy.array): pixels are constant weight values used to
+                scale the valuation output
 
-    nodata_vs_bool = 0
-    def non_zeros(value):
-        if value == nodata_vs_bool:
-            return nodata_vs_bool
-        elif value > 0:
-            return 1
+        Returns:
+            numpy.array
+        """
+        # Based off of Equation 1 in the Users Guide
+        return numpy.where(
+            (dist != nodata) & (weight != nodata),
+            (coef_a + coef_b * numpy.log(dist)) * weight,
+            nodata)
+
+    def exp_val(dist, weight):
+        """Exponential Decay Valuation function.
+
+        This represents equation X in the User Guide with the added weighted
+        factor.
+
+        Parameters:
+            dist (numpy.array): pixels are distances to a viewpoint.
+            weight (numpy.array): pixels are constant weight values used to
+                scale the valuation output
+
+        Returns:
+            numpy.array
+        """
+        return numpy.where(
+            (dist != nodata) & (weight != nodata),
+            (coef_a * numpy.exp(-coef_b * dist)) * weight,
+            nodata)
+
+    def add_op(raster_one, raster_two):
+        """Aggregate valuation matrices.
+
+        Sums all non-nodata values.
+
+        Parameters:
+            raster_one (numpy.array): values to aggregate with raster_two
+            raster_two (numpy.array): values to aggregate with raster_one
+
+        Returns:
+            numpy.array where the pixel value represents the combined
+                pixel values found across the two matrices.
+        """
+        raster_one[raster_one == nodata] = 0
+        raster_two[raster_two == nodata] = 0
+        return raster_one + raster_two
+
+    # Determine which valuation operation to use based on user input
+    val_functs = {'0': polynomial_val, '1': log_val, '2': exp_val}
+    val_op = val_functs[args["valuation_function"]]
+
+    viewpoints_vector = ogr.Open(file_registry['structures_projected_path'])
+
+    # Get the 'yes' or 'no' responses for whether the individual viewpoint
+    # rasters should be kept
+    keep_viewsheds = args['keep_feat_viewsheds']
+    keep_val_viewsheds = args['keep_val_viewsheds']
+
+    include_curvature = True
+    try:
+        curvature_correction = float(args['refraction'])
+    except ValueError:
+        # If refraction is not present, set to 0 and set include curvature
+        # to False
+        curvature_correction = 0.0
+        include_curvature = False
+
+    # An indicator if any previous viewpoints have been calculated
+    initial_viewpoint = True
+
+    for layer in viewpoints_vector:
+        num_features = layer.GetFeatureCount()
+
+        # Create lists of temporary files for the number of viewpoint features
+        # This will be used to aggregate the current viewpoint rasters to the
+        # previous ones on the fly.
+        feat_val_paths = []
+        feat_views_paths = []
+        for feat_num in xrange(num_features - 1):
+            val_path = pygeoprocessing.temporary_filename()
+            feat_val_paths.append(val_path)
+            feat_path = pygeoprocessing.temporary_filename()
+            feat_views_paths.append(feat_path)
+
+        # The last filenames in the lists should be the aggregated output paths
+        feat_val_paths.append(file_registry['viewshed_valuation_path'])
+        feat_views_paths.append(file_registry['viewshed_path'])
+
+        for index, point in enumerate(layer):
+            geometry = point.GetGeometryRef()
+            feature_id = point.GetFID()
+
+            # Coordinates in map units to pass to viewshed algorithm
+            geom_x, geom_y = geometry.GetX(), geometry.GetY()
+
+            max_radius = float('inf')
+            # RADIUS is the suggested value for InVEST Scenic Quality
+            # RADIUS2 is for users coming from ArcGIS's viewshed.
+            # Assume positive infinity if neither field is provided.
+            for fieldname in ['RADIUS', 'RADIUS2']:
+                try:
+                    max_radius = math.fabs(point.GetField(fieldname))
+                    break
+                except ValueError:
+                    # When this field is not present.
+                    pass
+
+            try:
+                viewpoint_height = math.fabs(point.GetField('HEIGHT'))
+            except ValueError:
+                # When height field is not present, assume height of 0.0
+                viewpoint_height = 0.0
+
+            try:
+                weight = point.GetField('WEIGHT')
+            except ValueError:
+                # When no weight provided, set scale to 1
+                weight = 1.0
+
+            LOGGER.debug(('Processing viewpoint %s of %s (FID %s). '
+                          'Radius:%s, Height:%s, Weight:%s'),
+                         index, num_features, feature_id, max_radius,
+                         viewpoint_height, weight)
+
+            viewshed_filepath = os.path.join(
+                viewshed_dir, 'viewshed_%s.tif' % index)
+
+            try:
+                pygeoprocessing.viewshed(
+                    file_registry['dem_proj_to_aoi_path'], (geom_x, geom_y),
+                    viewshed_filepath, None, include_curvature,
+                    curvature_correction, max_radius, viewpoint_height)
+            except ValueError:
+                # When pixel is over nodata and we told it to skip
+                LOGGER.info('Viewpoint %s is over nodata, skipping.', index)
+                # If this happens we want to continue and re-organize our
+                # file lists a bit
+                if not initial_viewpoint:
+                    if num_features - 1 == index:
+                        # Skipping last feature means our final outputs are
+                        # the previous aggregated ones. Copy to final file path
+                        shutil.copy(feat_val_paths[index - 1],
+                                    feat_val_paths[index])
+                        shutil.copy(feat_views_paths[index - 1],
+                                    feat_views_paths[index])
+                        os.remove(feat_vals_paths[index - 1])
+                        os.remove(feat_views_paths[index - 1])
+                    else:
+                        # NOTE: not removing index - 1 files because they
+                        # are empty and cleaned up on model exit
+                        feat_val_paths[index] = feat_val_paths[index - 1]
+                        feat_views_paths[index] = feat_views_paths[index - 1]
+                continue
+
+            # Create temporary point shapefile from geometry of feature
+            if os.path.isfile(file_registry['single_point_path']):
+                driver = ogr.GetDriverByName('ESRI Shapefile')
+                driver.DeleteDataSource(file_registry['single_point_path'])
+
+            output_driver = ogr.GetDriverByName('ESRI Shapefile')
+            output_datasource = output_driver.CreateDataSource(
+                file_registry['single_point_path'])
+            layer_name = 'viewpoint'
+            output_layer = output_datasource.CreateLayer(
+                    layer_name, aoi_srs, ogr.wkbPoint)
+
+            output_field = ogr.FieldDefn('view_ID', ogr.OFTReal)
+            output_layer.CreateField(output_field)
+
+            tmp_geom = ogr.Geometry(ogr.wkbPoint)
+            tmp_geom.AddPoint_2D(geom_x, geom_y)
+
+            output_feature = ogr.Feature(output_layer.GetLayerDefn())
+            output_layer.CreateFeature(output_feature)
+
+            field_index = output_feature.GetFieldIndex('view_ID')
+            output_feature.SetField(field_index, 1)
+
+            output_feature.SetGeometryDirectly(tmp_geom)
+            output_layer.SetFeature(output_feature)
+            output_feature = None
+            output_layer = None
+            output_datasource = None
+
+            nodata = pygeoprocessing.get_nodata_from_uri(viewshed_filepath)
+            cell_size = pygeoprocessing.get_cell_size_from_uri(
+                viewshed_filepath)
+            weighted_view_path = pygeoprocessing.temporary_filename()
+
+            def weight_factor_op(view):
+                """Scale raster by weight value.
+
+                Parameters:
+                    view (numpy.array): array to scale
+
+                Returns:
+                    numpy.array with view values multiplied by weight
+                """
+                return numpy.where(view != nodata, view * weight, nodata)
+
+            if weight != 1.0:
+                # Multiply viewpoints by the scalar weight
+                pygeoprocessing.vectorize_datasets(
+                    [viewshed_filepath], weight_factor_op, weighted_view_path,
+                    gdal.GDT_Float32, nodata, cell_size, 'intersection',
+                    vectorize_op=False)
+            else:
+                # Weight was not provided or set to 1.0
+                shutil.copy(viewshed_filepath, weighted_view_path)
+
+            # Create a new raster and burn viewpoint feature onto it
+            burned_feat_path = pygeoprocessing.temporary_filename()
+            dist_pixel_path = pygeoprocessing.temporary_filename()
+
+            pygeoprocessing.new_raster_from_base_uri(
+                viewshed_filepath, burned_feat_path, 'GTiff', nodata,
+                gdal.GDT_Float32, fill_value=0.0)
+            pygeoprocessing.rasterize_layer_uri(
+                burned_feat_path, file_registry['single_point_path'],
+                burn_values=[1.0], option_list=["ALL_TOUCHED=TRUE"])
+            # Do a distance transform on viewpoint raster
+            pygeoprocessing.distance_transform_edt(
+                burned_feat_path, dist_pixel_path, process_pool=None)
+
+            dist_nodata = pygeoprocessing.get_nodata_from_uri(dist_pixel_path)
+
+            def dist_op(dist):
+                """Convert pixel distances to meter distances.
+
+                Parameters:
+                    dist (numpy.array): array of distances in pixels
+
+                Returns:
+                    numpy.array with distances in meters
+                """
+                valid_mask = (dist != dist_nodata)
+                # There will be a pixel of zero distance that represents the
+                # viewpoint other distances are calculated from. Set this to
+                # 1.0, to avoid valuation function calculations of 0.0
+                # CONFIRM this is the correct behavior
+                dist_cell_size = numpy.where(
+                    dist[valid_mask] != 0.0, dist[valid_mask] * cell_size, 1.0)
+
+                dist_final = numpy.empty(valid_mask.shape)
+                dist_final[:] = nodata
+                dist_final[valid_mask] = dist_cell_size
+                return dist_final
+
+            dist_meters_path = pygeoprocessing.temporary_filename()
+
+            pygeoprocessing.vectorize_datasets(
+                [dist_pixel_path], dist_op, dist_meters_path,
+                gdal.GDT_Float32, nodata, cell_size, 'intersection',
+                vectorize_op=False)
+
+            vshed_val_path = os.path.join(
+                viewshed_dir, 'val_viewshed_%s.tif' % index)
+            # Run valuation equation on distance raster
+            pygeoprocessing.vectorize_datasets(
+                [dist_meters_path, weighted_view_path], val_op, vshed_val_path,
+                gdal.GDT_Float32, nodata, cell_size, 'intersection',
+                vectorize_op=False)
+
+            if initial_viewpoint:
+                # First time having computed on a viewpoint, nothing else
+                # to aggregate with yet. Copy files into the aggregate list
+                initial_viewpoint = False
+                shutil.copy(vshed_val_path, feat_val_paths[index])
+                shutil.copy(viewshed_filepath, feat_views_paths[index])
+
+            else:
+                for file_path, out_list in zip(
+                        [vshed_val_path, viewshed_filepath],
+                        [feat_val_paths, feat_views_paths]):
+
+                    pygeoprocessing.vectorize_datasets(
+                        [file_path, out_list[index - 1]], add_op,
+                        out_list[index], gdal.GDT_Float32, nodata, cell_size,
+                        'intersection', vectorize_op=False,
+                        datasets_are_pre_aligned=True)
+
+                    # No longer need the previous raster tracking accumalation.
+                    os.remove(out_list[index - 1])
+
+            tmp_files_remove = [
+                dist_pixel_path, dist_meters_path, weighted_view_path,
+                burned_feat_path]
+            for tmp_file in tmp_files_remove:
+                os.remove(tmp_file)
+            # Remove temporary viewpoint feature shapefile
+            driver = ogr.GetDriverByName('ESRI Shapefile')
+            driver.DeleteDataSource(file_registry['single_point_path'])
+
+            if keep_val_viewsheds == 'No':
+                os.remove(vshed_val_path)
+            if keep_viewsheds == 'No':
+                os.remove(viewshed_filepath)
+
+    layer = None
+    viewpoints_vector = None
+
+    # Do quantiles on viewshed_uri
+    percentile_list = [25, 50, 75, 100]
+
+    # Set 0 values to nodata before calculating percentiles, since 0 values
+    # indicate there was no viewpoint effects
+
+    def zero_to_nodata(view):
+        """Mask 0 values to nodata."""
+        return numpy.where(view == 0., nodata, view)
+
+    pygeoprocessing.vectorize_datasets(
+        [file_registry['viewshed_valuation_path']], zero_to_nodata,
+        file_registry['viewshed_no_zeros_path'], gdal.GDT_Int32, nodata,
+        cell_size, 'intersection', assert_datasets_projected=False,
+        vectorize_op=False)
+
+    def raster_percentile(band):
+        """Operation to use in vectorize_datasets.
+
+        Takes the pixels of 'band' and groups them together based on
+            their percentile ranges.
+        Parameters:
+            band (numpy.array): A gdal raster band
+        Returns:
+            An integer that places each pixel into a group
+        """
+        return bisect(percentiles, band)
+
+    # Get the percentile values for each percentile
+    percentiles = calculate_percentiles_from_raster(
+        file_registry['viewshed_no_zeros_path'], percentile_list)
+
+    LOGGER.debug('percentiles_list : %s', percentiles)
+
+    # Add the start_value to the beginning of the percentiles so that any value
+    # before the start value is set to nodata
+    percentiles.insert(0, 0)
+
+    # Set nodata to a very small negative number
+    percentile_nodata = -9999919
+
+    # Classify the pixels of raster_dataset into groups and write
+    # them to output
+    pygeoprocessing.vectorize_datasets(
+        [file_registry['viewshed_no_zeros_path']], raster_percentile,
+        file_registry['viewshed_quality_path'], gdal.GDT_Int32,
+        percentile_nodata, cell_size, 'intersection',
+        assert_datasets_projected=False)
+
+    if 'pop_path' in args:
+        # Project AOI to Population to clip Population raster
+        pop_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
+            args['pop_path'])
+        pygeoprocessing.reproject_datasource_uri(
+            args['aoi_path'], pop_wkt, file_registry['aoi_proj_pop_path'])
+        # Clip Population by AOI
+        pygeoprocessing.clip_dataset_uri(
+            args['pop_path'], file_registry['aoi_proj_pop_path'],
+            file_registry['clipped_pop_path'], False)
+
+        pop_cell_size = projected_pixel_size(
+                file_registry['clipped_pop_path'], aoi_srs)
+
+        # Project Population to AOI
+        pygeoprocessing.reproject_dataset_uri(
+            file_registry['clipped_pop_path'], pop_cell_size, aoi_wkt,
+            'nearest', file_registry['pop_proj_to_aoi_path'])
+
+        # Dataset lists for rasters to align and the aligned paths
+        dataset_uri_list = [file_registry['pop_proj_to_aoi_path'],
+                            file_registry['viewshed_path']]
+        dataset_out_uri_list = [file_registry['aligned_pop_path'],
+                                file_registry['aligned_viewshed_path']]
+        resample_method_list = ['nearest', 'nearest']
+
+        # Set a factor value which is a holder for the ratio between
+        # pop_cell_size and viewshed cell size
+        cell_size_factor = 1
+
+        if cell_size >= pop_cell_size:
+            # Viewshed cell size is bigger, so use pop cell size
+            # to resample viewshed_count raster
+            out_pixel_size = pop_cell_size
         else:
-            return nodata_vs_bool
+            # Viewshed cell size is smaller, so use it's cell size
+            # to resample population raster
+            out_pixel_size = cell_size
+            # Set cell_size_factor to the ratio between cell sizes, so that
+            # we can later maintain population data integrity.
+            cell_size_factor = pop_cell_size**2 / viewshed_cell_size**2
 
-    geoprocessing.vectorize_datasets([viewshed_uri],
-                                    non_zeros,
-                                    viewshed_reclass_uri,
-                                    gdal.GDT_Byte,
-                                    nodata_vs_bool,
-                                    aq_args["cell_size"],
-                                    "union")
+        pygeoprocessing.align_dataset_list(
+            dataset_uri_list, dataset_out_uri_list, resample_method_list,
+            out_pixel_size, 'intersection', 1,
+            dataset_to_bound_index=None, aoi_uri=args['aoi_path'],
+            assert_datasets_projected=True, all_touched=False)
 
-    if "overlap_uri" in aq_args:
-        LOGGER.debug("Copying overlap analysis features.")
-        geoprocessing.copy_datasource_uri(aq_args["overlap_uri"], overlap_uri)
+        pop_nodata = pygeoprocessing.get_nodata_from_uri(
+            file_registry['aligned_pop_path'])
+
+        def pop_affected_op(pop, view):
+            """Compute affected population."""
+            valid_mask = ((pop != pop_nodata) & (view != nodata))
+
+            pop_places = numpy.where(view[valid_mask] > 0, pop[valid_mask], 0)
+            pop_final = numpy.empty(valid_mask.shape)
+            pop_final[:] = nodata
+            pop_final[valid_mask] = pop_places
+            return pop_final
+
+        def pop_unaffected_op(pop, view):
+            """Compute unaffected population."""
+            valid_mask = ((pop != pop_nodata))
+
+            pop_places = numpy.where(view[valid_mask] == 0, pop[valid_mask], 0)
+            pop_final = numpy.empty(valid_mask.shape)
+            pop_final[:] = nodata
+            pop_final[valid_mask] = pop_places
+            return pop_final
+
+        pygeoprocessing.vectorize_datasets(
+            [file_registry['aligned_pop_path'],
+             file_registry['aligned_viewshed_path']],
+            pop_affected_op, file_registry['pop_affected_path'],
+            gdal.GDT_Float32, nodata, out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        pygeoprocessing.vectorize_datasets(
+            [file_registry['aligned_pop_path'],
+             file_registry['aligned_viewshed_path']],
+            pop_unaffected_op, file_registry['pop_unaffected_path'],
+            gdal.GDT_Float32, nodata, out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        # Count up the affected population values
+        affected_sum = 0
+        affected_count = 0
+        for _, block in pygeoprocessing.iterblocks(
+                file_registry['pop_affected_path']):
+
+            valid_mask = (block != nodata)
+            affected_count += numpy.sum(valid_mask)
+            affected_sum += numpy.sum(block[valid_mask])
+        # Count up the unaffected population values
+        unaffected_sum = 0
+        unaffected_count = 0
+        for _, block in pygeoprocessing.iterblocks(
+                file_registry['pop_unaffected_path']):
+
+            valid_mask = (block != nodata)
+            unaffected_count += numpy.sum(valid_mask)
+            unaffected_sum += numpy.sum(block[valid_mask])
+
+        if args['pop_type'] == "Density":
+            # If population raster is population density per area then
+            # adjust sums to reflect as much, to get in correct units
+            cell_area = out_pixel_size**2
+            affected_sum = affected_sum * (affected_count * cell_area)
+            unaffected_sum = unaffected_sum * (unaffected_count * cell_area)
+        else:
+            # If population raster is population counts per cell then
+            # we need to adjust counts by any resampling so we don't
+            # double count
+            affected_sum = affected_sum / cell_size_factor
+            unaffected_sum = unaffected_sum / cell_size_factor
+
+        # Create output HTML file for population stats
+        header = ("<center><H1>Scenic Quality Model</H1>"
+                  "<H2>(Visual Impact from Objects)</H2></center>"
+                  "<br><br><HR><br><H2>Population Statistics</H2>")
+        page_header = {'type': 'text', 'section': 'head', 'text': header}
+
+        table_data = [
+            {'Number of Features Visible': 'None Visible',
+             'Population (estimate)': unaffected_sum},
+            {'Number of Features Visible': '1 or more Visible',
+             'Population (estimate)': affected_sum}]
+        table_columns = [
+            {'name': 'Number of Features Visible', 'total': False},
+            {'name': 'Population (estimate)', 'total': False}]
+        table_args = {
+            'type': 'table', 'section': 'body', 'data_type': 'dictionary',
+            'data': table_data, 'columns': table_columns, 'sortable': False}
+
+        report_args = {}
+        report_args['title'] = 'Marine InVEST'
+        report_args['out_uri'] = file_registry['pop_stats_path']
+        report_args['elements'] = [table_args]
+
+        natcap.invest.reporting.generate_report(report_args)
+
+    if "overlap_path" in args:
+        # Project AOI to overlap vector to clip
+        overlap_srs = pygeoprocessing.get_spatial_ref_uri(args['overlap_path'])
+        overlap_wkt = overlap_srs.ExportToWkt()
+        pygeoprocessing.reproject_datasource_uri(
+            args['aoi_path'], overlap_wkt,
+            file_registry['aoi_proj_overlap_path'])
+        # Clip overlap vector by AOI
+        clip_datasource_layer(
+            args['overlap_path'], file_registry['aoi_proj_overlap_path'],
+            file_registry['overlap_clipped_path'])
+
+        # Project overlap to AOI
+        pygeoprocessing.reproject_datasource_uri(
+            file_registry['overlap_clipped_path'], aoi_wkt,
+            file_registry['overlap_projected_path'])
 
         LOGGER.debug("Adding id field to overlap features.")
-        id_name = "investID"
-        add_id_feature_set_uri(overlap_uri, id_name)
-
-        LOGGER.debug("Add area field to overlap features.")
-        area_name = "overlap"
-        add_field_feature_set_uri(overlap_uri, area_name, ogr.OFTReal)
+        id_name = 'investID'
+        setup_overlap_id_fields(
+            file_registry['overlap_projected_path'], id_name)
 
         LOGGER.debug("Count overlapping pixels per area.")
-        values = geoprocessing.aggregate_raster_values_uri(
-            viewshed_reclass_uri, overlap_uri, id_name, ignore_nodata=True).total
+        pixel_counts = pygeoprocessing.aggregate_raster_values_uri(
+            file_registry['viewshed_no_zeros_path'],
+            file_registry['overlap_projected_path'], id_name,
+            ignore_nodata=True, all_touched=True).n_pixels
 
-        def calculate_percent(feature):
-            if feature.GetFieldAsInteger(id_name) in values:
-                return (values[feature.GetFieldAsInteger(id_name)] * \
-                aq_args["cell_size"]) / feature.GetGeometryRef().GetArea()
-            else:
-                return 0
+        LOGGER.debug("Pixel Counts: %s", pixel_counts)
+        LOGGER.debug("Add area field to overlap features.")
+        perc_field = '%_overlap'
+        add_percent_overlap(
+            file_registry['overlap_projected_path'], id_name, perc_field,
+            pixel_counts, cell_size)
 
-        LOGGER.debug("Set area field values.")
-        set_field_by_op_feature_set_uri(overlap_uri, area_name, calculate_percent)
+    LOGGER.info('deleting temporary files')
+    for file_id in _TMP_BASE_FILES:
+        try:
+            if isinstance(file_registry[file_id], basestring):
+                if os.path.splitext(file_registry[file_id])[1] == '.shp':
+                    driver = ogr.GetDriverByName('ESRI Shapefile')
+                    driver.DeleteDataSource(file_registry[file_id])
+                else:
+                    os.remove(file_registry[file_id])
+            elif isinstance(file_registry[file_id], list):
+                for index in xrange(len(file_registry[file_id])):
+                    os.remove(file_registry[file_id][index])
+        except OSError:
+            # Let it go.
+            pass
 
 
-@validation.invest_validator
-def validate(args, limit_to=None):
-    """Validate an input dictionary for Scenic Quality.
+def setup_overlap_id_fields(shapefile_path, id_name):
+    """Add field to shapefile with unique values.
 
     Parameters:
-        args (dict): The args dictionary.
-        limit_to=None (str or None): If a string key, only this args parameter
-            will be validated.  If ``None``, all args parameters will be
-            validated.
+        shapefile_path (string): path to a shapefile on disk.
+        id_name (string): string of new field to add.
 
     Returns:
-        A list of tuples where tuple[0] is an iterable of keys that the error
-        message applies to and tuple[1] is the string validation warning.
+        Nothing
     """
-    warnings = []
-    missing_keys = set([])
-    keys_without_value = set([])
-    for key in ('workspace_dir',
-                'aoi_uri',
-                'structure_uri',
-                'dem_uri',
-                'refraction',
-                'valuation_function',
-                'a_coefficient',
-                'b_coefficient',
-                'c_coefficient',
-                'd_coefficient',
-                'max_valuation_radius'):
-        try:
-            if args[key] in ('', None):
-                keys_without_value.add(key)
-        except KeyError:
-            missing_keys.add(key)
+    shapefile = ogr.Open(shapefile_path, 1)
+    layer = shapefile.GetLayer()
+    id_field = ogr.FieldDefn(id_name, ogr.OFTInteger)
+    layer.CreateField(id_field)
 
-    if len(missing_keys) > 0:
-        raise KeyError('These keys are missing from args: %s' % (
-            ', '.join(sorted(missing_keys))))
+    index = 0
 
-    if len(keys_without_value) > 0:
-        warnings.append((keys_without_value, 'Parameter must have a value.'))
+    for feat in layer:
+        feat.SetField(id_name, index)
+        layer.SetFeature(feat)
+        index += 1
 
-    for vector_key in ('aoi_uri', 'structure_uri', 'overlap_uri'):
-        if limit_to not in (vector_key, None):
-            continue
 
-        try:
-            with utils.capture_gdal_logging():
-                vector = gdal.OpenEx(args[vector_key])
-                if vector is None:
-                    warnings.append(
-                        ([vector_key],
-                         ('Parameter must be a path to an OGR-compatible '
-                          'vector file.')))
-        except KeyError:
-            # overlap_uri is optional.
-            pass
+def add_percent_overlap(
+        overlap_path, key_field, perc_name, pixel_counts, pixel_size):
+    """Add overlap percentage of pixels on polygon in a new field.
 
-    for raster_key in ('dem_uri', 'pop_uri'):
-        if limit_to not in (raster_key, None):
-            continue
+    Parameters:
+        overlap_path (string): path to polygon shapefile on disk.
+        key_field (string): the field name for unique feature id's.
+        perc_name (string): name of new field to hold percent overlap values.
+        pixel_counts (dict): dictionary with keys mapping to 'key_field'
+            and values being number of pixels.
+        pixel_size (float): cell size for the pixels.
 
-        try:
-            with utils.capture_gdal_logging():
-                raster = gdal.OpenEx(args[raster_key])
-                if raster is None:
-                    warnings.append(
-                        ([raster_key],
-                         ('Parameter must be a path to a GDAL-compatible '
-                          'raster file.')))
-        except KeyError:
-            # pop_uri is optional.
-            pass
+    Returns:
+        Nothing
+    """
+    shapefile = ogr.Open(overlap_path, 1)
+    layer = shapefile.GetLayer()
+    perc_field = ogr.FieldDefn(perc_name, ogr.OFTReal)
+    layer.CreateField(perc_field)
 
-    for float_key in ('cell_size',
-                      'refraction',
-                      'max_valuation_radius') + tuple(
-                          '%s_coefficient' % letter for letter in 'abcd'):
-        if limit_to not in (float_key, None):
-            continue
+    for feat in layer:
+        key = feat.GetFieldAsInteger(key_field)
+        geom = feat.GetGeometryRef()
+        geom_area = geom.GetArea()
+        # Compute overlap by area of pixels and area of polygon
+        pixel_area = pixel_size**2 * pixel_counts[key]
+        feat.SetField(perc_name, (pixel_area / geom_area) * 100)
+        layer.SetFeature(feat)
 
-        try:
-            if args[float_key] not in ('', None):
-                float(args[float_key])
-        except ValueError:
-            warnings.append(([float_key], 'Parameter must be a number.'))
-        except KeyError:
-            # Not all arguments are required
-            pass
 
-    if limit_to in ('valuation_function', None):
-        valid_funcs = (
-            'polynomial: a + bx + cx^2 + dx^3',
-            'logarithmic: a + b ln(x)')
-        if args['valuation_function'] not in valid_funcs:
-            warnings.append(
-                (['valuation_function'],
-                 'Function must be either "%s" or "%s"' % valid_funcs))
+def calculate_percentiles_from_raster(raster_path, percentiles):
+    """A memory efficient sort to determine the percentiles of a raster.
 
-    return warnings
+    Percentile algorithm currently used is the nearest rank method.
+
+    Parameters:
+        raster_path (string): a path to a gdal raster on disk
+        percentiles (list): a list of desired percentiles to lookup
+            ex: [25,50,75,90]
+    Returns:
+        a list of values corresponding to the percentiles
+            from the percentiles list
+    """
+    raster = gdal.Open(raster_path, gdal.GA_ReadOnly)
+
+    def numbers_from_file(fle):
+        """Generate an iterator.
+
+        Iterator generated from a file by loading all the numbers
+            and yielding
+
+        Parameters:
+            fle (file object): file object
+        """
+        arr = numpy.load(fle)
+        for num in arr:
+            yield num
+
+    # List to hold the generated iterators
+    iters = []
+
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+
+    n_rows = raster.RasterYSize
+    n_cols = raster.RasterXSize
+
+    # Variable to count the total number of elements to compute percentile
+    # from. This leaves out nodata values
+    n_elements = 0
+
+    # Set the row strides to be something reasonable, like 256MB blocks
+    row_strides = max(int(2**28 / (4 * n_cols)), 1)
+
+    for row_index in xrange(0, n_rows, row_strides):
+        # It's possible we're on the last set of rows and the stride
+        # is too big, update if so
+        if row_index + row_strides >= n_rows:
+            row_strides = n_rows - row_index
+
+        # Read in raster chunk as array
+        arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
+
+        tmp_path = pygeoprocessing.temporary_filename()
+        tmp_file = open(tmp_path, 'wb')
+        # Make array one dimensional for sorting and saving
+        arr = arr.flatten()
+        # Remove nodata values from array and thus percentile calculation
+        arr = numpy.delete(arr, numpy.where(arr == nodata))
+        # Tally the number of values relevant for calculating percentiles
+        n_elements += len(arr)
+        # Sort array before saving
+        arr = numpy.sort(arr)
+
+        numpy.save(tmp_file, arr)
+        tmp_file.close()
+        tmp_file = open(tmp_path, 'rb')
+        tmp_file.seek(0)
+        iters.append(numbers_from_file(tmp_file))
+        arr = None
+
+    # List to store the rank/index where each percentile will be found
+    rank_list = []
+    # For each percentile calculate nearest rank
+    for perc in percentiles:
+        rank = math.ceil(perc/100.0 * n_elements)
+        rank_list.append(int(rank))
+
+    # Need to handle 0th percentile case. 0th percentile is first element
+    if 0 in rank_list:
+        rank_list[rank_list.index(0)] = 1
+
+    # A variable to burn through when doing heapq merge sort over the
+    # iterators. Variable is used to check if we've iterated to a
+    # specified rank spot, to grab percentile value
+    counter = 1
+    # Setup a list of 'nans' to replace with percentile results, modeled
+    # after scipy.stats.scoreatpercentile function
+    results = [float('nan')] * len(rank_list)
+
+    LOGGER.debug('Percentile Rank List: %s', rank_list)
+
+    for num in heapq.merge(*iters):
+        # If a percentile rank has been hit, grab percentile value
+        if counter in rank_list:
+            LOGGER.debug('percentile value is : %s', num)
+            results[rank_list.index(counter)] = int(num)
+        counter += 1
+
+    LOGGER.debug("Percentile Counter : %s" % counter)
+
+    band = None
+    raster = None
+    return results
+
+
+def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
+    """Clip Shapefile Layer by second Shapefile Layer.
+
+    Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
+    inherits the projection and fields from the original Shapefile.
+
+    Parameters:
+        shape_to_clip_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip. Must have same spatial reference as
+            'binding_shape_path'.
+        binding_shape_path (string): a path to a Shapefile on disk. This is
+            the Layer to clip to. Must have same spatial reference as
+            'shape_to_clip_path'
+        output_path (string): a path on disk to write the clipped Shapefile
+            to. Should end with a '.shp' extension.
+
+    Returns:
+        Nothing
+    """
+    if os.path.isfile(output_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(output_path)
+
+    shape_to_clip = ogr.Open(shape_to_clip_path)
+    binding_shape = ogr.Open(binding_shape_path)
+
+    input_layer = shape_to_clip.GetLayer()
+    binding_layer = binding_shape.GetLayer()
+
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    ds = driver.CreateDataSource(output_path)
+    input_layer_defn = input_layer.GetLayerDefn()
+    out_layer = ds.CreateLayer(
+        input_layer_defn.GetName(), input_layer.GetSpatialRef())
+
+    input_layer.Clip(binding_layer, out_layer)
+
+    # Add in a check to make sure the intersection didn't come back
+    # empty
+    if(out_layer.GetFeatureCount() == 0):
+        raise IntersectionError(
+            'Intersection ERROR: clip_datasource_layer '
+            'found no intersection between: file - %s and file - %s.' %
+            (shape_to_clip_path, binding_shape_path))
+
+
+def projected_pixel_size(raster_path, target_spat_ref):
+    """Transform source cell size to target spatial reference.
+
+    Determine what the pixel size for the raster would be if projected in
+        the target spatial reference. This is common for trying to keep
+        the same pixel size ration when reprojecting a raster.
+        Calculated by doing a Coordinate Transformation on the upper left
+        point of the raster and on the adjacent point. The difference is
+        then taken to determine the new cell size.
+
+    Raises an exception if the raster is not square since this'll break most of
+        the pygeoprocessing algorithms.
+
+    Parameters:
+        raster_path (string): path to a gdal dataset on disk.
+        target_spat_ref (string): target spatial reference for the pixel size.
+
+    Returns:
+        transformed pixel size
+    """
+    # Create two points from the raster
+    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
+        raster_path)
+    point_one = (raster_gt[0], raster_gt[3])
+    # Get X and Y cell size
+    pixel_size_x = raster_gt[1]
+    pixel_size_y = raster_gt[5]
+    point_two = (point_one[0] + pixel_size_x, point_one[1] + pixel_size_y)
+
+    raster_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(raster_path)
+    raster_srs = osr.SpatialReference()
+    raster_srs.ImportFromWkt(raster_wkt)
+    # A coordinate transformation to help get the proper pixel size
+    coord_trans = osr.CoordinateTransformation(raster_srs, target_spat_ref)
+
+    # Transform two points into new spatial reference
+    point_one_proj = coord_trans.TransformPoint(point_one[0], point_one[1])
+    point_two_proj = coord_trans.TransformPoint(point_two[0], point_two[1])
+    # Calculate the x/y difference between two points
+    # taking the absolute value because the direction doesn't matter for pixel
+    # size in the case of most coordinate systems where y increases up and x
+    # increases to the right (right handed coordinate system).
+    pixel_diff_x = abs(point_two_proj[0] - point_one_proj[0])
+    pixel_diff_y = abs(point_two_proj[1] - point_one_proj[1])
+
+    try:
+        numpy.testing.assert_approx_equal(
+            abs(pixel_diff_x), abs(pixel_diff_y))
+        resulting_size = abs(pixel_diff_x)
+    except AssertionError as e:
+        LOGGER.warn(e)
+        resulting_size = (
+            abs(pixel_diff_x) + abs(pixel_diff_y)) / 2.0
+
+    return resulting_size
