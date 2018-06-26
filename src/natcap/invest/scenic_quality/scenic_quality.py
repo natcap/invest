@@ -16,6 +16,7 @@ from osgeo import osr
 import taskgraph
 import pygeoprocessing
 
+from natcap.invest.scenic_quality.viewshed import viewshed
 import natcap.invest.utils
 import natcap.invest.reporting
 
@@ -172,6 +173,74 @@ def execute(args):
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
 
+    # viewshed calculation requires that the DEM and structures are all
+    # finished.
+    graph.join()
+
+    # phase 2: calculate viewsheds.
+    viewshed_files = []
+    viewshed_tasks = []
+    structures_vector = ogr.Open(file_registry['structures_projected_path'])
+    for structures_layer in structures_vector:
+        layer_name = structures_layer.GetName()
+
+        for point in structures_layer:
+            feature_id = "%s_%s" % (layer_name, point.GetFID())
+
+            # Coordinates in map units to pass to viewshed algorithm
+            geometry = point.GetGeometryRef()
+            geom_x, geom_y = geometry.GetX(), geometry.GetY()
+
+            max_radius = None
+            # RADIUS is the suggested value for InVEST Scenic Quality
+            # RADIUS2 is for users coming from ArcGIS's viewshed.
+            # Assume positive infinity if neither field is provided.
+            # Positive infinity is represented in our viewshed by None.
+            for fieldname in ('RADIUS', 'RADIUS2'):
+                try:
+                    max_radius = math.fabs(point.GetField(fieldname))
+                    break
+                except ValueError:
+                    # When this field is not present.
+                    pass
+
+            try:
+                viewpoint_height = math.fabs(point.GetField('HEIGHT'))
+            except ValueError:
+                # When height field is not present, assume height of 0.0
+                viewpoint_height = 0.0
+
+            try:
+                weight = point.GetField('WEIGHT')
+            except ValueError:
+                # When no weight provided, set scale to 1
+                weight = 1.0
+
+            visibility_filepath = os.path.join(
+                intermediate_dir, 'visibility_%s_%s%s.tif' % (
+                    layer_name, point.GetFID(), file_suffix))
+            viewshed_files.append(visibility_filepath)
+            auxilliary_filepath = os.path.join(
+                intermediate_dir, 'auxilliary_%s_%s%s.tif' % (
+                    layer_name, point.GetFID(), file_suffix))
+
+            viewshed_task = graph.add_task(
+                viewshed,
+                args=(file_registry['clipped_dem_path'],  # DEM
+                      (geometry.GetX(), geometry.GetY()),  # viewpoint
+                      visibility_filepath),
+                kwargs={'curved_earth': True,  # model always assumes this.
+                        'refraction_coeff': args['refraction'],
+                        'max_distance': max_radius,
+                        'aux_filepath': auxilliary_filepath},
+                target_path_list=[auxilliary_filepath, visibility_filepath],
+                dependent_task_list=[clipped_dem_task,
+                                     clipped_viewpoints_task],
+                task_name='calculate_visibility_%s_%s' % (layer_name,
+                                                          point.GetFID()))
+            viewshed_tasks.append(viewshed_task)
+
+
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
             args['population_path'])
@@ -191,11 +260,6 @@ def execute(args):
             task_name='reprojected_clipped_population_task')
 
         # TODO: HTML summary table task, depends on sum of visibilities 
-
-
-
-
-
 
     # Reproject AOI to DEM to clip DEM by AOI.
     pygeoprocessing.reproject_datasource_uri(
