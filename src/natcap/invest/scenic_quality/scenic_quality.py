@@ -13,15 +13,17 @@ import logging
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
-
+import taskgraph
 import pygeoprocessing
+
 import natcap.invest.utils
 import natcap.invest.reporting
 
 logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
-LOGGER = logging.getLogger('natcap.invest.scenic_quality.scenic_quality')
+LOGGER = logging.getLogger(__name__)
+_N_WORKERS = 0
 
 
 class ValuationContainerError(Exception):
@@ -57,7 +59,8 @@ _TMP_BASE_FILES = {
     'dem_proj_to_aoi_path': 'dem_proj_to_aoi.tif',
     'clipped_pop_path': 'pop_clipped.tif',
     'pop_proj_to_aoi_path': 'pop_proj_to_aoi.tif',
-    'single_point_path': 'tmp_viewpoint_path.shp'
+    'single_point_path': 'tmp_viewpoint_path.shp',
+    'population_projected': 'population_projected.shp',
     }
 
 
@@ -129,7 +132,51 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    dem_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(args['dem_path'])
+
+    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    aoi_vector_info = pygeoprocessing.get_vector_info(args['aoi_path'])
+    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
+
+    reprojected_aoi_task = graph.add_task(
+        pygeoprocessing.reproject_vector,
+        args=(args['aoi_path'],
+              dem_raster_info['projection'],
+              file_registry['aoi_proj_dem_path']),
+        target_path_list=[file_registry['aoi_proj_dem_path']],
+        task_name='reproject_aoi_to_dem')
+
+    reprojected_viewpoints_task = graph.add_task(
+        pygeoprocessing.reproject_vector,
+        args=(args['structure_path'],
+              dem_raster_info['projection'],
+              file_registry['structures_projected_path']),
+        target_path_list=[file_registry['structures_projected_path']],
+        task_name='reproject_structures_to_dem')
+
+    if 'population_path' in args and args['population_path'] not in (None, ''):
+        population_raster_info = pygeoprocessing.get_raster_info(
+            args['population_path'])
+        target_bbox = pygeoprocessing.transform_bounding_box(
+            population_raster_info['bounding_box'],
+            population_raster_info['projection'],
+            aoi_vector_info['projection'])
+        reprojected_clipped_population_task = graph.add_task(
+            pygeoprocessing.warp_raster,
+            args=(args['population_path'],
+                  population_raster_info['pixel_size'],
+                  file_registry['population_projected'],
+                  'nearest',
+                  target_bbox,
+                  aoi_vector_info['projection'])
+
+        # TODO: HTML summary table task, depends on sum of visibilities 
+
+
+
+
+
+
     # Reproject AOI to DEM to clip DEM by AOI.
     pygeoprocessing.reproject_datasource_uri(
         args['aoi_path'], dem_wkt, file_registry['aoi_proj_dem_path'])
