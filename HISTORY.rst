@@ -29,6 +29,10 @@ Unreleased Changes
   due to a missing dependent task; it had previously been patched by setting
   taskgraph to operate in single thread mode. This restores multithreading
   in the pollination model.
+* Fixed an issue in the model data of the crop production model where some 
+  crops were using incorrect climate bin rasters. Since the error was in the
+  data and not the code, users will need to download the most recent version 
+  of InVEST's crop model data during the installation step to get the fix.
 
 3.4.4 (2018-03-26)
 ------------------
