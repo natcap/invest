@@ -163,6 +163,15 @@ def execute(args):
                              reprojected_viewpoints_task],
         task_name='clip_reprojected_structures_to_aoi')
 
+    clipped_dem_task = graph.add_task(
+        _clip_dem,
+        args=(args['dem_path'],
+              file_registry['aoi_proj_dem_path'],
+              file_registry['clipped_dem_path']),
+        target_path_list=[file_registry['clipped_dem_path']],
+        dependent_task_list=[reprojected_aoi_task],
+        task_name='clip_dem_to_aoi')
+
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
             args['population_path'])
@@ -1073,3 +1082,14 @@ def projected_pixel_size(raster_path, target_spat_ref):
             abs(pixel_diff_x) + abs(pixel_diff_y)) / 2.0
 
     return resulting_size
+
+
+def _clip_dem(dem_path, aoi_path, target_path):
+    # invariate: dem and aoi have the same projection.
+    aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
+    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
+    pixel_size = (dem_raster_info['mean_pixel_size'],
+                  dem_raster_info['mean_pixel_size'])
+    pygeoprocessing.warp_raster(
+        dem_path, pixel_size, target_path, 'nearest',
+        target_bbox=aoi_vector_info['bounding_box'])
