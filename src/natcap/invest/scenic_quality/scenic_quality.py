@@ -38,8 +38,8 @@ _OUTPUT_BASE_FILES = {
     'viewshed_path': 'viewshed_counts.tif',
     'viewshed_quality_path': 'vshed_qual.tif',
     'pop_stats_path': 'populationStats.html',
-    'pop_stats_table': 'population_stats.css(',
-    'overlap_projected_path': 'vp_overlap.shp'
+    'pop_stats_table': 'population_stats.csv',
+    'overlap_path': 'vp_overlap_final.shp',
     }
 
 _INTERMEDIATE_BASE_FILES = {
@@ -64,6 +64,7 @@ _TMP_BASE_FILES = {
     'pop_proj_to_aoi_path': 'pop_proj_to_aoi.tif',
     'single_point_path': 'tmp_viewpoint_path.shp',
     'population_projected': 'population_projected.shp',
+    'overlap_projected_path': 'vp_overlap.shp'
     }
 
 
@@ -288,6 +289,52 @@ def execute(args):
             task_name='affected_population_summary_task',
             dependent_task_list=[reprojected_clipped_population_task,
                                  viewshed_sum_task])
+
+    if 'overlap_path' in args and args['overlap_path'] not in (None, ''):
+        # reproject overlap layer to DEM
+        # clip by overlap vector by AOI vector
+        # count the number of pixels greater than zero under the vector.
+        # Create a vector (copied from the overlap vector) with a new field
+        # called "%_overlap" that contains for each polygon:
+        #    n_pixels under the polygon*(pixel_size**2)/geometry_area*100
+        reprojected_overlap_vector_task = graph.add_task(
+            pygeoprocessing.reproject_vector,
+            args=(args['overlap_path'],
+                  dem_raster_info['projection'],
+                  file_registry['overlap_projected_path']),
+            target_path_list=[file_registry['overlap_projected_path']],
+            dependent_task_list=[viewshed_sum_task],
+            task_name='reprojected_overlap_vector_task')
+
+        clipped_overlap_vector_task = graph.add_task(
+            clip_datasource_layer,
+            args=(file_registry['overlap_projected_path'],
+                  file_registry['aoi_proj_dem_path'],
+                  file_registry['overlap_clipped_path']),
+            target_path_list=[file_registry['overlap_clipped_path']],
+            dependent_task_list=[reprojected_overlap_vector_task],
+            task_name='clipped_overlap_vector_task')
+
+        # convert zero-values to nodata for correct summing.
+        mask_out_zero_values_task = graph.add_task(
+            _mask_out_zero_values,
+            args=(file_registry['viewshed_counts'],
+                  file_registry['viewshed_no_zeros_path']),
+            target_path_list=[file_registry['viewshed_no_zeros_path']],
+            dependent_task_list=[viewshed_sum_task],
+            task_name='mask_out_zero_values_task')
+
+        # Calculating percent overlap is a leaf node on the graph.
+        graph.add_task(
+            _calculate_percent_overlap,
+            args=(file_registry['overlap_clipped_path'],
+                  file_registry['viewshed_no_zeros_path'],
+                  file_registry['overlap_path']),
+            target_path_list=[file_registry['overlap_path']],
+            dependent_task_list=[mask_out_zero_values_task,
+                                 clipped_overlap_vector_task],
+            task_name='calculate_percent_overlap_task')
+
 
     # Reproject AOI to DEM to clip DEM by AOI.
     pygeoprocessing.reproject_datasource_uri(
@@ -671,248 +718,6 @@ def execute(args):
     layer = None
     viewpoints_vector = None
 
-    # Do quantiles on viewshed_uri
-    percentile_list = [25, 50, 75, 100]
-
-    # Set 0 values to nodata before calculating percentiles, since 0 values
-    # indicate there was no viewpoint effects
-
-    def zero_to_nodata(view):
-        """Mask 0 values to nodata."""
-        return numpy.where(view == 0., nodata, view)
-
-    pygeoprocessing.vectorize_datasets(
-        [file_registry['viewshed_valuation_path']], zero_to_nodata,
-        file_registry['viewshed_no_zeros_path'], gdal.GDT_Int32, nodata,
-        cell_size, 'intersection', assert_datasets_projected=False,
-        vectorize_op=False)
-
-    def raster_percentile(band):
-        """Operation to use in vectorize_datasets.
-
-        Takes the pixels of 'band' and groups them together based on
-            their percentile ranges.
-        Parameters:
-            band (numpy.array): A gdal raster band
-        Returns:
-            An integer that places each pixel into a group
-        """
-        return bisect(percentiles, band)
-
-    # Get the percentile values for each percentile
-    percentiles = calculate_percentiles_from_raster(
-        file_registry['viewshed_no_zeros_path'], percentile_list)
-
-    LOGGER.debug('percentiles_list : %s', percentiles)
-
-    # Add the start_value to the beginning of the percentiles so that any value
-    # before the start value is set to nodata
-    percentiles.insert(0, 0)
-
-    # Set nodata to a very small negative number
-    percentile_nodata = -9999919
-
-    # Classify the pixels of raster_dataset into groups and write
-    # them to output
-    pygeoprocessing.vectorize_datasets(
-        [file_registry['viewshed_no_zeros_path']], raster_percentile,
-        file_registry['viewshed_quality_path'], gdal.GDT_Int32,
-        percentile_nodata, cell_size, 'intersection',
-        assert_datasets_projected=False)
-
-    if 'pop_path' in args:
-        # Project AOI to Population to clip Population raster
-        pop_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(
-            args['pop_path'])
-        pygeoprocessing.reproject_datasource_uri(
-            args['aoi_path'], pop_wkt, file_registry['aoi_proj_pop_path'])
-        # Clip Population by AOI
-        pygeoprocessing.clip_dataset_uri(
-            args['pop_path'], file_registry['aoi_proj_pop_path'],
-            file_registry['clipped_pop_path'], False)
-
-        pop_cell_size = projected_pixel_size(
-                file_registry['clipped_pop_path'], aoi_srs)
-
-        # Project Population to AOI
-        pygeoprocessing.reproject_dataset_uri(
-            file_registry['clipped_pop_path'], pop_cell_size, aoi_wkt,
-            'nearest', file_registry['pop_proj_to_aoi_path'])
-
-        # Dataset lists for rasters to align and the aligned paths
-        dataset_uri_list = [file_registry['pop_proj_to_aoi_path'],
-                            file_registry['viewshed_path']]
-        dataset_out_uri_list = [file_registry['aligned_pop_path'],
-                                file_registry['aligned_viewshed_path']]
-        resample_method_list = ['nearest', 'nearest']
-
-        # Set a factor value which is a holder for the ratio between
-        # pop_cell_size and viewshed cell size
-        cell_size_factor = 1
-
-        if cell_size >= pop_cell_size:
-            # Viewshed cell size is bigger, so use pop cell size
-            # to resample viewshed_count raster
-            out_pixel_size = pop_cell_size
-        else:
-            # Viewshed cell size is smaller, so use it's cell size
-            # to resample population raster
-            out_pixel_size = cell_size
-            # Set cell_size_factor to the ratio between cell sizes, so that
-            # we can later maintain population data integrity.
-            cell_size_factor = pop_cell_size**2 / viewshed_cell_size**2
-
-        pygeoprocessing.align_dataset_list(
-            dataset_uri_list, dataset_out_uri_list, resample_method_list,
-            out_pixel_size, 'intersection', 1,
-            dataset_to_bound_index=None, aoi_uri=args['aoi_path'],
-            assert_datasets_projected=True, all_touched=False)
-
-        pop_nodata = pygeoprocessing.get_nodata_from_uri(
-            file_registry['aligned_pop_path'])
-
-        def pop_affected_op(pop, view):
-            """Compute affected population."""
-            valid_mask = ((pop != pop_nodata) & (view != nodata))
-
-            pop_places = numpy.where(view[valid_mask] > 0, pop[valid_mask], 0)
-            pop_final = numpy.empty(valid_mask.shape)
-            pop_final[:] = nodata
-            pop_final[valid_mask] = pop_places
-            return pop_final
-
-        def pop_unaffected_op(pop, view):
-            """Compute unaffected population."""
-            valid_mask = ((pop != pop_nodata))
-
-            pop_places = numpy.where(view[valid_mask] == 0, pop[valid_mask], 0)
-            pop_final = numpy.empty(valid_mask.shape)
-            pop_final[:] = nodata
-            pop_final[valid_mask] = pop_places
-            return pop_final
-
-        pygeoprocessing.vectorize_datasets(
-            [file_registry['aligned_pop_path'],
-             file_registry['aligned_viewshed_path']],
-            pop_affected_op, file_registry['pop_affected_path'],
-            gdal.GDT_Float32, nodata, out_pixel_size,
-            "intersection", vectorize_op=False)
-
-        pygeoprocessing.vectorize_datasets(
-            [file_registry['aligned_pop_path'],
-             file_registry['aligned_viewshed_path']],
-            pop_unaffected_op, file_registry['pop_unaffected_path'],
-            gdal.GDT_Float32, nodata, out_pixel_size,
-            "intersection", vectorize_op=False)
-
-        # Count up the affected population values
-        affected_sum = 0
-        affected_count = 0
-        for _, block in pygeoprocessing.iterblocks(
-                file_registry['pop_affected_path']):
-
-            valid_mask = (block != nodata)
-            affected_count += numpy.sum(valid_mask)
-            affected_sum += numpy.sum(block[valid_mask])
-        # Count up the unaffected population values
-        unaffected_sum = 0
-        unaffected_count = 0
-        for _, block in pygeoprocessing.iterblocks(
-                file_registry['pop_unaffected_path']):
-
-            valid_mask = (block != nodata)
-            unaffected_count += numpy.sum(valid_mask)
-            unaffected_sum += numpy.sum(block[valid_mask])
-
-        if args['pop_type'] == "Density":
-            # If population raster is population density per area then
-            # adjust sums to reflect as much, to get in correct units
-            cell_area = out_pixel_size**2
-            affected_sum = affected_sum * (affected_count * cell_area)
-            unaffected_sum = unaffected_sum * (unaffected_count * cell_area)
-        else:
-            # If population raster is population counts per cell then
-            # we need to adjust counts by any resampling so we don't
-            # double count
-            affected_sum = affected_sum / cell_size_factor
-            unaffected_sum = unaffected_sum / cell_size_factor
-
-        # Create output HTML file for population stats
-        header = ("<center><H1>Scenic Quality Model</H1>"
-                  "<H2>(Visual Impact from Objects)</H2></center>"
-                  "<br><br><HR><br><H2>Population Statistics</H2>")
-        page_header = {'type': 'text', 'section': 'head', 'text': header}
-
-        table_data = [
-            {'Number of Features Visible': 'None Visible',
-             'Population (estimate)': unaffected_sum},
-            {'Number of Features Visible': '1 or more Visible',
-             'Population (estimate)': affected_sum}]
-        table_columns = [
-            {'name': 'Number of Features Visible', 'total': False},
-            {'name': 'Population (estimate)', 'total': False}]
-        table_args = {
-            'type': 'table', 'section': 'body', 'data_type': 'dictionary',
-            'data': table_data, 'columns': table_columns, 'sortable': False}
-
-        report_args = {}
-        report_args['title'] = 'Marine InVEST'
-        report_args['out_uri'] = file_registry['pop_stats_path']
-        report_args['elements'] = [table_args]
-
-        natcap.invest.reporting.generate_report(report_args)
-
-    if "overlap_path" in args:
-        # Project AOI to overlap vector to clip
-        overlap_srs = pygeoprocessing.get_spatial_ref_uri(args['overlap_path'])
-        overlap_wkt = overlap_srs.ExportToWkt()
-        pygeoprocessing.reproject_datasource_uri(
-            args['aoi_path'], overlap_wkt,
-            file_registry['aoi_proj_overlap_path'])
-        # Clip overlap vector by AOI
-        clip_datasource_layer(
-            args['overlap_path'], file_registry['aoi_proj_overlap_path'],
-            file_registry['overlap_clipped_path'])
-
-        # Project overlap to AOI
-        pygeoprocessing.reproject_datasource_uri(
-            file_registry['overlap_clipped_path'], aoi_wkt,
-            file_registry['overlap_projected_path'])
-
-        LOGGER.debug("Adding id field to overlap features.")
-        id_name = 'investID'
-        setup_overlap_id_fields(
-            file_registry['overlap_projected_path'], id_name)
-
-        LOGGER.debug("Count overlapping pixels per area.")
-        pixel_counts = pygeoprocessing.aggregate_raster_values_uri(
-            file_registry['viewshed_no_zeros_path'],
-            file_registry['overlap_projected_path'], id_name,
-            ignore_nodata=True, all_touched=True).n_pixels
-
-        LOGGER.debug("Pixel Counts: %s", pixel_counts)
-        LOGGER.debug("Add area field to overlap features.")
-        perc_field = '%_overlap'
-        add_percent_overlap(
-            file_registry['overlap_projected_path'], id_name, perc_field,
-            pixel_counts, cell_size)
-
-    LOGGER.info('deleting temporary files')
-    for file_id in _TMP_BASE_FILES:
-        try:
-            if isinstance(file_registry[file_id], basestring):
-                if os.path.splitext(file_registry[file_id])[1] == '.shp':
-                    driver = ogr.GetDriverByName('ESRI Shapefile')
-                    driver.DeleteDataSource(file_registry[file_id])
-                else:
-                    os.remove(file_registry[file_id])
-            elif isinstance(file_registry[file_id], list):
-                for index in xrange(len(file_registry[file_id])):
-                    os.remove(file_registry[file_id][index])
-        except OSError:
-            # Let it go.
-            pass
-
 
 def setup_overlap_id_fields(shapefile_path, id_name):
     """Add field to shapefile with unique values.
@@ -967,111 +772,6 @@ def add_percent_overlap(
         layer.SetFeature(feat)
 
 
-def calculate_percentiles_from_raster(raster_path, percentiles):
-    """A memory efficient sort to determine the percentiles of a raster.
-
-    Percentile algorithm currently used is the nearest rank method.
-
-    Parameters:
-        raster_path (string): a path to a gdal raster on disk
-        percentiles (list): a list of desired percentiles to lookup
-            ex: [25,50,75,90]
-    Returns:
-        a list of values corresponding to the percentiles
-            from the percentiles list
-    """
-    raster = gdal.Open(raster_path, gdal.GA_ReadOnly)
-
-    def numbers_from_file(fle):
-        """Generate an iterator.
-
-        Iterator generated from a file by loading all the numbers
-            and yielding
-
-        Parameters:
-            fle (file object): file object
-        """
-        arr = numpy.load(fle)
-        for num in arr:
-            yield num
-
-    # List to hold the generated iterators
-    iters = []
-
-    band = raster.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
-
-    n_rows = raster.RasterYSize
-    n_cols = raster.RasterXSize
-
-    # Variable to count the total number of elements to compute percentile
-    # from. This leaves out nodata values
-    n_elements = 0
-
-    # Set the row strides to be something reasonable, like 256MB blocks
-    row_strides = max(int(2**28 / (4 * n_cols)), 1)
-
-    for row_index in xrange(0, n_rows, row_strides):
-        # It's possible we're on the last set of rows and the stride
-        # is too big, update if so
-        if row_index + row_strides >= n_rows:
-            row_strides = n_rows - row_index
-
-        # Read in raster chunk as array
-        arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
-
-        tmp_path = pygeoprocessing.temporary_filename()
-        tmp_file = open(tmp_path, 'wb')
-        # Make array one dimensional for sorting and saving
-        arr = arr.flatten()
-        # Remove nodata values from array and thus percentile calculation
-        arr = numpy.delete(arr, numpy.where(arr == nodata))
-        # Tally the number of values relevant for calculating percentiles
-        n_elements += len(arr)
-        # Sort array before saving
-        arr = numpy.sort(arr)
-
-        numpy.save(tmp_file, arr)
-        tmp_file.close()
-        tmp_file = open(tmp_path, 'rb')
-        tmp_file.seek(0)
-        iters.append(numbers_from_file(tmp_file))
-        arr = None
-
-    # List to store the rank/index where each percentile will be found
-    rank_list = []
-    # For each percentile calculate nearest rank
-    for perc in percentiles:
-        rank = math.ceil(perc/100.0 * n_elements)
-        rank_list.append(int(rank))
-
-    # Need to handle 0th percentile case. 0th percentile is first element
-    if 0 in rank_list:
-        rank_list[rank_list.index(0)] = 1
-
-    # A variable to burn through when doing heapq merge sort over the
-    # iterators. Variable is used to check if we've iterated to a
-    # specified rank spot, to grab percentile value
-    counter = 1
-    # Setup a list of 'nans' to replace with percentile results, modeled
-    # after scipy.stats.scoreatpercentile function
-    results = [float('nan')] * len(rank_list)
-
-    LOGGER.debug('Percentile Rank List: %s', rank_list)
-
-    for num in heapq.merge(*iters):
-        # If a percentile rank has been hit, grab percentile value
-        if counter in rank_list:
-            LOGGER.debug('percentile value is : %s', num)
-            results[rank_list.index(counter)] = int(num)
-        counter += 1
-
-    LOGGER.debug("Percentile Counter : %s" % counter)
-
-    band = None
-    raster = None
-    return results
-
 
 def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     """Clip Shapefile Layer by second Shapefile Layer.
@@ -1119,61 +819,58 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             (shape_to_clip_path, binding_shape_path))
 
 
-def projected_pixel_size(raster_path, target_spat_ref):
-    """Transform source cell size to target spatial reference.
+def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
+    # viewshed_raster must not have any zero-pixel values.
 
-    Determine what the pixel size for the raster would be if projected in
-        the target spatial reference. This is common for trying to keep
-        the same pixel size ration when reprojecting a raster.
-        Calculated by doing a Coordinate Transformation on the upper left
-        point of the raster and on the adjacent point. The difference is
-        then taken to determine the new cell size.
+    in_vector = gdal.Open(overlap_vector, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    out_vector = driver.CreateCopy(target_path, in_vector)
 
-    Raises an exception if the raster is not square since this'll break most of
-        the pygeoprocessing algorithms.
+    # for now, let's assume that the InVESTID field doesn't exist.
+    field_name = 'InVESTID'
+    id_field = ogr.FieldDefn(field_name, ogr.OFTInteger)
+    layer = out_vector.GetLayer()
+    layer.CreateField(id_field)
 
-    Parameters:
-        raster_path (string): path to a gdal dataset on disk.
-        target_spat_ref (string): target spatial reference for the pixel size.
+    for index, feature in enumerate(layer):
+        feature.setField(id_field, index)
+        layer.setFeature(feature)
 
-    Returns:
-        transformed pixel size
-    """
-    # Create two points from the raster
-    raster_gt = pygeoprocessing.geoprocessing.get_geotransform_uri(
-        raster_path)
-    point_one = (raster_gt[0], raster_gt[3])
-    # Get X and Y cell size
-    pixel_size_x = raster_gt[1]
-    pixel_size_y = raster_gt[5]
-    point_two = (point_one[0] + pixel_size_x, point_one[1] + pixel_size_y)
+    layer = None
+    out_vector = None
 
-    raster_wkt = pygeoprocessing.get_dataset_projection_wkt_uri(raster_path)
-    raster_srs = osr.SpatialReference()
-    raster_srs.ImportFromWkt(raster_wkt)
-    # A coordinate transformation to help get the proper pixel size
-    coord_trans = osr.CoordinateTransformation(raster_srs, target_spat_ref)
+    raster_stats = pygeoprocessing.zonal_statistics(
+        (viewshed_raster, 1), target_path, field_name)
 
-    # Transform two points into new spatial reference
-    point_one_proj = coord_trans.TransformPoint(point_one[0], point_one[1])
-    point_two_proj = coord_trans.TransformPoint(point_two[0], point_two[1])
-    # Calculate the x/y difference between two points
-    # taking the absolute value because the direction doesn't matter for pixel
-    # size in the case of most coordinate systems where y increases up and x
-    # increases to the right (right handed coordinate system).
-    pixel_diff_x = abs(point_two_proj[0] - point_one_proj[0])
-    pixel_diff_y = abs(point_two_proj[1] - point_one_proj[1])
+    # having calculated the raster stats, create a new column and add the
+    # raster stats.
+    viewshed_info = pygeoprocessing.get_raster_info(viewshed_raster)
+    pixel_area = viewshed_info['mean_pixel_size']**2
+    vector = gdal.Open(target_path, gdal.OF_VECTOR | gdal.GA_Update)
+    layer = vector.GetLayer()
+    perc_overlap_fieldname = '%_overlap'
+    layer.CreateField(ogr.FieldDefn(perc_overlap_fieldname, ogr.OFTReal))
+    for feature in layer:
+        feature_id = feature.GetField(id_field)
+        geometry = feature.GetGeometryRef()
+        geom_area = geometry.GetArea()
+        n_pixels_overlapping_polygon = raster_stats[feature_id]['count']
+        percent_overlap = (
+            ((pixel_area*n_pixels_overlapping_polygon)/geom_area)*100.0)
+        feature.SetField(perc_overlap_fieldname, percent_overlap)
+        layer.SetFeature(feature)
 
-    try:
-        numpy.testing.assert_approx_equal(
-            abs(pixel_diff_x), abs(pixel_diff_y))
-        resulting_size = abs(pixel_diff_x)
-    except AssertionError as e:
-        LOGGER.warn(e)
-        resulting_size = (
-            abs(pixel_diff_x) + abs(pixel_diff_y)) / 2.0
 
-    return resulting_size
+def _mask_out_zero_values(viewshed_sum, target_raster_path):
+    viewshed_nodata = pygeoprocessing.get_raster_info(viewshed_sum)
+
+    def _mask_out_zeros(viewshed):
+        viewshed[viewshed==0] = viewshed_nodata
+        return viewshed
+
+    pygeoprocessing.raster_calculator(
+        [viewshed_sum], _mask_out_zeros, target_raster_path,
+        gdal.GDT_Int32, viewshed_nodata)
 
 
 def _clip_dem(dem_path, aoi_path, target_path):
