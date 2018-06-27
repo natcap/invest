@@ -3,9 +3,9 @@ import os
 import sys
 import math
 import heapq
+import bisect
 
 import numpy
-from bisect import bisect
 
 import shutil
 import logging
@@ -1223,13 +1223,22 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
             except KeyError:
                 value_counts[index] = 0
 
-    percentiles = [n*n_elements for n in (0.25, 0.50, 0.75, 1.0)]
+    # Rather than iterate over a loop of all the elements, we can locate the
+    # values of the individual ranks in a more abbreviated fashion to minimize
+    # looping (which is slow in python).
+    rank_ordinals = [math.ceil(n*n_elements) for n in
+                     (0.25, 0.50, 0.75, 1.0)]
+    percentile_ranks = [0]
+    for rank in rank_ordinals:
+        pixels_touched = 0
+        for n_structures_visible, n_pixels in sorted(value_counts.items()):
+            if pixels_touched < rank <= pixels_touched + n_pixels:
+                percentile_ranks.append(n_structures_visible)
+                break
+            pixels_touched += n_pixels
 
-    
-
-    
-
-
-
-    # phase 2: use the calculated percentiles to write a new raster based on
-    # them.
+    # phase 2: use the calculated percentiles to write a new raster
+    pygeoprocessing.raster_calculator(
+        [visible_structures_raster],
+        lambda matrix: bisect.bisect(percentile_ranks, matrix),
+        target_path, gdal.GDT_Byte, 255)
