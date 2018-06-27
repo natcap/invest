@@ -9,7 +9,6 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3
 
 from . import validation
 from . import utils
@@ -234,9 +233,9 @@ def execute(args):
 
 def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(raster_path)
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
-    for _, block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(raster_path):
+    for _, block in pygeoprocessing.iterblocks(raster_path):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
 
@@ -255,18 +254,18 @@ def _generate_carbon_map(
     Returns:
         None.
     """
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_path)
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_path)
+    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
+    nodata = lulc_info['nodata'][0]
+    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_size_out ** 2 / 10**4)
+        (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.iteritems()])
 
     carbon_stock_by_type[nodata] = _CARBON_NODATA
 
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        lulc_path, carbon_stock_by_type, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, exception_flag='values_required',
-        assert_dataset_projected=True)
+    pygeoprocessing.reclassify_raster(
+        (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
+        gdal.GDT_Float32, _CARBON_NODATA, values_required=True)
 
 
 def _sum_rasters(storage_path_list, output_sum_path):
@@ -282,12 +281,9 @@ def _sum_rasters(storage_path_list, output_sum_path):
             _[valid_mask] for _ in storage_arrays], axis=0)
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        storage_path_list[0])
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        storage_path_list, _sum_op, output_sum_path,
-        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in storage_path_list], _sum_op, output_sum_path,
+        gdal.GDT_Float32, _CARBON_NODATA)
 
 
 def _diff_rasters(storage_path_list, output_diff_path):
@@ -303,12 +299,9 @@ def _diff_rasters(storage_path_list, output_diff_path):
             future_array[valid_mask] - base_array[valid_mask])
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        storage_path_list[0])
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        storage_path_list, _diff_op, output_diff_path,
-        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in storage_path_list], _diff_op, output_diff_path,
+        gdal.GDT_Float32, _CARBON_NODATA)
 
 
 def _calculate_valuation_constant(
@@ -358,11 +351,9 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         result[valid_mask] = carbon_array[valid_mask] * valuation_constant
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(delta_carbon_path)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [delta_carbon_path], _npv_value_op, npv_out_path, gdal.GDT_Float32,
-        _VALUE_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(delta_carbon_path, 1)], _npv_value_op, npv_out_path,
+        gdal.GDT_Float32, _VALUE_NODATA)
 
 
 def _generate_report(summary_stats, model_args, html_report_path):
