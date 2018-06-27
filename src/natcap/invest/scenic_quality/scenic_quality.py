@@ -4,6 +4,7 @@ import sys
 import math
 import heapq
 import bisect
+import itertools
 
 import numpy
 
@@ -37,6 +38,7 @@ _OUTPUT_BASE_FILES = {
     'viewshed_path': 'viewshed_counts.tif',
     'viewshed_quality_path': 'vshed_qual.tif',
     'pop_stats_path': 'populationStats.html',
+    'pop_stats_table': 'population_stats.css(',
     'overlap_projected_path': 'vp_overlap.shp'
     }
 
@@ -249,7 +251,8 @@ def execute(args):
         dependent_task_list=viewshed_tasks,
         task_name='sum_visibility_for_all_structures')
 
-    visual_quality_task = graph.add_task(
+    # visual quality is one of the leaf nodes on the task graph.
+    graph.add_task(
         _calculate_visual_quality,
         args=(file_registry['viewshed_counts'],
               file_registry['viewshed_quality_path']),
@@ -257,7 +260,6 @@ def execute(args):
         target_path_list=[file_registry['viewshed_quality_path']],
         task_name='calculate_visual_quality'
     )
-
 
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
@@ -277,7 +279,15 @@ def execute(args):
             target_path_list=[file_registry['population_projected']],
             task_name='reprojected_clipped_population_task')
 
-        # TODO: HTML summary table task, depends on sum of visibilities 
+        affected_population_summary_task = graph.add_task(
+            _summarize_affected_populations,
+            args=(file_registry['population_projected'],
+                  file_registry['viewshed_counts'],
+                  file_registry['pop_stats_table']),
+            target_path_list=[file_registry['pop_stats_table']],
+            task_name='affected_population_summary_task',
+            dependent_task_list=[reprojected_clipped_population_task,
+                                 viewshed_sum_task])
 
     # Reproject AOI to DEM to clip DEM by AOI.
     pygeoprocessing.reproject_datasource_uri(
@@ -1242,3 +1252,36 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         [visible_structures_raster],
         lambda matrix: bisect.bisect(percentile_ranks, matrix),
         target_path, gdal.GDT_Byte, 255)
+
+
+def _summarize_affected_populations(population_path, viewshed_sum_path,
+                                    target_table_path):
+    population_nodata = pygeoprocessing.get_raster_info(
+        population_path)['nodata']
+    n_visible_nodata = pygeoprocessing.get_raster_info(
+        viewshed_sum_path)['nodata']
+
+    unaffected_sum = 0
+    unaffected_count = 0
+    affected_sum = 0
+    affected_count = 0
+    for (_, population), (_, n_visible) in itertools.izip(
+            pygeoprocessing.iterblocks(population_path),
+            pygeoprocessing.iterblocks(viewshed_sum_path)):
+        valid_mask = ((population != population_nodata) &
+                      (n_visible != n_visible_nodata))
+        affected_pixels = population[n_visible[valid_mask] > 0]
+        affected_sum += numpy.sum(affected_pixels)
+        affected_count += len(affected_pixels)
+
+        unaffected_pixels = population[n_visible[valid_mask] == 0]
+        unaffected_sum += numpy.sum(unaffected_pixels)
+        unaffected_count += len(unaffected_pixels)
+
+    # TODO: adjust for when population is a density raster.
+    # TODO: adjust by the cell size.
+
+    with open(target_table_path, 'w') as table_file:
+        table_file.write('"# of features visible","Population (estimate)"\n')
+        table_file.write('"None visible",%s\n' % unaffected_sum)
+        table_file.write('"1 or more visible",%s\n' % affected_sum)
