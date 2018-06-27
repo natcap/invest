@@ -1202,3 +1202,34 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
                                yoff=block_info['yoff'])
     target_band = None
     target_raster = None
+
+
+def _calculate_visual_quality(visible_structures_raster, target_path):
+    # Using the nearest-rank method.
+    n_elements = 0
+    value_counts = {}
+
+    raster_nodata = pygeoprocessing.get_raster_info(
+        visible_structures_raster)['nodata'][0]
+
+    # phase 1: calculate percentiles from the visible_structures raster
+    for _, block in pygeoprocessing.iterblocks(visible_structures_raster):
+        valid_pixels = block[block != raster_nodata]
+        n_elements += len(valid_pixels)
+
+        for index, counted_values in enumerate(numpy.bincount(valid_pixels)):
+            try:
+                value_counts[index] += counted_values
+            except KeyError:
+                value_counts[index] = 0
+
+    percentiles = [n*n_elements for n in (0.25, 0.50, 0.75, 1.0)]
+
+    
+
+    
+
+
+
+    # phase 2: use the calculated percentiles to write a new raster based on
+    # them.
