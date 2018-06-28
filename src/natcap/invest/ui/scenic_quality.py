@@ -21,8 +21,8 @@ class ScenicQuality(model.InVESTModel):
             interactive=True,
             label=u'General')
         self.add_input(self.general_tab)
-        self.aoi_uri = inputs.File(
-            args_key=u'aoi_uri',
+        self.aoi_path = inputs.File(
+            args_key=u'aoi_path',
             helptext=(
                 u"An OGR-supported vector file.  This AOI instructs "
                 u"the model where to clip the input data and the extent "
@@ -31,9 +31,9 @@ class ScenicQuality(model.InVESTModel):
                 u"must intersect the Digital Elevation Model (DEM)."),
             label=u'Area of Interest (Vector)',
             validator=self.validator)
-        self.general_tab.add_input(self.aoi_uri)
-        self.structure_uri = inputs.File(
-            args_key=u'structure_uri',
+        self.general_tab.add_input(self.aoi_path)
+        self.structure_path = inputs.File(
+            args_key=u'structure_path',
             helptext=(
                 u"An OGR-supported vector file.  The user must specify "
                 u"a point feature layer that indicates locations of "
@@ -44,9 +44,9 @@ class ScenicQuality(model.InVESTModel):
                 u"consistent with the project of the DEM input."),
             label=u'Features Impacting Scenic Quality (Vector)',
             validator=self.validator)
-        self.general_tab.add_input(self.structure_uri)
-        self.dem_uri = inputs.File(
-            args_key=u'dem_uri',
+        self.general_tab.add_input(self.structure_path)
+        self.dem_path = inputs.File(
+            args_key=u'dem_path',
             helptext=(
                 u"A GDAL-supported raster file.  An elevation raster "
                 u"layer is required to conduct viewshed analysis. "
@@ -55,7 +55,7 @@ class ScenicQuality(model.InVESTModel):
                 u"contributing to negative scenic quality are visible."),
             label=u'Digital Elevation Model (Raster)',
             validator=self.validator)
-        self.general_tab.add_input(self.dem_uri)
+        self.general_tab.add_input(self.dem_path)
         self.refraction = inputs.Text(
             args_key=u'refraction',
             helptext=(
@@ -73,8 +73,8 @@ class ScenicQuality(model.InVESTModel):
             label=u'Refractivity Coefficient',
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
-        self.pop_uri = inputs.File(
-            args_key=u'pop_uri',
+        self.pop_path = inputs.File(
+            args_key=u'pop_path',
             helptext=(
                 u"A GDAL-supported raster file.  A population raster "
                 u"layer is required to determine population within the "
@@ -83,9 +83,9 @@ class ScenicQuality(model.InVESTModel):
                 u"visible."),
             label=u'Population (Raster)',
             validator=self.validator)
-        self.general_tab.add_input(self.pop_uri)
-        self.overlap_uri = inputs.File(
-            args_key=u'overlap_uri',
+        self.general_tab.add_input(self.pop_path)
+        self.overlap_path = inputs.File(
+            args_key=u'overlap_path',
             helptext=(
                 u"An OGR-supported vector file.  The user has the "
                 u"option of providing a polygon feature layer where "
@@ -97,7 +97,7 @@ class ScenicQuality(model.InVESTModel):
                 u"features impacting scenic quality."),
             label=u'Overlap Analysis Features (Vector)',
             validator=self.validator)
-        self.general_tab.add_input(self.overlap_uri)
+        self.general_tab.add_input(self.overlap_path)
         self.valuation_tab = inputs.Container(
             interactive=True,
             label=u'Valuation')
@@ -158,9 +158,9 @@ class ScenicQuality(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.aoi_uri.args_key: self.aoi_uri.value(),
-            self.structure_uri.args_key: self.structure_uri.value(),
-            self.dem_uri.args_key: self.dem_uri.value(),
+            self.aoi_path.args_key: self.aoi_path.value(),
+            self.structure_path.args_key: self.structure_path.value(),
+            self.dem_path.args_key: self.dem_path.value(),
             self.refraction.args_key: self.refraction.value(),
             self.valuation_function.args_key: self.valuation_function.value(),
             self.a_coefficient.args_key: self.a_coefficient.value(),
@@ -170,11 +170,9 @@ class ScenicQuality(model.InVESTModel):
             self.max_valuation_radius.args_key:
                 self.max_valuation_radius.value(),
         }
-        if self.cell_size.value():
-            args[self.cell_size.args_key] = self.cell_size.value()
-        if self.pop_uri.value():
-            args[self.pop_uri.args_key] = self.pop_uri.value()
-        if self.overlap_uri.value():
-            args[self.overlap_uri.args_key] = self.overlap_uri.value()
+        if self.pop_path.value():
+            args[self.pop_path.args_key] = self.pop_path.value()
+        if self.overlap_path.value():
+            args[self.overlap_path.args_key] = self.overlap_path.value()
 
         return args
