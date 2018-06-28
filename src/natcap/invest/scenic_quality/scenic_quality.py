@@ -115,7 +115,31 @@ def execute(args):
         '0': 'polynomial_container', '1': 'log_container',
         '2': 'exponential_container'}
 
-    if args[val_containers[val_ordinal]] == False:
+    if args['valuation_function'] == 0:
+        valuation_method = 'polynomial'
+        valuation_coefficients = {
+            'a': args['poly_a_coef'],
+            'b': args['poly_b_coef'],
+            'c': args['poly_c_coef'],
+            'd': args['poly_d_coef'],
+        }
+    elif args['valuation_function'] == 1:
+        valuation_method = 'logarithmic'
+        valuation_coefficients = {
+            'a': args['log_a_coef'],
+            'b': args['log_b_coef'],
+        }
+    elif args['valuation_function'] == 2:
+        valuation_method = 'exponential'
+        valuation_coefficients = {
+            'a': args['exp_a_coef'],
+            'b': args['exp_b_coef'],
+        }
+    else:
+        raise ValueError('Valuation function type %s not recognized' %
+                         args['valuation_function'])
+
+    if args[val_containers[val_ordinal]] is False:
         raise ValuationContainerError(
             'The container for the selected valuation functions '
             'coefficients was not selected.')
@@ -148,6 +172,8 @@ def execute(args):
               file_registry['aoi_proj_dem_path']),
         target_path_list=[file_registry['aoi_proj_dem_path']],
         task_name='reproject_aoi_to_dem')
+
+    # TODO: clip the AOI to the DEM bounding box.
 
     reprojected_viewpoints_task = graph.add_task(
         pygeoprocessing.reproject_vector,
@@ -183,6 +209,7 @@ def execute(args):
     # phase 2: calculate viewsheds.
     viewshed_files = []
     viewshed_tasks = []
+    valuation_tasks = []
     structures_vector = ogr.Open(file_registry['structures_projected_path'])
     for structures_layer in structures_vector:
         layer_name = structures_layer.GetName()
@@ -236,7 +263,7 @@ def execute(args):
             viewshed_task = graph.add_task(
                 viewshed,
                 args=(file_registry['clipped_dem_path'],  # DEM
-                      (geometry.GetX(), geometry.GetY()),  # viewpoint
+                      viewpoint,
                       visibility_filepath),
                 kwargs={'curved_earth': True,  # model always assumes this.
                         'refraction_coeff': args['refraction'],
@@ -248,6 +275,46 @@ def execute(args):
                 task_name='calculate_visibility_%s_%s' % (layer_name,
                                                           point.GetFID()))
             viewshed_tasks.append(viewshed_task)
+
+            # create the distance transform
+            # TODO: write this path to the registry
+            distance_transform_base_path = os.path.join(
+                intermediate_dir,
+                'distance_transform_base_%s%s.tif' % (feature_id, file_suffix))
+            distance_to_viewpoint_path = os.path.join(
+                intermediate_dir,
+                'distance_to_viewpoint_%s%s.tif' % (feature_id, file_suffix))
+            distance_transform_task = graph.add_task(
+                _calculate_distance_from_viewpoint,
+                args=(file_registry['clipped_dem_path'],
+                      viewpoint,
+                      distance_transform_base_path,
+                      distance_to_viewpoint_path),
+                target_path_list=[distance_transform_base_path,
+                                  distance_to_viewpoint_path],
+                dependent_task_list=[clipped_dem_task],
+                task_name='calculate_distance_to_viewpoint_%s' % feature_id)
+
+            # calculate valuation
+            viewshed_valuation_path = os.path.join(
+                intermediate_dir,
+                'val_viewshed_%s%s.tif' % (feature_id, file_suffix))
+            valuation_task = graph.add_task(
+                _calculate_valuation,
+                args=(distance_to_viewpoint_path,
+                      visibility_filepath,
+                      weight,  # user defined, from WEIGHT field in vector
+                      valuation_method,
+                      valuation_coefficients,  # a, b, c, d from args, a dict
+                      viewshed_valuation_path),
+                target_path_list=[viewshed_valuation_path],
+                dependent_task_list=[distance_transform_task,
+                                     viewshed_task],
+                task_name='calculate_valuation_for_viewshed_%s' % feature_id)
+            valuation_tasks.append(valuation_task)
+
+
+
 
     viewshed_sum_task = graph.add_task(
         _count_visible_structures,
@@ -823,6 +890,88 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
+
+def _calculate_distance_from_viewpoint(dem_path, viewpoint,
+                                       distance_transform_base_path,
+                                       distance_to_viewpoint_path):
+    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
+    dem_gt = dem_raster_info['geotransform']
+
+    pygeoprocessing.new_raster_from_base(
+        dem_path, distance_transform_base_path, gdal.GDT_Byte, [255], [0])
+
+    iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
+    ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
+
+    edt_raster = gdal.OpenEx(distance_transform_base_path,
+                             gdal.OF_RASTER | gdal.GA_Update)
+    edt_band = edt_raster.GetRasterBand(1)
+    edt_band.WriteArray(numpy.array([[1]]),
+                        xoff=ix_viewpoint,
+                        yoff=iy_viewpoint)
+
+    edt_band = None
+    edt_raster = None
+
+    pygeoprocessing.distance_transform_edt((distance_transform_base_path, 1),
+                                           distance_to_viewpoint_path)
+
+
+def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
+                         valuation_method, valuation_coefficients,
+                         valuation_raster_path):
+    valuation_method = valuation_method.lower()
+    # TODO: make these operations nodata-aware (based on the DEM)
+    valuation_nodata = -99999
+
+    # All valuation functions use coefficients a, b
+    a = valuation_coefficients['a']
+    b = valuation_coefficients['b']
+
+    if valuation_method == 'polynomial':
+        c = valuation_coefficients['c']
+        d = valuation_coefficients['d']
+
+        def _valuation(distance, visibility):
+            valid_pixels = (visibility > 0)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation[:] = 0
+
+            valuation[valid_pixels] = (
+                (a+b*distance+c*distance**2+d*distance**3)*(weight*visibility))
+            return valuation
+
+    elif valuation_method == 'logarithmic':
+
+        def _valuation(distance, visibility):
+            valid_pixels = (visibility > 0)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation[:] = 0
+
+            valuation[valid_pixels] = (
+                (a+b*numpy.log(distance))*(weight*visibility))
+            return valuation
+
+    elif valuation_method == 'exponential':
+
+        def _valuation(distance, visibility):
+            valid_pixels = (visibility > 0)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation[:] = 0
+
+            valuation[valid_pixels] = (
+                (a*numpy.exp(-b*distance)) * weight*distance)
+            return valuation
+
+    pygeoprocessing.raster_calculator(
+        [(distance_to_viewpoint_path, 1), (visibility_path, 1)],
+        _valuation,
+        valuation_raster_path,
+        gdal.GDT_Float32,
+        valuation_nodata)
+
+
 
 
 def _viewpoint_over_nodata(viewpoint, dem_path):
