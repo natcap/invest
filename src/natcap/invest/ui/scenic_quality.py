@@ -32,12 +32,6 @@ class ScenicQuality(model.InVESTModel):
             label=u'Area of Interest (Vector)',
             validator=self.validator)
         self.general_tab.add_input(self.aoi_uri)
-        self.cell_size = inputs.Text(
-            args_key=u'cell_size',
-            helptext=u'Length (in meters) of each side of the (square) cell.',
-            label=u'Cell Size (meters)',
-            validator=self.validator)
-        self.general_tab.add_input(self.cell_size)
         self.structure_uri = inputs.File(
             args_key=u'structure_uri',
             helptext=(
@@ -119,32 +113,33 @@ class ScenicQuality(model.InVESTModel):
                 u"with the same slope as f(1) (i.e.  g'(x) == f'(1))."),
             label=u'Valuation Function',
             options=[u'polynomial: a + bx + cx^2 + dx^3',
-                     u'logarithmic: a + b ln(x)'])
+                     u'logarithmic: a + b log(x)',
+                     u'exponential: a * e^(-bx)'])
         self.valuation_tab.add_input(self.valuation_function)
         self.a_coefficient = inputs.Text(
-            args_key=u'a_coefficient',
+            args_key=u'a_coef',
             helptext=(
                 u"First coefficient used either by the polynomial or "
                 u"by the logarithmic valuation function."),
-            label=u"'a' Coefficient (polynomial/logarithmic)",
+            label=u"'a' Coefficient (polynomial/logarithmic/exponential)",
             validator=self.validator)
         self.valuation_tab.add_input(self.a_coefficient)
         self.b_coefficient = inputs.Text(
-            args_key=u'b_coefficient',
+            args_key=u'b_coef',
             helptext=(
                 u"Second coefficient used either by the polynomial or "
                 u"by the logarithmic valuation function."),
-            label=u"'b' Coefficient (polynomial/logarithmic)",
+            label=u"'b' Coefficient (polynomial/logarithmic/exponential)",
             validator=self.validator)
         self.valuation_tab.add_input(self.b_coefficient)
         self.c_coefficient = inputs.Text(
-            args_key=u'c_coefficient',
+            args_key=u'c_coef',
             helptext=u"Third coefficient for the polynomial's quadratic term.",
             label=u"'c' Coefficient (polynomial only)",
             validator=self.validator)
         self.valuation_tab.add_input(self.c_coefficient)
         self.d_coefficient = inputs.Text(
-            args_key=u'd_coefficient',
+            args_key=u'd_coef',
             helptext=u"Fourth coefficient for the polynomial's cubic exponent.",
             label=u"'d' Coefficient (polynomial only)",
             validator=self.validator)

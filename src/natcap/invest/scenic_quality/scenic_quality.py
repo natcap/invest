@@ -118,22 +118,22 @@ def execute(args):
     if args['valuation_function'] == 0:
         valuation_method = 'polynomial'
         valuation_coefficients = {
-            'a': args['poly_a_coef'],
-            'b': args['poly_b_coef'],
-            'c': args['poly_c_coef'],
-            'd': args['poly_d_coef'],
+            'a': args['a_coef'],
+            'b': args['b_coef'],
+            'c': args['c_coef'],
+            'd': args['d_coef'],
         }
     elif args['valuation_function'] == 1:
         valuation_method = 'logarithmic'
         valuation_coefficients = {
-            'a': args['log_a_coef'],
-            'b': args['log_b_coef'],
+            'a': args['a_coef'],
+            'b': args['b_coef'],
         }
     elif args['valuation_function'] == 2:
         valuation_method = 'exponential'
         valuation_coefficients = {
-            'a': args['exp_a_coef'],
-            'b': args['exp_b_coef'],
+            'a': args['a_coef'],
+            'b': args['b_coef'],
         }
     else:
         raise ValueError('Valuation function type %s not recognized' %
@@ -1007,7 +1007,7 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
             valuation[:] = 0
 
             valuation[valid_pixels] = (
-                (a*numpy.exp(-b*distance)) * weight*distance)
+                (a*numpy.exp(-b*distance)) * weight*visibility)
             return valuation
 
     pygeoprocessing.raster_calculator(
