@@ -210,6 +210,7 @@ def execute(args):
     viewshed_files = []
     viewshed_tasks = []
     valuation_tasks = []
+    valuation_filepaths = []
     structures_vector = ogr.Open(file_registry['structures_projected_path'])
     for structures_layer in structures_vector:
         layer_name = structures_layer.GetName()
@@ -312,9 +313,19 @@ def execute(args):
                                      viewshed_task],
                 task_name='calculate_valuation_for_viewshed_%s' % feature_id)
             valuation_tasks.append(valuation_task)
+            valuation_filepaths.append(viewshed_valuation_path)
 
-
-
+    # The valuation sum is a leaf node on the graph
+    graph.add_task(
+        pygeoprocessing.raster_calculator,
+        args=([(path, 1) for path in valuation_filepaths],
+              _sum_valuation_rasters,
+              file_registry['viewshed_valuation_path'],
+              gdal.GDT_Float32,
+              -9999),  # TODO: make this a module-level variable?
+        target_path_list=[file_registry['viewshed_valuation_path']],
+        dependent_task_list=valuation_tasks,
+        task_name='add_up_valuation_rasters')
 
     viewshed_sum_task = graph.add_task(
         _count_visible_structures,
@@ -890,6 +901,10 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
+
+def _sum_valuation_rasters(*valuation_rasters):
+    return numpy.sum(numpy.stack(valuation_rasters))
 
 
 def _calculate_distance_from_viewpoint(dem_path, viewpoint,
