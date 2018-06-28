@@ -192,7 +192,13 @@ def execute(args):
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
-            geom_x, geom_y = geometry.GetX(), geometry.GetY()
+            viewpoint = (geometry.GetX(), geometry.GetY())
+
+            if _viewpoint_over_nodata(viewpoint, args['dem_path']):
+                LOGGER.info(
+                    'Feature %s in layer %s is over nodata; skipping.',
+                    layer_name, point.GetFID())
+                continue
 
             max_radius = None
             # RADIUS is the suggested value for InVEST Scenic Quality
@@ -817,6 +823,23 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
+
+def _viewpoint_over_nodata(viewpoint, dem_path):
+    raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
+    band = raster.GetRasterBand(1)
+    nodata = band.GetNoDataValue()
+    dem_gt = raster.GetGeoTransform()
+
+    ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
+    iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
+
+    value_under_viewpoint = band.ReadAsArray(
+        xoff=ix_viewpoint, yoff=iy_viewpoint, xsize=1, ysize=1)
+
+    if value_under_viewpoint == nodata:
+        return True
+    return False
 
 
 def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
