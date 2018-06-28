@@ -694,6 +694,7 @@ def viewshed(dem_raster_path_band,
     cdef int correct_for_curvature = curved_earth
     cdef int correct_for_refraction = math.fabs(math.ceil(refraction_coeff) - 1.0) < 0.5e-7
     cdef double target_height_adjustment = 0  # initializing for compiler
+    cdef double adjustment = 0.0
     cdef float refract_coeff = refraction_coeff  # from the user
     cdef int block_x_size = dem_raster_info['block_size'][0]
     cdef int block_y_size = dem_raster_info['block_size'][1]
@@ -799,16 +800,17 @@ def viewshed(dem_raster_path_band,
                  target_distance + r_v)
 
             # add on refractivity/curvature-of-earth calculations.
+            adjustment = 0.0  # increase in required height due to curvature
             if correct_for_curvature or correct_for_refraction:
                 # target_height_adjustment is the apparent height reduction of
                 # the target due to the curvature of the earth.
                 target_height_adjustment = (target_distance**2)*DIAM_EARTH_INV
                 if correct_for_curvature:
-                    z += target_height_adjustment
+                    adjustment += target_height_adjustment
                 if correct_for_refraction:
-                    z -= refract_coeff*target_height_adjustment
+                    adjustment -= refract_coeff*target_height_adjustment
 
-            target_dem_height = dem_managed_raster.get(ix_target, iy_target)
+            target_dem_height = dem_managed_raster.get(ix_target, iy_target) - adjustment
             if (target_dem_height >= z and
                     target_distance < max_visible_radius):
                 visibility_managed_raster.set(ix_target, iy_target, 1)
@@ -922,20 +924,21 @@ def viewshed(dem_raster_path_band,
         # paper.  I adapted these from the ESRI documentation of their
         # viewshed, which can be found at
         # http://desktop.arcgis.com/en/arcmap/10.3/tools/spatial-analyst-toolbox/using-viewshed-and-observer-points-for-visibility.htm
+        adjustment = 0.0  # increase in required height due to curvature
         if correct_for_curvature or correct_for_refraction:
             # target_height_adjustment is the apparent height reduction of
             # the target due to the curvature of the earth.
             target_height_adjustment = (target_pixel.distance_to_viewpoint**2)*DIAM_EARTH_INV
             if correct_for_curvature:
-                z += target_height_adjustment
+                adjustment += target_height_adjustment
             if correct_for_refraction:
-                z -= refract_coeff*target_height_adjustment
+                adjustment -= refract_coeff*target_height_adjustment
 
         # Given the reference plane and any adjustments to the minimum required
         # height for visibility, the DEM pixel is only visible if it is greater
         # than or equal to the minimum-visible height AND is closer than the
         # maximum visible radius.
-        target_dem_height = dem_managed_raster.get(n, m)
+        target_dem_height = dem_managed_raster.get(n, m) - adjustment
         if (target_dem_height >= z and
                 target_pixel.distance_to_viewpoint < max_visible_radius):
             visibility_managed_raster.set(n, m, 1)
