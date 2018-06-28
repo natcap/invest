@@ -282,6 +282,9 @@ def execute(args):
             distance_transform_base_path = os.path.join(
                 intermediate_dir,
                 'distance_transform_base_%s%s.tif' % (feature_id, file_suffix))
+            distance_transform_path = os.path.join(
+                intermediate_dir,
+                'distance_transform_%s%s.tif' % (feature_id, file_suffix))
             distance_to_viewpoint_path = os.path.join(
                 intermediate_dir,
                 'distance_to_viewpoint_%s%s.tif' % (feature_id, file_suffix))
@@ -290,6 +293,7 @@ def execute(args):
                 args=(file_registry['clipped_dem_path'],
                       viewpoint,
                       distance_transform_base_path,
+                      distance_transform_path,
                       distance_to_viewpoint_path),
                 target_path_list=[distance_transform_base_path,
                                   distance_to_viewpoint_path],
@@ -909,10 +913,13 @@ def _sum_valuation_rasters(*valuation_rasters):
 
 def _calculate_distance_from_viewpoint(dem_path, viewpoint,
                                        distance_transform_base_path,
+                                       distance_transform_path,
                                        distance_to_viewpoint_path):
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
     dem_gt = dem_raster_info['geotransform']
 
+    # Create a new raster with the viewpoint as the one pixel to calculate
+    # distance from in the Euclidean Distance Transform.
     pygeoprocessing.new_raster_from_base(
         dem_path, distance_transform_base_path, gdal.GDT_Byte, [255], [0])
 
@@ -930,7 +937,31 @@ def _calculate_distance_from_viewpoint(dem_path, viewpoint,
     edt_raster = None
 
     pygeoprocessing.distance_transform_edt((distance_transform_base_path, 1),
-                                           distance_to_viewpoint_path)
+                                           distance_transform_path)
+
+    # convert the distance transform to meters
+    spatial_reference = osr.SpatialReference()
+    spatial_reference.ImportFromWkt(dem_raster_info['projection'])
+    linear_units = spatial_reference.GetLinearUnits()
+    pixel_size = dem_raster_info['mean_pixel_size']
+    dem_nodata = dem_raster_info['nodata'][0]
+    distance_nodata = -9999
+
+    def _convert_to_meters(dem, distance):
+        valid_pixels = (dem != dem_nodata)
+        converted_matrix = numpy.empty(dem.shape, dtype=numpy.float32)
+        converted_matrix[:] = distance_nodata
+
+        converted_matrix[valid_pixels] = (
+            distance[valid_pixels]*linear_units*pixel_size)
+        return converted_matrix
+
+    pygeoprocessing.raster_calculator(
+        [(dem_path, 1), (distance_transform_path, 1)],
+        _convert_to_meters,
+        distance_to_viewpoint_path,
+        gdal.GDT_Float32,
+        distance_nodata)
 
 
 def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
