@@ -26,7 +26,7 @@ logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
 %(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
 
 LOGGER = logging.getLogger(__name__)
-_N_WORKERS = 0
+_N_WORKERS = 0 
 
 
 class ValuationContainerError(Exception):
@@ -110,26 +110,18 @@ def execute(args):
     """
     LOGGER.info("Start Scenic Quality Model")
 
+    valuation_coefficients = {
+        'a': float(args['a_coef']),
+        'b': float(args['b_coef']),
+    }
     if args['valuation_function'].startswith('polynomial'):
         valuation_method = 'polynomial'
-        valuation_coefficients = {
-            'a': args['a_coef'],
-            'b': args['b_coef'],
-            'c': args['c_coef'],
-            'd': args['d_coef'],
-        }
+        valuation_coefficients['c'] = float(args['c_coef'])
+        valuation_coefficients['d'] = float(args['d_coef'])
     elif args['valuation_function'].startswith('logarithmic'):
         valuation_method = 'logarithmic'
-        valuation_coefficients = {
-            'a': args['a_coef'],
-            'b': args['b_coef'],
-        }
     elif args['valuation_function'].startswith('exponential'):
         valuation_method = 'exponential'
-        valuation_coefficients = {
-            'a': args['a_coef'],
-            'b': args['b_coef'],
-        }
     else:
         raise ValueError('Valuation function type %s not recognized' %
                          args['valuation_function'])
@@ -237,7 +229,7 @@ def execute(args):
                 viewpoint_height = 0.0
 
             try:
-                weight = point.GetField('WEIGHT')
+                weight = float(point.GetField('WEIGHT'))
             except ValueError:
                 # When no weight provided, set scale to 1
                 weight = 1.0
@@ -252,12 +244,13 @@ def execute(args):
 
             viewshed_task = graph.add_task(
                 viewshed,
-                args=(file_registry['clipped_dem_path'],  # DEM
+                args=((file_registry['clipped_dem_path'], 1),  # DEM
                       viewpoint,
                       visibility_filepath),
                 kwargs={'curved_earth': True,  # model always assumes this.
-                        'refraction_coeff': args['refraction'],
+                        'refraction_coeff': float(args['refraction']),
                         'max_distance': max_radius,
+                        'viewpoint_height': viewpoint_height,
                         'aux_filepath': auxilliary_filepath},
                 target_path_list=[auxilliary_filepath, visibility_filepath],
                 dependent_task_list=[clipped_dem_task,
@@ -324,15 +317,15 @@ def execute(args):
         _count_visible_structures,
         args=(viewshed_files,
               file_registry['clipped_dem_path'],
-              file_registry['viewshed_counts']),
-        target_path_list=[file_registry['viewshed_counts']],
+              file_registry['viewshed_path']),
+        target_path_list=[file_registry['viewshed_path']],
         dependent_task_list=viewshed_tasks,
         task_name='sum_visibility_for_all_structures')
 
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
-        args=(file_registry['viewshed_counts'],
+        args=(file_registry['viewshed_path'],
               file_registry['viewshed_quality_path']),
         dependent_task_list=[viewshed_sum_task],
         target_path_list=[file_registry['viewshed_quality_path']],
@@ -360,7 +353,7 @@ def execute(args):
         affected_population_summary_task = graph.add_task(
             _summarize_affected_populations,
             args=(file_registry['population_projected'],
-                  file_registry['viewshed_counts'],
+                  file_registry['viewshed_path'],
                   file_registry['pop_stats_table']),
             target_path_list=[file_registry['pop_stats_table']],
             task_name='affected_population_summary_task',
@@ -395,7 +388,7 @@ def execute(args):
         # convert zero-values to nodata for correct summing.
         mask_out_zero_values_task = graph.add_task(
             _mask_out_zero_values,
-            args=(file_registry['viewshed_counts'],
+            args=(file_registry['viewshed_path'],
                   file_registry['viewshed_no_zeros_path']),
             target_path_list=[file_registry['viewshed_no_zeros_path']],
             dependent_task_list=[viewshed_sum_task],
@@ -411,6 +404,7 @@ def execute(args):
             dependent_task_list=[mask_out_zero_values_task,
                                  clipped_overlap_vector_task],
             task_name='calculate_percent_overlap_task')
+    graph.join()
 
 
 def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
@@ -460,7 +454,7 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
 
 
 def _sum_valuation_rasters(*valuation_rasters):
-    return numpy.sum(numpy.stack(valuation_rasters))
+    return numpy.sum(numpy.stack(valuation_rasters), axis=0)
 
 
 def _calculate_distance_from_viewpoint(dem_path, viewpoint,
@@ -536,8 +530,9 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
             valuation = numpy.empty(distance.shape, dtype=numpy.float32)
             valuation[:] = 0
 
+            x = distance[valid_pixels]
             valuation[valid_pixels] = (
-                (a+b*distance+c*distance**2+d*distance**3)*(weight*visibility))
+                (a+b*x+c*x**2+d*x**3)*(weight*visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'logarithmic':
@@ -548,7 +543,8 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
             valuation[:] = 0
 
             valuation[valid_pixels] = (
-                (a+b*numpy.log(distance))*(weight*visibility))
+                (a+b*numpy.log(distance[valid_pixels]))*(
+                    weight*visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'exponential':
@@ -559,7 +555,8 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
             valuation[:] = 0
 
             valuation[valid_pixels] = (
-                (a*numpy.exp(-b*distance)) * weight*visibility)
+                (a*numpy.exp(-b*distance[valid_pixels])) * (
+                    weight*visibility[valid_pixels]))
             return valuation
 
     pygeoprocessing.raster_calculator(
@@ -592,7 +589,7 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
 def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
     # viewshed_raster must not have any zero-pixel values.
 
-    in_vector = gdal.Open(overlap_vector, gdal.OF_VECTOR)
+    in_vector = gdal.OpenEx(overlap_vector, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     out_vector = driver.CreateCopy(target_path, in_vector)
 
@@ -603,10 +600,11 @@ def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
     layer.CreateField(id_field)
 
     for index, feature in enumerate(layer):
-        feature.setField(id_field, index)
-        layer.setFeature(feature)
+        feature.SetField(field_name, index)
+        layer.SetFeature(feature)
 
     layer = None
+    out_vector.FlushCache()
     out_vector = None
 
     raster_stats = pygeoprocessing.zonal_statistics(
@@ -616,30 +614,37 @@ def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
     # raster stats.
     viewshed_info = pygeoprocessing.get_raster_info(viewshed_raster)
     pixel_area = viewshed_info['mean_pixel_size']**2
-    vector = gdal.Open(target_path, gdal.OF_VECTOR | gdal.GA_Update)
+    vector = gdal.OpenEx(target_path, gdal.OF_VECTOR | gdal.GA_Update)
     layer = vector.GetLayer()
     perc_overlap_fieldname = '%_overlap'
     layer.CreateField(ogr.FieldDefn(perc_overlap_fieldname, ogr.OFTReal))
     for feature in layer:
-        feature_id = feature.GetField(id_field)
+        feature_id = feature.GetField(field_name)
         geometry = feature.GetGeometryRef()
         geom_area = geometry.GetArea()
-        n_pixels_overlapping_polygon = raster_stats[feature_id]['count']
-        percent_overlap = (
-            ((pixel_area*n_pixels_overlapping_polygon)/geom_area)*100.0)
+
+        try:
+            n_pixels_overlapping_polygon = raster_stats[feature_id]['count']
+            percent_overlap = (
+                ((pixel_area*n_pixels_overlapping_polygon)/geom_area)*100.0)
+        except KeyError:
+            # When a polygon doesn't overlap any visible pixels.
+            percent_overlap = 0.0
+
         feature.SetField(perc_overlap_fieldname, percent_overlap)
         layer.SetFeature(feature)
 
 
 def _mask_out_zero_values(viewshed_sum, target_raster_path):
-    viewshed_nodata = pygeoprocessing.get_raster_info(viewshed_sum)
+    viewshed_nodata = (
+        pygeoprocessing.get_raster_info(viewshed_sum)['nodata'][0])
 
     def _mask_out_zeros(viewshed):
         viewshed[viewshed==0] = viewshed_nodata
         return viewshed
 
     pygeoprocessing.raster_calculator(
-        [viewshed_sum], _mask_out_zeros, target_raster_path,
+        [(viewshed_sum, 1)], _mask_out_zeros, target_raster_path,
         gdal.GDT_Int32, viewshed_nodata)
 
 
@@ -657,25 +662,28 @@ def _clip_dem(dem_path, aoi_path, target_path):
 def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
     target_nodata = -1
     pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
+                                         gdal.GDT_Int32,
                                          [target_nodata])
     dem_nodata = pygeoprocessing.get_raster_info(clipped_dem)['nodata'][0]
 
-    target_raster = gdal.Open(target_path)
+    target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
-    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem,
-                                                             offset_only=True):
+    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem):
         visibility_sum = numpy.empty((block_info['win_ysize'],
                                       block_info['win_xsize']),
                                      dtype=numpy.int32)
+        visibility_sum[:] = target_nodata
         valid_mask = (dem_matrix != dem_nodata)
         visibility_sum[~valid_mask] = target_nodata
         for visibility_path in visibility_rasters:
-            visibility_raster = gdal.Open(visibility_path)
+            visibility_raster = gdal.OpenEx(visibility_path, gdal.OF_RASTER)
             visibility_band = visibility_raster.GetRasterBand(1)
             visibility_matrix = visibility_band.ReadAsArray(**block_info)
-            visibility_sum[valid_mask] += visibility_matrix[valid_mask]
+            visible_mask = ((visibility_matrix == 1) & valid_mask)
+            visibility_sum[visible_mask] += visibility_matrix[visible_mask]
 
-        target_band.WriteArray(buffer, xoff=block_info['xoff'],
+        target_band.WriteArray(visibility_sum,
+                               xoff=block_info['xoff'],
                                yoff=block_info['yoff'])
     target_band = None
     target_raster = None
@@ -715,9 +723,10 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
             pixels_touched += n_pixels
 
     # phase 2: use the calculated percentiles to write a new raster
+    percentile_ranks = numpy.array(percentile_ranks)
     pygeoprocessing.raster_calculator(
-        [visible_structures_raster],
-        lambda matrix: bisect.bisect(percentile_ranks, matrix),
+        [(visible_structures_raster, 1)],
+        lambda matrix: numpy.digitize(matrix, percentile_ranks, right=True),
         target_path, gdal.GDT_Byte, 255)
 
 
