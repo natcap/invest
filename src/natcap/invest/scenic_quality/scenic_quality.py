@@ -456,25 +456,34 @@ def _calculate_distance_from_viewpoint(dem_path, viewpoint,
 
     # create a new raster to the distance out to.
     # No need to fill the raster, it'll be filled as we iterate over it
+    distance_nodata = -1
     pygeoprocessing.new_raster_from_base(
-        dem_path, distance_to_viewpoint_path, gdal.GDT_Float32, [-1])
+        dem_path, distance_to_viewpoint_path, gdal.GDT_Float32,
+        [distance_nodata])
 
     dist_raster = gdal.OpenEx(distance_to_viewpoint_path,
                               gdal.OF_RASTER | gdal.GA_Update)
     dist_band = dist_raster.GetRasterBand(1)
+    dem_nodata = dem_raster_info['nodata'][0]
 
     # iterate over the blocks and calculate the distance to the one pixel
-    for block_info in pygeoprocessing.iterblocks(dem_path, offset_only=True):
-        x_coord = numpy.linspace(block_info['xoff'],
-                                 block_info['win_xsize']-1,
-                                 block_info['win_xsize'])
-        y_coord = numpy.linspace(block_info['yoff'],
-                                 block_info['win_ysize']-1,
-                                 block_info['win_ysize'])
+    for block_info, dem_block in pygeoprocessing.iterblocks(dem_path):
+        valid_pixels = (dem_block != dem_nodata)
+        dist_in_m = numpy.empty(dem_block.shape, dtype=numpy.float32)
+        dist_in_m[:] = distance_nodata
+
+        x_coord = numpy.linspace(
+            block_info['xoff'],
+            block_info['xoff'] + block_info['win_xsize'] - 1,
+            block_info['win_xsize'])
+        y_coord = numpy.linspace(
+            block_info['yoff'],
+            block_info['yoff'] + block_info['win_ysize'] - 1,
+            block_info['win_ysize'])
         ix, iy = numpy.meshgrid(x_coord, y_coord)
-        dx = numpy.absolute(ix - ix_viewpoint)
-        dy = numpy.absolute(iy - iy_viewpoint)
-        dist_in_m = numpy.hypot(dx, dy) * pixel_size_in_m
+        dx = numpy.absolute(ix[valid_pixels] - ix_viewpoint)
+        dy = numpy.absolute(iy[valid_pixels] - iy_viewpoint)
+        dist_in_m[valid_pixels] = numpy.hypot(dx, dy) * pixel_size_in_m
 
         dist_band.WriteArray(dist_in_m,
                              xoff=block_info['xoff'],
