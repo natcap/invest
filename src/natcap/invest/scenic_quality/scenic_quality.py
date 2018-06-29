@@ -1,16 +1,12 @@
 """InVEST Scenic Quality Model."""
 import os
-import sys
 import math
-import heapq
-import bisect
 import itertools
+import operator
+import logging
+import time
 
 import numpy
-
-import shutil
-import logging
-
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -19,14 +15,10 @@ import pygeoprocessing
 
 from natcap.invest.scenic_quality.viewshed import viewshed
 from .. import utils
-import natcap.invest.reporting
 from .. import validation
 
-logging.basicConfig(format='%(asctime)s %(name)-20s %(levelname)-8s \
-%(message)s', level=logging.DEBUG, datefmt='%m/%d/%Y %H:%M:%S ')
-
 LOGGER = logging.getLogger(__name__)
-_N_WORKERS = 0 
+_N_WORKERS = 0
 
 
 class ValuationContainerError(Exception):
@@ -461,6 +453,7 @@ def _calculate_distance_from_viewpoint(dem_path, viewpoint,
                                        distance_transform_base_path,
                                        distance_transform_path,
                                        distance_to_viewpoint_path):
+    LOGGER.info("Calculating distance from viewpoint %s", viewpoint)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
     dem_gt = dem_raster_info['geotransform']
 
@@ -516,6 +509,10 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
     valuation_method = valuation_method.lower()
     # TODO: make these operations nodata-aware (based on the DEM)
     valuation_nodata = -99999
+    LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
+                valuation_method,
+                ' '.join(['%s=%f' % (k, v) for (k, v) in
+                          sorted(valuation_coefficients.items())]))
 
     # All valuation functions use coefficients a, b
     a = valuation_coefficients['a']
@@ -567,8 +564,6 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
         valuation_nodata)
 
 
-
-
 def _viewpoint_over_nodata(viewpoint, dem_path):
     raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
@@ -588,6 +583,7 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
 
 def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
     # viewshed_raster must not have any zero-pixel values.
+    LOGGER.info('Calculating percent overlap')
 
     in_vector = gdal.OpenEx(overlap_vector, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
@@ -636,12 +632,13 @@ def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
 
 
 def _mask_out_zero_values(viewshed_sum, target_raster_path):
+    LOGGER.info('Masking out zero-values for calculating raster stats')
     viewshed_nodata = (
         pygeoprocessing.get_raster_info(viewshed_sum)['nodata'][0])
 
-    def _mask_out_zeros(viewshed):
-        viewshed[viewshed==0] = viewshed_nodata
-        return viewshed
+    def _mask_out_zeros(viewshed_matrix):
+        viewshed_matrix[viewshed_matrix == 0] = viewshed_nodata
+        return viewshed_matrix
 
     pygeoprocessing.raster_calculator(
         [(viewshed_sum, 1)], _mask_out_zeros, target_raster_path,
@@ -649,6 +646,7 @@ def _mask_out_zero_values(viewshed_sum, target_raster_path):
 
 
 def _clip_dem(dem_path, aoi_path, target_path):
+    LOGGER.info('Clipping the DEM to the AOI bounding box.')
     # invariate: dem and aoi have the same projection.
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
@@ -660,15 +658,25 @@ def _clip_dem(dem_path, aoi_path, target_path):
 
 
 def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
+    LOGGER.info('Summing %d visibility rasters', len(visibility_rasters))
     target_nodata = -1
     pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
                                          gdal.GDT_Int32,
                                          [target_nodata])
-    dem_nodata = pygeoprocessing.get_raster_info(clipped_dem)['nodata'][0]
+    dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem)
+    dem_nodata = dem_raster_info['nodata'][0]
+    pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
+    pixels_processed = 0.0
+
 
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
+    start_time = time.time()
     for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem):
+        current_time = time.time()
+        if current_time - start_time > 5.0:
+            LOGGER.info('Counting visible structures approx. %.2f%% complete',
+                        (pixels_processed / pixels_in_dem) * 100.0)
         visibility_sum = numpy.empty((block_info['win_ysize'],
                                       block_info['win_xsize']),
                                      dtype=numpy.int32)
@@ -685,11 +693,14 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
         target_band.WriteArray(visibility_sum,
                                xoff=block_info['xoff'],
                                yoff=block_info['yoff'])
+        pixels_processed += len(dem_matrix)
+
     target_band = None
     target_raster = None
 
 
 def _calculate_visual_quality(visible_structures_raster, target_path):
+    LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
     n_elements = 0
     value_counts = {}
@@ -732,6 +743,7 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
 
 def _summarize_affected_populations(population_path, viewshed_sum_path,
                                     target_table_path):
+    LOGGER.info('Summarizing number of people affected')
     population_nodata = pygeoprocessing.get_raster_info(
         population_path)['nodata']
     n_visible_nodata = pygeoprocessing.get_raster_info(
