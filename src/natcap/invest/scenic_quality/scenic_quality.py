@@ -298,17 +298,17 @@ def execute(args):
         population_raster_info = pygeoprocessing.get_raster_info(
             args['population_path'])
         target_bbox = pygeoprocessing.transform_bounding_box(
-            population_raster_info['bounding_box'],
-            population_raster_info['projection'],
-            aoi_vector_info['projection'])
+            dem_raster_info['bounding_box'],
+            dem_raster_info['projection'],
+            population_raster_info['projection'])
         reprojected_clipped_population_task = graph.add_task(
             pygeoprocessing.warp_raster,
             args=(args['population_path'],
                   population_raster_info['pixel_size'],
                   file_registry['population_projected'],
-                  'nearest',
-                  target_bbox,
-                  aoi_vector_info['projection']),
+                  'nearest'),
+            kwargs={'target_bb': target_bbox,
+                    'target_sr_wkt': dem_raster_info['projection']},
             target_path_list=[file_registry['population_projected']],
             task_name='reprojected_clipped_population_task')
 
@@ -710,17 +710,26 @@ def _summarize_affected_populations(population_path, viewshed_sum_path,
                                     target_table_path):
     LOGGER.info('Summarizing number of people affected')
     population_nodata = pygeoprocessing.get_raster_info(
-        population_path)['nodata']
+        population_path)['nodata'][0]
     n_visible_nodata = pygeoprocessing.get_raster_info(
-        viewshed_sum_path)['nodata']
+        viewshed_sum_path)['nodata'][0]
 
     unaffected_sum = 0
     unaffected_count = 0
     affected_sum = 0
     affected_count = 0
-    for (_, population), (_, n_visible) in itertools.izip(
-            pygeoprocessing.iterblocks(population_path),
-            pygeoprocessing.iterblocks(viewshed_sum_path)):
+
+    pop_raster = gdal.OpenEx(population_path, gdal.OF_RASTER)
+    pop_band = pop_raster.GetRasterBand(1)
+    n_visible_raster = gdal.OpenEx(viewshed_sum_path, gdal.OF_RASTER)
+    n_visible_band = n_visible_raster.GetRasterBand(1)
+
+    for block_data in pygeoprocessing.iterblocks(population_path,
+                                                 offset_only=True):
+        # Reading these in here so we can ensure the same block sizes.
+        population = pop_band.ReadAsArray(**block_data)
+        n_visible = n_visible_band.ReadAsArray(**block_data)
+
         valid_mask = ((population != population_nodata) &
                       (n_visible != n_visible_nodata))
         affected_pixels = population[n_visible[valid_mask] > 0]

@@ -74,7 +74,7 @@ class ScenicQuality(model.InVESTModel):
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
         self.pop_path = inputs.File(
-            args_key=u'pop_path',
+            args_key=u'population_path',
             helptext=(
                 u"A GDAL-supported raster file.  A population raster "
                 u"layer is required to determine population within the "
