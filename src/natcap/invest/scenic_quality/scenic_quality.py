@@ -184,6 +184,11 @@ def execute(args):
             geometry = point.GetGeometryRef()
             viewpoint = (geometry.GetX(), geometry.GetY())
 
+            if not _viewpoint_within_raster(viewpoint, args['dem_path']):
+                LOGGER.info(
+                    ('Feature %s in layer %s is outside of the DEM bounding '
+                     'box. Skipping.'), layer_name, point.GetFID())
+
             if _viewpoint_over_nodata(viewpoint, args['dem_path']):
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
@@ -511,6 +516,16 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         valuation_band.WriteArray(visibility_value,
                                   xoff=block_info['xoff'],
                                   yoff=block_info['yoff'])
+
+
+def _viewpoint_within_raster(viewpoint, dem_path):
+    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
+
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = dem_raster_info['bounding_box']
+    if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
+            not bbox_miny <= viewpoint[1] <= bbox_maxy):
+        return False
+    return True
 
 
 def _viewpoint_over_nodata(viewpoint, dem_path):
