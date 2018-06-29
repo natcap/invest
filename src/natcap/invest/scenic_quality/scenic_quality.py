@@ -122,6 +122,8 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
 
+    max_valuation_radius = float(args['max_valuation_radius'])
+
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     aoi_vector_info = pygeoprocessing.get_vector_info(args['aoi_path'])
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
@@ -256,6 +258,7 @@ def execute(args):
                       weight,  # user defined, from WEIGHT field in vector
                       valuation_method,
                       valuation_coefficients,  # a, b, c, d from args, a dict
+                      max_valuation_radius,
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
                 dependent_task_list=[viewshed_task],
@@ -421,6 +424,7 @@ def _sum_valuation_rasters(*valuation_rasters):
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
                          valuation_method, valuation_coefficients,
+                         max_valuation_radius,
                          valuation_raster_path):
     valuation_method = valuation_method.lower()
     # TODO: make these operations nodata-aware (based on the DEM)
@@ -506,12 +510,13 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             block_info['yoff'] + block_info['win_ysize'] - 1,
             block_info['win_ysize'])
         ix, iy = numpy.meshgrid(x_coord, y_coord)
-        dx = numpy.absolute(ix[valid_pixels] - ix_viewpoint)
-        dy = numpy.absolute(iy[valid_pixels] - iy_viewpoint)
+        dx = numpy.absolute(ix - ix_viewpoint)
+        dy = numpy.absolute(iy - iy_viewpoint)
         dist_in_m = numpy.hypot(dx, dy) * pixel_size_in_m
 
-        visibility_value[valid_pixels] = _valuation(dist_in_m,
+        visibility_value[valid_pixels] = _valuation(dist_in_m[valid_pixels],
                                                     vis_block[valid_pixels])
+        visibility_value[dist_in_m > max_valuation_radius] = 0
 
         valuation_band.WriteArray(visibility_value,
                                   xoff=block_info['xoff'],
