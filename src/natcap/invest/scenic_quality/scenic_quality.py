@@ -253,12 +253,6 @@ def execute(args):
 
             # create the distance transform
             # TODO: write this path to the registry
-            distance_transform_base_path = os.path.join(
-                intermediate_dir,
-                'distance_transform_base_%s%s.tif' % (feature_id, file_suffix))
-            distance_transform_path = os.path.join(
-                intermediate_dir,
-                'distance_transform_%s%s.tif' % (feature_id, file_suffix))
             distance_to_viewpoint_path = os.path.join(
                 intermediate_dir,
                 'distance_to_viewpoint_%s%s.tif' % (feature_id, file_suffix))
@@ -266,11 +260,8 @@ def execute(args):
                 _calculate_distance_from_viewpoint,
                 args=(file_registry['clipped_dem_path'],
                       viewpoint,
-                      distance_transform_base_path,
-                      distance_transform_path,
                       distance_to_viewpoint_path),
-                target_path_list=[distance_transform_base_path,
-                                  distance_to_viewpoint_path],
+                target_path_list=[distance_to_viewpoint_path],
                 dependent_task_list=[clipped_dem_task],
                 task_name='calculate_distance_to_viewpoint_%s' % feature_id)
 
@@ -450,57 +441,47 @@ def _sum_valuation_rasters(*valuation_rasters):
 
 
 def _calculate_distance_from_viewpoint(dem_path, viewpoint,
-                                       distance_transform_base_path,
-                                       distance_transform_path,
                                        distance_to_viewpoint_path):
     LOGGER.info("Calculating distance from viewpoint %s", viewpoint)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
     dem_gt = dem_raster_info['geotransform']
-
-    # Create a new raster with the viewpoint as the one pixel to calculate
-    # distance from in the Euclidean Distance Transform.
-    pygeoprocessing.new_raster_from_base(
-        dem_path, distance_transform_base_path, gdal.GDT_Byte, [255], [0])
-
     iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
     ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
-
-    edt_raster = gdal.OpenEx(distance_transform_base_path,
-                             gdal.OF_RASTER | gdal.GA_Update)
-    edt_band = edt_raster.GetRasterBand(1)
-    edt_band.WriteArray(numpy.array([[1]]),
-                        xoff=ix_viewpoint,
-                        yoff=iy_viewpoint)
-
-    edt_band = None
-    edt_raster = None
-
-    pygeoprocessing.distance_transform_edt((distance_transform_base_path, 1),
-                                           distance_transform_path)
 
     # convert the distance transform to meters
     spatial_reference = osr.SpatialReference()
     spatial_reference.ImportFromWkt(dem_raster_info['projection'])
     linear_units = spatial_reference.GetLinearUnits()
-    pixel_size = dem_raster_info['mean_pixel_size']
-    dem_nodata = dem_raster_info['nodata'][0]
-    distance_nodata = -9999
+    pixel_size_in_m = dem_raster_info['mean_pixel_size'] * linear_units
 
-    def _convert_to_meters(dem, distance):
-        valid_pixels = (dem != dem_nodata)
-        converted_matrix = numpy.empty(dem.shape, dtype=numpy.float32)
-        converted_matrix[:] = distance_nodata
+    # create a new raster to the distance out to.
+    # No need to fill the raster, it'll be filled as we iterate over it
+    pygeoprocessing.new_raster_from_base(
+        dem_path, distance_to_viewpoint_path, gdal.GDT_Float32, [-1])
 
-        converted_matrix[valid_pixels] = (
-            distance[valid_pixels]*linear_units*pixel_size)
-        return converted_matrix
+    dist_raster = gdal.OpenEx(distance_to_viewpoint_path,
+                              gdal.OF_RASTER | gdal.GA_Update)
+    dist_band = dist_raster.GetRasterBand(1)
 
-    pygeoprocessing.raster_calculator(
-        [(dem_path, 1), (distance_transform_path, 1)],
-        _convert_to_meters,
-        distance_to_viewpoint_path,
-        gdal.GDT_Float32,
-        distance_nodata)
+    # iterate over the blocks and calculate the distance to the one pixel
+    for block_info in pygeoprocessing.iterblocks(dem_path, offset_only=True):
+        x_coord = numpy.linspace(block_info['xoff'],
+                                 block_info['win_xsize']-1,
+                                 block_info['win_xsize'])
+        y_coord = numpy.linspace(block_info['yoff'],
+                                 block_info['win_ysize']-1,
+                                 block_info['win_ysize'])
+        ix, iy = numpy.meshgrid(x_coord, y_coord)
+        dx = numpy.absolute(ix - ix_viewpoint)
+        dy = numpy.absolute(iy - iy_viewpoint)
+        dist_in_m = numpy.hypot(dx, dy) * pixel_size_in_m
+
+        dist_band.WriteArray(dist_in_m,
+                             xoff=block_info['xoff'],
+                             yoff=block_info['yoff'])
+
+    dist_band = None
+    dist_raster = None
 
 
 def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
@@ -674,7 +655,7 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
     last_log_time = time.time()
     for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem):
         current_time = time.time()
-        if current_time - start_time > 5.0:
+        if current_time - last_log_time > 5.0:
             last_log_time = current_time
             LOGGER.info('Counting visible structures approx. %.2f%% complete',
                         (pixels_processed / pixels_in_dem) * 100.0)
