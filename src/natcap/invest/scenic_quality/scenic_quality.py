@@ -251,35 +251,20 @@ def execute(args):
                                                           point.GetFID()))
             viewshed_tasks.append(viewshed_task)
 
-            # create the distance transform
-            # TODO: write this path to the registry
-            distance_to_viewpoint_path = os.path.join(
-                intermediate_dir,
-                'distance_to_viewpoint_%s%s.tif' % (feature_id, file_suffix))
-            distance_transform_task = graph.add_task(
-                _calculate_distance_from_viewpoint,
-                args=(file_registry['clipped_dem_path'],
-                      viewpoint,
-                      distance_to_viewpoint_path),
-                target_path_list=[distance_to_viewpoint_path],
-                dependent_task_list=[clipped_dem_task],
-                task_name='calculate_distance_to_viewpoint_%s' % feature_id)
-
             # calculate valuation
             viewshed_valuation_path = os.path.join(
                 intermediate_dir,
                 'val_viewshed_%s%s.tif' % (feature_id, file_suffix))
             valuation_task = graph.add_task(
                 _calculate_valuation,
-                args=(distance_to_viewpoint_path,
-                      visibility_filepath,
+                args=(visibility_filepath,
+                      viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       valuation_method,
                       valuation_coefficients,  # a, b, c, d from args, a dict
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
-                dependent_task_list=[distance_transform_task,
-                                     viewshed_task],
+                dependent_task_list=[viewshed_task],
                 task_name='calculate_valuation_for_viewshed_%s' % feature_id)
             valuation_tasks.append(valuation_task)
             valuation_filepaths.append(viewshed_valuation_path)
@@ -429,7 +414,7 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
 
     # Add in a check to make sure the intersection didn't come back
     # empty
-    if(out_layer.GetFeatureCount() == 0):
+    if out_layer.GetFeatureCount() == 0:
         raise ValueError(
             'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s.' %
@@ -440,60 +425,7 @@ def _sum_valuation_rasters(*valuation_rasters):
     return numpy.sum(numpy.stack(valuation_rasters), axis=0)
 
 
-def _calculate_distance_from_viewpoint(dem_path, viewpoint,
-                                       distance_to_viewpoint_path):
-    LOGGER.info("Calculating distance from viewpoint %s", viewpoint)
-    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-    dem_gt = dem_raster_info['geotransform']
-    iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
-    ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
-
-    # convert the distance transform to meters
-    spatial_reference = osr.SpatialReference()
-    spatial_reference.ImportFromWkt(dem_raster_info['projection'])
-    linear_units = spatial_reference.GetLinearUnits()
-    pixel_size_in_m = dem_raster_info['mean_pixel_size'] * linear_units
-
-    # create a new raster to the distance out to.
-    # No need to fill the raster, it'll be filled as we iterate over it
-    distance_nodata = -1
-    pygeoprocessing.new_raster_from_base(
-        dem_path, distance_to_viewpoint_path, gdal.GDT_Float32,
-        [distance_nodata])
-
-    dist_raster = gdal.OpenEx(distance_to_viewpoint_path,
-                              gdal.OF_RASTER | gdal.GA_Update)
-    dist_band = dist_raster.GetRasterBand(1)
-    dem_nodata = dem_raster_info['nodata'][0]
-
-    # iterate over the blocks and calculate the distance to the one pixel
-    for block_info, dem_block in pygeoprocessing.iterblocks(dem_path):
-        valid_pixels = (dem_block != dem_nodata)
-        dist_in_m = numpy.empty(dem_block.shape, dtype=numpy.float32)
-        dist_in_m[:] = distance_nodata
-
-        x_coord = numpy.linspace(
-            block_info['xoff'],
-            block_info['xoff'] + block_info['win_xsize'] - 1,
-            block_info['win_xsize'])
-        y_coord = numpy.linspace(
-            block_info['yoff'],
-            block_info['yoff'] + block_info['win_ysize'] - 1,
-            block_info['win_ysize'])
-        ix, iy = numpy.meshgrid(x_coord, y_coord)
-        dx = numpy.absolute(ix[valid_pixels] - ix_viewpoint)
-        dy = numpy.absolute(iy[valid_pixels] - iy_viewpoint)
-        dist_in_m[valid_pixels] = numpy.hypot(dx, dy) * pixel_size_in_m
-
-        dist_band.WriteArray(dist_in_m,
-                             xoff=block_info['xoff'],
-                             yoff=block_info['yoff'])
-
-    dist_band = None
-    dist_raster = None
-
-
-def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
+def _calculate_valuation(visibility_path, viewpoint, weight,
                          valuation_method, valuation_coefficients,
                          valuation_raster_path):
     valuation_method = valuation_method.lower()
@@ -546,12 +478,50 @@ def _calculate_valuation(distance_to_viewpoint_path, visibility_path, weight,
                     weight*visibility[valid_pixels]))
             return valuation
 
-    pygeoprocessing.raster_calculator(
-        [(distance_to_viewpoint_path, 1), (visibility_path, 1)],
-        _valuation,
-        valuation_raster_path,
-        gdal.GDT_Float32,
-        valuation_nodata)
+    pygeoprocessing.new_raster_from_base(
+        visibility_path, valuation_raster_path, gdal.GDT_Float32, [valuation_nodata])
+
+
+    vis_raster_info = pygeoprocessing.get_raster_info(visibility_path)
+    vis_gt = vis_raster_info['geotransform']
+    iy_viewpoint = int((viewpoint[1] - vis_gt[3]) / vis_gt[5])
+    ix_viewpoint = int((viewpoint[0] - vis_gt[0]) / vis_gt[1])
+
+    # convert the distance transform to meters
+    spatial_reference = osr.SpatialReference()
+    spatial_reference.ImportFromWkt(vis_raster_info['projection'])
+    linear_units = spatial_reference.GetLinearUnits()
+    pixel_size_in_m = vis_raster_info['mean_pixel_size'] * linear_units
+
+    valuation_raster = gdal.OpenEx(valuation_raster_path,
+                                   gdal.OF_RASTER | gdal.GA_Update)
+    valuation_band = valuation_raster.GetRasterBand(1)
+    vis_nodata = vis_raster_info['nodata'][0]
+
+    for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
+        valid_pixels = (vis_block != vis_nodata)
+        visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float32)
+        visibility_value[:] = valuation_nodata
+
+        x_coord = numpy.linspace(
+            block_info['xoff'],
+            block_info['xoff'] + block_info['win_xsize'] - 1,
+            block_info['win_xsize'])
+        y_coord = numpy.linspace(
+            block_info['yoff'],
+            block_info['yoff'] + block_info['win_ysize'] - 1,
+            block_info['win_ysize'])
+        ix, iy = numpy.meshgrid(x_coord, y_coord)
+        dx = numpy.absolute(ix[valid_pixels] - ix_viewpoint)
+        dy = numpy.absolute(iy[valid_pixels] - iy_viewpoint)
+        dist_in_m = numpy.hypot(dx, dy) * pixel_size_in_m
+
+        visibility_value[valid_pixels] = _valuation(dist_in_m,
+                                                    vis_block[valid_pixels])
+
+        valuation_band.WriteArray(visibility_value,
+                                  xoff=block_info['xoff'],
+                                  yoff=block_info['yoff'])
 
 
 def _viewpoint_over_nodata(viewpoint, dem_path):
