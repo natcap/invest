@@ -27,37 +27,27 @@ class ValuationContainerError(Exception):
     pass
 
 _OUTPUT_BASE_FILES = {
-    'viewshed_valuation_path': 'vshed.tif',
-    'viewshed_path': 'viewshed_counts.tif',
-    'viewshed_quality_path': 'vshed_qual.tif',
-    'pop_stats_path': 'populationStats.html',
-    'pop_stats_table': 'population_stats.csv',
-    'overlap_path': 'vp_overlap_final.shp',
+    'viewshed_value': 'visibility_value.tif',
+    'n_visible_structures': 'n_visible_structures.tif',
+    'viewshed_quality': 'viewshed_qual.tif',
+    'pop_stats_csv': 'population_stats.csv',
+    'overlap_path': 'vp_overlap.shp',
     }
 
 _INTERMEDIATE_BASE_FILES = {
+    'aligned_dem_path': 'aligned_dem.tif',
+    'aligned_pop_path': 'aligned_pop.tif',
+    'aoi_reprojected': 'aoi_reprojected.shp',
+    'clipped_dem': 'dem_clipped.tif',
     'pop_affected_path': 'affected_population.tif',
     'pop_unaffected_path': 'unaffected_population.tif',
-    'aligned_pop_path': 'aligned_pop.tif',
-    'aligned_viewshed_path': 'aligned_viewshed.tif',
-    'viewshed_no_zeros_path': 'view_no_zeros.tif'
-    }
-
-_TMP_BASE_FILES = {
-    'aoi_proj_dem_path': 'aoi_proj_to_dem.shp',
-    'aoi_proj_pop_path': 'aoi_proj_to_pop.shp',
-    'aoi_proj_struct_path': 'aoi_proj_to_struct.shp',
-    'structures_clipped_path': 'structures_clipped.shp',
-    'structures_projected_path': 'structures_projected.shp',
-    'aoi_proj_overlap_path': 'aoi_proj_to_overlap.shp',
-    'overlap_clipped_path': 'overlap_clipped.shp',
-    'clipped_dem_path': 'dem_clipped.tif',
-    'dem_proj_to_aoi_path': 'dem_proj_to_aoi.tif',
-    'clipped_pop_path': 'pop_clipped.tif',
-    'pop_proj_to_aoi_path': 'pop_proj_to_aoi.tif',
-    'single_point_path': 'tmp_viewpoint_path.shp',
-    'population_projected': 'population_projected.shp',
-    'overlap_projected_path': 'vp_overlap.shp'
+    'structures_clipped': 'structures_clipped.shp',
+    'structures_reprojected': 'structures_reprojected.shp',
+    'population_projected': 'population_projected.tif',
+    'population_clipped': 'population_clipped.tif',
+    'overlap_reprojected': 'overlap_projected.shp',
+    'overlap_clipped': 'overlap_clipped.shp',
+    'n_structures_no_zeros': 'view_no_zeros.tif'
     }
 
 
@@ -121,8 +111,7 @@ def execute(args):
     # Create output and intermediate directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    viewshed_dir = os.path.join(intermediate_dir, 'viewpoint_rasters')
-    utils.make_directories([output_dir, intermediate_dir, viewshed_dir])
+    utils.make_directories([output_dir, intermediate_dir])
 
     file_suffix = utils.make_suffix_string(
         args, 'results_suffix')
@@ -130,8 +119,8 @@ def execute(args):
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
+        file_suffix)
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     aoi_vector_info = pygeoprocessing.get_vector_info(args['aoi_path'])
@@ -142,8 +131,8 @@ def execute(args):
         pygeoprocessing.reproject_vector,
         args=(args['aoi_path'],
               dem_raster_info['projection'],
-              file_registry['aoi_proj_dem_path']),
-        target_path_list=[file_registry['aoi_proj_dem_path']],
+              file_registry['aoi_reprojected']),
+        target_path_list=[file_registry['aoi_reprojected']],
         task_name='reproject_aoi_to_dem')
 
     # TODO: clip the AOI to the DEM bounding box.
@@ -152,16 +141,16 @@ def execute(args):
         pygeoprocessing.reproject_vector,
         args=(args['structure_path'],
               dem_raster_info['projection'],
-              file_registry['structures_projected_path']),
-        target_path_list=[file_registry['structures_projected_path']],
+              file_registry['structures_reprojected']),
+        target_path_list=[file_registry['structures_reprojected']],
         task_name='reproject_structures_to_dem')
 
     clipped_viewpoints_task = graph.add_task(
         clip_datasource_layer,
-        args=(file_registry['structures_projected_path'],
-              file_registry['aoi_proj_dem_path'],
-              file_registry['structures_clipped_path']),
-        target_path_list=[file_registry['structures_clipped_path']],
+        args=(file_registry['structures_reprojected'],
+              file_registry['aoi_reprojected'],
+              file_registry['structures_clipped']),
+        target_path_list=[file_registry['structures_clipped']],
         dependent_task_list=[reprojected_aoi_task,
                              reprojected_viewpoints_task],
         task_name='clip_reprojected_structures_to_aoi')
@@ -169,9 +158,9 @@ def execute(args):
     clipped_dem_task = graph.add_task(
         _clip_dem,
         args=(args['dem_path'],
-              file_registry['aoi_proj_dem_path'],
-              file_registry['clipped_dem_path']),
-        target_path_list=[file_registry['clipped_dem_path']],
+              file_registry['aoi_reprojected'],
+              file_registry['clipped_dem']),
+        target_path_list=[file_registry['clipped_dem']],
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
 
@@ -184,7 +173,7 @@ def execute(args):
     viewshed_tasks = []
     valuation_tasks = []
     valuation_filepaths = []
-    structures_vector = ogr.Open(file_registry['structures_projected_path'])
+    structures_vector = ogr.Open(file_registry['structures_reprojected'])
     for structures_layer in structures_vector:
         layer_name = structures_layer.GetName()
 
@@ -236,7 +225,7 @@ def execute(args):
 
             viewshed_task = graph.add_task(
                 viewshed,
-                args=((file_registry['clipped_dem_path'], 1),  # DEM
+                args=((file_registry['clipped_dem'], 1),  # DEM
                       viewpoint,
                       visibility_filepath),
                 kwargs={'curved_earth': True,  # model always assumes this.
@@ -274,29 +263,29 @@ def execute(args):
         pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in valuation_filepaths],
               _sum_valuation_rasters,
-              file_registry['viewshed_valuation_path'],
+              file_registry['viewshed_value'],
               gdal.GDT_Float32,
               -9999),  # TODO: make this a module-level variable?
-        target_path_list=[file_registry['viewshed_valuation_path']],
+        target_path_list=[file_registry['viewshed_value']],
         dependent_task_list=valuation_tasks,
         task_name='add_up_valuation_rasters')
 
     viewshed_sum_task = graph.add_task(
         _count_visible_structures,
         args=(viewshed_files,
-              file_registry['clipped_dem_path'],
-              file_registry['viewshed_path']),
-        target_path_list=[file_registry['viewshed_path']],
+              file_registry['clipped_dem'],
+              file_registry['n_visible_structures']),
+        target_path_list=[file_registry['n_visible_structures']],
         dependent_task_list=viewshed_tasks,
         task_name='sum_visibility_for_all_structures')
 
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
-        args=(file_registry['viewshed_path'],
-              file_registry['viewshed_quality_path']),
+        args=(file_registry['n_visible_structures'],
+              file_registry['viewshed_quality']),
         dependent_task_list=[viewshed_sum_task],
-        target_path_list=[file_registry['viewshed_quality_path']],
+        target_path_list=[file_registry['viewshed_quality']],
         task_name='calculate_visual_quality'
     )
 
@@ -321,9 +310,9 @@ def execute(args):
         affected_population_summary_task = graph.add_task(
             _summarize_affected_populations,
             args=(file_registry['population_projected'],
-                  file_registry['viewshed_path'],
-                  file_registry['pop_stats_table']),
-            target_path_list=[file_registry['pop_stats_table']],
+                  file_registry['n_visible_structures'],
+                  file_registry['pop_stats_csv']),
+            target_path_list=[file_registry['pop_stats_csv']],
             task_name='affected_population_summary_task',
             dependent_task_list=[reprojected_clipped_population_task,
                                  viewshed_sum_task])
@@ -339,34 +328,34 @@ def execute(args):
             pygeoprocessing.reproject_vector,
             args=(args['overlap_path'],
                   dem_raster_info['projection'],
-                  file_registry['overlap_projected_path']),
-            target_path_list=[file_registry['overlap_projected_path']],
+                  file_registry['overlap_reprojected']),
+            target_path_list=[file_registry['overlap_reprojected']],
             dependent_task_list=[viewshed_sum_task],
             task_name='reprojected_overlap_vector_task')
 
         clipped_overlap_vector_task = graph.add_task(
             clip_datasource_layer,
-            args=(file_registry['overlap_projected_path'],
-                  file_registry['aoi_proj_dem_path'],
-                  file_registry['overlap_clipped_path']),
-            target_path_list=[file_registry['overlap_clipped_path']],
+            args=(file_registry['overlap_reprojected'],
+                  file_registry['aoi_reprojected'],
+                  file_registry['overlap_clipped']),
+            target_path_list=[file_registry['overlap_clipped']],
             dependent_task_list=[reprojected_overlap_vector_task],
             task_name='clipped_overlap_vector_task')
 
         # convert zero-values to nodata for correct summing.
         mask_out_zero_values_task = graph.add_task(
             _mask_out_zero_values,
-            args=(file_registry['viewshed_path'],
-                  file_registry['viewshed_no_zeros_path']),
-            target_path_list=[file_registry['viewshed_no_zeros_path']],
+            args=(file_registry['n_visible_structures'],
+                  file_registry['n_structures_no_zeros']),
+            target_path_list=[file_registry['n_structures_no_zeros']],
             dependent_task_list=[viewshed_sum_task],
             task_name='mask_out_zero_values_task')
 
         # Calculating percent overlap is a leaf node on the graph.
         graph.add_task(
             _calculate_percent_overlap,
-            args=(file_registry['overlap_clipped_path'],
-                  file_registry['viewshed_no_zeros_path'],
+            args=(file_registry['overlap_clipped'],
+                  file_registry['n_structures_no_zeros'],
                   file_registry['overlap_path']),
             target_path_list=[file_registry['overlap_path']],
             dependent_task_list=[mask_out_zero_values_task,
