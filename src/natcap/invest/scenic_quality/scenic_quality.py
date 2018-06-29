@@ -671,10 +671,11 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
 
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
-    start_time = time.time()
+    last_log_time = time.time()
     for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem):
         current_time = time.time()
         if current_time - start_time > 5.0:
+            last_log_time = current_time
             LOGGER.info('Counting visible structures approx. %.2f%% complete',
                         (pixels_processed / pixels_in_dem) * 100.0)
         visibility_sum = numpy.empty((block_info['win_ysize'],
@@ -693,7 +694,7 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
         target_band.WriteArray(visibility_sum,
                                xoff=block_info['xoff'],
                                yoff=block_info['yoff'])
-        pixels_processed += len(dem_matrix)
+        pixels_processed += dem_matrix.size
 
     target_band = None
     target_raster = None
