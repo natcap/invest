@@ -2,9 +2,11 @@
 from __future__ import absolute_import
 import logging
 import os
+import tempfile
 
 from osgeo import gdal
 from osgeo import ogr
+import pygeoprocessing
 
 from . import validation
 from . import utils
@@ -13,7 +15,7 @@ LOGGER = logging.getLogger(__name__)
 
 
 def execute(args):
-    """InVEST Urban Flood Risk Mitigation.
+    """Urban Flood Risk Mitigation model.
 
     The model computes the peak flow attenuation for each pixel, delineates
     areas benefiting from this service, then calculates the monetary value of
@@ -52,7 +54,31 @@ def execute(args):
         None.
 
     """
-    pass
+    utils.make_directories([args['workspace_dir']])
+    temporary_working_dir = tempfile.mkdtemp(
+        prefix='temp_working_dir', dir=args['workspace_dir'])
+    # Align LULC with soils
+    aligned_lulc_path = os.path.join(
+        temporary_working_dir, 'aligned_lulc.tif')
+    aligned_soils_path = os.path.join(
+        temporary_working_dir, 'aligned_soils_hydrological_group.tif')
+
+    lulc_raster_info = pygeoprocessing.get_raster_info(
+        args['lulc_path'])
+    target_pixel_size = lulc_raster_info['pixel_size']
+    target_sr_wkt = lulc_raster_info['projection']
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        [args['lulc_path'], args['soils_hydrological_group_raster_path']],
+        [aligned_lulc_path, aligned_soils_path],
+        ['mode', 'mode'],
+        target_pixel_size, 'intersection',
+        target_sr_wkt=target_sr_wkt,
+        base_vector_path_list=[args['aoi_watersheds_path']],
+        raster_align_index=0)
+    # Load CN table
+    # Generate Smax
+    # Generate Qpi
 
 
 @validation.invest_validator
@@ -72,6 +98,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []

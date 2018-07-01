@@ -1,21 +1,29 @@
 """Tracer script to help with development."""
+import logging
+
 import natcap.invest.urban_flood_risk_mitigation
+
+logging.basicConfig(
+    level=logging.DEBUG,
+    format=(
+        '%(asctime)s (%(relativeCreated)d) %(levelname)s %(name)s'
+        ' [%(pathname)s.%(funcName)s:%(lineno)d] %(message)s'))
+LOGGER = logging.getLogger(__name__)
 
 
 def main():
     """Entry point."""
     args = {
-        'workspace_dir': '',
+        'workspace_dir': 'urban_invest_workspace',
         'results_suffix': '',
-        'dem_path': '',
-        'aoi_watersheds_path': '',
-        'rainfall_depth': '',
-        'lulc_path': '',
-        'soils_hydrological_group_raster_path': '',
-        'curve_number_table_path': '',
-        'flood_prone_areas_vector_path': '',
+        'aoi_watersheds_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
+        'rainfall_depth': 257.0,
+        'lulc_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\LULC_SFBA.tif",
+        'soils_hydrological_group_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\SoilHydroGroup_SFBA_reproj.tif",
+        'curve_number_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Biophysical_water_SF.csv",
+        'flood_prone_areas_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Flood_areas.shp",
         'built_infrastructure_vector_path': '',
-        'infrastructure_damage_loss_table_path': '',
+        'infrastructure_damage_loss_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Damage.csv",
         }
     natcap.invest.urban_flood_risk_mitigation.execute(args)
 
