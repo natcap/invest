@@ -2,11 +2,14 @@
 from __future__ import absolute_import
 import logging
 import os
-import tempfile
 
 from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
+import taskgraph
+import pandas
+import numpy
+import scipy
 
 from . import validation
 from . import utils
@@ -54,9 +57,12 @@ def execute(args):
         None.
 
     """
-    utils.make_directories([args['workspace_dir']])
-    temporary_working_dir = tempfile.mkdtemp(
-        prefix='temp_working_dir', dir=args['workspace_dir'])
+    temporary_working_dir = os.path.join(
+        args['workspace_dir'], 'temp_working_dir')
+    utils.make_directories([args['workspace_dir'], temporary_working_dir])
+
+    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
+
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
         temporary_working_dir, 'aligned_lulc.tif')
@@ -68,17 +74,80 @@ def execute(args):
     target_pixel_size = lulc_raster_info['pixel_size']
     target_sr_wkt = lulc_raster_info['projection']
 
-    pygeoprocessing.align_and_resize_raster_stack(
-        [args['lulc_path'], args['soils_hydrological_group_raster_path']],
-        [aligned_lulc_path, aligned_soils_path],
-        ['mode', 'mode'],
-        target_pixel_size, 'intersection',
-        target_sr_wkt=target_sr_wkt,
-        base_vector_path_list=[args['aoi_watersheds_path']],
-        raster_align_index=0)
+    soil_raster_info = pygeoprocessing.get_raster_info(
+        args['soils_hydrological_group_raster_path'])
+
+    align_raster_stack_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            [args['lulc_path'], args['soils_hydrological_group_raster_path']],
+            [aligned_lulc_path, aligned_soils_path],
+            ['mode', 'mode'],
+            target_pixel_size, 'intersection'),
+        kwargs={
+            'target_sr_wkt': target_sr_wkt,
+            'base_vector_path_list': [args['aoi_watersheds_path']],
+            'raster_align_index': 0},
+        target_path_list=[aligned_lulc_path, aligned_soils_path],
+        task_name='align raster stack')
+
     # Load CN table
+    cn_table = utils.build_lookup_from_csv(
+        args['curve_number_table_path'], 'lucode')
+
+    # make cn_table into a 2d array where first dim is lucode, second is
+    # 0..3 for CN_A..CN_D and last
+    data = []
+    row_ind = []
+    col_ind = []
+    for lucode in cn_table:
+        data.extend([
+            cn_table[lucode]['cn_%s' % soil_id]
+            for soil_id in ['a', 'b', 'c', 'd']])
+        row_ind.extend([int(lucode)] * 4)
+    col_ind = [0, 1, 2, 3] * (len(row_ind) // 4)
+    lucode_to_cn_table = scipy.sparse.csr_matrix((data, (row_ind, col_ind)))
+
+    cn_nodata = -1
+    lucode_nodata = lulc_raster_info['nodata'][0]
+    soil_type_nodata = soil_raster_info['nodata'][0]
+
+    LOGGER.debug(lucode_to_cn_table)
+
+    def lu_to_cn(lucode_array, soil_type_array):
+        result = numpy.empty_like(lucode_array, dtype=numpy.float32)
+        result[:] = cn_nodata
+        valid_mask = (
+            (lucode_array != lucode_nodata) &
+            (soil_type_array != soil_type_nodata))
+
+        # this is an array where each row represents a valid landcover pixel
+        # and the columns are the CN for the landcover type under that pxel
+        per_pixel_cn_array = (
+            lucode_to_cn_table[lucode_array[valid_mask]].toarray().reshape(
+                (-1, 4)))
+
+        # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
+        # pixel CN array
+        result[valid_mask] = numpy.choose(
+            per_pixel_cn_array,
+            soil_type_array[valid_mask].astype(numpy.int8)-1)
+
+        return result
+
+    cn_raster_path = os.path.join(args['workspace_dir'], 'cn_raster.tif')
+
+    align_raster_stack_task.join()
+
+    pygeoprocessing.raster_calculator(
+        [(aligned_lulc_path, 1), (aligned_soils_path, 1)], lu_to_cn,
+        cn_raster_path, gdal.GDT_Float32, cn_nodata)
+
     # Generate Smax
     # Generate Qpi
+
+    task_graph.close()
+    task_graph.join()
 
 
 @validation.invest_validator

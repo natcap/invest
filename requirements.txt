@@ -21,6 +21,6 @@ scipy>=0.16.1
 Shapely
 six
 pygeoprocessing>=0.7.0
-taskgraph[niced_processes]>=0.4.0,<0.5.0
+taskgraph[niced_processes]>=0.5.2
 chardet>=3.0.4
 matplotlib
