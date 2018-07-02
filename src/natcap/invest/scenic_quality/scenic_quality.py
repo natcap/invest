@@ -793,6 +793,7 @@ def validate(args, limit_to=None):
         'dem_path',
         'refraction',
         'max_valuation_radius',
+        'valuation_function',
         'a_coef',
         'b_coef']
 
@@ -800,7 +801,8 @@ def validate(args, limit_to=None):
     #        gdal.OpenEx(args['population_path'], gdal.OF_RASTER) != None):
     #    required_keys.append('population_type')
 
-    if args['valuation_function'].lower().startswith('polynomial'):
+    if ('valuation_function' in args and
+            args['valuation_function'].lower().startswith('polynomial')):
         required_keys.append('c_coef')
         required_keys.append('d_coef')
 

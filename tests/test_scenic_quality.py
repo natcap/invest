@@ -32,6 +32,37 @@ class ScenicQualityTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
 
+class ScenicQualityValidationTests(unittest.TestCase):
+    """Tests for Scenic Quality validation."""
+
+    def test_missing_keys(self):
+        """SQ Validate: assert missing keys."""
+        from natcap.invest.scenic_quality import scenic_quality
+        try:
+            scenic_quality.validate({})  # empty args dict.
+            self.fail('KeyError expected but not found')
+        except KeyError as error_raised:
+            missing_keys = sorted(error_raised.args)
+            expected_missing_keys = [
+                'a_coef',
+                'aoi_path',
+                'b_coef',
+                'dem_path',
+                'max_valuation_radius',
+                'refraction',
+                'structure_path',
+                'valuation_function',
+                'workspace_dir',
+            ]
+            self.assertEqual(missing_keys, expected_missing_keys)
+        except Exception:
+            # any other error, fail!
+            self.fail('An unexpected error was raised!')
+
+
+
+
+
 
 class ScenicQualityUnitTests(unittest.TestCase):
     """Unit tests for Scenic Quality Model."""
