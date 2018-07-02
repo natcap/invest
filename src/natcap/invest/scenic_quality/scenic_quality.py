@@ -523,6 +523,12 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                                   xoff=block_info['xoff'],
                                   yoff=block_info['yoff'])
 
+    valuation_band = None
+    valuation_raster.FlushCache()
+    valuation_raster = None
+
+    pygeoprocessing.calculate_raster_stats(valuation_raster_path)
+
 
 def _viewpoint_within_raster(viewpoint, dem_path):
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
@@ -667,7 +673,10 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
         pixels_processed += dem_matrix.size
 
     target_band = None
+    target_raster.FlushCache()
     target_raster = None
+
+    pygeoprocessing.calculate_raster_stats(target_path)
 
 
 def _calculate_visual_quality(visible_structures_raster, target_path):
