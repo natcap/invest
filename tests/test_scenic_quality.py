@@ -5,18 +5,32 @@ import shutil
 import os
 import csv
 
+from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 from shapely.geometry import Polygon
-
-from nose.tools import nottest
+import numpy
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'scenic_quality')
+
+
+class ScenicQualityTests(unittest.TestCase):
+    """Tests for the InVEST Scenic Quality model."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
 
 
 class ScenicQualityUnitTests(unittest.TestCase):
@@ -31,7 +45,6 @@ class ScenicQualityUnitTests(unittest.TestCase):
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
-
 
     def test_add_percent_overlap(self):
         """SQ: test 'add_percent_overlap' function."""
@@ -111,7 +124,6 @@ class ScenicQualityRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    @nottest
     def test_scenic_quality_baseline(self):
         """SQ: testing with no optional features and polynomial val function."""
         from natcap.invest.scenic_quality import scenic_quality
@@ -302,7 +314,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_pixels_not_square(self):
         """Viewshed: exception raised when pixels are not square."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((20, 20))
         viewpoint = (10, 10)
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -311,12 +323,11 @@ class ViewshedTests(unittest.TestCase):
 
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         with self.assertRaises(AssertionError):
-            pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
-                                     visibility_filepath)
+            viewshed((dem_filepath, 1), viewpoint, visibility_filepath)
 
     def test_viewpoint_not_overlapping_dem(self):
         """Viewshed: exception raised when viewpoint is not over the DEM."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((20, 20))
         viewpoint = (-10, -10)
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -325,14 +336,13 @@ class ViewshedTests(unittest.TestCase):
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
 
         with self.assertRaises(ValueError):
-            pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
-                                     visibility_filepath,
-                                     aux_filepath=os.path.join(self.workspace_dir,
-                                                               'auxulliary.tif'))
+            viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
+                     aux_filepath=os.path.join(self.workspace_dir,
+                                               'auxulliary.tif'))
 
     def test_max_distance(self):
         """Viewshed: setting a max distance limits visibility distance."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((10, 10))
         viewpoint = (9, 9)
         max_dist = 4
@@ -342,12 +352,10 @@ class ViewshedTests(unittest.TestCase):
 
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
 
-        pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
-                                 visibility_filepath,
-                                 aux_filepath=os.path.join(self.workspace_dir,
-                                                           'auxulliary.tif'),
-                                 refraction_coeff=1.0,
-                                 max_distance=max_dist)
+        viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'),
+                 refraction_coeff=1.0, max_distance=max_dist)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -369,7 +377,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_refractivity(self):
         """Viewshed: refractivity partly compensates for earth's curvature."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         # TODO: verify this height.
         matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
         viewpoint = (0, 0)
@@ -386,11 +394,10 @@ class ViewshedTests(unittest.TestCase):
                                  pixel_size=pixel_size)
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
 
-        pygeoprocessing.viewshed((dem_filepath, 1), viewpoint,
-                                 visibility_filepath,
-                                 aux_filepath=os.path.join(self.workspace_dir,
-                                                           'auxulliary.tif'),
-                                 refraction_coeff=0.1)
+        viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'),
+                 refraction_coeff=0.1)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -405,8 +412,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_block_size_check(self):
         """Viewshed: exception raised when blocks not equal, power of 2."""
-        import pygeoprocessing
-        import pygeoprocessing.testing
+        from natcap.invest.scenic_quality.viewshed import viewshed
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(4326)
@@ -421,14 +427,14 @@ class ViewshedTests(unittest.TestCase):
                 'BLOCKXSIZE=20', 'BLOCKYSIZE=40'), filename=dem_filepath)
 
         with self.assertRaises(ValueError):
-            pygeoprocessing.viewshed(
+            viewshed(
                 (dem_filepath, 1), (0, 0), visibility_filepath,
                 aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
             )
 
     def test_view_from_valley(self):
         """Viewshed: test visibility from within a pit."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((9, 9))
         matrix[5:8,5:8] = 2
         matrix[4:7,4:7] = 1
@@ -437,11 +443,10 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
-                                 visibility_filepath, refraction_coeff=1.0,
-                                 aux_filepath=os.path.join(self.workspace_dir,
-                                                           'auxulliary.tif')
-                                 )
+        viewshed((dem_filepath, 1), (5, 5), visibility_filepath,
+                 refraction_coeff=1.0,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'))
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -454,7 +459,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_tower_view_from_valley(self):
         """Viewshed: test visibility from a 'tower' within a pit."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((9, 9))
         matrix[5:8,5:8] = 2
         matrix[4:7,4:7] = 1
@@ -463,11 +468,10 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
-                                 visibility_filepath, viewpoint_height=10,
-                                 aux_filepath=os.path.join(self.workspace_dir,
-                                                           'auxulliary.tif')
-                                 )
+        viewshed((dem_filepath, 1), (5, 5), visibility_filepath,
+                 viewpoint_height=10,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'))
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -478,7 +482,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_primitive_peak(self):
         """Viewshed: looking down from a peak renders everything visible."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((8, 8))
         matrix[4:7,4:7] = 1
         matrix[5,5] = 2
@@ -486,11 +490,11 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed((dem_filepath, 1), (5, 5),
+        viewshed((dem_filepath, 1), (5, 5),
                                  visibility_filepath,
-                                 aux_filepath=os.path.join(self.workspace_dir,
-                                                           'auxulliary.tif'),
-                                 refraction_coeff=1.0)
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'),
+                 refraction_coeff=1.0)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -499,7 +503,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_cliff_bottom_half_visibility(self):
         """Viewshed: visibility for a cliff on bottom half of DEM."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20,20))
         matrix.fill(2)
         matrix[7:] = 10  # cliff at row 7
@@ -509,7 +513,7 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed(
+        viewshed(
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=(viewpoint[1], viewpoint[0]),
             visibility_filepath=visibility_filepath,
@@ -525,7 +529,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_cliff_top_half_visibility(self):
         """Viewshed: visibility for a cliff on top half of DEM."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20,20))
         matrix.fill(2)
         matrix[:8] = 10  # cliff at row 8
@@ -535,7 +539,7 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed(
+        viewshed(
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
@@ -550,7 +554,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_cliff_left_half_visibility(self):
         """Viewshed: visibility for a cliff on left half of DEM."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20,20))
         matrix.fill(2)
         matrix[:,:8] = 10  # cliff at column 8
@@ -560,7 +564,7 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed(
+        viewshed(
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
@@ -575,7 +579,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_cliff_right_half_visibility(self):
         """Viewshed: visibility for a cliff on right half of DEM."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20,20))
         matrix.fill(2)
         matrix[:,12:] = 10  # cliff at column 8
@@ -585,7 +589,7 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed(
+        viewshed(
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
@@ -600,7 +604,7 @@ class ViewshedTests(unittest.TestCase):
 
     def test_pillars(self):
         """Viewshed: put a few pillars in a field, can't see behind them."""
-        import pygeoprocessing
+        from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20,20))
         matrix.fill(2)
 
@@ -617,7 +621,7 @@ class ViewshedTests(unittest.TestCase):
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
         visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
         ViewshedTests.create_dem(matrix, dem_filepath)
-        pygeoprocessing.viewshed(
+        viewshed(
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
