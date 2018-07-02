@@ -48,7 +48,10 @@ _INTERMEDIATE_BASE_FILES = {
     'population_clipped': 'population_clipped.tif',
     'overlap_reprojected': 'overlap_projected.shp',
     'overlap_clipped': 'overlap_clipped.shp',
-    'n_structures_no_zeros': 'view_no_zeros.tif'
+    'n_structures_no_zeros': 'view_no_zeros.tif',
+    'visibility_pattern': 'visibility_{id}.tif',
+    'auxilliary_pattern': 'auxilliary_{id}.tif',
+    'value_pattern': 'value_{id}.tif',
     }
 
 
@@ -127,7 +130,6 @@ def execute(args):
     max_valuation_radius = float(args['max_valuation_radius'])
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-    aoi_vector_info = pygeoprocessing.get_vector_info(args['aoi_path'])
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
 
@@ -222,14 +224,11 @@ def execute(args):
                 # When no weight provided, set scale to 1
                 weight = 1.0
 
-            visibility_filepath = os.path.join(
-                intermediate_dir, 'visibility_%s_%s%s.tif' % (
-                    layer_name, point.GetFID(), file_suffix))
+            visibility_filepath = file_registry['visibility_pattern'].format(
+                id=point.GetFID())
             viewshed_files.append(visibility_filepath)
-            auxilliary_filepath = os.path.join(
-                intermediate_dir, 'auxilliary_%s_%s%s.tif' % (
-                    layer_name, point.GetFID(), file_suffix))
-
+            auxilliary_filepath = file_registry['auxilliary_pattern'].format(
+                id=point.GetFID())
             viewshed_task = graph.add_task(
                 viewshed,
                 args=((file_registry['clipped_dem'], 1),  # DEM
@@ -248,9 +247,8 @@ def execute(args):
             viewshed_tasks.append(viewshed_task)
 
             # calculate valuation
-            viewshed_valuation_path = os.path.join(
-                intermediate_dir,
-                'val_viewshed_%s%s.tif' % (feature_id, file_suffix))
+            viewshed_valuation_path = file_registry['value_pattern'].format(
+                id=point.GetFID())
             valuation_task = graph.add_task(
                 _calculate_valuation,
                 args=(visibility_filepath,
