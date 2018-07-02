@@ -766,11 +766,27 @@ def _summarize_affected_populations(population_path, viewshed_sum_path,
 
 @validation.invest_validator
 def validate(args, limit_to=None):
+    """Validate args to ensure they conform to ``execute``'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in ``execute`` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the ``args[limit_to]`` value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire ``args`` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_key_b, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+    """
     missing_key_list = []
     no_value_list = []
     validation_error_list = []
 
-    required_keys = [ 
+    required_keys = [
         'workspace_dir',
         'aoi_path',
         'structure_path',
@@ -795,10 +811,10 @@ def validate(args, limit_to=None):
             elif args[key] in ('', None):
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
+    if missing_key_list:
         raise KeyError(*missing_key_list)
 
-    if len(no_value_list) > 0:
+    if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 
