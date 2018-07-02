@@ -19,6 +19,7 @@ from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 _N_WORKERS = 0
+_NODATA = -99999  # largish negative nodata value.
 
 
 class ValuationContainerError(Exception):
@@ -73,6 +74,13 @@ def execute(args):
             coefficient to use for calculating curvature of the earth.
         args['population_path'] (string): (optional) path to a raster for
             population data.
+        args['population_type'] (string):  Required when population raster is
+            provided. The value must be one of:
+
+            * "Density", when the population raster is population density per
+                unit area.
+            * "Count", when the population raster is population counts per call
+
         args['overlap_path'] (string): (optional) path to a polygon shapefile.
         args['results_suffix] (string): (optional) string to append to any
             output file.
@@ -136,8 +144,6 @@ def execute(args):
               file_registry['aoi_reprojected']),
         target_path_list=[file_registry['aoi_reprojected']],
         task_name='reproject_aoi_to_dem')
-
-    # TODO: clip the AOI to the DEM bounding box.
 
     reprojected_viewpoints_task = graph.add_task(
         pygeoprocessing.reproject_vector,
@@ -273,7 +279,7 @@ def execute(args):
               _sum_valuation_rasters,
               file_registry['viewshed_value'],
               gdal.GDT_Float32,
-              -9999),  # TODO: make this a module-level variable?
+              _NODATA),
         target_path_list=[file_registry['viewshed_value']],
         dependent_task_list=valuation_tasks,
         task_name='add_up_valuation_rasters')
@@ -300,6 +306,9 @@ def execute(args):
     if 'population_path' in args and args['population_path'] not in (None, ''):
         population_raster_info = pygeoprocessing.get_raster_info(
             args['population_path'])
+
+        # TODO: update the population computation to not warp pop pixels
+
         target_bbox = pygeoprocessing.transform_bounding_box(
             dem_raster_info['bounding_box'],
             dem_raster_info['projection'],
@@ -427,8 +436,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                          max_valuation_radius,
                          valuation_raster_path):
     valuation_method = valuation_method.lower()
-    # TODO: make these operations nodata-aware (based on the DEM)
-    valuation_nodata = -99999
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
                 valuation_method,
                 ' '.join(['%s=%f' % (k, v) for (k, v) in
@@ -477,7 +484,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             return valuation
 
     pygeoprocessing.new_raster_from_base(
-        visibility_path, valuation_raster_path, gdal.GDT_Float32, [valuation_nodata])
+        visibility_path, valuation_raster_path, gdal.GDT_Float32, [_NODATA])
 
 
     vis_raster_info = pygeoprocessing.get_raster_info(visibility_path)
@@ -499,7 +506,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
         valid_pixels = (vis_block != vis_nodata)
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float32)
-        visibility_value[:] = valuation_nodata
+        visibility_value[:] = _NODATA
 
         x_coord = numpy.linspace(
             block_info['xoff'],
