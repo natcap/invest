@@ -58,19 +58,16 @@ def execute(args):
     Parameters:
         args['workspace_dir'] (string): (required) output directory for
             intermediate, temporary, and final files.
+        args['results_suffix] (string): (optional) string to append to any
+            output file.
         args['aoi_path'] (string): (required) path to a vector that
             indicates the area over which the model should be run.
         args['structure_path'] (string): (required) path to a point vector
             that has the features for the viewpoints. Optional fields:
             'WEIGHT', 'RADIUS' / 'RADIUS2', 'HEIGHT'
-        args['keep_feat_viewsheds'] : a Boolean for whether individual feature
-            viewsheds should be saved to disk.
-        args['keep_val_viewsheds'] : a Boolean for whether individual feature
-            viewsheds that have been adjusted for valuation should be saved
-            to disk.
         args['dem_path'] (string): (required) path to a digital elevation model
             raster.
-        args['refraction'] (float): (optional) number indicating the refraction
+        args['refraction'] (float): (required) number indicating the refraction
             coefficient to use for calculating curvature of the earth.
         args['population_path'] (string): (optional) path to a raster for
             population data.
@@ -82,23 +79,20 @@ def execute(args):
             * "Count", when the population raster is population counts per call
 
         args['overlap_path'] (string): (optional) path to a polygon shapefile.
-        args['results_suffix] (string): (optional) string to append to any
-            output file.
-        args['valuation_function'] (int): type of economic function to use
-            for valuation. Either 3rd degree polynomial (0), logarithmic (1) or
-            exponential decay (2).
-        args['poly_a_coef'] (float): 1st coefficient for polynomial function.
-        args['poly_b_coef'] (float): 2nd coefficient for polynomial function.
-        args['poly_c_coef'] (float): 3rd coefficient for polynomial function.
-        args['poly_d_coef'] (float): 4th coefficient for polynomial function.
-        args['log_a_coef'] (float): 1st coefficient for logarithmic function.
-        args['log_b_coef'] (float): 2nd coefficient for logarithmic function.
-        args['exp_a_coef'] (float): 1st coefficient for exponential function.
-        args['exp_b_coef'] (float): 2nd coefficient for exponential function.
-        args['max_valuation_radius'] (float): (required) distance in
-            meters for maximum radius of valuation calculations.
+        args['valuation_function'] (string): The type of economic function to
+            use for valuation.  One of "polynomial", "logarithmic", or
+            "exponential".
+        args['a_coef'] (float): (required) The "a" coefficient for valuation.
+        args['b_coef'] (float): (required) The "b" coefficient for valuation.
+        args['c_coef'] (float): (optional) The "c" coefficient for valuation.
+            Required only for polynomial valuation.
+        args['d_coef'] (float): (optional) The "d" coefficient for valuation.
+            Required only for polynomial valuation.
+        args['max_valuation_radius'] (float): (required) Past this distance
+            from the viewpoint, the valuation raster's pixel values will be set
+            to 0.
     """
-    LOGGER.info("Start Scenic Quality Model")
+    LOGGER.info("Starting Scenic Quality Model")
 
     valuation_coefficients = {
         'a': float(args['a_coef']),

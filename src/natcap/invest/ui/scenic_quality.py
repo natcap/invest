@@ -13,10 +13,6 @@ class ScenicQuality(model.InVESTModel):
             validator=scenic_quality.validate,
             localdoc=u'../documentation/scenic_quality.html')
 
-        self.beta_only = inputs.Label(
-            text=(
-                u"This tool is considered UNSTABLE.  Users may "
-                u"experience performance issues and unexpected errors."))
         self.general_tab = inputs.Container(
             interactive=True,
             label=u'General')
@@ -29,7 +25,7 @@ class ScenicQuality(model.InVESTModel):
                 u"of analysis.  Users will create a polygon feature "
                 u"layer that defines their area of interest.  The AOI "
                 u"must intersect the Digital Elevation Model (DEM)."),
-            label=u'Area of Interest (Vector)',
+            label=u'Area of Interest (Vector) (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.aoi_path)
         self.structure_path = inputs.File(
@@ -42,7 +38,7 @@ class ScenicQuality(model.InVESTModel):
                 u"facilities.  In order for the viewshed analysis to "
                 u"run correctly, the projection of this input must be "
                 u"consistent with the project of the DEM input."),
-            label=u'Features Impacting Scenic Quality (Vector)',
+            label=u'Features Impacting Scenic Quality (Vector) (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.structure_path)
         self.dem_path = inputs.File(
@@ -53,7 +49,7 @@ class ScenicQuality(model.InVESTModel):
                 u"Elevation data allows the model to determine areas "
                 u"within the AOI's land-seascape where point features "
                 u"contributing to negative scenic quality are visible."),
-            label=u'Digital Elevation Model (Raster)',
+            label=u'Digital Elevation Model (Raster) (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.dem_path)
         self.refraction = inputs.Text(
@@ -70,7 +66,7 @@ class ScenicQuality(model.InVESTModel):
                 u"one-seventh.  By default, this model corrects for the "
                 u"curvature of the earth and sets the refractivity "
                 u"coefficient to 0.13."),
-            label=u'Refractivity Coefficient',
+            label=u'Refractivity Coefficient (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
         self.pop_path = inputs.File(
@@ -81,7 +77,7 @@ class ScenicQuality(model.InVESTModel):
                 u"AOI's land-seascape where point features contributing "
                 u"to negative scenic quality are visible and not "
                 u"visible."),
-            label=u'Population (Raster)',
+            label=u'Population (Raster) (Optional)',
             validator=self.validator)
         self.general_tab.add_input(self.pop_path)
         self.overlap_path = inputs.File(
@@ -95,7 +91,7 @@ class ScenicQuality(model.InVESTModel):
                 u"to determine what percent of the total area of each "
                 u"polygon feature can see at least one of the point "
                 u"features impacting scenic quality."),
-            label=u'Overlap Analysis Features (Vector)',
+            label=u'Overlap Analysis Features (Vector) (Optional)',
             validator=self.validator)
         self.general_tab.add_input(self.overlap_path)
         self.valuation_tab = inputs.Container(
@@ -150,7 +146,7 @@ class ScenicQuality(model.InVESTModel):
                 u"Radius beyond which the valuation is set to zero. "
                 u"The valuation function 'f' cannot be negative at the "
                 u"radius 'r' (f(r)>=0)."),
-            label=u'Maximum Valuation Radius (meters)',
+            label=u'Maximum Valuation Radius (meters) (Required)',
             validator=self.validator)
         self.valuation_tab.add_input(self.max_valuation_radius)
 
