@@ -178,11 +178,13 @@ def execute(args):
     valuation_tasks = []
     valuation_filepaths = []
     structures_vector = ogr.Open(file_registry['structures_reprojected'])
-    for structures_layer in structures_vector:
+    for lyr_index, structures_layer in enumerate(structures_vector):
         layer_name = structures_layer.GetName()
+        LOGGER.info('Layer %s has %s features', layer_name,
+                    structures_layer.GetFeatureCount())
 
         for point in structures_layer:
-            feature_id = "%s_%s" % (layer_name, point.GetFID())
+            feature_id = "%s-%s" % (lyr_index, point.GetFID())
 
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
@@ -225,10 +227,10 @@ def execute(args):
                 weight = 1.0
 
             visibility_filepath = file_registry['visibility_pattern'].format(
-                id=point.GetFID())
+                id=feature_id)
             viewshed_files.append(visibility_filepath)
             auxilliary_filepath = file_registry['auxilliary_pattern'].format(
-                id=point.GetFID())
+                id=point.feature_id)
             viewshed_task = graph.add_task(
                 viewshed,
                 args=((file_registry['clipped_dem'], 1),  # DEM
@@ -248,7 +250,7 @@ def execute(args):
 
             # calculate valuation
             viewshed_valuation_path = file_registry['value_pattern'].format(
-                id=point.GetFID())
+                id=feature_id)
             valuation_task = graph.add_task(
                 _calculate_valuation,
                 args=(visibility_filepath,
