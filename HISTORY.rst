@@ -29,6 +29,8 @@ Unreleased Changes
   due to a missing dependent task; it had previously been patched by setting
   taskgraph to operate in single thread mode. This restores multithreading
   in the pollination model.
+* Fixed an issue in the water yield / hydropower model that would skip
+  calculation of water demand tables when "water scarcity" was enabled.
 
 3.4.4 (2018-03-26)
 ------------------
