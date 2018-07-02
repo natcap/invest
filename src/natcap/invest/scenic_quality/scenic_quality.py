@@ -820,6 +820,12 @@ def validate(args, limit_to=None):
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 
+    if limit_to in ('valuation_function', None):
+        if not args['valuation_function'].startswith(
+                ('polynomial', 'logarithmic', 'exponential')):
+            validation_error_list.append(
+                (['valuation_function'], 'Invalid function'))
+
     spatial_files = (
         ('dem_path', gdal.OF_RASTER, 'raster',),
         ('population_path', gdal.OF_RASTER, 'raster',),
@@ -846,6 +852,8 @@ def validate(args, limit_to=None):
         'c_coef',
         'd_coef']
     for key in numeric_keys:
+        if key not in args or args[key] in ('', None):
+            continue
         try:
             float(args[key])
         except Exception as error:

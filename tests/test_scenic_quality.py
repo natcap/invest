@@ -59,9 +59,68 @@ class ScenicQualityValidationTests(unittest.TestCase):
             # any other error, fail!
             self.fail('An unexpected error was raised!')
 
+    def test_polynomial_required_keys(self):
+        """SQ Validate: assert polynomial required keys"""
+        from natcap.invest.scenic_quality import scenic_quality
+        try:
+            args = {'valuation_function': 'polynomial'}
+            scenic_quality.validate(args)
+            self.fail('KeyError expected but not found')
+        except KeyError as error_raised:
+            missing_keys = sorted(error_raised.args)
+            expected_missing_keys = [
+                'a_coef',
+                'aoi_path',
+                'b_coef',
+                'c_coef',
+                'd_coef',
+                'dem_path',
+                'max_valuation_radius',
+                'refraction',
+                'structure_path',
+                'workspace_dir',
+                # This list doesn't contain key ``valuation_function`` because
+                # the key was provided in args.
+            ]
+            self.assertEqual(missing_keys, expected_missing_keys)
+        except Exception:
+            # any other error, fail!
+            self.fail('An unexpected error was raised!')
 
+    def test_bad_values(self):
+        """SQ Validate: Assert we can catch various validation errors."""
+        from natcap.invest.scenic_quality import scenic_quality
 
+        # AOI path is missing
+        args = {
+            'workspace_dir': 'workspace not validated',
+            'aoi_path': '',  # covers required key, missing value.
+            'a_coef': 'foo',  # not a number
+            'b_coef': 1,  # key still needs to be here
+            'dem_path': 'not/a/path',  # not a raster
+            'refraction': "0.13",
+            'max_valuation_radius': None,  # covers missing value.
+            'structure_path': 'vector/missing',
+            'valuation_function': 'bad function',
+        }
 
+        validation_errors = scenic_quality.validate(args)
+
+        self.assertEqual(len(validation_errors), 5)
+
+        # map single-key errors to their errors.
+        single_key_errors = {}
+        for keys, error in validation_errors:
+            if len(keys) == 1:
+                single_key_errors[keys[0]] = error
+
+        self.assertTrue('refraction' not in single_key_errors)
+        self.assertEqual(single_key_errors['a_coef'], 'Must be a number')
+        self.assertEqual(single_key_errors['dem_path'], 'Must be a raster')
+        self.assertEqual(single_key_errors['structure_path'], 'Must be a vector')
+        self.assertEqual(single_key_errors['aoi_path'], 'Must be a vector')
+        self.assertEqual(single_key_errors['valuation_function'],
+                         'Invalid function')
 
 
 class ScenicQualityUnitTests(unittest.TestCase):
