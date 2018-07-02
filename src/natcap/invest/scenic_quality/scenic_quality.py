@@ -82,9 +82,9 @@ def execute(args):
             * "Count", when the population raster is population counts per call
 
         args['overlap_path'] (string): (optional) path to a polygon shapefile.
-        args['valuation_function'] (string): The type of economic function to
-            use for valuation.  One of "polynomial", "logarithmic", or
-            "exponential".
+        args['valuation_function'] (string): (required) The type of economic
+            function to use for valuation.  One of "polynomial", "logarithmic",
+            or "exponential".
         args['a_coef'] (float): (required) The "a" coefficient for valuation.
         args['b_coef'] (float): (required) The "b" coefficient for valuation.
         args['c_coef'] (float): (optional) The "c" coefficient for valuation.
@@ -766,4 +766,72 @@ def _summarize_affected_populations(population_path, viewshed_sum_path,
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    return []
+    missing_key_list = []
+    no_value_list = []
+    validation_error_list = []
+
+    required_keys = [ 
+        'workspace_dir',
+        'aoi_path',
+        'structure_path',
+        'dem_path',
+        'refraction',
+        'max_valuation_radius',
+        'a_coef',
+        'b_coef']
+
+    #if ('population_path' in args and
+    #        gdal.OpenEx(args['population_path'], gdal.OF_RASTER) != None):
+    #    required_keys.append('population_type')
+
+    if args['valuation_function'].lower().startswith('polynomial'):
+        required_keys.append('c_coef')
+        required_keys.append('d_coef')
+
+    for key in required_keys:
+        if limit_to in (None, key):
+            if key not in args:
+                missing_key_list.append(key)
+            elif args[key] in ('', None):
+                no_value_list.append(key)
+
+    if len(missing_key_list) > 0:
+        raise KeyError(*missing_key_list)
+
+    if len(no_value_list) > 0:
+        validation_error_list.append(
+            (no_value_list, 'parameter has no value'))
+
+    spatial_files = (
+        ('dem_path', gdal.OF_RASTER, 'raster',),
+        ('population_path', gdal.OF_RASTER, 'raster',),
+        ('aoi_path', gdal.OF_VECTOR, 'vector'),
+        ('overlap_path', gdal.OF_VECTOR, 'vector'),
+        ('structure_path', gdal.OF_VECTOR, 'vector'))
+    with utils.capture_gdal_logging():
+        for key, filetype, filetype_string in spatial_files:
+            if key not in args:
+                continue
+            if args[key] in (None, ''):
+                continue
+
+            spatial_file = gdal.OpenEx(args[key], filetype)
+            if spatial_file is None:
+                validation_error_list.append(
+                    ([key], 'Must be a %s' % filetype_string))
+
+    numeric_keys = [
+        'refraction',
+        'max_valuation_radius',
+        'a_coef',
+        'b_coef',
+        'c_coef',
+        'd_coef']
+    for key in numeric_keys:
+        try:
+            float(args[key])
+        except Exception as error:
+            validation_error_list.append(
+                ([key], "Must be a number"))
+
+    return validation_error_list
