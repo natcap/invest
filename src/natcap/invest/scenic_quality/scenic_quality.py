@@ -170,7 +170,8 @@ def execute(args):
 
     # viewshed calculation requires that the DEM and structures are all
     # finished.
-    graph.join()
+    clipped_dem_task.join()
+    clipped_viewpoints_task.join()
 
     # phase 2: calculate viewsheds.
     viewshed_files = []
