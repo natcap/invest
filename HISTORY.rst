@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Updated Recreation server's database to include metadata from photos taken 
+  from 2005-2017 (previous range was 2005-2014). The new range is reflected 
+  in the UI. 
 * Fixed an issue with the InVEST binary build where binaries on Windows would
   crash with an error saying Python27.dll could not be loaded.
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
