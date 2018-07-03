@@ -377,7 +377,7 @@ class ViewshedTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def create_dem(matrix, filepath, pixel_size=(1, -1)):
+    def create_dem(matrix, filepath, pixel_size=(1, -1), nodata=-1):
         """Create a DEM in WGS84 coordinate system.
 
         Parameters:
@@ -385,6 +385,7 @@ class ViewshedTests(unittest.TestCase):
             filepath (string): The filepath where the new raster file will be
                 written.
             pixel_size=(1, -1): The pixel size to use for the output raster.
+            nodata=-1: The nodata value to use for the output raster.
 
         Returns:
             ``None``.
@@ -398,7 +399,7 @@ class ViewshedTests(unittest.TestCase):
             [matrix],
             origin=(0, 0),
             projection_wkt=wkt,
-            nodata=-1,
+            nodata=nodata,
             pixel_size=pixel_size,
             filename=filepath)
 
@@ -499,6 +500,57 @@ class ViewshedTests(unittest.TestCase):
         expected_visibility = numpy.array(
             [[1, 1, 1, 1, 0, 0, 0, 0, 0, 1]], dtype=numpy.uint8)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_intervening_nodata(self):
+        """Viewshed: intervening nodata does not affect visibility."""
+        from natcap.invest.scenic_quality.viewshed import viewshed
+        nodata = 255
+        matrix = numpy.array([[2, 2, nodata, 3]])
+        viewpoint = (0, 0)
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath,
+                                 nodata=nodata)
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+
+        viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'),
+                 refraction_coeff=0.0)
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+
+        expected_visibility = numpy.array(
+            [[1, 1, 0, 1]], dtype=numpy.uint8)
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
+    def test_nodata_undefined(self):
+        """Viewshed: assume a reasonable nodata value if none defined."""
+        from natcap.invest.scenic_quality.viewshed import viewshed
+        nodata = None  # viewshed assumes an unlikely nodata value.
+        matrix = numpy.array([[2, 2, 1, 3]])
+        viewpoint = (0, 0)
+
+        dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        ViewshedTests.create_dem(matrix, dem_filepath,
+                                 nodata=nodata)
+        visibility_filepath = os.path.join(self.workspace_dir, 'visibility.tif')
+
+        viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
+                 aux_filepath=os.path.join(self.workspace_dir,
+                                           'auxulliary.tif'),
+                 refraction_coeff=0.0)
+
+        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_band = visibility_raster.GetRasterBand(1)
+        visibility_matrix = visibility_band.ReadAsArray()
+
+        expected_visibility = numpy.array(
+            [[1, 1, 0, 1]], dtype=numpy.uint8)
+        numpy.testing.assert_equal(visibility_matrix, expected_visibility)
+
 
     def test_block_size_check(self):
         """Viewshed: exception raised when blocks not equal, power of 2."""

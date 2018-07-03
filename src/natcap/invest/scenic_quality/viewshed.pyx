@@ -130,6 +130,7 @@ cdef int* SECTOR_SEEDS = [
 cdef int AUX_NOT_VISITED = -9999
 cdef int DIAM_EARTH = 12740000  # meters, from ArcGIS docs
 cdef double DIAM_EARTH_INV = 1.0/DIAM_EARTH
+cdef double IMPROBABLE_NODATA = -123457.12345
 
 # This type represents an x,y coordinate pair.
 ctypedef pair[long, long] CoordinatePair
@@ -604,8 +605,14 @@ def viewshed(dem_raster_path_band,
     raster = None
 
     band_to_array_index = dem_raster_path_band[1] - 1
-    if viewpoint_elevation == dem_raster_info['nodata'][band_to_array_index]:
+    nodata_value = dem_raster_info['nodata'][band_to_array_index]
+    if viewpoint_elevation == nodata_value:
         raise LookupError('Viewpoint is over nodata')
+
+    # Need to handle the case where the nodata value is not defined.
+    if nodata_value is None:
+        nodata_value = IMPROBABLE_NODATA
+    cdef double nodata = nodata_value
 
     # Verify that pixels are very close to square.  The Wang et al algorithm
     # doesn't require that this be the case, but the math is simplified if it
@@ -747,6 +754,7 @@ def viewshed(dem_raster_path_band,
     cdef long ix_target, iy_target
     cdef long ix_prev_target, iy_prev_target
     cdef long ix_cardinal_target, iy_cardinal_target
+    cdef double target_dem_height, adjusted_dem_height
     cdef double target_distance
     cdef double slope_distance
     cdef double z = 0  # initializing for compiler
@@ -810,11 +818,13 @@ def viewshed(dem_raster_path_band,
                 if correct_for_refraction:
                     adjustment -= refract_coeff*target_height_adjustment
 
-            target_dem_height = dem_managed_raster.get(ix_target, iy_target) - adjustment
-            if (target_dem_height >= z and
-                    target_distance < max_visible_radius):
+            target_dem_height = dem_managed_raster.get(ix_target, iy_target)
+            adjusted_dem_height = target_dem_height - adjustment
+            if (adjusted_dem_height >= z and
+                    target_distance < max_visible_radius and
+                    target_dem_height != nodata):
                 visibility_managed_raster.set(ix_target, iy_target, 1)
-                aux_managed_raster.set(ix_target, iy_target, target_dem_height)
+                aux_managed_raster.set(ix_target, iy_target, adjusted_dem_height)
             else:
                 visibility_managed_raster.set(ix_target, iy_target, 0)
                 aux_managed_raster.set(ix_target, iy_target, z)
@@ -938,11 +948,13 @@ def viewshed(dem_raster_path_band,
         # height for visibility, the DEM pixel is only visible if it is greater
         # than or equal to the minimum-visible height AND is closer than the
         # maximum visible radius.
-        target_dem_height = dem_managed_raster.get(n, m) - adjustment
-        if (target_dem_height >= z and
-                target_pixel.distance_to_viewpoint < max_visible_radius):
+        target_dem_height = dem_managed_raster.get(n, m)
+        adjusted_dem_height = dem_managed_raster.get(n, m) - adjustment
+        if (adjusted_dem_height >= z and
+                target_pixel.distance_to_viewpoint < max_visible_radius and
+                target_dem_height != nodata):
             visibility_managed_raster.set(n, m, 1)
-            aux_managed_raster.set(n, m, target_dem_height)
+            aux_managed_raster.set(n, m, adjusted_dem_height)
         else:
             visibility_managed_raster.set(n, m, 0)
             aux_managed_raster.set(n, m, z)
