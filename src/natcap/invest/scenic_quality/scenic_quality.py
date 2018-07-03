@@ -251,7 +251,7 @@ def execute(args):
               gdal.GDT_Float32,
               _NODATA),
         target_path_list=[file_registry['viewshed_value']],
-        dependent_task_list=valuation_tasks,
+        dependent_task_list=sorted(valuation_tasks),
         task_name='add_up_valuation_rasters')
 
     viewshed_sum_task = graph.add_task(
@@ -260,7 +260,7 @@ def execute(args):
               file_registry['clipped_dem'],
               file_registry['n_visible_structures']),
         target_path_list=[file_registry['n_visible_structures']],
-        dependent_task_list=viewshed_tasks,
+        dependent_task_list=sorted(viewshed_tasks),
         task_name='sum_visibility_for_all_structures')
 
     # visual quality is one of the leaf nodes on the task graph.
