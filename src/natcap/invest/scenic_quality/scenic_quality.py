@@ -647,18 +647,24 @@ def validate(args, limit_to=None):
                     ([key], 'Must be a %s' % filetype_string))
 
     numeric_keys = [
-        'refraction',
-        'max_valuation_radius',
-        'a_coef',
-        'b_coef',
-        'c_coef',
-        'd_coef']
-    for key in numeric_keys:
+        ('refraction', (0, 1)),
+        ('max_valuation_radius', (0, float('inf'))),
+        ('a_coef', (0, 1)),
+        ('b_coef', (0, 1)),
+        ('c_coef', (0, 1)),
+        ('d_coef', (0, 1)),
+    ]
+    for key, (min_value, max_value) in numeric_keys:
         if key not in args or args[key] in ('', None):
             continue
+
         try:
-            float(args[key])
-        except Exception as error:
+            value = float(args[key])
+            if not min_value <= value <= max_value:
+                validation_error_list.append(
+                    ([key], "Must be between %s and %s" % (
+                        min_value, max_value)))
+        except Exception:
             validation_error_list.append(
                 ([key], "Must be a number"))
 

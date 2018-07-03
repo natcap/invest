@@ -93,10 +93,10 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         # AOI path is missing
         args = {
-            'workspace_dir': 'workspace not validated',
-            'aoi_path': '',  # covers required key, missing value.
+            'workspace_dir': '',  # required key, missing value
+            'aoi_path': '/bad/vector/path',
             'a_coef': 'foo',  # not a number
-            'b_coef': 1,  # key still needs to be here
+            'b_coef': -1, # too low a value
             'dem_path': 'not/a/path',  # not a raster
             'refraction': "0.13",
             'max_valuation_radius': None,  # covers missing value.
@@ -106,7 +106,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         validation_errors = scenic_quality.validate(args)
 
-        self.assertEqual(len(validation_errors), 5)
+        self.assertEqual(len(validation_errors), 7)
 
         # map single-key errors to their errors.
         single_key_errors = {}
@@ -116,6 +116,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(single_key_errors['a_coef'], 'Must be a number')
+        self.assertEqual(single_key_errors['b_coef'], 'Must be between 0 and 1')
         self.assertEqual(single_key_errors['dem_path'], 'Must be a raster')
         self.assertEqual(single_key_errors['structure_path'], 'Must be a vector')
         self.assertEqual(single_key_errors['aoi_path'], 'Must be a vector')
