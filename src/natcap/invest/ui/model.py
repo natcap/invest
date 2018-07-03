@@ -15,6 +15,8 @@ import contextlib
 import functools
 import datetime
 import codecs
+import multiprocessing
+import importlib
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -414,6 +416,36 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
+        self._taskgraph_opts = inputs.Container(
+            label='Parallelism (experimental)')
+        self.layout().addWidget(self._taskgraph_opts)
+        self.taskgraph_enable_multicore = inputs.Checkbox(
+            label='Enable multicore computation',
+            helptext=('Check this box to enable multicore computation for '
+                      'InVEST models that support it.'))
+        self.taskgraph_enable_multicore.set_value(
+            inputs.INVEST_SETTINGS.value(
+                'taskgraph/use_multicore', False, bool))
+        self._taskgraph_opts.add_input(self.taskgraph_enable_multicore)
+
+        def _enable_multicore_input(value):
+            self.taskgraph_n_cpus.set_interactive(value)
+
+        self.taskgraph_enable_multicore.value_changed.connect(_enable_multicore_input)
+
+        self.taskgraph_n_cpus = inputs.Text(
+            label='Number of CPUs',
+            helptext=('Some models are able to take advantage of multiple '
+                      'CPU cores.  Setting this to anything higher than 1 '
+                      'will result in some models using more CPU cores '
+                      'when possible.'),
+            interactive=self.taskgraph_enable_multicore.value())
+        self.taskgraph_n_cpus.set_value(inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_cpus', '1', unicode))
+        self.taskgraph_n_cpus.textfield.setValidator(
+            QtGui.QIntValidator(1, multiprocessing.cpu_count() - 1))
+        self._taskgraph_opts.add_input(self.taskgraph_n_cpus)
+
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
@@ -432,6 +464,13 @@ class SettingsDialog(OptionsDialog):
             inputs.INVEST_SETTINGS.setValue(
                 'logging/logfile',
                 self.logfile_logging_level.value())
+
+            inputs.INVEST_SETTINGS.setValue(
+                'taskgraph/use_multicore',
+                self.taskgraph_enable_multicore.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'taskgraph/n_cpus',
+                self.taskgraph_n_cpus.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1494,6 +1533,16 @@ class InVESTModel(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
+
+            # Use the configured InVEST settings for taskgraph, if available.
+            # Default to no process parallelism.
+            if inputs.INVEST_SETTINGS.value(
+                    'taskgraph/use_multicore', False, bool) is True:
+                taskgraph_n_cpus = inputs.INVEST_SETTINGS.value(
+                    'taskgraph/n_cpus', 1, int)
+            else:
+                taskgraph_n_cpus = 0
+
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
                                          logging_level=logfile_log_level):
@@ -1502,6 +1551,19 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
+
+                    # if the model is taskgraph-enabled, set the number of
+                    # processes available to the user-defined n_cpus.
+                    try:
+                        module = importlib.import_module(
+                            self.target.__module__)
+                        if hasattr(module, '_N_WORKERS'):
+                            module._N_WORKERS = taskgraph_n_cpus
+                            LOGGER.info(
+                                'Taskgraph parallelism enabled on %s CPUs',
+                                taskgraph_n_cpus)
+                    except:
+                        LOGGER.exception('Could not set taskgraph n_workers')
 
                     try:
                         return self.target(args=args)
