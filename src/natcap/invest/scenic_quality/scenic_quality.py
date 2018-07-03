@@ -230,7 +230,7 @@ def execute(args):
                 id=feature_id)
             viewshed_files.append(visibility_filepath)
             auxilliary_filepath = file_registry['auxilliary_pattern'].format(
-                id=point.feature_id)
+                id=feature_id)
             viewshed_task = graph.add_task(
                 viewshed,
                 args=((file_registry['clipped_dem'], 1),  # DEM
@@ -432,7 +432,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     valuation_method = valuation_method.lower()
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
                 valuation_method,
-                ' '.join(['%s=%f' % (k, v) for (k, v) in
+                ' '.join(['%s=%g' % (k, v) for (k, v) in
                           sorted(valuation_coefficients.items())]))
 
     # All valuation functions use coefficients a, b
