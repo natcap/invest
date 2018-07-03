@@ -96,7 +96,7 @@ def execute(args):
         args['curve_number_table_path'], 'lucode')
 
     # make cn_table into a 2d array where first dim is lucode, second is
-    # 0..3 for CN_A..CN_D and last
+    # 0..3 to correspond to CN_A..CN_D
     data = []
     row_ind = []
     col_ind = []
@@ -112,26 +112,32 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    LOGGER.debug(lucode_to_cn_table)
-
     def lu_to_cn(lucode_array, soil_type_array):
+        """Map combination landcover soil type map to curve number raster."""
         result = numpy.empty_like(lucode_array, dtype=numpy.float32)
         result[:] = cn_nodata
         valid_mask = (
             (lucode_array != lucode_nodata) &
             (soil_type_array != soil_type_nodata))
 
-        # this is an array where each row represents a valid landcover pixel
-        # and the columns are the CN for the landcover type under that pxel
+        # this is an array where each column represents a valid landcover
+        # pixel and the rows are the curve number index for the landcover
+        # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
         per_pixel_cn_array = (
             lucode_to_cn_table[lucode_array[valid_mask]].toarray().reshape(
-                (-1, 4)))
+                (-1, 4))).transpose()
+
+        # this is the soil type array with values ranging from 0..4 that will
+        # choose the appropriate row for each pixel colum in
+        # `per_pixel_cn_array`
+        soil_choose_array = (
+            soil_type_array[valid_mask].astype(numpy.int8))-1
 
         # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
         # pixel CN array
         result[valid_mask] = numpy.choose(
-            per_pixel_cn_array,
-            soil_type_array[valid_mask].astype(numpy.int8)-1)
+            soil_choose_array,
+            per_pixel_cn_array)
 
         return result
 
