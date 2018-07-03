@@ -272,6 +272,8 @@ def execute(args):
         target_path_list=[file_registry['viewshed_quality']],
         task_name='calculate_visual_quality'
     )
+
+    LOGGER.info('Waiting for Scenic Quality tasks to complete.')
     graph.join()
 
 
