@@ -35,6 +35,14 @@ class ScenicQualityTests(unittest.TestCase):
 class ScenicQualityValidationTests(unittest.TestCase):
     """Tests for Scenic Quality validation."""
 
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
     def test_missing_keys(self):
         """SQ Validate: assert missing keys."""
         from natcap.invest.scenic_quality import scenic_quality
@@ -122,6 +130,30 @@ class ScenicQualityValidationTests(unittest.TestCase):
         self.assertEqual(single_key_errors['aoi_path'], 'Must be a vector')
         self.assertEqual(single_key_errors['valuation_function'],
                          'Invalid function')
+
+    def test_dem_projected_in_m(self):
+        """SQ Validate: the DEM must be projected in meters."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        from pygeoprocessing.testing import create_raster_on_disk
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(4326)  # WGS84 is not projected.
+        filepath = os.path.join(self.workspace_dir, 'dem.tif')
+        create_raster_on_disk(
+            [numpy.array([[1]])],
+            origin=(0, 0),
+            projection_wkt=srs.ExportToWkt(),
+            nodata=-1,
+            pixel_size=(1, -1),
+            filename=filepath)
+
+        args = {'dem_path': filepath}
+
+        validation_errors = scenic_quality.validate(args, limit_to='dem_path')
+        self.assertEqual(len(validation_errors), 1)
+        self.assertTrue('Must be projected in meters' in
+                        validation_errors[0][1])
 
 
 class ScenicQualityUnitTests(unittest.TestCase):

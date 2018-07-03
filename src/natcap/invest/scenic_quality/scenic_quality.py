@@ -646,6 +646,24 @@ def validate(args, limit_to=None):
                 validation_error_list.append(
                     ([key], 'Must be a %s' % filetype_string))
 
+    # Verify that the DEM projection is in meters.
+    # We don't care about the other spatial inputs, as they'll all be
+    # reprojected to the DEM's projection.
+    if limit_to in ('dem_path', None):
+        # only do this check if we can open the raster.
+        with utils.capture_gdal_logging():
+            do_spatial_check = False
+            if gdal.OpenEx(args['dem_path'], gdal.OF_RASTER) != None:
+                do_spatial_check = True
+        if do_spatial_check:
+            dem_srs = osr.SpatialReference()
+            dem_srs.ImportFromWkt(
+                pygeoprocessing.get_raster_info(args['dem_path'])['projection'])
+            if (abs(dem_srs.GetLinearUnits() - 1.0) > 0.5e7 or
+                    not bool(dem_srs.IsProjected())):
+                validation_error_list.append(
+                    (['dem_path'], 'Must be projected in meters'))
+
     numeric_keys = [
         ('refraction', (0, 1)),
         ('max_valuation_radius', (0, float('inf'))),
