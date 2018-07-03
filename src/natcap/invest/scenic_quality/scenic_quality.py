@@ -1,7 +1,6 @@
 """InVEST Scenic Quality Model."""
 import os
 import math
-import itertools
 import operator
 import logging
 import time
@@ -22,37 +21,23 @@ _N_WORKERS = 0
 _NODATA = -99999  # largish negative nodata value.
 
 
-class ValuationContainerError(Exception):
-    """A custom error message for missing Valuation parameters."""
-
-    pass
-
 _OUTPUT_BASE_FILES = {
     'viewshed_value': 'visibility_value.tif',
     'n_visible_structures': 'n_visible_structures.tif',
     'viewshed_quality': 'viewshed_qual.tif',
-    'pop_stats_csv': 'population_stats.csv',
     'overlap_path': 'vp_overlap.shp',
-    }
+}
 
 _INTERMEDIATE_BASE_FILES = {
     'aligned_dem_path': 'aligned_dem.tif',
-    'aligned_pop_path': 'aligned_pop.tif',
     'aoi_reprojected': 'aoi_reprojected.shp',
     'clipped_dem': 'dem_clipped.tif',
-    'pop_affected_path': 'affected_population.tif',
-    'pop_unaffected_path': 'unaffected_population.tif',
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
-    'population_projected': 'population_projected.tif',
-    'population_clipped': 'population_clipped.tif',
-    'overlap_reprojected': 'overlap_projected.shp',
-    'overlap_clipped': 'overlap_clipped.shp',
-    'n_structures_no_zeros': 'view_no_zeros.tif',
     'visibility_pattern': 'visibility_{id}.tif',
     'auxilliary_pattern': 'auxilliary_{id}.tif',
     'value_pattern': 'value_{id}.tif',
-    }
+}
 
 
 def execute(args):
@@ -72,16 +57,6 @@ def execute(args):
             raster.
         args['refraction'] (float): (required) number indicating the refraction
             coefficient to use for calculating curvature of the earth.
-        args['population_path'] (string): (optional) path to a raster for
-            population data.
-        args['population_type'] (string):  Required when population raster is
-            provided. The value must be one of:
-
-            * "Density", when the population raster is population density per
-                unit area.
-            * "Count", when the population raster is population counts per call
-
-        args['overlap_path'] (string): (optional) path to a polygon shapefile.
         args['valuation_function'] (string): (required) The type of economic
             function to use for valuation.  One of "polynomial", "logarithmic",
             or "exponential".
@@ -297,82 +272,6 @@ def execute(args):
         target_path_list=[file_registry['viewshed_quality']],
         task_name='calculate_visual_quality'
     )
-
-    if 'population_path' in args and args['population_path'] not in (None, ''):
-        population_raster_info = pygeoprocessing.get_raster_info(
-            args['population_path'])
-
-        # TODO: update the population computation to not warp pop pixels
-
-        target_bbox = pygeoprocessing.transform_bounding_box(
-            dem_raster_info['bounding_box'],
-            dem_raster_info['projection'],
-            population_raster_info['projection'])
-        reprojected_clipped_population_task = graph.add_task(
-            pygeoprocessing.warp_raster,
-            args=(args['population_path'],
-                  population_raster_info['pixel_size'],
-                  file_registry['population_projected'],
-                  'nearest'),
-            kwargs={'target_bb': target_bbox,
-                    'target_sr_wkt': dem_raster_info['projection']},
-            target_path_list=[file_registry['population_projected']],
-            task_name='reprojected_clipped_population_task')
-
-        affected_population_summary_task = graph.add_task(
-            _summarize_affected_populations,
-            args=(file_registry['population_projected'],
-                  file_registry['n_visible_structures'],
-                  file_registry['pop_stats_csv']),
-            target_path_list=[file_registry['pop_stats_csv']],
-            task_name='affected_population_summary_task',
-            dependent_task_list=[reprojected_clipped_population_task,
-                                 viewshed_sum_task])
-
-    if 'overlap_path' in args and args['overlap_path'] not in (None, ''):
-        # reproject overlap layer to DEM
-        # clip by overlap vector by AOI vector
-        # count the number of pixels greater than zero under the vector.
-        # Create a vector (copied from the overlap vector) with a new field
-        # called "%_overlap" that contains for each polygon:
-        #    n_pixels under the polygon*(pixel_size**2)/geometry_area*100
-        reprojected_overlap_vector_task = graph.add_task(
-            pygeoprocessing.reproject_vector,
-            args=(args['overlap_path'],
-                  dem_raster_info['projection'],
-                  file_registry['overlap_reprojected']),
-            target_path_list=[file_registry['overlap_reprojected']],
-            dependent_task_list=[viewshed_sum_task],
-            task_name='reprojected_overlap_vector_task')
-
-        clipped_overlap_vector_task = graph.add_task(
-            clip_datasource_layer,
-            args=(file_registry['overlap_reprojected'],
-                  file_registry['aoi_reprojected'],
-                  file_registry['overlap_clipped']),
-            target_path_list=[file_registry['overlap_clipped']],
-            dependent_task_list=[reprojected_overlap_vector_task],
-            task_name='clipped_overlap_vector_task')
-
-        # convert zero-values to nodata for correct summing.
-        mask_out_zero_values_task = graph.add_task(
-            _mask_out_zero_values,
-            args=(file_registry['n_visible_structures'],
-                  file_registry['n_structures_no_zeros']),
-            target_path_list=[file_registry['n_structures_no_zeros']],
-            dependent_task_list=[viewshed_sum_task],
-            task_name='mask_out_zero_values_task')
-
-        # Calculating percent overlap is a leaf node on the graph.
-        graph.add_task(
-            _calculate_percent_overlap,
-            args=(file_registry['overlap_clipped'],
-                  file_registry['n_structures_no_zeros'],
-                  file_registry['overlap_path']),
-            target_path_list=[file_registry['overlap_path']],
-            dependent_task_list=[mask_out_zero_values_task,
-                                 clipped_overlap_vector_task],
-            task_name='calculate_percent_overlap_task')
     graph.join()
 
 
@@ -558,56 +457,6 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
     return False
 
 
-def _calculate_percent_overlap(overlap_vector, viewshed_raster, target_path):
-    # viewshed_raster must not have any zero-pixel values.
-    LOGGER.info('Calculating percent overlap')
-
-    in_vector = gdal.OpenEx(overlap_vector, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    out_vector = driver.CreateCopy(target_path, in_vector)
-
-    # for now, let's assume that the InVESTID field doesn't exist.
-    field_name = 'InVESTID'
-    id_field = ogr.FieldDefn(field_name, ogr.OFTInteger)
-    layer = out_vector.GetLayer()
-    layer.CreateField(id_field)
-
-    for index, feature in enumerate(layer):
-        feature.SetField(field_name, index)
-        layer.SetFeature(feature)
-
-    layer = None
-    out_vector.FlushCache()
-    out_vector = None
-
-    raster_stats = pygeoprocessing.zonal_statistics(
-        (viewshed_raster, 1), target_path, field_name)
-
-    # having calculated the raster stats, create a new column and add the
-    # raster stats.
-    viewshed_info = pygeoprocessing.get_raster_info(viewshed_raster)
-    pixel_area = viewshed_info['mean_pixel_size']**2
-    vector = gdal.OpenEx(target_path, gdal.OF_VECTOR | gdal.GA_Update)
-    layer = vector.GetLayer()
-    perc_overlap_fieldname = '%_overlap'
-    layer.CreateField(ogr.FieldDefn(perc_overlap_fieldname, ogr.OFTReal))
-    for feature in layer:
-        feature_id = feature.GetField(field_name)
-        geometry = feature.GetGeometryRef()
-        geom_area = geometry.GetArea()
-
-        try:
-            n_pixels_overlapping_polygon = raster_stats[feature_id]['count']
-            percent_overlap = (
-                ((pixel_area*n_pixels_overlapping_polygon)/geom_area)*100.0)
-        except KeyError:
-            # When a polygon doesn't overlap any visible pixels.
-            percent_overlap = 0.0
-
-        feature.SetField(perc_overlap_fieldname, percent_overlap)
-        layer.SetFeature(feature)
-
-
 def _mask_out_zero_values(viewshed_sum, target_raster_path):
     LOGGER.info('Masking out zero-values for calculating raster stats')
     viewshed_nodata = (
@@ -623,6 +472,7 @@ def _mask_out_zero_values(viewshed_sum, target_raster_path):
 
 
 def _clip_dem(dem_path, aoi_path, target_path):
+    # TODO: mask out pixel values outside the AOI
     LOGGER.info('Clipping the DEM to the AOI bounding box.')
     # invariate: dem and aoi have the same projection.
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
@@ -722,49 +572,6 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         target_path, gdal.GDT_Byte, 255)
 
 
-def _summarize_affected_populations(population_path, viewshed_sum_path,
-                                    target_table_path):
-    LOGGER.info('Summarizing number of people affected')
-    population_nodata = pygeoprocessing.get_raster_info(
-        population_path)['nodata'][0]
-    n_visible_nodata = pygeoprocessing.get_raster_info(
-        viewshed_sum_path)['nodata'][0]
-
-    unaffected_sum = 0
-    unaffected_count = 0
-    affected_sum = 0
-    affected_count = 0
-
-    pop_raster = gdal.OpenEx(population_path, gdal.OF_RASTER)
-    pop_band = pop_raster.GetRasterBand(1)
-    n_visible_raster = gdal.OpenEx(viewshed_sum_path, gdal.OF_RASTER)
-    n_visible_band = n_visible_raster.GetRasterBand(1)
-
-    for block_data in pygeoprocessing.iterblocks(population_path,
-                                                 offset_only=True):
-        # Reading these in here so we can ensure the same block sizes.
-        population = pop_band.ReadAsArray(**block_data)
-        n_visible = n_visible_band.ReadAsArray(**block_data)
-
-        valid_mask = ((population != population_nodata) &
-                      (n_visible != n_visible_nodata))
-        affected_pixels = population[n_visible[valid_mask] > 0]
-        affected_sum += numpy.sum(affected_pixels)
-        affected_count += len(affected_pixels)
-
-        unaffected_pixels = population[n_visible[valid_mask] == 0]
-        unaffected_sum += numpy.sum(unaffected_pixels)
-        unaffected_count += len(unaffected_pixels)
-
-    # TODO: adjust for when population is a density raster.
-    # TODO: adjust by the cell size.
-
-    with open(target_table_path, 'w') as table_file:
-        table_file.write('"# of features visible","Population (estimate)"\n')
-        table_file.write('"None visible",%s\n' % unaffected_sum)
-        table_file.write('"1 or more visible",%s\n' % affected_sum)
-
-
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to ``execute``'s contract.
@@ -798,10 +605,6 @@ def validate(args, limit_to=None):
         'a_coef',
         'b_coef']
 
-    #if ('population_path' in args and
-    #        gdal.OpenEx(args['population_path'], gdal.OF_RASTER) != None):
-    #    required_keys.append('population_type')
-
     if ('valuation_function' in args and
             args['valuation_function'].lower().startswith('polynomial')):
         required_keys.append('c_coef')
@@ -829,9 +632,7 @@ def validate(args, limit_to=None):
 
     spatial_files = (
         ('dem_path', gdal.OF_RASTER, 'raster',),
-        ('population_path', gdal.OF_RASTER, 'raster',),
         ('aoi_path', gdal.OF_VECTOR, 'vector'),
-        ('overlap_path', gdal.OF_VECTOR, 'vector'),
         ('structure_path', gdal.OF_VECTOR, 'vector'))
     with utils.capture_gdal_logging():
         for key, filetype, filetype_string in spatial_files:

@@ -69,31 +69,6 @@ class ScenicQuality(model.InVESTModel):
             label=u'Refractivity Coefficient (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
-        self.pop_path = inputs.File(
-            args_key=u'population_path',
-            helptext=(
-                u"A GDAL-supported raster file.  A population raster "
-                u"layer is required to determine population within the "
-                u"AOI's land-seascape where point features contributing "
-                u"to negative scenic quality are visible and not "
-                u"visible."),
-            label=u'Population (Raster) (Optional)',
-            validator=self.validator)
-        self.general_tab.add_input(self.pop_path)
-        self.overlap_path = inputs.File(
-            args_key=u'overlap_path',
-            helptext=(
-                u"An OGR-supported vector file.  The user has the "
-                u"option of providing a polygon feature layer where "
-                u"they would like to determine the impact of objects on "
-                u"visual quality.  This input must be a polygon and "
-                u"projected in meters.  The model will use this layer "
-                u"to determine what percent of the total area of each "
-                u"polygon feature can see at least one of the point "
-                u"features impacting scenic quality."),
-            label=u'Overlap Analysis Features (Vector) (Optional)',
-            validator=self.validator)
-        self.general_tab.add_input(self.overlap_path)
         self.valuation_tab = inputs.Container(
             interactive=True,
             label=u'Valuation')
@@ -166,9 +141,5 @@ class ScenicQuality(model.InVESTModel):
             self.max_valuation_radius.args_key:
                 self.max_valuation_radius.value(),
         }
-        if self.pop_path.value():
-            args[self.pop_path.args_key] = self.pop_path.value()
-        if self.overlap_path.value():
-            args[self.overlap_path.args_key] = self.overlap_path.value()
 
         return args
