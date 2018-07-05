@@ -353,7 +353,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility > 0)
-            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
             x = distance[valid_pixels]
@@ -365,7 +365,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility > 0)
-            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
             # Per Rob, this is the natural log.
@@ -378,7 +378,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility > 0)
-            valuation = numpy.empty(distance.shape, dtype=numpy.float32)
+            valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
             valuation[valid_pixels] = (
@@ -387,7 +387,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             return valuation
 
     pygeoprocessing.new_raster_from_base(
-        visibility_path, valuation_raster_path, gdal.GDT_Float32, [_NODATA])
+        visibility_path, valuation_raster_path, gdal.GDT_Float64, [_NODATA])
 
     vis_raster_info = pygeoprocessing.get_raster_info(visibility_path)
     vis_gt = vis_raster_info['geotransform']
@@ -407,7 +407,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
         valid_pixels = (vis_block != vis_nodata)
-        visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float32)
+        visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _NODATA
 
         x_coord = numpy.linspace(
@@ -421,7 +421,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         ix, iy = numpy.meshgrid(x_coord, y_coord)
         dx = numpy.absolute(ix - ix_viewpoint)
         dy = numpy.absolute(iy - iy_viewpoint)
-        dist_in_m = numpy.hypot(dx, dy) * pixel_size_in_m
+        dist_in_m = numpy.hypot(dx, dy, dtype=numpy.float64) * pixel_size_in_m
 
         visibility_value[valid_pixels] = _valuation(dist_in_m[valid_pixels],
                                                     vis_block[valid_pixels])
