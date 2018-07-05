@@ -423,9 +423,13 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         dy = numpy.absolute(iy - iy_viewpoint)
         dist_in_m = numpy.hypot(dx, dy, dtype=numpy.float64) * pixel_size_in_m
 
-        visibility_value[valid_pixels] = _valuation(dist_in_m[valid_pixels],
-                                                    vis_block[valid_pixels])
-        visibility_value[dist_in_m > max_valuation_radius] = 0
+        valid_distances = (dist_in_m <= max_valuation_radius)
+        nodata = (vis_block == vis_nodata)
+        valid_indexes = (valid_distances & (~nodata))
+
+        visibility_value[valid_indexes] = _valuation(dist_in_m[valid_indexes],
+                                                     vis_block[valid_indexes])
+        visibility_value[~valid_distances & ~nodata] = 0
 
         valuation_band.WriteArray(visibility_value,
                                   xoff=block_info['xoff'],
