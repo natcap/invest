@@ -17,7 +17,6 @@ from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
-_N_WORKERS = 0
 _NODATA = -99999  # largish negative nodata value.
 
 
@@ -69,6 +68,9 @@ def execute(args):
         args['max_valuation_radius'] (float): (required) Past this distance
             from the viewpoint, the valuation raster's pixel values will be set
             to 0.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
     """
     LOGGER.info("Starting Scenic Quality Model")
 
@@ -106,7 +108,11 @@ def execute(args):
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
-    graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
+    try:
+        n_workers = int(args['n_workers'])
+    except KeyError:
+        n_workers = 0  # Threaded queue management, but same process.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     reprojected_aoi_task = graph.add_task(
         pygeoprocessing.reproject_vector,
