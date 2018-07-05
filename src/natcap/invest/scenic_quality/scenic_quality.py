@@ -554,6 +554,8 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
     pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
     pixels_processed = 0.0
 
+    vis_raster_bands = [gdal.OpenEx(vis_path, gdal.OF_RASTER).GetRasterBand(1)
+                        for vis_path in visibility_rasters]
 
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
@@ -567,12 +569,11 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
         visibility_sum = numpy.empty((block_info['win_ysize'],
                                       block_info['win_xsize']),
                                      dtype=numpy.int32)
+
         visibility_sum[:] = target_nodata
         valid_mask = (dem_matrix != dem_nodata)
         visibility_sum[~valid_mask] = target_nodata
-        for visibility_path in visibility_rasters:
-            visibility_raster = gdal.OpenEx(visibility_path, gdal.OF_RASTER)
-            visibility_band = visibility_raster.GetRasterBand(1)
+        for visibility_band in vis_raster_bands:
             visibility_matrix = visibility_band.ReadAsArray(**block_info)
             visible_mask = ((visibility_matrix == 1) & valid_mask)
             visibility_sum[visible_mask] += visibility_matrix[visible_mask]
