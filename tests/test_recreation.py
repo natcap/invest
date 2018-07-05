@@ -467,7 +467,7 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': 'local_recreation-results', #self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         recmodel_client.execute(args)
