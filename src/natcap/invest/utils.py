@@ -99,7 +99,10 @@ def prepare_workspace(workspace, name, logging_level=logging.NOTSET):
             modelname='-'.join(name.replace(':', '').split(' ')),
             timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
 
+    thread_name = threading.current_thread().name
+
     with capture_gdal_logging(), log_to_file(logfile,
+                                             threadname=thread_name,
                                              logging_level=logging_level):
         with sandbox_tempdir(dir=workspace):
             logging.captureWarnings(True)
@@ -162,18 +165,19 @@ def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
     if os.path.exists(logfile):
         LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
 
-    if not threadname:
-        threadname = threading.current_thread().name
 
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(log_fmt, date_fmt)
-    thread_filter = ThreadFilter(threadname)
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.NOTSET)
     root_logger.addHandler(handler)
-    handler.addFilter(thread_filter)
     handler.setFormatter(formatter)
     handler.setLevel(logging_level)
+
+    if threadname is not None:
+        thread_filter = ThreadFilter(threadname)
+        handler.addFilter(thread_filter)
+
     try:
         yield handler
     finally:
