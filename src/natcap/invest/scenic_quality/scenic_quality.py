@@ -125,7 +125,7 @@ def execute(args):
         task_name='reproject_structures_to_dem')
 
     clipped_viewpoints_task = graph.add_task(
-        clip_vector,
+        _clip_vector,
         args=(file_registry['structures_reprojected'],
               file_registry['aoi_reprojected'],
               file_registry['structures_clipped']),
@@ -362,6 +362,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valuation = numpy.empty(distance.shape, dtype=numpy.float32)
             valuation[:] = 0
 
+            # Per Rob, this is the natural log.
             valuation[valid_pixels] = (
                 (a+b*numpy.log(distance[valid_pixels]))*(
                     weight*visibility[valid_pixels]))
@@ -666,25 +667,23 @@ def validate(args, limit_to=None):
                     (['dem_path'], 'Must be projected in meters'))
 
     numeric_keys = [
-        ('refraction', (0, 1)),
-        ('max_valuation_radius', (0, float('inf'))),
-        ('a_coef', (0, 1)),
-        ('b_coef', (0, 1)),
-        ('c_coef', (0, 1)),
-        ('d_coef', (0, 1)),
+        'refraction',
+        'max_valuation_radius',
+        'a_coef',
+        'b_coef',
+        'c_coef',
+        'd_coef',
     ]
-    for key, (min_value, max_value) in numeric_keys:
+    for key in numeric_keys:
         if key not in args or args[key] in ('', None):
             continue
 
         try:
-            value = float(args[key])
-            if not min_value <= value <= max_value:
-                validation_error_list.append(
-                    ([key], "Must be between %s and %s" % (
-                        min_value, max_value)))
-        except Exception:
+            float(args[key])
+        except (ValueError, TypeError):
             validation_error_list.append(
                 ([key], "Must be a number"))
+        except Exception:
+            LOGGER.exception('Unexpected error when testing for float value')
 
     return validation_error_list
