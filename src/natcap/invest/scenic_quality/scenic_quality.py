@@ -125,7 +125,7 @@ def execute(args):
         task_name='reproject_structures_to_dem')
 
     clipped_viewpoints_task = graph.add_task(
-        clip_datasource_layer,
+        clip_vector,
         args=(file_registry['structures_reprojected'],
               file_registry['aoi_reprojected'],
               file_registry['structures_clipped']),
@@ -174,7 +174,7 @@ def execute(args):
             if _viewpoint_over_nodata(viewpoint, args['dem_path']):
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
-                    layer_name, point.GetFID())
+                    point.GetFID(), layer_name)
                 continue
 
             max_radius = None
@@ -277,21 +277,21 @@ def execute(args):
     graph.join()
 
 
-def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
-    """Clip Shapefile Layer by second Shapefile Layer.
+def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
+    """Clip one vector by another.
 
-    Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
-    inherits the projection and fields from the original Shapefile.
+    Uses ogr.Layer.Clip() to clip a vector, where the output Layer
+    inherits the projection and fields from the original.
 
     Parameters:
-        shape_to_clip_path (string): a path to a Shapefile on disk. This is
+        shape_to_clip_path (string): a path to a vector on disk. This is
             the Layer to clip. Must have same spatial reference as
             'binding_shape_path'.
-        binding_shape_path (string): a path to a Shapefile on disk. This is
+        binding_shape_path (string): a path to a vector on disk. This is
             the Layer to clip to. Must have same spatial reference as
             'shape_to_clip_path'
-        output_path (string): a path on disk to write the clipped Shapefile
-            to. Should end with a '.shp' extension.
+        output_path (string): a path on disk to write the clipped ESRI
+            Shapefile to. Should end with a '.shp' extension.
 
     Returns:
         Nothing
@@ -307,9 +307,9 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     binding_layer = binding_shape.GetLayer()
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    ds = driver.CreateDataSource(output_path)
+    vector = driver.CreateDataSource(output_path)
     input_layer_defn = input_layer.GetLayerDefn()
-    out_layer = ds.CreateLayer(
+    out_layer = vector.CreateLayer(
         input_layer_defn.GetName(), input_layer.GetSpatialRef())
 
     input_layer.Clip(binding_layer, out_layer)
@@ -318,7 +318,7 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     # empty
     if out_layer.GetFeatureCount() == 0:
         raise ValueError(
-            'Intersection ERROR: clip_datasource_layer '
+            'Intersection ERROR: _clip_vector '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
 
@@ -381,7 +381,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     pygeoprocessing.new_raster_from_base(
         visibility_path, valuation_raster_path, gdal.GDT_Float32, [_NODATA])
-
 
     vis_raster_info = pygeoprocessing.get_raster_info(visibility_path)
     vis_gt = vis_raster_info['geotransform']
