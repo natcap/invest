@@ -330,6 +330,18 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
 
 
 def _sum_valuation_rasters(*valuation_rasters):
+    """Sum up all valuation rasters.
+
+    This is a ``raster_calculator`` local operation.
+
+    Parameters:
+        valuation_rasters (list of ``numpy.array``s): The valuation rasters
+            to sum.
+
+    Returns:
+        A ``numpy.array`` representing the per-pixel sum of the valuation
+        matrices.
+    """
     return numpy.sum(numpy.stack(valuation_rasters), axis=0)
 
 
@@ -337,6 +349,30 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                          valuation_method, valuation_coefficients,
                          max_valuation_radius,
                          valuation_raster_path):
+    """Calculate valuation with one of the defined methods.
+
+    Parameters:
+        visibility_path (string): The path to a visibility raster for a single
+            point.  The visibility raster has pixel values of 0, 1, or nodata.
+            This raster must be projected in meters.
+        viewpoint (tuple): The viewpoint in projected coordinates of the
+            visibility raster.
+        weight (number): The numeric weight of the visibility.
+        valuation_method (string): The valuation method to use, one of
+            ('polynomial', 'logarithmic', 'exponential').
+        valuation_coefficients (dict): A dictionary mapping string coefficient
+            letters to numeric coefficient values.  For 'logarithmic' and
+            'exponential' valuation methods, keys 'a' and 'b' are required.
+            For 'polynomial' valuation method, keys 'a', 'b', 'c' and 'd' are
+            required.
+        max_valuation_radius (number): Past this distance (in meters),
+            valuation values will be set to 0.
+        valuation_raster_path (string): The path to where the valuation raster
+            will be saved.
+
+    Returns:
+        ``None``
+    """
     valuation_method = valuation_method.lower()
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
                 valuation_method,
@@ -443,6 +479,16 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
 
 def _viewpoint_within_raster(viewpoint, dem_path):
+    """Determine if a viewpoint overlaps a DEM.
+
+    Parameters:
+        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
+            projected in the DEM's coordinate system.
+        dem_path (string): The path to a DEM raster on disk.
+
+    Returns:
+        ``True`` if the viewpoint overlaps the DEM, ``False`` if not.
+    """
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
 
     bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = dem_raster_info['bounding_box']
@@ -453,10 +499,25 @@ def _viewpoint_within_raster(viewpoint, dem_path):
 
 
 def _viewpoint_over_nodata(viewpoint, dem_path):
+    """Determine if a viewpoint overlaps a nodata value within the DEM.
+
+    Parameters:
+        viewpoint (tuple): A coordinate pair indicating the (x, y) coordinates
+            projected in the DEM's coordinate system.
+        dem_path (string): The path to a DEM raster on disk.
+
+    Returns:
+        ``True`` if the viewpoint overlaps a nodata value within the DEM,
+        ``False`` if not.  If the DEM does not have a nodata value defined,
+        returns ``False``.
+    """
     raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
     nodata = band.GetNoDataValue()
     dem_gt = raster.GetGeoTransform()
+
+    if nodata is None:
+        return False
 
     ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
     iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
@@ -467,20 +528,6 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
     if value_under_viewpoint == nodata:
         return True
     return False
-
-
-def _mask_out_zero_values(viewshed_sum, target_raster_path):
-    LOGGER.info('Masking out zero-values for calculating raster stats')
-    viewshed_nodata = (
-        pygeoprocessing.get_raster_info(viewshed_sum)['nodata'][0])
-
-    def _mask_out_zeros(viewshed_matrix):
-        viewshed_matrix[viewshed_matrix == 0] = viewshed_nodata
-        return viewshed_matrix
-
-    pygeoprocessing.raster_calculator(
-        [(viewshed_sum, 1)], _mask_out_zeros, target_raster_path,
-        gdal.GDT_Int32, viewshed_nodata)
 
 
 def _clip_dem(dem_path, aoi_path, target_path):
@@ -543,6 +590,7 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
 
 
 def _calculate_visual_quality(visible_structures_raster, target_path):
+    """Calculate the visual quality of a q"""
     LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
     n_elements = 0
