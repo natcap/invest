@@ -658,7 +658,7 @@ def viewshed(dem_raster_path_band,
     LOGGER.info('Creating visibility raster %s', visibility_filepath)
     pygeoprocessing.new_raster_from_base(
         dem_raster_path_band[0], visibility_filepath, gdal.GDT_Byte, [255],
-        fill_value_list=[0], gtiff_creation_options=gtiff_creation_options)
+        fill_value_list=[255], gtiff_creation_options=gtiff_creation_options)
 
     # LRU-cached rasters for easier access to individual pixels.
     cdef _ManagedRaster dem_managed_raster = (
