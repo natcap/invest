@@ -59,14 +59,10 @@ def execute(args):
         args['refraction'] (float): (required) number indicating the refraction
             coefficient to use for calculating curvature of the earth.
         args['valuation_function'] (string): (required) The type of economic
-            function to use for valuation.  One of "polynomial", "logarithmic",
+            function to use for valuation.  One of "linear", "logarithmic",
             or "exponential".
         args['a_coef'] (float): (required) The "a" coefficient for valuation.
         args['b_coef'] (float): (required) The "b" coefficient for valuation.
-        args['c_coef'] (float): (optional) The "c" coefficient for valuation.
-            Required only for polynomial valuation.
-        args['d_coef'] (float): (optional) The "d" coefficient for valuation.
-            Required only for polynomial valuation.
         args['max_valuation_radius'] (float): (required) Past this distance
             from the viewpoint, the valuation raster's pixel values will be set
             to 0.
@@ -81,10 +77,8 @@ def execute(args):
         'a': float(args['a_coef']),
         'b': float(args['b_coef']),
     }
-    if args['valuation_function'].startswith('polynomial'):
-        valuation_method = 'polynomial'
-        valuation_coefficients['c'] = float(args['c_coef'])
-        valuation_coefficients['d'] = float(args['d_coef'])
+    if args['valuation_function'].startswith('linear'):
+        valuation_method = 'linear'
     elif args['valuation_function'].startswith('logarithmic'):
         valuation_method = 'logarithmic'
         # Log a warning to the user (per Rob's request) when pixel sizes are
@@ -253,7 +247,7 @@ def execute(args):
                       viewpoint,
                       weight,  # user defined, from WEIGHT field in vector
                       valuation_method,
-                      valuation_coefficients,  # a, b, c, d from args, a dict
+                      valuation_coefficients,  # a, b from args, a dict.
                       max_valuation_radius,
                       viewshed_valuation_path),
                 target_path_list=[viewshed_valuation_path],
@@ -373,11 +367,9 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             visibility raster.
         weight (number): The numeric weight of the visibility.
         valuation_method (string): The valuation method to use, one of
-            ('polynomial', 'logarithmic', 'exponential').
+            ('linear', 'logarithmic', 'exponential').
         valuation_coefficients (dict): A dictionary mapping string coefficient
-            letters to numeric coefficient values.  For 'logarithmic' and
-            'exponential' valuation methods, keys 'a' and 'b' are required.
-            For 'polynomial' valuation method, keys 'a', 'b', 'c' and 'd' are
+            letters to numeric coefficient values.  Keys 'a' and 'b' are
             required.
         max_valuation_radius (number): Past this distance (in meters),
             valuation values will be set to 0.
@@ -397,9 +389,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     a = valuation_coefficients['a']
     b = valuation_coefficients['b']
 
-    if valuation_method == 'polynomial':
-        c = valuation_coefficients['c']
-        d = valuation_coefficients['d']
+    if valuation_method == 'linear':
 
         def _valuation(distance, visibility):
             valid_pixels = (visibility > 0)
@@ -408,7 +398,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
             x = distance[valid_pixels]
             valuation[valid_pixels] = (
-                (a+b*x+c*x**2+d*x**3)*(weight*visibility[valid_pixels]))
+                (a+b*x)*(weight*visibility[valid_pixels]))
             return valuation
 
     elif valuation_method == 'logarithmic':
@@ -734,11 +724,6 @@ def validate(args, limit_to=None):
         'a_coef',
         'b_coef']
 
-    if ('valuation_function' in args and
-            args['valuation_function'].lower().startswith('polynomial')):
-        required_keys.append('c_coef')
-        required_keys.append('d_coef')
-
     for key in required_keys:
         if limit_to in (None, key):
             if key not in args:
@@ -755,7 +740,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('valuation_function', None):
         if not args['valuation_function'].startswith(
-                ('polynomial', 'logarithmic', 'exponential')):
+                ('linear', 'logarithmic', 'exponential')):
             validation_error_list.append(
                 (['valuation_function'], 'Invalid function'))
 
@@ -798,11 +783,11 @@ def validate(args, limit_to=None):
         'max_valuation_radius',
         'a_coef',
         'b_coef',
-        'c_coef',
-        'd_coef',
     ]
     for key in numeric_keys:
-        if key not in args or args[key] in ('', None):
+        # Skip validating key unless that's the only key we're validator OR
+        # we're validating every key.
+        if limit_to not in (key, None):
             continue
 
         try:
