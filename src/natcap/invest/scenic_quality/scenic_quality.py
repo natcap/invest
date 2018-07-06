@@ -5,6 +5,7 @@ import operator
 import logging
 import time
 import tempfile
+import shutil
 
 import numpy
 from osgeo import gdal
@@ -111,7 +112,10 @@ def execute(args):
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
-    except KeyError:
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
         n_workers = 0  # Threaded queue management, but same process.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
@@ -403,7 +407,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     elif valuation_method == 'logarithmic':
 
         def _valuation(distance, visibility):
-            valid_pixels = (visibility > 0)
+            valid_pixels = ((visibility > 0) & (distance > 0))
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
@@ -563,7 +567,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     pixel_size = (dem_raster_info['mean_pixel_size'],
                   dem_raster_info['mean_pixel_size'])
 
-    intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim) in
+    intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim, op) in
                          zip(aoi_vector_info['bounding_box'],
                              dem_raster_info['bounding_box'],
                              [max, max, min, min])]
@@ -573,6 +577,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
         dem_path, pixel_size, clipped_dem_path, 'nearest',
         target_bb=intersection_bbox)
 
+    LOGGER.info('Masking DEM pixels outside the AOI to nodata')
     aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
     pygeoprocessing.new_raster_from_base(
         clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte, [255], [0])
@@ -590,7 +595,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
     pygeoprocessing.raster_calculator(
         [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
-        mask_op, target_path, gdal.GDT_Float32, dem_nodata)
+        _mask_op, target_path, gdal.GDT_Float32, dem_nodata)
 
     try:
         shutil.rmtree(temp_dir)
@@ -609,8 +614,9 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
     pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
     pixels_processed = 0.0
 
-    vis_raster_bands = [gdal.OpenEx(vis_path, gdal.OF_RASTER).GetRasterBand(1)
-                        for vis_path in visibility_rasters]
+    vis_rasters = [gdal.OpenEx(vis_path, gdal.OF_RASTER)
+                   for vis_path in visibility_rasters]
+    vis_raster_bands = [raster.GetRasterBand(1) for raster in vis_rasters]
 
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
