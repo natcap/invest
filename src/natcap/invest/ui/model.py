@@ -118,6 +118,36 @@ def is_probably_datastack(filepath):
     return False
 
 
+def _validate_n_workers(args, limit_to=None):
+    """A custom validation hook for the number of workers.
+
+    Parameters:
+        args (dict): An args dict mapping string keys to values.
+        limit_to=None (string or None): If a string, only those key-value
+            pairse with keys matching this string will be validated.  If None,
+            all keys will be validated.
+
+    Returns:
+        A list of (iterable of keys, string error) tuples.  If no validation
+        errors found, an empty list is returned.
+    """
+    try:
+        if int(args['n_workers']) < 1:
+            return [
+                (['n_workers'], ('If provided, number of workers cannot be '
+                                 'less than 1'))]
+        if int(args['n_workers']) != float(args['n_workers']):
+            return [
+                (['n_workers'], ('Number of workers must be a positive '
+                                 'integer'))]
+    except ValueError:
+        # When n_workers is an empty string.  Input is optional, so this is not
+        # an error.
+        pass
+
+    return []
+
+
 class OptionsDialog(QtWidgets.QDialog):
     """A common dialog class for Options-style functionality.
 
@@ -1216,8 +1246,26 @@ class InVESTModel(QtWidgets.QMainWindow):
             label='Results suffix (optional)',
             validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)
+
         self.add_input(self.workspace)
         self.add_input(self.suffix)
+
+        # If the model has a documented input for the number of taskgraph
+        # workers, add an input for it.
+        if 'n_workers' in self.target.__doc__:
+            n_cpus = multiprocessing.cpu_count()
+            self.n_workers = inputs.Text(
+                args_key='n_workers',
+                helptext=(
+                    u'The number of workers to spawn for executing tasks. '
+                    u'If this input is not provided, the model will be '
+                    u'executed in the current process.  <br/><br/>'
+                    u'Your computer has <b>%s CPUs</b>') % n_cpus,
+                label='Number of parallel workers (optional)',
+                validator=_validate_n_workers)
+            self.n_workers.textfield.setMaximumWidth(150)
+            self.add_input(self.n_workers)
+            self.n_workers.set_value(n_cpus)
 
         self.form.submitted.connect(self.execute_model)
 
@@ -1552,18 +1600,11 @@ class InVESTModel(QtWidgets.QMainWindow):
                                datastack.format_args_dict(
                                    args, self.target.__module__))
 
-                    # if the model is taskgraph-enabled, set the number of
-                    # processes available to the user-defined n_cpus.
                     try:
-                        module = importlib.import_module(
-                            self.target.__module__)
-                        if hasattr(module, '_N_WORKERS'):
-                            module._N_WORKERS = taskgraph_n_cpus
-                            LOGGER.info(
-                                'Taskgraph parallelism enabled on %s CPUs',
-                                taskgraph_n_cpus)
-                    except:
-                        LOGGER.exception('Could not set taskgraph n_workers')
+                        args['n_workers'] = self.n_workers.value()
+                    except AttributeError:
+                        # When we don't have n_workers defined
+                        pass
 
                     try:
                         return self.target(args=args)
