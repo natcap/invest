@@ -705,7 +705,6 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         ``None``
 
     """
-    # TODO: clip this to the AOI with nodata.
     # TODO: the ranks don't look right at all!
     LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
@@ -740,12 +739,22 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
                 break
             pixels_touched += n_pixels
 
+    percentile_ranks = numpy.array(percentile_ranks)
+    visual_quality_nodata = 255
+
+    def _reclass_percentiles(n_structures):
+        valid_pixels = (n_structures != raster_nodata)
+        visual_quality = numpy.empty(n_structures.shape, numpy.int)
+        visual_quality[:] = visual_quality_nodata
+        visual_quality[valid_pixels] = numpy.digitize(
+            n_structures[valid_pixels], percentile_ranks, right=True)
+        return visual_quality
+
     # phase 2: use the calculated percentiles to write a new raster
     percentile_ranks = numpy.array(percentile_ranks)
     pygeoprocessing.raster_calculator(
         [(visible_structures_raster, 1)],
-        lambda matrix: numpy.digitize(matrix, percentile_ranks, right=True),
-        target_path, gdal.GDT_Byte, 255)
+        _reclass_percentiles, target_path, gdal.GDT_Byte, visual_quality_nodata)
 
 
 @validation.invest_validator
