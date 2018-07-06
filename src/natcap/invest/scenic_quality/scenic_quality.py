@@ -19,7 +19,7 @@ from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
-_NODATA = -99999  # largish negative nodata value.
+_VALUATION_NODATA = -99999  # largish negative nodata value.
 
 
 _OUTPUT_BASE_FILES = {
@@ -259,7 +259,7 @@ def execute(args):
     # The valuation sum is a leaf node on the graph
     graph.add_task(
         _sum_valuation_rasters,
-        args=(file_registry['clipped_dem_path'],
+        args=(file_registry['clipped_dem'],
               valuation_filepaths,
               file_registry['viewshed_value']),
         target_path_list=[file_registry['viewshed_value']],
@@ -353,18 +353,20 @@ def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
     dem_nodata = pygeoprocessing.get_raster_info(dem)['nodata'][0]
 
     def _sum_rasters(dem, *valuation_rasters):
-        valid_pixels = (dem != dem_nodata)
+        valid_dem_pixels = (dem != dem_nodata)
         raster_sum = numpy.empty(dem.shape, dtype=numpy.float64)
-        raster_sum[:] = _NODATA
-        raster_sum[valid_pixels] = 0
+        raster_sum[:] = _VALUATION_NODATA
+        raster_sum[valid_dem_pixels] = 0
 
         for valuation_matrix in valuation_rasters:
+            valid_pixels = ((valuation_matrix != _VALUATION_NODATA) &
+                            valid_dem_pixels)
             raster_sum[valid_pixels] += valuation_matrix[valid_pixels]
         return raster_sum
 
     pygeoprocessing.raster_calculator(
         [(dem, 1)] + [(path, 1) for path in valuation_filepaths],
-        _sum_rasters, target_path, gdal.GDT_Float64, _NODATA)
+        _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA)
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
@@ -441,7 +443,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             return valuation
 
     pygeoprocessing.new_raster_from_base(
-        visibility_path, valuation_raster_path, gdal.GDT_Float64, [_NODATA])
+        visibility_path, valuation_raster_path, gdal.GDT_Float64,
+        [_VALUATION_NODATA])
 
     vis_raster_info = pygeoprocessing.get_raster_info(visibility_path)
     vis_gt = vis_raster_info['geotransform']
@@ -462,7 +465,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
         valid_pixels = (vis_block != vis_nodata)
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
-        visibility_value[:] = _NODATA
+        visibility_value[:] = _VALUATION_NODATA
 
         x_coord = numpy.linspace(
             block_info['xoff'],
