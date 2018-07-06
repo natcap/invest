@@ -4,6 +4,7 @@ import math
 import operator
 import logging
 import time
+import tempfile
 
 import numpy
 from osgeo import gdal
@@ -141,10 +142,11 @@ def execute(args):
         task_name='clip_reprojected_structures_to_aoi')
 
     clipped_dem_task = graph.add_task(
-        _clip_dem,
+        _clip_and_mask_dem,
         args=(args['dem_path'],
               file_registry['aoi_reprojected'],
-              file_registry['clipped_dem']),
+              file_registry['clipped_dem'],
+              intermediate_dir),
         target_path_list=[file_registry['clipped_dem']],
         dependent_task_list=[reprojected_aoi_task],
         task_name='clip_dem_to_aoi')
@@ -176,6 +178,7 @@ def execute(args):
                 LOGGER.info(
                     ('Feature %s in layer %s is outside of the DEM bounding '
                      'box. Skipping.'), layer_name, point.GetFID())
+                continue
 
             if _viewpoint_over_nodata(viewpoint, args['dem_path']):
                 LOGGER.info(
@@ -530,17 +533,69 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
     return False
 
 
-def _clip_dem(dem_path, aoi_path, target_path):
-    # TODO: mask out pixel values outside the AOI
-    LOGGER.info('Clipping the DEM to the AOI bounding box.')
-    # invariate: dem and aoi have the same projection.
+def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
+    """Clip and mask the DEM to the AOI.
+
+    Parameters:
+        dem_path (string): The path to the DEM to use.  Must have the same
+            projection as the AOI.
+        aoi_path (string): The path to the AOI to use.  Must have the same
+            projection as the DEM.
+        target_path (string): The path on disk to where the clipped and masked
+            raster will be saved.  If a file exists at this location it will be
+            overwritten.  The raster will have a bounding box matching the
+            intersection of the AOI and the DEM's bounding box and a spatial
+            reference matching the AOI and the DEM.
+        working_dir (string): A path to a directory on disk.  A new temporary
+            directory will be created within this directory for the storage of
+            several working files.  This temporary directory will be removed at
+            the end of this function.
+
+    Returns:
+        ``None``
+    """
+    temp_dir = tempfile.mkdtemp(dir=working_dir,
+                                prefix='clip_dem')
+
+    LOGGER.info('Clipping the DEM to its intersection with the AOI.')
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
     pixel_size = (dem_raster_info['mean_pixel_size'],
                   dem_raster_info['mean_pixel_size'])
+
+    intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim) in
+                         zip(aoi_vector_info['bounding_box'],
+                             dem_raster_info['bounding_box'],
+                             [max, max, min, min])]
+
+    clipped_dem_path = os.path.join(temp_dir, 'clipped_dem.tif')
     pygeoprocessing.warp_raster(
-        dem_path, pixel_size, target_path, 'nearest',
-        target_bb=aoi_vector_info['bounding_box'])
+        dem_path, pixel_size, clipped_dem_path, 'nearest',
+        target_bb=intersection_bbox)
+
+    aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
+    pygeoprocessing.new_raster_from_base(
+        clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte, [255], [0])
+    pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
+
+    dem_nodata = dem_raster_info['nodata'][0]
+
+    def _mask_op(dem, aoi_mask):
+        valid_pixels = ((dem != dem_nodata) &
+                        (aoi_mask == 1))
+        masked_dem = numpy.empty(dem.shape)
+        masked_dem[:] = dem_nodata
+        masked_dem[valid_pixels] = dem[valid_pixels]
+        return masked_dem
+
+    pygeoprocessing.raster_calculator(
+        [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
+        mask_op, target_path, gdal.GDT_Float32, dem_nodata)
+
+    try:
+        shutil.rmtree(temp_dir)
+    except OSError:
+        LOGGER.exception('Could not remove temp directory %s' % temp_dir)
 
 
 def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
