@@ -631,7 +631,7 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
                                       block_info['win_xsize']),
                                      dtype=numpy.int32)
 
-        visibility_sum[:] = target_nodata
+        visibility_sum[:] = 0
         valid_mask = (dem_matrix != dem_nodata)
         visibility_sum[~valid_mask] = target_nodata
         for visibility_band in vis_raster_bands:
