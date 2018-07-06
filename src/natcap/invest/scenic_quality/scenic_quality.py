@@ -69,6 +69,10 @@ def execute(args):
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
+
+    Returns:
+        ``None``
+
     """
     LOGGER.info("Starting Scenic Quality Model")
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
@@ -306,7 +310,8 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
             Shapefile to. Should end with a '.shp' extension.
 
     Returns:
-        Nothing
+        ``None``
+
     """
     if os.path.isfile(output_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -349,6 +354,7 @@ def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
 
     Returns:
         ``None``
+
     """
     dem_nodata = pygeoprocessing.get_raster_info(dem)['nodata'][0]
 
@@ -394,6 +400,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
 
     Returns:
         ``None``
+
     """
     valuation_method = valuation_method.lower()
     LOGGER.info('Calculating valuation with %s method. Coefficients: %s',
@@ -509,10 +516,12 @@ def _viewpoint_within_raster(viewpoint, dem_path):
 
     Returns:
         ``True`` if the viewpoint overlaps the DEM, ``False`` if not.
+
     """
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
 
-    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = dem_raster_info['bounding_box']
+    bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = (
+        dem_raster_info['bounding_box'])
     if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
             not bbox_miny <= viewpoint[1] <= bbox_maxy):
         return False
@@ -531,6 +540,7 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
         ``True`` if the viewpoint overlaps a nodata value within the DEM,
         ``False`` if not.  If the DEM does not have a nodata value defined,
         returns ``False``.
+
     """
     raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
@@ -571,6 +581,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
     Returns:
         ``None``
+
     """
     temp_dir = tempfile.mkdtemp(dir=working_dir,
                                 prefix='clip_dem')
@@ -666,7 +677,6 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
 
 
 def _calculate_visual_quality(visible_structures_raster, target_path):
-    """Calculate the visual quality of a q"""
     LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
     n_elements = 0
@@ -725,6 +735,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
@@ -784,12 +795,13 @@ def validate(args, limit_to=None):
         # only do this check if we can open the raster.
         with utils.capture_gdal_logging():
             do_spatial_check = False
-            if gdal.OpenEx(args['dem_path'], gdal.OF_RASTER) != None:
+            if gdal.OpenEx(args['dem_path'], gdal.OF_RASTER) is not None:
                 do_spatial_check = True
         if do_spatial_check:
             dem_srs = osr.SpatialReference()
             dem_srs.ImportFromWkt(
-                pygeoprocessing.get_raster_info(args['dem_path'])['projection'])
+                pygeoprocessing.get_raster_info(
+                    args['dem_path'])['projection'])
             if (abs(dem_srs.GetLinearUnits() - 1.0) > 0.5e7 or
                     not bool(dem_srs.IsProjected())):
                 validation_error_list.append(
