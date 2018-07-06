@@ -629,6 +629,18 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
 
 def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
+    """Count the number of visible structures for each pixel.
+
+    Parameters:
+        visibility_rasters (list of strings): A list of strings to perfectly
+            overlapping visibility rasters.
+        clipped_dem (string): String path to the DEM.
+        target_path (string): The path to where the output raster is stored.
+
+    Returns:
+        ``None``
+
+    """
     LOGGER.info('Summing %d visibility rasters', len(visibility_rasters))
     target_nodata = -1
     pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
@@ -652,6 +664,7 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
             last_log_time = current_time
             LOGGER.info('Counting visible structures approx. %.2f%% complete',
                         (pixels_processed / pixels_in_dem) * 100.0)
+
         visibility_sum = numpy.empty((block_info['win_ysize'],
                                       block_info['win_xsize']),
                                      dtype=numpy.int32)
@@ -677,6 +690,23 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
 
 
 def _calculate_visual_quality(visible_structures_raster, target_path):
+    """Calculate visual quality based on the number of visible structures.
+
+    Visual quality is based on the nearest-rank method for breaking the number
+    of visible structures into percentiles.
+
+    Parameters:
+        visible_structures_raster (string): The path to a raster representing
+            the number of structures that are visible from a given pixel.
+        target_path (string): The path to where the output raster will be
+            written.
+
+    Returns:
+        ``None``
+
+    """
+    # TODO: clip this to the AOI with nodata.
+    # TODO: the ranks don't look right at all!
     LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
     n_elements = 0
