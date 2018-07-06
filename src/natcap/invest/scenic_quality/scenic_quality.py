@@ -75,6 +75,7 @@ def execute(args):
             place in the current process.
     """
     LOGGER.info("Starting Scenic Quality Model")
+    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
     valuation_coefficients = {
         'a': float(args['a_coef']),
@@ -86,6 +87,13 @@ def execute(args):
         valuation_coefficients['d'] = float(args['d_coef'])
     elif args['valuation_function'].startswith('logarithmic'):
         valuation_method = 'logarithmic'
+        # Log a warning to the user (per Rob's request) when pixel sizes are
+        # less than 1 and we're doing logarithmic valuation.
+        if dem_raster_info['mean_pixel_size'] < 1.0:
+            LOGGER.warning(
+                ('Pixel sizes are less than 1m. Expect strange '
+                 'results with the selected valuation method ("logarithmic") '
+                 'for pixels that are very close (< 1.0m) to the viewpoint.'))
     elif args['valuation_function'].startswith('exponential'):
         valuation_method = 'exponential'
     else:
@@ -108,7 +116,6 @@ def execute(args):
 
     max_valuation_radius = float(args['max_valuation_radius'])
 
-    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
