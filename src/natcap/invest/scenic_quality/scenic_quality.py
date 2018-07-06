@@ -258,12 +258,10 @@ def execute(args):
 
     # The valuation sum is a leaf node on the graph
     graph.add_task(
-        pygeoprocessing.raster_calculator,
-        args=([(path, 1) for path in valuation_filepaths],
-              _sum_valuation_rasters,
-              file_registry['viewshed_value'],
-              gdal.GDT_Float32,
-              _NODATA),
+        _sum_valuation_rasters,
+        args=(file_registry['clipped_dem_path'],
+              valuation_filepaths,
+              file_registry['viewshed_value']),
         target_path_list=[file_registry['viewshed_value']],
         dependent_task_list=sorted(valuation_tasks),
         task_name='add_up_valuation_rasters')
@@ -337,20 +335,36 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
             (shape_to_clip_path, binding_shape_path))
 
 
-def _sum_valuation_rasters(*valuation_rasters):
+def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
     """Sum up all valuation rasters.
 
-    This is a ``raster_calculator`` local operation.
-
     Parameters:
-        valuation_rasters (list of ``numpy.array``s): The valuation rasters
-            to sum.
+        dem (string): A path to the DEM.  Must perfectly overlap all of the
+            rasters in ``valuation_filepaths``.
+        valuation_filepaths (list of strings): A list of paths to individual
+            valuation rasters.  All rasters in this list must overlap
+            perfectly.
+        target_path (string): The path on disk where the output raster will be
+            written.  If a file exists at this path, it will be overwritten.
 
     Returns:
-        A ``numpy.array`` representing the per-pixel sum of the valuation
-        matrices.
+        ``None``
     """
-    return numpy.sum(numpy.stack(valuation_rasters), axis=0)
+    dem_nodata = pygeoprocessing.get_raster_info(dem)['nodata'][0]
+
+    def _sum_rasters(dem, *valuation_rasters):
+        valid_pixels = (dem != dem_nodata)
+        raster_sum = numpy.empty(dem.shape, dtype=numpy.float64)
+        raster_sum[:] = _NODATA
+        raster_sum[valid_pixels] = 0
+
+        for valuation_matrix in valuation_rasters:
+            raster_sum[valid_pixels] += valuation_matrix[valid_pixels]
+        return raster_sum
+
+    pygeoprocessing.raster_calculator(
+        [(dem, 1)] + [(path, 1) for path in valuation_filepaths],
+        _sum_rasters, target_path, gdal.GDT_Float64, _NODATA)
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
