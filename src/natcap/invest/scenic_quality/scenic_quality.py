@@ -714,10 +714,8 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         ``None``
 
     """
-    # TODO: the ranks don't look right at all!
     LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
-    n_elements = 0
     value_counts = {}
 
     raster_nodata = pygeoprocessing.get_raster_info(
@@ -726,7 +724,6 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     # phase 1: calculate percentiles from the visible_structures raster
     for _, block in pygeoprocessing.iterblocks(visible_structures_raster):
         valid_pixels = block[block != raster_nodata]
-        n_elements += len(valid_pixels)
 
         for index, counted_values in enumerate(numpy.bincount(valid_pixels)):
             try:
@@ -737,20 +734,24 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     # Rather than iterate over a loop of all the elements, we can locate the
     # values of the individual ranks in a more abbreviated fashion to minimize
     # looping (which is slow in python).
+    visible_value_counts = filter(lambda p: p[0] > 0,
+                                  sorted(value_counts.items()))
+    n_elements = sum(value for (key, value) in visible_value_counts)
     rank_ordinals = [math.ceil(n*n_elements) for n in
                      (0.25, 0.50, 0.75, 1.0)]
-    percentile_ranks = [0]
+    percentile_ranks = []
     for rank in rank_ordinals:
         pixels_touched = 0
-        for n_structures_visible, n_pixels in sorted(value_counts.items()):
+        for n_structures_visible, n_pixels in visible_value_counts:
             if pixels_touched < rank <= pixels_touched + n_pixels:
                 percentile_ranks.append(n_structures_visible)
                 break
             pixels_touched += n_pixels
 
-    percentile_ranks = numpy.array(percentile_ranks)
+    percentile_ranks = numpy.array([0] + percentile_ranks)
     visual_quality_nodata = 255
 
+    # phase 2: use the calculated percentiles to write a new raster
     def _reclass_percentiles(n_structures):
         valid_pixels = (n_structures != raster_nodata)
         visual_quality = numpy.empty(n_structures.shape, numpy.int)
@@ -759,7 +760,6 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
             n_structures[valid_pixels], percentile_ranks, right=True)
         return visual_quality
 
-    # phase 2: use the calculated percentiles to write a new raster
     percentile_ranks = numpy.array(percentile_ranks)
     pygeoprocessing.raster_calculator(
         [(visible_structures_raster, 1)],
