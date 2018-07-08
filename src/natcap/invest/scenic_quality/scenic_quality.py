@@ -166,10 +166,7 @@ def execute(args):
     clipped_viewpoints_task.join()
 
     # phase 2: calculate viewsheds.
-    viewshed_files = []
-    viewshed_tasks = []
-    valuation_tasks = []
-    valuation_filepaths = []
+    viewpoint_tuples = []
     structures_vector = ogr.Open(file_registry['structures_reprojected'])
     for lyr_index, structures_layer in enumerate(structures_vector):
         layer_name = structures_layer.GetName()
@@ -220,45 +217,57 @@ def execute(args):
                 # When no weight provided, set scale to 1
                 weight = 1.0
 
-            visibility_filepath = file_registry['visibility_pattern'].format(
-                id=feature_id)
-            viewshed_files.append(visibility_filepath)
-            auxilliary_filepath = file_registry['auxilliary_pattern'].format(
-                id=feature_id)
-            viewshed_task = graph.add_task(
-                viewshed,
-                args=((file_registry['clipped_dem'], 1),  # DEM
-                      viewpoint,
-                      visibility_filepath),
-                kwargs={'curved_earth': True,  # model always assumes this.
-                        'refraction_coeff': float(args['refraction']),
-                        'max_distance': max_radius,
-                        'viewpoint_height': viewpoint_height,
-                        'aux_filepath': auxilliary_filepath},
-                target_path_list=[auxilliary_filepath, visibility_filepath],
-                dependent_task_list=[clipped_dem_task,
-                                     clipped_viewpoints_task],
-                task_name='calculate_visibility_%s_%s' % (layer_name,
-                                                          point.GetFID()))
-            viewshed_tasks.append(viewshed_task)
+            viewpoint_tuples.append((viewpoint, max_radius, weight,
+                                     viewpoint_height))
 
-            # calculate valuation
-            viewshed_valuation_path = file_registry['value_pattern'].format(
-                id=feature_id)
-            valuation_task = graph.add_task(
-                _calculate_valuation,
-                args=(visibility_filepath,
-                      viewpoint,
-                      weight,  # user defined, from WEIGHT field in vector
-                      valuation_method,
-                      valuation_coefficients,  # a, b from args, a dict.
-                      max_valuation_radius,
-                      viewshed_valuation_path),
-                target_path_list=[viewshed_valuation_path],
-                dependent_task_list=[viewshed_task],
-                task_name='calculate_valuation_for_viewshed_%s' % feature_id)
-            valuation_tasks.append(valuation_task)
-            valuation_filepaths.append(viewshed_valuation_path)
+    # These are sorted outside the vector to ensure consistent ordering.  This
+    # helps avoid unnecesary recomputation in taskgraph.
+    viewshed_files = []
+    viewshed_tasks = []
+    valuation_tasks = []
+    valuation_filepaths = []
+    feature_index = 0
+    for viewpoint, max_radius, weight, viewpoint_height in sorted(
+            viewpoint_tuples, key=lambda x: x[0]):
+        visibility_filepath = file_registry['visibility_pattern'].format(
+            id=feature_index)
+        viewshed_files.append(visibility_filepath)
+        auxilliary_filepath = file_registry['auxilliary_pattern'].format(
+            id=feature_index)
+        viewshed_task = graph.add_task(
+            viewshed,
+            args=((file_registry['clipped_dem'], 1),  # DEM
+                  viewpoint,
+                  visibility_filepath),
+            kwargs={'curved_earth': True,  # model always assumes this.
+                    'refraction_coeff': float(args['refraction']),
+                    'max_distance': max_radius,
+                    'viewpoint_height': viewpoint_height,
+                    'aux_filepath': auxilliary_filepath},
+            target_path_list=[auxilliary_filepath, visibility_filepath],
+            dependent_task_list=[clipped_dem_task,
+                                 clipped_viewpoints_task],
+            task_name='calculate_visibility_%s' % feature_index)
+        viewshed_tasks.append(viewshed_task)
+
+        # calculate valuation
+        viewshed_valuation_path = file_registry['value_pattern'].format(
+            id=feature_index)
+        valuation_task = graph.add_task(
+            _calculate_valuation,
+            args=(visibility_filepath,
+                  viewpoint,
+                  weight,  # user defined, from WEIGHT field in vector
+                  valuation_method,
+                  valuation_coefficients,  # a, b from args, a dict.
+                  max_valuation_radius,
+                  viewshed_valuation_path),
+            target_path_list=[viewshed_valuation_path],
+            dependent_task_list=[viewshed_task],
+            task_name='calculate_valuation_for_viewshed_%s' % feature_index)
+        valuation_tasks.append(valuation_task)
+        valuation_filepaths.append(viewshed_valuation_path)
+        feature_index += 1
 
     # The valuation sum is a leaf node on the graph
     graph.add_task(
