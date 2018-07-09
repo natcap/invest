@@ -591,8 +591,9 @@ def viewshed(dem_raster_path_band,
     bbox_minx, bbox_miny, bbox_maxx, bbox_maxy = dem_raster_info['bounding_box']
     if (not bbox_minx <= viewpoint[0] <= bbox_maxx or
             not bbox_miny <= viewpoint[1] <= bbox_maxy):
-        raise ValueError('Viewpoint (%s, %s) does not overlap with the DEM' %
-                         viewpoint)
+        raise ValueError(('Viewpoint (%s, %s) does not overlap with DEM with '
+                          'bounding box %s') % (viewpoint[0], viewpoint[1],
+                                                dem_raster_info['bounding_box']))
     cdef long iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
     cdef long ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
 
