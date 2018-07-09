@@ -20,6 +20,7 @@ from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
+_BYTE_NODATA = 255  # Largest value a byte can hold
 
 
 _OUTPUT_BASE_FILES = {
@@ -168,14 +169,12 @@ def execute(args):
     # phase 2: calculate viewsheds.
     viewpoint_tuples = []
     structures_vector = ogr.Open(file_registry['structures_reprojected'])
-    for lyr_index, structures_layer in enumerate(structures_vector):
+    for structures_layer in structures_vector:
         layer_name = structures_layer.GetName()
         LOGGER.info('Layer %s has %s features', layer_name,
                     structures_layer.GetFeatureCount())
 
         for point in structures_layer:
-            feature_id = "%s-%s" % (lyr_index, point.GetFID())
-
             # Coordinates in map units to pass to viewshed algorithm
             geometry = point.GetGeometryRef()
             viewpoint = (geometry.GetX(), geometry.GetY())
@@ -192,11 +191,11 @@ def execute(args):
                     point.GetFID(), layer_name)
                 continue
 
-            max_radius = None
             # RADIUS is the suggested value for InVEST Scenic Quality
             # RADIUS2 is for users coming from ArcGIS's viewshed.
             # Assume positive infinity if neither field is provided.
             # Positive infinity is represented in our viewshed by None.
+            max_radius = None
             for fieldname in ('RADIUS', 'RADIUS2'):
                 try:
                     max_radius = math.fabs(point.GetField(fieldname))
@@ -221,7 +220,9 @@ def execute(args):
                                      viewpoint_height))
 
     # These are sorted outside the vector to ensure consistent ordering.  This
-    # helps avoid unnecesary recomputation in taskgraph.
+    # helps avoid unnecesary recomputation in taskgraph for when an ESRI
+    # Shapefile, for example, returns a different order of points because
+    # someone decided to repack it.
     viewshed_files = []
     viewshed_tasks = []
     valuation_tasks = []
@@ -479,7 +480,6 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     vis_nodata = vis_raster_info['nodata'][0]
 
     for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
-        valid_pixels = (vis_block != vis_nodata)
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _VALUATION_NODATA
 
@@ -491,10 +491,10 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             block_info['yoff'],
             block_info['yoff'] + block_info['win_ysize'] - 1,
             block_info['win_ysize'])
-        ix, iy = numpy.meshgrid(x_coord, y_coord)
-        dx = numpy.absolute(ix - ix_viewpoint)
-        dy = numpy.absolute(iy - iy_viewpoint)
-        dist_in_m = numpy.hypot(dx, dy, dtype=numpy.float64) * pixel_size_in_m
+        ix_matrix, iy_matrix = numpy.meshgrid(x_coord, y_coord)
+        dist_in_m = numpy.hypot(numpy.absolute(ix_matrix - ix_viewpoint),
+                                numpy.absolute(iy_matrix - iy_viewpoint),
+                                dtype=numpy.float64) * pixel_size_in_m
 
         valid_distances = (dist_in_m <= max_valuation_radius)
         nodata = (vis_block == vis_nodata)
@@ -614,7 +614,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     LOGGER.info('Masking DEM pixels outside the AOI to nodata')
     aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
     pygeoprocessing.new_raster_from_base(
-        clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte, [255], [0])
+        clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte, [_BYTE_NODATA], [0])
     pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
 
     dem_nodata = dem_raster_info['nodata'][0]
@@ -734,8 +734,8 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     # Rather than iterate over a loop of all the elements, we can locate the
     # values of the individual ranks in a more abbreviated fashion to minimize
     # looping (which is slow in python).
-    visible_value_counts = filter(lambda p: p[0] > 0,
-                                  sorted(value_counts.items()))
+    visible_value_counts = [pair for pair in sorted(value_counts.items())
+                            if pair[0] > 0]
     n_elements = sum(value for (key, value) in visible_value_counts)
     rank_ordinals = [math.ceil(n*n_elements) for n in
                      (0.25, 0.50, 0.75, 1.0)]
@@ -749,13 +749,12 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
             pixels_touched += n_pixels
 
     percentile_ranks = numpy.array([0] + percentile_ranks)
-    visual_quality_nodata = 255
 
     # phase 2: use the calculated percentiles to write a new raster
     def _reclass_percentiles(n_structures):
         valid_pixels = (n_structures != raster_nodata)
         visual_quality = numpy.empty(n_structures.shape, numpy.int)
-        visual_quality[:] = visual_quality_nodata
+        visual_quality[:] = _BYTE_NODATA
         visual_quality[valid_pixels] = numpy.digitize(
             n_structures[valid_pixels], percentile_ranks, right=True)
         return visual_quality
@@ -763,7 +762,7 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     percentile_ranks = numpy.array(percentile_ranks)
     pygeoprocessing.raster_calculator(
         [(visible_structures_raster, 1)],
-        _reclass_percentiles, target_path, gdal.GDT_Byte, visual_quality_nodata)
+        _reclass_percentiles, target_path, gdal.GDT_Byte, _BYTE_NODATA)
 
 
 @validation.invest_validator
