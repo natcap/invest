@@ -368,8 +368,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
                 'a_coef',
                 'aoi_path',
                 'b_coef',
-                'c_coef',
-                'd_coef',
                 'dem_path',
                 'max_valuation_radius',
                 'refraction',
@@ -392,7 +390,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
             'workspace_dir': '',  # required key, missing value
             'aoi_path': '/bad/vector/path',
             'a_coef': 'foo',  # not a number
-            'b_coef': -1, # too low a value
+            'b_coef': -1, # valid
             'dem_path': 'not/a/path',  # not a raster
             'refraction': "0.13",
             'max_valuation_radius': None,  # covers missing value.
@@ -412,7 +410,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(single_key_errors['a_coef'], 'Must be a number')
-        self.assertEqual(single_key_errors['b_coef'], 'Must be between 0 and 1')
         self.assertEqual(single_key_errors['dem_path'], 'Must be a raster')
         self.assertEqual(single_key_errors['structure_path'], 'Must be a vector')
         self.assertEqual(single_key_errors['aoi_path'], 'Must be a vector')
@@ -513,8 +510,8 @@ class ViewshedTests(unittest.TestCase):
     def test_max_distance(self):
         """Viewshed: setting a max distance limits visibility distance."""
         from natcap.invest.scenic_quality.viewshed import viewshed
-        matrix = numpy.ones((10, 10))
-        viewpoint = (9, 9)
+        matrix = numpy.ones((6, 6))
+        viewpoint = (5, 5)
         max_dist = 4
 
         dem_filepath = os.path.join(self.workspace_dir, 'dem.tif')
@@ -532,17 +529,13 @@ class ViewshedTests(unittest.TestCase):
         visibility_matrix = visibility_band.ReadAsArray()
         expected_visibility = numpy.zeros(matrix.shape)
 
-        expected_visibility = numpy.array([[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                                           [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
-                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1],
-                                           [0, 0, 0, 0, 0, 0, 1, 1, 1, 1]],
-                                          dtype=numpy.uint8)
+        expected_visibility = numpy.array(
+            [[255, 255, 255, 255, 255, 255],
+             [255, 255, 255, 255, 255,   0],
+             [255, 255, 255,   1,   1,   1],
+             [255, 255,   1,   1,   1,   1],
+             [255, 255,   1,   1,   1,   1],
+             [255,   0,   1,   1,   1,   1]], dtype=numpy.uint8)
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_refractivity(self):
