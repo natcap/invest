@@ -108,6 +108,21 @@ class ScenicQualityTests(unittest.TestCase):
         self.assertEqual(len(glob.glob(os.path.join(
             args['workspace_dir'], 'intermediate', 'value*'))), 3)
 
+        # Verify that the value summation matrix is what we expect it to be.
+        expected_value = numpy.array(
+            [[1, 1, 1, 1, 2],
+             [0, 1, 1, 2, 1],
+             [0, 0, 3, 1, 1],
+             [0, 1, 1, 2, 1],
+             [1, 1, 1, 1, 2]], dtype=numpy.int8)
+
+        value_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed_value_foo.tif'))
+        value_band = value_raster.GetRasterBand(1)
+        value_matrix = value_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+
 
 
 
