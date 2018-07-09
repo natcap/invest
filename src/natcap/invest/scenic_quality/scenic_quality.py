@@ -24,10 +24,9 @@ _BYTE_NODATA = 255  # Largest value a byte can hold
 
 
 _OUTPUT_BASE_FILES = {
-    'viewshed_value': 'visibility_value.tif',
-    'n_visible_structures': 'n_visible_structures.tif',
-    'viewshed_quality': 'viewshed_qual.tif',
-    'overlap_path': 'vp_overlap.shp',
+    'viewshed_value': 'vshed_value.tif',
+    'n_visible_structures': 'vshed.tif',
+    'viewshed_quality': 'vshed_qual.tif',
 }
 
 _INTERMEDIATE_BASE_FILES = {
