@@ -126,6 +126,19 @@ class ScenicQualityTests(unittest.TestCase):
         # value matrix.
         numpy.testing.assert_almost_equal(expected_value, vshed_matrix)
 
+        # Test the visual quality raster.
+        expected_visual_quality = numpy.array(
+            [[1, 1, 1, 1, 1],
+             [0, 1, 1, 1, 1],
+             [0, 0, 4, 1, 1],
+             [0, 1, 1, 1, 1],
+             [1, 1, 1, 1, 1]])
+        visual_quality_raster = os.path.join(
+            args['workspace_dir'], 'output', 'vshed_qual_foo.tif')
+        quality_matrix = gdal.Open(visual_quality_raster).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          quality_matrix)
+
     def test_viewshed_with_fields(self):
         """SQ: verify that we can specify viewpoint fields."""
         from natcap.invest.scenic_quality import scenic_quality
@@ -314,10 +327,59 @@ class ScenicQualityTests(unittest.TestCase):
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
+    def test_visual_quality(self):
+        """SQ: verify visual quality calculations."""
+        from natcap.invest.scenic_quality import scenic_quality
+        visible_structures = numpy.tile(
+            numpy.array([3, 0, 0, 0, 6, 7, 8]), (5, 1))
 
+        n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
+        visual_quality_raster = os.path.join(self.workspace_dir,
+                                             'visual_quality.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(n_visible, 7, 5, 1, gdal.GDT_Int32)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(-1)
+        band.WriteArray(visible_structures)
+        band = None
+        raster = None
 
+        scenic_quality._calculate_visual_quality(n_visible,
+                                                 visual_quality_raster)
 
+        expected_visual_quality = numpy.tile(
+            numpy.array([1, 0, 0, 0, 2, 3, 4]), (5, 1))
 
+        visual_quality_matrix = gdal.Open(
+            visual_quality_raster).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          visual_quality_matrix)
+
+    def test_visual_quality_low_count(self):
+        """SQ: verify visual quality calculations."""
+        from natcap.invest.scenic_quality import scenic_quality
+        visible_structures = numpy.array([[-1, 3, 0, 0, 0, 3, 6, 7]])
+
+        n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
+        visual_quality_raster = os.path.join(self.workspace_dir,
+                                             'visual_quality.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(n_visible, 8, 1, 1, gdal.GDT_Int32)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(-1)
+        band.WriteArray(visible_structures)
+        band = None
+        raster = None
+
+        scenic_quality._calculate_visual_quality(n_visible,
+                                                 visual_quality_raster)
+
+        expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
+
+        visual_quality_matrix = gdal.Open(
+            visual_quality_raster).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          visual_quality_matrix)
 
 
 class ScenicQualityValidationTests(unittest.TestCase):
@@ -419,7 +481,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
         from natcap.invest.scenic_quality import scenic_quality
-
         from pygeoprocessing.testing import create_raster_on_disk
 
         srs = osr.SpatialReference()
