@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import csv
+import glob
 
 from osgeo import gdal
 from osgeo import ogr
@@ -11,7 +12,7 @@ from osgeo import osr
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
-from shapely.geometry import Polygon
+from shapely.geometry import Polygon, Point
 import numpy
 
 SAMPLE_DATA = os.path.join(
@@ -30,6 +31,87 @@ class ScenicQualityTests(unittest.TestCase):
     def tearDown(self):
         """Remove the temporary workspace after a test."""
         shutil.rmtree(self.workspace_dir)
+
+    @staticmethod
+    def create_dem(dem_path):
+        from pygeoprocessing.testing import create_raster_on_disk
+        dem_matrix = numpy.array(
+            [[10, 2, 2, 2, 10],
+             [2, 10, 2, 10, 2],
+             [2, 2, 10, 2, 2],
+             [2, 10, 2, 10, 2],
+             [10, 2, 2, 2, 10]], dtype=numpy.int8)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+        create_raster_on_disk(
+            [dem_matrix],
+            origin=(0, 0),
+            projection_wkt=wkt,
+            nodata=255,  # byte nodata value
+            pixel_size=(2, -2),
+            filename=dem_path)
+
+    def test_viewshed_field_defaults(self):
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        viewpoints_path = os.path.join(self.workspace_dir, 'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(5.0, -1.0),
+             Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
+             Point(5.0, -9.0),
+             Point(9.0, -5.0)],
+            wkt, filename=viewpoints_path)
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': 'foo',
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'linear',
+            'a_coef': 1,
+            'b_coef': 0,
+            'max_valuation_radius': 10.0,
+        }
+        import logging
+        LOGGER = logging.getLogger(__name__)
+        LOGGER.info('%s',
+                    pygeoprocessing.get_raster_info(dem_path)['bounding_box'])
+        LOGGER.info('%s',
+                    pygeoprocessing.get_vector_info(aoi_path)['bounding_box'])
+        LOGGER.info('%s',
+                    pygeoprocessing.get_vector_info(viewpoints_path)['bounding_box'])
+
+        scenic_quality.execute(args)
+
+        # 3 of the 4 viewpoints overlap the DEM, so there should only be files
+        # from 3 viewsheds.
+        self.assertEqual(len(glob.glob(os.path.join(
+            args['workspace_dir'], 'intermediate', 'auxilliary*'))), 3)
+        self.assertEqual(len(glob.glob(os.path.join(
+            args['workspace_dir'], 'intermediate', 'visibility*'))), 3)
+        self.assertEqual(len(glob.glob(os.path.join(
+            args['workspace_dir'], 'intermediate', 'value*'))), 3)
+
+
+
+
+
 
 
 class ScenicQualityValidationTests(unittest.TestCase):
