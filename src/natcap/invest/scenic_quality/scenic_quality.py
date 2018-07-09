@@ -6,6 +6,7 @@ import logging
 import time
 import tempfile
 import shutil
+import collections
 
 import numpy
 from osgeo import gdal
@@ -728,40 +729,41 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
             try:
                 value_counts[index] += counted_values
             except KeyError:
-                value_counts[index] = 0
+                value_counts[index] = counted_values
 
     # Rather than iterate over a loop of all the elements, we can locate the
     # values of the individual ranks in a more abbreviated fashion to minimize
     # looping (which is slow in python).
     visible_value_counts = [pair for pair in sorted(value_counts.items())
                             if pair[0] > 0]
+    zero_base = value_counts[0]
     n_elements = sum(value for (key, value) in visible_value_counts)
-    rank_ordinals = [math.ceil(n*n_elements) for n in
-                     (0.25, 0.50, 0.75, 1.0)]
-    percentile_ranks = []
-    for rank in rank_ordinals:
-        pixels_touched = 0
-        for n_structures_visible, n_pixels in visible_value_counts:
-            if pixels_touched < rank <= pixels_touched + n_pixels:
-                percentile_ranks.append(n_structures_visible)
-                break
-            pixels_touched += n_pixels
+    rank_ordinals = collections.deque(
+        [zero_base + math.ceil(n*n_elements) for n in
+         (0.25, 0.50, 0.75, 1.0)])
+    percentile_ranks = {0: 0}
 
-    percentile_ranks = numpy.array([0] + percentile_ranks)
+    idx = 0
+    next_percentile_index = rank_ordinals.popleft()
+    for bin_value, bin_count in visible_value_counts:
+        if bin_count == 0:
+            continue
+        try:
+            while next_percentile_index <= idx + bin_count:
+                percentile_ranks[bin_value] = next_percentile_index
+                next_percentile_index = rank_ordinals.popleft()
+            idx += bin_count
+        except IndexError:
+            break
+
+    LOGGER.debug('Rank ordinals: %s', rank_ordinals)
+    LOGGER.debug('Value counts: %s', value_counts)
+    LOGGER.debug('Percentile ranks: %s', percentile_ranks)
 
     # phase 2: use the calculated percentiles to write a new raster
-    def _reclass_percentiles(n_structures):
-        valid_pixels = (n_structures != raster_nodata)
-        visual_quality = numpy.empty(n_structures.shape, numpy.int)
-        visual_quality[:] = _BYTE_NODATA
-        visual_quality[valid_pixels] = numpy.digitize(
-            n_structures[valid_pixels], percentile_ranks, right=True)
-        return visual_quality
-
-    percentile_ranks = numpy.array(percentile_ranks)
-    pygeoprocessing.raster_calculator(
-        [(visible_structures_raster, 1)],
-        _reclass_percentiles, target_path, gdal.GDT_Byte, _BYTE_NODATA)
+    pygeoprocessing.reclassify_raster(
+        (visible_structures_raster, 1), percentile_ranks, target_path,
+        gdal.GDT_Byte, _BYTE_NODATA)
 
 
 @validation.invest_validator
