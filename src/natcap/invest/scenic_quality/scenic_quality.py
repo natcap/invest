@@ -634,7 +634,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     try:
         shutil.rmtree(temp_dir)
     except OSError:
-        LOGGER.exception('Could not remove temp directory %s' % temp_dir)
+        LOGGER.exception('Could not remove temp directory %s', temp_dir)
 
 
 def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
