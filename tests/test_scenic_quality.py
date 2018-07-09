@@ -54,6 +54,7 @@ class ScenicQualityTests(unittest.TestCase):
             filename=dem_path)
 
     def test_viewshed_field_defaults(self):
+        """SQ: run model with default field values."""
         from natcap.invest.scenic_quality import scenic_quality
 
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
@@ -88,14 +89,6 @@ class ScenicQualityTests(unittest.TestCase):
             'b_coef': 0,
             'max_valuation_radius': 10.0,
         }
-        import logging
-        LOGGER = logging.getLogger(__name__)
-        LOGGER.info('%s',
-                    pygeoprocessing.get_raster_info(dem_path)['bounding_box'])
-        LOGGER.info('%s',
-                    pygeoprocessing.get_vector_info(aoi_path)['bounding_box'])
-        LOGGER.info('%s',
-                    pygeoprocessing.get_vector_info(viewpoints_path)['bounding_box'])
 
         scenic_quality.execute(args)
 
@@ -118,6 +111,204 @@ class ScenicQualityTests(unittest.TestCase):
 
         value_raster = gdal.Open(os.path.join(
             args['workspace_dir'], 'output', 'vshed_value_foo.tif'))
+        value_band = value_raster.GetRasterBand(1)
+        value_matrix = value_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+
+        # verify that the correct number of viewpoints has been tallied.
+        vshed_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed_foo.tif'))
+        vshed_band = vshed_raster.GetRasterBand(1)
+        vshed_matrix = vshed_band.ReadAsArray()
+
+        # Because our B coefficient is 0, the vshed matrix should match the
+        # value matrix.
+        numpy.testing.assert_almost_equal(expected_value, vshed_matrix)
+
+    def test_viewshed_with_fields(self):
+        """SQ: verify that we can specify viewpoint fields."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        viewpoints_path = os.path.join(self.workspace_dir, 'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(5.0, 0.0),
+             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
+             Point(5.0, -8.0),
+             Point(9.0, -4.0)],
+            wkt, filename=viewpoints_path,
+            fields={'RADIUS': 'real',
+                    'HEIGHT': 'real',
+                    'WEIGHT': 'real'},
+            attributes=[
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.0}])
+
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'linear',
+            'a_coef': 0,
+            'b_coef': 1,
+            'max_valuation_radius': 10.0,
+        }
+
+        scenic_quality.execute(args)
+
+        # Verify that the value summation matrix is what we expect it to be.
+        # The weight of two of the points makessome sectors more valuable
+        expected_value = numpy.array(
+            [[8, 4, 0, 4, 16],
+             [0, 5.65685425, 4, 11.3137085, 4],
+             [0, 0, 20, 4, 0],
+             [0, 2.82842712, 2, 8.48528137, 4],
+             [4, 2, 0, 2, 12]])
+
+        value_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed_value.tif'))
+        value_band = value_raster.GetRasterBand(1)
+        value_matrix = value_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+
+        # verify that the correct number of viewpoints has been tallied.
+        vshed_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed.tif'))
+        vshed_band = vshed_raster.GetRasterBand(1)
+        vshed_matrix = vshed_band.ReadAsArray()
+
+        expected_vshed = numpy.array(
+            [[1, 1, 1, 1, 2],
+             [0, 1, 1, 2, 1],
+             [0, 0, 3, 1, 1],
+             [0, 1, 1, 2, 1],
+             [1, 1, 1, 1, 2]], dtype=numpy.int8)
+
+        numpy.testing.assert_almost_equal(expected_vshed, vshed_matrix)
+
+    def test_exponential_valuation(self):
+        """SQ: verify values on exponential valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        viewpoints_path = os.path.join(self.workspace_dir, 'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(5.0, 0.0),
+             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
+             Point(5.0, -8.0),
+             Point(9.0, -4.0)],
+            wkt, filename=viewpoints_path)
+
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'exponential',
+            'a_coef': 1,
+            'b_coef': 1,
+            'max_valuation_radius': 10.0,
+        }
+
+        scenic_quality.execute(args)
+
+        # Verify that the value summation matrix is what we expect it to be.
+        # The weight of two of the points makessome sectors more valuable
+        expected_value = numpy.array(
+            [[0.01831564, 0.13533528, 1.,         0.13533528, 0.03663128],
+             [0.,         0.05910575, 0.13533528, 0.11821149, 0.13533528],
+             [0.,         0.,         0.05494692, 0.13533528, 1.        ],
+             [0.,         0.05910575, 0.13533528, 0.11821149, 0.13533528],
+             [0.01831564, 0.13533528, 1.,         0.13533528, 0.03663128]])
+
+        value_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed_value.tif'))
+        value_band = value_raster.GetRasterBand(1)
+        value_matrix = value_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(expected_value, value_matrix)
+
+    def test_logarithmic_valuation(self):
+        """SQ: verify values on logarithmic valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        viewpoints_path = os.path.join(self.workspace_dir, 'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(5.0, 0.0),
+             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
+             Point(5.0, -8.0),
+             Point(9.0, -4.0)],
+            wkt, filename=viewpoints_path)
+
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'logarithmic',
+            'a_coef': 1,
+            'b_coef': 1,
+            'max_valuation_radius': 10.0,
+        }
+
+        scenic_quality.execute(args)
+
+        # Verify that the value summation matrix is what we expect it to be.
+        # The weight of two of the points makessome sectors more valuable
+        expected_value = numpy.array(
+            [[2.38629436, 1.69314718, 0.        , 1.69314718, 4.77258872],
+             [0.        , 2.03972077, 1.69314718, 4.07944154, 1.69314718],
+             [0.        , 0.        , 7.15888308, 1.69314718, 0.        ],
+             [0.        , 2.03972077, 1.69314718, 4.07944154, 1.69314718],
+             [2.38629436, 1.69314718, 0.        , 1.69314718, 4.77258872]])
+
+        value_raster = gdal.Open(os.path.join(
+            args['workspace_dir'], 'output', 'vshed_value.tif'))
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
