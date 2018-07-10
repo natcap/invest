@@ -217,11 +217,11 @@ class ScenicQualityTests(unittest.TestCase):
 
         # Test the visual quality raster since this run is weighted.
         expected_visual_quality = numpy.array(
-            [[3, 3, 3, 3, 4],
+            [[3, 3, 0, 3, 4],
              [0, 3, 3, 4, 3],
-             [0, 0, 4, 3, 3],
-             [0, 1, 1, 4, 3],
-             [1, 1, 1, 1, 4]])
+             [0, 0, 4, 3, 0],
+             [0, 1, 1, 3, 3],
+             [1, 1, 0, 1, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
         quality_matrix = gdal.OpenEx(visual_quality_raster).ReadAsArray()
@@ -356,6 +356,7 @@ class ScenicQualityTests(unittest.TestCase):
         raster = None
 
         scenic_quality._calculate_visual_quality(n_visible,
+                                                 self.workspace_dir,
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.tile(
@@ -383,6 +384,7 @@ class ScenicQualityTests(unittest.TestCase):
         raster = None
 
         scenic_quality._calculate_visual_quality(n_visible,
+                                                 self.workspace_dir,
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
@@ -409,6 +411,7 @@ class ScenicQualityTests(unittest.TestCase):
         raster = None
 
         scenic_quality._calculate_visual_quality(n_visible,
+                                                 self.workspace_dir,
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.array([[255, 1, 0, 0, 0, 2, 3, 4]])
