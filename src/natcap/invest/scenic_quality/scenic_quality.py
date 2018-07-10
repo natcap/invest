@@ -13,7 +13,6 @@ import heapq
 
 import numpy
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 import taskgraph
 import pygeoprocessing
@@ -173,8 +172,10 @@ def execute(args):
     # phase 2: calculate viewsheds.
     LOGGER.info('Setting up viewshed tasks')
     viewpoint_tuples = []
-    structures_vector = ogr.Open(file_registry['structures_reprojected'])
-    for structures_layer in structures_vector:
+    structures_vector = gdal.OpenEx(file_registry['structures_reprojected'],
+                                    gdal.OF_VECTOR)
+    for structures_layer_index in range(structures_vector.GetLayerCount()):
+        structures_layer = structures_vector.GetLayer(structures_layer_index)
         layer_name = structures_layer.GetName()
         LOGGER.info('Layer %s has %s features', layer_name,
                     structures_layer.GetFeatureCount())
@@ -315,7 +316,7 @@ def execute(args):
 def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     """Clip one vector by another.
 
-    Uses ogr.Layer.Clip() to clip a vector, where the output Layer
+    Uses gdal.Layer.Clip() to clip a vector, where the output Layer
     inherits the projection and fields from the original.
 
     Parameters:
@@ -333,17 +334,17 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
 
     """
     if os.path.isfile(output_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver = gdal.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(output_path)
 
-    shape_to_clip = ogr.Open(shape_to_clip_path)
-    binding_shape = ogr.Open(binding_shape_path)
+    shape_to_clip = gdal.OpenEx(shape_to_clip_path, gdal.OF_VECTOR)
+    binding_shape = gdal.OpenEx(binding_shape_path, gdal.OF_VECTOR)
 
     input_layer = shape_to_clip.GetLayer()
     binding_layer = binding_shape.GetLayer()
 
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    vector = driver.CreateDataSource(output_path)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    vector = driver.Create(output_path, 0, 0, 0, gdal.GDT_Unknown)
     input_layer_defn = input_layer.GetLayerDefn()
     out_layer = vector.CreateLayer(
         input_layer_defn.GetName(), input_layer.GetSpatialRef())
