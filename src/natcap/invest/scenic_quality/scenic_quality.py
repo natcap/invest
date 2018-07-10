@@ -714,20 +714,16 @@ def _count_visible_structures(visibility_rasters, weights, clipped_dem,
     pygeoprocessing.calculate_raster_stats(target_path)
 
 
-def _calculate_visual_quality(visible_structures_raster, working_dir,
-                              target_path):
-    """Calculate visual quality based on the number of visible structures.
+def _calculate_visual_quality(source_raster_path, working_dir, target_path):
+    """Calculate visual quality based on a raster.
 
-    Visual quality is based on the nearest-rank method for breaking the number
-    of visible structures into percentiles.
-
-    The number of visible structures may optionally be weighted (which may mean
-    that the structures raster has floating-point values).
+    Visual quality is based on the nearest-rank method for breaking pixel
+    values from the source raster into percentiles.
 
     Parameters:
-        visible_structures_raster (string): The path to a raster representing
-            the number of structures that are visible from a given pixel.
-            This may be an integer or floating-point raster.
+        source_raster_path (string): The path to a raster from which
+            percentiles should be calculated.  Nodata values and pixel values
+            of 0 are ignored.
         working_dir (string): A directory where working files can be saved.
             This directory will be removed at the end of the function.
         target_path (string): The path to where the output raster will be
@@ -740,7 +736,7 @@ def _calculate_visual_quality(visible_structures_raster, working_dir,
     # Using the nearest-rank method.
     LOGGER.info('Calculating visual quality')
     raster_nodata = pygeoprocessing.get_raster_info(
-        visible_structures_raster)['nodata'][0]
+        source_raster_path)['nodata'][0]
 
     if not os.path.exists(working_dir):
         os.makedirs(working_dir)
@@ -749,6 +745,16 @@ def _calculate_visual_quality(visible_structures_raster, working_dir,
                                 prefix='visual_quality')
 
     def values_from_file(filepath):
+        """Build a generator for values in a numpy array.
+
+        Parameters:
+            filepath (string): The filepath to open, containing a sorted, saved
+                numpy array.
+
+        Yields:
+            Values in the numpy array saved in the indicated file.
+
+        """
         with open(filepath, 'rb') as npy_file:
             array = numpy.load(npy_file)
 
@@ -756,9 +762,11 @@ def _calculate_visual_quality(visible_structures_raster, working_dir,
             yield value
 
     # phase 1: calculate percentiles from the visible_structures raster
+    LOGGER.info('Determining percentiles for %s',
+                os.path.basename(source_raster_path))
     n_elements = 0
     iterators = []
-    for _, block in pygeoprocessing.iterblocks(visible_structures_raster):
+    for _, block in pygeoprocessing.iterblocks(source_raster_path):
         valid_pixels = block[(block != raster_nodata) & (block != 0)]
 
         # If no pixels to process, don't bother creating a temp file for it.
@@ -804,21 +812,20 @@ def _calculate_visual_quality(visible_structures_raster, working_dir,
     percentile_bins = numpy.array(percentile_values)
     LOGGER.info('Mapping percentile breaks %s', percentile_bins)
 
-    # TODO: rename weighted_structures to weighted_values
-    def _map_percentiles(weighted_structures):
-        nonzero = (weighted_structures != 0)
-        nodata = (weighted_structures == raster_nodata)
+    def _map_percentiles(valuation_matrix):
+        nonzero = (valuation_matrix != 0)
+        nodata = (valuation_matrix == raster_nodata)
         valid_indexes = (~nodata & nonzero)
-        visual_quality = numpy.empty(weighted_structures.shape,
+        visual_quality = numpy.empty(valuation_matrix.shape,
                                      dtype=numpy.int8)
         visual_quality[:] = _BYTE_NODATA
         visual_quality[~nonzero & ~nodata] = 0
         visual_quality[valid_indexes] = numpy.digitize(
-            weighted_structures[valid_indexes], percentile_bins)
+            valuation_matrix[valid_indexes], percentile_bins)
         return visual_quality
 
     pygeoprocessing.raster_calculator(
-        [(visible_structures_raster, 1)], _map_percentiles, target_path,
+        [(source_raster_path, 1)], _map_percentiles, target_path,
         gdal.GDT_Byte, _BYTE_NODATA)
 
 
