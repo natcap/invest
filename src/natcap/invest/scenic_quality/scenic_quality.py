@@ -7,6 +7,7 @@ import time
 import tempfile
 import shutil
 import collections
+import pprint
 
 import numpy
 from osgeo import gdal
@@ -736,29 +737,34 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     # looping (which is slow in python).
     visible_value_counts = [pair for pair in sorted(value_counts.items())
                             if pair[0] > 0]
-    zero_base = value_counts[0]
+    LOGGER.debug('Visible value counts: %s',
+                 pprint.pformat(visible_value_counts))
     n_elements = sum(value for (key, value) in visible_value_counts)
     rank_ordinals = collections.deque(
-        [zero_base + math.ceil(n*n_elements) for n in
-         (0.25, 0.50, 0.75, 1.0)])
+        [(index, math.ceil(n*n_elements)) for (index, n) in
+         enumerate((0.25, 0.50, 0.75, 1.0), start=1)])
     percentile_ranks = {0: 0}
+    LOGGER.debug('Rank ordinals: %s', rank_ordinals)
 
-    idx = 0
-    next_percentile_index = rank_ordinals.popleft()
+    idx = value_counts[0]
+    next_percentile_index, next_percentile_value = rank_ordinals.popleft()
     for bin_value, bin_count in visible_value_counts:
         if bin_count == 0:
             continue
-        try:
-            while next_percentile_index <= idx + bin_count:
-                percentile_ranks[bin_value] = next_percentile_index
-                next_percentile_index = rank_ordinals.popleft()
-            idx += bin_count
-        except IndexError:
-            break
+        if bin_value == 0:
+            continue
+        while next_percentile_value <= idx + bin_count:
+            # If a single bin value covers multiple percentiles, take the
+            # highest one.
+            percentile_ranks[bin_value] = next_percentile_index
+            try:
+                next_percentile_index, next_percentile_value = (
+                    rank_ordinals.popleft())
+            except IndexError:
+                break
+        idx += bin_count
 
-    LOGGER.debug('Rank ordinals: %s', rank_ordinals)
-    LOGGER.debug('Value counts: %s', value_counts)
-    LOGGER.debug('Percentile ranks: %s', percentile_ranks)
+    LOGGER.debug('Reclassifying using %s', pprint.pformat(percentile_ranks))
 
     # phase 2: use the calculated percentiles to write a new raster
     pygeoprocessing.reclassify_raster(

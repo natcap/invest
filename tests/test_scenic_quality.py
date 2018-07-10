@@ -128,11 +128,11 @@ class ScenicQualityTests(unittest.TestCase):
 
         # Test the visual quality raster.
         expected_visual_quality = numpy.array(
-            [[1, 1, 1, 1, 1],
-             [0, 1, 1, 1, 1],
-             [0, 0, 4, 1, 1],
-             [0, 1, 1, 1, 1],
-             [1, 1, 1, 1, 1]])
+            [[3, 3, 3, 3, 4],
+             [0, 3, 3, 4, 3],
+             [0, 0, 4, 3, 3],
+             [0, 3, 3, 4, 3],
+             [3, 3, 3, 3, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual_foo.tif')
         quality_matrix = gdal.Open(visual_quality_raster).ReadAsArray()
