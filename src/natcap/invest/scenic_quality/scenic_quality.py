@@ -8,6 +8,7 @@ import tempfile
 import shutil
 import collections
 import pprint
+import itertools
 
 import numpy
 from osgeo import gdal
@@ -228,9 +229,11 @@ def execute(args):
     viewshed_tasks = []
     valuation_tasks = []
     valuation_filepaths = []
+    weights = []
     feature_index = 0
     for viewpoint, max_radius, weight, viewpoint_height in sorted(
             viewpoint_tuples, key=lambda x: x[0]):
+        weights.append(weight)
         visibility_filepath = file_registry['visibility_pattern'].format(
             id=feature_index)
         viewshed_files.append(visibility_filepath)
@@ -284,6 +287,7 @@ def execute(args):
     viewshed_sum_task = graph.add_task(
         _count_visible_structures,
         args=(viewshed_files,
+              weights,
               file_registry['clipped_dem'],
               file_registry['n_visible_structures']),
         target_path_list=[file_registry['n_visible_structures']],
@@ -638,12 +642,16 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
         LOGGER.exception('Could not remove temp directory %s', temp_dir)
 
 
-def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
-    """Count the number of visible structures for each pixel.
+def _count_visible_structures(visibility_rasters, weights, clipped_dem,
+                              target_path):
+    """Count (and weight) the number of visible structures for each pixel.
 
     Parameters:
         visibility_rasters (list of strings): A list of strings to perfectly
             overlapping visibility rasters.
+        weights (list of numbers): A list of numeric weights to apply to each
+            visibility raster.  There must be the same number of weights in
+            this list as there are elements in visibility_rasters.
         clipped_dem (string): String path to the DEM.
         target_path (string): The path to where the output raster is stored.
 
@@ -653,9 +661,9 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
     """
     LOGGER.info('Summing %d visibility rasters', len(visibility_rasters))
     target_nodata = -1
+
     pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
-                                         gdal.GDT_Int32,
-                                         [target_nodata])
+                                         gdal.GDT_Float32, [target_nodata])
     dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem)
     dem_nodata = dem_raster_info['nodata'][0]
     pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
@@ -677,15 +685,17 @@ def _count_visible_structures(visibility_rasters, clipped_dem, target_path):
 
         visibility_sum = numpy.empty((block_info['win_ysize'],
                                       block_info['win_xsize']),
-                                     dtype=numpy.int32)
+                                     dtype=numpy.float32)
 
         visibility_sum[:] = 0
         valid_mask = (dem_matrix != dem_nodata)
         visibility_sum[~valid_mask] = target_nodata
-        for visibility_band in vis_raster_bands:
+        for visibility_band, weight in itertools.izip(vis_raster_bands,
+                                                      weights):
             visibility_matrix = visibility_band.ReadAsArray(**block_info)
             visible_mask = ((visibility_matrix == 1) & valid_mask)
-            visibility_sum[visible_mask] += visibility_matrix[visible_mask]
+            visibility_sum[visible_mask] += (
+                visibility_matrix[visible_mask] * weight)
 
         target_band.WriteArray(visibility_sum,
                                xoff=block_info['xoff'],

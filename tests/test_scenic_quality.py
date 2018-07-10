@@ -202,31 +202,29 @@ class ScenicQualityTests(unittest.TestCase):
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
-        # verify that the correct number of viewpoints has been tallied.
-        vshed_raster = gdal.Open(os.path.join(
-            args['workspace_dir'], 'output', 'vshed.tif'))
-        vshed_band = vshed_raster.GetRasterBand(1)
-        vshed_matrix = vshed_band.ReadAsArray()
-
-        expected_vshed = numpy.array(
-            [[1, 1, 1, 1, 2],
-             [0, 1, 1, 2, 1],
-             [0, 0, 3, 1, 1],
-             [0, 1, 1, 2, 1],
-             [1, 1, 1, 1, 2]], dtype=numpy.int8)
-
-        numpy.testing.assert_almost_equal(expected_vshed, vshed_matrix)
+        # Verify that the sum of the viewsheds (which is weighted) is correct.
+        expected_weighted_vshed = numpy.array(
+            [[ 2.5,  2.5,  2.5,  2.5,  5. ],
+             [ 0. ,  2.5,  2.5,  5. ,  2.5],
+             [ 0. ,  0. ,  6. ,  2.5,  2.5],
+             [ 0. ,  1. ,  1. ,  3.5,  2.5],
+             [ 1. ,  1. ,  1. ,  1. ,  3.5]], dtype=numpy.float32)
+        vshed_raster_path = os.path.join(args['workspace_dir'], 'output',
+                                         'vshed.tif')
+        weighted_vshed_matrix = gdal.OpenEx(vshed_raster_path).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_weighted_vshed,
+                                          weighted_vshed_matrix)
 
         # Test the visual quality raster since this run is weighted.
         expected_visual_quality = numpy.array(
             [[3, 3, 3, 3, 4],
              [0, 3, 3, 4, 3],
              [0, 0, 4, 3, 3],
-             [0, 3, 3, 4, 3],
-             [3, 3, 3, 3, 4]])
+             [0, 1, 1, 4, 3],
+             [1, 1, 1, 1, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
-        quality_matrix = gdal.Open(visual_quality_raster).ReadAsArray()
+        quality_matrix = gdal.OpenEx(visual_quality_raster).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           quality_matrix)
 
