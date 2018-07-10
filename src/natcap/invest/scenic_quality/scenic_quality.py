@@ -619,7 +619,8 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     LOGGER.info('Masking DEM pixels outside the AOI to nodata')
     aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
     pygeoprocessing.new_raster_from_base(
-        clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte, [_BYTE_NODATA], [0])
+        clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte,
+        [_BYTE_NODATA], [0])
     pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
 
     dem_nodata = dem_raster_info['nodata'][0]
