@@ -9,6 +9,7 @@ import shutil
 import collections
 import pprint
 import itertools
+import heapq
 
 import numpy
 from osgeo import gdal
@@ -165,10 +166,12 @@ def execute(args):
 
     # viewshed calculation requires that the DEM and structures are all
     # finished.
+    LOGGER.info('Waiting for clipping to finish')
     clipped_dem_task.join()
     clipped_viewpoints_task.join()
 
     # phase 2: calculate viewsheds.
+    LOGGER.info('Setting up viewshed tasks')
     viewpoint_tuples = []
     structures_vector = ogr.Open(file_registry['structures_reprojected'])
     for structures_layer in structures_vector:
@@ -274,8 +277,7 @@ def execute(args):
         valuation_filepaths.append(viewshed_valuation_path)
         feature_index += 1
 
-    # The valuation sum is a leaf node on the graph
-    graph.add_task(
+    viewshed_value_task = graph.add_task(
         _sum_valuation_rasters,
         args=(file_registry['clipped_dem'],
               valuation_filepaths,
@@ -284,7 +286,8 @@ def execute(args):
         dependent_task_list=sorted(valuation_tasks),
         task_name='add_up_valuation_rasters')
 
-    viewshed_sum_task = graph.add_task(
+    # The weighted visible structures raster is a leaf node
+    graph.add_task(
         _count_visible_structures,
         args=(viewshed_files,
               weights,
@@ -297,9 +300,10 @@ def execute(args):
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
-        args=(file_registry['n_visible_structures'],
+        args=(file_registry['viewshed_value'],
+              intermediate_dir,
               file_registry['viewshed_quality']),
-        dependent_task_list=[viewshed_sum_task],
+        dependent_task_list=[viewshed_value_task],
         target_path_list=[file_registry['viewshed_quality']],
         task_name='calculate_visual_quality'
     )
@@ -710,7 +714,8 @@ def _count_visible_structures(visibility_rasters, weights, clipped_dem,
     pygeoprocessing.calculate_raster_stats(target_path)
 
 
-def _calculate_visual_quality(visible_structures_raster, target_path):
+def _calculate_visual_quality(visible_structures_raster, working_dir,
+                              target_path):
     """Calculate visual quality based on the number of visible structures.
 
     Visual quality is based on the nearest-rank method for breaking the number
@@ -723,6 +728,8 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         visible_structures_raster (string): The path to a raster representing
             the number of structures that are visible from a given pixel.
             This may be an integer or floating-point raster.
+        working_dir (string): A directory where working files can be saved.
+            This directory will be removed at the end of the function.
         target_path (string): The path to where the output raster will be
             written.
 
@@ -730,67 +737,88 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
         ``None``
 
     """
-    LOGGER.info('Calculating visual quality')
     # Using the nearest-rank method.
-    value_counts = {}
-
+    LOGGER.info('Calculating visual quality')
     raster_nodata = pygeoprocessing.get_raster_info(
         visible_structures_raster)['nodata'][0]
 
+    if not os.path.exists(working_dir):
+        os.makedirs(working_dir)
+
+    temp_dir = tempfile.mkdtemp(dir=working_dir,
+                                prefix='visual_quality')
+
+    def values_from_file(filepath):
+        with open(filepath, 'rb') as npy_file:
+            array = numpy.load(npy_file)
+
+        for value in array:
+            yield value
+
     # phase 1: calculate percentiles from the visible_structures raster
+    n_elements = 0
+    iterators = []
     for _, block in pygeoprocessing.iterblocks(visible_structures_raster):
-        valid_pixels = block[block != raster_nodata]
+        valid_pixels = block[(block != raster_nodata) & (block != 0)]
 
-        # Values could be any real number, which precludes usage of
-        # numpy.bincount.
-        for value in numpy.unique(valid_pixels):
-            n_values_in_block = (
-                valid_pixels[valid_pixels == value].size)
-            try:
-                value_counts[value] += n_values_in_block
-            except KeyError:
-                value_counts[value] = n_values_in_block
-
-    # Rather than iterate over a loop of all the elements, we can locate the
-    # values of the individual ranks in a more abbreviated fashion to minimize
-    # looping (which is slow in python).
-    visible_value_counts = [pair for pair in sorted(value_counts.items())
-                            if pair[0] > 0]
-    LOGGER.debug('Visible value counts: %s',
-                 pprint.pformat(visible_value_counts))
-    n_elements = sum(value for (key, value) in visible_value_counts)
-    rank_ordinals = collections.deque(
-        [(index, value_counts[0] + math.ceil(n*n_elements)) for (index, n) in
-         enumerate((0.25, 0.50, 0.75, 1.0), start=1)])
-    percentile_ranks = {0: 0}
-    LOGGER.debug('Rank ordinals: %s', rank_ordinals)
-
-    idx = value_counts[0]  # initialize to the values we're skipping
-    LOGGER.debug('Initializing index to %s', idx)
-    next_percentile_index, next_percentile_value = rank_ordinals.popleft()
-    for bin_value, bin_count in visible_value_counts:
-        if bin_count == 0 or bin_value == 0:
+        # If no pixels to process, don't bother creating a temp file for it.
+        if valid_pixels.size == 0:
             continue
 
-        # Always set a reclassification mapping for this bin.  This fills in
-        # the gaps in the percentile ranks so we can safely reclassify.
-        percentile_ranks[bin_value] = next_percentile_index
-        while next_percentile_value <= idx + bin_count:
-            # If a single bin value covers multiple percentiles, take the
-            # highest one.
-            percentile_ranks[bin_value] = next_percentile_index
+        # array is already flat.  Sort.
+        valid_pixels.sort()
+
+        tmp_filepath = os.path.join(temp_dir,
+                                    'tmp_offset_%s.npy' % n_elements)
+        with open(tmp_filepath, 'wb') as tmp_file:
+            numpy.save(tmp_file, valid_pixels)
+
+        n_elements += valid_pixels.size
+        iterators.append(values_from_file(tmp_filepath))
+
+    rank_ordinals = collections.deque(
+        [math.ceil(n*n_elements) for n in (0.0, 0.25, 0.50, 0.75)])
+
+    percentile_values = []
+    current_index = 0
+    next_percentile_ordinal = rank_ordinals.popleft()
+    for value in heapq.merge(*iterators):
+        if current_index == next_percentile_ordinal:
+            percentile_values.append(value)
             try:
-                next_percentile_index, next_percentile_value = (
-                    rank_ordinals.popleft())
+                next_percentile_ordinal = rank_ordinals.popleft()
             except IndexError:
+                # No more percentile breaks to find
                 break
-        idx += bin_count
+        current_index += 1
 
-    LOGGER.debug('Reclassifying using %s', pprint.pformat(percentile_ranks))
+    # In case any of the files are still open.
+    iterators = None
 
-    # phase 2: use the calculated percentiles to write a new raster
-    pygeoprocessing.reclassify_raster(
-        (visible_structures_raster, 1), percentile_ranks, target_path,
+    try:
+        shutil.rmtree(temp_dir)
+    except OSError:
+        LOGGER.exception("Unable to remove temporary directory %s", temp_dir)
+
+    # Phase 2: map values to their bins to indicate visual quality.
+    percentile_bins = numpy.array(percentile_values)
+    LOGGER.info('Mapping percentile breaks %s', percentile_bins)
+
+    # TODO: rename weighted_structures to weighted_values
+    def _map_percentiles(weighted_structures):
+        nonzero = (weighted_structures != 0)
+        nodata = (weighted_structures == raster_nodata)
+        valid_indexes = (~nodata & nonzero)
+        visual_quality = numpy.empty(weighted_structures.shape,
+                                     dtype=numpy.int8)
+        visual_quality[:] = _BYTE_NODATA
+        visual_quality[~nonzero & ~nodata] = 0
+        visual_quality[valid_indexes] = numpy.digitize(
+            weighted_structures[valid_indexes], percentile_bins)
+        return visual_quality
+
+    pygeoprocessing.raster_calculator(
+        [(visible_structures_raster, 1)], _map_percentiles, target_path,
         gdal.GDT_Byte, _BYTE_NODATA)
 
 
