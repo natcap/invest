@@ -741,18 +741,21 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
                  pprint.pformat(visible_value_counts))
     n_elements = sum(value for (key, value) in visible_value_counts)
     rank_ordinals = collections.deque(
-        [(index, math.ceil(n*n_elements)) for (index, n) in
+        [(index, value_counts[0] + math.ceil(n*n_elements)) for (index, n) in
          enumerate((0.25, 0.50, 0.75, 1.0), start=1)])
     percentile_ranks = {0: 0}
     LOGGER.debug('Rank ordinals: %s', rank_ordinals)
 
-    idx = value_counts[0]
+    idx = value_counts[0]  # initialize to the values we're skipping
+    LOGGER.debug('Initializing index to %s', idx)
     next_percentile_index, next_percentile_value = rank_ordinals.popleft()
     for bin_value, bin_count in visible_value_counts:
-        if bin_count == 0:
+        if bin_count == 0 or bin_value == 0:
             continue
-        if bin_value == 0:
-            continue
+
+        # Always set a reclassification mapping for this bin.  This fills in
+        # the gaps in the percentile ranks so we can safely reclassify.
+        percentile_ranks[bin_value] = next_percentile_index
         while next_percentile_value <= idx + bin_count:
             # If a single bin value covers multiple percentiles, take the
             # highest one.
