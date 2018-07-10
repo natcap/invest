@@ -705,9 +705,13 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     Visual quality is based on the nearest-rank method for breaking the number
     of visible structures into percentiles.
 
+    The number of visible structures may optionally be weighted (which may mean
+    that the structures raster has floating-point values).
+
     Parameters:
         visible_structures_raster (string): The path to a raster representing
             the number of structures that are visible from a given pixel.
+            This may be an integer or floating-point raster.
         target_path (string): The path to where the output raster will be
             written.
 
@@ -726,11 +730,15 @@ def _calculate_visual_quality(visible_structures_raster, target_path):
     for _, block in pygeoprocessing.iterblocks(visible_structures_raster):
         valid_pixels = block[block != raster_nodata]
 
-        for index, counted_values in enumerate(numpy.bincount(valid_pixels)):
+        # Values could be any real number, which precludes usage of
+        # numpy.bincount.
+        for value in numpy.unique(valid_pixels):
+            n_values_in_block = (
+                valid_pixels[valid_pixels == value].size)
             try:
-                value_counts[index] += counted_values
+                value_counts[value] += n_values_in_block
             except KeyError:
-                value_counts[index] = counted_values
+                value_counts[value] = n_values_in_block
 
     # Rather than iterate over a loop of all the elements, we can locate the
     # values of the individual ranks in a more abbreviated fashion to minimize

@@ -163,8 +163,8 @@ class ScenicQualityTests(unittest.TestCase):
             attributes=[
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.0},
-                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.0}])
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5}])
 
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
@@ -189,11 +189,11 @@ class ScenicQualityTests(unittest.TestCase):
         # Verify that the value summation matrix is what we expect it to be.
         # The weight of two of the points makessome sectors more valuable
         expected_value = numpy.array(
-            [[8, 4, 0, 4, 16],
-             [0, 5.65685425, 4, 11.3137085, 4],
-             [0, 0, 20, 4, 0],
-             [0, 2.82842712, 2, 8.48528137, 4],
-             [4, 2, 0, 2, 12]])
+            [[10., 5.        , 0.,  5.        ,  20.],
+             [ 0., 7.07106781, 5., 14.14213562,   5.],
+             [ 0., 0.        ,24.,  5.        ,   0.],
+             [ 0., 2.82842712, 2.,  9.89949494,   5.],
+             [ 4., 2.        , 0.,  2.        ,  14.]])
 
         value_raster = gdal.Open(os.path.join(
             args['workspace_dir'], 'output', 'vshed_value.tif'))
@@ -216,6 +216,19 @@ class ScenicQualityTests(unittest.TestCase):
              [1, 1, 1, 1, 2]], dtype=numpy.int8)
 
         numpy.testing.assert_almost_equal(expected_vshed, vshed_matrix)
+
+        # Test the visual quality raster since this run is weighted.
+        expected_visual_quality = numpy.array(
+            [[3, 3, 3, 3, 4],
+             [0, 3, 3, 4, 3],
+             [0, 0, 4, 3, 3],
+             [0, 3, 3, 4, 3],
+             [3, 3, 3, 3, 4]])
+        visual_quality_raster = os.path.join(
+            args['workspace_dir'], 'output', 'vshed_qual.tif')
+        quality_matrix = gdal.Open(visual_quality_raster).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          quality_matrix)
 
     def test_exponential_valuation(self):
         """SQ: verify values on exponential valuation."""
@@ -356,7 +369,7 @@ class ScenicQualityTests(unittest.TestCase):
                                           visual_quality_matrix)
 
     def test_visual_quality_low_count(self):
-        """SQ: verify visual quality calculations."""
+        """SQ: verify visual quality calculations for low pixel counts."""
         from natcap.invest.scenic_quality import scenic_quality
         visible_structures = numpy.array([[-1, 3, 0, 0, 0, 3, 6, 7]])
 
@@ -375,6 +388,32 @@ class ScenicQualityTests(unittest.TestCase):
                                                  visual_quality_raster)
 
         expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
+
+        visual_quality_matrix = gdal.Open(
+            visual_quality_raster).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          visual_quality_matrix)
+
+    def test_visual_quality_floats(self):
+        """SQ: verify visual quality calculations for floating-point vshed."""
+        from natcap.invest.scenic_quality import scenic_quality
+        visible_structures = numpy.array([[-1, 3.33, 0, 0, 0, 3.66, 6.12, 7.8]])
+
+        n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
+        visual_quality_raster = os.path.join(self.workspace_dir,
+                                             'visual_quality.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(n_visible, 8, 1, 1, gdal.GDT_Float32)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(-1)
+        band.WriteArray(visible_structures)
+        band = None
+        raster = None
+
+        scenic_quality._calculate_visual_quality(n_visible,
+                                                 visual_quality_raster)
+
+        expected_visual_quality = numpy.array([[255, 1, 0, 0, 0, 2, 3, 4]])
 
         visual_quality_matrix = gdal.Open(
             visual_quality_raster).ReadAsArray()
