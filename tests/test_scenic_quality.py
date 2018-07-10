@@ -54,6 +54,47 @@ class ScenicQualityTests(unittest.TestCase):
             pixel_size=(2, -2),
             filename=dem_path)
 
+    def test_invalid_valuation_function(self):
+        """SQ: model raises exception with invalid valuation function."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(5.0, -1.0),
+             Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
+             Point(5.0, -9.0),
+             Point(9.0, -5.0)],
+            wkt, filename=viewpoints_path)
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': 'foo',
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'INVALID FUNCTION',
+            'a_coef': 1,
+            'b_coef': 0,
+            'max_valuation_radius': 10.0,
+        }
+
+        with self.assertRaises(ValueError):
+            scenic_quality.execute(args)
+
     def test_viewshed_field_defaults(self):
         """SQ: run model with default field values."""
         from natcap.invest.scenic_quality import scenic_quality
