@@ -893,9 +893,7 @@ def validate(args, limit_to=None):
         ('structure_path', gdal.OF_VECTOR, 'vector'))
     with utils.capture_gdal_logging():
         for key, filetype, filetype_string in spatial_files:
-            if key not in args:
-                continue
-            if args[key] in (None, ''):
+            if limit_to not in (key, None):
                 continue
 
             spatial_file = gdal.OpenEx(args[key], filetype)
@@ -939,7 +937,5 @@ def validate(args, limit_to=None):
         except (ValueError, TypeError):
             validation_error_list.append(
                 ([key], "Must be a number"))
-        except Exception:
-            LOGGER.exception('Unexpected error when testing for float value')
 
     return validation_error_list
