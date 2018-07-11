@@ -335,7 +335,7 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     """
     if os.path.isfile(output_path):
         driver = gdal.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(output_path)
+        driver.Delete(output_path)
 
     shape_to_clip = gdal.OpenEx(shape_to_clip_path, gdal.OF_VECTOR)
     binding_shape = gdal.OpenEx(binding_shape_path, gdal.OF_VECTOR)
