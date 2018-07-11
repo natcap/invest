@@ -752,8 +752,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
         """Build a generator for values in a numpy array.
 
         Parameters:
-            filepath (string): The filepath to open, containing a sorted, saved
-                numpy array.
+            filepath (string): The filepath to open, containing a flat, sorted,
+                saved numpy array.
 
         Yields:
             Values in the numpy array saved in the indicated file.
@@ -773,20 +773,16 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     for _, block in pygeoprocessing.iterblocks(source_raster_path):
         valid_pixels = block[(block != raster_nodata) & (block != 0)]
 
-        # If no pixels to process, don't bother creating a temp file for it.
-        if valid_pixels.size == 0:
-            continue
+        # Only process blocks that have valid pixels.
+        if valid_pixels.size > 0:
+            valid_pixels.sort()
+            tmp_filepath = os.path.join(temp_dir,
+                                        'tmp_offset_%s.npy' % n_elements)
+            with open(tmp_filepath, 'wb') as tmp_file:
+                numpy.save(tmp_file, valid_pixels)
 
-        # array is already flat.  Sort.
-        valid_pixels.sort()
-
-        tmp_filepath = os.path.join(temp_dir,
-                                    'tmp_offset_%s.npy' % n_elements)
-        with open(tmp_filepath, 'wb') as tmp_file:
-            numpy.save(tmp_file, valid_pixels)
-
-        n_elements += valid_pixels.size
-        iterators.append(values_from_file(tmp_filepath))
+            n_elements += valid_pixels.size
+            iterators.append(values_from_file(tmp_filepath))
 
     rank_ordinals = collections.deque(
         [math.ceil(n*n_elements) for n in (0.0, 0.25, 0.50, 0.75)])
