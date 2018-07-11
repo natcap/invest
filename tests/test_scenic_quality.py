@@ -95,6 +95,65 @@ class ScenicQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             scenic_quality.execute(args)
 
+    def test_error_invalid_viewpoints(self):
+        """SQ: error when no valid viewpoints.
+
+        This also tests for coverage when using logarithmic valuation on pixels
+        with size < 1m.
+        """
+        from natcap.invest.scenic_quality import scenic_quality
+        from pygeoprocessing.testing import create_raster_on_disk
+
+        dem_matrix = numpy.array(
+            [[-1, -1, -1, -1, -1],
+             [-1, -1, -1, -1, -1],
+             [-1, -1, -1, -1, -1],
+             [-1, -1, -1, -1, -1],
+             [-1, -1, -1, -1, -1]], dtype=numpy.int)
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32331)  # UTM zone 31s
+        wkt = srs.ExportToWkt()
+        create_raster_on_disk(
+            [dem_matrix],
+            origin=(0, 0),
+            projection_wkt=wkt,
+            nodata=-1,
+            pixel_size=(0.5, -0.5),
+            filename=dem_path)
+
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        sampledata.create_vector_on_disk(
+            [Point(1.25, -0.5),
+             Point(-1.0, -5.0)],  # off the edge of DEM, won't be included.
+            wkt, filename=viewpoints_path)
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(0, 0), (0, -2.5), (2.5, -2.5), (2.5, 0), (0, 0)])],
+            wkt, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': 'foo',
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            'valuation_function': 'logarithmic',
+            'a_coef': 1,
+            'b_coef': 0,
+            'max_valuation_radius': 10.0,
+            'n_workers': -1,  # use serial mode to ensure correct exception.
+        }
+        with self.assertRaises(ValueError) as raised_error:
+            scenic_quality.execute(args)
+
+        self.assertTrue('No valid viewpoints found.' in
+                        str(raised_error.exception))
+
     def test_viewshed_field_defaults(self):
         """SQ: run model with default field values."""
         from natcap.invest.scenic_quality import scenic_quality

@@ -89,7 +89,8 @@ def execute(args):
     elif args['valuation_function'].startswith('logarithmic'):
         valuation_method = 'logarithmic'
         # Log a warning to the user (per Rob's request) when pixel sizes are
-        # less than 1 and we're doing logarithmic valuation.
+        # less than 1 and we're doing logarithmic valuation.  This is because
+        # taking the log of values < 1 yields strange results.
         if dem_raster_info['mean_pixel_size'] < 1.0:
             LOGGER.warning(
                 ('Pixel sizes are less than 1m. Expect strange '
@@ -224,6 +225,11 @@ def execute(args):
 
             viewpoint_tuples.append((viewpoint, max_radius, weight,
                                      viewpoint_height))
+
+    if not viewpoint_tuples:
+        raise ValueError('No valid viewpoints found. This may happen if '
+                         'viewpoints are beyond the edge of the DEM or are '
+                         'over nodata pixels.')
 
     # These are sorted outside the vector to ensure consistent ordering.  This
     # helps avoid unnecesary recomputation in taskgraph for when an ESRI
