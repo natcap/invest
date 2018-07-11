@@ -572,15 +572,14 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
     nodata = band.GetNoDataValue()
     dem_gt = raster.GetGeoTransform()
 
-    if nodata is None:
-        return False
-
     ix_viewpoint = int((viewpoint[0] - dem_gt[0]) / dem_gt[1])
     iy_viewpoint = int((viewpoint[1] - dem_gt[3]) / dem_gt[5])
 
     value_under_viewpoint = band.ReadAsArray(
         xoff=ix_viewpoint, yoff=iy_viewpoint, win_xsize=1, win_ysize=1)
 
+    # If the nodata value is not set, ``nodata`` will be None and this should
+    # always return False.
     if value_under_viewpoint == nodata:
         return True
     return False
