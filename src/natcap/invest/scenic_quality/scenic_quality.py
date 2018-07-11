@@ -726,7 +726,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
             percentiles should be calculated.  Nodata values and pixel values
             of 0 are ignored.
         working_dir (string): A directory where working files can be saved.
-            This directory will be removed at the end of the function.
+            A new temporary directory will be created within.  This new
+            temporary directory will be removed at the end of the function.
         target_path (string): The path to where the output raster will be
             written.
 
@@ -738,9 +739,6 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     LOGGER.info('Calculating visual quality')
     raster_nodata = pygeoprocessing.get_raster_info(
         source_raster_path)['nodata'][0]
-
-    if not os.path.exists(working_dir):
-        os.makedirs(working_dir)
 
     temp_dir = tempfile.mkdtemp(dir=working_dir,
                                 prefix='visual_quality')

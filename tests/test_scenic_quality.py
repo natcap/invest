@@ -133,6 +133,15 @@ class ScenicQualityTests(unittest.TestCase):
             'max_valuation_radius': 10.0,
         }
 
+        # Simulate a run where the clipped structures vector already exists.
+        # This is needed for coverage in the vector clipping function.
+        clipped_structures_path = os.path.join(args['workspace_dir'],
+                                               'intermediate',
+                                               'structures_clipped_foo.shp')
+        os.makedirs(os.path.dirname(clipped_structures_path))
+        with open(clipped_structures_path, 'w') as fake_file:
+            fake_file.write('this is a vector :)')
+
         scenic_quality.execute(args)
 
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
