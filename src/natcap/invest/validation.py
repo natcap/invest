@@ -98,6 +98,8 @@ def invest_validator(validate_func):
               It is an error for the first element to be a string.
             * The second element of the 2-tuple is a string error message.
 
+    In addition, this validates the ``n_workers`` argument if it's included.
+
     Raises:
         AssertionError when an invalid format is found.
 
@@ -125,7 +127,23 @@ def invest_validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
-        warnings_ = validate_func(args, limit_to)
+        # Validate n_workers if requested.
+        warnings_ = []
+        if limit_to in ('n_workers', None):
+            try:
+                n_workers_float = float(args['n_workers'])
+                n_workers_int = int(n_workers_float)
+                if n_workers_float != n_workers_int or n_workers_int < 1:
+                    warnings_.append((['n_workers'],
+                                      ('If provided, must be a nonzero, '
+                                       'postive integer')))
+            except (ValueError, KeyError):
+                # ValueError When n_workers is an empty string.  Input is
+                # optional, so this is not erroneous behavior.
+                # KeyError for those models that don't use this input.
+                pass
+
+        warnings_ += validate_func(args, limit_to)
         LOGGER.debug('Validation warnings: %s',
                      pprint.pformat(warnings_))
 
