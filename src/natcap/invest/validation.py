@@ -128,22 +128,23 @@ def invest_validator(validate_func):
                 'All args keys must be strings.')
 
         # Validate n_workers if requested.
-        warnings_ = []
+        common_warnings = []
         if limit_to in ('n_workers', None):
             try:
                 n_workers_float = float(args['n_workers'])
                 n_workers_int = int(n_workers_float)
                 if n_workers_float != n_workers_int or n_workers_int < 1:
-                    warnings_.append((['n_workers'],
-                                      ('If provided, must be a nonzero, '
-                                       'postive integer')))
+                    common_warnings.append(
+                        (['n_workers'],
+                         ('If provided, must be a nonzero, positive '
+                          'integer')))
             except (ValueError, KeyError):
                 # ValueError When n_workers is an empty string.  Input is
                 # optional, so this is not erroneous behavior.
                 # KeyError for those models that don't use this input.
                 pass
 
-        warnings_ += validate_func(args, limit_to)
+        warnings_ = validate_func(args, limit_to)
         LOGGER.debug('Validation warnings: %s',
                      pprint.pformat(warnings_))
 
@@ -159,6 +160,6 @@ def invest_validator(validate_func):
                     key, keys_iterable)
             assert isinstance(error_string, basestring), (
                 'Error string must be a string, not a %s' % type(error_string))
-        return warnings_
+        return common_warnings + warnings_
 
     return _wrapped_validate_func
