@@ -36,7 +36,7 @@ class Recreation(model.InVESTModel):
             helptext=(
                 u'Year to end PUD calculations, date ends and includes '
                 u'Dec 31st.'),
-            label=u'End Year (inclusive, must be <= 2014)',
+            label=u'End Year (inclusive, must be <= 2017)',
             validator=self.validator)
         self.add_input(self.end_year)
         self.regression_container = inputs.Container(
