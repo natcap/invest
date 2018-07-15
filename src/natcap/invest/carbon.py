@@ -50,7 +50,7 @@ _TMP_BASE_FILES = {
 # -1.0 since carbon stocks are 0 or greater
 _CARBON_NODATA = -1.0
 # use min float32 which is unlikely value to see in a NPV raster
-_VALUE_NODATA = numpy.finfo(numpy.float32).min
+_VALUE_NODATA = float(numpy.finfo(numpy.float32).min)
 
 
 def execute(args):
