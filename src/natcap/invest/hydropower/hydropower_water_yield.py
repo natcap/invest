@@ -76,6 +76,9 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
+        args['calculate_water_scarcity'] (bool): if True, run water scarcity
+            calculation using `args['demand_table_uri']`.
+
         args['demand_table_uri'] (string): (optional) if a non-empty string,
             a path to an input CSV
             table of LULC classes, showing consumptive water use for each
@@ -494,12 +497,8 @@ def execute(args):
             LOGGER.warn("could not delete temporary files in %s", temp_path)
 
     # Check to see if Water Scarcity was selected to run
-    if 'water_scarcity_container' in args:
-        water_scarcity_checked = args['water_scarcity_container']
-    else:
-        water_scarcity_checked = False
-
-    if not water_scarcity_checked:
+    if ('calculate_water_scarcity' not in args or
+            not args['calculate_water_scarcity']):
         # Since Scarcity and Valuation are not selected write out
         # the CSV table
         _write_table(watershed_results_csv_uri, wyield_value_dict_ws)

@@ -60,7 +60,7 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['water_scarcity_container'] = True
+        args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
         args['valuation_container'] = True
@@ -171,7 +171,7 @@ class HydropowerTests(unittest.TestCase):
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
 
-        args['water_scarcity_container'] = True
+        args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
 
@@ -208,7 +208,7 @@ class HydropowerTests(unittest.TestCase):
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
 
-        args['water_scarcity_container'] = True
+        args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
         args['sub_watersheds_uri'] = os.path.join(
@@ -249,7 +249,7 @@ class HydropowerTests(unittest.TestCase):
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
 
-        args['water_scarcity_container'] = True
+        args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
         args['valuation_container'] = True
@@ -309,7 +309,7 @@ class HydropowerTests(unittest.TestCase):
             'biophysical_table_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'biophysical_smoke.csv'),
             'seasonality_constant': 5,
-            'water_scarcity_container': True,
+            'calculate_water_scarcity': True,
             'demand_table_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'demand_smoke.csv'),
             'valuation_container': True,
@@ -364,7 +364,7 @@ class HydropowerTests(unittest.TestCase):
             'biophysical_table_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'biophysical_smoke.csv'),
             'seasonality_constant': 5,
-            'water_scarcity_container': True,
+            'calculate_water_scarcity': True,
             'demand_table_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'demand_smoke.csv'),
             'valuation_container': True,
