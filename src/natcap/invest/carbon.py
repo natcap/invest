@@ -8,7 +8,7 @@ import time
 from osgeo import gdal
 from osgeo import ogr
 import numpy
-import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 
 from . import validation
 from . import utils
@@ -110,7 +110,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = args['workspace_dir']
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([intermediate_output_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, output_dir])
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -118,31 +118,33 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-    carbon_pool_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
+    carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
-    cell_sizes = []
+    cell_size_set = set()
+    raster_size_set = set()
     valid_lulc_keys = []
     valid_scenarios = []
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
-        if lulc_key in args and len(args[lulc_key]) > 0:
-            cell_sizes.append(
-                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-                    args[lulc_key]))
+        if lulc_key in args and args[lulc_key]:
+            raster_info = pygeoprocessing.get_raster_info(args[lulc_key])
+            cell_size_set.add(raster_info['pixel_size'])
+            raster_size_set.add(raster_info['raster_size'])
             valid_lulc_keys.append(lulc_key)
             valid_scenarios.append(scenario_type)
-    pixel_size_out = min(cell_sizes)
-
-    # align the input datasets
-    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
-        [args[_] for _ in valid_lulc_keys],
-        [file_registry['aligned_' + _] for _ in valid_lulc_keys],
-        ['nearest'] * len(valid_lulc_keys),
-        pixel_size_out, 'intersection', 0, assert_datasets_projected=True)
+    if len(cell_size_set) > 1:
+        raise ValueError(
+            "the pixel sizes of %s are not equivalent. Here are the "
+            "different sets that were found in processing: %s" % (
+                valid_lulc_keys, cell_size_set))
+    if len(raster_size_set) > 1:
+        raise ValueError(
+            "the raster dimensions of %s are not equivalent. Here are the "
+            "different sizes that were found in processing: %s" % (
+                valid_lulc_keys, raster_size_set))
 
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
-    aligned_lulc_key = None
     pool_storage_path_lookup = collections.defaultdict(list)
     summary_stats = []  # use to aggregate storage, value, and more
     for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
@@ -150,17 +152,19 @@ def execute(args):
             (lucode, float(carbon_pool_table[lucode][pool_type]))
             for lucode in carbon_pool_table])
         for scenario_type in valid_scenarios:
-            aligned_lulc_key = 'aligned_lulc_%s_path' % scenario_type
+            lulc_key = 'lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)
             LOGGER.info(
                 "Mapping carbon from '%s' to '%s' scenario.",
-                aligned_lulc_key, storage_key)
+                lulc_key, storage_key)
             _generate_carbon_map(
-                file_registry[aligned_lulc_key], carbon_pool_by_type,
+                args[lulc_key], carbon_pool_by_type,
                 file_registry[storage_key])
             # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
+
+    # TODO: left off here for pgp 1.0 conversion
 
     # Sum the individual carbon storage pool paths per scenario
     for scenario_type, storage_path_list in (
@@ -229,9 +233,9 @@ def execute(args):
 
 def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(raster_path)
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
-    for _, block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(raster_path):
+    for _, block in pygeoprocessing.iterblocks(raster_path):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
 
@@ -250,18 +254,18 @@ def _generate_carbon_map(
     Returns:
         None.
     """
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_path)
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_path)
+    lulc_info = pygeoprocessing.get_raster_info(lulc_path)
+    nodata = lulc_info['nodata'][0]
+    pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
-        (lulcid, stock * pixel_size_out ** 2 / 10**4)
+        (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.iteritems()])
 
     carbon_stock_by_type[nodata] = _CARBON_NODATA
 
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        lulc_path, carbon_stock_by_type, out_carbon_stock_path,
-        gdal.GDT_Float32, _CARBON_NODATA, exception_flag='values_required',
-        assert_dataset_projected=True)
+    pygeoprocessing.reclassify_raster(
+        (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
+        gdal.GDT_Float32, _CARBON_NODATA, values_required=True)
 
 
 def _sum_rasters(storage_path_list, output_sum_path):
@@ -277,12 +281,9 @@ def _sum_rasters(storage_path_list, output_sum_path):
             _[valid_mask] for _ in storage_arrays], axis=0)
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        storage_path_list[0])
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        storage_path_list, _sum_op, output_sum_path,
-        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in storage_path_list], _sum_op, output_sum_path,
+        gdal.GDT_Float32, _CARBON_NODATA)
 
 
 def _diff_rasters(storage_path_list, output_diff_path):
@@ -298,12 +299,9 @@ def _diff_rasters(storage_path_list, output_diff_path):
             future_array[valid_mask] - base_array[valid_mask])
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        storage_path_list[0])
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        storage_path_list, _diff_op, output_diff_path,
-        gdal.GDT_Float32, _CARBON_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in storage_path_list], _diff_op, output_diff_path,
+        gdal.GDT_Float32, _CARBON_NODATA)
 
 
 def _calculate_valuation_constant(
@@ -353,11 +351,9 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         result[valid_mask] = carbon_array[valid_mask] * valuation_constant
         return result
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(delta_carbon_path)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [delta_carbon_path], _npv_value_op, npv_out_path, gdal.GDT_Float32,
-        _VALUE_NODATA, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(delta_carbon_path, 1)], _npv_value_op, npv_out_path,
+        gdal.GDT_Float32, _VALUE_NODATA)
 
 
 def _generate_report(summary_stats, model_args, html_report_path):

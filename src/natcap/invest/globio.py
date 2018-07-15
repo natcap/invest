@@ -3,9 +3,9 @@ from __future__ import absolute_import
 import os
 import logging
 import collections
-import csv
 import uuid
 
+import pandas
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
@@ -409,22 +409,23 @@ def load_msa_parameter_table(
                          msa_lu_9 * intensification_fraction}
             }
     """
-    with open(msa_parameter_table_filename, 'rb') as msa_parameter_table_file:
-        reader = csv.DictReader(msa_parameter_table_file)
-        msa_dict = collections.defaultdict(dict)
-        for line in reader:
-            if line['Value'][0] in ['<', '>']:
-                # put the limit and the MSA value in a tub
-                value = line['Value'][0]
-                msa_dict[line['MSA_type']][value] = (
-                    float(line['Value'][1:]), float(line['MSA_x']))
-                continue
-            elif '-' in line['Value']:
-                value = float(line['Value'].split('-')[1])
-            else:
-                value = float(line['Value'])
-            msa_dict[line['MSA_type']][value] = float(line['MSA_x'])
-    # cast back to a regular dict so we get keyerrors on non-existant keys
+    msa_table = pandas.read_csv(
+        msa_parameter_table_filename, sep=None, engine='python')
+    msa_dict = collections.defaultdict(dict)
+    for _, row in msa_table.iterrows():
+        if row['Value'][0] in ['<', '>']:
+            # put the limit and the MSA value in a tub
+            value = row['Value'][0]
+            # take 1: because it starts with a < or >
+            msa_dict[row['MSA_type']][value] = (
+                float(row['Value'][1:]), float(row['MSA_x']))
+            continue
+        elif '-' in row['Value']:
+            value = float(row['Value'].split('-')[1])
+        else:
+            value = float(row['Value'])
+        msa_dict[row['MSA_type']][value] = float(row['MSA_x'])
+    # landcover ID 12 is a linear interpolation between 8 and 9
     msa_dict['msa_lu'][12] = (
         msa_dict['msa_lu'][8] * (1.0 - intensification_fraction) +
         msa_dict['msa_lu'][9] * intensification_fraction)

@@ -1,17 +1,17 @@
-"""Module that contains the core computational components for the hydropower
-    model including the water yield, water scarcity, and valuation functions"""
+"""InVEST Hydropower Water Yield model."""
 from __future__ import absolute_import
 
+import shutil
 import logging
 import os
-import csv
 import math
+import tempfile
 
 import numpy
 from osgeo import gdal
 from osgeo import ogr
 
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import pygeoprocessing
 from .. import validation
 from .. import utils
 
@@ -49,8 +49,9 @@ def execute(args):
         args['eto_uri'] (string): a uri to an input raster describing the
             annual average evapotranspiration value for each cell. Potential
             evapotranspiration is the potential loss of water from soil by
-            both evaporation from the soil and transpiration by healthy Alfalfa
-            (or grass) if sufficient water is available (mm) (required)
+            both evaporation from the soil and transpiration by healthy
+            Alfalfa (or grass) if sufficient water is available (mm)
+            (required)
 
         args['watersheds_uri'] (string): a uri to an input shapefile of the
             watersheds of interest as polygons. (required)
@@ -75,55 +76,65 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
-        args['demand_table_uri'] (string): a uri to an input CSV table of
-            LULC classes, showing consumptive water use for each landuse /
-            land-cover type (cubic meters per year) (required for water
-            scarcity)
+        args['calculate_water_scarcity'] (bool): if True, run water scarcity
+            calculation using `args['demand_table_uri']`.
 
-        args['valuation_table_uri'] (string): a uri to an input CSV table of
-            hydropower stations with the following fields (required for
-            valuation):
-            ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
-            'cost', 'height', 'kw_price')
+        args['demand_table_uri'] (string): (optional) if a non-empty string,
+            a path to an input CSV
+            table of LULC classes, showing consumptive water use for each
+            landuse / land-cover type (cubic meters per year) to calculate
+            water scarcity.
+
+        args['valuation_table_uri'] (string): (optional) if a non-empty
+            string, a path to an input CSV table of
+            hydropower stations with the following fields to calculate
+            valuation:
+                ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
+                'cost', 'height', 'kw_price')
 
     Returns:
-        None"""
+        None
 
-    LOGGER.info('Starting Water Yield Core Calculations')
+    """
+    LOGGER.info('Validating arguments')
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     # Construct folder paths
-    workspace = args['workspace_dir']
-    output_dir = os.path.join(workspace, 'output')
+    workspace_dir = args['workspace_dir']
+    output_dir = os.path.join(workspace_dir, 'output')
     per_pixel_output_dir = os.path.join(output_dir, 'per_pixel')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories([
-        workspace, output_dir, per_pixel_output_dir])
+    utils.make_directories([workspace_dir, output_dir, per_pixel_output_dir])
 
-    clipped_lulc_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-    eto_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-    precip_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-    depth_to_root_rest_layer_uri = (
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename())
-    pawc_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+    temp_dir = tempfile.mkdtemp(dir=workspace_dir)
+
+    clipped_lulc_uri = os.path.join(temp_dir, 'clipped_lulc.tif')
+    eto_uri = os.path.join(temp_dir, 'eto.tif')
+    precip_uri = os.path.join(temp_dir, 'precip.tif')
+    depth_to_root_rest_layer_uri = os.path.join(
+        temp_dir, 'depth_to_root_rest_layer.tif')
+    pawc_uri = os.path.join(temp_dir, 'pawc.tif')
 
     sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
 
-    original_raster_uris = [
+    base_raster_path_list = [
         args['eto_uri'], args['precipitation_uri'],
         args['depth_to_root_rest_layer_uri'], args['pawc_uri'],
         args['lulc_uri']]
 
-    aligned_raster_uris = [
+    aligned_raster_path_list = [
         eto_uri, precip_uri, depth_to_root_rest_layer_uri, pawc_uri,
         clipped_lulc_uri]
 
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        args['lulc_uri'])
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.align_dataset_list(
-        original_raster_uris, aligned_raster_uris,
-        ['nearest'] * len(original_raster_uris),
-        pixel_size_out, 'intersection', 4,
-        aoi_uri=sheds_uri)
+    target_pixel_size = pygeoprocessing.get_raster_info(
+        args['lulc_uri'])['pixel_size']
+    pygeoprocessing.align_and_resize_raster_stack(
+        base_raster_path_list, aligned_raster_path_list,
+        ['nearest'] * len(base_raster_path_list), target_pixel_size,
+        'intersection', raster_align_index=4,
+        base_vector_path_list=[sheds_uri])
 
     sub_sheds_uri = None
     # If subwatersheds was input get the URI
@@ -131,16 +142,8 @@ def execute(args):
         sub_sheds_uri = args['sub_watersheds_uri']
 
     # Open/read in the csv file into a dictionary and add to arguments
-    bio_dict = {}
-    biophysical_table_file = open(args['biophysical_table_uri'], 'rU')
-    reader = csv.DictReader(biophysical_table_file)
-    for row in reader:
-        bio_dict[int(row['lucode'])] = {
-            'Kc':float(row['Kc']), 'root_depth':float(row['root_depth']),
-            'LULC_veg':float(row['LULC_veg'])
-            }
-
-    biophysical_table_file.close()
+    bio_dict = utils.build_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode', to_lower=True)
 
     # Append a _ to the suffix if it's not empty and doens't already have one
     try:
@@ -175,8 +178,8 @@ def execute(args):
     vegetated_dict = {}
 
     for lulc_code in bio_dict:
-        Kc_dict[lulc_code] = bio_dict[lulc_code]['Kc']
-        vegetated_dict[lulc_code] = bio_dict[lulc_code]['LULC_veg']
+        Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
+        vegetated_dict[lulc_code] = bio_dict[lulc_code]['lulc_veg']
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
@@ -188,103 +191,87 @@ def execute(args):
 
     # Create Kc raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_Kc raster")
-    tmp_Kc_raster_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
-            clipped_lulc_uri, Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float64,
-            out_nodata)
+    tmp_Kc_raster_uri = os.path.join(temp_dir, 'kc_raster.tif')
+    pygeoprocessing.reclassify_raster(
+        (clipped_lulc_uri, 1), Kc_dict, tmp_Kc_raster_uri, gdal.GDT_Float64,
+        out_nodata)
 
     # Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
-    tmp_root_raster_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+    tmp_root_raster_uri = os.path.join(
+        temp_dir, 'root_depth.tif')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
-            clipped_lulc_uri, root_dict, tmp_root_raster_uri, gdal.GDT_Float64,
-            out_nodata)
+    pygeoprocessing.reclassify_raster(
+        (clipped_lulc_uri, 1), root_dict, tmp_root_raster_uri,
+        gdal.GDT_Float64, out_nodata)
 
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
     LOGGER.info("Reclassifying tmp_veg raster")
-    tmp_veg_raster_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
-            clipped_lulc_uri, vegetated_dict, tmp_veg_raster_uri, gdal.GDT_Float64,
-            out_nodata)
+    tmp_veg_raster_uri = os.path.join(temp_dir, 'veg.tif')
+    pygeoprocessing.reclassify_raster(
+        (clipped_lulc_uri, 1), vegetated_dict, tmp_veg_raster_uri,
+        gdal.GDT_Float64, out_nodata)
 
     # Get out_nodata values so that we can avoid any issues when running
     # operations
-    Kc_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        tmp_Kc_raster_uri)
-    root_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        tmp_root_raster_uri)
-    veg_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        tmp_veg_raster_uri)
-    precip_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        precip_uri)
-    eto_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        eto_uri)
-    root_rest_layer_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        depth_to_root_rest_layer_uri)
-    pawc_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        pawc_uri)
+    Kc_nodata = pygeoprocessing.get_raster_info(tmp_Kc_raster_uri)['nodata'][0]
+    root_nodata = pygeoprocessing.get_raster_info(
+        tmp_root_raster_uri)['nodata'][0]
+    veg_nodata = pygeoprocessing.get_raster_info(
+        tmp_veg_raster_uri)['nodata'][0]
+    precip_nodata = pygeoprocessing.get_raster_info(precip_uri)['nodata'][0]
+    eto_nodata = pygeoprocessing.get_raster_info(eto_uri)['nodata'][0]
+    root_rest_layer_nodata = pygeoprocessing.get_raster_info(
+        depth_to_root_rest_layer_uri)['nodata'][0]
+    pawc_nodata = pygeoprocessing.get_raster_info(pawc_uri)['nodata'][0]
 
     def pet_op(eto_pix, Kc_pix):
-        """Vectorize operation for calculating the plant potential
-            evapotranspiration
+        """Calculate the plant potential evapotranspiration.
 
-            eto_pix - a float value for ETo
-            Kc_pix - a float value for Kc coefficient
+        eto_pix (numpy.ndarray): a numpy array of ETo
+        Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
 
-            returns - a float value for pet"""
+        Returns:
+            PET.
+
+        """
         return numpy.where(
-                (eto_pix == eto_nodata) | (Kc_pix == Kc_nodata),
-                out_nodata, eto_pix * Kc_pix)
+            (eto_pix == eto_nodata) | (Kc_pix == Kc_nodata),
+            out_nodata, eto_pix * Kc_pix)
 
     # Get pixel size from tmp_Kc_raster_uri which should be the same resolution
     # as LULC raster
-    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(tmp_Kc_raster_uri)
-    tmp_pet_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+    tmp_pet_uri = os.path.join(temp_dir, 'pet.tif')
+    LOGGER.info('Calculate PET from Ref Evap times Kc')
+    pygeoprocessing.raster_calculator(
+        [(eto_uri, 1), (tmp_Kc_raster_uri, 1)], pet_op, tmp_pet_uri,
+        gdal.GDT_Float64, out_nodata)
 
-    LOGGER.debug('Calculate PET from Ref Evap times Kc')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-            [eto_uri, tmp_Kc_raster_uri], pet_op, tmp_pet_uri, gdal.GDT_Float64,
-            out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
-            vectorize_op=False)
-
-    # Dictionary of out_nodata values corresponding to values for fractp_op
-    # that will help avoid any out_nodata calculation issues
-    fractp_nodata_dict = {
-        'Kc':Kc_nodata,
-        'eto':eto_nodata,
-        'precip':precip_nodata,
-        'root':root_nodata,
-        'veg':veg_nodata,
-        'soil':root_rest_layer_nodata,
-        'pawc':pawc_nodata,
-        }
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
-        """Function that calculates the fractp (actual evapotranspiration
-            fraction of precipitation) raster
+        """Calculate actual evapotranspiration fraction of precipitation.
 
-        Kc - numpy array with the Kc (plant evapotranspiration
+        Parameters:
+            Kc (numpy.ndarray): Kc (plant evapotranspiration
               coefficient) raster values
-        eto - numpy array with the potential evapotranspiration raster
+            eto (numpy.ndarray): potential evapotranspiration raster
               values (mm)
-        precip - numpy array with the precipitation raster values (mm)
-        root - numpy array with the root depth (maximum root depth for
+            precip (numpy.ndarray): precipitation raster values (mm)
+            root (numpy.ndarray): root depth (maximum root depth for
                vegetated land use classes) raster values (mm)
-        soil - numpy array with the depth to root restricted layer raster
-            values (mm)
-        pawc - numpy array with the plant available water content raster
+            soil (numpy.ndarray): depth to root restricted layer raster
+                values (mm)
+            pawc (numpy.ndarray): plant available water content raster
                values
-        veg - numpy array with a 1 or 0 where 1 depicts the land type as
+            veg (numpy.ndarray): 1 or 0 where 1 depicts the land type as
                 vegetation and 0 depicts the land type as non
                 vegetation (wetlands, urban, water, etc...). If 1 use
                 regular AET equation if 0 use: AET = Kc * ETo
 
-        returns - fractp value
-        """
+        Returns:
+            fractp.
 
+        """
         valid_mask = (
             (Kc != Kc_nodata) & (eto != eto_nodata) &
             (precip != precip_nodata) & (root != root_nodata) &
@@ -336,160 +323,157 @@ def execute(args):
 
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
-            tmp_Kc_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
-            depth_to_root_rest_layer_uri, pawc_uri, tmp_veg_raster_uri]
+        tmp_Kc_raster_uri, eto_uri, precip_uri, tmp_root_raster_uri,
+        depth_to_root_rest_layer_uri, pawc_uri, tmp_veg_raster_uri]
 
     LOGGER.debug('Performing fractp operation')
     # Create clipped fractp_clipped raster
-    LOGGER.debug(fractp_nodata_dict)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        raster_list, fractp_op, fractp_clipped_path, gdal.GDT_Float64,
-        out_nodata, pixel_size, 'intersection', aoi_uri=sheds_uri,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in raster_list], fractp_op, fractp_clipped_path,
+        gdal.GDT_Float64, out_nodata)
 
     def wyield_op(fractp, precip):
-        """Function that calculates the water yeild raster
+        """Calculate water yield.
 
-           fractp - numpy array with the fractp raster values
-           precip - numpy array with the precipitation raster values (mm)
+        Parameters:
+           fractp (numpy.ndarray): fractp raster values
+           precip (numpy.ndarray): precipitation raster values (mm)
 
-           returns - water yield value (mm)"""
+        Returns:
+            numpy.ndarray of water yield value (mm).
+
+        """
         return numpy.where(
-                (fractp == out_nodata) | (precip == precip_nodata),
-                out_nodata, (1.0 - fractp) * precip)
+            (fractp == out_nodata) | (precip == precip_nodata),
+            out_nodata, (1.0 - fractp) * precip)
 
-    LOGGER.debug('Performing wyield operation')
+    LOGGER.info('Performing wyield operation')
     # Create clipped wyield_clipped raster
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-            [fractp_clipped_path, precip_uri], wyield_op, wyield_clipped_path,
-            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(fractp_clipped_path, 1), (precip_uri, 1)], wyield_op,
+        wyield_clipped_path, gdal.GDT_Float64, out_nodata)
 
     # Making a copy of watershed and sub-watershed to add water yield outputs
     # to
     watershed_results_uri = os.path.join(
-            output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(sheds_uri, watershed_results_uri)
+        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
+    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+    watershed_vector = gdal.OpenEx(sheds_uri, gdal.OF_VECTOR)
+    esri_shapefile_driver.CreateCopy(watershed_results_uri, watershed_vector)
+    watershed_vector = None
 
     if sub_sheds_uri is not None:
         subwatershed_results_uri = os.path.join(
-                output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(sub_sheds_uri, subwatershed_results_uri)
+            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
+        subwatershed_vector = gdal.OpenEx(sub_sheds_uri, gdal.OF_VECTOR)
+        esri_shapefile_driver.CreateCopy(
+            subwatershed_results_uri, subwatershed_vector)
+        subwatershed_vector = None
 
     def aet_op(fractp, precip, veg):
-        """Function to compute the actual evapotranspiration values
+        """Compute actual evapotranspiration values.
 
-            fractp - numpy array with the fractp raster values
-            precip - numpy array with the precipitation raster values (mm)
-            veg - numpy array that depicts which AET equation was used in
+        Parameters:
+            fractp (numpy.ndarray): fractp raster values
+            precip (numpy.ndarray): precipitation raster values (mm)
+            veg (numpy.ndarray): value which AET equation was used in
                 calculations of fractp. Value of 1.0 indicates original
                 equation was used, value of 0.0 indicates the alternate
                 version was used (AET = Kc * ETo)
 
-            returns - actual evapotranspiration values (mm)"""
+        Returns:
+            numpy.ndarray of actual evapotranspiration values (mm).
 
+        """
         # checking if fractp >= 0 because it's a value that's between 0 and 1
         # and the nodata value is a large negative number.
         return numpy.where(
-                (fractp >= 0) & (precip != precip_nodata),
-                fractp * precip, out_nodata)
+            (fractp >= 0) & (precip != precip_nodata),
+            fractp * precip, out_nodata)
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-            [fractp_clipped_path, precip_uri, tmp_veg_raster_uri], aet_op, aet_path,
-            gdal.GDT_Float64, out_nodata, pixel_size, 'intersection',
-            aoi_uri=sheds_uri, vectorize_op=False)
-
-    # Get the area of the pixel to use in later calculations for volume
-    wyield_pixel_area = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(wyield_clipped_path) ** 2
+    pygeoprocessing.raster_calculator(
+        [(x, 1) for x in [
+            fractp_clipped_path, precip_uri, tmp_veg_raster_uri]],
+        aet_op, aet_path, gdal.GDT_Float64, out_nodata)
 
     if sub_sheds_uri is not None:
         # Create a list of tuples that pair up field names and raster uris so
         # that we can nicely do operations below
         sws_tuple_names_uris = [
-                ('precip_mn', precip_uri),('PET_mn', tmp_pet_uri),
-                ('AET_mn', aet_path)]
+            ('precip_mn', precip_uri),
+            ('PET_mn', tmp_pet_uri),
+            ('AET_mn', aet_path)]
 
         for key_name, rast_uri in sws_tuple_names_uris:
             # Aggregrate mean over the sub-watersheds for each uri listed in
             # 'sws_tuple_names_uri'
-            key_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.aggregate_raster_values_uri(
-                rast_uri, sub_sheds_uri, 'subws_id',
-                ignore_nodata=False).pixel_mean
+            sub_ws_stat_dict = pygeoprocessing.zonal_statistics(
+                (rast_uri, 1), sub_sheds_uri, 'subws_id',
+                ignore_nodata=False)
+
             # Add aggregated values to sub-watershed shapefile under new field
             # 'key_name'
-            add_dict_to_shape(
-                    subwatershed_results_uri, key_dict, key_name, 'subws_id')
+            _add_zonal_stats_dict_to_shape(
+                subwatershed_results_uri, sub_ws_stat_dict, key_name,
+                'subws_id', 'mean')
 
         # Aggregate values for the water yield raster under the sub-watershed
-        agg_wyield_tup = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.aggregate_raster_values_uri(
-                wyield_clipped_path, sub_sheds_uri, 'subws_id',
-                ignore_nodata=False)
-        # Get the pixel mean for aggregated for water yield and the number of
-        # pixels in which it aggregated over
-        wyield_mean_dict = agg_wyield_tup.pixel_mean
-        hectare_mean_dict = agg_wyield_tup.hectare_mean
-        pixel_count_dict = agg_wyield_tup.n_pixels
+        agg_wyield_stat_dict = pygeoprocessing.zonal_statistics(
+            (wyield_clipped_path, 1), sub_sheds_uri, 'subws_id',
+            ignore_nodata=False)
         # Add the wyield mean and number of pixels to the shapefile
-        add_dict_to_shape(
-                subwatershed_results_uri, wyield_mean_dict, 'wyield_mn', 'subws_id')
-        add_dict_to_shape(
-                subwatershed_results_uri, pixel_count_dict, 'num_pixels',
-                'subws_id')
+        _add_zonal_stats_dict_to_shape(
+            subwatershed_results_uri, agg_wyield_stat_dict, 'wyield_mn',
+            'subws_id', 'mean')
 
-        # Compute the water yield volume and water yield volume per hectare. The
-        # values per sub-watershed will be added as fields in the sub-watersheds
-        # shapefile
-        compute_water_yield_volume(subwatershed_results_uri, wyield_pixel_area)
+        # Compute the water yield volume and water yield volume per hectare.
+        # The values per sub-watershed will be added as fields in the
+        # sub-watersheds shapefile.
+        compute_water_yield_volume(subwatershed_results_uri)
 
         # List of wanted fields to output in the subwatershed CSV table
         field_list_sws = [
-                'subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-                'wyield_mn', 'wyield_vol']
+            'subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+            'wyield_mn', 'wyield_vol']
 
         # Get a dictionary from the sub-watershed shapefiles attributes based
         # on the fields to be outputted to the CSV table
         wyield_values_sws = _extract_vector_table_by_key(
             subwatershed_results_uri, 'subws_id')
 
-        wyield_value_dict_sws = filter_dictionary(wyield_values_sws, field_list_sws)
-
-        LOGGER.debug('wyield_value_dict_sws : %s', wyield_value_dict_sws)
+        wyield_value_dict_sws = filter_dictionary(
+            wyield_values_sws, field_list_sws)
 
         # Write sub-watershed CSV table
-        write_new_table(
-                subwatershed_results_csv_uri, field_list_sws, wyield_value_dict_sws)
+        _write_table(subwatershed_results_csv_uri, wyield_value_dict_sws)
 
     # Create a list of tuples that pair up field names and raster uris so that
     # we can nicely do operations below
     ws_tuple_names_uris = [
-            ('precip_mn', precip_uri),('PET_mn', tmp_pet_uri),
-            ('AET_mn', aet_path)]
+        ('precip_mn', precip_uri), ('PET_mn', tmp_pet_uri),
+        ('AET_mn', aet_path)]
 
     for key_name, rast_uri in ws_tuple_names_uris:
         # Aggregrate mean over the watersheds for each uri listed in
         # 'ws_tuple_names_uri'
-        key_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.aggregate_raster_values_uri(
-            rast_uri, sheds_uri, 'ws_id', ignore_nodata=False).pixel_mean
+        ws_stats_dict = pygeoprocessing.zonal_statistics(
+            (rast_uri, 1), sheds_uri, 'ws_id', ignore_nodata=False)
         # Add aggregated values to watershed shapefile under new field
         # 'key_name'
-        add_dict_to_shape(watershed_results_uri, key_dict, key_name, 'ws_id')
+        _add_zonal_stats_dict_to_shape(
+            watershed_results_uri, ws_stats_dict, key_name, 'ws_id', 'mean')
 
     # Aggregate values for the water yield raster under the watershed
-    agg_wyield_tup = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.aggregate_raster_values_uri(
-            wyield_clipped_path, sheds_uri, 'ws_id', ignore_nodata=False)
-    # Get the pixel mean for aggregated for water yield and the number of
-    # pixels in which it aggregated over
-    wyield_mean_dict = agg_wyield_tup.pixel_mean
-    pixel_count_dict = agg_wyield_tup.n_pixels
+    wyield_stats_dict = pygeoprocessing.zonal_statistics(
+        (wyield_clipped_path, 1), sheds_uri, 'ws_id', ignore_nodata=False)
     # Add the wyield mean and number of pixels to the shapefile
-    add_dict_to_shape(
-            watershed_results_uri, wyield_mean_dict, 'wyield_mn', 'ws_id')
-    add_dict_to_shape(
-            watershed_results_uri, pixel_count_dict, 'num_pixels', 'ws_id')
+    _add_zonal_stats_dict_to_shape(
+        watershed_results_uri, wyield_stats_dict, 'wyield_mn', 'ws_id',
+        'mean')
 
-    compute_water_yield_volume(watershed_results_uri, wyield_pixel_area)
+    compute_water_yield_volume(watershed_results_uri)
 
     # List of wanted fields to output in the watershed CSV table
     field_list_ws = [
@@ -503,65 +487,58 @@ def execute(args):
 
     wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
-    LOGGER.debug('wyield_value_dict_ws : %s', wyield_value_dict_ws)
-
-    #clear out the temporary filenames, doing this because a giant run of
-    #hydropower water yield chews up all available disk space
-    for tmp_uri in [
-        tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri, tmp_veg_raster_uri]:
-        os.remove(tmp_uri)
+    # removing temporary files
+    for temp_path in [
+            tmp_Kc_raster_uri, tmp_root_raster_uri, tmp_pet_uri,
+            tmp_veg_raster_uri]:
+        try:
+            os.remove(temp_path)
+        except OSError:
+            LOGGER.warn("could not delete temporary files in %s", temp_path)
 
     # Check to see if Water Scarcity was selected to run
-    if 'water_scarcity_container' in args:
-        water_scarcity_checked = args['water_scarcity_container']
-    else:
-        water_scarcity_checked = False
-
-    if not water_scarcity_checked:
-        LOGGER.debug('Water Scarcity Not Selected')
+    if ('calculate_water_scarcity' not in args or
+            not args['calculate_water_scarcity']):
         # Since Scarcity and Valuation are not selected write out
         # the CSV table
-        write_new_table(watershed_results_csv_uri, field_list_ws, wyield_value_dict_ws)
+        _write_table(watershed_results_csv_uri, wyield_value_dict_ws)
         # The rest of the function is water scarcity and valuation, so we can
         # quit now
-        os.remove(clipped_lulc_uri)
+        try:
+            shutil.rmtree(temp_dir)
+        except OSError:
+            LOGGER.warn("could not delete temporary directory %s", temp_dir)
         return
 
     LOGGER.info('Starting Water Scarcity')
-
-    # Open/read in the demand csv file into a dictionary
-    demand_dict = {}
-    demand_table_file = open(args['demand_table_uri'], 'rU')
-    reader = csv.DictReader(demand_table_file)
-    for row in reader:
-        demand_dict[int(row['lucode'])] = float(row['demand'])
-
-    LOGGER.debug('Demand_Dict : %s', demand_dict)
-    demand_table_file.close()
+    demand_dict = utils.build_lookup_from_csv(
+        args['demand_table_uri'], 'lucode')
+    demand_reclassify_dict = dict(
+        [(lucode, demand_dict[lucode]['demand']) for lucode in demand_dict])
 
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
-    tmp_demand_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
-            clipped_lulc_uri, demand_dict, tmp_demand_uri, gdal.GDT_Float64,
-            out_nodata)
+    tmp_demand_uri = os.path.join(temp_dir, 'demand.tif')
+    pygeoprocessing.reclassify_raster(
+        (clipped_lulc_uri, 1), demand_reclassify_dict, tmp_demand_uri,
+        gdal.GDT_Float64, out_nodata)
 
     # Aggregate the consumption volume over sheds using the
     # reclassfied demand raster
     LOGGER.info('Aggregating Consumption Volume and Mean')
 
-    consump_ws = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.aggregate_raster_values_uri(
-        tmp_demand_uri, sheds_uri, 'ws_id', ignore_nodata=False)
-    consump_vol_dict_ws = consump_ws.total
-    consump_mn_dict_ws = consump_ws.pixel_mean
+    consump_ws_stats_dict = pygeoprocessing.zonal_statistics(
+        (tmp_demand_uri, 1), sheds_uri, 'ws_id', ignore_nodata=False)
 
     # Add aggregated consumption to sheds shapefiles
-    add_dict_to_shape(
-            watershed_results_uri, consump_vol_dict_ws, 'consum_vol', 'ws_id')
+    _add_zonal_stats_dict_to_shape(
+        watershed_results_uri, consump_ws_stats_dict, 'consum_vol', 'ws_id',
+        'sum')
 
     # Add aggregated consumption means to sheds shapefiles
-    add_dict_to_shape(
-            watershed_results_uri, consump_mn_dict_ws, 'consum_mn', 'ws_id')
+    _add_zonal_stats_dict_to_shape(
+        watershed_results_uri, consump_ws_stats_dict, 'consum_mn', 'ws_id',
+        'mean')
 
     # Calculate the realised water supply after consumption
     LOGGER.info('Calculating RSUPPLY')
@@ -569,8 +546,7 @@ def execute(args):
 
     # List of wanted fields to output in the watershed CSV table
     scarcity_field_list_ws = [
-            'ws_id', 'consum_vol', 'consum_mn', 'rsupply_vl',
-            'rsupply_mn']
+        'ws_id', 'consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
 
     # Aggregate water yield and water scarcity fields, where we exclude the
     # first field in the scarcity list because they are duplicates already
@@ -584,17 +560,10 @@ def execute(args):
 
     watershed_dict = filter_dictionary(watershed_values, field_list_ws)
 
-    #Don't need this anymore
-    os.remove(tmp_demand_uri)
-    os.remove(clipped_lulc_uri)
-
-    for raster_uri in aligned_raster_uris:
-        try:
-            os.remove(raster_uri)
-        except OSError:
-            #might have deleted earlier
-            pass
-
+    try:
+        shutil.rmtree(temp_dir)
+    except OSError:
+        LOGGER.warn("Could not remove temporary directory %s", temp_dir)
 
     # Check to see if Valuation was selected to run
     if 'valuation_container' in args:
@@ -606,27 +575,15 @@ def execute(args):
         LOGGER.debug('Valuation Not Selected')
         # Since Valuation are not selected write out
         # the CSV table
-        write_new_table(
-                watershed_results_csv_uri, field_list_ws, watershed_dict)
+        _write_table(watershed_results_csv_uri, watershed_dict)
         # The rest of the function is valuation, so we can quit now
         return
 
     LOGGER.info('Starting Valuation Calculation')
 
     # Open/read in valuation parameters from CSV file
-    valuation_params = {}
-    valuation_table_file = open(args['valuation_table_uri'], 'rU')
-    reader = csv.DictReader(valuation_table_file)
-    for row in reader:
-        for key, val in row.iteritems():
-            try:
-                row[key] = float(val)
-            except ValueError:
-                pass
-
-        valuation_params[int(row['ws_id'])] = row
-
-    valuation_table_file.close()
+    valuation_params = utils.build_lookup_from_csv(
+        args['valuation_table_uri'], 'ws_id')
 
     # Compute NPV and Energy for the watersheds
     LOGGER.info('Calculating NPV/ENERGY for Sheds')
@@ -647,21 +604,24 @@ def execute(args):
     watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
     # Write out the CSV Table
-    write_new_table(
-            watershed_results_csv_uri, field_list_ws, watershed_dict_ws)
+    _write_table(watershed_results_csv_uri, watershed_dict_ws)
+
 
 def compute_watershed_valuation(watersheds_uri, val_dict):
-    """Computes and adds the net present value and energy for the watersheds to
-        an output shapefile.
+    """Compute net present value and energy for the watersheds.
 
-        watersheds_uri - a URI path to an OGR shapefile for the
+    Parameters:
+        watersheds_uri (string): - a URI path to an OGR shapefile for the
             watershed results. Where the results will be added.
 
-        val_dict - a python dictionary that has all the valuation parameters for
-            each watershed
+        val_dict (mappable): - a python dictionary that has all the valuation
+            parameters for each watershed
 
-        returns - Nothing
+    Returns:
+        None.
+
     """
+    LOGGER.debug(val_dict)
     ws_ds = gdal.OpenEx(watersheds_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
@@ -696,16 +656,19 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
 
         # Compute hydropower energy production (KWH)
         # This is from the equation given in the Users' Guide
-        energy = val_row['efficiency'] * val_row['fraction'] * val_row['height'] * rsupply_vl * 0.00272
+        energy = (
+            val_row['efficiency'] * val_row['fraction'] * val_row['height'] *
+            rsupply_vl * 0.00272)
 
-        dsum = 0
+        dsum = 0.
         # Divide by 100 because it is input at a percent and we need
         # decimal value
-        disc = val_row['discount'] / 100
+        disc = val_row['discount'] / 100.0
         # To calculate the summation of the discount rate term over the life
         # span of the dam we can use a geometric series
-        ratio = 1 / (1 + disc)
-        dsum = (1 - math.pow(ratio, val_row['time_span'])) / (1 - ratio)
+        ratio = 1. / (1. + disc)
+        if ratio != 1.:
+            dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
 
         npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
@@ -715,15 +678,23 @@ def compute_watershed_valuation(watersheds_uri, val_dict):
 
         ws_layer.SetFeature(ws_feat)
 
+
 def compute_rsupply_volume(watershed_results_uri):
-    """Calculate the total realized water supply volume and the mean realized
+    """Calculate the total realized water supply volume.
+
+     and the mean realized
         water supply volume per hectare for the given sheds. Output units in
         cubic meters and cubic meters per hectare respectively.
 
-        watershed_results_uri - a URI path to an OGR shapefile to get water yield
-            values from
+    Parameters:
+        watershed_results_uri (string): a path to a vector that contains
+            fields 'rsupply_vl' and 'rsupply_mn' to caluclate water supply
+            volumne per hectare and cubic meters.
 
-        returns - Nothing"""
+    Returns:
+        None.
+
+    """
     ws_ds = gdal.OpenEx(watershed_results_uri, 1)
     ws_layer = ws_ds.GetLayer()
 
@@ -767,6 +738,7 @@ def compute_rsupply_volume(watershed_results_uri):
 
         ws_layer.SetFeature(ws_feat)
 
+
 def filter_dictionary(dict_data, values):
     """
     Create a subset of a dictionary given keys found in a list.
@@ -777,13 +749,15 @@ def filter_dictionary(dict_data, values):
         in the values list.
 
     Parameters:
-        dict_data (dictionary): a dictionary that has keys which point to
-            dictionary's.
-        values (list): a list of keys to keep from the inner dictionary's
-            of 'dict_data'
+        dict_data (mappable): A dictionary containing values that are also
+            dictionaries.
+        values (list): a list of keys to copy from the second level
+            dictionaries in `dict_data`.
 
     Returns:
-        a dictionary
+        a dictionary that's a copy of `dict_data` with `values` removed from
+        it.
+
     """
     new_dict = {}
 
@@ -795,51 +769,63 @@ def filter_dictionary(dict_data, values):
 
     return new_dict
 
-def write_new_table(filename, fields, data):
-    """Create a new csv table from a dictionary
 
-        filename - a URI path for the new table to be written to disk
+def _write_table(target_path, data_row_map):
+    """Create a csv table from a dictionary.
 
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
+    Parameters:
+        target_path (string): a file path for the new table, if 'ws_id' is
+            contained in the field names it will be placed as the first
+            column in the table, otherwise columns output in alphabetical
+            order.
 
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
+        data_row_map (mappable): a mapping of row number to a mappable of
+            column name to value. The column names should be identical for
+            all rows. Example:
 
-        returns - nothing
+            data_row_map = {
+                0 : {'id':1, 'precip':43, 'total': 65},
+                1 : {'id':2, 'precip':65, 'total': 94}}
+
+    Returns:
+        None.
+
     """
-    csv_file = open(filename, 'wb')
-
     #  Sort the keys so that the rows are written in order
-    row_keys = data.keys()
-    row_keys.sort()
+    sorted_row_index_list = sorted(data_row_map.keys())
+    sorted_column_names = sorted(data_row_map.itervalues().next().keys())
+    if 'ws_id' in sorted_column_names:
+        ws_index = sorted_column_names.index('ws_id')
+        sorted_column_names = (
+            [sorted_column_names[ws_index]] +
+            sorted_column_names[:ws_index] +
+            sorted_column_names[ws_index+1:])
+    with open(target_path, 'wb') as csv_file:
+        #  Write the columns as the first row in the table
+        csv_file.write(','.join(sorted_column_names))
+        csv_file.write('\n')
 
-    csv_writer = csv.DictWriter(csv_file, fields)
-    #  Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn, fn) for fn in fields))
-
-    # Write the rows from the dictionary
-    for index in row_keys:
-        csv_writer.writerow(data[index])
-
+        # Write the rows from the dictionary
+        for row_index in sorted_row_index_list:
+            csv_file.write(','.join(
+                [str(data_row_map[row_index][key])
+                 for key in sorted_column_names]))
+            csv_file.write('\n')
     csv_file.close()
 
-def compute_water_yield_volume(shape_uri, pixel_area):
+
+def compute_water_yield_volume(shape_uri):
     """Calculate the water yield volume per sub-watershed or watershed.
-        Add results to shape_uri, units are cubic meters
 
-        shape_uri - a URI path to an ogr datasource for the sub-watershed
+        shape_uri - a URI path a vector for the sub-watershed
             or watershed shapefile. This shapefiles features should have a
-            'wyield_mn' attribute, which calculations are derived from
+            'wyield_mn' attribute. Results are added to a 'wyield_vol' field
+            in `shape_uri` whose units are in cubic meters.
 
-        pixel_area - the area in meters squared of a pixel from the wyield
-            raster.
+    Returns:
+        None.
 
-        returns - Nothing"""
+    """
     shape = gdal.OpenEx(shape_uri, 1)
     layer = shape.GetLayer()
 
@@ -858,39 +844,47 @@ def compute_water_yield_volume(shape_uri, pixel_area):
         feat = layer.GetFeature(feat_id)
         wyield_mn_id = feat.GetFieldIndex('wyield_mn')
         wyield_mn = feat.GetField(wyield_mn_id)
-        pixel_count_id = feat.GetFieldIndex('num_pixels')
-        pixel_count = feat.GetField(pixel_count_id)
-
+        geom = feat.GetGeometryRef()
         # Calculate water yield volume,
-        #1000 is for converting the mm of wyield to meters
-        vol = wyield_mn * pixel_area * pixel_count / 1000.0
+        # 1000 is for converting the mm of wyield to meters
+        vol = wyield_mn * geom.Area() / 1000.0
         # Get the volume field index and add value
         vol_index = feat.GetFieldIndex(vol_name)
         feat.SetField(vol_index, vol)
 
         layer.SetFeature(feat)
 
-def add_dict_to_shape(shape_uri, field_dict, field_name, key):
+
+def _add_zonal_stats_dict_to_shape(
+        shape_path, stats_map, field_name, key, aggregate_field_id):
     """Add a new field to a shapefile with values from a dictionary.
+
         The dictionaries keys should match to the values of a unique fields
         values in the shapefile
 
-        shape_uri - a URI path to a ogr datasource on disk with a unique field
-            'key'. The field 'key' should have values that
-            correspond to the keys of 'field_dict'
+        shape_path (string): a path to a vector with a unique field
+            `key`. The field `key` should have values that map to the keys
+            of  `stats_map`.
 
-        field_dict - a python dictionary with keys mapping to values. These
-            values will be what is filled in for the new field
+        stats_map (mappable): a dictionary in the format generated by
+            pygeoprocessing.zonal_statistics that contains at least the key
+            value of `aggregate_field_id` per feature id.
 
-        field_name - a string for the name of the new field to add
+        field_name (str): a string for the name of the new field to add to
+            the target vector.
 
-        key - a string for the field name in 'shape_uri' that represents
-            the unique features
+        key (str): a string for the field name in the `shape_path` vector
+            a unique features per record.
 
-        returns - nothing"""
+        aggregate_field_id (string): one of 'min' 'max' 'sum' 'mean' 'count'
+            or 'nodata_count' as defined by pygeoprocessing.zonal_statistics.
 
-    shape = gdal.OpenEx(shape_uri, 1)
-    layer = shape.GetLayer()
+    Returns:
+        None
+
+    """
+    vector = gdal.OpenEx(shape_path, gdal.OF_VECTOR | gdal.GA_Update)
+    layer = vector.GetLayer()
 
     # Create the new field
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -911,7 +905,11 @@ def add_dict_to_shape(shape_uri, field_dict, field_name, key):
 
         # Using the unique value from the field of the feature, index into the
         # dictionary to get the corresponding value
-        field_val = float(field_dict[ws_val])
+        if aggregate_field_id == 'mean':
+            field_val = float(
+                stats_map[ws_val]['sum']) / stats_map[ws_val]['count']
+        else:
+            field_val = float(stats_map[ws_val][aggregate_field_id])
 
         # Get the new fields index and set the new value for the field
         field_index = feat.GetFieldIndex(field_name)
@@ -926,7 +924,7 @@ def _extract_vector_table_by_key(vector_path, key_field):
     Create a dictionary lookup table of the features in the attribute table
     of the vector referenced by vector_path.
 
-    Args:
+    Parameters:
         vector_path (string): a path to an OGR vector
         key_field: a field in vector_path that refers to a key value
             for each row such as a polygon id.
@@ -934,9 +932,10 @@ def _extract_vector_table_by_key(vector_path, key_field):
     Returns:
         attribute_dictionary (dict): returns a dictionary of the
             form {key_field_0: {field_0: value0, field_1: value1}...}
+
     """
     # Pull apart the vector
-    vector = gdal.OpenEx(vector_path)
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     layer = vector.GetLayer()
     layer_def = layer.GetLayerDefn()
 
@@ -980,6 +979,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
@@ -994,15 +994,7 @@ def validate(args, limit_to=None):
         'lulc_uri',
         'watersheds_uri',
         'biophysical_table_uri',
-        'seasonality_constant',
-        'calculate_water_scarcity',
-        'calculate_valuation']
-
-    if 'calculate_water_scarcity' in args and args['calculate_water_scarcity']:
-        required_keys.append('demand_table_uri')
-
-    if 'calculate_valuation' in args and args['calculate_valuation']:
-        required_keys.append('valuation_table_uri')
+        'seasonality_constant']
 
     for key in required_keys:
         if limit_to is None or limit_to == key:
@@ -1046,13 +1038,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

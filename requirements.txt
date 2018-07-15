@@ -20,7 +20,9 @@ Rtree>=0.8.2
 scipy>=0.16.1
 Shapely
 six
-pygeoprocessing>=0.7.0
-taskgraph[niced_processes]>=0.4.0,<0.5.0
+pygeoprocessing>=1.0.1
+# psutil is used, but not required, by taskgraph to lower process priority
+psutil>=5.2.2
+taskgraph[niced_processes]>=0.5.1
 chardet>=3.0.4
 matplotlib
