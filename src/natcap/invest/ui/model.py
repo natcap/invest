@@ -1185,20 +1185,25 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         # If the model has a documented input for the number of taskgraph
         # workers, add an input for it.
-        if 'n_workers' in self.target.__doc__:
-            n_cpus = multiprocessing.cpu_count()
-            self.n_workers = inputs.Text(
-                args_key='n_workers',
-                helptext=(
-                    u'The number of workers to spawn for executing tasks. '
-                    u'If this input is not provided, the model will be '
-                    u'executed in the current process.  <br/><br/>'
-                    u'Your computer has <b>%s CPUs</b>') % n_cpus,
-                label='Number of parallel workers (optional)',
-                validator=self.validator)
-            self.n_workers.textfield.setMaximumWidth(150)
-            self.add_input(self.n_workers)
-            self.n_workers.set_value(n_cpus)
+        try:
+            if 'n_workers' in self.target.__doc__:
+                n_cpus = multiprocessing.cpu_count()
+                self.n_workers = inputs.Text(
+                    args_key='n_workers',
+                    helptext=(
+                        u'The number of workers to spawn for executing tasks. '
+                        u'If this input is not provided, the model will be '
+                        u'executed in the current process.  <br/><br/>'
+                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
+                    label='Number of parallel workers (optional)',
+                    validator=self.validator)
+                self.n_workers.textfield.setMaximumWidth(150)
+                self.add_input(self.n_workers)
+                self.n_workers.set_value(n_cpus)
+        except TypeError:
+            # When self.target doesn't have __doc__, assume that there's no
+            # n_workers parameter.
+            pass
 
         self.form.submitted.connect(self.execute_model)
 
