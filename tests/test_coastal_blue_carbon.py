@@ -270,17 +270,17 @@ class TestPreprocessor(unittest.TestCase):
 
     def setUp(self):
         """Create a temp directory for the workspace."""
-        self.workspace = tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Remove workspace."""
-        shutil.rmtree(self.workspace)
+        shutil.rmtree(self.workspace_dir)
 
     def test_create_carbon_pool_transient_table_template(self):
         """Coastal Blue Carbon: Test creation of transient table template."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
-        filepath = os.path.join(self.workspace,
+        args = _get_preprocessor_args(1, self.workspace_dir)
+        filepath = os.path.join(self.workspace_dir,
                                 'transient_temp.csv')
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
@@ -296,7 +296,7 @@ class TestPreprocessor(unittest.TestCase):
         All rasters contain ones.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
@@ -315,7 +315,7 @@ class TestPreprocessor(unittest.TestCase):
         First two rasters contain ones, last contains zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args2 = _get_preprocessor_args(2, self.workspace)
+        args2 = _get_preprocessor_args(2, self.workspace_dir)
         preprocessor.execute(args2)
         trans_csv = os.path.join(
             args2['workspace_dir'],
@@ -335,7 +335,7 @@ class TestPreprocessor(unittest.TestCase):
         First raster contains ones, second nodata, third zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(3, self.workspace)
+        args = _get_preprocessor_args(3, self.workspace_dir)
         preprocessor.execute(args)
         trans_csv = os.path.join(
             args['workspace_dir'],
@@ -356,10 +356,10 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
         from natcap.invest import utils
 
-        args = _get_preprocessor_args(4, self.workspace)
+        args = _get_preprocessor_args(4, self.workspace_dir)
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            self.workspace,
+            self.workspace_dir,
             'workspace',
             'outputs_preprocessor',
             'transitions_test.csv')
@@ -373,7 +373,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_lookup_parsing_exception(self):
         """Coastal Blue Carbon: Test lookup table parsing exception."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
         _create_table(args['lulc_lookup_uri'], lulc_lookup_list_unreadable)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -381,7 +381,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_raster_validation(self):
         """Coastal Blue Carbon: Test raster validation."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
         OTHER_NODATA = -1
         srs = pygeotest.sampledata.SRS_WILLAMETTE
         band_matrices_with_nodata = [numpy.ones((2, 2)) * OTHER_NODATA]
@@ -393,7 +393,7 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                self.workspace, 'raster_wrong_nodata.tif'))
+                self.workspace_dir, 'raster_wrong_nodata.tif'))
         args['lulc_snapshot_list'][0] = raster_wrong_nodata
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -401,7 +401,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_raster_values_not_in_lookup_table(self):
         """Coastal Blue Carbon: Test raster values not in lookup table."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
         _create_table(args['lulc_lookup_uri'], lulc_lookup_list_no_ones)
         with self.assertRaises(ValueError):
             preprocessor.execute(args)
@@ -409,7 +409,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_mark_transition_type(self):
         """Coastal Blue Carbon: Test mark_transition_type."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
 
         band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -421,12 +421,12 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                self.workspace, 'raster_1.tif'))
+                self.workspace_dir, 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
         trans_csv = os.path.join(
-            self.workspace,
+            self.workspace_dir,
             'workspace',
             'outputs_preprocessor',
             'transitions_test.csv')
@@ -437,7 +437,7 @@ class TestPreprocessor(unittest.TestCase):
     def test_mark_transition_type_nodata_check(self):
         """Coastal Blue Carbon: Test mark_transition_type with nodata check."""
         from natcap.invest.coastal_blue_carbon import preprocessor
-        args = _get_preprocessor_args(1, self.workspace)
+        args = _get_preprocessor_args(1, self.workspace_dir)
 
         band_matrices_zero = [numpy.zeros((2, 2))]
         srs = pygeotest.sampledata.SRS_WILLAMETTE
@@ -449,7 +449,7 @@ class TestPreprocessor(unittest.TestCase):
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
             filename=os.path.join(
-                self.workspace, 'raster_1.tif'))
+                self.workspace_dir, 'raster_1.tif'))
         args['lulc_snapshot_list'][0] = raster_zeros
 
         preprocessor.execute(args)
@@ -501,11 +501,11 @@ class TestIO(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.workspace = tempfile.mkdtemp()
-        self.args = _get_args(self.workspace)
+        self.workspace_dir = tempfile.mkdtemp()
+        self.args = _get_args(self.workspace_dir)
 
     def tearDown(self):
-        shutil.rmtree(self.workspace)
+        shutil.rmtree(self.workspace_dir)
 
     def test_get_inputs(self):
         """Coastal Blue Carbon: Test get_inputs function in IO module."""
@@ -585,12 +585,12 @@ class TestModel(unittest.TestCase):
 
     def setUp(self):
         """Create arguments."""
-        self.workspace = tempfile.mkdtemp()
-        self.args = _get_args(workspace=self.workspace)
+        self.workspace_dir = tempfile.mkdtemp()
+        self.args = _get_args(workspace=self.workspace_dir)
 
     def tearDown(self):
         """Remove workspace."""
-        shutil.rmtree(self.workspace)
+        shutil.rmtree(self.workspace_dir)
 
     def test_model_run(self):
         """Coastal Blue Carbon: Test run function in main model."""
@@ -670,7 +670,7 @@ class TestModel(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
-        self.args = _get_args(valuation=False, workspace=self.workspace)
+        self.args = _get_args(valuation=False, workspace=self.workspace_dir)
         self.args['lulc_baseline_year']= 2000
         self.args['lulc_transition_years_list'] = [2005, 2010]
         self.args['analysis_year'] = None

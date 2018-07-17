@@ -172,12 +172,10 @@ def execute(args):
         "Calculating total land area and warning if the landcover raster "
         "is missing lucodes")
     crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
-        numerical_cast=True)
+        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
 
     crop_to_fertlization_rate_table = utils.build_lookup_from_csv(
-        args['fertilization_rate_table_path'], 'crop_name', to_lower=True,
-        numerical_cast=True)
+        args['fertilization_rate_table_path'], 'crop_name', to_lower=True)
 
     crop_lucodes = [
         x[_EXPECTED_LUCODE_TABLE_HEADER]
@@ -260,7 +258,7 @@ def execute(args):
 
         crop_regression_table = utils.build_lookup_from_csv(
             crop_regression_table_path, 'climate_bin',
-            to_lower=True, numerical_cast=True, warn_if_missing=False)
+            to_lower=True, warn_if_missing=False)
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':

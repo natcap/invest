@@ -6,11 +6,11 @@ SVN_DATA_REPO_REV       := 172
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 141
+SVN_TEST_DATA_REPO_REV  := 146
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 1448fa07b52c 
+HG_UG_REPO_REV          := 1448fa07b52c
 
 
 ENV = env
@@ -29,7 +29,7 @@ ifeq ($(OS),Windows_NT)
 	MAKE := make
 	SHELL := powershell.exe
 	BASHLIKE_SHELL_COMMAND := cmd.exe /C
-	.DEFAULT_GOAL := windows_installer 
+	.DEFAULT_GOAL := windows_installer
 	JENKINS_BUILD_SCRIPT := .\scripts\jenkins-build.bat
 	RM_DATA_DIR := $(RM) $(DATA_DIR)
 	/ := '\'
@@ -53,7 +53,7 @@ else
 		.DEFAULT_GOAL := mac_installer
 		JENKINS_BUILD_SCRIPT := ./scripts/jenkins-build.sh
 	else
-		.DEFAULT_GOAL := binaries 
+		.DEFAULT_GOAL := binaries
 		JENKINS_BUILD_SCRIPT := @echo "NOTE: There is not currently a linux jenkins build."; exit 1
 	endif
 endif
@@ -153,7 +153,7 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH): 
+$(HG_UG_REPO_PATH):
 	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
 	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
@@ -179,7 +179,7 @@ env:
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
 	-$(RM) natcap.invest.egg-info
-	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest 
+	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
 
 
 # Bulid python packages and put them in dist/
@@ -215,7 +215,7 @@ $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE) 
+userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	-$(RM) build/userguide/latex
 	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide latex
@@ -223,7 +223,7 @@ $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide html 
+	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide html
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
@@ -288,7 +288,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 							$(USERGUIDE_HTML_DIR) \
 							$(USERGUIDE_PDF_FILE) \
 							build/vcredist_x86.exe \
-							$(SVN_DATA_REPO_PATH) 
+							$(SVN_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis \
 		/DVERSION=$(VERSION) \

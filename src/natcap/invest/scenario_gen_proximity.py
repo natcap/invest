@@ -1,5 +1,4 @@
 """Scenario Generation: Proximity Based."""
-
 from __future__ import absolute_import
 
 import math
@@ -11,14 +10,12 @@ import struct
 import heapq
 import time
 import collections
-import csv
 
 import numpy
 from osgeo import osr
 from osgeo import gdal
-from osgeo import ogr
-import natcap.invest.pygeoprocessing_0_3_3
 import scipy
+import pygeoprocessing
 
 from . import validation
 from . import utils
@@ -32,7 +29,8 @@ _INTERMEDIATE_BASE_FILES = {
     }
 
 _TMP_BASE_FILES = {
-    'base_lulc_path': 'base_lulc.tif'
+    'base_lulc_path': 'base_lulc.tif',
+    'masked_lulc_path': 'masked_lulc.tif'
     }
 
 # This sets the largest number of elements that will be packed at once and
@@ -82,6 +80,7 @@ def execute(args):
 
     Returns:
         None.
+
     """
     if (not args['convert_farthest_from_edge'] and
             not args['convert_nearest_to_edge']):
@@ -96,7 +95,7 @@ def execute(args):
         args['workspace_dir'], 'intermediate_outputs')
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
+    utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
     f_reg = utils.build_file_registry(
@@ -116,9 +115,15 @@ def execute(args):
     shutil.copy(args['base_lulc_path'], f_reg['base_lulc_path'])
     if 'aoi_path' in args and args['aoi_path'] != '':
         # clip base lulc to a new raster
-        natcap.invest.pygeoprocessing_0_3_3.clip_dataset_uri(
-            args['base_lulc_path'], args['aoi_path'], f_reg['base_lulc_path'],
-            assert_projections=True, all_touched=False)
+        target_pixel_size = pygeoprocessing.get_raster_info(
+            args['base_lulc_path'])['pixel_size']
+        pygeoprocessing.align_and_resize_raster_stack(
+            [args['base_lulc_path']], [f_reg['base_lulc_path']], ['nearest'],
+            target_pixel_size, 'intersection',
+            base_vector_path_list=[args['aoi_path']])
+        _mask_raster_by_vector(
+            (f_reg['base_lulc_path'], 1), args['aoi_path'],
+            f_reg['masked_lulc_path'])
 
     scenarios = [
         (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
@@ -128,24 +133,87 @@ def execute(args):
         if not scenario_enabled:
             continue
         LOGGER.info('executing %s scenario', basename)
-        output_landscape_raster_uri = os.path.join(
+        output_landscape_raster_path = os.path.join(
             output_dir, basename+file_suffix+'.tif')
-        stats_uri = os.path.join(
+        stats_path = os.path.join(
             output_dir, basename+file_suffix+'.csv')
-        distance_from_edge_uri = os.path.join(
+        distance_from_edge_path = os.path.join(
             intermediate_output_dir, basename+'_distance'+file_suffix+'.tif')
         _convert_landscape(
-            f_reg['base_lulc_path'], replacement_lucode, area_to_convert,
+            f_reg['masked_lulc_path'], replacement_lucode, area_to_convert,
             focal_landcover_codes, convertible_type_list, score_weight,
-            int(args['n_fragmentation_steps']), distance_from_edge_uri,
-            output_landscape_raster_uri, stats_uri)
+            int(args['n_fragmentation_steps']), distance_from_edge_path,
+            output_landscape_raster_path, stats_path,
+            args['workspace_dir'])
+
+
+def _mask_raster_by_vector(
+        base_raster_path_band, vector_path, target_raster_path):
+    """Mask pixels outside of the vector to nodata.
+
+    Parameters:
+        base_raster_path (string): path/band tuple to raster to process
+        vector_path (string): path to single layer raster that is used to
+            indicate areas to preserve from the base raster.  Areas outside
+            of this vector are set to nodata.
+        target_raster_path (string): path to a single band raster that will be
+            created of the same dimensions and data type as
+            `base_raster_path_band` where any pixels that lie outside of
+            `vector_path` coverage will be set to nodata.
+
+    Returns:
+        None.
+
+    """
+    base_raster_info = pygeoprocessing.get_raster_info(
+        base_raster_path_band[0])
+    nodata = base_raster_info['nodata'][base_raster_path_band[1]-1]
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path_band[0], target_raster_path,
+        base_raster_info['datatype'], [nodata], fill_value_list=[nodata])
+
+    tmp_dir = tempfile.mkdtemp()
+    mask_raster_path = os.path.join(tmp_dir, 'mask.tif')
+
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path_band[0], mask_raster_path,
+        gdal.GDT_Byte, [0], fill_value_list=[0])
+
+    pygeoprocessing.rasterize(vector_path, mask_raster_path, [1], None)
+
+    target_raster = gdal.OpenEx(
+        target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
+    target_band = target_raster.GetRasterBand(1)
+
+    mask_raster = gdal.OpenEx(mask_raster_path, gdal.OF_RASTER)
+    mask_band = mask_raster.GetRasterBand(1)
+
+    base_raster = gdal.OpenEx(base_raster_path_band[0], gdal.OF_RASTER)
+    base_band = base_raster.GetRasterBand(base_raster_path_band[1])
+
+    for offset_dict in pygeoprocessing.iterblocks(
+            mask_raster_path, offset_only=True):
+        base_array = base_band.ReadAsArray(**offset_dict)
+        mask_array = mask_band.ReadAsArray(**offset_dict)
+        base_array[mask_array != 1] = nodata
+        target_band.WriteArray(
+            base_array, xoff=offset_dict['xoff'], yoff=offset_dict['yoff'])
+    target_band.FlushCache()
+    target_band = None
+    target_raster = None
+    mask_band = None
+    mask_raster = None
+    try:
+        shutil.rmtree(tmp_dir)
+    except OSError:
+        LOGGER.warn("Unable to delete temporary file %s", mask_raster_path)
 
 
 def _convert_landscape(
-        base_lulc_uri, replacement_lucode, area_to_convert,
+        base_lulc_path, replacement_lucode, area_to_convert,
         focal_landcover_codes, convertible_type_list, score_weight, n_steps,
-        smooth_distance_from_edge_uri, output_landscape_raster_uri,
-        stats_uri):
+        smooth_distance_from_edge_path, output_landscape_raster_path,
+        stats_path, workspace_dir):
     """Expand replacement lucodes in relation to the focal lucodes.
 
     If the sign on `score_weight` is positive, expansion occurs marches
@@ -153,10 +221,10 @@ def _convert_landscape(
     marches toward the focal types.
 
     Parameters:
-        base_lulc_uri (string): path to landcover raster that will be used as
+        base_lulc_path (string): path to landcover raster that will be used as
             the base landcover map to agriculture pixels
         replacement_lucode (int): agriculture landcover code type found in the
-            raster at `base_lulc_uri`
+            raster at `base_lulc_path`
         area_to_convert (float): area (Ha) to convert to agriculture
         focal_landcover_codes (list of int): landcover codes that are used to
             calculate proximity
@@ -170,46 +238,55 @@ def _convert_landscape(
         n_steps (int): number of steps to convert the landscape.  On each step
             the distance transform will be applied on the
             current value of the `focal_landcover_codes` pixels in
-            `output_landscape_raster_uri`.  On the first step the distance
-            is calculated from `base_lulc_uri`.
-        smooth_distance_from_edge_uri (string): an intermediate output showing
+            `output_landscape_raster_path`.  On the first step the distance
+            is calculated from `base_lulc_path`.
+        smooth_distance_from_edge_path (string): an intermediate output showing
             the pixel distance from the edge of the base landcover types
-        output_landscape_raster_uri (string): an output raster that will
+        output_landscape_raster_path (string): an output raster that will
             contain the final fragmented forest layer.
-        stats_uri (string): a path to an output csv that records the number
-            type, and area of pixels converted in `output_landscape_raster_uri`
+        stats_path (string): a path to an output csv that records the number
+            type, and area of pixels converted in `output_landscape_raster_path`
+        workspace_dir (string): workspace directory that will be used to
+            hold temporary files. On a successful run of this function,
+            the temporary directory will be removed.
 
     Returns:
         None.
+
     """
+    temp_dir = tempfile.mkdtemp(prefix='temp_dir', dir=workspace_dir)
     tmp_file_registry = {
-        'non_base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'base_mask': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'gaussian_kernel': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_base_mask_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_non_base_mask_edge':
-            natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'convertible_distances': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'smooth_distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
-        'distance_from_edge': natcap.invest.pygeoprocessing_0_3_3.temporary_filename(),
+        'non_base_mask': os.path.join(temp_dir, 'non_base_mask.tif'),
+        'base_mask': os.path.join(temp_dir, 'base_mask.tif'),
+        'gaussian_kernel': os.path.join(temp_dir, 'gaussian_kernel.tif'),
+        'distance_from_base_mask_edge': os.path.join(
+            temp_dir, 'distance_from_base_mask_edge.tif'),
+        'distance_from_non_base_mask_edge': os.path.join(
+            temp_dir, 'distance_from_non_base_mask_edge.tif'),
+        'convertible_distances': os.path.join(
+            temp_dir, 'convertible_distances.tif'),
+        'smooth_distance_from_edge': os.path.join(
+            temp_dir, 'smooth_distance_from_edge.tif'),
+        'distance_from_edge': os.path.join(
+            temp_dir, 'distance_from_edge.tif'),
     }
     # a sigma of 1.0 gives nice visual results to smooth pixel level artifacts
     # since a pixel is the 1.0 unit
-    _make_gaussian_kernel_uri(1.0, tmp_file_registry['gaussian_kernel'])
+    _make_gaussian_kernel_path(1.0, tmp_file_registry['gaussian_kernel'])
 
     # create the output raster first as a copy of the base landcover so it can
     # be looped on for each step
-    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(base_lulc_uri)
-    pixel_size_out = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(base_lulc_uri)
+    lulc_raster_info = pygeoprocessing.get_raster_info(base_lulc_path)
+    lulc_nodata = lulc_raster_info['nodata'][0]
     mask_nodata = 2
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [base_lulc_uri], lambda x: x, output_landscape_raster_uri,
-        gdal.GDT_Int32, lulc_nodata, pixel_size_out, "intersection",
-        vectorize_op=False, datasets_are_pre_aligned=True)
+    pygeoprocessing.raster_calculator(
+        [(base_lulc_path, 1)], lambda x: x, output_landscape_raster_path,
+        gdal.GDT_Int32, lulc_nodata)
 
     # convert everything furthest from edge for each of n_steps
     pixel_area_ha = (
-        natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(base_lulc_uri)**2 / 10000.0)
+        abs(lulc_raster_info['pixel_size'][0]) *
+        abs(lulc_raster_info['pixel_size'][1])) / 10000.0
     max_pixels_to_convert = int(math.ceil(area_to_convert / pixel_area_ha))
     convertible_type_nodata = -1
     pixels_left_to_convert = max_pixels_to_convert
@@ -244,38 +321,38 @@ def _convert_landscape(
                     base_mask = ~base_mask
                 return numpy.where(
                     lulc_array == lulc_nodata, mask_nodata, base_mask)
-            natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-                [output_landscape_raster_uri], _mask_base_op,
+            pygeoprocessing.raster_calculator(
+                [(output_landscape_raster_path, 1)], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
-                mask_nodata, pixel_size_out, "intersection",
-                vectorize_op=False, datasets_are_pre_aligned=True)
+                mask_nodata)
 
             # create distance transform for the current mask
-            natcap.invest.pygeoprocessing_0_3_3.distance_transform_edt(
-                tmp_file_registry[mask_id], tmp_file_registry[distance_id])
+            pygeoprocessing.distance_transform_edt(
+                (tmp_file_registry[mask_id], 1),
+                tmp_file_registry[distance_id],
+                working_dir=temp_dir)
 
         # combine inner and outer distance transforms into one
-        distance_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-            tmp_file_registry['distance_from_base_mask_edge'])
+        distance_nodata = pygeoprocessing.get_raster_info(
+            tmp_file_registry['distance_from_base_mask_edge'])['nodata'][0]
 
         def _combine_masks(base_distance_array, non_base_distance_array):
-            """create a mask of valid non-base pixels only."""
+            """Create a mask of valid non-base pixels only."""
             result = non_base_distance_array
             valid_base_mask = base_distance_array > 0.0
             result[valid_base_mask] = base_distance_array[valid_base_mask]
             return result
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [tmp_file_registry['distance_from_base_mask_edge'],
-             tmp_file_registry['distance_from_non_base_mask_edge']],
+        pygeoprocessing.raster_calculator(
+            [(tmp_file_registry['distance_from_base_mask_edge'], 1),
+             (tmp_file_registry['distance_from_non_base_mask_edge'], 1)],
             _combine_masks, tmp_file_registry['distance_from_edge'],
-            gdal.GDT_Float32, distance_nodata, pixel_size_out, "intersection",
-            vectorize_op=False, datasets_are_pre_aligned=True)
+            gdal.GDT_Float32, distance_nodata)
 
         # smooth the distance transform to avoid scanline artifacts
-        natcap.invest.pygeoprocessing_0_3_3.convolve_2d_uri(
-            tmp_file_registry['distance_from_edge'],
-            tmp_file_registry['gaussian_kernel'],
-            smooth_distance_from_edge_uri)
+        pygeoprocessing.convolve_2d(
+            (tmp_file_registry['distance_from_edge'], 1),
+            (tmp_file_registry['gaussian_kernel'], 1),
+            smooth_distance_from_edge_path)
 
         # turn inside and outside masks into a single mask
         def _mask_to_convertible_codes(distance_from_base_edge, lulc):
@@ -285,27 +362,30 @@ def _convert_landscape(
             return numpy.where(
                 convertible_mask, distance_from_base_edge,
                 convertible_type_nodata)
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [smooth_distance_from_edge_uri, output_landscape_raster_uri],
+        pygeoprocessing.raster_calculator(
+            [(smooth_distance_from_edge_path, 1),
+             (output_landscape_raster_path, 1)],
             _mask_to_convertible_codes,
             tmp_file_registry['convertible_distances'], gdal.GDT_Float32,
-            convertible_type_nodata, pixel_size_out, "intersection",
-            vectorize_op=False, datasets_are_pre_aligned=True)
+            convertible_type_nodata)
 
         LOGGER.info(
             'convert %d pixels to lucode %d', pixels_to_convert,
             replacement_lucode)
         _convert_by_score(
             tmp_file_registry['convertible_distances'], pixels_to_convert,
-            output_landscape_raster_uri, replacement_lucode, stats_cache,
+            output_landscape_raster_path, replacement_lucode, stats_cache,
             score_weight)
 
-    _log_stats(stats_cache, pixel_area_ha, stats_uri)
-    for filename in tmp_file_registry.values():
-        os.remove(filename)
+    _log_stats(stats_cache, pixel_area_ha, stats_path)
+    try:
+        shutil.rmtree(temp_dir)
+    except OSError:
+        LOGGER.warn(
+            "Could not delete temporary working directory '%s'", temp_dir)
 
 
-def _log_stats(stats_cache, pixel_area, stats_uri):
+def _log_stats(stats_cache, pixel_area, stats_path):
     """Write pixel change statistics to a file in tabular format.
 
     Parameters:
@@ -313,38 +393,38 @@ def _log_stats(stats_cache, pixel_area, stats_uri):
             pixels changed
         pixel_area (float): size of pixels in hectares so an area column can
             be generated
-        stats_uri (string): path to a csv file that the table should be
+        stats_path (string): path to a csv file that the table should be
             generated to
 
     Returns:
         None
+
     """
-    with open(stats_uri, 'wb') as csv_output_file:
-        stats_writer = csv.writer(
-            csv_output_file, delimiter=',', quotechar=',',
-            quoting=csv.QUOTE_MINIMAL)
-        stats_writer.writerow(
-            ['lucode', 'area converted (Ha)', 'pixels converted'])
+    with open(stats_path, 'wb') as csv_output_file:
+        csv_output_file.write('lucode,area converted (Ha),pixels converted\n')
         for lucode in sorted(stats_cache):
-            stats_writer.writerow([
-                lucode, stats_cache[lucode] * pixel_area, stats_cache[lucode]])
+            csv_output_file.write(
+                '%s,%s,%s\n' % (
+                    lucode, stats_cache[lucode] * pixel_area,
+                    stats_cache[lucode]))
 
 
-def _sort_to_disk(dataset_uri, score_weight=1.0):
+def _sort_to_disk(dataset_path, score_weight=1.0):
     """Return an iterable of non-nodata pixels in sorted order.
 
     Parameters:
-        dataset_uri (string): a path to a floating point GDAL dataset
+        dataset_path (string): a path to a floating point GDAL dataset
         score_weight (float): a number to multiply all values by, which can be
             used to reverse the order of the iteration if negative.
 
     Returns:
         an iterable that produces (value * score_weight, flat_index) in
         decreasing sorted order by value * score_weight
+
     """
     def _read_score_index_from_disk(
             score_file_path, index_file_path):
-        """Generator to yield a float/int value from the given filenames.
+        """Create generator of float/int value from the given filenames.
 
         Reads a buffer of `buffer_size` big before to avoid keeping the
         file open between generations.
@@ -356,6 +436,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
 
         Yields:
             next (score, index) tuple in the given score and index files.
+
         """
         try:
             score_buffer = ''
@@ -404,6 +485,7 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
 
         Returns:
             Iterable to visit scores/indexes in increasing score order.
+
         """
         # sort the whole bunch to disk
         score_file = tempfile.NamedTemporaryFile(delete=False)
@@ -427,16 +509,17 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
 
         return _read_score_index_from_disk(score_file_path, index_file_path)
 
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(dataset_uri)
+    dataset_info = pygeoprocessing.get_raster_info(dataset_path)
+    nodata = dataset_info['nodata'][0]
     nodata *= score_weight  # scale the nodata so they can be filtered out
 
     # This will be a list of file iterators we'll pass to heap.merge
     iters = []
 
-    _, n_cols = natcap.invest.pygeoprocessing_0_3_3.get_row_col_from_uri(dataset_uri)
+    n_cols = dataset_info['raster_size'][0]
 
-    for scores_data, scores_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
-            dataset_uri, largest_block=_BLOCK_SIZE):
+    for scores_data, scores_block in pygeoprocessing.iterblocks(
+            dataset_path, largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
 
@@ -469,32 +552,33 @@ def _sort_to_disk(dataset_uri, score_weight=1.0):
 
 
 def _convert_by_score(
-        score_uri, max_pixels_to_convert, out_raster_uri, convert_value,
+        score_path, max_pixels_to_convert, out_raster_path, convert_value,
         stats_cache, score_weight):
     """Convert up to max pixels in ranked order of score.
 
     Parameters:
-        score_uri (string): path to a raster whose non-nodata values score the
-            pixels to convert.  The pixels in `out_raster_uri` are converted
+        score_path (string): path to a raster whose non-nodata values score the
+            pixels to convert.  The pixels in `out_raster_path` are converted
             from the lowest score to the highest.  This scale can be modified
             by the parameter `score_weight`.
         max_pixels_to_convert (int): number of pixels to convert in
-            `out_raster_uri` up to the number of non nodata valued pixels in
-            `score_uri`.
-        out_raster_uri (string): a path to an existing raster that is of the
-            same dimensions and projection as `score_uri`.  The pixels in this
-            raster are modified depending on the value of `score_uri` and set
+            `out_raster_path` up to the number of non nodata valued pixels in
+            `score_path`.
+        out_raster_path (string): a path to an existing raster that is of the
+            same dimensions and projection as `score_path`.  The pixels in this
+            raster are modified depending on the value of `score_path` and set
             to the value in `convert_value`.
-        convert_value (int/float): type is dependant on out_raster_uri. Any
-            pixels converted in `out_raster_uri` are set to the value of this
+        convert_value (int/float): type is dependant on out_raster_path. Any
+            pixels converted in `out_raster_path` are set to the value of this
             variable.
         reverse_sort (boolean): If true, pixels are visited in descreasing
-            order of `score_uri`, otherwise increasing.
+            order of `score_path`, otherwise increasing.
         stats_cache (collections.defaultdict(int)): contains the number of
             pixels converted indexed by original pixel id.
 
     Returns:
         None.
+
     """
     def _flush_cache_to_band(
             data_array, row_array, col_array, valid_index, dirty_blocks,
@@ -524,6 +608,7 @@ def _convert_by_score(
 
         Returns:
             None
+
         """
         # construct sparse matrix so it can be indexed later
         sparse_matrix = scipy.sparse.csc_matrix(
@@ -563,7 +648,7 @@ def _convert_by_score(
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
 
-    out_ds = gdal.OpenEx(out_raster_uri, gdal.GA_Update)
+    out_ds = gdal.OpenEx(out_raster_path, gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
     out_block_col_size, out_block_row_size = out_band.GetBlockSize()
     n_rows = out_band.YSize
@@ -577,7 +662,7 @@ def _convert_by_score(
     dirty_blocks = set()
 
     last_time = time.time()
-    for _, flatindex in _sort_to_disk(score_uri, score_weight=score_weight):
+    for _, flatindex in _sort_to_disk(score_path, score_weight=score_weight):
         if pixels_converted >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
@@ -613,16 +698,17 @@ def _convert_by_score(
         stats_cache)
 
 
-def _make_gaussian_kernel_uri(sigma, kernel_uri):
+def _make_gaussian_kernel_path(sigma, kernel_path):
     """Create a 2D Gaussian kernel.
 
     Parameters:
         sigma (float): the sigma as in the classic Gaussian function
-        kernel_uri (string): path to raster on disk to write the gaussian
+        kernel_path (string): path to raster on disk to write the gaussian
             kernel.
 
     Returns:
         None.
+
     """
     # going 3.0 times out from the sigma gives you over 99% of area under
     # the guassian curve
@@ -631,22 +717,23 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
+        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
 
     # Make some kind of geotransform, it doesn't matter what but
     # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
     srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
+    srs.SetWellKnownGeogCS('WGS84')
     kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
     col_index = numpy.array(xrange(kernel_size))
-    integration = 0.0
+    running_sum = 0.0
     for row_index in xrange(kernel_size):
         distance_kernel_row = numpy.sqrt(
             (row_index - max_distance) ** 2 +
@@ -655,12 +742,13 @@ def _make_gaussian_kernel_uri(sigma, kernel_uri):
             distance_kernel_row > max_distance, 0.0,
             (1 / (2.0 * numpy.pi * sigma ** 2) *
              numpy.exp(-distance_kernel_row**2 / (2 * sigma ** 2))))
-        integration += numpy.sum(kernel)
+        running_sum += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
     kernel_dataset.FlushCache()
-    for kernel_data, kernel_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(kernel_uri):
-        kernel_block /= integration
+    for kernel_data, kernel_block in pygeoprocessing.iterblocks(kernel_path):
+        # divide by sum to normalize
+        kernel_block /= running_sum
         kernel_band.WriteArray(
             kernel_block, xoff=kernel_data['xoff'], yoff=kernel_data['yoff'])
 
@@ -682,6 +770,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
@@ -706,13 +795,13 @@ def validate(args, limit_to=None):
             elif args[key] in ['', None]:
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
+    if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
             "The following keys were expected in `args` but were missing " +
             ', '.join(missing_key_list))
 
-    if len(no_value_list) > 0:
+    if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 

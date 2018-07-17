@@ -75,7 +75,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
-_IC_NODATA = numpy.finfo('float32').min
+_IC_NODATA = float(numpy.finfo('float32').min)
 
 
 def execute(args):
