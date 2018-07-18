@@ -138,7 +138,7 @@ def execute(args):
         task_name='create s_max')
 
     # Generate Qpi
-    q_pi_nodata = -9999
+    q_pi_nodata = -9999.
     q_pi_raster_path = os.path.join(args['workspace_dir'], 'q_pi.tif')
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -150,10 +150,31 @@ def execute(args):
         dependent_task_list=[s_max_task],
         task_name='create q_pi')
 
+    # Genereate Peak flow Retention
+    peak_flow_nodata = -9999.
+    peak_flow_raster_path = os.path.join(args['workspace_dir'], 'R_i.tif')
+    peak_flow_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (float(args['rainfall_depth']), 'raw'), (q_pi_raster_path, 1),
+            (q_pi_nodata, 'raw'), (peak_flow_nodata, 'raw')], peak_flow_op,
+            peak_flow_raster_path, gdal.GDT_Float32, peak_flow_nodata),
+        target_path_list=[peak_flow_raster_path],
+        dependent_task_list=[q_pi_task],
+        task_name='create peak flow')
+
     task_graph.close()
     task_graph.join()
 
+
 # TODO: numpy is close for nodata
+def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
+    """Calculate peak flow retention."""
+    result = numpy.empty_like(q_pi_array)
+    result[:] = result_nodata
+    valid_mask = q_pi_array != q_pi_nodata
+    result[valid_mask] = 1.0 - q_pi_array[valid_mask] / p_value
+    return result
 
 
 def q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
@@ -163,7 +184,7 @@ def q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     valid_mask = (s_max_array != s_max_nodata)
     numerator = (p_value - 0.2 * s_max_array[valid_mask])**2.0
     denominator = p_value + (1 - 0.2) * s_max_array[valid_mask]
-    zero_mask = denominator == 0.0
+    zero_mask = denominator != 0.0
     intermediate_result = numpy.empty_like(numerator)
     intermediate_result[:] = 0.0
     intermediate_result[zero_mask] = (
