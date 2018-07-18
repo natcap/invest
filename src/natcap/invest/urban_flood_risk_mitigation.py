@@ -138,9 +138,38 @@ def execute(args):
         task_name='create s_max')
 
     # Generate Qpi
+    q_pi_nodata = -9999
+    q_pi_raster_path = os.path.join(args['workspace_dir'], 'q_pi.tif')
+    q_pi_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(float(args['rainfall_depth']), 'raw'), (s_max_raster_path, 1),
+             (s_max_nodata, 'raw'), (q_pi_nodata, 'raw')], q_pi_op,
+            q_pi_raster_path, gdal.GDT_Float32, q_pi_nodata),
+        target_path_list=[q_pi_raster_path],
+        dependent_task_list=[s_max_task],
+        task_name='create q_pi')
 
     task_graph.close()
     task_graph.join()
+
+# TODO: numpy is close for nodata
+
+
+def q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
+    """Calculate peak flow Q (mm) with the Curve Number method."""
+    result = numpy.empty_like(s_max_array)
+    result[:] = result_nodata
+    valid_mask = (s_max_array != s_max_nodata)
+    numerator = (p_value - 0.2 * s_max_array[valid_mask])**2.0
+    denominator = p_value + (1 - 0.2) * s_max_array[valid_mask]
+    zero_mask = denominator == 0.0
+    intermediate_result = numpy.empty_like(numerator)
+    intermediate_result[:] = 0.0
+    intermediate_result[zero_mask] = (
+        numerator[zero_mask] / denominator[zero_mask])
+    result[valid_mask] = intermediate_result
+    return result
 
 
 def s_max_op(cn_array, cn_nodata, result_nodata):
