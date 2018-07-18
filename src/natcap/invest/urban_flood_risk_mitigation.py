@@ -179,17 +179,20 @@ def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
 
 def q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     """Calculate peak flow Q (mm) with the Curve Number method."""
+    lam = 0.2  # this value of lambda is hard-coded in the design doc.
     result = numpy.empty_like(s_max_array)
     result[:] = result_nodata
-    valid_mask = (s_max_array != s_max_nodata)
-    numerator = (p_value - 0.2 * s_max_array[valid_mask])**2.0
-    denominator = p_value + (1 - 0.2) * s_max_array[valid_mask]
-    zero_mask = denominator != 0.0
-    intermediate_result = numpy.empty_like(numerator)
-    intermediate_result[:] = 0.0
-    intermediate_result[zero_mask] = (
-        numerator[zero_mask] / denominator[zero_mask])
-    result[valid_mask] = intermediate_result
+
+    zero_mask = (p_value <= lam * s_max_array)
+    non_nodata_mask = (s_max_array != s_max_nodata)
+
+    # valid if not nodata and not going to be set to 0.
+    valid_mask = non_nodata_mask & ~zero_mask
+    result[valid_mask] = (
+        p_value - lam * s_max_array[valid_mask])**2.0 / (
+            p_value + (1 - lam) * s_max_array[valid_mask])
+    # any non-nodata result that should be zero is set so.
+    result[zero_mask & non_nodata_mask] = 0.0
     return result
 
 
@@ -198,7 +201,7 @@ def s_max_op(cn_array, cn_nodata, result_nodata):
     result = numpy.empty_like(cn_array)
     result[:] = result_nodata
     zero_mask = cn_array == 0
-    valid_mask = (cn_array != result_nodata) & ~zero_mask
+    valid_mask = (cn_array != cn_nodata) & ~zero_mask
     result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
     result[zero_mask] = 0.0
     return result
