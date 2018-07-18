@@ -1,4 +1,4 @@
-"""Carbon Storage and Sequestration."""
+"""Urban Flood Risk Mitigation model."""
 from __future__ import absolute_import
 import logging
 import os
@@ -172,7 +172,9 @@ def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
     """Calculate peak flow retention."""
     result = numpy.empty_like(q_pi_array)
     result[:] = result_nodata
-    valid_mask = q_pi_array != q_pi_nodata
+    valid_mask = numpy.ones(q_pi_array.shape, dtype=numpy.bool)
+    if q_pi_nodata:
+        valid_mask[:] = ~numpy.isclose(q_pi_array, q_pi_nodata)
     result[valid_mask] = 1.0 - q_pi_array[valid_mask] / p_value
     return result
 
@@ -184,7 +186,9 @@ def q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
     result[:] = result_nodata
 
     zero_mask = (p_value <= lam * s_max_array)
-    non_nodata_mask = (s_max_array != s_max_nodata)
+    non_nodata_mask = numpy.ones(s_max_array.shape, dtype=numpy.bool)
+    if s_max_nodata:
+        non_nodata_mask[:] = ~numpy.isclose(s_max_array, s_max_nodata)
 
     # valid if not nodata and not going to be set to 0.
     valid_mask = non_nodata_mask & ~zero_mask
@@ -201,7 +205,9 @@ def s_max_op(cn_array, cn_nodata, result_nodata):
     result = numpy.empty_like(cn_array)
     result[:] = result_nodata
     zero_mask = cn_array == 0
-    valid_mask = (cn_array != cn_nodata) & ~zero_mask
+    valid_mask = ~zero_mask
+    if cn_nodata:
+        valid_mask[:] &= ~numpy.isclose(cn_array, cn_nodata)
     result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
     result[zero_mask] = 0.0
     return result
@@ -213,9 +219,11 @@ def lu_to_cn_op(
     """Map combination landcover soil type map to curve number raster."""
     result = numpy.empty_like(lucode_array, dtype=numpy.float32)
     result[:] = cn_nodata
-    valid_mask = (
-        (lucode_array != lucode_nodata) &
-        (soil_type_array != soil_type_nodata))
+    valid_mask = numpy.ones(lucode_array.shape, dtype=numpy.bool)
+    if lucode_nodata:
+        valid_mask[:] &= ~numpy.isclose(lucode_array, lucode_nodata)
+    if soil_type_nodata:
+        valid_mask[:] &= ~numpy.isclose(soil_type_array, soil_type_nodata)
 
     # this is an array where each column represents a valid landcover
     # pixel and the rows are the curve number index for the landcover
