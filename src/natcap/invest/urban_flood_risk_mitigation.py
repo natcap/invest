@@ -7,7 +7,6 @@ from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
 import taskgraph
-import pandas
 import numpy
 import scipy
 
@@ -112,48 +111,80 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    def lu_to_cn(lucode_array, soil_type_array):
-        """Map combination landcover soil type map to curve number raster."""
-        result = numpy.empty_like(lucode_array, dtype=numpy.float32)
-        result[:] = cn_nodata
-        valid_mask = (
-            (lucode_array != lucode_nodata) &
-            (soil_type_array != soil_type_nodata))
-
-        # this is an array where each column represents a valid landcover
-        # pixel and the rows are the curve number index for the landcover
-        # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
-        per_pixel_cn_array = (
-            lucode_to_cn_table[lucode_array[valid_mask]].toarray().reshape(
-                (-1, 4))).transpose()
-
-        # this is the soil type array with values ranging from 0..4 that will
-        # choose the appropriate row for each pixel colum in
-        # `per_pixel_cn_array`
-        soil_choose_array = (
-            soil_type_array[valid_mask].astype(numpy.int8))-1
-
-        # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
-        # pixel CN array
-        result[valid_mask] = numpy.choose(
-            soil_choose_array,
-            per_pixel_cn_array)
-
-        return result
-
     cn_raster_path = os.path.join(args['workspace_dir'], 'cn_raster.tif')
-
     align_raster_stack_task.join()
 
-    pygeoprocessing.raster_calculator(
-        [(aligned_lulc_path, 1), (aligned_soils_path, 1)], lu_to_cn,
-        cn_raster_path, gdal.GDT_Float32, cn_nodata)
+    cn_raster_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(aligned_lulc_path, 1), (aligned_soils_path, 1),
+             (lucode_nodata, 'raw'), (soil_type_nodata, 'raw'),
+             (cn_nodata, 'raw'), (lucode_to_cn_table, 'raw')], lu_to_cn_op,
+            cn_raster_path, gdal.GDT_Float32, cn_nodata),
+        target_path_list=[cn_raster_path],
+        dependent_task_list=[align_raster_stack_task],
+        task_name='create cn raster')
 
-    # Generate Smax
+    # Generate S_max
+    s_max_nodata = -9999
+    s_max_raster_path = os.path.join(args['workspace_dir'], 's_max.tif')
+    s_max_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(cn_raster_path, 1), (cn_nodata, 'raw'), (s_max_nodata, 'raw')],
+            s_max_op, s_max_raster_path, gdal.GDT_Float32, s_max_nodata),
+        target_path_list=[s_max_raster_path],
+        dependent_task_list=[cn_raster_task],
+        task_name='create s_max')
+
     # Generate Qpi
 
     task_graph.close()
     task_graph.join()
+
+
+def s_max_op(cn_array, cn_nodata, result_nodata):
+    """Calculate S_max from the curve number."""
+    result = numpy.empty_like(cn_array)
+    result[:] = result_nodata
+    zero_mask = cn_array == 0
+    valid_mask = (cn_array != result_nodata) & ~zero_mask
+    result[valid_mask] = 25400.0 / cn_array[valid_mask] - 254.0
+    result[zero_mask] = 0.0
+    return result
+
+
+def lu_to_cn_op(
+        lucode_array, soil_type_array, lucode_nodata, soil_type_nodata,
+        cn_nodata, lucode_to_cn_table):
+    """Map combination landcover soil type map to curve number raster."""
+    result = numpy.empty_like(lucode_array, dtype=numpy.float32)
+    result[:] = cn_nodata
+    valid_mask = (
+        (lucode_array != lucode_nodata) &
+        (soil_type_array != soil_type_nodata))
+
+    # this is an array where each column represents a valid landcover
+    # pixel and the rows are the curve number index for the landcover
+    # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
+    per_pixel_cn_array = (
+        lucode_to_cn_table[lucode_array[valid_mask]].toarray().reshape(
+            (-1, 4))).transpose()
+
+    # this is the soil type array with values ranging from 0..4 that will
+    # choose the appropriate row for each pixel colum in
+    # `per_pixel_cn_array`
+    soil_choose_array = (
+        soil_type_array[valid_mask].astype(numpy.int8))-1
+
+    # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
+    # pixel CN array
+    result[valid_mask] = numpy.choose(
+        soil_choose_array,
+        per_pixel_cn_array)
+
+    return result
+
 
 
 @validation.invest_validator
