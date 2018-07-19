@@ -21,7 +21,7 @@ scipy>=0.16.1
 Shapely
 six
 taskgraph[niced_processes]>=0.5.2
-pygeoprocessing>=1.1.0
+pygeoprocessing>=1.2.0
 # psutil is used, but not required, by taskgraph to lower process priority
 psutil>=5.2.2
 chardet>=3.0.4
