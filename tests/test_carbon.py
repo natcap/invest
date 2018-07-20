@@ -9,7 +9,9 @@ import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import numpy
+import pygeoprocessing.testing
 
 
 SAMPLE_DATA = os.path.join(
@@ -62,6 +64,57 @@ class CarbonTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, npv_filename),
                 os.path.join(self.workspace_dir, npv_filename), 1e-6)
 
+    def test_carbon_full_fast(self):
+        """Carbon: full model run with simplified data."""
+        from natcap.invest import carbon
+
+        args = {
+            u'carbon_pools_path': os.path.join(
+                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
+            u'lulc_cur_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
+            u'lulc_fut_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
+            u'lulc_redd_path': os.path.join(
+                SAMPLE_DATA, 'carbon/lulc_samp_redd.tif'),
+            u'workspace_dir': self.workspace_dir,
+            u'do_valuation': True,
+            u'price_per_metric_ton_of_c': 43.0,
+            u'rate_change': 2.8,
+            u'lulc_cur_year': 2016,
+            u'lulc_fut_year': 2030,
+            u'discount_rate': -7.1,
+        }
+        
+        #create LULC rasters
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+
+        raster_keys = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        for val,key in enumerate(raster_keys, 1):
+            current_lulc_array = numpy.empty((10,10))
+            current_lulc_array.fill(val)
+
+            lulc_path = os.path.join(self.workspace_dir, key+'.tif')
+
+            pygeoprocessing.testing.create_raster_on_disk(
+                [current_lulc_array], (461261,4923265), projection_wkt, -1, (1, -1),
+                filename=lulc_path)
+
+            args[key] = lulc_path
+
+        csv_file = os.path.join(self.workspace_dir, 'pools.csv')
+        with open(csv_file, 'w') as open_table:
+            open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+            open_table.write('15,10,60,1,1,"lulc code 1"\n')
+            open_table.write('5,3,20,0,2,"lulc code 2"\n')
+            open_table.write('2,1,5,0,3,"lulc code 3"\n')
+        args['carbon_pools_path'] = csv_file
+
+        carbon.execute(args)
+
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_carbon_future_no_val(self):
@@ -89,6 +142,7 @@ class CarbonTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
             os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
