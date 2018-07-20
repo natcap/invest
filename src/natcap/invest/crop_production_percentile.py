@@ -7,7 +7,6 @@ import re
 import numpy
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
@@ -173,7 +172,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
             crop_climate_bin_raster_info['pixel_size'],
-            clipped_climate_bin_raster_path, 'nearest',
+            clipped_climate_bin_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         climate_percentile_yield_table_path = os.path.join(
@@ -213,7 +212,7 @@ def execute(args):
             pygeoprocessing.warp_raster(
                 coarse_yield_percentile_raster_path,
                 landcover_raster_info['pixel_size'],
-                interpolated_yield_percentile_raster_path, 'cubic_spline',
+                interpolated_yield_percentile_raster_path, 'cubicspline',
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
@@ -266,7 +265,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             global_observed_yield_raster_path,
             global_observed_yield_raster_info['pixel_size'],
-            clipped_observed_yield_raster_path, 'nearest',
+            clipped_observed_yield_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         observed_yield_nodata = (
@@ -299,7 +298,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             zeroed_observed_yield_raster_path,
             landcover_raster_info['pixel_size'],
-            interpolated_observed_yield_raster_path, 'cubic_spline',
+            interpolated_observed_yield_raster_path, 'cubicspline',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
