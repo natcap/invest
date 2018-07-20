@@ -3,7 +3,6 @@ import datetime
 import glob
 import zipfile
 import socket
-import multiprocessing
 import threading
 import Queue
 import unittest
@@ -12,12 +11,12 @@ import shutil
 import os
 import functools
 import logging
-import sys
 
 import Pyro4
 import natcap.invest.pygeoprocessing_0_3_3
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import natcap.invest.pygeoprocessing_0_3_3.testing
 import numpy
+import pandas
 from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
@@ -107,7 +106,6 @@ class TestRecServer(unittest.TestCase):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hashfile(self):
         """Recreation test for hash and fast hash of file."""
         from natcap.invest.recreation import recmodel_server
@@ -116,7 +114,6 @@ class TestRecServer(unittest.TestCase):
             file_path, blocksize=2**20, fast_hash=False)
         self.assertEqual(file_hash, 'b372f3f062afb3e8')
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
         from natcap.invest.recreation import recmodel_server
@@ -128,8 +125,6 @@ class TestRecServer(unittest.TestCase):
         # instead we just check that at the very least it ends with _fast_hash
         self.assertTrue(file_hash.endswith('_fast_hash'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_year_order(self):
         """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_server
@@ -140,8 +135,6 @@ class TestRecServer(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'sample_data.csv'),
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(30.0)
     def test_workspace_fetcher(self):
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
@@ -230,7 +223,6 @@ class TestRecServer(unittest.TestCase):
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(30.0)
     def test_empty_server(self):
         """Recreation test a client call to simple server."""
@@ -286,8 +278,6 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'file_list_empty_local_server.txt'),
             self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_client
@@ -343,8 +333,6 @@ class TestRecServer(unittest.TestCase):
             aoi_path,
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
         from natcap.invest.recreation import recmodel_client
@@ -371,8 +359,6 @@ class TestRecServer(unittest.TestCase):
         self.assertEqual(
             53.3, pud_poly_feature_queue.get()[1][0])
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_calc_existing_cached(self):
         """Recreation local PUD calculation on existing quadtree."""
         from natcap.invest.recreation import recmodel_client
@@ -404,8 +390,6 @@ class TestRecServer(unittest.TestCase):
         self.assertEqual(
             53.3, pud_poly_feature_queue.get()[1][0])
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_parse_input_csv(self):
         """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
@@ -431,7 +415,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         natcap.invest.pygeoprocessing_0_3_3.create_directories(
-            [   self.workspace_dir])
+            [self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -453,7 +437,7 @@ class TestRecServer(unittest.TestCase):
             'max_points_per_node': 50,
         }
 
-        server_thread = multiprocessing.Process(
+        server_thread = threading.Thread(
             target=recmodel_server.execute, args=(server_args,))
         server_thread.daemon = True
         server_thread.start()
@@ -475,7 +459,6 @@ class TestRecServer(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
-        server_thread.terminate()
 
         _assert_regression_results_eq(
             args['workspace_dir'],
@@ -499,8 +482,6 @@ class TestLocalRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
         aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
@@ -540,8 +521,6 @@ class RecreationRegressionTests(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_data_missing_in_predictors(self):
         """Recreation raise exception if predictor data missing."""
         from natcap.invest.recreation import recmodel_client
@@ -554,8 +533,6 @@ class RecreationRegressionTests(unittest.TestCase):
             recmodel_client._validate_same_projection(
                 response_vector_path, table_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_data_different_projection(self):
         """Recreation raise exception if data in different projection."""
         from natcap.invest.recreation import recmodel_client
@@ -568,8 +545,6 @@ class RecreationRegressionTests(unittest.TestCase):
             recmodel_client._validate_same_projection(
                 response_vector_path, table_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_different_tables(self):
         """Recreation exception if scenario ids different than predictor."""
         from natcap.invest.recreation import recmodel_client
@@ -599,8 +574,6 @@ class RecreationRegressionTests(unittest.TestCase):
         recmodel_client.delay_op(last_time, time_delay, func)
         self.assertTrue(called[0])
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_no_nodata(self):
         """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client
@@ -618,8 +591,6 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['count'][0], 5065)
         numpy.testing.assert_equal(fid_values['sum'][0], 65377)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster is all nodata."""
         from natcap.invest.recreation import recmodel_client
@@ -638,8 +609,6 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['sum'][0], 0)
         numpy.testing.assert_equal(fid_values['mean'][0], 0)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(50.0)
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
@@ -671,8 +640,6 @@ class RecreationRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'scenario_results_40000.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_square_grid_regression(self):
         """Recreation square grid regression test."""
         from natcap.invest.recreation import recmodel_client
@@ -690,8 +657,6 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_all_metrics(self):
         """Recreation test with all but trivial predictor metrics."""
         from natcap.invest.recreation import recmodel_client
@@ -725,8 +690,6 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_scenario_path, expected_scenario_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
         from natcap.invest.recreation import recmodel_client
@@ -744,8 +707,6 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
@@ -762,19 +723,13 @@ class RecreationRegressionTests(unittest.TestCase):
 
         recmodel_client.execute(args)
 
-        output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
-        expected_lines = open(os.path.join(
-            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'),
-                              'rb').readlines()
+        expected_result_table = pandas.read_csv(os.path.join(
+            REGRESSION_DATA, 'expected_monthly_table_for_no_grid.csv'))
+        result_table = pandas.read_csv(
+            os.path.join(self.workspace_dir, 'monthly_table.csv'))
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)
 
-        if output_lines != expected_lines:
-            raise ValueError(
-                "Output table not the same as input. "
-                "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_predictor_id_too_long(self):
         """Recreation test ID too long raises ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -796,8 +751,6 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_existing_output_shapefiles(self):
         """Recreation grid test when output files need to be overwritten."""
         from natcap.invest.recreation import recmodel_client
@@ -819,8 +772,6 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
@@ -857,8 +808,6 @@ class RecreationRegressionTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_absolute_regression_coef(self):
         """Recreation test validation from full path."""
         from natcap.invest.recreation import recmodel_client
@@ -903,8 +852,6 @@ class RecreationRegressionTests(unittest.TestCase):
             self.fail(
                 "_validate_same_projection raised ValueError unexpectedly!")
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_year_order(self):
         """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -928,8 +875,6 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_bad_grid_type(self):
         """Recreation ensure that bad grid type raises ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -949,8 +894,6 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_start_year_out_of_range(self):
         """Recreation that start_year out of range raise ValueError."""
         from natcap.invest.recreation import recmodel_client
@@ -974,8 +917,6 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_end_year_out_of_range(self):
         """Recreation that end_year out of range raise ValueError."""
         from natcap.invest.recreation import recmodel_client

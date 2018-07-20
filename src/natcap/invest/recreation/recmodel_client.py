@@ -303,19 +303,7 @@ def execute(args):
     LOGGER.info('connection release')
     recmodel_server._pyroRelease()
     LOGGER.info('deleting temporary files')
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    #shutil.rmtree(temporary_output_dir, ignore_errors=True)
-    for file_id in _TMP_BASE_FILES:
-        file_path = file_registry[file_id]
-        LOGGER.debug('deleting %s', file_path)
-        try:
-            if file_path.endswith('.shp') and os.path.exists(file_path):
-                pass#driver.Delete(file_path)
-            else:
-                pass#os.remove(file_path)
-        except OSError:
-            pass  # let it go
-    driver = None
+    shutil.rmtree(temporary_output_dir, ignore_errors=True)
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
