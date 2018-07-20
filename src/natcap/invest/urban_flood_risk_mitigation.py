@@ -27,8 +27,6 @@ def execute(args):
         args['workspace_dir'] (string): a path to the directory that will
             write output and other temporary files during calculation.
         args['results_suffix'] (string): appended to any output file name.
-        args['dem_path'] (string): path to the DEM that will be used to
-            delineate watersheds.
         args['aoi_watersheds_path'] (string): path to a shapefile of
             (sub)watersheds or sewersheds used to indicate spatial area of
             interest.
