@@ -671,7 +671,7 @@ def get_inputs(args):
     pygeoprocessing.align_and_resize_raster_stack(
         [args['lulc_baseline_map_uri']] + transition_raster_paths,
         [aligned_baseline_lulc_path] + aligned_transition_raster_paths,
-        ['nearest'] * (1 + len(aligned_transition_raster_paths)),
+        ['near'] * (1 + len(aligned_transition_raster_paths)),
         baseline_info['pixel_size'], 'intersection')
 
     d['C_prior_raster'] = aligned_baseline_lulc_path
@@ -813,7 +813,7 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     pygeoprocessing.align_and_resize_raster_stack(
         [C_prior_raster] + transition_rasters,
         aligned_lulc_files,
-        ['nearest'] * len(aligned_lulc_files),
+        ['near'] * len(aligned_lulc_files),
         baseline_pixel_size,
         'intersection')
 

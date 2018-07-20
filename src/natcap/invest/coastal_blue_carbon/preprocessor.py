@@ -73,7 +73,7 @@ def execute(args):
     pygeoprocessing.align_and_resize_raster_stack(
         vars_dict['lulc_snapshot_list'],
         aligned_lulcs,
-        ['nearest'] * len(aligned_lulcs),
+        ['near'] * len(aligned_lulcs),
         min_pixel_raster_info['pixel_size'],
         'intersection')
 
