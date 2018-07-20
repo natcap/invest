@@ -90,9 +90,6 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-
-            self.workspace_dir.args_key: self.workspace_dir.value(),
-            self.results_suffix.args_key: self.results_suffix.value(),
             self.aoi_watersheds_path.args_key:
                 self.aoi_watersheds_path.value(),
             self.rainfall_depth.args_key: self.rainfall_depth.value(),
