@@ -3,6 +3,7 @@ import datetime
 import glob
 import zipfile
 import socket
+import multiprocessing
 import threading
 import Queue
 import unittest
@@ -11,12 +12,13 @@ import shutil
 import os
 import functools
 import logging
+import sys
 
 import Pyro4
 import natcap.invest.pygeoprocessing_0_3_3
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 import numpy
-from osgeo import ogr
+from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
@@ -39,9 +41,13 @@ def _timeout(max_timeout):
 
         def worker():
             """Read one func,args,kwargs tuple and execute."""
-            func, args, kwargs = work_queue.get()
-            result = func(*args, **kwargs)
-            result_queue.put(result)
+            try:
+                func, args, kwargs = work_queue.get()
+                result = func(*args, **kwargs)
+                result_queue.put(result)
+            except Exception as e:
+                result_queue.put(e)
+                raise
 
         work_thread = threading.Thread(target=worker)
         work_thread.daemon = True
@@ -52,7 +58,10 @@ def _timeout(max_timeout):
             """Closure for function."""
             try:
                 work_queue.put((target, args, kwargs))
-                return result_queue.get(timeout=max_timeout)
+                result = result_queue.get(timeout=max_timeout)
+                if isinstance(result, Exception):
+                    raise result
+                return result
             except Queue.Empty:
                 raise RuntimeError("Timeout of %f exceeded" % max_timeout)
         return func_wrapper
@@ -412,8 +421,6 @@ class TestRecServer(unittest.TestCase):
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 17))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     @_timeout(30.0)
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
@@ -423,7 +430,8 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
+        natcap.invest.pygeoprocessing_0_3_3.create_directories(
+            [   self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -445,7 +453,7 @@ class TestRecServer(unittest.TestCase):
             'max_points_per_node': 50,
         }
 
-        server_thread = threading.Thread(
+        server_thread = multiprocessing.Process(
             target=recmodel_server.execute, args=(server_args,))
         server_thread.daemon = True
         server_thread.start()
@@ -467,8 +475,9 @@ class TestRecServer(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
+        server_thread.terminate()
 
-        RecreationRegressionTests._assert_regression_results_eq(
+        _assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
@@ -656,7 +665,7 @@ class RecreationRegressionTests(unittest.TestCase):
         }
 
         recmodel_client.execute(args)
-        RecreationRegressionTests._assert_regression_results_eq(
+        _assert_regression_results_eq(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
@@ -990,78 +999,78 @@ class RecreationRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
 
-    @staticmethod
-    def _assert_regression_results_eq(
-            workspace_dir, file_list_path, result_vector_path,
-            agg_results_path):
-        """Test workspace against the expected list of files and results.
 
-        Parameters:
-            workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
-            result_vector_path (string): path to the summary shapefile
-                produced by the SWY model.
-            agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
-                fid,vri_sum,qb_val per line
+def _assert_regression_results_eq(
+        workspace_dir, file_list_path, result_vector_path,
+        agg_results_path):
+    """Test workspace against the expected list of files and results.
 
-        Returns:
-            None
+    Parameters:
+        workspace_dir (string): path to the completed model workspace
+        file_list_path (string): path to a file that has a list of all
+            the expected files relative to the workspace base
+        result_vector_path (string): path to the summary shapefile
+            produced by the SWY model.
+        agg_results_path (string): path to a csv file that has the
+            expected aggregated_results.shp table in the form of
+            fid,vri_sum,qb_val per line
 
-        Raises:
-            AssertionError if any files are missing or results are out of
-            range by `tolerance_places`
-        """
-        try:
-            # Test that the workspace has the same files as we expect
-            _test_same_files(file_list_path, workspace_dir)
+    Returns:
+        None
 
-            # we expect a file called 'aggregated_results.shp'
-            result_vector = ogr.Open(result_vector_path)
-            result_layer = result_vector.GetLayer()
+    Raises:
+        AssertionError if any files are missing or results are out of
+        range by `tolerance_places`
+    """
+    try:
+        # Test that the workspace has the same files as we expect
+        _test_same_files(file_list_path, workspace_dir)
 
-            # The tolerance of 3 digits after the decimal was determined by
-            # experimentation on the application with the given range of
-            # numbers.  This is an apparently reasonable approach as described
-            # by ChrisF: http://stackoverflow.com/a/3281371/42897
-            # and even more reading about picking numerical tolerance
-            # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-            tolerance_places = 3
+        # we expect a file called 'aggregated_results.shp'
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
+        result_layer = result_vector.GetLayer()
 
-            headers = [
-                'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR',
-                'PUD_APR', 'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG',
-                'PUD_SEP', 'PUD_OCT', 'PUD_NOV', 'PUD_DEC', 'bonefish',
-                'airdist', 'ports', 'bathy', 'PUD_EST']
+        # The tolerance of 3 digits after the decimal was determined by
+        # experimentation on the application with the given range of
+        # numbers.  This is an apparently reasonable approach as described
+        # by ChrisF: http://stackoverflow.com/a/3281371/42897
+        # and even more reading about picking numerical tolerance
+        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
+        tolerance_places = 3
 
-            with open(agg_results_path, 'rb') as agg_result_file:
-                header_line = agg_result_file.readline().strip()
-                error_in_header = False
-                for expected, actual in zip(headers, header_line.split(',')):
-                    if actual != expected:
-                        error_in_header = True
-                if error_in_header:
-                    raise ValueError(
-                        "Header not as expected, got\n%s\nexpected:\n%s" % (
-                            str(header_line.split(',')), headers))
-                for line in agg_result_file:
-                    try:
-                        expected_result_lookup = dict(
-                            zip(headers, [float(x) for x in line.split(',')]))
-                    except ValueError:
-                        LOGGER.error(line)
-                        raise
-                    feature = result_layer.GetFeature(
-                        int(expected_result_lookup['FID']))
-                    for field, value in expected_result_lookup.iteritems():
-                        numpy.testing.assert_almost_equal(
-                            feature.GetField(field), value,
-                            decimal=tolerance_places)
-                    feature = None
-        finally:
-            result_layer = None
-            result_vector = None
+        headers = [
+            'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR',
+            'PUD_APR', 'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG',
+            'PUD_SEP', 'PUD_OCT', 'PUD_NOV', 'PUD_DEC', 'bonefish',
+            'airdist', 'ports', 'bathy', 'PUD_EST']
+
+        with open(agg_results_path, 'rb') as agg_result_file:
+            header_line = agg_result_file.readline().strip()
+            error_in_header = False
+            for expected, actual in zip(headers, header_line.split(',')):
+                if actual != expected:
+                    error_in_header = True
+            if error_in_header:
+                raise ValueError(
+                    "Header not as expected, got\n%s\nexpected:\n%s" % (
+                        str(header_line.split(',')), headers))
+            for line in agg_result_file:
+                try:
+                    expected_result_lookup = dict(
+                        zip(headers, [float(x) for x in line.split(',')]))
+                except ValueError:
+                    raise
+                feature = result_layer.GetFeature(
+                    int(expected_result_lookup['FID']))
+                for field, value in expected_result_lookup.iteritems():
+                    numpy.testing.assert_almost_equal(
+                        feature.GetField(field), value,
+                        decimal=tolerance_places)
+                feature = None
+    finally:
+        result_layer = None
+        gdal.Dataset.__swig_destroy__(result_vector)
+        result_vector = None
 
 
 def _test_same_files(base_list_path, directory_path):

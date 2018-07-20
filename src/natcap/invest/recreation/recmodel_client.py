@@ -201,7 +201,11 @@ def execute(args):
     else:
         aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
         driver = gdal.GetDriverByName('ESRI Shapefile')
-        driver.CreateCopy(file_registry['local_aoi_path'], aoi_vector)
+        local_aoi_vector = driver.CreateCopy(
+            file_registry['local_aoi_path'], aoi_vector)
+        gdal.Dataset.__swig_destroy__(local_aoi_vector)
+        local_aoi_vector = None
+        gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
     basename = os.path.splitext(file_registry['local_aoi_path'])[0]
@@ -230,7 +234,7 @@ def execute(args):
     # unpack result
     open(file_registry['compressed_pud_path'], 'wb').write(
         result_zip_file_binary)
-    temporary_output_dir = tempfile.mkdtemp()
+    temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
     zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
         temporary_output_dir)
     monthly_table_path = os.path.join(
@@ -296,17 +300,22 @@ def execute(args):
                 file_registry['tmp_scenario_indexed_vector_path'],
                 file_registry['scenario_results_path'])
 
+    LOGGER.info('connection release')
+    recmodel_server._pyroRelease()
     LOGGER.info('deleting temporary files')
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    #shutil.rmtree(temporary_output_dir, ignore_errors=True)
     for file_id in _TMP_BASE_FILES:
         file_path = file_registry[file_id]
+        LOGGER.debug('deleting %s', file_path)
         try:
             if file_path.endswith('.shp') and os.path.exists(file_path):
-                driver = gdal.GetDriverByName('ESRI Shapefile')
-                driver.Delete(file_path)
+                pass#driver.Delete(file_path)
             else:
-                os.remove(file_path)
+                pass#os.remove(file_path)
         except OSError:
             pass  # let it go
+    driver = None
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
