@@ -65,7 +65,7 @@ class CarbonTests(unittest.TestCase):
     #             os.path.join(self.workspace_dir, npv_filename), 1e-6)
 
 
-    def make_lulc_rasters(args, raster_keys, start_num):
+    def make_lulc_rasters(self, args, raster_keys, start_num):
         """Create LULC rasters"""
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(26910)
@@ -80,6 +80,18 @@ class CarbonTests(unittest.TestCase):
                 [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
                 filename=lulc_path)
             args[key] = lulc_path
+
+
+    def assert_npv(self, args, fill_val, npv_filename):
+        """Assert that the output npv is the same as the real npv."""
+        real_npv = numpy.empty((10,10))
+        real_npv.fill(fill_val)
+
+        npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], npv_filename))
+        npv_raster_band = npv_raster.GetRasterBand(1)
+        out_npv = npv_raster_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(real_npv, out_npv)
 
 
     def test_carbon_full_fast(self):
@@ -104,7 +116,7 @@ class CarbonTests(unittest.TestCase):
             u'discount_rate': -7.1,
         }
 
-        make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path'], 1)
+        self.make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path'], 1)
 
         # #Create LULC rasters
         # srs = osr.SpatialReference()
@@ -132,19 +144,23 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         #Add assertions for npv for future and REDD scenarios
-        fut_cur_npv = numpy.empty((10,10))
-        fut_cur_npv.fill(-0.34220789207450352)
-        fut_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_fut.tif'))
-        fut_npv_raster_band = fut_npv_raster.GetRasterBand(1)
-        fut_npv_val = fut_npv_raster_band.ReadAsArray()
-        numpy.testing.assert_almost_equal(fut_cur_npv, fut_npv_val)
+        self.assert_npv(args, -0.34220789207450352, 'npv_fut.tif')
+        self.assert_npv(args, -0.4602106134795047, 'npv_redd.tif')
 
-        redd_cur_npv = numpy.empty((10,10))
-        redd_cur_npv.fill(-0.4602106134795047)
-        redd_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_redd.tif'))
-        redd_npv_raster_band = redd_npv_raster.GetRasterBand(1)
-        redd_npv_val = redd_npv_raster_band.ReadAsArray()
-        numpy.testing.assert_almost_equal(redd_cur_npv, redd_npv_val)
+
+        # fut_cur_npv = numpy.empty((10,10))
+        # fut_cur_npv.fill(-0.34220789207450352)
+        # fut_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_fut.tif'))
+        # fut_npv_raster_band = fut_npv_raster.GetRasterBand(1)
+        # fut_npv_val = fut_npv_raster_band.ReadAsArray()
+        # numpy.testing.assert_almost_equal(fut_cur_npv, fut_npv_val)
+
+        # redd_cur_npv = numpy.empty((10,10))
+        # redd_cur_npv.fill(-0.4602106134795047)
+        # redd_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_redd.tif'))
+        # redd_npv_raster_band = redd_npv_raster.GetRasterBand(1)
+        # redd_npv_val = redd_npv_raster_band.ReadAsArray()
+        # numpy.testing.assert_almost_equal(redd_cur_npv, redd_npv_val)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -195,10 +211,7 @@ class CarbonTests(unittest.TestCase):
             u'discount_rate': -7.1,
         }
 
-        raster_keys = ['lulc_cur_path', 'lulc_fut_path']
-        for key in raster_keys:
-            lulc_path = os.path.join('.', key+'.tif')
-            args[key] = lulc_path
+        self.make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path'], 1)
 
         carbon.execute(args)
         CarbonTests._test_same_files(
@@ -242,20 +255,22 @@ class CarbonTests(unittest.TestCase):
             u'do_valuation': False,
         }
 
-        #Create LULC rasters
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)
-        projection_wkt = srs.ExportToWkt()
+        self.make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path'], 200)
 
-        raster_keys = ['lulc_cur_path', 'lulc_fut_path']
-        for val, key in enumerate(raster_keys, start=200):
-            lulc_array = numpy.empty((10,10))
-            lulc_array.fill(val)
-            lulc_path = os.path.join('.', key+'.tif')
-            pygeoprocessing.testing.create_raster_on_disk(
-                [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
-                filename=lulc_path)
-            args[key] = lulc_path
+        # #Create LULC rasters
+        # srs = osr.SpatialReference()
+        # srs.ImportFromEPSG(26910)
+        # projection_wkt = srs.ExportToWkt()
+
+        # raster_keys = ['lulc_cur_path', 'lulc_fut_path']
+        # for val, key in enumerate(raster_keys, start=200):
+        #     lulc_array = numpy.empty((10,10))
+        #     lulc_array.fill(val)
+        #     lulc_path = os.path.join('.', key+'.tif')
+        #     pygeoprocessing.testing.create_raster_on_disk(
+        #         [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
+        #         filename=lulc_path)
+        #     args[key] = lulc_path
 
         with self.assertRaises(ValueError):
             carbon.execute(args)
