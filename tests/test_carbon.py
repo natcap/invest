@@ -77,7 +77,7 @@ class CarbonTests(unittest.TestCase):
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'lulc_redd_path': os.path.join(
                 SAMPLE_DATA, 'carbon/lulc_samp_redd.tif'),
-            u'workspace_dir': self.workspace_dir,
+            u'workspace_dir': 'carbon_test',
             u'do_valuation': True,
             u'price_per_metric_ton_of_c': 43.0,
             u'rate_change': 2.8,
@@ -96,7 +96,7 @@ class CarbonTests(unittest.TestCase):
             current_lulc_array = numpy.empty((10,10))
             current_lulc_array.fill(val)
 
-            lulc_path = os.path.join(self.workspace_dir, key+'.tif')
+            lulc_path = os.path.join('.', key+'.tif')
 
             pygeoprocessing.testing.create_raster_on_disk(
                 [current_lulc_array], (461261,4923265), projection_wkt, -1, (1, -1),
@@ -113,6 +113,14 @@ class CarbonTests(unittest.TestCase):
         args['carbon_pools_path'] = csv_file
 
         carbon.execute(args)
+
+        fut_cur_npv = numpy.empty((10,10))
+        fut_cur_npv.fill(-0.34220789207450352)
+        npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_fut.tif'))
+        npv_raster_band = npv_raster.GetRasterBand(1)
+        npv_val = npv_raster_band.ReadAsArray()
+
+        numpy.testing.assert_almost_equal(fut_cur_npv, npv_val)
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
