@@ -161,8 +161,31 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='create peak flow')
 
+    # intersect built_infrastructure_vector_path with aoi_watersheds_path
+    target_watershed_result_vector_path = os.path.join(
+        args['workspace_dir'], 'flood_risk_service.gpkg')
+    build_service_vector_task = task_graph.add_task(
+        func=build_service_vector,
+        args=(
+            args['aoi_watersheds_path'],
+            args['built_infrastructure_vector_path'],
+            target_watershed_result_vector_path),
+        target_path_list=[target_watershed_result_vector_path],
+        task_name='build_service_vector_task')
+
     task_graph.close()
     task_graph.join()
+
+
+def build_service_vector(
+        base_watershed_vector_path,
+        built_infrastructure_vector_path,
+        target_watershed_result_vector_path):
+    geopackage_driver = gdal.GetDriverByName('GPKG')
+    base_watershed_vector = gdal.OpenEx(
+        base_watershed_vector_path, gdal.OF_VECTOR)
+    geopackage_driver.CreateCopy(
+        target_watershed_result_vector_path, base_watershed_vector)
 
 
 # TODO: numpy is close for nodata
