@@ -146,12 +146,7 @@ def execute(args):
         args['biophysical_table_uri'], 'lucode', to_lower=True)
 
     # Append a _ to the suffix if it's not empty and doens't already have one
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Paths for clipping the fractp/wyield raster to watershed polygons
     fractp_clipped_path = os.path.join(
