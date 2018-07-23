@@ -132,7 +132,7 @@ def execute(args):
         args['lulc_uri'])['pixel_size']
     pygeoprocessing.align_and_resize_raster_stack(
         base_raster_path_list, aligned_raster_path_list,
-        ['nearest'] * len(base_raster_path_list), target_pixel_size,
+        ['near'] * len(base_raster_path_list), target_pixel_size,
         'intersection', raster_align_index=4,
         base_vector_path_list=[sheds_uri])
 
