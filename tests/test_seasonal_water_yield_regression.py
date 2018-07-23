@@ -1,5 +1,4 @@
-"""InVEST Seasonal water yield model tests that use the InVEST sample data"""
-
+"""InVEST Seasonal water yield model tests that use the InVEST sample data."""
 import glob
 import unittest
 import tempfile
@@ -8,7 +7,6 @@ import os
 
 import numpy
 from osgeo import ogr
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
@@ -23,15 +21,13 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
     input data are in an unusual corner case"""
 
     def setUp(self):
-        # this lets us delete the workspace after its done no matter the
-        # the rest result
+        """Make tmp workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        shutil.rmtree(self.workspace_dir)
+        """Delete workspace after test is done."""
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files"""
 
@@ -70,8 +66,6 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             seasonal_water_yield.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_precip_data_missing(self):
         """SWY test case where there is a missing precipitation file"""
 
@@ -108,8 +102,6 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             seasonal_water_yield.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_aggregate_vector_preexists(self):
         """SWY test that model deletes a preexisting aggregate output result"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
@@ -153,7 +145,6 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         if incorrect_value_list:
             raise AssertionError('\n' + '\n'.join(incorrect_value_list))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_duplicate_aoi_assertion(self):
         """SWY ensure model halts when AOI path identical to output vector"""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
@@ -223,8 +214,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         }
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
         """SWY base regression test on sample data
 
@@ -250,8 +239,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data
 
@@ -279,8 +266,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_climate_zones_regression(self):
         """SWY climate zone regression test on sample data
 
@@ -311,8 +296,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 args['workspace_dir'], 'aggregated_results_cz.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_cz.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_user_recharge(self):
         """SWY user recharge regression test on sample data
 

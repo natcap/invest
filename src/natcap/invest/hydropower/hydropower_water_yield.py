@@ -132,7 +132,7 @@ def execute(args):
         args['lulc_uri'])['pixel_size']
     pygeoprocessing.align_and_resize_raster_stack(
         base_raster_path_list, aligned_raster_path_list,
-        ['nearest'] * len(base_raster_path_list), target_pixel_size,
+        ['near'] * len(base_raster_path_list), target_pixel_size,
         'intersection', raster_align_index=4,
         base_vector_path_list=[sheds_uri])
 
@@ -146,12 +146,7 @@ def execute(args):
         args['biophysical_table_uri'], 'lucode', to_lower=True)
 
     # Append a _ to the suffix if it's not empty and doens't already have one
-    try:
-        file_suffix = args['results_suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Paths for clipping the fractp/wyield raster to watershed polygons
     fractp_clipped_path = os.path.join(

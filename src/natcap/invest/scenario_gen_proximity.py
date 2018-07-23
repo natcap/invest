@@ -118,7 +118,7 @@ def execute(args):
         target_pixel_size = pygeoprocessing.get_raster_info(
             args['base_lulc_path'])['pixel_size']
         pygeoprocessing.align_and_resize_raster_stack(
-            [args['base_lulc_path']], [f_reg['base_lulc_path']], ['nearest'],
+            [args['base_lulc_path']], [f_reg['base_lulc_path']], ['near'],
             target_pixel_size, 'intersection',
             base_vector_path_list=[args['aoi_path']])
         _mask_raster_by_vector(

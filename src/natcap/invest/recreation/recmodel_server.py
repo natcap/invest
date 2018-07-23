@@ -26,7 +26,7 @@ import shapely.geometry
 import shapely.prepared
 
 from ... import invest
-from natcap.invest.recreation import out_of_core_quadtree  # pylint: disable=import-error,no-name-in-module
+from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
 
 BLOCKSIZE = 2 ** 21
@@ -54,6 +54,7 @@ def _try_except_wrapper(mesg):
 
     Returns:
         None
+
     """
     def try_except_decorator(func):
         """Raw decorator function."""
@@ -96,6 +97,7 @@ class RecModel(object):
 
         Returns:
             None
+
         """
         initial_bounding_box = [-180, -90, 180, 90]
         if max_year < min_year:
@@ -114,6 +116,7 @@ class RecModel(object):
 
         Returns:
             (min_year, max_year)
+
         """
         return (self.min_year, self.max_year)
 
@@ -139,6 +142,7 @@ class RecModel(object):
 
         Returns:
             zip file as a binary string of workspace.
+
         """
         # make a random workspace name so we can work in parallel
         workspace_path = os.path.join(self.cache_workspace, workspace_id)
@@ -164,16 +168,12 @@ class RecModel(object):
                 calendar months.
             workspace_id: a string that can be used to uniquely identify this
                 run on the server
+
         """
         # make a random workspace name so we can work in parallel
-        while True:
-            # although there should never be a uuid4 collision, this loop
-            # makes me feel better
-            workspace_id = str(uuid.uuid4())
-            workspace_path = os.path.join(self.cache_workspace, workspace_id)
-            if not os.path.exists(workspace_path):
-                os.makedirs(workspace_path)
-                break
+        workspace_id = str(uuid.uuid4())
+        workspace_path = os.path.join(self.cache_workspace, workspace_id)
+        os.makedirs(workspace_path)
 
         # decompress zip
         out_zip_file_filename = os.path.join(
@@ -184,6 +184,8 @@ class RecModel(object):
             zip_file_disk.write(zip_file_binary)
         shapefile_archive = zipfile.ZipFile(out_zip_file_filename, 'r')
         shapefile_archive.extractall(workspace_path)
+        shapefile_archive.close()
+        shapefile_archive = None
         aoi_path = glob.glob(os.path.join(workspace_path, '*.shp'))[0]
 
         LOGGER.info('running calc user days on %s', workspace_path)
@@ -226,6 +228,7 @@ class RecModel(object):
         Returns:
             a path to an ESRI shapefile copy of `aoi_path` updated with a
             "PUD" field which contains the metric per polygon.
+
         """
         aoi_vector = gdal.OpenEx(aoi_path, gdal.OF_VECTOR)
         # append a _pud to the aoi filename
@@ -306,7 +309,7 @@ class RecModel(object):
             'building local quadtree with %d points', len(local_points))
         last_time = time.time()
         time_elapsed = None
-        for point_list_slice_index in xrange(
+        for point_list_slice_index in range(
                 0, len(local_points), POINTS_TO_ADD_PER_STEP):
             time_elapsed = time.time() - last_time
             last_time = recmodel_client.delay_op(
@@ -318,7 +321,7 @@ class RecModel(object):
             projected_point_list = local_points[
                 point_list_slice_index:
                 point_list_slice_index+POINTS_TO_ADD_PER_STEP]
-            for point_index in xrange(
+            for point_index in range(
                     min(len(projected_point_list), POINTS_TO_ADD_PER_STEP)):
                 current_point = projected_point_list[point_index]
                 # convert to python float types rather than numpy.float32
@@ -341,19 +344,26 @@ class RecModel(object):
             local_quad_tree_shapefile_name, local_qt, aoi_ref)
 
         # Start several testing processes
-        for _ in xrange(n_polytest_processes):
+        polytest_process_list = []
+        for _ in range(n_polytest_processes):
             polytest_process = multiprocessing.Process(
                 target=_calc_poly_pud, args=(
                     local_qt_pickle_filename, aoi_path, date_range,
                     poly_test_queue, pud_poly_feature_queue))
             polytest_process.daemon = True
             polytest_process.start()
+            polytest_process_list.append(polytest_process)
 
         # Copy the input shapefile into the designated output folder
         LOGGER.info('Creating a copy of the input shapefile')
         driver = gdal.GetDriverByName('ESRI Shapefile')
         pud_aoi_vector = driver.CreateCopy(out_aoi_pud_path, aoi_vector)
         pud_aoi_layer = pud_aoi_vector.GetLayer()
+
+        aoi_layer = None
+        gdal.Dataset.__swig_destroy__(aoi_vector)
+        aoi_vector = None
+
         pud_id_suffix_list = [
             'YR_AVG', 'JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG',
             'SEP', 'OCT', 'NOV', 'DEC']
@@ -376,7 +386,7 @@ class RecModel(object):
             poly_test_queue.put(poly_feat.GetFID())
 
         # Fill the queue with STOPs for each process
-        for _ in xrange(n_polytest_processes):
+        for _ in range(n_polytest_processes):
             poly_test_queue.put('STOP')
 
         # Read the result until we've seen n_processes_alive
@@ -388,9 +398,9 @@ class RecModel(object):
         date_range_year = [
             date.tolist().timetuple().tm_year for date in date_range]
         table_headers = [
-            '%s-%s' % (year, month) for year in xrange(
+            '%s-%s' % (year, month) for year in range(
                 int(date_range_year[0]), int(date_range_year[1])+1)
-            for month in xrange(1, 13)]
+            for month in range(1, 13)]
         monthly_table.write('poly_id,' + ','.join(table_headers) + '\n')
 
         while True:
@@ -421,7 +431,11 @@ class RecModel(object):
         LOGGER.info('done with polygon test, syncing to disk')
         pud_aoi_layer = None
         pud_aoi_vector.FlushCache()
+        gdal.Dataset.__swig_destroy__(pud_aoi_vector)
         pud_aoi_vector = None
+
+        for polytest_process in polytest_process_list:
+            polytest_process.join()
 
         LOGGER.info('returning out shapefile path')
         return out_aoi_pud_path, monthly_table_path
@@ -533,11 +547,12 @@ def construct_userday_quadtree(
         numpy_array_queue = multiprocessing.Queue(n_parse_processes * 2)
 
         LOGGER.info('starting parsing processes')
-        for _ in xrange(n_parse_processes):
+        for _ in range(n_parse_processes):
             parse_input_csv_process = multiprocessing.Process(
                 target=_parse_input_csv, args=(
                     block_offset_size_queue, raw_photo_csv_table,
                     numpy_array_queue))
+            parse_input_csv_process.deamon = True
             parse_input_csv_process.start()
 
         # rush through file and determine reasonable offsets and blocks
@@ -553,7 +568,7 @@ def construct_userday_quadtree(
                 if not line:
                     break
             csv_file.close()
-            for _ in xrange(n_parse_processes):
+            for _ in range(n_parse_processes):
                 block_offset_size_queue.put('STOP')
 
         LOGGER.info('starting offset queue population thread')
@@ -601,6 +616,9 @@ def construct_userday_quadtree(
         lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
         LOGGER.info("building quadtree shapefile overview")
         build_quadtree_shape(quad_tree_shapefile_name, ooc_qt, lat_lng_ref)
+
+    populate_thread.join()
+    parse_input_csv_process.join()
 
     LOGGER.info('took %f seconds', (time.time() - start_time))
     return ooc_qt_picklefilename
@@ -699,13 +717,16 @@ def _calc_poly_pud(
             date_range[1].tolist().timetuple().tm_year -
             date_range[0].tolist().timetuple().tm_year + 1)
         pud_averages[0] = len(pud_set) / float(n_years)
-        for month_id in xrange(1, 13):
+        for month_id in range(1, 13):
             monthly_pud_set = pud_monthly_set[str(month_id)]
             pud_averages[month_id] = (
                 len(monthly_pud_set) / float(n_years))
 
         pud_poly_feature_queue.put((poly_id, pud_averages, pud_monthly_set))
     pud_poly_feature_queue.put('STOP')
+    aoi_layer = None
+    gdal.Dataset.__swig_destroy__(aoi_vector)
+    aoi_vector = None
 
 
 def execute(args):
@@ -804,9 +825,11 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     read_file_process = threading.Thread(
         target=_read_file, args=(
             file_path, file_buffer_queue, blocksize, fast_hash))
+    read_file_process.daemon = True
     read_file_process.start()
     hash_blocks_process = threading.Thread(
         target=_hash_blocks, args=(file_buffer_queue,))
+    hash_blocks_process.daemon = True
     hash_blocks_process.start()
     read_file_process.join()
     hash_blocks_process.join()
