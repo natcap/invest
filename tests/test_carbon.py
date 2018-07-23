@@ -65,8 +65,25 @@ class CarbonTests(unittest.TestCase):
     #             os.path.join(self.workspace_dir, npv_filename), 1e-6)
 
 
+    def make_lulc_rasters(args, raster_keys, start_num):
+        """Create LULC rasters"""
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)
+        projection_wkt = srs.ExportToWkt()
+
+        raster_keys = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        for val, key in enumerate(raster_keys, start=start_num):
+            lulc_array = numpy.empty((10,10))
+            lulc_array.fill(val)
+            lulc_path = os.path.join('.', key+'.tif')
+            pygeoprocessing.testing.create_raster_on_disk(
+                [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
+                filename=lulc_path)
+            args[key] = lulc_path
+
+
     def test_carbon_full_fast(self):
-        """Carbon: full model run with simplified data."""
+        """Carbon: full model run with synthetic data."""
         from natcap.invest import carbon
 
         args = {
@@ -86,21 +103,23 @@ class CarbonTests(unittest.TestCase):
             u'lulc_fut_year': 2030,
             u'discount_rate': -7.1,
         }
-        
-        #Create LULC rasters
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)
-        projection_wkt = srs.ExportToWkt()
 
-        raster_keys = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
-        for val, key in enumerate(raster_keys, start=1):
-            lulc_array = numpy.empty((10,10))
-            lulc_array.fill(val)
-            lulc_path = os.path.join('.', key+'.tif')
-            pygeoprocessing.testing.create_raster_on_disk(
-                [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
-                filename=lulc_path)
-            args[key] = lulc_path
+        make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path'], 1)
+
+        # #Create LULC rasters
+        # srs = osr.SpatialReference()
+        # srs.ImportFromEPSG(26910)
+        # projection_wkt = srs.ExportToWkt()
+
+        # raster_keys = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        # for val, key in enumerate(raster_keys, start=1):
+        #     lulc_array = numpy.empty((10,10))
+        #     lulc_array.fill(val)
+        #     lulc_path = os.path.join('.', key+'.tif')
+        #     pygeoprocessing.testing.create_raster_on_disk(
+        #         [lulc_array], (461261,4923265), projection_wkt, -1, (1, -1), 
+        #         filename=lulc_path)
+        #     args[key] = lulc_path
 
         csv_file = os.path.join(self.workspace_dir, 'pools.csv')
         with open(csv_file, 'w') as open_table:
@@ -157,23 +176,56 @@ class CarbonTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
 
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_missing_landcover_values(self):
-        """Carbon: testing expected exception on incomplete  table."""
+    def test_carbon_future_no_val_fast(self):
+        """Carbon: regression testing future scenario with no valuation using synthetic data."""
         from natcap.invest import carbon
         args = {
             u'carbon_pools_path': os.path.join(
-                REGRESSION_DATA, 'carbon_pools_missing_coverage.csv'),
+                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
             u'lulc_cur_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
             u'lulc_fut_path': os.path.join(
                 SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'workspace_dir': self.workspace_dir,
-            u'do_valuation': False,
+            u'do_valuation': True,
+            u'price_per_metric_ton_of_c': 43.0,
+            u'rate_change': 2.8,
+            u'lulc_cur_year': 2016,
+            u'lulc_fut_year': 2030,
+            u'discount_rate': -7.1,
         }
-        with self.assertRaises(ValueError):
-            carbon.execute(args)
+
+        raster_keys = ['lulc_cur_path', 'lulc_fut_path']
+        for key in raster_keys:
+            lulc_path = os.path.join('.', key+'.tif')
+            args[key] = lulc_path
+
+        carbon.execute(args)
+        CarbonTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list_fut_only.txt'),
+            args['workspace_dir'])
+        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
+            os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
+
+
+    # @scm.skip_if_data_missing(SAMPLE_DATA)
+    # @scm.skip_if_data_missing(REGRESSION_DATA)
+    # def test_carbon_missing_landcover_values(self):
+    #     """Carbon: testing expected exception on incomplete  table."""
+    #     from natcap.invest import carbon
+    #     args = {
+    #         u'carbon_pools_path': os.path.join(
+    #             REGRESSION_DATA, 'carbon_pools_missing_coverage.csv'),
+    #         u'lulc_cur_path': os.path.join(
+    #             SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
+    #         u'lulc_fut_path': os.path.join(
+    #             SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
+    #         u'workspace_dir': self.workspace_dir,
+    #         u'do_valuation': False,
+    #     }
+    #     with self.assertRaises(ValueError):
+    #         carbon.execute(args)
 
 
     def test_carbon_missing_landcover_values_fast(self):
