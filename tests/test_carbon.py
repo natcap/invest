@@ -20,14 +20,13 @@ def make_lulc_rasters(args, raster_keys, start_val):
     """Create LULC rasters with specified raster names and starting value.
 
     Parameters:
-        args (dictionary): the arguments used in the testing function.
+        args (dict): the arguments used in the testing function.
         raster_keys (list): a list of raster name(s) that are either 
             'lulc_cur_path', 'lulc_fut_path' or 'lulc_redd_path'.
         start_val (int): the starting value used for filling the rasters(s).
     Returns:
         None.
     """
-
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)
     projection_wkt = srs.ExportToWkt()
@@ -47,7 +46,7 @@ def assert_npv(args, actual_npv, out_npv_filename):
     computed manually based on the synthetic data.
     
     Parameters:
-        args (dictionary): the arguments used in the testing function.
+        args (dict): the arguments used in the testing function.
         actual_npv (float): the actual npv to be filled in the array.
         out_npv_filename (string): the filename of the output npv TIFF file.
     Returns:
@@ -146,4 +145,3 @@ class CarbonTests(unittest.TestCase):
         make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path'], 200)
         with self.assertRaises(ValueError):
             carbon.execute(args)
-            
