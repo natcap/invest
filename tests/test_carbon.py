@@ -116,11 +116,18 @@ class CarbonTests(unittest.TestCase):
 
         fut_cur_npv = numpy.empty((10,10))
         fut_cur_npv.fill(-0.34220789207450352)
-        npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_fut.tif'))
-        npv_raster_band = npv_raster.GetRasterBand(1)
-        npv_val = npv_raster_band.ReadAsArray()
+        fut_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_fut.tif'))
+        fut_npv_raster_band = fut_npv_raster.GetRasterBand(1)
+        fut_npv_val = fut_npv_raster_band.ReadAsArray()
+        numpy.testing.assert_almost_equal(fut_cur_npv, fut_npv_val)
 
-        numpy.testing.assert_almost_equal(fut_cur_npv, npv_val)
+        redd_cur_npv = numpy.empty((10,10))
+        redd_cur_npv.fill(-0.4602106134795047)
+        redd_npv_raster = gdal.OpenEx(os.path.join(args['workspace_dir'], 'npv_redd.tif'))
+        redd_npv_raster_band = redd_npv_raster.GetRasterBand(1)
+        redd_npv_val = redd_npv_raster_band.ReadAsArray()
+        numpy.testing.assert_almost_equal(redd_cur_npv, redd_npv_val)
+
 
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
