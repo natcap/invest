@@ -10,12 +10,6 @@ import numpy
 import pygeoprocessing.testing
 
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'carbon')
-
-
 def make_lulc_rasters(args, raster_keys, start_val):
     """Create LULC rasters with specified raster names and starting value.
 
@@ -62,6 +56,23 @@ def assert_npv(args, actual_npv, out_npv_filename):
     numpy.testing.assert_almost_equal(actual_npv_arr, out_npv_arr)
 
 
+def make_pools_csv(args):
+    """Create a carbon pools csv file with simplified land cover types.
+
+    Parameters:
+        args (dict): the arguments used in the testing function.
+    Returns:
+        None.
+    """
+    pools_csv = os.path.join(args['workspace_dir'], 'pools.csv')
+    with open(pools_csv, 'w') as open_table:
+        open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+        open_table.write('15,10,60,1,1,"lulc code 1"\n')
+        open_table.write('5,3,20,0,2,"lulc code 2"\n')
+        open_table.write('2,1,5,0,3,"lulc code 3"\n')
+    args['carbon_pools_path'] = pools_csv
+
+
 class CarbonTests(unittest.TestCase):
     """Tests for the Carbon Model."""
 
@@ -91,15 +102,7 @@ class CarbonTests(unittest.TestCase):
         }
 
         make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path'], 1)
-
-        csv_file = os.path.join(self.workspace_dir, 'pools.csv')
-        with open(csv_file, 'w') as open_table:
-            open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
-            open_table.write('15,10,60,1,1,"lulc code 1"\n')
-            open_table.write('5,3,20,0,2,"lulc code 2"\n')
-            open_table.write('2,1,5,0,3,"lulc code 3"\n')
-        args['carbon_pools_path'] = csv_file
-
+        make_pools_csv(args)
         carbon.execute(args)
 
         #Add assertions for npv for future and REDD scenarios
@@ -111,8 +114,6 @@ class CarbonTests(unittest.TestCase):
         """Carbon: regression testing future scenario using synthetic data."""
         from natcap.invest import carbon
         args = {
-            u'carbon_pools_path': os.path.join(
-                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': True,
             u'price_per_metric_ton_of_c': 43.0,
@@ -123,6 +124,7 @@ class CarbonTests(unittest.TestCase):
         }
 
         make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path'], 1)
+        make_pools_csv(args)
         carbon.execute(args)
         #Add assertions for npv for the future scenario
         assert_npv(args, -0.34220789207450352, 'npv_fut.tif')
@@ -132,16 +134,11 @@ class CarbonTests(unittest.TestCase):
         """Carbon: testing expected exception on incomplete with synthetic data."""
         from natcap.invest import carbon
         args = {
-            u'carbon_pools_path': os.path.join(
-                REGRESSION_DATA, 'carbon_pools_missing_coverage.csv'),
-            u'lulc_cur_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
-            u'lulc_fut_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': False,
         }
 
         make_lulc_rasters(args, ['lulc_cur_path', 'lulc_fut_path'], 200)
+        make_pools_csv(args)
         with self.assertRaises(ValueError):
             carbon.execute(args)
