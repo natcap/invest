@@ -2051,7 +2051,7 @@ class Dropdown(GriddedInput):
                 return six.text_type(value, 'utf-8')
             except TypeError:
                 # It's already unicode, so can't decode further.
-                return value 
+                return value
 
         # make sure all values in the return value map are text
         if return_value_map is not None:

@@ -1288,7 +1288,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
             time_obj = datetime.datetime.strptime(timestamp,
                                                   '%Y-%m-%dT%H:%M:%S.%f')
-            if time_obj .date() == datetime.date.today():
+            if time_obj.date() == datetime.date.today():
                 date_label = 'Today at %s' % time_obj.strftime('%H:%M')
             else:
                 date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
