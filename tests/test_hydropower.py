@@ -137,9 +137,7 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        # TODO: delete this
         args['workspace_dir'] = 'hydropower_regression/test_valuation_subshed'
-
         args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
@@ -156,8 +154,8 @@ class HydropowerTests(unittest.TestCase):
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(
-                    args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path))
+                    args['workspace_dir'], 'output', 'per_pixel',
+                    raster_path), os.path.join(REGRESSION_DATA, raster_path))
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
