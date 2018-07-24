@@ -56,9 +56,6 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        # TODO: delete this
-        args['workspace_dir'] = 'hydropower_regression/test_water_yield_subshed'
-
         args['sub_watersheds_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Freshwater', 'subwatersheds.shp')
         args['results_suffix'] = 'test'
@@ -97,9 +94,6 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        # TODO: delete this
-        args['workspace_dir'] = 'hydropower_regression/test_scarcity_subshed'
-
         args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
@@ -137,7 +131,6 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['workspace_dir'] = 'hydropower_regression/test_valuation_subshed'
         args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'Hydropower', 'input', 'water_demand_table.csv')
