@@ -168,24 +168,55 @@ def execute(args):
         func=build_service_vector,
         args=(
             args['aoi_watersheds_path'],
+            target_sr_wkt,
             args['built_infrastructure_vector_path'],
             target_watershed_result_vector_path),
         target_path_list=[target_watershed_result_vector_path],
         task_name='build_service_vector_task')
 
+    q_pi_zonal_stats_task = task_graph.add_task(
+        func=add_zonal_stats,
+        args=(
+            peak_flow_raster_path, target_watershed_result_vector_path,
+            'OBJECTID'),
+        target_path_list=[],
+        dependent_task_list=[peak_flow_task, build_service_vector_task],
+        task_name='q_pi stats')
+
     task_graph.close()
     task_graph.join()
 
 
+def add_zonal_stats(
+        base_raster_path, aggregate_vector_path, aggregate_field_name):
+    """Add watershed scale values of the given base_raster.
+
+    Parameters:
+        base_raster_path (str): path to raster to aggregate over.
+        aggregate_vector_path (str): path to vector to aggregate values over
+        aggregate_field_name (str): key field in `aggregate_vector_path`
+            that can be used to index the per-feature results.
+
+    Return:
+        None.
+
+    """
+    stats = pygeoprocessing.zonal_statistics(
+        (base_raster_path, 1), aggregate_vector_path,
+        aggregate_field_name)
+    LOGGER.debug(stats)
+
+
 def build_service_vector(
         base_watershed_vector_path,
+        target_wkt,
         built_infrastructure_vector_path,
         target_watershed_result_vector_path):
-    geopackage_driver = gdal.GetDriverByName('GPKG')
-    base_watershed_vector = gdal.OpenEx(
-        base_watershed_vector_path, gdal.OF_VECTOR)
-    geopackage_driver.CreateCopy(
-        target_watershed_result_vector_path, base_watershed_vector)
+
+    pygeoprocessing.reproject_vector(
+        base_watershed_vector_path, target_wkt,
+        target_watershed_result_vector_path, layer_index=0,
+        driver_name='GPKG')
 
 
 # TODO: numpy is close for nodata
