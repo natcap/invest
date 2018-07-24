@@ -10,8 +10,8 @@ import tempfile
 import numpy
 from osgeo import gdal
 from osgeo import ogr
-
 import pygeoprocessing
+
 from .. import validation
 from .. import utils
 
