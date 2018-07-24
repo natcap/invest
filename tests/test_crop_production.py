@@ -60,7 +60,8 @@ class CropProductionTests(unittest.TestCase):
             expected_result_table_path)
         result_table = pandas.read_csv(
             result_table_path)
-        pandas.testing.assert_frame_equal(expected_result_table, result_table)
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)
 
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
     @scm.skip_if_data_missing(MODEL_DATA_PATH)
@@ -154,4 +155,5 @@ class CropProductionTests(unittest.TestCase):
             expected_result_table_path)
         result_table = pandas.read_csv(
             result_table_path)
-        pandas.testing.assert_frame_equal(expected_result_table, result_table)
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)

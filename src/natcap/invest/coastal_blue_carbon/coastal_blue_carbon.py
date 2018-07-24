@@ -8,7 +8,7 @@ import math
 import itertools
 import time
 import re
-import csv
+import pandas
 
 import numpy
 from osgeo import gdal
@@ -671,7 +671,7 @@ def get_inputs(args):
     pygeoprocessing.align_and_resize_raster_stack(
         [args['lulc_baseline_map_uri']] + transition_raster_paths,
         [aligned_baseline_lulc_path] + aligned_transition_raster_paths,
-        ['nearest'] * (1 + len(aligned_transition_raster_paths)),
+        ['near'] * (1 + len(aligned_transition_raster_paths)),
         baseline_info['pixel_size'], 'intersection')
 
     d['C_prior_raster'] = aligned_baseline_lulc_path
@@ -813,7 +813,7 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     pygeoprocessing.align_and_resize_raster_stack(
         [C_prior_raster] + transition_rasters,
         aligned_lulc_files,
-        ['nearest'] * len(aligned_lulc_files),
+        ['near'] * len(aligned_lulc_files),
         baseline_pixel_size,
         'intersection')
 
@@ -936,11 +936,12 @@ def _get_price_table(price_table_uri, start_year, end_year):
     Returns:
         price_t (numpy.array): price for each year.
     """
-    price_dict = utils.build_lookup_from_csv(price_table_uri, 'year')
-
+    price_dict = utils.build_lookup_from_csv(
+        price_table_uri, 'year')
     try:
-        return numpy.array([price_dict[year]['price']
-                            for year in xrange(start_year, end_year+1)])
+        return numpy.array(
+            [price_dict[year]['price']
+            for year in xrange(start_year, end_year+1)]).astype(numpy.float)
     except KeyError as missing_year:
         raise KeyError('Carbon price table does not contain a price value for '
                        '%s' % missing_year)
@@ -999,18 +1000,18 @@ def validate(args, limit_to=None):
                                            'soil-half-life')),
             ('price_table_uri', ('year', 'price'))):
         try:
-            table = csv.reader(open(args[csv_key]))
-            headers = set([field.lower() for field in table.next()])
+            table = pandas.read_csv(args[csv_key], sep=None, engine='python')
+            headers = list(table)
             missing_headers = set(required_fields) - headers
-            if len(missing_headers) > 0:
+            if missing_headers:
                 warnings.append((
                     [csv_key],
                     ('Table is missing required columns: %s'
                      % ', '.join(sorted(missing_headers)))))
         except IOError:
             warnings.append(([csv_key], 'File not found.'))
-        except csv.Error:
-            warnings.append(([csv_key], 'Could not open CSV'))
+        except Exception as e:
+            warnings.append(([csv_key], 'Unknown exception %s' % e))
 
     if limit_to in ('lulc_baseline_map_uri', None):
         with utils.capture_gdal_logging():

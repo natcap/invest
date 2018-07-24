@@ -194,7 +194,6 @@ class ExponentialDecayUtilsTests(unittest.TestCase):
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel_100.tif')
         utils.exponential_decay_kernel_raster(
             expected_distance, kernel_filepath)
-        shutil.copyfile(kernel_filepath, 'kernel.tif')
 
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(
@@ -367,7 +366,7 @@ class BuildLookupFromCsvTests(unittest.TestCase):
         with open(table_path, 'w') as table_file:
             table_file.write(table_str)
         result = utils.build_lookup_from_csv(
-            table_path, 'a', to_lower=True, numerical_cast=True)
+            table_path, 'a', to_lower=True)
         expected_dict = {
             0.0: {
                 'a': 0.0,
@@ -525,16 +524,16 @@ class BuildLookupFromCSVTests(unittest.TestCase):
             file_obj.write(textwrap.dedent(
                 """
                 header1,HEADER2,header3
-                1,2,3
-                4,FOO,bar
+                1,2,bar
+                4,5,FOO
                 """
             ).strip())
 
         lookup_dict = utils.build_lookup_from_csv(
-            csv_file, 'header1', to_lower=True, numerical_cast=False)
+            csv_file, 'header1', to_lower=True)
 
-        self.assertEqual(lookup_dict['4']['header2'], 'foo')
-        self.assertEqual(lookup_dict['1']['header2'], '2')
+        self.assertEqual(lookup_dict[4]['header3'], 'foo')
+        self.assertEqual(lookup_dict[1]['header2'], 2)
 
     def test_results_uppercase_numeric_cast(self):
         """utils: test handling of uppercase, num. casting, blank values."""
