@@ -224,8 +224,9 @@ def execute(args):
     def pet_op(eto_pix, Kc_pix):
         """Calculate the plant potential evapotranspiration.
 
-        eto_pix (numpy.ndarray): a numpy array of ETo
-        Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
+        Parameters:
+            eto_pix (numpy.ndarray): a numpy array of ETo
+            Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
 
         Returns:
             PET.
