@@ -236,8 +236,7 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = AestheticQuality \
-		  Aquaculture \
+ZIPDIRS = Aquaculture \
 		  Freshwater \
 		  Marine \
 		  Terrestrial \
