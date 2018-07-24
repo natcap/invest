@@ -2,9 +2,9 @@
 
 Unreleased Changes
 ------------------
-* Updated Recreation server's database to include metadata from photos taken 
-  from 2005-2017 (previous range was 2005-2014). The new range is reflected 
-  in the UI. 
+* Updated Recreation server's database to include metadata from photos taken
+  from 2005-2017 (previous range was 2005-2014). The new range is reflected
+  in the UI.
 * Fixed an issue with the InVEST binary build where binaries on Windows would
   crash with an error saying Python27.dll could not be loaded.
 * Fixed an issue in the Rule-Based Scenario Generator UI where vector column
@@ -32,9 +32,11 @@ Unreleased Changes
   due to a missing dependent task; it had previously been patched by setting
   taskgraph to operate in single thread mode. This restores multithreading
   in the pollination model.
-* Fixed an issue in the model data of the crop production model where some 
+* Fixed an issue in the water yield / hydropower model that would skip
+  calculation of water demand tables when "water scarcity" was enabled.
+* Fixed an issue in the model data of the crop production model where some
   crops were using incorrect climate bin rasters. Since the error was in the
-  data and not the code, users will need to download the most recent version 
+  data and not the code, users will need to download the most recent version
   of InVEST's crop model data during the installation step to get the fix.
 
 3.4.4 (2018-03-26)
