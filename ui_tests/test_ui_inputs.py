@@ -2060,11 +2060,7 @@ class ModelTests(_QtTest):
         # constructed and not destroyed properly before the test model object
         # could complete its setup, causing lots of test failures.
         label = 'Test model'
-        settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            label)
+        settings = model.SETTINGS_TEMPLATE(label)
         settings.clear()
 
         class _TestInVESTModel(model.InVESTModel):

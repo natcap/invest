@@ -56,6 +56,11 @@ _DATASTACK_SAVE_OPTS = {
         'savefile': _DATASTACK_BASE_FILENAME % 'tar.gz',
     }
 }
+# To create a QSettings object, call this with the model label as the only
+# argument.  Example:  settings = SETTINGS_TEMPLATE('My Model')
+SETTINGS_TEMPLATE = functools.partial(
+    QtCore.QSettings, QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
+    'Natural Capital Project')
 
 
 @contextlib.contextmanager
@@ -1183,11 +1188,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+        self.settings = SETTINGS_TEMPLATE(self.label)
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
