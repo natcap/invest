@@ -1189,6 +1189,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         # Settings files
         self.settings = SETTINGS_TEMPLATE(self.label)
+        LOGGER.info('Model settings stored in %s', self.settings.fileName())
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
@@ -1259,10 +1260,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
-
-        LOGGER.info('Recent datastacks: %s',
-                    pprint.pformat(recently_opened_datastacks))
-        LOGGER.info('Settings stored in %s', self.settings.fileName())
 
         for datastack_filepath, timestamp in sorted(
                 recently_opened_datastacks.items(), key=lambda x: x[1]):
