@@ -18,13 +18,13 @@ class HabitatQualityTests(unittest.TestCase):
     """Tests for the Habitat Quality model."""
 
     def setUp(self):
-        """Overriding setUp function to create temp workspace directory."""
+        """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Overriding tearDown function to remove temporary directory."""
+        """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -235,6 +235,7 @@ class HabitatQualityTests(unittest.TestCase):
         Raises:
             AssertionError when there are files listed in `base_list_file`
                 that don't exist in the directory indicated by `path`
+
         """
         missing_files = []
         with open(base_list_path, 'r') as file_list:
