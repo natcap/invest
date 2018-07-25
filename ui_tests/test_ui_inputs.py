@@ -2099,6 +2099,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_lastrun(self):
         """UI Model: Check that lastrun saving/loading works."""
@@ -2122,6 +2123,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_close_window_confirm(self):
         """UI Model: Close confirmation dialog 'remember lastrun' checkbox."""
@@ -2156,6 +2158,7 @@ class ModelTests(_QtTest):
             self.assertFalse(model_ui.isVisible())
         finally:
             model_ui.destroy()
+            del model_ui
 
     def test_close_window_cancel(self):
         """UI Model: Close confirmation dialog cancel"""
@@ -2181,6 +2184,7 @@ class ModelTests(_QtTest):
         # then close it for real so it doesn't hang around
         model_ui.close(prompt=False)
         model_ui.destroy()
+        del model_ui
 
     def test_validation_passes(self):
         """UI Model: Check what happens when validation passes."""
@@ -2203,6 +2207,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_validate_blocking(self):
         """UI Model: Validate that the blocking validation call works."""
@@ -2224,6 +2229,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_validate_nonblocking(self):
         """UI Model: Validate that the nonblocking validation call works."""
@@ -2245,6 +2251,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_assemble_args_not_implemented(self):
         """UI Model: Validate exception when assemble_args not implemented."""
@@ -2262,6 +2269,7 @@ class ModelTests(_QtTest):
             finally:
                 model_ui.close(prompt=False)
                 model_ui.destroy()
+                del model_ui
 
     def test_load_args(self):
         """UI Model: Check that we can load args as expected."""
@@ -2277,6 +2285,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_args_bad_key(self):
         """UI Model: Check that we can handle loading of bad keys."""
@@ -2293,6 +2302,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_args_error(self):
         """UI Model: Check that we can handle errors when loading args."""
@@ -2315,6 +2325,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_run(self):
         """UI Model: Check that we can run the model."""
@@ -2337,6 +2348,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_local_docs_from_hyperlink(self):
         """UI Model: Check that we can open the local docs missing dialog."""
@@ -2365,6 +2377,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_local_docs_launch(self):
         """UI Model: Check that we can launch local documentation."""
@@ -2391,6 +2404,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_forums_link_launch(self):
         """UI Model: Check that we can link to the forums."""
@@ -2417,6 +2431,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
@@ -2441,6 +2456,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_archive(self):
         """UI Model: Check that we can load a parameter archive."""
@@ -2474,6 +2490,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_from_logfile(self):
         """UI Model: Check that we can load parameters from a logfile."""
@@ -2498,6 +2515,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_extraction_dialog_cancelled(self):
         """UI Model: coverage when user clicks cancel in datastack dialog."""
@@ -2521,6 +2539,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_file_dialog_cancelled(self):
         """UI Model: coverage for when the file select dialog is cancelled."""
@@ -2535,6 +2554,7 @@ class ModelTests(_QtTest):
             finally:
                 model_ui.close(prompt=False)
                 model_ui.destroy()
+                del model_ui
 
     def test_model_quickrun(self):
         """UI Model: Test the quickrun path through model.run()."""
@@ -2560,6 +2580,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_save_datastack_cancel_coverage(self):
         """UI Model: Test coverage for cancelling save datastack dialog."""
@@ -2573,6 +2594,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_save_datastack_as_archive(self):
         """UI Model: Test coverage for saving parameter archives."""
@@ -2602,6 +2624,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_save_datastack_as_parameter_set(self):
         """UI Model: Test coverage for saving parameter set."""
@@ -2630,6 +2653,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_settings_saved_message(self):
         """UI Model: Verify that saving settings posts status to statusbar."""
@@ -2644,6 +2668,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_run_with_validation_errors(self):
         """UI Model: Verify coverage when validation errors before a run."""
@@ -2672,6 +2697,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_exception_raised_in_target(self):
         """UI Model: Verify coverage when exception raised in target."""
@@ -2694,6 +2720,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_workspace_overwrite_reject(self):
         """UI Model: Verify coverage when overwrite dialog is rejected."""
@@ -2708,6 +2735,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_save_to_python(self):
         """UI Model: Verify that we can make a python script from params."""
@@ -2729,6 +2757,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_drag_n_drop_datastack(self):
         """UI Model: Verify that we can drag-n-drop a valid datastack."""
@@ -2876,6 +2905,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_display_short_filepaths(self):
         """UI Model: Check handling of long filepaths in open-recent menu."""
@@ -2896,6 +2926,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_display_long_filepaths(self):
         """UI Model: Check handling of long filepaths in open-recent menu."""
@@ -2918,6 +2949,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_load_datastack_from_open_recent(self):
         """UI Model: Check loading of datastack via open-recent menu."""
@@ -2966,6 +2998,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_clear_local_settings(self):
         """UI Model: Check that we can clear local settings."""
@@ -2981,6 +3014,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
     def test_reject_on_modelname_mismatch(self):
         """UI Model: confirm when datastack modelname != model modelname."""
@@ -3020,6 +3054,7 @@ class ModelTests(_QtTest):
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
+            del model_ui
 
 
 class ValidatorTest(_QtTest):

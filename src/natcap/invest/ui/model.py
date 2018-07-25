@@ -1188,6 +1188,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             QtCore.QSettings.UserScope,
             'Natural Capital Project',
             self.label)
+        LOGGER.info('Settings stored in %s', self.settings.fileName())
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
@@ -1261,7 +1262,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         LOGGER.info('Recent datastacks: %s',
                     pprint.pformat(recently_opened_datastacks))
-        LOGGER.info('Settings stored in %s', self.settings.fileName())
 
         for datastack_filepath, timestamp in sorted(
                 recently_opened_datastacks.items(), key=lambda x: x[1]):
