@@ -1259,12 +1259,15 @@ class InVESTModel(QtWidgets.QMainWindow):
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
 
+        LOGGER.info('Recent datastacks: %s',
+                    pprint.pformat(recently_opened_datastacks))
+
         for datastack_filepath, timestamp in sorted(
                 recently_opened_datastacks.items(), key=lambda x: x[1]):
 
             time_obj = datetime.datetime.strptime(timestamp,
                                                   '%Y-%m-%dT%H:%M:%S.%f')
-            if time_obj .date() == datetime.date.today():
+            if time_obj.date() == datetime.date.today():
                 date_label = 'Today at %s' % time_obj.strftime('%H:%M')
             else:
                 date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
