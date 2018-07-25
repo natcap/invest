@@ -1319,7 +1319,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         # store the new value.
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
 
         recently_opened_datastacks[datastack_path] = timestamp
 
