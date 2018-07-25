@@ -623,7 +623,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
     clipped_dem_path = os.path.join(temp_dir, 'clipped_dem.tif')
     pygeoprocessing.warp_raster(
-        dem_path, pixel_size, clipped_dem_path, 'nearest',
+        dem_path, pixel_size, clipped_dem_path, 'near',
         target_bb=intersection_bbox)
 
     LOGGER.info('Masking DEM pixels outside the AOI to nodata')
