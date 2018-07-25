@@ -2057,13 +2057,14 @@ class ModelTests(_QtTest):
 
         class _TestInVESTModel(model.InVESTModel):
             def __init__(self):
-                model.InVESTModel.__init__(self,
-                                     label='Test model',
-                                     target=target_func,
-                                     validator=validate_func,
-                                     localdoc='testmodel.html')
-                # Default model class already has workspace and suffix input.
+                model.InVESTModel.__init__(
+                    self,
+                    label='Test model',
+                    target=target_func,
+                    validator=validate_func,
+                    localdoc='testmodel.html')
 
+            # Default model class already has workspace and suffix input.
             def assemble_args(self):
                 return {
                     self.workspace.args_key: self.workspace.value(),

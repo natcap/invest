@@ -1251,7 +1251,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack, parameter set or logfile...', self.load_datastack,
+            'L&oad datastack, parameter set or logfile...',
+            self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
