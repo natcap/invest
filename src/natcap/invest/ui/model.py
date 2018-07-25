@@ -1261,6 +1261,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         LOGGER.info('Recent datastacks: %s',
                     pprint.pformat(recently_opened_datastacks))
+        LOGGER.info('Settings stored in %s', self.settings.fileName())
 
         for datastack_filepath, timestamp in sorted(
                 recently_opened_datastacks.items(), key=lambda x: x[1]):
