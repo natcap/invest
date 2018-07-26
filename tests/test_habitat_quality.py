@@ -68,6 +68,32 @@ class HabitatQualityTests(unittest.TestCase):
                 os.path.join(self.workspace_dir, 'output', output_filename),
                 1e-6)
 
+    def test_habitat_quality_regression_fast(self):
+        """Habitat Quality: base regression test with simplified data."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'access_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
+            'half_saturation_constant': '0.5',
+            'landuse_bas_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
+            'landuse_cur_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
+            'landuse_fut_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
+            'sensitivity_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'sensitivity_samp.csv'),
+            'suffix': 'regression',
+            'threat_raster_folder': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality'),
+            'threats_uri': os.path.join(
+                SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        habitat_quality.execute(args)
+
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_habitat_quality_missing_sensitivity_threat(self):
