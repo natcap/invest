@@ -36,24 +36,24 @@ def make_simple_raster(raster_path, fill_val):
         filename=raster_path)
 
 
-def assert_npv(out_npv_filename, actual_npv):
-    """Assert that the output npv is the same as the actual npv.
+def assert_raster_equal_value(base_raster_path, val_to_compare):
+    """Assert that the entire output raster has the same value as specified.
 
     Parameters:
-        out_npv_filename (str): the filename of the output npv TIFF file.
-        actual_npv (float): the actual npv to be filled in the array.
+        base_raster_path (str): the filepath of a raster.
+        val_to_compare (float): the value to be filled in the array to compare.
 
     Returns:
         None.
 
     """
-    out_npv_raster = gdal.OpenEx(out_npv_filename, gdal.OF_RASTER)
-    out_npv_raster_band = out_npv_raster.GetRasterBand(1)
-    out_npv_arr = out_npv_raster_band.ReadAsArray()
+    base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    base_band = base_raster.GetRasterBand(1)
+    base_array = base_band.ReadAsArray()
 
-    actual_npv_arr = numpy.empty((10, 10))
-    actual_npv_arr.fill(actual_npv)
-    numpy.testing.assert_almost_equal(actual_npv_arr, out_npv_arr)
+    array_to_compare = numpy.empty(base_array.shape)
+    array_to_compare.fill(val_to_compare)
+    numpy.testing.assert_almost_equal(base_array, array_to_compare)
 
 
 def make_pools_csv(pools_csv_path):
@@ -114,10 +114,10 @@ class CarbonTests(unittest.TestCase):
         carbon.execute(args)
 
         # Add assertions for npv for future and REDD scenarios
-        assert_npv(os.path.join(args['workspace_dir'], 'npv_fut.tif'),
-                   -0.3422078)
-        assert_npv(os.path.join(args['workspace_dir'], 'npv_redd.tif'),
-                   -0.4602106)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
 
     def test_carbon_future(self):
         """Carbon: regression testing future scenario."""
@@ -144,8 +144,8 @@ class CarbonTests(unittest.TestCase):
 
         carbon.execute(args)
         # Add assertions for npv for the future scenario
-        assert_npv(os.path.join(args['workspace_dir'], 'npv_fut.tif'),
-                   -0.3422078)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
 
     def test_carbon_missing_landcover_values(self):
         """Carbon: testing expected exception on missing LULC codes."""
