@@ -91,7 +91,7 @@ def push(target_dir, files_to_push, files_to_unzip=None):
     # Make folders on remote if needed.
     ssh.exec_command(
         'if [ ! -d "{dir}" ]; then mkdir -p -v "{dir}"; fi'.format(
-            dir=target_dir))
+            dir=_fix_path(target_dir)))
 
     print 'Opening SCP connection'
     sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())
