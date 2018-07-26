@@ -16,12 +16,14 @@ import sys
 import os
 import imp
 import ast
+import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src'))
+pprint.pprint(sys.path)
 
 # -- General configuration ------------------------------------------------
 
@@ -299,7 +301,9 @@ autodoc_mock_imports = [
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
     'shapely.wkt', 'shapely.ops', 'shapely.speedups',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
-    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing',
+    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
+    'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
+    'qtawesome',
 ]
 
 # Mock class with attribute handling.  As suggested by:
