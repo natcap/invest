@@ -113,7 +113,8 @@ class CarbonTests(unittest.TestCase):
 
         carbon.execute(args)
 
-        # Add assertions for npv for future and REDD scenarios
+        # Add assertions for npv for future and REDD scenarios.
+        # The npv was calculated based on _calculate_npv in carbon.py.
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
         assert_raster_equal_value(
@@ -143,7 +144,8 @@ class CarbonTests(unittest.TestCase):
         make_pools_csv(args['carbon_pools_path'])
 
         carbon.execute(args)
-        # Add assertions for npv for the future scenario
+        # Add assertions for npv for the future scenario.
+        # The npv was calculated based on _calculate_npv in carbon.py.
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
 
