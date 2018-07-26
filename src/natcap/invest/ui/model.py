@@ -1158,7 +1158,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
-        self.run_dialog = inputs.FileSystemRunDialog()
 
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
