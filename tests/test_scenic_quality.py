@@ -220,16 +220,18 @@ class ScenicQualityTests(unittest.TestCase):
              [0, 1, 1, 2, 1],
              [1, 1, 1, 1, 2]], dtype=numpy.int8)
 
-        value_raster = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'output', 'vshed_value_foo.tif'))
+        value_raster = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'vshed_value_foo.tif'), gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
         numpy.testing.assert_almost_equal(expected_value, value_matrix)
 
         # verify that the correct number of viewpoints has been tallied.
-        vshed_raster = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'output', 'vshed_foo.tif'))
+        vshed_raster = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'vshed_foo.tif'), gdal.OF_RASTER)
         vshed_band = vshed_raster.GetRasterBand(1)
         vshed_matrix = vshed_band.ReadAsArray()
 
@@ -246,7 +248,8 @@ class ScenicQualityTests(unittest.TestCase):
              [3, 3, 3, 3, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual_foo.tif')
-        quality_matrix = gdal.OpenEx(visual_quality_raster).ReadAsArray()
+        quality_matrix = gdal.OpenEx(visual_quality_raster,
+                                     gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           quality_matrix)
 
@@ -298,7 +301,7 @@ class ScenicQualityTests(unittest.TestCase):
         scenic_quality.execute(args)
 
         # Verify that the value summation matrix is what we expect it to be.
-        # The weight of two of the points makessome sectors more valuable
+        # The weight of two of the points makes some sectors more valuable
         expected_value = numpy.array(
             [[10., 5., 0., 5., 20.],
              [0., 7.07106781, 5., 14.14213562, 5.],
@@ -306,8 +309,9 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.82842712, 2., 9.89949494, 5.],
              [4., 2., 0., 2., 14.]])
 
-        value_raster = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'output', 'vshed_value.tif'))
+        value_raster = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'vshed_value.tif').gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -322,7 +326,8 @@ class ScenicQualityTests(unittest.TestCase):
              [1., 1., 1., 1., 3.5]], dtype=numpy.float32)
         vshed_raster_path = os.path.join(args['workspace_dir'], 'output',
                                          'vshed.tif')
-        weighted_vshed_matrix = gdal.OpenEx(vshed_raster_path).ReadAsArray()
+        weighted_vshed_matrix = gdal.OpenEx(
+            vshed_raster_path, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_weighted_vshed,
                                           weighted_vshed_matrix)
 
@@ -335,7 +340,8 @@ class ScenicQualityTests(unittest.TestCase):
              [1, 1, 0, 1, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
-        quality_matrix = gdal.OpenEx(visual_quality_raster).ReadAsArray()
+        quality_matrix = gdal.OpenEx(
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           quality_matrix)
 
@@ -387,8 +393,9 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 0.05910575, 0.13533528, 0.11821149, 0.13533528],
              [0.01831564, 0.13533528, 1., 0.13533528, 0.03663128]])
 
-        value_raster = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'output', 'vshed_value.tif'))
+        value_raster = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'vshed_value.tif'), gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -442,8 +449,9 @@ class ScenicQualityTests(unittest.TestCase):
              [0., 2.03972077, 1.69314718, 4.07944154, 1.69314718],
              [2.38629436, 1.69314718, 0., 1.69314718, 4.77258872]])
 
-        value_raster = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'output', 'vshed_value.tif'))
+        value_raster = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'output',
+                         'vshed_value.tif'), gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -474,7 +482,7 @@ class ScenicQualityTests(unittest.TestCase):
             numpy.array([1, 0, 0, 0, 2, 3, 4]), (5, 1))
 
         visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster).ReadAsArray()
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -501,7 +509,7 @@ class ScenicQualityTests(unittest.TestCase):
         expected_visual_quality = numpy.array([[255, 2, 0, 0, 0, 2, 3, 4]])
 
         visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster).ReadAsArray()
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -529,7 +537,7 @@ class ScenicQualityTests(unittest.TestCase):
         expected_visual_quality = numpy.array([[255, 1, 0, 0, 0, 2, 3, 4]])
 
         visual_quality_matrix = gdal.OpenEx(
-            visual_quality_raster).ReadAsArray()
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
@@ -736,7 +744,7 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=1.0, max_distance=max_dist)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         expected_visibility = numpy.zeros(matrix.shape)
@@ -774,7 +782,7 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.1)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
 
@@ -803,7 +811,7 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
 
@@ -829,7 +837,7 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=0.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
 
@@ -877,7 +885,7 @@ class ViewshedTests(unittest.TestCase):
                  aux_filepath=os.path.join(self.workspace_dir,
                                            'auxiliary.tif'))
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
 
@@ -903,7 +911,7 @@ class ViewshedTests(unittest.TestCase):
                  aux_filepath=os.path.join(self.workspace_dir,
                                            'auxiliary.tif'))
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
 
@@ -926,7 +934,7 @@ class ViewshedTests(unittest.TestCase):
                                            'auxiliary.tif'),
                  refraction_coeff=1.0)
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, numpy.ones(matrix.shape))
@@ -953,7 +961,7 @@ class ViewshedTests(unittest.TestCase):
 
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[8:] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
@@ -979,7 +987,7 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:7] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
@@ -1005,7 +1013,7 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, :7] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
@@ -1031,7 +1039,7 @@ class ViewshedTests(unittest.TestCase):
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, 13:] = 0
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
@@ -1085,7 +1093,7 @@ class ViewshedTests(unittest.TestCase):
              [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
              [1, 1, 1, 1, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]])
 
-        visibility_raster = gdal.OpenEx(visibility_filepath)
+        visibility_raster = gdal.OpenEx(visibility_filepath, gdal.OF_RASTER)
         visibility_band = visibility_raster.GetRasterBand(1)
         visibility_matrix = visibility_band.ReadAsArray()
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
