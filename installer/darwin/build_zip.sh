@@ -10,7 +10,7 @@
 # This script writes the bundle to "build/app_bundle/InVEST-${1}"
 
 zipdirname="InVEST-${1}"
-zipfilename="$zipdirname.zip"
+zipfilename="$zipdirname-mac.zip"
 tempdir="build/mac_zip/$zipdirname"
 if [ -d "$tempdir" ]
 then
