@@ -10,7 +10,7 @@ import numpy
 import pygeoprocessing.testing
 
 
-def make_simple_raster(raster_path, fill_val):
+def make_simple_raster(base_raster_path, fill_val):
     """Create a 10x10 raster on designated path with fill value.
 
     Parameters:
@@ -25,22 +25,22 @@ def make_simple_raster(raster_path, fill_val):
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
     projection_wkt = srs.ExportToWkt()
 
-    lulc_array = numpy.empty((10, 10))
-    lulc_array.fill(fill_val)
+    base_array = numpy.empty((10, 10))
+    base_array.fill(fill_val)
     pygeoprocessing.testing.create_raster_on_disk(
-        [lulc_array],
+        [base_array],
         (461261, 4923265),  # Origin based on the projection
         projection_wkt,
         -1,
         (1, -1),
-        filename=raster_path)
+        filename=base_raster_path)
 
 
 def assert_raster_equal_value(base_raster_path, val_to_compare):
     """Assert that the entire output raster has the same value as specified.
 
     Parameters:
-        base_raster_path (str): the filepath of a raster.
+        base_raster_path (str): the filepath of the raster to be asserted.
         val_to_compare (float): the value to be filled in the array to compare.
 
     Returns:
