@@ -11,10 +11,10 @@ import pygeoprocessing.testing
 
 
 def make_simple_raster(raster_path, fill_val):
-    """Create a 10x10 raster with designated path and fill value.
+    """Create a 10x10 raster on designated path with fill value.
 
     Parameters:
-        raster_path (str): a raster path for making the new raster.
+        raster_path (str): the raster path for making the new raster.
         fill_val (int): the value used for filling the raster.
 
     Returns:
