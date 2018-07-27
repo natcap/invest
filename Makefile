@@ -95,6 +95,7 @@ USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION).zip"
+MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins purge mac_zipfile
@@ -299,13 +300,17 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 		/DDATA_LOCATION=$(DATA_BASE_URL) \
 		installer\windows\invest_installer.nsi
 
+mac_app: $(MAC_APPLICATION_BUNDLE)
+$(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
+	./installer/darwin/build_app_bundle.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(MAC_APPLICATION_BUNDLE)"
+
 mac_installer: $(MAC_DISK_IMAGE_FILE)
-$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_dmg.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
+$(MAC_DISK_IMAGE_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+	./installer/darwin/build_dmg.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
 
 mac_zipfile: $(MAC_BINARIES_ZIP_FILE)
-$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR)
-	./installer/darwin/build_zip.sh "$(VERSION)" "$(INVEST_BINARIES_DIR)" "$(USERGUIDE_HTML_DIR)"
+$(MAC_BINARIES_ZIP_FILE): $(DIST_DIR) $(MAC_APPLICATION_BUNDLE) $(USERGUIDE_HTML_DIR)
+	./installer/darwin/build_zip.sh "$(VERSION)" "$(MAC_APPLICATION_BUNDLE)" "$(USERGUIDE_HTML_DIR)"
 
 build/vcredist_x86.exe: | build
 	powershell.exe -Command "Start-BitsTransfer -Source https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe -Destination build\vcredist_x86.exe"
