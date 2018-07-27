@@ -206,7 +206,7 @@ class ScenicQualityTests(unittest.TestCase):
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
         # from 3 viewsheds.
         self.assertEqual(len(glob.glob(os.path.join(
-            args['workspace_dir'], 'intermediate', 'auxilliary*'))), 3)
+            args['workspace_dir'], 'intermediate', 'auxiliary*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
             args['workspace_dir'], 'intermediate', 'visibility*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
@@ -716,7 +716,7 @@ class ViewshedTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
                      aux_filepath=os.path.join(self.workspace_dir,
-                                               'auxulliary.tif'))
+                                               'auxiliary.tif'))
 
     def test_max_distance(self):
         """Viewshed: setting a max distance limits visibility distance."""
@@ -733,7 +733,7 @@ class ViewshedTests(unittest.TestCase):
 
         viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'),
+                                           'auxiliary.tif'),
                  refraction_coeff=1.0, max_distance=max_dist)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
@@ -771,7 +771,7 @@ class ViewshedTests(unittest.TestCase):
 
         viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'),
+                                           'auxiliary.tif'),
                  refraction_coeff=0.1)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
@@ -800,7 +800,7 @@ class ViewshedTests(unittest.TestCase):
 
         viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'),
+                                           'auxiliary.tif'),
                  refraction_coeff=0.0)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
@@ -826,7 +826,7 @@ class ViewshedTests(unittest.TestCase):
 
         viewshed((dem_filepath, 1), viewpoint, visibility_filepath,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'),
+                                           'auxiliary.tif'),
                  refraction_coeff=0.0)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
@@ -857,7 +857,7 @@ class ViewshedTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             viewshed(
                 (dem_filepath, 1), (0, 0), visibility_filepath,
-                aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+                aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
             )
 
     def test_view_from_valley(self):
@@ -875,7 +875,7 @@ class ViewshedTests(unittest.TestCase):
         viewshed((dem_filepath, 1), (5, 5), visibility_filepath,
                  refraction_coeff=1.0,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'))
+                                           'auxiliary.tif'))
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -901,7 +901,7 @@ class ViewshedTests(unittest.TestCase):
         viewshed((dem_filepath, 1), (5, 5), visibility_filepath,
                  viewpoint_height=10,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'))
+                                           'auxiliary.tif'))
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
         visibility_band = visibility_raster.GetRasterBand(1)
@@ -923,7 +923,7 @@ class ViewshedTests(unittest.TestCase):
         ViewshedTests.create_dem(matrix, dem_filepath)
         viewshed((dem_filepath, 1), (5, 5), visibility_filepath,
                  aux_filepath=os.path.join(self.workspace_dir,
-                                           'auxulliary.tif'),
+                                           'auxiliary.tif'),
                  refraction_coeff=1.0)
 
         visibility_raster = gdal.OpenEx(visibility_filepath)
@@ -948,7 +948,7 @@ class ViewshedTests(unittest.TestCase):
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=(viewpoint[1], viewpoint[0]),
             visibility_filepath=visibility_filepath,
-            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
         )
 
         expected_visibility = numpy.ones(matrix.shape)
@@ -975,7 +975,7 @@ class ViewshedTests(unittest.TestCase):
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
-            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:7] = 0
@@ -1001,7 +1001,7 @@ class ViewshedTests(unittest.TestCase):
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
-            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, :7] = 0
@@ -1027,7 +1027,7 @@ class ViewshedTests(unittest.TestCase):
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
-            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
         )
         expected_visibility = numpy.ones(matrix.shape)
         expected_visibility[:, 13:] = 0
@@ -1060,7 +1060,7 @@ class ViewshedTests(unittest.TestCase):
             dem_raster_path_band=(dem_filepath, 1),
             viewpoint=viewpoint,
             visibility_filepath=visibility_filepath,
-            aux_filepath=os.path.join(self.workspace_dir, 'auxulliary.tif')
+            aux_filepath=os.path.join(self.workspace_dir, 'auxiliary.tif')
         )
 
         expected_visibility = numpy.array(

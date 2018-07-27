@@ -7,7 +7,6 @@ import time
 import tempfile
 import shutil
 import collections
-import pprint
 import itertools
 import heapq
 
@@ -39,7 +38,7 @@ _INTERMEDIATE_BASE_FILES = {
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
     'visibility_pattern': 'visibility_{id}.tif',
-    'auxilliary_pattern': 'auxilliary_{id}.tif',
+    'auxiliary_pattern': 'auxiliary_{id}.tif',
     'value_pattern': 'value_{id}.tif',
 }
 
@@ -247,7 +246,7 @@ def execute(args):
         visibility_filepath = file_registry['visibility_pattern'].format(
             id=feature_index)
         viewshed_files.append(visibility_filepath)
-        auxilliary_filepath = file_registry['auxilliary_pattern'].format(
+        auxiliary_filepath = file_registry['auxiliary_pattern'].format(
             id=feature_index)
         viewshed_task = graph.add_task(
             viewshed,
@@ -258,8 +257,8 @@ def execute(args):
                     'refraction_coeff': float(args['refraction']),
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
-                    'aux_filepath': auxilliary_filepath},
-            target_path_list=[auxilliary_filepath, visibility_filepath],
+                    'aux_filepath': auxiliary_filepath},
+            target_path_list=[auxiliary_filepath, visibility_filepath],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)

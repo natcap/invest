@@ -30,8 +30,6 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 import shapely.geometry
-cimport numpy
-cimport cython
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as inc
@@ -43,6 +41,8 @@ from libcpp.deque cimport deque
 from libcpp.pair cimport pair
 from libcpp.queue cimport queue
 from libc cimport math
+cimport numpy
+cimport cython
 
 
 LOGGER = logging.getLogger(__name__)
@@ -90,17 +90,18 @@ cdef int* SECTOR_TO_NEIGHBOR_2_INDEX = [
     -1, -1
 ]
 
-# List out which targets (in terms of their neighbor index) to process per sector.
-# We can preemptively define which neighbors are to be visited after a given
-# target by indexing into the arrays we've already created.  Each line in this
-# array has four indexes.  The first two are for Neighbor1, the second two
+# List out which targets (in terms of their neighbor index) to process per
+# sector.  We can preemptively define which neighbors are to be visited after a
+# given target by indexing into the arrays we've already created.  Each line in
+# this array has four indexes.  The first two are for Neighbor1, the second two
 # are for Neighbor2.
 #
 # Order of these is:
 #    iy_next_neighbor1, ix_next_neighbor1, iy_next_neighbor1, ix_next_neighbor2
 #
-# When looking at the indexes, the number multiplied by 2 is the neighbor index.
-# So, sector 0 uses neighbors 0 and 1.  Sector 7 uses neighbors 7 and 0.
+# When looking at the indexes, the number multiplied by 2 is the neighbor
+# index.  So, sector 0 uses neighbors 0 and 1.  Sector 7 uses neighbors 7 and
+# 0.
 cdef int* SECTOR_NEXT_TARGET_INDEXES = [
     NEIGHBORS_INDEXES[2*0], NEIGHBORS_INDEXES[2*0+1], NEIGHBORS_INDEXES[2*1], NEIGHBORS_INDEXES[2*1+1],
     NEIGHBORS_INDEXES[2*1], NEIGHBORS_INDEXES[2*1+1], NEIGHBORS_INDEXES[2*2], NEIGHBORS_INDEXES[2*2+1],
@@ -535,7 +536,7 @@ def viewshed(dem_raster_path_band,
 
     Parameters:
         dem_raster_path_band (tuple): A tuple of (path, band_index) where
-            ``path`` is a path to a GDAl-compatible raster on disk and
+            ``path`` is a path to a GDAL-compatible raster on disk and
             ``band_index`` is the 1-based band index.  This DEM must be tiled
             with block sizes as a power of 2.  If the viewshed is being
             adjusted for curvature of the earth and/or refraction, the
@@ -555,21 +556,21 @@ def viewshed(dem_raster_path_band,
             the curvature of the earth.  If False, the earth will be treated as
             though it is flat.
         refraction_coeff=0.13 (float):  The coefficient of atmospheric
-            refraction that may be adjusted to accommodate varying atmonspheric
+            refraction that may be adjusted to accommodate varying atmospheric
             conditions.  Default is ``0.13``.  Set to ``0`` to ignore
             refraction calculations.
         max_distance=None (float):  If provided, visibility will not be
             calculated for DEM pixels that are more than this distance (in meters)
             from the viewpoint.
         aux_filepath=None (string): A path to a location on disk
-            where the raster containing the auxilliary matrix will be written.
-            The auxilliary matrix defines the height that a DEM must exceed in
+            where the raster containing the auxiliary matrix will be written.
+            The auxiliary matrix defines the height that a DEM must exceed in
             order to be visible from the viewpoint.  This matrix is very useful
             for debugging.  If a raster already exists at this location, it
             will be overwritten.  If this path is not provided by the user, the
             viewshed will create this file as a temporary file wherever the
             system keeps its temp files and remove it when the viewshed
-            finishes..  See python's ``tempfile`` documentation for where this
+            finishes.  See python's ``tempfile`` documentation for where this
             might be on your system.
 
     Raises:
@@ -636,19 +637,19 @@ def viewshed(dem_raster_path_band,
             'power of 2.  Current block size is (%s, %s)' %
             (block_xsize, block_ysize))
 
-    # Create the auxilliary raster for storing the calculated minimum height
+    # Create the auxiliary raster for storing the calculated minimum height
     # for visibility at a given point.
     temp_dir = None
     if aux_filepath is None:
         temp_dir = tempfile.mkdtemp(
             prefix='viewshed_%s' % time.strftime(
                 '%Y-%m-%d_%H_%M_%S', time.gmtime()))
-        aux_filepath = os.path.join(temp_dir, 'auxilliary.tif')
+        aux_filepath = os.path.join(temp_dir, 'auxiliary.tif')
 
     gtiff_creation_options = [
         'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
         'BLOCKXSIZE=%s' % block_xsize, 'BLOCKYSIZE=%s' % block_ysize]
-    LOGGER.info("Creating auxilliary raster %s", aux_filepath)
+    LOGGER.info("Creating auxiliary raster %s", aux_filepath)
     pygeoprocessing.new_raster_from_base(
         dem_raster_path_band[0], aux_filepath, gdal.GDT_Float64, [AUX_NOT_VISITED],
         fill_value_list=[AUX_NOT_VISITED],
@@ -745,13 +746,13 @@ def viewshed(dem_raster_path_band,
 
     # If the user defined a viewpoint, we add it to the actual viewpoint height
     # in the DEM matrix.
-    cdef double r_v = dem_managed_raster.get(ix_viewpoint, iy_viewpoint) + viewpoint_height 
+    cdef double r_v = dem_managed_raster.get(ix_viewpoint, iy_viewpoint) + viewpoint_height
 
     # Defining cardinal and intercardinal directions is significantly simpler
     # than defining other pixels because the reference plane is constructed
-    # from only 1 previous pixel (as opposed to 2 for the otehr pixels).
+    # from only 1 previous pixel (as opposed to 2 for the other pixels).
     # Rather than try to shoehorn these calculations into a single processing
-    # loop, we can take care of this special case ahread of time.
+    # loop, we can take care of this special case ahead of time.
     cdef long ix_target, iy_target
     cdef long ix_prev_target, iy_prev_target
     cdef long ix_cardinal_target, iy_cardinal_target
@@ -899,7 +900,7 @@ def viewshed(dem_raster_path_band,
             m + SECTOR_TO_NEIGHBOR_2_INDEX[2*target_pixel.sector])
 
         # These equations are taken directly from the Wang et al. paper.
-        # Sector 3 is the sector that is explicily referenced in the paper.
+        # Sector 3 is the sector that is explicitly referenced in the paper.
         # The others are adjusted based on the neighbors selected.
         # I could abstract this in such a way that the math is only written out
         # on one line, but that ends up being much longer than just writing out
@@ -912,7 +913,7 @@ def viewshed(dem_raster_path_band,
         # The only modification I have made to the math is working in the
         # viewpoint height, r_v, which allows us to have a slope that is
         # positive or negative, and is relative to the viewpoint height.  This
-        # modification is not in the paper, and is not in any citeable resource
+        # modification is not in the paper, and is not in any citable resource
         # I have found.
         if target_pixel.sector == 0:
             z = -(m-i)*(r_n1-r_n2)+(j-n)*((m-i)*(r_n1-r_n2)-r_v+r_n1)/(j+1-n)+r_v
