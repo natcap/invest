@@ -8,10 +8,14 @@
 #
 # This build script is maintained primarily for a build on
 # readthedocs.org.
+#
+# This requirements file assumes that the natcap.invest package is being
+# installed to the readthedocs virtualenv separately.  This is currently
+# implemented with a checkbox in the readthedocs admin page.
 
 sphinx
 sphinx-rtd-theme
 nose
 cython
 mock
-.
+numpy
