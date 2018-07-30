@@ -224,6 +224,7 @@ def execute(args):
 
             viewpoint_tuples.append((viewpoint, max_radius, weight,
                                      viewpoint_height))
+    structures_vector = None
 
     if not viewpoint_tuples:
         raise ValueError('No valid viewpoints found. This may happen if '
@@ -338,8 +339,8 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
         ``None``
 
     """
+    driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.isfile(output_path):
-        driver = gdal.GetDriverByName('ESRI Shapefile')
         driver.Delete(output_path)
 
     shape_to_clip = gdal.OpenEx(shape_to_clip_path, gdal.OF_VECTOR)
@@ -348,7 +349,6 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     input_layer = shape_to_clip.GetLayer()
     binding_layer = binding_shape.GetLayer()
 
-    driver = gdal.GetDriverByName('ESRI Shapefile')
     vector = driver.Create(output_path, 0, 0, 0, gdal.GDT_Unknown)
     input_layer_defn = input_layer.GetLayerDefn()
     out_layer = vector.CreateLayer(
@@ -363,6 +363,13 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
             'Intersection ERROR: _clip_vector '
             'found no intersection between: file - %s and file - %s.' %
             (shape_to_clip_path, binding_shape_path))
+
+    input_layer = None
+    binding_layer = None
+    shape_to_clip.FlushCache()
+    binding_shape.FlushCache()
+    shape_to_clip = None
+    binding_shape = None
 
 
 def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
@@ -577,6 +584,9 @@ def _viewpoint_over_nodata(viewpoint, dem_path):
     value_under_viewpoint = band.ReadAsArray(
         xoff=ix_viewpoint, yoff=iy_viewpoint, win_xsize=1, win_ysize=1)
 
+    band = None
+    raster = None
+
     # If the nodata value is not set, ``nodata`` will be None and this should
     # always return False.
     if value_under_viewpoint == nodata:
@@ -711,6 +721,9 @@ def _count_visible_structures(visibility_rasters, weights, clipped_dem,
                                xoff=block_info['xoff'],
                                yoff=block_info['yoff'])
         pixels_processed += dem_matrix.size
+
+    vis_raster_bands = None
+    vis_rasters = None
 
     target_band = None
     target_raster.FlushCache()
