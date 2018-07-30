@@ -61,12 +61,44 @@ class ScenicQualityTests(unittest.TestCase):
 
     @staticmethod
     def create_aoi(aoi_path):
+        """Create a known bounding box that overlaps the DEM.
+
+        The envelope of the AOI perfectly overlaps the outside edge of the DEM.
+
+        Parameters:
+            aoi_path (string): The filepath where the AOI should be written.
+
+        Returns:
+            ``None``
+
+        """
         sampledata.create_vector_on_disk(
             [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])],
             WKT, filename=aoi_path)
 
     @staticmethod
     def create_viewpoints(viewpoints_path, fields=None, attributes=None):
+        """Create a known set of viewpoints for this DEM.
+
+        This vector will contain 4 viewpoints in the WGS84/UTM31S projection.
+        The second viewpoint is off the edge of the DEM and will therefore not
+        be included in the Scenic Quality analysis.
+
+        Parameters:
+            viewpoints_path (string): The filepath where the viewpoints vector
+                should be saved.
+            fields=None (dict): If provided, this must be a dict mapping
+                fieldnames to datatypes, as expected by
+                ``pygeoprocessing.create_vector_on_disk``.
+            attributes=None (dict): If provided, this must be a list of dicts
+                mapping fieldnames (which match the keys in ``fields``) to
+                values that will be used as the column value for each feature
+                in sequence.
+
+        Returns:
+            ``None``
+
+        """
         sampledata.create_vector_on_disk(
             [Point(7.0, -3.0),
              Point(1.0, -7.0),  # off the edge of DEM, won't be included.
