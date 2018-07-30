@@ -505,8 +505,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
-                header1,header2,header3
+                """header1,header2,header3
                 1,2,3
                 4,FOO,bar
                 """
