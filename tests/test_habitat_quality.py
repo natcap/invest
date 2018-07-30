@@ -25,10 +25,10 @@ REGRESSION_DATA = os.path.join(
 
 
 def make_simple_poly(origin):
-    """Make a 10x10 ogr rectangular geometry clockwisely from origin."""
+    """Make a 1000x1000 ogr rectangular geometry clockwisely from origin."""
     # Create a rectangular ring
     lon, lat = origin[0], origin[1]
-    width = 10
+    width = 1000
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon, lat)
     ring.AddPoint(lon + width, lat)
@@ -43,7 +43,7 @@ def make_simple_poly(origin):
     return poly
 
 
-def make_simple_raster(array, raster_path):
+def make_raster_from_array(array, raster_path):
     """Make a raster from an array on a designated path."""
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)  # UTM Zone 10N
@@ -59,10 +59,19 @@ def make_simple_raster(array, raster_path):
 
 
 def make_access_shp(access_shp_path):
+    """Create an accessibility polygon shapefile with two access values.
+
+    Parameters:
+        access_shp_path (str): the path for the shapefile.
+
+    Returns:
+        None.
+
+    """
     # Set up parameters. Fid and access values are based on the sample data
-    fid_list = [0.0, 1.0, 2.0]
-    access_list = [0.2, 0.8, 1.0]
-    coord_list = [(1180000.0, 690000.0 - i * 10) for i in range(3)]  # 30x10 px
+    fid_list = [0.0, 1.0]
+    access_list = [0.2, 1.0]
+    coord_list = [(1180000.0, 690000.0 - i * 1000) for i in range(2)]
     poly_list = [make_simple_poly(coord) for coord in coord_list]
 
     # Create a new shapefile
@@ -70,10 +79,9 @@ def make_access_shp(access_shp_path):
     data_source = driver.CreateDataSource(access_shp_path)
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(26910)  # Spatial reference UTM Zone 10N
-    # pdb.set_trace()
     layer = data_source.CreateLayer('access_samp', srs, ogr.wkbPolygon)
 
-    # Add FID and ACCESS fields and make the format same to sample data
+    # Add FID and ACCESS fields and make their format same to sample data
     fid_field = ogr.FieldDefn('FID', ogr.OFTInteger64)
     fid_field.SetWidth(11)
     fid_field.SetPrecision(0)
@@ -86,14 +94,12 @@ def make_access_shp(access_shp_path):
 
     # Create the feature
     for fid_val, access_val, poly in zip(fid_list, access_list, poly_list):
-        # pdb.set_trace()
         feature = ogr.Feature(layer.GetLayerDefn())
         feature.SetField('FID', fid_val)
         feature.SetField('ACCESS', access_val)
         feature.SetGeometry(poly)
         layer.CreateFeature(feature)
         feature = None
-
     data_source = None
 
 
@@ -101,16 +107,16 @@ def make_lulc_raster(raster_path, lulc_val):
     """Create a 30x10 raster on designated path with designated LULC code.
 
     Parameters:
-        raster_path (str): the raster path for making the LULC raster.
+        raster_path (str): the path for the LULC raster.
         lulc_val (int): the LULC value to be filled in the raster.
 
     Returns:
         None.
 
     """
-    lulc_array = numpy.empty((30, 10))
+    lulc_array = numpy.empty((2, 1))
     lulc_array.fill(lulc_val)
-    make_simple_raster(lulc_array, raster_path)
+    make_raster_from_array(lulc_array, raster_path)
 
 
 def make_threats_raster(raster_folder):
@@ -123,11 +129,10 @@ def make_threats_raster(raster_folder):
         None.
 
     """
-    array = numpy.concatenate((numpy.full((20, 10), 0), numpy.full((10, 10),
-                                                                   1)))
+    array = numpy.concatenate((numpy.full((1, 1), 0), numpy.full((1, 1), 1)))
     for suffix in ['_c', '_f']:
         raster_path = os.path.join(raster_folder, 'threat_1' + suffix + '.tif')
-        make_simple_raster(array, raster_path)
+        make_raster_from_array(array, raster_path)
 
 
 def make_sensitivity_samp_csv(csv_path):
@@ -142,8 +147,8 @@ def make_sensitivity_samp_csv(csv_path):
     """
     with open(csv_path, 'wb') as open_table:
         open_table.write('LULC,NAME,HABITAT,L_threat_1\n')
-        open_table.write('0,"lulc 0",1,0.4\n')
-        open_table.write('1,"lulc 1",1,0.3\n')
+        open_table.write('0,"lulc 0",1,1\n')
+        open_table.write('1,"lulc 1",1,0.5\n')
         open_table.write('2,"lulc 2",0,0.0\n')
 
 
@@ -159,7 +164,7 @@ def make_threats_csv(csv_path):
     """
     with open(csv_path, 'wb') as open_table:
         open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
-        open_table.write('5,1,threat_1,linear\n')
+        open_table.write('1,1,threat_1,linear\n')
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -225,27 +230,9 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            # 'access_uri':
-            # os.path.join(SAMPLE_DATA, 'access_samp.shp'),
-            'half_saturation_constant':
-            '0.5',
-            # 'landuse_bas_uri':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
-            # 'landuse_cur_uri':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
-            # 'landuse_fut_uri':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
-            # 'sensitivity_uri':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality',
-            #              'sensitivity_samp.csv'),
-            'suffix':
-            'regression',
-            # 'threat_raster_folder':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality'),
-            # 'threats_uri':
-            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
-            u'workspace_dir':
-            self.workspace_dir,
+            'half_saturation_constant': '0.5',
+            'suffix': 'regression',
+            u'workspace_dir': self.workspace_dir,
         }
 
         args['workspace_dir'] = temp_dir
@@ -270,6 +257,7 @@ class HabitatQualityTests(unittest.TestCase):
         args['threats_uri'] = os.path.join(args['workspace_dir'],
                                            'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
+
         habitat_quality.execute(args)
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
