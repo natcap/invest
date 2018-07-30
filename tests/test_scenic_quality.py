@@ -294,11 +294,11 @@ class ScenicQualityTests(unittest.TestCase):
         # Verify that the value summation matrix is what we expect it to be.
         # The weight of two of the points makes some sectors more valuable
         expected_value = numpy.array(
-            [[10., 5., 0., 5., 20.],
-             [0., 7.07106781, 5., 14.14213562, 5.],
-             [0., 0., 24., 5., 0.],
+            [[4., 2., 0., 2., 14.],
              [0., 2.82842712, 2., 9.89949494, 5.],
-             [4., 2., 0., 2., 14.]])
+             [0., 0., 24., 5., 0.],
+             [0., 7.07106781, 5., 14.14213562, 5.],
+             [10., 5., 0., 5., 20.]])
 
         value_raster = gdal.OpenEx(
             os.path.join(args['workspace_dir'], 'output',
@@ -310,11 +310,11 @@ class ScenicQualityTests(unittest.TestCase):
 
         # Verify that the sum of the viewsheds (which is weighted) is correct.
         expected_weighted_vshed = numpy.array(
-            [[2.5, 2.5, 2.5, 2.5, 5.],
-             [0., 2.5, 2.5, 5., 2.5],
-             [0., 0., 6., 2.5, 2.5],
+            [[1., 1., 1., 1., 3.5],
              [0., 1., 1., 3.5, 2.5],
-             [1., 1., 1., 1., 3.5]], dtype=numpy.float32)
+             [0., 0., 6., 2.5, 2.5],
+             [0., 2.5, 2.5, 5., 2.5],
+             [2.5, 2.5, 2.5, 2.5, 5.]], dtype=numpy.float32)
         vshed_raster_path = os.path.join(args['workspace_dir'], 'output',
                                          'vshed.tif')
         weighted_vshed_matrix = gdal.OpenEx(
@@ -324,11 +324,11 @@ class ScenicQualityTests(unittest.TestCase):
 
         # Test the visual quality raster since this run is weighted.
         expected_visual_quality = numpy.array(
-            [[3, 3, 0, 3, 4],
-             [0, 3, 3, 4, 3],
-             [0, 0, 4, 3, 0],
+            [[1, 1, 0, 1, 4],
              [0, 1, 1, 3, 3],
-             [1, 1, 0, 1, 4]])
+             [0, 0, 4, 3, 0],
+             [0, 3, 3, 4, 3],
+             [3, 3, 0, 3, 4]])
         visual_quality_raster = os.path.join(
             args['workspace_dir'], 'output', 'vshed_qual.tif')
         quality_matrix = gdal.OpenEx(
