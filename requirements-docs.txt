@@ -19,3 +19,5 @@ nose
 cython
 mock
 numpy
+scipy
+setuptools_scm

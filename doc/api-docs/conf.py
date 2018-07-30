@@ -303,7 +303,7 @@ autodoc_mock_imports = [
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
     'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
-    'qtawesome',
+    'qtawesome', 'sip', 'taskgraph'
 ]
 
 # Mock class with attribute handling.  As suggested by:
