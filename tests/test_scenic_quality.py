@@ -59,9 +59,6 @@ class ScenicQualityTests(unittest.TestCase):
                           'COMPRESS=LZW'],
             filename=dem_path)
 
-        raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
-        print('DEM GT', raster.GetGeoTransform())
-
     @staticmethod
     def create_aoi(aoi_path):
         sampledata.create_vector_on_disk(
