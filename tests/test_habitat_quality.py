@@ -3,7 +3,8 @@ import unittest
 import tempfile
 import shutil
 import os
-
+# import logging
+# logging.basicConfig(level=logging.DEBUG)
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
@@ -53,15 +54,15 @@ def make_simple_raster(array, raster_path):
         (1180000, 690000),  # Origin same as access_samp.shp
         project_wkt,
         -1,
-        (1, -1),
+        (1000, -1000),
         filename=raster_path)
 
 
 def make_access_shp(access_shp_path):
     # Set up parameters. Fid and access values are based on the sample data
-    fid_list = [0.0, 1.0, 2.0, 3.0]
-    access_list = [0.2, 0.8, 1.0, 1.0]
-    coord_list = [(1180000.0, 690000.0 - i * 10) for i in range(4)]  # 40x10 px
+    fid_list = [0.0, 1.0, 2.0]
+    access_list = [0.2, 0.8, 1.0]
+    coord_list = [(1180000.0, 690000.0 - i * 10) for i in range(3)]  # 30x10 px
     poly_list = [make_simple_poly(coord) for coord in coord_list]
 
     # Create a new shapefile
@@ -96,20 +97,19 @@ def make_access_shp(access_shp_path):
     data_source = None
 
 
-def make_lulc_raster(raster_path, fill_val_list):
-    """Create a 40x10 raster on designated path with 10 different LULC codes.
+def make_lulc_raster(raster_path, lulc_val):
+    """Create a 30x10 raster on designated path with designated LULC code.
 
     Parameters:
-        raster_path (str): the raster path for making the lulc raster.
-        fill_val_list (list): a list of 4 values to be filled in 10x10 patches.
+        raster_path (str): the raster path for making the LULC raster.
+        lulc_val (int): the LULC value to be filled in the raster.
 
     Returns:
         None.
 
     """
-    lulc_array = numpy.array([[i] for i in fill_val_list])  # 4x1 array
-    lulc_array = numpy.repeat(lulc_array, 10, axis=0)  # 40x1 array
-    lulc_array = numpy.repeat(lulc_array, 10, axis=1)  # 40x10 array
+    lulc_array = numpy.empty((30, 10))
+    lulc_array.fill(lulc_val)
     make_simple_raster(lulc_array, raster_path)
 
 
@@ -123,14 +123,11 @@ def make_threats_raster(raster_folder):
         None.
 
     """
-    array = numpy.concatenate((numpy.full((20, 10), 0), numpy.full((20, 10),
+    array = numpy.concatenate((numpy.full((20, 10), 0), numpy.full((10, 10),
                                                                    1)))
-    n_threats = 2
     for suffix in ['_c', '_f']:
-        for idx in range(n_threats):
-            raster_path = os.path.join(
-                raster_folder, 'threat_' + str(idx + 1) + suffix + '.tif')
-            make_simple_raster(array, raster_path)
+        raster_path = os.path.join(raster_folder, 'threat_1' + suffix + '.tif')
+        make_simple_raster(array, raster_path)
 
 
 def make_sensitivity_samp_csv(csv_path):
@@ -144,13 +141,10 @@ def make_sensitivity_samp_csv(csv_path):
 
     """
     with open(csv_path, 'wb') as open_table:
-        open_table.write('LULC,NAME,HABITAT,L_threat_1,L_threat_2\n')
-        open_table.write('0,"lulc 0",1,0.4,0.45\n')
-        open_table.write('1,"lulc 1",1,0.3,0.35\n')
-        open_table.write('2,"lulc 2",0,0.0,0.0\n')
-        open_table.write('3,"lulc 3",0,0.0,0.0\n')
-        open_table.write('4,"lulc 4",0,0.0,0.0\n')
-        open_table.write('5,"lulc 5",0,0.0,0.0\n')
+        open_table.write('LULC,NAME,HABITAT,L_threat_1\n')
+        open_table.write('0,"lulc 0",1,0.4\n')
+        open_table.write('1,"lulc 1",1,0.3\n')
+        open_table.write('2,"lulc 2",0,0.0\n')
 
 
 def make_threats_csv(csv_path):
@@ -166,7 +160,6 @@ def make_threats_csv(csv_path):
     with open(csv_path, 'wb') as open_table:
         open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
         open_table.write('5,1,threat_1,linear\n')
-        open_table.write('5,0.5,threat_2,exponential\n')
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -232,25 +225,25 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            'access_uri':
-            os.path.join(SAMPLE_DATA, 'access_samp.shp'),
+            # 'access_uri':
+            # os.path.join(SAMPLE_DATA, 'access_samp.shp'),
             'half_saturation_constant':
             '0.5',
-            'landuse_bas_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
-            'landuse_cur_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
-            'landuse_fut_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
-            'sensitivity_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality',
-                         'sensitivity_samp.csv'),
+            # 'landuse_bas_uri':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
+            # 'landuse_cur_uri':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
+            # 'landuse_fut_uri':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
+            # 'sensitivity_uri':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality',
+            #              'sensitivity_samp.csv'),
             'suffix':
             'regression',
-            'threat_raster_folder':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality'),
-            'threats_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
+            # 'threat_raster_folder':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality'),
+            # 'threats_uri':
+            # os.path.join(SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
             u'workspace_dir':
             self.workspace_dir,
         }
@@ -262,11 +255,10 @@ class HabitatQualityTests(unittest.TestCase):
         make_access_shp(args['access_uri'])
 
         lulc_names = ['_bas_', '_cur_', '_fut_']
-        for i, lulc_name in enumerate(lulc_names):
+        for lulc_val, lulc_name in enumerate(lulc_names):
             args['landuse' + lulc_name + 'uri'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + lulc_name + 'b.tif')
-            make_lulc_raster(args['landuse' + lulc_name + 'uri'],
-                             range(i, i + 4))
+            make_lulc_raster(args['landuse' + lulc_name + 'uri'], lulc_val)
 
         args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
                                                'sensitivity_samp.csv')
