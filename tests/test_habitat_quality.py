@@ -114,12 +114,12 @@ def make_lulc_raster(raster_path, lulc_val):
         None.
 
     """
-    lulc_array = numpy.empty((2, 1))
-    lulc_array.fill(lulc_val)
+    lulc_array = numpy.concatenate((numpy.full((1, 1), 0),
+                                    numpy.full((1, 1), lulc_val)))
     make_raster_from_array(lulc_array, raster_path)
 
 
-def make_threats_raster(raster_folder):
+def make_threats_raster(raster_folder, make_bad_raster=False):
     """Create a 40x10 raster on designated path with 1 as threat and 0 as none.
 
     Parameters:
@@ -129,30 +129,44 @@ def make_threats_raster(raster_folder):
         None.
 
     """
-    array = numpy.concatenate((numpy.full((1, 1), 0), numpy.full((1, 1), 1)))
+    threat_array = numpy.concatenate((numpy.full((1, 1), 0),
+                                      numpy.full((1, 1), 1)))
     for suffix in ['_c', '_f']:
         raster_path = os.path.join(raster_folder, 'threat_1' + suffix + '.tif')
-        make_raster_from_array(array, raster_path)
+        if make_bad_raster:
+            open(raster_path, 'a').close()
+        else:
+            make_raster_from_array(threat_array, raster_path)
 
 
-def make_sensitivity_samp_csv(csv_path):
+def make_sensitivity_samp_csv(csv_path, include_threat=True):
     """Create a simplified sensitivity csv file with five land cover types.
 
     Parameters:
         csv_path (str): the path of sensitivity csv.
+        missing_threat (bool): whether the "threat" column is included in csv.
 
     Returns:
         None.
 
     """
-    with open(csv_path, 'wb') as open_table:
-        open_table.write('LULC,NAME,HABITAT,L_threat_1\n')
-        open_table.write('0,"lulc 0",1,1\n')
-        open_table.write('1,"lulc 1",1,0.5\n')
-        open_table.write('2,"lulc 2",0,0.0\n')
+    if include_threat:
+        with open(csv_path, 'wb') as open_table:
+            open_table.write('LULC,NAME,HABITAT,L_threat_1\n')
+            open_table.write('0,"lulc 0",1,1\n')
+            open_table.write('1,"lulc 1",0.5,0.5\n')
+            open_table.write('2,"lulc 2",0,0.3\n')
+    else:
+        with open(csv_path, 'wb') as open_table:
+            open_table.write('LULC,NAME,HABITAT\n')
+            open_table.write('0,"lulc 0",1\n')
+            open_table.write('1,"lulc 1",0.5\n')
+            open_table.write('2,"lulc 2",0\n')
 
 
-def make_threats_csv(csv_path):
+def make_threats_csv(csv_path,
+                     include_missing_threat=False,
+                     include_invalid_decay=False):
     """Create a simplified threat csv with two threat types.
 
     Parameters:
@@ -164,7 +178,30 @@ def make_threats_csv(csv_path):
     """
     with open(csv_path, 'wb') as open_table:
         open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
-        open_table.write('1,1,threat_1,linear\n')
+        if include_invalid_decay:
+            open_table.write('0.9,0.7,threat_1,invalid\n')
+        else:
+            open_table.write('0.9,0.7,threat_1,linear\n')
+        if include_missing_threat:
+            open_table.write('0.5,0.8,missing_threat,linear\n')
+
+
+def assert_array_sum(base_raster_path, desired_sum):
+    """Assert that the sum of a raster is equal to the specified value.
+
+    Parameters:
+        base_raster_path (str): the filepath of the raster to be asserted.
+        desired_sum (float): the value to be compared with the raster sum.
+
+    Returns:
+        None.
+
+    """
+    base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    base_band = base_raster.GetRasterBand(1)
+    base_array = base_band.ReadAsArray()
+    raster_sum = numpy.sum(base_array)
+    numpy.testing.assert_almost_equal(raster_sum, desired_sum)
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -180,50 +217,50 @@ class HabitatQualityTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_habitat_quality_regression(self):
-        """Habitat Quality: base regression test."""
-        from natcap.invest import habitat_quality
+    # @scm.skip_if_data_missing(SAMPLE_DATA)
+    # @scm.skip_if_data_missing(REGRESSION_DATA)
+    # def test_habitat_quality_regression(self):
+    #     """Habitat Quality: base regression test."""
+    #     from natcap.invest import habitat_quality
 
-        args = {
-            'access_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
-            'half_saturation_constant':
-            '0.5',
-            'landuse_bas_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
-            'landuse_cur_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
-            'landuse_fut_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
-            'sensitivity_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality',
-                         'sensitivity_samp.csv'),
-            'suffix':
-            'regression',
-            'threat_raster_folder':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality'),
-            'threats_uri':
-            os.path.join(SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
-            u'workspace_dir':
-            self.workspace_dir,
-        }
+    #     args = {
+    #         'access_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality', 'access_samp.shp'),
+    #         'half_saturation_constant':
+    #         '0.5',
+    #         'landuse_bas_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_bse_b.tif'),
+    #         'landuse_cur_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_cur_b.tif'),
+    #         'landuse_fut_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality', 'lc_samp_fut_b.tif'),
+    #         'sensitivity_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality',
+    #                      'sensitivity_samp.csv'),
+    #         'suffix':
+    #         'regression',
+    #         'threat_raster_folder':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality'),
+    #         'threats_uri':
+    #         os.path.join(SAMPLE_DATA, 'HabitatQuality', 'threats_samp.csv'),
+    #         u'workspace_dir':
+    #         self.workspace_dir,
+    #     }
 
-        # habitat_quality.execute(args)
-        # HabitatQualityTests._test_same_files(
-        #     os.path.join(REGRESSION_DATA, 'file_list_regression.txt'),
-        #     args['workspace_dir'])
+    #     habitat_quality.execute(args)
+    #     HabitatQualityTests._test_same_files(
+    #         os.path.join(REGRESSION_DATA, 'file_list_regression.txt'),
+    #         args['workspace_dir'])
 
-        # for output_filename in [
-        #         'rarity_f_regression.tif', 'deg_sum_out_c_regression.tif',
-        #         'deg_sum_out_f_regression.tif',
-        #         'quality_out_c_regression.tif',
-        #         'quality_out_f_regression.tif', 'rarity_c_regression.tif']:
-        #     natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-        #         os.path.join(REGRESSION_DATA, output_filename),
-        #         os.path.join(self.workspace_dir, 'output', output_filename),
-        #         1e-6)
+    #     for output_filename in [
+    #             'rarity_f_regression.tif', 'deg_sum_out_c_regression.tif',
+    #             'deg_sum_out_f_regression.tif',
+    #             'quality_out_c_regression.tif',
+    #             'quality_out_f_regression.tif', 'rarity_c_regression.tif']:
+    #         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+    #             os.path.join(REGRESSION_DATA, output_filename),
+    #             os.path.join(self.workspace_dir, 'output', output_filename),
+    #             1e-6)
 
     def test_habitat_quality_regression_fast(self):
         """Habitat Quality: base regression test with simplified data."""
@@ -235,30 +272,18 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['workspace_dir'] = temp_dir
-
         def add_to_args(uri_name, file_name):
-            """
-            Adds the uri and the path of file located in the workspace to args.
-
-            Parameters:
-                uri_name (str): the uri name to be added as the key to args.
-                file_name (str): the name of the file in the workspace folder.
-
-            Returns:
-                None.
-            """
+            """Add the uri and the file path to the args dictionary."""
             args[uri_name] = os.path.join(args['workspace_dir'], file_name)
 
         add_to_args('access_uri', 'access_samp.shp')
-
         make_access_shp(args['access_uri'])
 
-        lulc_names = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, lulc_name in enumerate(lulc_names):
-            add_to_args('landuse' + lulc_name + 'uri',
-                        'lc_samp' + lulc_name + 'b.tif')
-            make_lulc_raster(args['landuse' + lulc_name + 'uri'], lulc_val)
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios):
+            add_to_args('landuse' + scenario + 'uri',
+                        'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['landuse' + scenario + 'uri'], lulc_val)
 
         add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
@@ -270,6 +295,18 @@ class HabitatQualityTests(unittest.TestCase):
         make_threats_csv(args['threats_uri'])
 
         habitat_quality.execute(args)
+
+        for output_filename, assert_value in {
+                'deg_sum_out_c_regression.tif': 0.5,
+                'deg_sum_out_f_regression.tif': 0.3,
+                'quality_out_c_regression.tif': 1.25,
+                'quality_out_f_regression.tif': 1.0,
+                'rarity_c_regression.tif': 0.5,
+                'rarity_f_regression.tif': 0.5
+        }.iteritems():
+            assert_array_sum(
+                os.path.join(args['workspace_dir'], 'output', output_filename),
+                assert_value)
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -294,6 +331,38 @@ class HabitatQualityTests(unittest.TestCase):
     #     with self.assertRaises(ValueError):
     #         habitat_quality.execute(args)
 
+    def test_habitat_quality_missing_sensitivity_threat_fast(self):
+        """Habitat Quality: ValueError w/ missing threat in sensitivity."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('access_uri', 'access_samp.shp')
+        make_access_shp(args['access_uri'])
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(
+            args['sensitivity_uri'], include_threat=False)
+
+        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        make_lulc_raster(args['landuse_cur_uri'], 1)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'])
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
+
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
     # def test_habitat_quality_missing_threat(self):
@@ -316,6 +385,37 @@ class HabitatQualityTests(unittest.TestCase):
 
     #     with self.assertRaises(ValueError):
     #         habitat_quality.execute(args)
+
+    def test_habitat_quality_missing_threat_fast(self):
+        """Habitat Quality: expected ValueError on missing threat raster."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('access_uri', 'access_samp.shp')
+        make_access_shp(args['access_uri'])
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_uri'])
+
+        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        make_lulc_raster(args['landuse_cur_uri'], 1)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'], include_missing_threat=True)
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -340,6 +440,37 @@ class HabitatQualityTests(unittest.TestCase):
     #     with self.assertRaises(ValueError):
     #         habitat_quality.execute(args)
 
+    def test_habitat_quality_invalid_decay_type_fast(self):
+        """Habitat Quality: expected ValueError on invalid decay type."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('access_uri', 'access_samp.shp')
+        make_access_shp(args['access_uri'])
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_uri'])
+
+        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        make_lulc_raster(args['landuse_cur_uri'], 1)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'], include_invalid_decay=True)
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
+
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
     # def test_habitat_quality_bad_rasters(self):
@@ -361,6 +492,34 @@ class HabitatQualityTests(unittest.TestCase):
 
     #     with self.assertRaises(ValueError):
     #         habitat_quality.execute(args)
+
+    def test_habitat_quality_bad_rasters_fast(self):
+        """Habitat Quality: on threats that aren't real rasters."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_uri'])
+
+        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        make_lulc_raster(args['landuse_cur_uri'], 1)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'], make_bad_raster=True)
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'])
+
+        with self.assertRaises(ValueError):
+            habitat_quality.execute(args)
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -390,6 +549,38 @@ class HabitatQualityTests(unittest.TestCase):
     #         os.path.join(REGRESSION_DATA, 'small_quality_out_c.tif'),
     #         os.path.join(self.workspace_dir, 'output', 'quality_out_c.tif'),
     #         1e-6)
+
+    def test_habitat_quality_nodata_small_fast(self):
+        """Habitat Quality: on rasters that have nodata values."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_uri'])
+
+        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        make_lulc_raster(args['landuse_cur_uri'], 1)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'])
+
+        habitat_quality.execute(args)
+
+        # Reasonable to just check quality out in this case
+        assert_array_sum(
+            os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
+            1.25)
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
     # @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -421,6 +612,41 @@ class HabitatQualityTests(unittest.TestCase):
     #         os.path.join(REGRESSION_DATA, 'small_quality_out_c.tif'),
     #         os.path.join(self.workspace_dir, 'output', 'quality_out_c.tif'),
     #         1e-6)
+
+    def test_habitat_quality_nodata_small_fut_fast(self):
+        """Habitat Quality: small test with future raster only."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        def add_to_args(uri_name, file_name):
+            """Add the uri and the file path to the args dictionary."""
+            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
+
+        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_uri'])
+
+        scenarios = ['_bas_', '_cur_']  # Missing '_fut_'
+        for lulc_val, scenario in enumerate(scenarios):
+            add_to_args('landuse' + scenario + 'uri',
+                        'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['landuse' + scenario + 'uri'], lulc_val)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        add_to_args('threats_uri', 'threats_samp.csv')
+        make_threats_csv(args['threats_uri'])
+
+        habitat_quality.execute(args)
+
+        # Reasonable to just check quality out in this case
+        assert_array_sum(
+            os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
+            1.25)
 
     # @staticmethod
     # def _test_same_files(base_list_path, directory_path):
