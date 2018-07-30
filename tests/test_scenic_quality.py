@@ -13,6 +13,11 @@ from shapely.geometry import Polygon, Point
 import numpy
 
 
+_SRS = osr.SpatialReference()
+_SRS.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
+WKT = _SRS.ExportToWkt()
+
+
 class ScenicQualityTests(unittest.TestCase):
     """Tests for the InVEST Scenic Quality model."""
 
@@ -43,16 +48,26 @@ class ScenicQualityTests(unittest.TestCase):
              [2, 10, 2, 10, 2],
              [10, 2, 2, 2, 10]], dtype=numpy.int8)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
         create_raster_on_disk(
             [dem_matrix],
-            origin=(0, 0),
-            projection_wkt=wkt,
+            origin=(2, -2),
+            projection_wkt=WKT,
             nodata=255,  # byte nodata value
             pixel_size=(2, -2),
+            dataset_opts=['TILED=YES',
+                          'BIGTIFF=YES',
+                          'COMPRESS=LZW'],
             filename=dem_path)
+
+        raster = gdal.OpenEx(dem_path, gdal.OF_RASTER)
+        print('DEM GT', raster.GetGeoTransform())
+
+    @staticmethod
+    def create_aoi(aoi_path):
+        sampledata.create_vector_on_disk(
+            [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])],
+            WKT, filename=aoi_path)
+
 
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
@@ -61,10 +76,6 @@ class ScenicQualityTests(unittest.TestCase):
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         ScenicQualityTests.create_dem(dem_path)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
-
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
@@ -72,12 +83,10 @@ class ScenicQualityTests(unittest.TestCase):
              Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
              Point(5.0, -9.0),
              Point(9.0, -5.0)],
-            wkt, filename=viewpoints_path)
+            WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+        ScenicQualityTests.create_aoi(aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -112,13 +121,10 @@ class ScenicQualityTests(unittest.TestCase):
              [-1, -1, -1, -1, -1]], dtype=numpy.int)
 
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
         create_raster_on_disk(
             [dem_matrix],
             origin=(0, 0),
-            projection_wkt=wkt,
+            projection_wkt=WKT,
             nodata=-1,
             pixel_size=(0.5, -0.5),
             filename=dem_path)
@@ -128,12 +134,12 @@ class ScenicQualityTests(unittest.TestCase):
         sampledata.create_vector_on_disk(
             [Point(1.25, -0.5),
              Point(-1.0, -5.0)],  # off the edge of DEM, won't be included.
-            wkt, filename=viewpoints_path)
+            WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         sampledata.create_vector_on_disk(
             [Polygon([(0, 0), (0, -2.5), (2.5, -2.5), (2.5, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+            WKT, filename=aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -161,10 +167,6 @@ class ScenicQualityTests(unittest.TestCase):
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         ScenicQualityTests.create_dem(dem_path)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
-
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
@@ -172,12 +174,10 @@ class ScenicQualityTests(unittest.TestCase):
              Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
              Point(5.0, -9.0),
              Point(9.0, -5.0)],
-            wkt, filename=viewpoints_path)
+            WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+        ScenicQualityTests.create_aoi(aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -260,18 +260,14 @@ class ScenicQualityTests(unittest.TestCase):
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         ScenicQualityTests.create_dem(dem_path)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
-
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
-            [Point(5.0, 0.0),
-             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
-             Point(5.0, -8.0),
-             Point(9.0, -4.0)],
-            wkt, filename=viewpoints_path,
+            [Point(7.0, -3.0),
+             Point(1.0, -7.0),  # off the edge of DEM, won't be included.
+             Point(7.0, -11.0),
+             Point(11.0, -7.0)],
+            WKT, filename=viewpoints_path,
             fields={'RADIUS': 'real',
                     'HEIGHT': 'real',
                     'WEIGHT': 'real'},
@@ -282,9 +278,7 @@ class ScenicQualityTests(unittest.TestCase):
                 {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5}])
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+        ScenicQualityTests.create_aoi(aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -311,7 +305,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         value_raster = gdal.OpenEx(
             os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value.tif').gdal.OF_RASTER)
+                         'vshed_value.tif'), gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -352,10 +346,6 @@ class ScenicQualityTests(unittest.TestCase):
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         ScenicQualityTests.create_dem(dem_path)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
-
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
@@ -363,12 +353,10 @@ class ScenicQualityTests(unittest.TestCase):
              Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
              Point(5.0, -8.0),
              Point(9.0, -4.0)],
-            wkt, filename=viewpoints_path)
+            WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+        ScenicQualityTests.create_aoi(aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -408,10 +396,6 @@ class ScenicQualityTests(unittest.TestCase):
         dem_path = os.path.join(self.workspace_dir, 'dem.tif')
         ScenicQualityTests.create_dem(dem_path)
 
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(32331)  # UTM zone 31s
-        wkt = srs.ExportToWkt()
-
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
@@ -419,12 +403,10 @@ class ScenicQualityTests(unittest.TestCase):
              Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
              Point(5.0, -8.0),
              Point(9.0, -4.0)],
-            wkt, filename=viewpoints_path)
+            WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
-        sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -9), (9, -9), (9, 0), (0, 0)])],
-            wkt, filename=aoi_path)
+        ScenicQualityTests.create_aoi(aoi_path)
 
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
