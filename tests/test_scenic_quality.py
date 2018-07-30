@@ -68,6 +68,17 @@ class ScenicQualityTests(unittest.TestCase):
             [Polygon([(2, -2), (2, -12), (12, -12), (12, -2), (2, -2)])],
             WKT, filename=aoi_path)
 
+    @staticmethod
+    def create_viewpoints(viewpoints_path, fields=None, attributes=None):
+        sampledata.create_vector_on_disk(
+            [Point(7.0, -3.0),
+             Point(1.0, -7.0),  # off the edge of DEM, won't be included.
+             Point(7.0, -11.0),
+             Point(11.0, -7.0)],
+            projection=WKT,
+            fields=fields,
+            attributes=attributes,
+            filename=viewpoints_path)
 
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
@@ -78,12 +89,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(5.0, -1.0),
-             Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
-             Point(5.0, -9.0),
-             Point(9.0, -5.0)],
-            WKT, filename=viewpoints_path)
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         ScenicQualityTests.create_aoi(aoi_path)
@@ -169,12 +175,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(5.0, -1.0),
-             Point(-1.0, -5.0),  # off the edge of DEM, won't be included.
-             Point(5.0, -9.0),
-             Point(9.0, -5.0)],
-            WKT, filename=viewpoints_path)
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         ScenicQualityTests.create_aoi(aoi_path)
@@ -262,12 +263,8 @@ class ScenicQualityTests(unittest.TestCase):
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(7.0, -3.0),
-             Point(1.0, -7.0),  # off the edge of DEM, won't be included.
-             Point(7.0, -11.0),
-             Point(11.0, -7.0)],
-            WKT, filename=viewpoints_path,
+        ScenicQualityTests.create_viewpoints(
+            viewpoints_path,
             fields={'RADIUS': 'real',
                     'HEIGHT': 'real',
                     'WEIGHT': 'real'},
@@ -348,12 +345,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(5.0, 0.0),
-             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
-             Point(5.0, -8.0),
-             Point(9.0, -4.0)],
-            WKT, filename=viewpoints_path)
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         ScenicQualityTests.create_aoi(aoi_path)
@@ -398,12 +390,7 @@ class ScenicQualityTests(unittest.TestCase):
 
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
-        sampledata.create_vector_on_disk(
-            [Point(5.0, 0.0),
-             Point(-1.0, -4.0),  # off the edge of DEM, won't be included.
-             Point(5.0, -8.0),
-             Point(9.0, -4.0)],
-            WKT, filename=viewpoints_path)
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         ScenicQualityTests.create_aoi(aoi_path)
