@@ -165,7 +165,6 @@ def log_to_file(logfile, threadname=None, logging_level=logging.NOTSET,
     if os.path.exists(logfile):
         LOGGER.warn('Logfile %s exists and will be overwritten', logfile)
 
-
     handler = logging.FileHandler(logfile, 'w', encoding='UTF-8')
     formatter = logging.Formatter(log_fmt, date_fmt)
     root_logger = logging.getLogger()

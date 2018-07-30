@@ -252,15 +252,15 @@ class LogToFileTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace)
 
-    def test_log_to_file_no_thread(self):
-        """Utils: Verify that we can exclude messages not from this thread."""
+    def test_log_to_file_all_threads(self):
+        """Utils: Verify that we can capture messages from all threads."""
         from natcap.invest.utils import log_to_file
 
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
             thread_logger = logging.getLogger()
-            thread_logger.info('this should not be logged')
+            thread_logger.info('this is from a thread')
 
         local_logger = logging.getLogger()
 
@@ -280,7 +280,7 @@ class LogToFileTests(unittest.TestCase):
 
         messages = [msg for msg in open(logfile).read().split('\n')
                     if msg if msg]
-        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(messages), 3)
 
     def test_log_to_file_from_thread(self):
         """Utils: Verify that we can filter from a threading.Thread."""
