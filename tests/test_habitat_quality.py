@@ -63,7 +63,7 @@ def make_raster_from_array(base_array, base_raster_path):
 
 
 def make_access_shp(access_shp_path):
-    """Create an accessibility polygon shapefile with two access values.
+    """Create a 2000x1000 accessibility polygon shapefile with two access values.
 
     Parameters:
         access_shp_path (str): the path for the shapefile.
@@ -108,7 +108,7 @@ def make_access_shp(access_shp_path):
 
 
 def make_lulc_raster(raster_path, lulc_val):
-    """Create a 30x10 raster on designated path with designated LULC code.
+    """Create a 2x1 raster on raster path with designated LULC code.
 
     Parameters:
         raster_path (str): the path for the LULC raster.
@@ -124,7 +124,7 @@ def make_lulc_raster(raster_path, lulc_val):
 
 
 def make_threats_raster(folder_path, make_bad_raster=False):
-    """Create a 40x10 raster on designated path with 1 as threat and 0 as none.
+    """Create a 2x1 raster on designated path with 1 as threat and 0 as none.
 
     Parameters:
         folder_path (str): the folder path for saving the threat rasters.
