@@ -4,7 +4,7 @@ from natcap.invest.ui import model, inputs
 import natcap.invest.scenario_gen_proximity
 import natcap.invest.scenario_generator.scenario_generator
 
-from osgeo import ogr
+from osgeo import gdal
 
 
 class ScenarioGenProximity(model.InVESTModel):

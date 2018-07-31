@@ -2,11 +2,44 @@
 
 Unreleased Changes
 ------------------
+* Updated Recreation server's database to include metadata from photos taken
+  from 2005-2017 (previous range was 2005-2014). The new range is reflected
+  in the UI.
+* Fixed an issue with the InVEST binary build where binaries on Windows would
+  crash with an error saying Python27.dll could not be loaded.
+* Fixed an issue in the Rule-Based Scenario Generator UI where vector column
+  names from override and constraint layers were not being loaded.  This bug
+  caused the field 'UNKNOWN' to be passed to the model, causing an error.
 * Fixed an issue with the InVEST UI (all models), where attempting to
   drag-and-drop a directory onto a model input would cause the application to
   crash.
 * Coastal Vulnerability UI now specifies a number of reasonable defaults for
   some numeric inputs.
+* Fixed an issue with the Fisheries UI where alpha and beta parameter inputs
+  were incorrectly disabled for the Ricker recruitment function.
+* InVEST now uses a Makefile to automate the build processes.  GNU Make is
+  required to use the Makefile.  See ``README.rst`` for instructions on
+  building InVEST.  This replaces the old ``pavement.py`` build entrypoint,
+  which has been removed.
+* Fixed an issue with the InVEST UI (all models), where attempting to
+  drag-and-drop a directory onto a model input would cause the application to
+  crash.
+* Fixed an issue with Forest Carbon Edge Effect where the UI layer was always
+  causing the model to run with only the aboveground carbon pool
+* Added functionality to the InVEST UI so that ``Dropdown`` inputs can now map
+  dropdown values to different output values.
+* Fixed an issue in the Crop Production Percentile model that would treat the
+  optional AOI vector field as a filename and crash on a run if it were empty.
+* Fixing an issue in the Pollination Model that would cause occasional crashes
+  due to a missing dependent task; it had previously been patched by setting
+  taskgraph to operate in single thread mode. This restores multithreading
+  in the pollination model.
+* Fixed an issue in the water yield / hydropower model that would skip
+  calculation of water demand tables when "water scarcity" was enabled.
+* Fixed an issue in the model data of the crop production model where some
+  crops were using incorrect climate bin rasters. Since the error was in the
+  data and not the code, users will need to download the most recent version
+  of InVEST's crop model data during the installation step to get the fix.
 
 3.4.4 (2018-03-26)
 ------------------

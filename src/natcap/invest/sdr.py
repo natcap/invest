@@ -75,7 +75,7 @@ _TMP_BASE_FILES = {
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
 # for rasters that are any range
 _TARGET_NODATA = -1.0
-_IC_NODATA = numpy.finfo('float32').min
+_IC_NODATA = float(numpy.finfo('float32').min)
 
 
 def execute(args):
@@ -157,7 +157,7 @@ def execute(args):
     dem_pixel_size = pygeoprocessing.get_raster_info(
         args['dem_path'])['pixel_size']
     pygeoprocessing.align_and_resize_raster_stack(
-        base_list, aligned_list, ['nearest'] * len(base_list),
+        base_list, aligned_list, ['near'] * len(base_list),
         dem_pixel_size, 'intersection',
         base_vector_path_list=[args['watersheds_path']],
         raster_align_index=0)

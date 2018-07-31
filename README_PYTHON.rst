@@ -50,6 +50,7 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 Additionally, a python binding for Qt is needed to use the InVEST GUI, but is
 not required for development against ``natcap.invest``.  InVEST uses the
 interface library ``qtpy`` to support ``PyQt4``, ``PyQt5``, and ``PySide``.
+One of these bindings for Qt must be installed in order to use the GUI.
 
 
 Installing from Source
@@ -63,15 +64,6 @@ is:
 
     $ pip install natcap.invest
 
-If you are working within virtual environments, there is a `documented issue
-with namespaces 
-<https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version>`__
-in setuptools that may cause problems when importing packages within the
-``natcap`` namespace.  The current workaround is to use these extra pip flags:
-
-.. code-block:: console
-
-    $ pip install natcap.invest --egg --no-binary :all:
 
 Installing the latest development version
 -----------------------------------------

@@ -3,23 +3,24 @@
 # This file records the packages and requirements needed in order for
 # all models of natcap.invest to work as expected.
 #
+# Packages required for extras (like the UI) are in setup.py.
+#
 # Note that there may be some OS-specific requirements, so be sure to run
-# `paver check` to verify you have all the required packages.
+# `make check` to verify you have all the required packages.
+#
+# Any lines with "# pip-only" at the end will be processed by
+# scripts/convert-requirements-to-conda-yml.py as though it can only be found
+# on pip.
 
-Pyro4==4.41
-gdal>=2.0,<3.0
-matplotlib
-natcap.versioner>=0.4.2
-pygeoprocessing>=0.6.0,<0.7.0
+GDAL>=2.0,<3.0
+Pyro4==4.41  # pip-only
+pandas>=0.22.0
 numpy>=1.11.0
-rtree>=0.8.2
+Rtree>=0.8.2
 scipy>=0.16.1
-shapely
-setuptools>=8.0
-qtpy<1.3
-qtawesome
+Shapely
 six
-taskgraph>=0.2.3,<0.3.0
-# psutil is used, but not required, by taskgraph to lower process priority
-psutil>=5.2.2
+pygeoprocessing>=1.2.1
+taskgraph[niced_processes]>=0.6.0
 chardet>=3.0.4
+matplotlib

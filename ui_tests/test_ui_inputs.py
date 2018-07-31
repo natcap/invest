@@ -965,6 +965,21 @@ class DropdownTest(GriddedInputTest):
             label='label', options=('foo', 'bar', 'baz'))
         self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
 
+    def test_options_with_return_value_map(self):
+        return_value_map = {'foo': 1, 'bar': 2, 'baz': 3}
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'),
+            return_value_map=return_value_map)
+        self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
+        self.assertEqual(input_instance.return_value_map,
+                         {'foo': '1', 'bar': '2', 'baz': '3'})
+
+    def test_options_return_value_mismatch(self):
+        with self.assertRaises(ValueError):
+            self.__class__.create_input(
+                label='label', options=(1, 2, 3),
+                return_value_map={'foo': 4, 1: 'bar'})
+
     def test_options_typecast(self):
         input_instance = self.__class__.create_input(
             label='label', options=(1, 2, 3))
@@ -1008,6 +1023,19 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(1, 2, 3))
         with self.assertRaises(ValueError):
             input_instance.set_value('foo')
+
+    def test_set_value_from_return_map(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=(1, 2, 3),
+            return_value_map={1: 'a', 2: 'b', 3: 'c'}
+        )
+        input_instance.set_value('a')
+        self.assertEqual(input_instance.value(), 'a')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 0)
+
+        input_instance.set_value(3)
+        self.assertEqual(input_instance.value(), 'c')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 2)
 
     def test_value(self):
         input_instance = self.__class__.create_input(
@@ -2027,15 +2055,24 @@ class ModelTests(_QtTest):
                 return []
             validate_func = _validate
 
+        # Fetch settings and clear them before the UI constructs.
+        # This avoids a scenario where invalid settings have been
+        # constructed and not destroyed properly before the test model object
+        # could complete its setup, causing lots of test failures.
+        label = 'Test model'
+        settings = model.SETTINGS_TEMPLATE(label)
+        settings.clear()
+
         class _TestInVESTModel(model.InVESTModel):
             def __init__(self):
-                model.InVESTModel.__init__(self,
-                                     label='Test model',
-                                     target=target_func,
-                                     validator=validate_func,
-                                     localdoc='testmodel.html')
-                # Default model class already has workspace and suffix input.
+                model.InVESTModel.__init__(
+                    self,
+                    label=label,
+                    target=target_func,
+                    validator=validate_func,
+                    localdoc='testmodel.html')
 
+            # Default model class already has workspace and suffix input.
             def assemble_args(self):
                 return {
                     self.workspace.args_key: self.workspace.value(),
@@ -2047,12 +2084,7 @@ class ModelTests(_QtTest):
                 self.settings.clear()
                 model.InVESTModel.__del__(self)
 
-        model = _TestInVESTModel()
-
-        # clear the model's settings before we run our test.
-        model.settings.clear()
-
-        return model
+        return _TestInVESTModel()
 
     def test_model_defaults(self):
         """UI Model: Check that workspace and suffix are added."""

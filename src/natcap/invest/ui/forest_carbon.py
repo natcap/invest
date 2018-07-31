@@ -43,7 +43,9 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
                 u"the carbon pool calculation.  Otherwise only "
                 u"'c_above' is considered."),
             label=u'Carbon Pools to Calculate',
-            options=[u'all carbon pools', u'above ground only'])
+            options=[u'all carbon pools', u'above ground only'],
+            return_value_map={'all carbon pools': 'all',
+                              'above ground only': 'above_ground'})
         self.add_input(self.pools_to_calculate)
         self.compute_forest_edge_effects = inputs.Checkbox(
             args_key=u'compute_forest_edge_effects',

@@ -8,7 +8,7 @@ import tempfile
 import shutil
 from datetime import datetime
 import time
-import csv
+import pandas
 
 import numpy
 from osgeo import gdal
@@ -270,10 +270,9 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     # Make some kind of geotransform, it doesn't matter what but
     # will make GIS libraries behave better if it's all defined
-    kernel_dataset.SetGeoTransform([444720, 30, 0, 3751320, 0, -30])
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
     srs = osr.SpatialReference()
-    srs.SetUTM(11, 1)
-    srs.SetWellKnownGeogCS('NAD27')
+    srs.SetWellKnownGeogCS('WGS84')
     kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
@@ -398,17 +397,8 @@ def build_file_registry(base_file_path_list, file_suffix):
     return f_reg
 
 
-def _attempt_float(value):
-    """Attempt to cast `value` to a float.  If fail, return original value."""
-    try:
-        return float(value)
-    except ValueError:
-        return value
-
-
 def build_lookup_from_csv(
-        table_path, key_field, to_lower=True, numerical_cast=True,
-        warn_if_missing=True):
+        table_path, key_field, to_lower=True, warn_if_missing=True):
     """Read a CSV table into a dictionary indexed by `key_field`.
 
     Creates a dictionary from a CSV whose keys are unique entries in the CSV
@@ -420,16 +410,10 @@ def build_lookup_from_csv(
         table_path (string): path to a CSV file containing at
             least the header key_field
         key_field: (string): a column in the CSV file at `table_path` that
-            can uniquely identify each row in the table.  If `numerical_cast`
-            is true the values will be cast to floats/ints/unicode if
-            possible.
-        to_lower (string): if True, converts all unicode in the CSV,
+            can uniquely identify each row in the table.
+        to_lower (bool): if True, converts all unicode in the CSV,
             including headers and values to lowercase, otherwise uses raw
             string values.
-        numerical_cast (bool): If true, all values in the CSV table will
-            attempt to be cast to a floating point type; if it fails will be
-            left as unicode.  If false, all values will be considered raw
-            unicode.
         warn_if_missing (bool): If True, warnings are logged if there are
             empty headers or value rows.
 
@@ -440,50 +424,41 @@ def build_lookup_from_csv(
             }
 
         if `to_lower` all strings including key_fields and values are
-        converted to lowercase unicde.  if `numerical_cast` all values
-        that can be represented as floats are, otherwise unicode.
+        converted to lowercase unicode.
     """
-    with open(table_path, 'rbU') as table_file:
-        # Detect the dialect
-        # From experience, dialect detection only works on whole lines.
-        try:
-            dialect = csv.Sniffer().sniff('\n'.join(table_file.readlines(20)),
-                                          delimiters=',;')
-        except csv.Error as error:
-            # When the table is malformed, assume the CSV default dialect.
-            LOGGER.exception('Assuming dialect to be "excel"')
-            dialect = 'excel'
-        finally:
-            table_file.seek(0)
+    table = pandas.read_csv(table_path, sep=None, engine='python')
+    header_row = list(table)
+    key_field = unicode(key_field)
+    if to_lower:
+        key_field = key_field.lower()
+        header_row = [
+            x if not isinstance(x, basestring) else x.lower()
+            for x in header_row]
 
-        # Read the table now that we know the dialect.
-        reader = csv.reader(table_file, dialect=dialect)
-        header_row = reader.next()
-        header_row = [unicode(x) for x in header_row]
-        key_field = unicode(key_field)
+    if key_field not in header_row:
+        raise ValueError(
+            '%s expected in %s for the CSV file at %s' % (
+                key_field, header_row, table_path))
+    if warn_if_missing and '' in header_row:
+        LOGGER.warn(
+            "There are empty strings in the header row at %s", table_path)
+
+    key_index = header_row.index(key_field)
+    lookup_dict = {}
+    for index, row in table.iterrows():
         if to_lower:
-            key_field = key_field.lower()
-            header_row = [x.lower() for x in header_row]
-        if key_field not in header_row:
-            raise ValueError(
-                '%s expected in %s for the CSV file at %s' % (
-                    key_field, header_row, table_path))
-        if warn_if_missing and '' in header_row:
+            row = pandas.Series([
+                x if not isinstance(x, basestring) else x.lower()
+                for x in row])
+        # check if every single element in the row is null
+        if row.isnull().values.all():
             LOGGER.warn(
-                "There are empty strings in the header row at %s", table_path)
-        key_index = header_row.index(key_field)
-        lookup_dict = {}
-        for row in reader:
-            if to_lower:
-                row = [x.lower() for x in row]
-            if numerical_cast:
-                row = [_attempt_float(x) for x in row]
-            if warn_if_missing and '' in row:
-                LOGGER.warn(
-                    "There are empty strings in row %s in %s", row,
-                    table_path)
-            lookup_dict[row[key_index]] = dict(zip(header_row, row))
-        return lookup_dict
+                "Encountered an entirely blank row on line %d", index+2)
+            continue
+        if row.isnull().values.any():
+            row = row.fillna('')
+        lookup_dict[row[key_index]] = dict(zip(header_row, row))
+    return lookup_dict
 
 
 def make_directories(directory_list):

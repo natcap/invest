@@ -7,7 +7,6 @@ import re
 import numpy
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 import pygeoprocessing
 
 from . import utils
@@ -118,8 +117,7 @@ def execute(args):
         None.
     """
     crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
-        numerical_cast=True)
+        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
     bad_crop_name_list = []
     for crop_name in crop_to_landcover_table:
         crop_climate_bin_raster_path = os.path.join(
@@ -127,7 +125,7 @@ def execute(args):
             _EXTENDED_CLIMATE_BIN_FILE_PATTERN % crop_name)
         if not os.path.exists(crop_climate_bin_raster_path):
             bad_crop_name_list.append(crop_name)
-    if len(bad_crop_name_list) > 0:
+    if bad_crop_name_list:
         raise ValueError(
             "The following crop names were provided in %s but no such crops "
             "exist for this model: %s" % (
@@ -173,15 +171,14 @@ def execute(args):
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
             crop_climate_bin_raster_info['pixel_size'],
-            clipped_climate_bin_raster_path, 'nearest',
+            clipped_climate_bin_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         climate_percentile_yield_table_path = os.path.join(
             args['model_data_path'],
             _CLIMATE_PERCENTILE_TABLE_PATTERN % crop_name)
         crop_climate_percentile_table = utils.build_lookup_from_csv(
-            climate_percentile_yield_table_path, 'climate_bin',
-            to_lower=True, numerical_cast=True)
+            climate_percentile_yield_table_path, 'climate_bin', to_lower=True)
         yield_percentile_headers = [
             x for x in crop_climate_percentile_table.itervalues().next()
             if x != 'climate_bin']
@@ -213,7 +210,7 @@ def execute(args):
             pygeoprocessing.warp_raster(
                 coarse_yield_percentile_raster_path,
                 landcover_raster_info['pixel_size'],
-                interpolated_yield_percentile_raster_path, 'cubic_spline',
+                interpolated_yield_percentile_raster_path, 'cubicspline',
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
@@ -266,7 +263,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             global_observed_yield_raster_path,
             global_observed_yield_raster_info['pixel_size'],
-            clipped_observed_yield_raster_path, 'nearest',
+            clipped_observed_yield_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         observed_yield_nodata = (
@@ -299,7 +296,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             zeroed_observed_yield_raster_path,
             landcover_raster_info['pixel_size'],
-            interpolated_observed_yield_raster_path, 'cubic_spline',
+            interpolated_observed_yield_raster_path, 'cubicspline',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 
@@ -408,7 +405,7 @@ def execute(args):
                 total_area * pixel_area_ha))
 
     if ('aggregate_polygon_path' in args and
-            args['aggregate_polygon_path'] is not None):
+            args['aggregate_polygon_path'] not in ['', None]):
         LOGGER.info("aggregating result over query polygon")
         # reproject polygon to LULC's projection
         target_aggregate_vector_path = os.path.join(

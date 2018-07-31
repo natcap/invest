@@ -56,6 +56,11 @@ _DATASTACK_SAVE_OPTS = {
         'savefile': _DATASTACK_BASE_FILENAME % 'tar.gz',
     }
 }
+# To create a QSettings object, call this with the model label as the only
+# argument.  Example:  settings = SETTINGS_TEMPLATE('My Model')
+SETTINGS_TEMPLATE = functools.partial(
+    QtCore.QSettings, QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
+    'Natural Capital Project')
 
 
 @contextlib.contextmanager
@@ -482,8 +487,6 @@ class AboutDialog(QtWidgets.QDialog):
                 ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
                 ('matplotlib', 'BSD', 'http://matplotlib.org'),
-                ('natcap.versioner', 'BSD',
-                 'http://bitbucket.org/jdouglass/versioner'),
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
@@ -1185,11 +1188,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+        self.settings = SETTINGS_TEMPLATE(self.label)
+        LOGGER.info('Model settings stored in %s', self.settings.fileName())
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
@@ -1253,7 +1253,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack, parameter set or logfile...', self.load_datastack,
+            'L&oad datastack, parameter set or logfile...',
+            self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
@@ -1265,7 +1266,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
             time_obj = datetime.datetime.strptime(timestamp,
                                                   '%Y-%m-%dT%H:%M:%S.%f')
-            if time_obj .date() == datetime.date.today():
+            if time_obj.date() == datetime.date.today():
                 date_label = 'Today at %s' % time_obj.strftime('%H:%M')
             else:
                 date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
@@ -1321,7 +1322,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         # store the new value.
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
 
         recently_opened_datastacks[datastack_path] = timestamp
 

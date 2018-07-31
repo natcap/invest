@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
+import pandas
 import numpy
-import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
 MODEL_DATA_PATH = os.path.join(
@@ -56,8 +56,12 @@ class CropProductionTests(unittest.TestCase):
             args['workspace_dir'], 'aggregate_results.csv')
         expected_result_table_path = os.path.join(
             TEST_DATA_PATH, 'expected_aggregate_results.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            expected_result_table_path, result_table_path)
+        expected_result_table = pandas.read_csv(
+            expected_result_table_path)
+        result_table = pandas.read_csv(
+            result_table_path)
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)
 
     @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
     @scm.skip_if_data_missing(MODEL_DATA_PATH)
@@ -147,5 +151,9 @@ class CropProductionTests(unittest.TestCase):
             args['workspace_dir'], 'aggregate_results.csv')
         expected_result_table_path = os.path.join(
             TEST_DATA_PATH, 'expected_regression_aggregate_results.csv')
-        pygeoprocessing.testing.assert_csv_equal(
-            expected_result_table_path, result_table_path)
+        expected_result_table = pandas.read_csv(
+            expected_result_table_path)
+        result_table = pandas.read_csv(
+            result_table_path)
+        pandas.testing.assert_frame_equal(
+            expected_result_table, result_table, check_dtype=False)

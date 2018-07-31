@@ -21,7 +21,7 @@ from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-# We're hardcoding this to 0 now which makes taskgraph run in threading mode
+# We're hardcoding this to -1 now which makes taskgraph run in serial mode
 # we'll do that until we're comfortable with taskgraph in the wild.
 _N_WORKERS = 0
 
@@ -235,6 +235,7 @@ def execute(args):
     if farm_vector_path is not None:
         # ensure farm vector is in the same projection as the landcover map
         reproject_farm_task = task_graph.add_task(
+            task_name='reproject_farm_task',
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['farm_vector_path'], landcover_raster_info['projection'],
@@ -253,6 +254,7 @@ def execute(args):
             nesting_substrate_index_path)
 
         landcover_substrate_index_tasks[substrate] = task_graph.add_task(
+            task_name='reclassify_to_substrate_%s' % substrate,
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
@@ -279,6 +281,7 @@ def execute(args):
                 substrate] = farm_nesting_substrate_index_path
             farm_substrate_rasterize_task_list.append(
                 task_graph.add_task(
+                    task_name='rasterize_nesting_substrate_%s' % substrate,
                     func=_rasterize_vector_onto_base,
                     args=(
                         scenario_variables['nesting_substrate_index_path'][
@@ -314,6 +317,7 @@ def execute(args):
             scenario_variables['habitat_nesting_index_path'][species])
 
         habitat_nesting_tasks[species] = task_graph.add_task(
+            task_name='calculate_habitat_nesting_%s' % species,
             func=calculate_habitat_nesting_index_op,
             dependent_task_list=dependent_task_list,
             target_path_list=[
@@ -330,6 +334,7 @@ def execute(args):
                 season, file_suffix))
 
         relative_floral_abudance_task = task_graph.add_task(
+            task_name='reclassify_to_floral_abundance_%s' % season,
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (args['landcover_raster_path'], 1),
@@ -353,6 +358,7 @@ def execute(args):
 
             # override the relative floral task because we'll need this one
             relative_floral_abudance_task = task_graph.add_task(
+                task_name='relative_floral_abudance_task_%s' % season,
                 func=_rasterize_vector_onto_base,
                 args=(
                     relative_floral_abundance_index_path,
@@ -390,6 +396,8 @@ def execute(args):
                     (species, season)])
             foraged_flowers_index_task_map[(species, season)] = (
                 task_graph.add_task(
+                    task_name='calculate_foraged_flowers_%s_%s' % (
+                        species, season),
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(relative_abundance_path, 1)],
@@ -418,6 +426,7 @@ def execute(args):
                 species, file_suffix))
 
         local_foraging_effectiveness_task = task_graph.add_task(
+            task_name='local_foraging_effectiveness_%s' % species,
             func=pygeoprocessing.raster_calculator,
             args=(
                 foraged_flowers_path_band_list,
@@ -438,6 +447,7 @@ def execute(args):
                 alpha, file_suffix))
 
         alpha_kernel_raster_task = task_graph.add_task(
+            task_name='decay_kernel_raster_%s' % alpha,
             func=utils.exponential_decay_kernel_raster,
             args=(alpha, kernel_path),
             target_path_list=[kernel_path])
@@ -449,6 +459,7 @@ def execute(args):
         floral_resources_index_path_map[species] = floral_resources_index_path
 
         floral_resources_task = task_graph.add_task(
+            task_name='convolve_%s' % species,
             func=pygeoprocessing.convolve_2d,
             args=(
                 (local_foraging_effectiveness_path, 1), (kernel_path, 1),
@@ -471,6 +482,7 @@ def execute(args):
         ps_index_op = _PollinatorSupplyIndexOp(
             scenario_variables['species_abundance'][species])
         pollinator_supply_task = task_graph.add_task(
+            task_name='calculate_pollinator_supply_%s' % species,
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(scenario_variables['habitat_nesting_index_path'][species],
@@ -488,6 +500,7 @@ def execute(args):
                 species, file_suffix))
 
         convolve_ps_task = task_graph.add_task(
+            task_name='convolve_ps_%s' % species,
             func=pygeoprocessing.convolve_2d,
             args=(
                 (pollinator_supply_index_path, 1), (kernel_path, 1),
@@ -512,6 +525,7 @@ def execute(args):
                     species, season, file_suffix))
             pollinator_abundance_task_map[(species, season)] = (
                 task_graph.add_task(
+                    task_name='calculate_poll_abudance_%s' % species,
                     func=pygeoprocessing.raster_calculator,
                     args=(
                         [(foraged_flowers_index_path, 1),
@@ -537,6 +551,7 @@ def execute(args):
     blank_raster_path = os.path.join(
         intermediate_output_dir, _BLANK_RASTER_FILE_PATTERN % file_suffix)
     blank_raster_task = task_graph.add_task(
+        task_name='create_blank_raster',
         func=pygeoprocessing.new_raster_from_base,
         args=(
             args['landcover_raster_path'], blank_raster_path,
@@ -558,6 +573,7 @@ def execute(args):
             for species in scenario_variables['species_list']]
 
         total_pollinator_abundance_task[season] = task_graph.add_task(
+            task_name='calculate_poll_abudnce_%s_%s' % (species, season),
             func=pygeoprocessing.raster_calculator,
             args=(
                 pollinator_abudnance_season_path_band_list, _SumRasters(),
@@ -572,6 +588,7 @@ def execute(args):
             intermediate_output_dir, _HALF_SATURATION_FILE_PATTERN % (
                 season, file_suffix))
         half_saturation_task = task_graph.add_task(
+            task_name='half_saturation_rasterize_%s' % season,
             func=_rasterize_vector_onto_base,
             args=(
                 blank_raster_path, farm_vector_path,
@@ -585,6 +602,7 @@ def execute(args):
             intermediate_output_dir, _FARM_POLLINATOR_SEASON_FILE_PATTERN % (
                 season, file_suffix))
         farm_pollinator_season_task_list.append(task_graph.add_task(
+            task_name='farm_pollinator_%s' % season,
             func=pygeoprocessing.raster_calculator,
             args=(
                 [(half_saturation_raster_path, 1),
@@ -600,6 +618,7 @@ def execute(args):
     farm_pollinator_path = os.path.join(
         output_dir, _FARM_POLLINATOR_FILE_PATTERN % file_suffix)
     farm_pollinator_task = task_graph.add_task(
+        task_name='sum_farm_pollinators',
         func=pygeoprocessing.raster_calculator,
         args=(
             [(path, 1) for path in farm_pollinator_season_path_list],
@@ -613,17 +632,19 @@ def execute(args):
         intermediate_output_dir,
         _MANAGED_POLLINATOR_FILE_PATTERN % file_suffix)
     managed_pollinator_task = task_graph.add_task(
+        task_name='rasterize_managed_pollinators',
         func=_rasterize_vector_onto_base,
         args=(
             blank_raster_path, farm_vector_path, _MANAGED_POLLINATORS_FIELD,
             managed_pollinator_path),
-        dependent_task_list=[reproject_farm_task],
+        dependent_task_list=[reproject_farm_task, blank_raster_task],
         target_path_list=[managed_pollinator_path])
 
     # calculate PYT
     total_pollinator_yield_path = os.path.join(
         output_dir, _TOTAL_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
     pyt_task = task_graph.add_task(
+        task_name='calculate_total_pollinators',
         func=pygeoprocessing.raster_calculator,
         args=(
             [(managed_pollinator_path, 1), (farm_pollinator_path, 1)],
@@ -636,6 +657,7 @@ def execute(args):
     wild_pollinator_yield_path = os.path.join(
         output_dir, _WILD_POLLINATOR_YIELD_FILE_PATTERN % file_suffix)
     wild_pollinator_task = task_graph.add_task(
+        task_name='calcualte_wild_pollinators',
         func=pygeoprocessing.raster_calculator,
         args=(
             [(managed_pollinator_path, 1), (total_pollinator_yield_path, 1)],
@@ -851,8 +873,7 @@ def _parse_scenario_variables(args):
         farm_vector_path = None
 
     guild_table = utils.build_lookup_from_csv(
-        guild_table_path, 'species', to_lower=True,
-        numerical_cast=True)
+        guild_table_path, 'species', to_lower=True)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
     guild_headers = guild_table.itervalues().next().keys()
@@ -867,8 +888,7 @@ def _parse_scenario_variables(args):
                     guild_headers))
 
     landcover_biophysical_table = utils.build_lookup_from_csv(
-        landcover_biophysical_table_path, 'lucode', to_lower=True,
-        numerical_cast=True)
+        landcover_biophysical_table_path, 'lucode', to_lower=True)
     biophysical_table_headers = (
         landcover_biophysical_table.itervalues().next().keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
@@ -913,7 +933,7 @@ def _parse_scenario_variables(args):
             for i in xrange(farm_layer_defn.GetFieldCount())]
         for header in _EXPECTED_FARM_HEADERS:
             matches = re.findall(header, " ".join(farm_headers))
-            if len(matches) == 0:
+            if not matches:
                 raise ValueError(
                     "Missing an expected headers '%s'from %s.\n"
                     "Got these headers instead %s" % (

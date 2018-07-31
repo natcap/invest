@@ -4,17 +4,31 @@
 # by infrastructure, but not by natcap.invest.
 #
 # Note that there may be some OS-specific requirements, so be sure to run
-# `paver check` to verify you have all the required packages.
+# `make check` to verify you have all the required packages.
+#
+# Any lines with "# pip-only" at the end will be processed by
+# scripts/convert-requirements-to-conda-yml.py as though it can only be found
+# on pip.
 
-# Pip<10 is only needed for pavement infrastructure and egg installs of natcap.versioner.
-pip<10,>=6.0.0
-
-cython
+Cython
 virtualenv>=12.0.1
 nose
-sphinx==1.3.1
-paramiko
-paver
+nose-timer
 mock
-faulthandler
 future
+wheel>=0.27.0
+pypiwin32; sys_platform == 'win32'  # pip-only
+setuptools>=8.0
+Sphinx>=1.3.1,<1.7.1
+sphinx-rtd-theme
+PyInstaller==3.3.1  # pip-only
+setuptools_scm
+requests
+coverage
+
+# Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
+# with some other package versions, but I haven't had time to try to get
+# other versions to work.
+dmgbuild==1.1.0; sys_platform == 'darwin'  # pip-only
+mac-alias==1.1.0; sys_platform == 'darwin'  # pip-only
+ds-store==1.0.1; sys_platform == 'darwin'  # pip-only

@@ -271,7 +271,7 @@ class Fisheries(model.InVESTModel):
                           self.total_recur_recruits):
             parameter.set_interactive(False)
 
-        if self.recruitment_type.value() == 'Beverton-Holt':
+        if self.recruitment_type.value() in ('Beverton-Holt', 'Ricker'):
             for parameter in (self.spawn_units, self.alpha, self.beta):
                 parameter.set_interactive(True)
         elif self.recruitment_type.value() == 'Fixed':

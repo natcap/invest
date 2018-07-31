@@ -172,12 +172,10 @@ def execute(args):
         "Calculating total land area and warning if the landcover raster "
         "is missing lucodes")
     crop_to_landcover_table = utils.build_lookup_from_csv(
-        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True,
-        numerical_cast=True)
+        args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
 
     crop_to_fertlization_rate_table = utils.build_lookup_from_csv(
-        args['fertilization_rate_table_path'], 'crop_name', to_lower=True,
-        numerical_cast=True)
+        args['fertilization_rate_table_path'], 'crop_name', to_lower=True)
 
     crop_lucodes = [
         x[_EXPECTED_LUCODE_TABLE_HEADER]
@@ -252,7 +250,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             crop_climate_bin_raster_path,
             crop_climate_bin_raster_info['pixel_size'],
-            clipped_climate_bin_raster_path, 'nearest',
+            clipped_climate_bin_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         crop_regression_table_path = os.path.join(
@@ -260,7 +258,7 @@ def execute(args):
 
         crop_regression_table = utils.build_lookup_from_csv(
             crop_regression_table_path, 'climate_bin',
-            to_lower=True, numerical_cast=True, warn_if_missing=False)
+            to_lower=True, warn_if_missing=False)
         for bin_id in crop_regression_table:
             for header in _EXPECTED_REGRESSION_TABLE_HEADERS:
                 if crop_regression_table[bin_id][header.lower()] == '':
@@ -307,7 +305,7 @@ def execute(args):
                 coarse_regression_parameter_raster_path,
                 landcover_raster_info['pixel_size'],
                 regression_parameter_raster_path_lookup[yield_regression_id],
-                'cubic_spline',
+                'cubicspline',
                 target_sr_wkt=landcover_raster_info['projection'],
                 target_bb=landcover_raster_info['bounding_box'])
 
@@ -417,7 +415,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             global_observed_yield_raster_path,
             global_observed_yield_raster_info['pixel_size'],
-            clipped_observed_yield_raster_path, 'nearest',
+            clipped_observed_yield_raster_path, 'near',
             target_bb=landcover_wgs84_bounding_box)
 
         observed_yield_nodata = (
@@ -450,7 +448,7 @@ def execute(args):
         pygeoprocessing.warp_raster(
             zeroed_observed_yield_raster_path,
             landcover_raster_info['pixel_size'],
-            interpolated_observed_yield_raster_path, 'cubic_spline',
+            interpolated_observed_yield_raster_path, 'cubicspline',
             target_sr_wkt=landcover_raster_info['projection'],
             target_bb=landcover_raster_info['bounding_box'])
 

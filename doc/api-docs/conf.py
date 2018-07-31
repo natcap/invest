@@ -15,12 +15,15 @@
 import sys
 import os
 import imp
+import ast
+import pprint
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 DOCS_SOURCE_DIR = os.path.dirname(__file__)
 sys.path.insert(0, os.path.join(DOCS_SOURCE_DIR, '..', '..', 'src'))
+pprint.pprint(sys.path)
 
 # -- General configuration ------------------------------------------------
 
@@ -57,9 +60,12 @@ copyright = u'2015, The Natural Capital Project'
 # built documents.
 #
 # The short X.Y version.
-import natcap.versioner
-_version = natcap.versioner.parse_version(
-    root=os.path.join(DOCS_SOURCE_DIR, '..', '..'))
+import setuptools_scm
+_version = setuptools_scm.get_version(
+    root= os.path.join(DOCS_SOURCE_DIR, '..', '..'),
+    version_scheme='post-release',
+    local_scheme='node-and-date'
+)
 version = _version.split('+')[0]
 # The full version, including alpha/beta/rc tags.
 release = _version
@@ -295,7 +301,9 @@ autodoc_mock_imports = [
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
     'shapely.wkt', 'shapely.ops', 'shapely.speedups',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
-    'PyQt4.QtCore', 'geoprocessing_core'
+    'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
+    'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
+    'qtawesome', 'sip', 'taskgraph'
 ]
 
 # Mock class with attribute handling.  As suggested by:
@@ -310,6 +318,17 @@ class Mock(mock.Mock):
 # mocked up.
 for name in autodoc_mock_imports:
     sys.modules[name] = Mock()
+
+# mock the pygeoprocessing version to be whatever is in the natcap.invest
+# __init__ file.
+_invest_init = os.path.join(
+    DOCS_SOURCE_DIR, '..', '..', 'src', 'natcap', 'invest',
+    '__init__.py')
+with open(_invest_init) as init_file:
+    for line in init_file:
+        if line.startswith('PYGEOPROCESSING_REQUIRED'):
+            pgp_version = ast.literal_eval(line.split(' ')[-1].strip())
+            sys.modules['pygeoprocessing'].__version__ = pgp_version
 
 sys.modules['osgeo'].gdal.GetDriverCount.return_value = 1
 sys.modules['osgeo.gdal'].GetDriverCount.return_value = 1

@@ -19,7 +19,7 @@ import pygeoprocessing
 from .. import utils
 from .. import validation
 
-import seasonal_water_yield_core  #pylint: disable=import-error
+from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
 
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
@@ -273,7 +273,7 @@ def _execute(args):
         input_align_list.append(args['climate_zone_raster_path'])
         output_align_list.append(
             file_registry['cz_aligned_raster_path'])
-    interpolate_list = ['nearest'] * len(input_align_list)
+    interpolate_list = ['near'] * len(input_align_list)
 
     pygeoprocessing.align_and_resize_raster_stack(
         input_align_list, output_align_list, interpolate_list,
