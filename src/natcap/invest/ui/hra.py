@@ -109,7 +109,7 @@ class HRAPreprocessor(model.InVESTModel):
             validator=hra_preprocessor.validate,
             localdoc=u'../documentation/habitat_risk_assessment.html')
 
-        self.habs_dir = inputs.File(
+        self.habs_dir = inputs.Folder(
             args_key=u'habitats_dir',
             helptext=(
                 u"Checking this box indicates that habitats should be "
@@ -120,7 +120,7 @@ class HRAPreprocessor(model.InVESTModel):
             label=u'Calculate Risk to Habitats?',
             validator=self.validator)
         self.add_input(self.habs_dir)
-        self.species_dir = inputs.File(
+        self.species_dir = inputs.Folder(
             args_key=u'species_dir',
             helptext=(
                 u"Checking this box indicates that species should be "
@@ -163,7 +163,7 @@ class HRAPreprocessor(model.InVESTModel):
             label=u'Consequence: Resilience',
             link_text=u'Add Another')
         self.cur_lulc_box.add_input(self.res_crit)
-        self.crit_dir = inputs.File(
+        self.crit_dir = inputs.Folder(
             args_key=u'criteria_dir',
             helptext=(
                 u"Checking this box indicates that model should use "
