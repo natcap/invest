@@ -235,26 +235,25 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('access_uri', 'access_samp.shp')
+        args['access_uri'] = os.path.join(args['workspace_dir'],
+                                          'access_samp.shp')
         make_access_shp(args['access_uri'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios):
-            add_to_args('landuse' + scenario + 'uri',
-                        'lc_samp' + scenario + 'b.tif')
+            args['landuse' + scenario + 'uri'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_lulc_raster(args['landuse' + scenario + 'uri'], lulc_val)
 
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
 
         habitat_quality.execute(args)
@@ -281,25 +280,25 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('access_uri', 'access_samp.shp')
+        args['access_uri'] = os.path.join(args['workspace_dir'],
+                                          'access_samp.shp')
         make_access_shp(args['access_uri'])
 
         # Include a missing threat to the sensitivity csv table
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(
             args['sensitivity_uri'], include_threat=False)
 
-        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(args['workspace_dir'],
+                                               'lc_samp_cur_b.tif')
         make_lulc_raster(args['landuse_cur_uri'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
 
         with self.assertRaises(ValueError):
@@ -314,24 +313,24 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('access_uri', 'access_samp.shp')
+        args['access_uri'] = os.path.join(args['workspace_dir'],
+                                          'access_samp.shp')
         make_access_shp(args['access_uri'])
 
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
-        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(args['workspace_dir'],
+                                               'lc_samp_cur_b.tif')
         make_lulc_raster(args['landuse_cur_uri'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
         # Include a missing threat to the threats csv table
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'], include_missing_threat=True)
 
         with self.assertRaises(ValueError):
@@ -346,24 +345,24 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('access_uri', 'access_samp.shp')
+        args['access_uri'] = os.path.join(args['workspace_dir'],
+                                          'access_samp.shp')
         make_access_shp(args['access_uri'])
 
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
-        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(args['workspace_dir'],
+                                               'lc_samp_cur_b.tif')
         make_lulc_raster(args['landuse_cur_uri'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
         # Include an invalid decay function name to the threats csv table.
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'], include_invalid_decay=True)
 
         with self.assertRaises(ValueError):
@@ -378,21 +377,20 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
-        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(args['workspace_dir'],
+                                               'lc_samp_cur_b.tif')
         make_lulc_raster(args['landuse_cur_uri'], 1)
 
         # Make an empty threat raster in the workspace folder.
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'], make_bad_raster=True)
 
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
 
         with self.assertRaises(ValueError):
@@ -407,20 +405,19 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
-        add_to_args('landuse_cur_uri', 'lc_samp_cur_b.tif')
+        args['landuse_cur_uri'] = os.path.join(args['workspace_dir'],
+                                               'lc_samp_cur_b.tif')
         make_lulc_raster(args['landuse_cur_uri'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
 
         habitat_quality.execute(args)
@@ -439,23 +436,21 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        def add_to_args(uri_name, file_name):
-            """Add the uri and the file path to the args dictionary."""
-            args[uri_name] = os.path.join(args['workspace_dir'], file_name)
-
-        add_to_args('sensitivity_uri', 'sensitivity_samp.csv')
+        args['sensitivity_uri'] = os.path.join(args['workspace_dir'],
+                                               'sensitivity_samp.csv')
         make_sensitivity_samp_csv(args['sensitivity_uri'])
 
         scenarios = ['_bas_', '_cur_']  # Missing '_fut_'
         for lulc_val, scenario in enumerate(scenarios):
-            add_to_args('landuse' + scenario + 'uri',
-                        'lc_samp' + scenario + 'b.tif')
+            args['landuse' + scenario + 'uri'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_lulc_raster(args['landuse' + scenario + 'uri'], lulc_val)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        add_to_args('threats_uri', 'threats_samp.csv')
+        args['threats_uri'] = os.path.join(args['workspace_dir'],
+                                           'threats_samp.csv')
         make_threats_csv(args['threats_uri'])
 
         habitat_quality.execute(args)
