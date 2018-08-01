@@ -182,17 +182,15 @@ class HRAPreprocessor(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.habs_dir.args_key: self.habs_dir.value(),
             self.stressor_dir.args_key: self.stressor_dir.value(),
             self.exp_crit.args_key: self.exp_crit.value(),
             self.sens_crit.args_key: self.sens_crit.value(),
             self.res_crit.args_key: self.res_crit.value(),
-            self.crit_dir.args_key: self.crit_dir.value(),
         }
 
         for hideable_input_name in ('habs_dir', 'species_dir', 'crit_dir'):
             hideable_input = getattr(self, hideable_input_name)
-            if not hideable_input.hidden:
+            if not hideable_input.hidden():
                 args[hideable_input.args_key] = hideable_input.value()
 
         return args
