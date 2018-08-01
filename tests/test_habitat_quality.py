@@ -12,7 +12,7 @@ import pygeoprocessing.testing
 
 
 def make_simple_poly(origin):
-    """Make a 1000x1000 ogr rectangular geometry clockwisely from origin.
+    """Make a 50x100 ogr rectangular geometry clockwisely from origin.
 
     Parameters:
         origin (tuple): the longitude and latitude of the origin of the
@@ -24,12 +24,12 @@ def make_simple_poly(origin):
     """
     # Create a rectangular ring
     lon, lat = origin[0], origin[1]
-    width = 1000
+    width = 100
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon, lat)
     ring.AddPoint(lon + width, lat)
-    ring.AddPoint(lon + width, lat - width)
-    ring.AddPoint(lon, lat - width)
+    ring.AddPoint(lon + width, lat - width / 2.0)
+    ring.AddPoint(lon, lat - width / 2.0)
     ring.AddPoint(lon, lat)
 
     # Create polygon geometry
@@ -58,12 +58,12 @@ def make_raster_from_array(base_array, base_raster_path):
         (1180000, 690000),
         project_wkt,
         -1,
-        (1000, -1000),  # Each pixel is 1000x1000 m
+        (1, -1),  # Each pixel is 1x1 m
         filename=base_raster_path)
 
 
 def make_access_shp(access_shp_path):
-    """Create a 2000x1000 accessibility polygon shapefile with two access values.
+    """Create a 100x100 accessibility polygon shapefile with two access values.
 
     Parameters:
         access_shp_path (str): the path for the shapefile.
@@ -75,7 +75,7 @@ def make_access_shp(access_shp_path):
     # Set up parameters. Fid and access values are based on the sample data
     fid_list = [0.0, 1.0]
     access_list = [0.2, 1.0]
-    coord_list = [(1180000.0, 690000.0 - i * 1000) for i in range(2)]
+    coord_list = [(1180000.0, 690000.0 - i * 50) for i in range(2)]
     poly_list = [make_simple_poly(coord) for coord in coord_list]
 
     # Create a new shapefile
@@ -108,7 +108,7 @@ def make_access_shp(access_shp_path):
 
 
 def make_lulc_raster(raster_path, lulc_val):
-    """Create a 2x1 raster on raster path with designated LULC code.
+    """Create a 100x100 raster on raster path with designated LULC code.
 
     Parameters:
         raster_path (str): the path for the LULC raster.
@@ -118,13 +118,13 @@ def make_lulc_raster(raster_path, lulc_val):
         None.
 
     """
-    lulc_array = numpy.concatenate((numpy.full((1, 1), 0),
-                                    numpy.full((1, 1), lulc_val)))
+    lulc_array = numpy.zeros((100, 100), dtype=numpy.int8)
+    lulc_array[50:, :] = lulc_val
     make_raster_from_array(lulc_array, raster_path)
 
 
 def make_threats_raster(folder_path, make_bad_raster=False):
-    """Create a 2x1 raster on designated path with 1 as threat and 0 as none.
+    """Create a 100x100 raster on designated path with 1 as threat and 0 as none.
 
     Parameters:
         folder_path (str): the folder path for saving the threat rasters.
@@ -133,8 +133,9 @@ def make_threats_raster(folder_path, make_bad_raster=False):
         None.
 
     """
-    threat_array = numpy.concatenate((numpy.full((1, 1), 0),
-                                      numpy.full((1, 1), 1)))
+    threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
+    threat_array[50:, :] = 1
+
     for suffix in ['_c', '_f']:
         raster_path = os.path.join(folder_path, 'threat_1' + suffix + '.tif')
         if make_bad_raster:
@@ -260,12 +261,12 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_out_c_regression.tif': 0.5,
-                'deg_sum_out_f_regression.tif': 0.3,
-                'quality_out_c_regression.tif': 1.25,
-                'quality_out_f_regression.tif': 1.0,
-                'rarity_c_regression.tif': 0.5,
-                'rarity_f_regression.tif': 0.5
+                'deg_sum_out_c_regression.tif': 19.5529461,
+                'deg_sum_out_f_regression.tif': 13.9218416,
+                'quality_out_c_regression.tif': 7499.9941406,
+                'quality_out_f_regression.tif': 4999.9995117,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000
         }.iteritems():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),
@@ -425,7 +426,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
-            1.25)
+            7499.9316406)
 
     def test_habitat_quality_nodata_small_fut(self):
         """Habitat Quality: on missing future LULC raster."""
@@ -458,4 +459,4 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
-            1.25)
+            7499.9316406)
