@@ -28,8 +28,8 @@ def make_simple_poly(origin):
     ring = ogr.Geometry(ogr.wkbLinearRing)
     ring.AddPoint(lon, lat)
     ring.AddPoint(lon + width, lat)
-    ring.AddPoint(lon + width, lat - width/2.0)
-    ring.AddPoint(lon, lat - width/2.0)
+    ring.AddPoint(lon + width, lat - width / 2.0)
+    ring.AddPoint(lon, lat - width / 2.0)
     ring.AddPoint(lon, lat)
 
     # Create polygon geometry
@@ -58,8 +58,8 @@ def make_raster_from_array(base_array, base_raster_path):
         (1180000, 690000),
         project_wkt,
         -1,
-        (1, -1),
-        base_raster_path)
+        (1, -1),  # Each pixel is 1x1 m
+        filename=base_raster_path)
 
 
 def make_access_shp(access_shp_path):
