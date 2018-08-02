@@ -13,7 +13,7 @@ import setuptools_scm
 
 
 LOGGER = logging.getLogger(__name__)
-logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
 if platform.system() == 'Windows':
     _HOME_DIR = os.path.join('C:\\', 'cygwin', 'home', 'SYSTEM')
 else:
@@ -90,8 +90,8 @@ def push(target_dir, files_to_push, files_to_unzip=None):
 
     # Make folders on remote if needed.
     ssh.exec_command(
-        'if [ ! -d "{dir}" ]\nthen\nmkdir -p -v {dir}\nfi'.format(
-            dir=target_dir))
+        'if [ ! -d "{dir}" ]; then mkdir -p -v "{dir}"; fi'.format(
+            dir=_fix_path(target_dir)))
 
     print 'Opening SCP connection'
     sftp = paramiko.SFTPClient.from_transport(ssh.get_transport())

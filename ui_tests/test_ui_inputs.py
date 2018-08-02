@@ -2055,15 +2055,24 @@ class ModelTests(_QtTest):
                 return []
             validate_func = _validate
 
+        # Fetch settings and clear them before the UI constructs.
+        # This avoids a scenario where invalid settings have been
+        # constructed and not destroyed properly before the test model object
+        # could complete its setup, causing lots of test failures.
+        label = 'Test model'
+        settings = model.SETTINGS_TEMPLATE(label)
+        settings.clear()
+
         class _TestInVESTModel(model.InVESTModel):
             def __init__(self):
-                model.InVESTModel.__init__(self,
-                                     label='Test model',
-                                     target=target_func,
-                                     validator=validate_func,
-                                     localdoc='testmodel.html')
-                # Default model class already has workspace and suffix input.
+                model.InVESTModel.__init__(
+                    self,
+                    label=label,
+                    target=target_func,
+                    validator=validate_func,
+                    localdoc='testmodel.html')
 
+            # Default model class already has workspace and suffix input.
             def assemble_args(self):
                 return {
                     self.workspace.args_key: self.workspace.value(),
@@ -2075,12 +2084,7 @@ class ModelTests(_QtTest):
                 self.settings.clear()
                 model.InVESTModel.__del__(self)
 
-        model = _TestInVESTModel()
-
-        # clear the model's settings before we run our test.
-        model.settings.clear()
-
-        return model
+        return _TestInVESTModel()
 
     def test_model_defaults(self):
         """UI Model: Check that workspace and suffix are added."""
