@@ -13,6 +13,8 @@ Unreleased Changes
 * Fixed an issue with the InVEST UI (all models), where attempting to
   drag-and-drop a directory onto a model input would cause the application to
   crash.
+* Coastal Vulnerability UI now specifies a number of reasonable defaults for
+  some numeric inputs.
 * Fixed an issue with the Fisheries UI where alpha and beta parameter inputs
   were incorrectly disabled for the Ricker recruitment function.
 * InVEST now uses a Makefile to automate the build processes.  GNU Make is
