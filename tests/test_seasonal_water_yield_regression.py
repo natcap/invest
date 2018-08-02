@@ -6,7 +6,6 @@ import shutil
 import os
 
 import numpy
-from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import pygeoprocessing.testing
@@ -518,6 +517,10 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_soil_raster(soil_ras_path)
         args['soil_group_path'] = soil_ras_path
 
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(tempdir, 'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
+
         return args
 
     def test_base_regression(self):
@@ -538,10 +541,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['results_suffix'] = ''
 
         seasonal_water_yield.execute(args)
-
-        # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(tempdir, 'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
@@ -574,7 +573,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
+            os.path.join(args['workspace_dir'], 'agg_results_base.csv'))
 
     def test_climate_zones_regression(self):
         """SWY climate zone regression test on sample data
