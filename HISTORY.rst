@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Reimplemented the InVEST Scenic Quality model.  This new version removes the
+  'population' and 'overlap' postprocessing steps, updates the available
+  valuation functions and greatly improves the runtime and memory-efficiency of
+  the model.  See the InVEST User's Guide chapter for more information.
 * Updated Recreation server's database to include metadata from photos taken
   from 2005-2017 (previous range was 2005-2014). The new range is reflected
   in the UI.
