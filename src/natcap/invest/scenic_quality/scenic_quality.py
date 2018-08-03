@@ -648,7 +648,10 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
     pygeoprocessing.raster_calculator(
         [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
-        _mask_op, target_path, gdal.GDT_Float32, dem_nodata)
+        _mask_op, target_path, gdal.GDT_Float32, dem_nodata,
+        gtiff_creation_options=(
+            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'))
 
     try:
         shutil.rmtree(temp_dir)
