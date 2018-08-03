@@ -5,8 +5,6 @@ import tempfile
 import shutil
 import os
 
-import pdb
-
 import numpy
 from osgeo import ogr
 from osgeo import osr
@@ -18,7 +16,6 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
-
 tempdir = r"C:\Users\Joanna Lin\Documents\invest_fork\seasonal_water_yield_tempdir"
 
 def make_simple_shp(base_shp_path, origin):
@@ -264,7 +261,7 @@ def make_agg_results_csv(result_csv_path, cz=False):
     The csv table is in the form of fid,vri_sum,qb_val per line.
 
     Parameters:
-        csv_path (str): path to the aggreated results csv file.
+        csv_path (str): path to the aggregated results csv file.
         cz (bool): True if model is executed in climate zone mode.
 
     Returns:
@@ -792,8 +789,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         with open(base_list_path, 'r') as file_list:
             for file_path in file_list:
                 full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    #skip blank lines
+                if full_path == '':  # skip blank lines
                     continue
                 if not os.path.isfile(full_path):
                     missing_files.append(full_path)
