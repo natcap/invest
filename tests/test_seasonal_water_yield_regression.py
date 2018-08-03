@@ -5,6 +5,8 @@ import tempfile
 import shutil
 import os
 
+import pdb
+
 import numpy
 from osgeo import ogr
 from osgeo import osr
@@ -263,7 +265,7 @@ def make_agg_results_csv(result_csv_path, cz=False):
 
     Parameters:
         csv_path (str): path to the aggreated results csv file.
-        cz (bool): True if model is executed in climate zone mode
+        cz (bool): True if model is executed in climate zone mode.
 
     Returns:
         None.
@@ -419,28 +421,25 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
 
         # Set up data so there is enough code to do an aggregate over the
         # rasters but the output vector already exists
-        aoi_dir_path = os.path.join(self.workspace_dir, 'aoi_dir')
-        aoi_path = os.path.join(aoi_dir_path, 'watershed.shp')
-        os.makedirs(aoi_dir_path)
+        aoi_path = os.path.join(self.workspace_dir, 'watershed.shp')
         make_simple_shp(aoi_path, (1180000.0, 690000.0))
-
         l_path = os.path.join(self.workspace_dir, 'L.tif')
         make_recharge_raster(l_path)
-
         aggregate_vector_path = os.path.join(self.workspace_dir,
-                                             'watershed.shp')
+                                             'aggregated_results.shp')
         make_simple_shp(aggregate_vector_path, (1180000.0, 690000.0))
         seasonal_water_yield._aggregate_recharge(aoi_path, l_path, l_path,
                                                  aggregate_vector_path)
 
         # test if aggregate is expected
-        tolerance_places = 1  # this was an experimentally acceptable value
-        agg_results_base_path = os.path.join(REGRESSION_DATA,
-                                             'l_agg_results.csv')
+        agg_results_csv_path = os.path.join(self.workspace_dir,
+                                            'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
         result_vector = ogr.Open(aggregate_vector_path)
         result_layer = result_vector.GetLayer()
         incorrect_value_list = []
-        with open(agg_results_base_path, 'rb') as agg_result_file:
+
+        with open(agg_results_csv_path, 'rb') as agg_result_file:
             for line in agg_result_file:
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
@@ -474,26 +473,45 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'results_suffix': 'foo',
             'alpha_m': '1/12',
             'beta_i': '1.0',
-            'biophysical_table_path':
-            os.path.join(SAMPLE_DATA, 'biophysical_table.csv'),
-            'dem_raster_path':
-            os.path.join(SAMPLE_DATA, 'dem.tif'),
-            'et0_dir':
-            os.path.join(SAMPLE_DATA, 'eto_dir'),
             'gamma': '1.0',
-            'lulc_raster_path':
-            os.path.join(SAMPLE_DATA, 'lulc.tif'),
-            'precip_dir':
-            os.path.join(SAMPLE_DATA, 'precip_dir'),
-            'rain_events_table_path':
-            os.path.join(SAMPLE_DATA, 'rain_events_table.csv'),
-            'soil_group_path':
-            os.path.join(SAMPLE_DATA, 'soil_group.tif'),
             'threshold_flow_accumulation': '1000',
             'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
         }
+
+        biophysical_csv_path = os.path.join(args['workspace_dir'],
+                                            'biophysical_table.csv')
+        make_biophysical_csv(biophysical_csv_path)
+        args['biophysical_table_path'] = biophysical_csv_path
+
+        dem_ras_path = os.path.join(args['workspace_dir'], 'dem.tif')
+        make_gradient_raster(dem_ras_path)
+        args['dem_raster_path'] = dem_ras_path
+
+        eto_dir_path = os.path.join(args['workspace_dir'], 'eto_dir')
+        os.makedirs(eto_dir_path)
+        make_eto_rasters(eto_dir_path)
+        args['et0_dir'] = eto_dir_path
+
+        lulc_ras_path = os.path.join(args['workspace_dir'], 'lulc.tif')
+        make_lulc_raster(lulc_ras_path)
+        args['lulc_raster_path'] = lulc_ras_path
+
+        precip_dir_path = os.path.join(args['workspace_dir'], 'precip_dir')
+        os.makedirs(precip_dir_path)
+        make_precip_rasters(precip_dir_path)
+        args['precip_dir'] = precip_dir_path
+
+        rain_csv_path = os.path.join(args['workspace_dir'],
+                                     'rain_events_table.csv')
+        make_rain_csv(rain_csv_path)
+        args['rain_events_table_path'] = rain_csv_path
+
+        soil_ras_path = os.path.join(args['workspace_dir'], 'soil_group.tif')
+        make_soil_raster(soil_ras_path)
+        args['soil_group_path'] = soil_ras_path
+
         with self.assertRaises(ValueError):
             seasonal_water_yield.execute(args)
 
@@ -525,7 +543,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_simple_shp(watershed_shp_path, (1180000.0, 690000.0))
         args['aoi_path'] = watershed_shp_path
 
-        biophysical_csv_path = os.path.join(workspace_dir, 'biophysical_table.csv')
+        biophysical_csv_path = os.path.join(workspace_dir,
+                                            'biophysical_table.csv')
         make_biophysical_csv(biophysical_csv_path)
         args['biophysical_table_path'] = biophysical_csv_path
 
@@ -567,7 +586,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            tempdir)  # change back to self.workspace_dir later
+            self.workspace_dir)
         # make args explicit that this is a base run of SWY
         args['user_defined_climate_zones'] = False
         args['user_defined_local_recharge'] = False
@@ -597,7 +616,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            tempdir)  # change back to self.workspace_dir later
+            self.workspace_dir)
         # make args explicit that this is a base run of SWY
         args['user_defined_climate_zones'] = False
         args['user_defined_local_recharge'] = False
@@ -632,7 +651,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            tempdir)  # change back to self.workspace_dir later
+            self.workspace_dir)
         # modify args to account for climate zones defined
         cz_csv_path = os.path.join(args['workspace_dir'],
                                    'climate_zone_events.csv')
@@ -671,7 +690,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
-            tempdir)  # change back to self.workspace_dir later
+            self.workspace_dir)
         # modify args to account for user recharge
         args['user_defined_climate_zones'] = False
         args['monthly_alpha'] = False
@@ -683,6 +702,11 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['l_path'] = recharge_ras_path
 
         seasonal_water_yield.execute(args)
+
+        # generate aggregated results csv table for assertion
+        agg_results_csv_path = os.path.join(args['workspace_dir'],
+                                            'agg_results_base.csv')
+        make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
