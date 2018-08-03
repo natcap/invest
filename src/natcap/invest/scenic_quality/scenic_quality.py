@@ -439,7 +439,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     if valuation_method == 'linear':
 
         def _valuation(distance, visibility):
-            valid_pixels = (visibility > 0)
+            valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
@@ -451,7 +451,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     elif valuation_method == 'logarithmic':
 
         def _valuation(distance, visibility):
-            valid_pixels = ((visibility > 0) & (distance > 0))
+            valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
@@ -466,7 +466,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     elif valuation_method == 'exponential':
 
         def _valuation(distance, visibility):
-            valid_pixels = (visibility > 0)
+            valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = 0
 
