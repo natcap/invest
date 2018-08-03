@@ -659,13 +659,13 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
         LOGGER.exception('Could not remove temp directory %s', temp_dir)
 
 
-def _count_visible_structures(visibility_rasters, weights, clipped_dem,
-                              target_path):
+def _count_visible_structures(visibility_raster_path_list, weights,
+                              clipped_dem, target_path):
     """Count (and weight) the number of visible structures for each pixel.
 
     Parameters:
-        visibility_rasters (list of strings): A list of strings to perfectly
-            overlapping visibility rasters.
+        visibility_raster_path_list (list of strings): A list of strings to
+            perfectly overlapping visibility rasters.
         weights (list of numbers): A list of numeric weights to apply to each
             visibility raster.  There must be the same number of weights in
             this list as there are elements in visibility_rasters.
@@ -676,7 +676,8 @@ def _count_visible_structures(visibility_rasters, weights, clipped_dem,
         ``None``
 
     """
-    LOGGER.info('Summing %d visibility rasters', len(visibility_rasters))
+    LOGGER.info('Summing %d visibility rasters',
+                len(visibility_raster_path_list))
     target_nodata = -1
 
     pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
@@ -687,7 +688,7 @@ def _count_visible_structures(visibility_rasters, weights, clipped_dem,
     pixels_processed = 0.0
 
     vis_rasters = [gdal.OpenEx(vis_path, gdal.OF_RASTER)
-                   for vis_path in visibility_rasters]
+                   for vis_path in visibility_raster_path_list]
     vis_raster_bands = [raster.GetRasterBand(1) for raster in vis_rasters]
 
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
