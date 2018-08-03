@@ -84,7 +84,7 @@ class ScenicQuality(model.InVESTModel):
                 u"with the same slope as f(1) (i.e.  g'(x) == f'(1))."),
             label=u'Valuation Function',
             options=[u'linear: a + bx',
-                     u'logarithmic: a + b log(x)',
+                     u'logarithmic: a + b log(x+1)',
                      u'exponential: a * e^(-bx)'])
         self.valuation_tab.add_input(self.valuation_function)
         self.a_coefficient = inputs.Text(

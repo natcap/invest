@@ -394,7 +394,7 @@ class ScenicQualityTests(unittest.TestCase):
         scenic_quality.execute(args)
 
         # Verify that the value summation matrix is what we expect it to be.
-        # The weight of two of the points makessome sectors more valuable
+        # The weight of two of the points makes some sectors more valuable
         expected_value = numpy.array(
             [[0.01831564, 0.13533528, 1., 0.13533528, 0.03663128],
              [0., 0.05910575, 0.13533528, 0.11821149, 0.13533528],
@@ -439,13 +439,13 @@ class ScenicQualityTests(unittest.TestCase):
         scenic_quality.execute(args)
 
         # Verify that the value summation matrix is what we expect it to be.
-        # The weight of two of the points makessome sectors more valuable
+        # The weight of two of the points makes some sectors more valuable
         expected_value = numpy.array(
-            [[2.38629436, 1.69314718, 0., 1.69314718, 4.77258872],
-             [0., 2.03972077, 1.69314718, 4.07944154, 1.69314718],
-             [0., 0., 7.15888308, 1.69314718, 0.],
-             [0., 2.03972077, 1.69314718, 4.07944154, 1.69314718],
-             [2.38629436, 1.69314718, 0., 1.69314718, 4.77258872]])
+            [[2.60943791, 2.09861229, 0., 2.09861229, 5.21887582],
+             [0., 2.34245405, 2.09861229, 4.68490809, 2.09861229],
+             [0., 0., 7.82831374, 2.09861229, 0.],
+             [0., 2.34245405, 2.09861229, 4.68490809, 2.09861229],
+             [2.60943791, 2.09861229, 0., 2.09861229, 5.21887582]])
 
         value_raster = gdal.OpenEx(
             os.path.join(args['workspace_dir'], 'output',

@@ -87,14 +87,6 @@ def execute(args):
         valuation_method = 'linear'
     elif args['valuation_function'].startswith('logarithmic'):
         valuation_method = 'logarithmic'
-        # Log a warning to the user (per Rob's request) when pixel sizes are
-        # less than 1 and we're doing logarithmic valuation.  This is because
-        # taking the log of values < 1 yields strange results.
-        if dem_raster_info['mean_pixel_size'] < 1.0:
-            LOGGER.warning(
-                ('Pixel sizes are less than 1m. Expect strange '
-                 'results with the selected valuation method ("logarithmic") '
-                 'for pixels that are very close (< 1.0m) to the viewpoint.'))
     elif args['valuation_function'].startswith('exponential'):
         valuation_method = 'exponential'
     else:
@@ -464,8 +456,10 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valuation[:] = 0
 
             # Per Rob, this is the natural log.
+            # Also per Rob (and Rich), we'll use log(x+1) because log of values
+            # where 0 < x < 1 yields strange results indeed.
             valuation[valid_pixels] = (
-                (a+b*numpy.log(distance[valid_pixels]))*(
+                (a+b*numpy.log(distance[valid_pixels] + 1))*(
                     weight*visibility[valid_pixels]))
             return valuation
 
