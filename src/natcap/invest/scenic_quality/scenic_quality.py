@@ -1,7 +1,6 @@
 """InVEST Scenic Quality Model."""
 import os
 import math
-import operator
 import logging
 import time
 import tempfile
@@ -684,7 +683,8 @@ def _count_visible_structures(visibility_raster_path_list, weights,
                                          gdal.GDT_Float32, [target_nodata])
     dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
-    pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
+    pixels_in_dem = (dem_raster_info['raster_size'][0] *
+                     dem_raster_info['raster_size'][1])
     pixels_processed = 0.0
 
     vis_rasters = [gdal.OpenEx(vis_path, gdal.OF_RASTER)
