@@ -364,12 +364,12 @@ def _clip_vector(shape_to_clip_path, binding_shape_path, output_path):
     binding_shape = None
 
 
-def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
+def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
     """Sum up all valuation rasters.
 
     Parameters:
-        dem (string): A path to the DEM.  Must perfectly overlap all of the
-            rasters in ``valuation_filepaths``.
+        dem_path (string): A path to the DEM.  Must perfectly overlap all of
+            the rasters in ``valuation_filepaths``.
         valuation_filepaths (list of strings): A list of paths to individual
             valuation rasters.  All rasters in this list must overlap
             perfectly.
@@ -380,7 +380,7 @@ def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
         ``None``
 
     """
-    dem_nodata = pygeoprocessing.get_raster_info(dem)['nodata'][0]
+    dem_nodata = pygeoprocessing.get_raster_info(dem_path)['nodata'][0]
 
     def _sum_rasters(dem, *valuation_rasters):
         valid_dem_pixels = (dem != dem_nodata)
@@ -395,7 +395,7 @@ def _sum_valuation_rasters(dem, valuation_filepaths, target_path):
         return raster_sum
 
     pygeoprocessing.raster_calculator(
-        [(dem, 1)] + [(path, 1) for path in valuation_filepaths],
+        [(dem_path, 1)] + [(path, 1) for path in valuation_filepaths],
         _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA)
 
 
