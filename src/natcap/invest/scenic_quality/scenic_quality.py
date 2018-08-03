@@ -409,7 +409,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
         visibility_path (string): The path to a visibility raster for a single
             point.  The visibility raster has pixel values of 0, 1, or nodata.
             This raster must be projected in meters.
-        viewpoint (tuple): The viewpoint in projected coordinates of the
+        viewpoint (tuple): The viewpoint in projected coordinates (x, y) of the
             visibility raster.
         weight (number): The numeric weight of the visibility.
         valuation_method (string): The valuation method to use, one of
