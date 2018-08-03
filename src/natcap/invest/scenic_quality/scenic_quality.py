@@ -660,7 +660,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
 
 
 def _count_visible_structures(visibility_raster_path_list, weights,
-                              clipped_dem, target_path):
+                              clipped_dem_path, target_path):
     """Count (and weight) the number of visible structures for each pixel.
 
     Parameters:
@@ -669,7 +669,7 @@ def _count_visible_structures(visibility_raster_path_list, weights,
         weights (list of numbers): A list of numeric weights to apply to each
             visibility raster.  There must be the same number of weights in
             this list as there are elements in visibility_rasters.
-        clipped_dem (string): String path to the DEM.
+        clipped_dem_path (string): String path to the DEM.
         target_path (string): The path to where the output raster is stored.
 
     Returns:
@@ -680,9 +680,9 @@ def _count_visible_structures(visibility_raster_path_list, weights,
                 len(visibility_raster_path_list))
     target_nodata = -1
 
-    pygeoprocessing.new_raster_from_base(clipped_dem, target_path,
+    pygeoprocessing.new_raster_from_base(clipped_dem_path, target_path,
                                          gdal.GDT_Float32, [target_nodata])
-    dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem)
+    dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
     pixels_in_dem = operator.mul(*dem_raster_info['raster_size'])
     pixels_processed = 0.0
@@ -694,7 +694,7 @@ def _count_visible_structures(visibility_raster_path_list, weights,
     target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
     target_band = target_raster.GetRasterBand(1)
     last_log_time = time.time()
-    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem):
+    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem_path):
         current_time = time.time()
         if current_time - last_log_time > 5.0:
             last_log_time = current_time
