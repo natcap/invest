@@ -109,7 +109,7 @@ class HRAPreprocessor(model.InVESTModel):
             validator=hra_preprocessor.validate,
             localdoc=u'../documentation/habitat_risk_assessment.html')
 
-        self.habs_dir = inputs.File(
+        self.habs_dir = inputs.Folder(
             args_key=u'habitats_dir',
             helptext=(
                 u"Checking this box indicates that habitats should be "
@@ -120,7 +120,7 @@ class HRAPreprocessor(model.InVESTModel):
             label=u'Calculate Risk to Habitats?',
             validator=self.validator)
         self.add_input(self.habs_dir)
-        self.species_dir = inputs.File(
+        self.species_dir = inputs.Folder(
             args_key=u'species_dir',
             helptext=(
                 u"Checking this box indicates that species should be "
@@ -163,7 +163,7 @@ class HRAPreprocessor(model.InVESTModel):
             label=u'Consequence: Resilience',
             link_text=u'Add Another')
         self.cur_lulc_box.add_input(self.res_crit)
-        self.crit_dir = inputs.File(
+        self.crit_dir = inputs.Folder(
             args_key=u'criteria_dir',
             helptext=(
                 u"Checking this box indicates that model should use "
@@ -182,17 +182,15 @@ class HRAPreprocessor(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.habs_dir.args_key: self.habs_dir.value(),
             self.stressor_dir.args_key: self.stressor_dir.value(),
             self.exp_crit.args_key: self.exp_crit.value(),
             self.sens_crit.args_key: self.sens_crit.value(),
             self.res_crit.args_key: self.res_crit.value(),
-            self.crit_dir.args_key: self.crit_dir.value(),
         }
 
         for hideable_input_name in ('habs_dir', 'species_dir', 'crit_dir'):
             hideable_input = getattr(self, hideable_input_name)
-            if not hideable_input.hidden:
+            if not hideable_input.hidden():
                 args[hideable_input.args_key] = hideable_input.value()
 
         return args
