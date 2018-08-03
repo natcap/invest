@@ -286,7 +286,7 @@ def execute(args):
 
     # The weighted visible structures raster is a leaf node
     graph.add_task(
-        _count_visible_structures,
+        _count_and_weight_visible_structures,
         args=(viewshed_files,
               weights,
               file_registry['clipped_dem'],
@@ -658,8 +658,8 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
         LOGGER.exception('Could not remove temp directory %s', temp_dir)
 
 
-def _count_visible_structures(visibility_raster_path_list, weights,
-                              clipped_dem_path, target_path):
+def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
+                                         clipped_dem_path, target_path):
     """Count (and weight) the number of visible structures for each pixel.
 
     Parameters:
@@ -675,59 +675,51 @@ def _count_visible_structures(visibility_raster_path_list, weights,
         ``None``
 
     """
-    LOGGER.info('Summing %d visibility rasters',
+    LOGGER.info('Summing and weighting %d visibility rasters',
                 len(visibility_raster_path_list))
     target_nodata = -1
-
-    pygeoprocessing.new_raster_from_base(clipped_dem_path, target_path,
-                                         gdal.GDT_Float32, [target_nodata])
     dem_raster_info = pygeoprocessing.get_raster_info(clipped_dem_path)
     dem_nodata = dem_raster_info['nodata'][0]
-    pixels_in_dem = (dem_raster_info['raster_size'][0] *
-                     dem_raster_info['raster_size'][1])
-    pixels_processed = 0.0
 
-    vis_rasters = [gdal.OpenEx(vis_path, gdal.OF_RASTER)
-                   for vis_path in visibility_raster_path_list]
-    vis_raster_bands = [raster.GetRasterBand(1) for raster in vis_rasters]
+    def _sum_and_weight(*args):
+        """Sum and weight the input matrices, masking the output to the DEM.
 
-    target_raster = gdal.OpenEx(target_path, gdal.OF_RASTER | gdal.GA_Update)
-    target_band = target_raster.GetRasterBand(1)
-    last_log_time = time.time()
-    for block_info, dem_matrix in pygeoprocessing.iterblocks(clipped_dem_path):
-        current_time = time.time()
-        if current_time - last_log_time > 5.0:
-            last_log_time = current_time
-            LOGGER.info('Counting visible structures approx. %.2f%% complete',
-                        (pixels_processed / pixels_in_dem) * 100.0)
+        Parameters:
+            args (list): A list of 2n+1 items, where n is the number of
+                visibility rasters to sum and weight.  Item 0 in this list must
+                be the DEM array.  Items 1 through n of this list must be the
+                visibility arrays.  Items n+1 through 2n of this list must be
+                the weights that correspond with the visibility arrays, in
+                corresponding order.
 
-        visibility_sum = numpy.empty((block_info['win_ysize'],
-                                      block_info['win_xsize']),
-                                     dtype=numpy.float32)
+        Returns:
+            A 2D numpy array for the weighted sum of the visibility rasters.
 
-        visibility_sum[:] = 0
-        valid_mask = (dem_matrix != dem_nodata)
-        visibility_sum[~valid_mask] = target_nodata
-        for visibility_band, weight in itertools.izip(vis_raster_bands,
-                                                      weights):
-            visibility_matrix = visibility_band.ReadAsArray(**block_info)
-            visible_mask = ((visibility_matrix == 1) & valid_mask)
-            visibility_sum[visible_mask] += (
-                visibility_matrix[visible_mask] * weight)
+        """
+        dem = args[0]
+        n_visibility_arrays = (len(args) - 1) / 2
+        visibility_rasters = args[1: n_visibility_arrays + 1]
+        weights = args[n_visibility_arrays + 1:]
 
-        target_band.WriteArray(visibility_sum,
-                               xoff=block_info['xoff'],
-                               yoff=block_info['yoff'])
-        pixels_processed += dem_matrix.size
+        valid_mask = (dem != dem_nodata)
 
-    vis_raster_bands = None
-    vis_rasters = None
+        visibility_sum = numpy.empty(dem.shape, dtype=numpy.float32)
+        visibility_sum[:] = target_nodata
+        visibility_sum[valid_mask] = 0
 
-    target_band = None
-    target_raster.FlushCache()
-    target_raster = None
+        # Weight and sum the outputs.
+        for visibility_matrix, weight in itertools.izip(
+                visibility_rasters, weights):
+            visible_mask = (valid_mask & (visibility_matrix == 1))
+            visibility_sum[visible_mask] += (visibility_matrix[visible_mask] *
+                                             weight)
+        return visibility_sum
 
-    pygeoprocessing.calculate_raster_stats(target_path)
+    pygeoprocessing.raster_calculator(
+        ([(clipped_dem_path, 1)] +
+         [(vis_path, 1) for vis_path in visibility_raster_path_list] +
+         [(weight, 'raw') for weight in weights]),
+        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata)
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):

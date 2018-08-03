@@ -134,6 +134,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 0,
             'max_valuation_radius': 10.0,
+            'n_workers': -1,
         }
 
         with self.assertRaises(ValueError):
@@ -220,6 +221,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 0,
             'max_valuation_radius': 10.0,
+            'n_workers': -1,
         }
 
         # Simulate a run where the clipped structures vector already exists.
@@ -316,6 +318,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 0,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
+            'n_workers': -1,
         }
 
         scenic_quality.execute(args)
@@ -389,6 +392,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
+            'n_workers': -1,
         }
 
         scenic_quality.execute(args)
@@ -434,6 +438,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
+            'n_workers': -1,
         }
 
         scenic_quality.execute(args)
