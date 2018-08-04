@@ -255,21 +255,28 @@ def make_climate_zone_csv(cz_csv_path):
             open_table.write(',14,17,14,15,20,18,4,6,5,16,16,20\n')
 
 
-def make_agg_results_csv(result_csv_path, cz=False):
+def make_agg_results_csv(result_csv_path, climate_zones=False, recharge=False,
+                         vector_exists=False):
     """Make csv file that has the expected aggregated_results.shp table.
 
     The csv table is in the form of fid,vri_sum,qb_val per line.
 
     Parameters:
         csv_path (str): path to the aggregated results csv file.
-        cz (bool): True if model is executed in climate zone mode.
+        climate_zones (bool): True if model is executed in climate zone mode.
+        recharge (bool): True if user inputs recharge zone shapefile.
+        vector_preexists (bool): True if aggregate results exists.
 
     Returns:
         None.
     """
     with open(result_csv_path, 'wb') as open_table:
-        if cz:
+        if climate_zones:
             open_table.write('0,0.99999976158,155.03570312500\n')
+        elif recharge:
+            open_table.write('0,0.00000000000,200.00000000000')
+        elif vector_exists:
+            open_table.write('0,20000.00000000000,200.00000000000')
         else:
             open_table.write('0,0.99999988079,146.15576171875\n')
 
@@ -431,7 +438,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         # test if aggregate is expected
         agg_results_csv_path = os.path.join(self.workspace_dir,
                                             'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path)
+        make_agg_results_csv(agg_results_csv_path, vector_preexists=True)
         result_vector = ogr.Open(aggregate_vector_path)
         result_layer = result_vector.GetLayer()
         incorrect_value_list = []
@@ -669,7 +676,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(args['workspace_dir'],
                                             'agg_results_cz.csv')
-        make_agg_results_csv(agg_results_csv_path, cz=True)
+        make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
@@ -692,7 +699,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['user_defined_climate_zones'] = False
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
-
         args['user_defined_local_recharge'] = True
         recharge_ras_path = os.path.join(args['workspace_dir'], 'L.tif')
         make_recharge_raster(recharge_ras_path)
@@ -702,14 +708,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         # generate aggregated results csv table for assertion
         agg_results_csv_path = os.path.join(args['workspace_dir'],
-                                            'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path)
+                                            'agg_results_l.csv')
+        make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_user_recharge.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
-            os.path.join(args['workspace_dir'], 'agg_results_base.csv'))
+            agg_results_csv_path)
 
     @staticmethod
     def _assert_regression_results_equal(workspace_dir, file_list_path,
