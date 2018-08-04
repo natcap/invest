@@ -1191,7 +1191,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         # workers, add an input for it.
         try:
             if 'n_workers' in self.target.__doc__:
-                n_cpus = multiprocessing.cpu_count()
+                n_cpus = max(1, multiprocessing.cpu_count())
                 self.n_workers = inputs.Text(
                     args_key='n_workers',
                     helptext=(
