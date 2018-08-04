@@ -620,7 +620,7 @@ def viewshed(dem_raster_path_band,
     # doesn't require that this be the case, but the math is simplified if it
     # is.
     pixel_xsize, pixel_ysize = dem_raster_info['pixel_size']
-    if not (abs(abs(pixel_xsize) - abs(pixel_ysize)) < 0.5*10.0**(-7.0)):
+    if not (abs(abs(pixel_xsize) - abs(pixel_ysize)) < 0.5e-7):
         raise AssertionError(
             'Pixel dimensions must match:\n X size:%s\n Y size:%s' %
                              (pixel_xsize, pixel_ysize))
