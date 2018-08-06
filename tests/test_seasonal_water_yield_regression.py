@@ -10,9 +10,6 @@ from osgeo import ogr
 from osgeo import osr
 import pygeoprocessing.testing
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'seasonal_water_yield')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
