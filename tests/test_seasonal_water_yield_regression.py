@@ -16,7 +16,6 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'seasonal_water_yield')
-tempdir = r"C:\Users\Joanna Lin\Documents\invest_fork\seasonal_water_yield_tempdir"
 
 
 def make_simple_shp(base_shp_path, origin):
