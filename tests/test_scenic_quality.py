@@ -700,7 +700,7 @@ class ViewshedTests(unittest.TestCase):
             filename=filepath)
 
     def test_pixels_not_square(self):
-        """Viewshed: exception raised when pixels are not square."""
+        """SQ Viewshed: exception raised when pixels are not square."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((20, 20))
         viewpoint = (10, 10)
@@ -714,7 +714,7 @@ class ViewshedTests(unittest.TestCase):
             viewshed((dem_filepath, 1), viewpoint, visibility_filepath)
 
     def test_viewpoint_not_overlapping_dem(self):
-        """Viewshed: exception raised when viewpoint is not over the DEM."""
+        """SQ Viewshed: exception raised when viewpoint is not over the DEM."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((20, 20))
         viewpoint = (-10, -10)
@@ -730,7 +730,7 @@ class ViewshedTests(unittest.TestCase):
                                                'auxiliary.tif'))
 
     def test_max_distance(self):
-        """Viewshed: setting a max distance limits visibility distance."""
+        """SQ Viewshed: setting a max distance limits visibility distance."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.ones((6, 6))
         viewpoint = (5, 5)
@@ -762,7 +762,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_refractivity(self):
-        """Viewshed: refractivity partly compensates for earth's curvature."""
+        """SQ Viewshed: refractivity partly compensates for earth's curvature."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.array([[2, 1, 1, 2, 1, 1, 1, 1, 1, 50]])
         viewpoint = (0, 0)
@@ -797,7 +797,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_intervening_nodata(self):
-        """Viewshed: intervening nodata does not affect visibility."""
+        """SQ Viewshed: intervening nodata does not affect visibility."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = 255
         matrix = numpy.array([[2, 2, nodata, 3]])
@@ -823,7 +823,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_nodata_undefined(self):
-        """Viewshed: assume a reasonable nodata value if none defined."""
+        """SQ Viewshed: assume a reasonable nodata value if none defined."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         nodata = None  # viewshed assumes an unlikely nodata value.
         matrix = numpy.array([[2, 2, 1, 3]])
@@ -849,7 +849,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_block_size_check(self):
-        """Viewshed: exception raised when blocks not equal, power of 2."""
+        """SQ Viewshed: exception raised when blocks not equal, power of 2."""
         from natcap.invest.scenic_quality.viewshed import viewshed
 
         srs = osr.SpatialReference()
@@ -872,7 +872,7 @@ class ViewshedTests(unittest.TestCase):
             )
 
     def test_view_from_valley(self):
-        """Viewshed: test visibility from within a pit."""
+        """SQ Viewshed: test visibility from within a pit."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((9, 9))
         matrix[5:8, 5:8] = 2
@@ -898,7 +898,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_tower_view_from_valley(self):
-        """Viewshed: test visibility from a 'tower' within a pit."""
+        """SQ Viewshed: test visibility from a 'tower' within a pit."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((9, 9))
         matrix[5:8, 5:8] = 2
@@ -922,7 +922,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_primitive_peak(self):
-        """Viewshed: looking down from a peak renders everything visible."""
+        """SQ Viewshed: looking down from a peak renders everything visible."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.zeros((8, 8))
         matrix[4:7, 4:7] = 1
@@ -943,7 +943,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, numpy.ones(matrix.shape))
 
     def test_cliff_bottom_half_visibility(self):
-        """Viewshed: visibility for a cliff on bottom half of DEM."""
+        """SQ Viewshed: visibility for a cliff on bottom half of DEM."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20, 20))
         matrix.fill(2)
@@ -970,7 +970,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_top_half_visibility(self):
-        """Viewshed: visibility for a cliff on top half of DEM."""
+        """SQ Viewshed: visibility for a cliff on top half of DEM."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20, 20))
         matrix.fill(2)
@@ -996,7 +996,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_left_half_visibility(self):
-        """Viewshed: visibility for a cliff on left half of DEM."""
+        """SQ Viewshed: visibility for a cliff on left half of DEM."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20, 20))
         matrix.fill(2)
@@ -1022,7 +1022,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_cliff_right_half_visibility(self):
-        """Viewshed: visibility for a cliff on right half of DEM."""
+        """SQ Viewshed: visibility for a cliff on right half of DEM."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20, 20))
         matrix.fill(2)
@@ -1048,7 +1048,7 @@ class ViewshedTests(unittest.TestCase):
         numpy.testing.assert_equal(visibility_matrix, expected_visibility)
 
     def test_pillars(self):
-        """Viewshed: put a few pillars in a field, can't see behind them."""
+        """SQ Viewshed: put a few pillars in a field, can't see behind them."""
         from natcap.invest.scenic_quality.viewshed import viewshed
         matrix = numpy.empty((20, 20))
         matrix.fill(2)
