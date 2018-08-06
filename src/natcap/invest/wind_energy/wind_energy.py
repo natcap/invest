@@ -345,7 +345,7 @@ def execute(args):
             returns - out_nodata if 'bath' does not fall within the range, or
                 'bath' if it does"""
         return np.where(
-            ((bath >= max_depth) & (bath <= min_depth)), bath, out_nodata)
+            ((bath >= max_depth) & (bath <= min_depth)), bath, out_nodata).astype(np.float32)
 
     depth_mask_uri = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
@@ -827,7 +827,7 @@ def execute(args):
             """
             return np.where(
                 tmp_dist != out_nodata,
-                tmp_dist * pixel_size + avg_grid_distance, out_nodata)
+                tmp_dist * pixel_size + avg_grid_distance, out_nodata).astype(np.float32)
 
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             [tmp_dist_uri], add_avg_dist_op, tmp_dist_final_uri,
@@ -957,10 +957,10 @@ def execute(args):
         cable_cost = np.where(
             total_cable_dist <= circuit_break,
             (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist),
-            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist))
+            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)).astype(np.float32)
         # Mask out nodata values
         cable_cost = np.where(
-            harvested_row == out_nodata, out_nodata, cable_cost)
+            harvested_row == out_nodata, out_nodata, cable_cost).astype(np.float32)
 
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
@@ -999,7 +999,7 @@ def execute(args):
 
         return np.where(
             (harvested_row != out_nodata) & (distance_row != out_nodata),
-            comp_one_sum - decommish_capex - capex, out_nodata)
+            comp_one_sum - decommish_capex - capex, out_nodata).astype(np.float32)
 
     def calculate_levelized_op(harvested_row, distance_row):
         """vectorize_datasets operation that computes the levelized cost
@@ -1026,10 +1026,10 @@ def execute(args):
         cable_cost = np.where(
             total_cable_dist <= circuit_break,
             (mw_coef_ac * total_mega_watt) + (cable_coef_ac * total_cable_dist),
-            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist))
+            (mw_coef_dc * total_mega_watt) + (cable_coef_dc * total_cable_dist)).astype(np.float32)
         # Mask out nodata values
         cable_cost = np.where(
-            harvested_row == out_nodata, out_nodata, cable_cost)
+            harvested_row == out_nodata, out_nodata, cable_cost).astype(np.float32)
 
         # Compute the total CAP
         cap = cap_less_dist + cable_cost
@@ -1077,7 +1077,7 @@ def execute(args):
         # dollars
         return np.where(
             harvested_row == out_nodata,
-            out_nodata, levelized_cost * 1000000.0)
+            out_nodata, levelized_cost * 1000000.0).astype(np.float32)
 
     # The amount of CO2 not released into the atmosphere, with the
     # constant conversion factor provided in the users guide by
@@ -1097,7 +1097,7 @@ def execute(args):
         energy_val = harvested_row * 1000.0
 
         return np.where(
-            harvested_row == out_nodata, out_nodata, carbon_coef * energy_val)
+            harvested_row == out_nodata, out_nodata, carbon_coef * energy_val).astype(np.float32)
 
     # URIs for output rasters
     npv_uri = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
@@ -1396,14 +1396,14 @@ def mask_by_distance(
             transform values by a cell size, to get distances
             in meters"""
         return np.where(
-            dist_pix == dataset_nodata, out_nodata, dist_pix * cell_size)
+            dist_pix == dataset_nodata, out_nodata, dist_pix * cell_size).astype(np.float32)
 
     def mask_op(dist_pix):
         """Vectorize_dataset operation to bound dist_pix values between
             two integer values"""
         return np.where(
             ((dist_pix >= max_dist) | (dist_pix <= min_dist)), out_nodata,
-            dist_pix)
+            dist_pix).astype(np.float32)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [dataset_uri], dist_op, dist_uri, gdal.GDT_Float32,
@@ -1816,7 +1816,7 @@ def calculate_distances_land_grid(
     output_layer = None
     output_datasource = None
     shutil.rmtree(single_feature_vector_path)
-    l2g_dist_array = np.array(l2g_dist)
+    l2g_dist_array = np.array(l2g_dist, dtype=np.float32)
 
     def _min_land_ocean_dist(*grid_distances):
         """vectorize_dataset operation to aggregate each features distance
@@ -1830,7 +1830,7 @@ def calculate_distances_land_grid(
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
-        min_distances = np.min(grid_distances, axis=0)
+        min_distances = np.min(grid_distances, axis=0, dtype=np.float32)
         min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
         return min_distances * pixel_size + min_land_grid_dist
 
@@ -1888,7 +1888,7 @@ def calculate_distances_grid(
             returns - an nd numpy array multiplied by a pixel size
         """
         return np.where(
-            tmp_dist != out_nodata, tmp_dist * pixel_size, out_nodata)
+            tmp_dist != out_nodata, tmp_dist * pixel_size, out_nodata).astype(np.float32)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [tmp_dist_uri], dist_meters_op, tmp_dist_final_uri, gdal.GDT_Float32,

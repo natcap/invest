@@ -3,9 +3,7 @@ import unittest
 import tempfile
 import shutil
 import os
-import collections
 import csv
-import struct
 
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
@@ -23,6 +21,7 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
+
 
 def _create_csv(fields, data, fname):
     """Create a new CSV table from a dictionary.
@@ -58,6 +57,7 @@ def _create_csv(fields, data, fname):
         csv_writer.writerow(data[index])
 
     csv_file.close()
+
 
 def _create_vertical_csv(data, fname):
     """Create a new CSV table where the fields are in the left column.
@@ -110,20 +110,31 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
         geometries = [
-            Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
+            Point(pos_x + 50, pos_y - 50),
+            Point(pos_x + 50, pos_y - 150)
+        ]
         shape_path = os.path.join(temp_dir, 'temp_shape.shp')
         # Create point shapefile to use for testing input
         land_shape_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attrs,
-            vector_format='ESRI Shapefile', filename=shape_path)
+            geometries,
+            srs.projection,
+            fields,
+            attrs,
+            vector_format='ESRI Shapefile',
+            filename=shape_path)
 
         # Setup parameters for create raster
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(temp_dir, 'temp_raster.tif')
         # Create raster to use for testing input
         harvested_masked_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
-            [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=raster_path)
+            [matrix],
+            srs.origin,
+            srs.projection,
+            -1,
+            srs.pixel_size(100),
+            datatype=gdal.GDT_Int32,
+            filename=raster_path)
 
         tmp_dist_final_path = os.path.join(temp_dir, 'dist_final.tif')
         # Call function to test given testing inputs
@@ -154,28 +165,42 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         poly_geoms = {
             'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
-                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y -100),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
                        (pos_x + 200, pos_y)],
             'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
                        (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
-                       (pos_x, pos_y - 150)]}
+                       (pos_x, pos_y - 150)]
+        }
 
         poly_geometries = [
-            Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
+            Polygon(poly_geoms['poly_1']),
+            Polygon(poly_geoms['poly_2'])
+        ]
         poly_file = os.path.join(temp_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
         poly_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            poly_geometries, srs.projection, fields, attr_poly,
-            vector_format='ESRI Shapefile', filename=poly_file)
+            poly_geometries,
+            srs.projection,
+            fields,
+            attr_poly,
+            vector_format='ESRI Shapefile',
+            filename=poly_file)
 
         point_geometries = [
-            Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-            Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+            Point(pos_x, pos_y),
+            Point(pos_x + 100, pos_y),
+            Point(pos_x, pos_y - 100),
+            Point(pos_x + 100, pos_y - 100)
+        ]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         point_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            point_geometries, srs.projection, fields, attr_pt,
-            vector_format='ESRI Shapefile', filename=point_file)
+            point_geometries,
+            srs.projection,
+            fields,
+            attr_pt,
+            vector_format='ESRI Shapefile',
+            filename=point_file)
         # Call function to test
         results = wind_energy.point_to_polygon_distance(
             poly_ds_path, point_ds_path)
@@ -199,23 +224,43 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
 
-        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-                      Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+        geometries = [
+            Point(pos_x, pos_y),
+            Point(pos_x + 100, pos_y),
+            Point(pos_x, pos_y - 100),
+            Point(pos_x + 100, pos_y - 100)
+        ]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile for testing input
         shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=point_file)
+            geometries,
+            srs.projection,
+            fields,
+            attributes,
+            vector_format='ESRI Shapefile',
+            filename=point_file)
 
         value_list = [10, 20, 30, 40]
         field_name = "num_turb"
         # Call function to test
-        wind_energy.add_field_to_shape_given_list(
-            shape_ds_path, value_list, field_name)
+        wind_energy.add_field_to_shape_given_list(shape_ds_path, value_list,
+                                                  field_name)
 
         # Compare results
-        results = {1: {'num_turb': 10}, 2: {'num_turb': 20},
-                   3: {'num_turb': 30}, 4: {'num_turb': 40}}
+        results = {
+            1: {
+                'num_turb': 10
+            },
+            2: {
+                'num_turb': 20
+            },
+            3: {
+                'num_turb': 30
+            },
+            4: {
+                'num_turb': 40
+            }
+        }
 
         shape = ogr.Open(shape_ds_path)
         layer_count = shape.GetLayerCount()
@@ -246,8 +291,13 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         result = wind_energy.combine_dictionaries(dict_1, dict_2)
 
-        expected_result = {"name": "bob", "age": 3, "sex": "female",
-                           "hobby": "crawling", "food": "milk"}
+        expected_result = {
+            "name": "bob",
+            "age": 3,
+            "sex": "female",
+            "hobby": "crawling",
+            "food": "milk"
+        }
 
         self.assertDictEqual(expected_result, result)
 
@@ -260,8 +310,13 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         result = wind_energy.combine_dictionaries(dict_1, dict_2)
 
-        expected_result = {"name": "bob", "age": 3, "sex": "female",
-                           "hobby": "crawling", "food": "milk"}
+        expected_result = {
+            "name": "bob",
+            "age": 3,
+            "sex": "female",
+            "hobby": "crawling",
+            "food": "milk"
+        }
 
         self.assertDictEqual(expected_result, result)
 
@@ -270,19 +325,21 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        csv_path = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input',
-            'global_wind_energy_parameters.csv')
+        csv_path = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                'global_wind_energy_parameters.csv')
 
         parameter_list = [
             'air_density', 'exponent_power_curve', 'decommission_cost',
-            'operation_maintenance_cost', 'miscellaneous_capex_cost']
+            'operation_maintenance_cost', 'miscellaneous_capex_cost'
+        ]
 
         result = wind_energy.read_csv_wind_parameters(csv_path, parameter_list)
 
         expected_result = {
-            'air_density': '1.225', 'exponent_power_curve': '2',
-            'decommission_cost': '.037', 'operation_maintenance_cost': '.035',
+            'air_density': '1.225',
+            'exponent_power_curve': '2',
+            'decommission_cost': '.037',
+            'operation_maintenance_cost': '.035',
             'miscellaneous_capex_cost': '.05'
         }
         self.assertDictEqual(expected_result, result)
@@ -302,17 +359,23 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
 
-        geometries = [LinearRing([(pos_x + 100, pos_y), (pos_x + 100, pos_y + 150),
-                                  (pos_x + 200, pos_y + 150), (pos_x + 200, pos_y),
-                                  (pos_x + 100, pos_y)])]
+        geometries = [
+            LinearRing([(pos_x + 100, pos_y), (pos_x + 100, pos_y + 150),
+                        (pos_x + 200, pos_y + 150), (pos_x + 200, pos_y),
+                        (pos_x + 100, pos_y)])
+        ]
 
         farm_1 = os.path.join(temp_dir, 'farm_1')
         os.mkdir(farm_1)
         farm_file = os.path.join(farm_1, 'vector.shp')
         # Create polyline shapefile to use to test against
         farm_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=farm_file)
+            geometries,
+            srs.projection,
+            fields,
+            attributes,
+            vector_format='ESRI Shapefile',
+            filename=farm_file)
 
         start_point = (pos_x + 100, pos_y)
         x_len = 100
@@ -322,8 +385,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         os.mkdir(farm_2)
         out_path = os.path.join(farm_2, 'vector.shp')
         # Call the function to test
-        wind_energy.create_wind_farm_box(
-            spat_ref, start_point, x_len, y_len, out_path)
+        wind_energy.create_wind_farm_box(spat_ref, start_point, x_len, y_len,
+                                         out_path)
         # Compare results
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             out_path, farm_ds_path)
@@ -336,22 +399,38 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Setup parameters for creating point shapefile
         fields = {'pt_id': 'int', 'Harv_MWhr': 'real'}
-        attributes = [{'pt_id': 1, 'Harv_MWhr': 20.5},
-                      {'pt_id': 2, 'Harv_MWhr': 24.5},
-                      {'pt_id': 3, 'Harv_MWhr': 13},
-                      {'pt_id': 4, 'Harv_MWhr': 15}]
+        attributes = [{
+            'pt_id': 1,
+            'Harv_MWhr': 20.5
+        }, {
+            'pt_id': 2,
+            'Harv_MWhr': 24.5
+        }, {
+            'pt_id': 3,
+            'Harv_MWhr': 13
+        }, {
+            'pt_id': 4,
+            'Harv_MWhr': 15
+        }]
         srs = sampledata.SRS_WILLAMETTE
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
 
-        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-                      Point(pos_x, pos_y - 100),
-                      Point(pos_x + 100, pos_y - 100)]
+        geometries = [
+            Point(pos_x, pos_y),
+            Point(pos_x + 100, pos_y),
+            Point(pos_x, pos_y - 100),
+            Point(pos_x + 100, pos_y - 100)
+        ]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use for testing input
         shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=point_file)
+            geometries,
+            srs.projection,
+            fields,
+            attributes,
+            vector_format='ESRI Shapefile',
+            filename=point_file)
         # Call function to test
         result = wind_energy.get_highest_harvested_geom(shape_ds_path)
 
@@ -396,8 +475,12 @@ class WindEnergyUnitTests(unittest.TestCase):
         input_path = os.path.join(temp_dir, 'input_raster.tif')
         # Create raster to use as testing input
         raster_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
-            [matrix], latlong_origin, latlong_proj, -1.0,
-            pixel_size(0.033333), filename=input_path)
+            [matrix],
+            latlong_origin,
+            latlong_proj,
+            -1.0,
+            pixel_size(0.033333),
+            filename=input_path)
 
         raster_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
             raster_path)
@@ -433,20 +516,31 @@ class WindEnergyUnitTests(unittest.TestCase):
         srs = sampledata.SRS_WILLAMETTE
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
-        geometries = [Point(pos_x + 50, pos_y - 50),
-                      Point(pos_x + 50, pos_y - 150)]
+        geometries = [
+            Point(pos_x + 50, pos_y - 50),
+            Point(pos_x + 50, pos_y - 150)
+        ]
         point_file = os.path.join(temp_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         land_shape_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attrs,
-            vector_format='ESRI Shapefile', filename=point_file)
+            geometries,
+            srs.projection,
+            fields,
+            attrs,
+            vector_format='ESRI Shapefile',
+            filename=point_file)
 
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(temp_dir, 'raster.tif')
         # Create raster to use as testing input
         harvested_masked_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
-            [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
-            datatype=gdal.GDT_Int32, filename=raster_path)
+            [matrix],
+            srs.origin,
+            srs.projection,
+            -1,
+            srs.pixel_size(100),
+            datatype=gdal.GDT_Int32,
+            filename=raster_path)
 
         tmp_dist_final_path = os.path.join(temp_dir, 'dist_final.tif')
         # Call function to test
@@ -468,8 +562,11 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         dict_data = {
             (31.79, 123.76): {
-                'LONG': 123.76, 'LATI': 31.79, 'Ram-080m': 7.98,
-                'K-010m': 1.90}
+                'LONG': 123.76,
+                'LATI': 31.79,
+                'Ram-080m': 7.98,
+                'K-010m': 1.90
+            }
         }
 
         layer_name = "datatopoint"
@@ -496,11 +593,10 @@ class WindEnergyUnitTests(unittest.TestCase):
             for field in field_names:
                 try:
                     field_val = feat.GetField(field)
-                    self.assertEqual(
-                        dict_data[(31.79, 123.76)][field], field_val)
+                    self.assertEqual(dict_data[(31.79, 123.76)][field],
+                                     field_val)
                 except ValueError:
-                    raise AssertionError(
-                        'Could not find field %s' % field)
+                    raise AssertionError('Could not find field %s' % field)
 
             feat = layer.GetNextFeature()
 
@@ -516,8 +612,11 @@ class WindEnergyUnitTests(unittest.TestCase):
         # Set up a coordinate with a longitude in the range of -360 to 0.
         dict_data = {
             (31.79, -200.0): {
-                'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
-                'K-010m': 1.90}
+                'LONG': -200.0,
+                'LATI': 31.79,
+                'Ram-080m': 7.98,
+                'K-010m': 1.90
+            }
         }
 
         layer_name = "datatopoint"
@@ -546,13 +645,13 @@ class WindEnergyUnitTests(unittest.TestCase):
             for field in field_names:
                 try:
                     field_val = feat.GetField(field)
-                    self.assertEqual(
-                        dict_data[(31.79, -200.0)][field], field_val)
+                    self.assertEqual(dict_data[(31.79, -200.0)][field],
+                                     field_val)
                 except ValueError:
-                    raise AssertionError(
-                        'Could not find field %s' % field)
+                    raise AssertionError('Could not find field %s' % field)
 
             feat = layer.GetNextFeature()
+
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -571,23 +670,27 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def generate_base_args(workspace_dir):
         """Generate an args list that is consistent across regression tests."""
         args = {
-            'workspace_dir': workspace_dir,
-            'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
-            'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60
-            }
+            'workspace_dir':
+            workspace_dir,
+            'wind_data_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
+            'bathymetry_uri':
+            os.path.join(SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
+                         'global_dem'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         '3_6_turbine.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            60
+        }
         return args
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -598,8 +701,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -615,8 +718,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -625,7 +729,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -643,7 +748,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -652,7 +758,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -667,13 +774,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -682,7 +790,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -697,17 +806,18 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         workspace_dir = 'expected_result'
         args = WindEnergyRegressionTests.generate_base_args(
-            workspace_dir)#self.workspace_dir)
+            workspace_dir)  #self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
 
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -716,7 +826,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -731,8 +842,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -741,7 +852,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
+            'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -750,7 +862,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -765,8 +878,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -774,8 +887,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
-        args['grid_points_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['grid_points_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy',
+                                               'input', 'NE_sub_pts.csv')
         args['price_table'] = True
         args['wind_schedule'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv')
@@ -783,24 +896,26 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricetablegridpts',
-                    raster_path))
+                             raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(
-                    REGRESSION_DATA, 'pricetablegridpts', vector_path))
+                os.path.join(REGRESSION_DATA, 'pricetablegridpts',
+                             vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -810,8 +925,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -827,8 +942,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -837,7 +953,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -851,8 +968,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -860,8 +977,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
-        args['grid_points_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['grid_points_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy',
+                                               'input', 'NE_sub_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -869,8 +986,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -879,7 +997,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -893,8 +1012,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                                       'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -906,8 +1025,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # testing, grid points in 'NE_sub_pts.csv' were duplicated and marked
         # as land points. So the distances will be zero, keeping the result
         # the same but testing that section of code
-        args['grid_points_uri'] = os.path.join(
-            REGRESSION_DATA, 'grid_land_pts.csv')
+        args['grid_points_uri'] = os.path.join(REGRESSION_DATA,
+                                               'grid_land_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -915,8 +1034,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         raster_results = [
-            'carbon_emissions_tons.tif',
-            'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
+            'carbon_emissions_tons.tif', 'levelized_cost_price_per_kWh.tif',
+            'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
@@ -925,7 +1045,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
@@ -939,53 +1060,72 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
-            'suffix': 'test'
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         '3_6_turbine.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000,
+            'valuation_container':
+            True,
+            'foundation_cost':
+            2,
+            'discount_rate':
+            0.07,
+            'avg_grid_distance':
+            4,
+            'price_table':
+            True,
+            'wind_schedule':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'price_table_example.csv'),
+            'suffix':
+            'test'
         }
         wind_energy.execute(args)
 
         raster_results = [
             'carbon_emissions_tons_test.tif', 'density_W_per_m2_test.tif',
             'harvested_energy_MWhr_per_yr_test.tif',
-            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif']
+            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif'
+        ]
 
         for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 raster_path)))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm_test.shp',
-            'wind_energy_points_test.shp']
+            'wind_energy_points_test.shp'
+        ]
 
         for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 vector_path)))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -994,53 +1134,72 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
-            'suffix': '_test'
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         '3_6_turbine.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000,
+            'valuation_container':
+            True,
+            'foundation_cost':
+            2,
+            'discount_rate':
+            0.07,
+            'avg_grid_distance':
+            4,
+            'price_table':
+            True,
+            'wind_schedule':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'price_table_example.csv'),
+            'suffix':
+            '_test'
         }
         wind_energy.execute(args)
 
         raster_results = [
             'carbon_emissions_tons_test.tif', 'density_W_per_m2_test.tif',
             'harvested_energy_MWhr_per_yr_test.tif',
-            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif']
+            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif'
+        ]
 
         for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 raster_path)))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm_test.shp',
-            'wind_energy_points_test.shp']
+            'wind_energy_points_test.shp'
+        ]
 
         for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 vector_path)))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -1052,31 +1211,41 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # created by hand and has no numerical validity. Helps test the
         # raised exception quicker
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000
         }
         # creating a stand in turbine parameter csv file that is missing
         # a biophysical field / value. This should raise the exception
         tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
+            'hub_height': 80,
+            'cut_in_wspd': 4.0,
+            'rated_wspd': 12.5,
+            'cut_out_wspd': 25.0,
+            'turbine_rated_pwr': 3.6,
+            'turbine_cost': 8.0,
             'turbines_per_circuit': 8
         }
 
@@ -1096,40 +1265,57 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # created by hand and has no numerical validity. Helps test the
         # raised exception quicker
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
-            'suffix': '_test'
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000,
+            'valuation_container':
+            True,
+            'foundation_cost':
+            2,
+            'discount_rate':
+            0.07,
+            'avg_grid_distance':
+            4,
+            'price_table':
+            True,
+            'wind_schedule':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'price_table_example.csv'),
+            'suffix':
+            '_test'
         }
         # creating a stand in turbine parameter csv file that is missing
         # a valuation field / value. This should raise the exception
         tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbines_per_circuit': 8, 'rotor_diameter': 40
+            'hub_height': 80,
+            'cut_in_wspd': 4.0,
+            'rated_wspd': 12.5,
+            'cut_out_wspd': 25.0,
+            'turbine_rated_pwr': 3.6,
+            'turbines_per_circuit': 8,
+            'rotor_diameter': 40
         }
 
         _create_vertical_csv(data, fname)
@@ -1148,31 +1334,44 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # created by hand and has no numerical validity. Helps test the
         # raised exception quicker
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
-            'suffix': '_test'
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'turbine_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         '3_6_turbine.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000,
+            'valuation_container':
+            True,
+            'foundation_cost':
+            2,
+            'discount_rate':
+            0.07,
+            'avg_grid_distance':
+            4,
+            'price_table':
+            True,
+            'wind_schedule':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'price_table_example.csv'),
+            'suffix':
+            '_test'
         }
         # creating a stand in global wind params table that has a different
         # 'time' value than what is given in the wind schedule table.
@@ -1180,15 +1379,24 @@ class WindEnergyRegressionTests(unittest.TestCase):
         tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
-            'air_density': 1.225, 'exponent_power_curve': 2,
-            'decommission_cost': .037, 'operation_maintenance_cost': .035,
-            'miscellaneous_capex_cost': .05, 'installation_cost': .20,
-            'infield_cable_length': 0.91, 'infield_cable_cost': 0.26,
-            'mw_coef_ac': .81, 'mw_coef_dc': 1.09, 'cable_coef_ac': 1.36,
-            'cable_coef_dc': .89, 'ac_dc_distance_break': 60,
-            'time_period': 10, 'rotor_diameter_factor': 7,
+            'air_density': 1.225,
+            'exponent_power_curve': 2,
+            'decommission_cost': .037,
+            'operation_maintenance_cost': .035,
+            'miscellaneous_capex_cost': .05,
+            'installation_cost': .20,
+            'infield_cable_length': 0.91,
+            'infield_cable_cost': 0.26,
+            'mw_coef_ac': .81,
+            'mw_coef_dc': 1.09,
+            'cable_coef_ac': 1.36,
+            'cable_coef_dc': .89,
+            'ac_dc_distance_break': 60,
+            'time_period': 10,
+            'rotor_diameter_factor': 7,
             'carbon_coefficient': 6.8956e-4,
-            'air_density_coefficient': 1.194e-4, 'loss_parameter': .05
+            'air_density_coefficient': 1.194e-4,
+            'loss_parameter': .05
         }
 
         _create_vertical_csv(data, fname)
@@ -1204,33 +1412,45 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+            'workspace_dir':
+            self.workspace_dir,
+            'wind_data_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+            'bathymetry_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+            'global_wind_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'global_wind_energy_parameters.csv'),
+            'turbine_parameters_uri':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         '3_6_turbine.csv'),
+            'number_of_turbines':
+            80,
+            'min_depth':
+            3,
+            'max_depth':
+            200,
+            'aoi_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+            'land_polygon_uri':
+            os.path.join(REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+            'min_distance':
+            0,
+            'max_distance':
+            200000,
+            'valuation_container':
+            True,
+            'foundation_cost':
+            2,
+            'discount_rate':
+            0.07,
+            'avg_grid_distance':
+            4,
+            'price_table':
+            True,
+            'wind_schedule':
+            os.path.join(SAMPLE_DATA, 'WindEnergy', 'input',
+                         'price_table_example.csv'),
         }
 
         wind_energy.execute(args)
@@ -1245,16 +1465,22 @@ class WindEnergyRegressionTests(unittest.TestCase):
         raster_results = [
             'carbon_emissions_tons.tif', 'density_W_per_m2.tif',
             'harvested_energy_MWhr_per_yr.tif',
-            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif'
+        ]
 
         for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 raster_path)))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+            'wind_energy_points.shp'
+        ]
 
         for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], 'output',
+                                 vector_path)))
