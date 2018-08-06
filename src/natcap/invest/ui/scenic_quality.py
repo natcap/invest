@@ -78,10 +78,7 @@ class ScenicQuality(model.InVESTModel):
             helptext=(
                 u"This field indicates the functional form f(x) the "
                 u"model will use to value the visual impact for each "
-                u"viewpoint.  For distances less than 1 km (x<1), the "
-                u"model uses a linear form g(x) where the line passes "
-                u"through f(1) (i.e.  g(1) == f(1)) and extends to zero "
-                u"with the same slope as f(1) (i.e.  g'(x) == f'(1))."),
+                u"viewpoint."),
             label=u'Valuation Function',
             options=[u'linear: a + bx',
                      u'logarithmic: a + b log(x+1)',
