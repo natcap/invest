@@ -223,6 +223,9 @@ cdef inline double pixel_dist(long ix_source, long ix_target, long iy_source, lo
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
+# The nodata value for visibility rasters
+cdef int VISIBILITY_NODATA = 255
+
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
 ctypedef pair[int, double*] BlockBufferPair
@@ -659,8 +662,9 @@ def viewshed(dem_raster_path_band,
     # based on the calculated minimum height.
     LOGGER.info('Creating visibility raster %s', visibility_filepath)
     pygeoprocessing.new_raster_from_base(
-        dem_raster_path_band[0], visibility_filepath, gdal.GDT_Byte, [255],
-        fill_value_list=[255], gtiff_creation_options=gtiff_creation_options)
+        dem_raster_path_band[0], visibility_filepath, gdal.GDT_Byte,
+        [VISIBILITY_NODATA], fill_value_list=[VISIBILITY_NODATA],
+        gtiff_creation_options=gtiff_creation_options)
 
     # LRU-cached rasters for easier access to individual pixels.
     cdef _ManagedRaster dem_managed_raster = (
@@ -958,7 +962,15 @@ def viewshed(dem_raster_path_band,
             visibility_managed_raster.set(n, m, 1)
             aux_managed_raster.set(n, m, adjusted_dem_height)
         else:
-            visibility_managed_raster.set(n, m, 0)
+            # If it's close enough to nodata to be interpreted as nodata,
+            # consider it to be nodata.  Nodata implies that visibility is
+            # undefined ... which it is, since there's no defined DEM value for
+            # this pixel.
+            if math.fabs(target_dem_height - nodata) <= 1.0e-7:
+                visibility_managed_raster.set(n, m, VISIBILITY_NODATA)
+            else:
+                # If we're not over nodata, then the pixel isn't visible.
+                visibility_managed_raster.set(n, m, 0)
             aux_managed_raster.set(n, m, z)
         pixels_touched += 1
 
