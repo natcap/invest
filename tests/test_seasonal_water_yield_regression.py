@@ -1,10 +1,10 @@
 """InVEST Seasonal water yield model tests that use the InVEST sample data."""
-import glob
 import unittest
 import tempfile
 import shutil
 import os
 
+import csv
 import numpy
 from osgeo import ogr
 from osgeo import osr
@@ -18,8 +18,9 @@ REGRESSION_DATA = os.path.join(
     'seasonal_water_yield')
 tempdir = r"C:\Users\Joanna Lin\Documents\invest_fork\seasonal_water_yield_tempdir"
 
+
 def make_simple_shp(base_shp_path, origin):
-    """Make a 10x10 ogr rectangular geometry shapefile.
+    """Make a 100x100 ogr rectangular geometry shapefile.
 
     Parameters:
         base_shp_path (str): path to the shapefile.
@@ -42,7 +43,7 @@ def make_simple_shp(base_shp_path, origin):
 
     # Create a rectangular geometry
     lon, lat = origin[0], origin[1]
-    width = 10
+    width = 100
     rect = ogr.Geometry(ogr.wkbLinearRing)
     rect.AddPoint(lon, lat)
     rect.AddPoint(lon + width, lat)
@@ -87,7 +88,7 @@ def make_raster_from_array(base_array, base_raster_path):
 
 
 def make_lulc_raster(lulc_ras_path):
-    """Make a 10x10 LULC raster with two LULC codes on the raster path.
+    """Make a 100x100 LULC raster with two LULC codes on the raster path.
 
     Parameters:
         lulc_raster_path (str): path to the LULC raster.
@@ -95,14 +96,14 @@ def make_lulc_raster(lulc_ras_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
     lulc_array[size / 2:, :] = 1
     make_raster_from_array(lulc_array, lulc_ras_path)
 
 
 def make_soil_raster(soil_ras_path):
-    """Make a 10x10 soil group raster with four soil groups on th raster path.
+    """Make a 100x100 soil group raster with four soil groups on th raster path.
 
     Parameters:
         soil_ras_path (str): path to the soil group raster.
@@ -110,7 +111,7 @@ def make_soil_raster(soil_ras_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     soil_groups = 4
     soil_array = numpy.zeros((size, size))
     for i, row in enumerate(soil_array):
@@ -131,14 +132,14 @@ def make_gradient_raster(grad_ras_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     grad_array = numpy.arange(size)
     grad_array = numpy.resize(numpy.arange(size), (size, size))
     make_raster_from_array(grad_array, grad_ras_path)
 
 
 def make_eto_rasters(eto_dir_path):
-    """Make twelve 10x10 rasters of monthly evapotranspiration.
+    """Make twelve 100x100 rasters of monthly evapotranspiration.
 
     Parameters:
         eto_dir_path (str): path to the directory for saving the rasters.
@@ -146,7 +147,7 @@ def make_eto_rasters(eto_dir_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     for month in range(1, 13):
         eto_raster_path = os.path.join(eto_dir_path,
                                        'eto' + str(month) + '.tif')
@@ -155,7 +156,7 @@ def make_eto_rasters(eto_dir_path):
 
 
 def make_precip_rasters(precip_dir_path):
-    """Make twelve 10x10 rasters of monthly precipitation.
+    """Make twelve 100x100 rasters of monthly precipitation.
 
     Parameters:
         precip_dir_path (str): path to the directory for saving the rasters.
@@ -163,7 +164,7 @@ def make_precip_rasters(precip_dir_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     for month in range(1, 13):
         precip_raster_path = os.path.join(precip_dir_path,
                                           'precip_mm_' + str(month) + '.tif')
@@ -172,7 +173,7 @@ def make_precip_rasters(precip_dir_path):
 
 
 def make_recharge_raster(recharge_ras_path):
-    """Make a 10x10 raster of user defined recharge.
+    """Make a 100x100 raster of user defined recharge.
 
     Parameters:
         recharge_ras_path (str): path to the directory for saving the rasters.
@@ -180,7 +181,7 @@ def make_recharge_raster(recharge_ras_path):
     Returns:
         None.
     """
-    size = 10
+    size = 100
     recharge_array = numpy.full((size, size), 200)
     make_raster_from_array(recharge_array, recharge_ras_path)
 
@@ -245,17 +246,25 @@ def make_climate_zone_csv(cz_csv_path):
     Returns:
         None.
     """
-    climate_zones = 10
+    climate_zones = 100
+    # Random rain events for each month
+    rain_events = [14, 17, 14, 15, 20, 18, 4, 6, 5, 16, 16, 20]
     with open(cz_csv_path, 'wb') as open_table:
-        open_table.write('cz_id,jan,feb,mar,apr,may,')
-        open_table.write('jun,jul,aug,sep,oct,nov,dec\n')
+        writer = csv.writer(open_table)
+        writer.writerow([
+            'cz_id', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug',
+            'sep', 'oct', 'nov', 'dec'
+        ])
 
-        for cz in range(climate_zones):  # Write random rain events for each CZ
-            open_table.write(str(cz))
-            open_table.write(',14,17,14,15,20,18,4,6,5,16,16,20\n')
+        # Make small variations on rain events for each climate zone
+        for cz in range(climate_zones):
+            rain_events = [x+1 for x in rain_events]
+            writer.writerow([cz] + rain_events)
 
 
-def make_agg_results_csv(result_csv_path, climate_zones=False, recharge=False,
+def make_agg_results_csv(result_csv_path,
+                         climate_zones=False,
+                         recharge=False,
                          vector_exists=False):
     """Make csv file that has the expected aggregated_results.shp table.
 
@@ -272,13 +281,13 @@ def make_agg_results_csv(result_csv_path, climate_zones=False, recharge=False,
     """
     with open(result_csv_path, 'wb') as open_table:
         if climate_zones:
-            open_table.write('0,0.99999976158,155.03570312500\n')
+            open_table.write('0,0.99999,155.09967\n')
         elif recharge:
-            open_table.write('0,0.00000000000,200.00000000000')
+            open_table.write('0,0.00000,200.00000')
         elif vector_exists:
-            open_table.write('0,20000.00000000000,200.00000000000')
+            open_table.write('0,2000000.00000,200.00000')
         else:
-            open_table.write('0,0.99999988079,146.15576171875\n')
+            open_table.write('0,0.99999,148.72562\n')
 
 
 class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
@@ -317,7 +326,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
             'gamma': '1.0',
             'precip_dir': test_precip_dir_path,  # test constructed one
             'threshold_flow_accumulation': '1000',
-            'user_defined_climate_zones':  False,
+            'user_defined_climate_zones': False,
             'user_defined_local_recharge': False,
             'monthly_alpha': False,
         }
@@ -438,7 +447,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         # test if aggregate is expected
         agg_results_csv_path = os.path.join(self.workspace_dir,
                                             'agg_results_base.csv')
-        make_agg_results_csv(agg_results_csv_path, vector_preexists=True)
+        make_agg_results_csv(agg_results_csv_path, vector_exists=True)
         result_vector = ogr.Open(aggregate_vector_path)
         result_layer = result_vector.GetLayer()
         incorrect_value_list = []
@@ -471,17 +480,26 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         # A placeholder args that has the property that the aoi_path will be
         # the same name as the output aggregate vector
         args = {
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir':
+            self.workspace_dir,
             'aoi_path':
             os.path.join(self.workspace_dir, 'aggregated_results_foo.shp'),
-            'results_suffix': 'foo',
-            'alpha_m': '1/12',
-            'beta_i': '1.0',
-            'gamma': '1.0',
-            'threshold_flow_accumulation': '1000',
-            'user_defined_climate_zones': False,
-            'user_defined_local_recharge': False,
-            'monthly_alpha': False,
+            'results_suffix':
+            'foo',
+            'alpha_m':
+            '1/12',
+            'beta_i':
+            '1.0',
+            'gamma':
+            '1.0',
+            'threshold_flow_accumulation':
+            '1000',
+            'user_defined_climate_zones':
+            False,
+            'user_defined_local_recharge':
+            False,
+            'monthly_alpha':
+            False,
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
