@@ -245,16 +245,13 @@ def make_climate_zone_csv(cz_csv_path):
     # Random rain events for each month
     rain_events = [14, 17, 14, 15, 20, 18, 4, 6, 5, 16, 16, 20]
     with open(cz_csv_path, 'wb') as open_table:
-        writer = csv.writer(open_table)
-        writer.writerow([
-            'cz_id', 'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug',
-            'sep', 'oct', 'nov', 'dec'
-        ])
+        open_table.write('cz_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec\n')
 
-        # Make small variations on rain events for each climate zone
         for cz in range(climate_zones):
-            rain_events = [x+1 for x in rain_events]
-            writer.writerow([cz] + rain_events)
+            rain_events = [x + 1 for x in rain_events]
+            rain_events_str = [str(val) for val in [cz] + rain_events]
+            rain_events_str = ','.join(rain_events_str) + '\n'
+            open_table.write(rain_events_str)
 
 
 def make_agg_results_csv(result_csv_path,
