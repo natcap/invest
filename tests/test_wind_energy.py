@@ -754,7 +754,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
+                os.path.join(REGRESSION_DATA, 'noaoi', raster_path),
+                rel_tol=1e-3, abs_tol=1e-3)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
