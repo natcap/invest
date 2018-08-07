@@ -4,7 +4,6 @@ import tempfile
 import shutil
 import os
 
-import csv
 import numpy
 from osgeo import ogr
 from osgeo import osr
