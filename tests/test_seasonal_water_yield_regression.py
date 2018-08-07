@@ -476,26 +476,17 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         # A placeholder args that has the property that the aoi_path will be
         # the same name as the output aggregate vector
         args = {
-            'workspace_dir':
-            self.workspace_dir,
-            'aoi_path':
-            os.path.join(self.workspace_dir, 'aggregated_results_foo.shp'),
-            'results_suffix':
-            'foo',
-            'alpha_m':
-            '1/12',
-            'beta_i':
-            '1.0',
-            'gamma':
-            '1.0',
-            'threshold_flow_accumulation':
-            '1000',
-            'user_defined_climate_zones':
-            False,
-            'user_defined_local_recharge':
-            False,
-            'monthly_alpha':
-            False,
+            'workspace_dir': self.workspace_dir,
+            'aoi_path': os.path.join(
+                        self.workspace_dir, 'aggregated_results_foo.shp'),
+            'results_suffix': 'foo',
+            'alpha_m': '1/12',
+            'beta_i': '1.0',
+            'gamma': '1.0',
+            'threshold_flow_accumulation': '1000',
+            'user_defined_climate_zones': False,
+            'user_defined_local_recharge': False,
+            'monthly_alpha': False,
         }
 
         biophysical_csv_path = os.path.join(args['workspace_dir'],
@@ -557,6 +548,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'threshold_flow_accumulation': '1000',
             'workspace_dir': workspace_dir,
         }
+
         watershed_shp_path = os.path.join(workspace_dir, 'watershed.shp')
         make_simple_shp(watershed_shp_path, (1180000.0, 690000.0))
         args['aoi_path'] = watershed_shp_path
