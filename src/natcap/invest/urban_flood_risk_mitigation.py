@@ -9,6 +9,9 @@ import pygeoprocessing
 import taskgraph
 import numpy
 import scipy
+import rtree
+import shapely.wkb
+import shapely.prepared
 
 from . import validation
 from . import utils
@@ -212,14 +215,64 @@ def build_service_vector(
         target_wkt,
         built_infrastructure_vector_path,
         target_watershed_result_vector_path):
+    """Construct the service polygon.
 
+    The ``base_watershed_vector_path`` should be intersected with the
+    ``built_infrastructure_vector_path`` to get
+        * affected population ?
+        * affected build?
+
+    Parameters:
+        base_watershed_vector_path (str): path to base watershed vector,
+        target_wkt (str): desired target projection.
+        built_infrastructure_vector_path (str): path to infrastructure vector.
+        target_watershed_result_vector_path (str): path to desired target
+            watershed result vector with watershed scale values of stats.
+
+    Returns:
+        None.
+
+    """
     pygeoprocessing.reproject_vector(
         base_watershed_vector_path, target_wkt,
         target_watershed_result_vector_path, layer_index=0,
         driver_name='GPKG')
 
+    infrastructure_rtree = rtree.index.Index()
+    infrastructure_geometry_list = []
+    infrastructure_vector = gdal.OpenEx(
+        built_infrastructure_vector_path, gdal.OF_VECTOR)
+    infrastructure_layer = infrastructure_vector.GetLayer()
+    for infrastructure_index in range(infrastructure_layer.GetFeatureCount()):
+        infrastructure_feature = infrastructure_layer.GetFeature(
+            infrastructure_index)
+        infrastructure_geom = infrastructure_feature.GetGeometryRef()
+        infrastructure_geometry_list.append(
+            shapely.wkb.loads(infrastructure_geom.ExportToWkb()))
+        infrastructure_rtree.insert(
+            infrastructure_index, infrastructure_geometry_list[-1].bounds)
 
-# TODO: numpy is close for nodata
+    infrastructure_vector = None
+    infrastructure_layer = None
+
+    watershed_vector = gdal.OpenEx(
+        target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
+    watershed_layer = watershed_vector.GetLayer()
+    for watershed_feature in watershed_layer:
+        watershed_shapely = shapely.wkb.loads(
+            watershed_feature.GetGeometryRef().ExportToWkb())
+        watershed_prep_geom = shapely.prepared.prep(watershed_shapely)
+        intersect_area = 0.0
+        for infrastructure_index in infrastructure_rtree.intersection(
+                watershed_shapely.bounds):
+            infrastructure_geom = infrastructure_geometry_list[
+                infrastructure_index]
+            if watershed_prep_geom.intersects(infrastructure_geom):
+                intersect_area += watershed_shapely.intersection(
+                    infrastructure_geom).area
+        LOGGER.debug(intersect_area)
+
+
 def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
     """Calculate peak flow retention."""
     result = numpy.empty_like(q_pi_array)
