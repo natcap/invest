@@ -440,7 +440,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = _VALUATION_NODATA
-            valuation[(visibility == 0) & valid_pixels] = 0
+            valuation[(visibility == 0) | valid_pixels] = 0
 
             x = distance[valid_pixels]
             valuation[valid_pixels] = (
@@ -453,7 +453,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = _VALUATION_NODATA
-            valuation[(visibility == 0) & valid_pixels] = 0
+            valuation[(visibility == 0) | valid_pixels] = 0
 
             # Per Rob, this is the natural log.
             # Also per Rob (and Rich), we'll use log(x+1) because log of values
@@ -469,7 +469,7 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
             valid_pixels = (visibility == 1)
             valuation = numpy.empty(distance.shape, dtype=numpy.float64)
             valuation[:] = _VALUATION_NODATA
-            valuation[(visibility == 0) & valid_pixels] = 0
+            valuation[(visibility == 0) | valid_pixels] = 0
 
             valuation[valid_pixels] = (
                 (a*numpy.exp(-b*distance[valid_pixels])) * (
