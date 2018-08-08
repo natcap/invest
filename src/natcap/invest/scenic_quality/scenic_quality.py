@@ -786,7 +786,9 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
             buffer_offset += dtype_n_bytes
             if not packed_score:
                 break
-            yield struct.unpack('d', packed_score)[0]
+            for value in struct.unpack(
+                    'd' * (len(values_buffer)//dtype_n_bytes), values_buffer):
+                yield value
 
     # phase 1: calculate percentiles from the visible_structures raster
     LOGGER.info('Determining percentiles for %s',
