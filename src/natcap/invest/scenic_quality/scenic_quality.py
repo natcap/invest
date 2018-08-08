@@ -31,7 +31,6 @@ _OUTPUT_BASE_FILES = {
 }
 
 _INTERMEDIATE_BASE_FILES = {
-    'aligned_dem_path': 'aligned_dem.tif',
     'aoi_reprojected': 'aoi_reprojected.shp',
     'clipped_dem': 'dem_clipped.tif',
     'structures_clipped': 'structures_clipped.shp',
