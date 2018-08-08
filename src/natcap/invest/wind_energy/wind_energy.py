@@ -21,7 +21,6 @@ import shapely.ops
 from shapely import speedups
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-import pygeoprocessing
 from .. import validation
 from .. import utils
 
@@ -329,8 +328,8 @@ def execute(args):
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
-    min_depth = np.float32(abs(float(args['min_depth'])) * -1.0)
-    max_depth = np.float32(abs(float(args['max_depth'])) * -1.0)
+    min_depth = abs(float(args['min_depth'])) * -1.0
+    max_depth = abs(float(args['max_depth'])) * -1.0
 
     def depth_op(bath):
         """A vectorized function that takes one argument and uses a range to
@@ -345,7 +344,6 @@ def execute(args):
 
             returns - out_nodata if 'bath' does not fall within the range, or
                 'bath' if it does"""
-        bath = bath.astype(np.float32)
         return np.where(
             ((bath >= max_depth) & (bath <= min_depth)), bath, out_nodata)
 
@@ -544,8 +542,6 @@ def execute(args):
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    # pygeoprocessing.interpolate_points(final_wind_points_uri, density_field_name,
-    #     (density_temp_uri, 1), 'linear')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
         final_wind_points_uri, density_field_name, density_temp_uri,
         interpolation = 'linear')
@@ -571,7 +567,7 @@ def execute(args):
         for array in rasters:
             nodata_mask = nodata_mask | (array == out_nodata)
 
-        return np.where(nodata_mask, out_nodata, rasters[0].astype(np.float32))
+        return np.where(nodata_mask, out_nodata, rasters[0])
 
     # Output URIs for final Density and Harvested rasters after they've been
     # masked by depth and distance
