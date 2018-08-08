@@ -5,6 +5,7 @@ import os
 
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import pygeoprocessing
 import taskgraph
 import numpy
@@ -207,7 +208,7 @@ def add_zonal_stats(
     stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), aggregate_vector_path,
         aggregate_field_name)
-    LOGGER.debug(stats)
+    #LOGGER.debug(stats)
 
 
 def build_service_vector(
@@ -238,15 +239,24 @@ def build_service_vector(
         target_watershed_result_vector_path, layer_index=0,
         driver_name='GPKG')
 
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_wkt)
+
     infrastructure_rtree = rtree.index.Index()
     infrastructure_geometry_list = []
     infrastructure_vector = gdal.OpenEx(
         built_infrastructure_vector_path, gdal.OF_VECTOR)
     infrastructure_layer = infrastructure_vector.GetLayer()
+
+    infrastructure_srs = infrastructure_layer.GetSpatialRef()
+    infrastructure_to_target = osr.CoordinateTransformation(
+        infrastructure_srs, target_srs)
+
     for infrastructure_index in range(infrastructure_layer.GetFeatureCount()):
         infrastructure_feature = infrastructure_layer.GetFeature(
             infrastructure_index)
-        infrastructure_geom = infrastructure_feature.GetGeometryRef()
+        infrastructure_geom = infrastructure_feature.GetGeometryRef().Clone()
+        infrastructure_geom.Transform(infrastructure_to_target)
         infrastructure_geometry_list.append(
             shapely.wkb.loads(infrastructure_geom.ExportToWkb()))
         infrastructure_rtree.insert(
