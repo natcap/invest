@@ -153,28 +153,9 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         # the same name as the output aggregate vector
         args = {
             'workspace_dir': self.workspace_dir,
-<<<<<<< working copy
-            'aoi_path': os.path.join(self.workspace_dir,
-                                     'aggregated_results_foo.shp'),
-            'results_suffix': 'foo',
-            'alpha_m': '1/12',
-            'beta_i': '1.0',
-            'gamma': '1.0',
-            'threshold_flow_accumulation': '1000',
-            'user_defined_climate_zones': False,
-            'user_defined_local_recharge': False,
-            'monthly_alpha': False,
-        }
-
-        biophysical_csv_path = os.path.join(args['workspace_dir'],
-                                            'biophysical_table.csv')
-        make_biophysical_csv(biophysical_csv_path)
-        args['biophysical_table_path'] = biophysical_csv_path
-=======
             'aoi_path': os.path.join(
                 self.workspace_dir, 'aggregated_results_foo.shp'),
             'results_suffix': 'foo',
->>>>>>> destination
 
             'alpha_m': '1/12',
             'beta_i': '1.0',
