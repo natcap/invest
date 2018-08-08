@@ -793,7 +793,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
                 os.path.basename(source_raster_path))
     iterators = []
     pixel_cache = numpy.array([], dtype=numpy.float64)
-    desired_pixel_cache_size = 2**16  # seems like a reasonable cache size
+    desired_pixel_cache_size = 2**17  # seems like a reasonable cache size
     n_valid_pixels = 0
     n_pixels_read = 0
     n_pixels_in_raster = (raster_info['raster_size'][0] *
