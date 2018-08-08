@@ -268,7 +268,12 @@ def build_service_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
-    for watershed_feature in watershed_layer:
+    watershed_layer.CreateField(ogr.FieldDefn('Affected.Area', ogr.OFTReal))
+    watershed_layer.SyncToDisk()
+
+    for watershed_index in range(watershed_layer.GetFeatureCount()):
+        LOGGER.debug(watershed_index)
+        watershed_feature = watershed_layer.GetFeature(watershed_index)
         watershed_shapely = shapely.wkb.loads(
             watershed_feature.GetGeometryRef().ExportToWkb())
         watershed_prep_geom = shapely.prepared.prep(watershed_shapely)
@@ -280,7 +285,7 @@ def build_service_vector(
             if watershed_prep_geom.intersects(infrastructure_geom):
                 intersect_area += watershed_shapely.intersection(
                     infrastructure_geom).area
-        LOGGER.debug(intersect_area)
+        watershed_feature.SetField('Affected.Area', intersect_area)
 
 
 def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
