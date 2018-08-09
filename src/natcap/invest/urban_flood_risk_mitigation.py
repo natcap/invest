@@ -183,7 +183,7 @@ def execute(args):
         func=add_zonal_stats,
         args=(
             peak_flow_raster_path, target_watershed_result_vector_path,
-            'OBJECTID'),
+            'OBJECTID', 'q_pi'),
         target_path_list=[],
         dependent_task_list=[peak_flow_task, build_service_vector_task],
         task_name='q_pi stats')
@@ -193,7 +193,8 @@ def execute(args):
 
 
 def add_zonal_stats(
-        base_raster_path, aggregate_vector_path, aggregate_field_name):
+        base_raster_path, aggregate_vector_path, aggregate_field_name,
+        target_field_name):
     """Add watershed scale values of the given base_raster.
 
     Parameters:
@@ -206,10 +207,38 @@ def add_zonal_stats(
         None.
 
     """
+    LOGGER.info("Processing zonal stats for %s", target_field_name)
     stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), aggregate_vector_path,
         aggregate_field_name)
-    #LOGGER.debug(stats)
+    LOGGER.debug(stats)
+
+    aggregate_vector = gdal.OpenEx(
+        aggregate_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    aggregate_layer = aggregate_vector.GetLayer()
+
+    for summary_op_name in ['min', 'max', 'sum']:
+        aggregate_layer.CreateField(
+            ogr.FieldDefn('%s_%s' % (
+                target_field_name, summary_op_name), ogr.OFTReal))
+
+    last_time = time.time()
+    for aggregate_index, aggregate_feature in enumerate(aggregate_layer):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                "processing watershed result %.2f%%",
+                (100.0 * (aggregate_index+1)) /
+                aggregate_layer.GetFeatureCount())
+            last_time = current_time
+
+        for summary_op_name in ['min', 'max', 'sum']:
+            LOGGER.debug(stats[aggregate_feature.GetField(
+                    aggregate_field_name)])
+            aggregate_feature.SetField(
+                '%s_%s' % (target_field_name, summary_op_name),
+                float(stats[aggregate_feature.GetField(
+                    aggregate_field_name)][summary_op_name]))
 
 
 def build_service_vector(
