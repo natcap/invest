@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import logging
 import os
+import time
 
 from osgeo import gdal
 from osgeo import ogr
@@ -171,8 +172,8 @@ def execute(args):
     build_service_vector_task = task_graph.add_task(
         func=build_service_vector,
         args=(
-            args['aoi_watersheds_path'],
-            target_sr_wkt,
+            args['aoi_watersheds_path'], target_sr_wkt,
+            args['infrastructure_damage_loss_table_path'],
             args['built_infrastructure_vector_path'],
             target_watershed_result_vector_path),
         target_path_list=[target_watershed_result_vector_path],
@@ -212,8 +213,7 @@ def add_zonal_stats(
 
 
 def build_service_vector(
-        base_watershed_vector_path,
-        target_wkt,
+        base_watershed_vector_path, target_wkt, damage_table_path,
         built_infrastructure_vector_path,
         target_watershed_result_vector_path):
     """Construct the service polygon.
@@ -226,7 +226,12 @@ def build_service_vector(
     Parameters:
         base_watershed_vector_path (str): path to base watershed vector,
         target_wkt (str): desired target projection.
-        built_infrastructure_vector_path (str): path to infrastructure vector.
+        built_infrastructure_vector_path (str): path to infrastructure vector
+            containing at least the integer field 'Type'.
+        damage_table_path (str): path to a CSV table containing fields
+            'Type' and 'Damage'. For every value of 'Type' in the
+            built_infrastructure_vector there must be a corresponding entry
+            in this table.
         target_watershed_result_vector_path (str): path to desired target
             watershed result vector with watershed scale values of stats.
 
@@ -234,6 +239,9 @@ def build_service_vector(
         None.
 
     """
+    damage_type_map = utils.build_lookup_from_csv(
+        damage_table_path, 'type', to_lower=True, warn_if_missing=True)
+
     pygeoprocessing.reproject_vector(
         base_watershed_vector_path, target_wkt,
         target_watershed_result_vector_path, layer_index=0,
@@ -252,14 +260,29 @@ def build_service_vector(
     infrastructure_to_target = osr.CoordinateTransformation(
         infrastructure_srs, target_srs)
 
+    infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()
+    for field_name in ['type', 'Type', 'TYPE']:
+        type_index = infrastructure_layer_defn.GetFieldIndex(field_name)
+        if type_index != -1:
+            break
+    if type_index == -1:
+        raise ValueError(
+            "Could not find field 'Type' in %s",
+            built_infrastructure_vector_path)
+
+    LOGGER.info("building infrastructure lookup dict")
     for infrastructure_feature in infrastructure_layer:
         infrastructure_geom = infrastructure_feature.GetGeometryRef().Clone()
         infrastructure_geom.Transform(infrastructure_to_target)
-        infrastructure_geometry_list.append(
-            shapely.wkb.loads(infrastructure_geom.ExportToWkb()))
+        infrastructure_geometry_list.append({
+            'geom': shapely.wkb.loads(
+                infrastructure_geom.ExportToWkb()),
+            'damage': damage_type_map[
+                infrastructure_feature.GetField(type_index)]['damage']
+        })
         infrastructure_rtree.insert(
             len(infrastructure_geometry_list)-1,
-            infrastructure_geometry_list[-1].bounds)
+            infrastructure_geometry_list[-1]['geom'].bounds)
 
     infrastructure_vector = None
     infrastructure_layer = None
@@ -267,10 +290,18 @@ def build_service_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
-    watershed_layer.CreateField(ogr.FieldDefn('Affected.Area', ogr.OFTReal))
+    watershed_layer.CreateField(ogr.FieldDefn('Affected.Build', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
-    for watershed_feature in watershed_layer:
+    last_time = time.time()
+    for watershed_index, watershed_feature in enumerate(watershed_layer):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                "processing watershed result %.2f%%",
+                (100.0 * (watershed_index+1)) /
+                watershed_layer.GetFeatureCount())
+            last_time = current_time
         watershed_shapely = shapely.wkb.loads(
             watershed_feature.GetGeometryRef().ExportToWkb())
         watershed_prep_geom = shapely.prepared.prep(watershed_shapely)
@@ -278,11 +309,14 @@ def build_service_vector(
         for infrastructure_index in infrastructure_rtree.intersection(
                 watershed_shapely.bounds):
             infrastructure_geom = infrastructure_geometry_list[
-                infrastructure_index]
+                infrastructure_index]['geom']
             if watershed_prep_geom.intersects(infrastructure_geom):
-                intersect_area += watershed_shapely.intersection(
-                    infrastructure_geom).area
-        watershed_feature.SetField('Affected.Area', intersect_area)
+                intersect_area += (
+                    watershed_shapely.intersection(infrastructure_geom).area *
+                    infrastructure_geometry_list[infrastructure_index][
+                        'damage'])
+
+        watershed_feature.SetField('Affected.Build', intersect_area)
         watershed_layer.SetFeature(watershed_feature)
 
 
