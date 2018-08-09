@@ -10,12 +10,13 @@ import struct
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
+import pygeoprocessing
 import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
-from osgeo import gdal
+from osgeo import gdal, gdalconst
 from osgeo import ogr
 from osgeo import osr
 
@@ -23,6 +24,24 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
+
+
+def resample_global_dem(src_path, dst_path, resample_factor=5000,
+                        method='average'):
+    """Resample the raster size of global DEM by a certain factor.
+    """
+    src = gdal.Open(src_path, gdalconst.GA_ReadOnly)
+    x_size = src.RasterXSize / resample_factor
+    y_size = src.RasterYSize / resample_factor
+    pygeoprocessing.warp_raster(src_path, (x_size, y_size), dst_path, method)
+    src = None
+
+def resample_csv(src_path, dst_path, resample_factor=1000):
+    with open(src_path, 'rb') as read_table:
+        with open(dst_path, 'wb') as write_table:
+            for i, line in enumerate(read_table):
+                if i % resample_factor == 0:
+                    write_table.write(line)
 
 
 # def _create_csv(fields, data, fname):
@@ -556,6 +575,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
             feat = layer.GetNextFeature()
 
+tempdir = r'C:\Users\Joanna Lin\Desktop\test_folder\windEnergy'
+
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -574,7 +595,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def generate_base_args(workspace_dir):
         """Generate an args list that is consistent across regression tests."""
         args = {
-            'workspace_dir': workspace_dir,
+            'workspace_dir': tempdir,
             'wind_data_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
@@ -591,6 +612,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'min_depth': 3,
             'max_depth': 60
             }
+        # args['bathymetry_uri'] = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\resampled_dem.tif"
         return args
 
     # @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -642,6 +664,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        new_bathymetry_uri = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\resampled_dem.tif"
+        resample_global_dem(args['bathymetry_uri'], new_bathymetry_uri, resample_factor=5000)
+        args['bathymetry_uri'] = new_bathymetry_uri
+
+        new_wind_data_uri = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\windpoints.csv"
+        resample_csv(args['wind_data_uri'], new_wind_data_uri, resample_factor=1000)
+        args['wind_data_uri'] = new_wind_data_uri
 
         wind_energy.execute(args)
 
@@ -650,7 +679,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(tempdir, 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
 
         vector_results = [
@@ -659,7 +688,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(tempdir, 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
