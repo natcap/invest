@@ -252,15 +252,14 @@ def build_service_vector(
     infrastructure_to_target = osr.CoordinateTransformation(
         infrastructure_srs, target_srs)
 
-    for infrastructure_index in range(infrastructure_layer.GetFeatureCount()):
-        infrastructure_feature = infrastructure_layer.GetFeature(
-            infrastructure_index)
+    for infrastructure_feature in infrastructure_layer:
         infrastructure_geom = infrastructure_feature.GetGeometryRef().Clone()
         infrastructure_geom.Transform(infrastructure_to_target)
         infrastructure_geometry_list.append(
             shapely.wkb.loads(infrastructure_geom.ExportToWkb()))
         infrastructure_rtree.insert(
-            infrastructure_index, infrastructure_geometry_list[-1].bounds)
+            len(infrastructure_geometry_list)-1,
+            infrastructure_geometry_list[-1].bounds)
 
     infrastructure_vector = None
     infrastructure_layer = None
@@ -271,9 +270,7 @@ def build_service_vector(
     watershed_layer.CreateField(ogr.FieldDefn('Affected.Area', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
-    for watershed_index in range(watershed_layer.GetFeatureCount()):
-        LOGGER.debug(watershed_index)
-        watershed_feature = watershed_layer.GetFeature(watershed_index)
+    for watershed_feature in watershed_layer:
         watershed_shapely = shapely.wkb.loads(
             watershed_feature.GetGeometryRef().ExportToWkb())
         watershed_prep_geom = shapely.prepared.prep(watershed_shapely)
@@ -286,6 +283,7 @@ def build_service_vector(
                 intersect_area += watershed_shapely.intersection(
                     infrastructure_geom).area
         watershed_feature.SetField('Affected.Area', intersect_area)
+        watershed_layer.SetFeature(watershed_feature)
 
 
 def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
