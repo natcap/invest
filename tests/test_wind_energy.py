@@ -5,6 +5,7 @@ import shutil
 import os
 import csv
 
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
@@ -13,7 +14,6 @@ import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
-import pygeoprocessing
 from osgeo import gdal, gdalconst
 from osgeo import ogr
 from osgeo import osr
