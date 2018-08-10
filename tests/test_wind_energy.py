@@ -619,8 +619,49 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_no_dist_landpoly(self):
-        """WindEnergy: testing case w/ AOI, but w/o distances or land poly."""
+    def test_no_land_polygon(self):
+        """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
+        from natcap.invest.wind_energy import wind_energy
+
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['workspace_dir'] = tempdir
+
+        # to replace SAMPLE_DATA
+        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
+        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        args['bathymetry_uri'] = resampled_bathymetry_uri
+
+        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        args['wind_data_uri'] = resampled_wind_data_uri
+
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+
+        wind_energy.execute(args)
+
+        raster_results = [
+            'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
+
+        for raster_path in raster_results:
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+                os.path.join(tempdir, 'output', raster_path),
+                os.path.join(tests_results_dir, 'nolandpoly', raster_path))
+
+        vector_results = [
+            'example_size_and_orientation_of_a_possible_wind_farm.shp',
+            'wind_energy_points.shp']
+
+        for vector_path in vector_results:
+            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+                os.path.join(tempdir, 'output', vector_path),
+                os.path.join(tests_results_dir, 'nolandpoly', vector_path))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_no_distances(self):
+        """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
