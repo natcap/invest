@@ -166,6 +166,20 @@ def execute(args):
         dependent_task_list=[q_pi_task],
         task_name='create peak flow')
 
+    # TODO: calculate peak flow retention in volume
+    # calculate this raster = (R_i * Qpi * cell_size) then sum under the polygon
+    peak_flow_ret_vol_raster_path = os.path.join(
+        args['workspace_dir'], 'peak_flow_retention_volume.tif')
+
+    peak_flow_ret_vol_nodata = -1
+    pygeoprocessing.raster_calculator([
+        (peak_flow_raster_path, 1), (peak_flow_nodata, 'raw'),
+        (q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
+        (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
+        (peak_flow_ret_vol_nodata, 'raw')], peak_flow_ret_vol_op,
+        peak_flow_ret_vol_raster_path, gdal.GDT_Float32,
+        peak_flow_ret_vol_nodata)
+
     # intersect built_infrastructure_vector_path with aoi_watersheds_path
     target_watershed_result_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service.gpkg')
@@ -183,11 +197,22 @@ def execute(args):
         peak_flow_raster_path, target_watershed_result_vector_path,
         'OBJECTID', 'mean', 'mean_peak_flow_retention_index')
 
-    # TODO: calculate peak flow retention in volume
-    # calculate this raster = (R_i * Qpi * cell_size) then sum under the polygon
-
     task_graph.close()
     task_graph.join()
+
+
+def peak_flow_ret_vol_op(
+        peak_flow_array, peak_flow_nodata, q_pi_array, q_pi_nodata,
+        cell_area, target_nodata):
+    """Calculate peak flow retention as a volume (R_i*Qpi*cell_size)"""
+    result = numpy.empty(peak_flow_array.shape, dtype=numpy.float32)
+    result[:] = target_nodata
+    valid_mask = (
+        (peak_flow_array != peak_flow_nodata) &
+        (q_pi_array != q_pi_nodata))
+    result[valid_mask] = (
+        peak_flow_array[valid_mask] * q_pi_array[valid_mask] * cell_area)
+    return result
 
 
 def add_zonal_stats(
