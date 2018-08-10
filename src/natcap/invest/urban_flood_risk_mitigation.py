@@ -179,14 +179,12 @@ def execute(args):
         target_path_list=[target_watershed_result_vector_path],
         task_name='build_service_vector_task')
 
-    mean_peak_flow_aggregate_task = task_graph.add_task(
-        func=add_zonal_stats,
-        args=(
-            peak_flow_raster_path, target_watershed_result_vector_path,
-            'OBJECTID', 'mean_peak_flow_retention_index'),
-        target_path_list=[],
-        dependent_task_list=[peak_flow_task, build_service_vector_task],
-        task_name='q_pi stats')
+    add_zonal_stats(
+        peak_flow_raster_path, target_watershed_result_vector_path,
+        'OBJECTID', 'mean', 'mean_peak_flow_retention_index')
+
+    # TODO: calculate peak flow retention in volume
+    # calculate this raster = (R_i * Qpi * cell_size) then sum under the polygon
 
     task_graph.close()
     task_graph.join()
@@ -194,7 +192,7 @@ def execute(args):
 
 def add_zonal_stats(
         base_raster_path, aggregate_vector_path, aggregate_field_name,
-        target_field_name):
+        aggregate_operation, target_field_name):
     """Add watershed scale values of the given base_raster.
 
     Parameters:
@@ -202,6 +200,7 @@ def add_zonal_stats(
         aggregate_vector_path (str): path to vector to aggregate values over
         aggregate_field_name (str): key field in `aggregate_vector_path`
             that can be used to index the per-feature results.
+        aggregate_operation (str): one of 'mean' or 'sum'
 
     Return:
         None.
@@ -232,10 +231,15 @@ def add_zonal_stats(
         feature_id = aggregate_feature.GetField(aggregate_field_name)
         if feature_id not in stats:
             continue
-        pixel_count = stats[feature_id]['count']
-        if pixel_count > 0:
-            mean_value = stats[feature_id]['sum'] / float(pixel_count)
-            aggregate_feature.SetField(target_field_name, float(mean_value))
+        if aggregate_operation == 'mean':
+            pixel_count = stats[feature_id]['count']
+            if pixel_count > 0:
+                mean_value = stats[feature_id]['sum'] / float(pixel_count)
+                aggregate_feature.SetField(
+                    target_field_name, float(mean_value))
+        else:
+            aggregate_feature.SetField(
+                target_field_name, float(stats[feature_id]['sum']))
         aggregate_layer.SetFeature(aggregate_feature)
 
 
