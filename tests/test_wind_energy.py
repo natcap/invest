@@ -3,19 +3,11 @@ import unittest
 import tempfile
 import shutil
 import os
-import collections
 import csv
-import struct
 
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
-from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
 import pygeoprocessing
-import numpy
-import numpy.testing
-from shapely.geometry import Polygon
-from shapely.geometry import Point
-from shapely.geometry.polygon import LinearRing
 from osgeo import gdal, gdalconst
 from osgeo import ogr
 from osgeo import osr
@@ -74,7 +66,7 @@ def _make_simple_shp(base_shp_path, origin):
     rect.AddPoint(lon, lat)
     rect.AddPoint(lon + width, lat)
     rect.AddPoint(lon + width, lat - width)
-    # rect.AddPoint(lon, lat - width)
+    rect.AddPoint(lon, lat - width)
     rect.AddPoint(lon, lat)
 
     # Create the feature from the geometry
@@ -938,7 +930,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
-        import pdb
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['workspace_dir'] = tempdir
@@ -952,25 +943,13 @@ class WindEnergyRegressionTests(unittest.TestCase):
         _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
         args['wind_data_uri'] = resampled_wind_data_uri
 
-        # simple_aoi_uri = os.path.join(tempdir, 'simple_aoi.shp')
-        # origin = (223824, 4891223)  # near wind energy points
-        # _make_simple_shp(simple_aoi_uri, origin)
-        # args['aoi_uri'] = simple_aoi_uri
-
-        # resampled_grid_pts_uri = os.path.join(tempdir, 'resample_grid_pts.csv')
-        # _resample_csv(os.path.join(
-        #     SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv'),
-        #     resampled_grid_pts_uri,
-        #     resample_factor=50)
-        # args['grid_points_uri'] = resampled_grid_pts_uri
-
-        # args['aoi_uri'] = os.path.join(
-        #     SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['aoi_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
-        args['valuation_container'] = True
+        args['valuaclstion_container'] = True
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
         # Test that only grid points are provided in grid_points_uri
@@ -979,7 +958,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
-        pdb.set_trace()
+
         wind_energy.execute(args)
 
         raster_results = [
@@ -1006,6 +985,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['workspace_dir'] = tempdir
+
+        # to replace SAMPLE_DATA
+        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
+        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        args['bathymetry_uri'] = resampled_bathymetry_uri
+
+        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -1034,8 +1024,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
+                os.path.join(tempdir, 'output', raster_path),
+                os.path.join(tests_results_dir, 'pricevalgridpts', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -1043,8 +1033,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
+                os.path.join(tempdir, 'output', vector_path),
+                os.path.join(tests_results_dir, 'pricevalgridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
