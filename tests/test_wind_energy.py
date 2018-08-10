@@ -698,48 +698,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(tempdir, 'output', vector_path),
                 os.path.join(tests_results_dir, 'nodistances', vector_path))
 
-    # @scm.skip_if_data_missing(SAMPLE_DATA)
-    # @scm.skip_if_data_missing(REGRESSION_DATA)
-    # def test_val_avggriddist_windprice(self):
-    #     """WindEnergy: testing Valuation w/ avg grid distances and wind price."""
-    #     from natcap.invest.wind_energy import wind_energy
-
-    #     args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-    #     args['aoi_uri'] = os.path.join(
-    #         SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-    #     args['land_polygon_uri'] = os.path.join(
-    #         SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
-    #     args['min_distance'] = 0
-    #     args['max_distance'] = 200000
-    #     args['valuation_container'] = True
-    #     args['foundation_cost'] = 2
-    #     args['discount_rate'] = 0.07
-    #     args['avg_grid_distance'] = 4
-    #     args['price_table'] = False
-    #     args['wind_price'] = 0.187
-    #     args['rate_change'] = 0.2
-
-    #     wind_energy.execute(args)
-
-    #     raster_results = [
-    #         'carbon_emissions_tons.tif',
-    #         'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
-
-    #     for raster_path in raster_results:
-    #         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-    #             os.path.join(args['workspace_dir'], 'output', raster_path),
-    #             os.path.join(REGRESSION_DATA, 'priceval', raster_path))
-
-    #     vector_results = [
-    #         'example_size_and_orientation_of_a_possible_wind_farm.shp',
-    #         'wind_energy_points.shp']
-
-    #     for vector_path in vector_results:
-    #         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-    #             os.path.join(args['workspace_dir'], 'output', vector_path),
-    #             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_val_gridpts_windprice(self):
