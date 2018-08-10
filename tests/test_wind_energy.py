@@ -24,20 +24,42 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
 
 
-def _resample_global_dem(src_path, dst_path, resample_factor=5000):
-    """Resample the raster size of global DEM by a certain factor.
+def _resample_raster(base_raster_path, base_dst_path, resample_factor=5000):
+    """Resample (downsize) the raster size of a raster file by a certain factor.
+
+    Parameters:
+        base_raster_path (str): path to the source raster.
+        base_dst (str): path to the destination raster.
+        resample_factor (int): the factor used to divide the height and width
+            of the raster dataset in pixels.
+
+    Returns:
+        None.
     """
-    src = gdal.Open(src_path, gdalconst.GA_ReadOnly)
+    src = gdal.Open(base_raster_path, gdalconst.GA_ReadOnly)
     #  Original raster size was (10800, 5400)
     x_size = src.RasterXSize / resample_factor
     y_size = src.RasterYSize / resample_factor
-    pygeoprocessing.warp_raster(src_path, (x_size, y_size), dst_path, 'average')
+    pygeoprocessing.warp_raster(base_raster_path, (x_size, y_size),
+                                base_dst_path, 'average')
     src = None
 
 
-def _resample_csv(src_path, dst_path, resample_factor):
-    with open(src_path, 'rb') as read_table:
-        with open(dst_path, 'wb') as write_table:
+def _resample_csv(base_csv_path, base_dst_path, resample_factor):
+    """Resample (downsize) a cvs file by a certain factor.
+
+    Parameters:
+        base_csv_path (str): path to the source csv file to be resampled.
+        base_dst_path (str): path to the destination csv file.
+        resample_factor (int): the factor used to determined how many rows
+            should be skipped before writing a row to the destination file.
+
+    Returns:
+        None
+
+    """
+    with open(base_csv_path, 'rb') as read_table:
+        with open(base_dst_path, 'wb') as write_table:
             for i, line in enumerate(read_table):
                 if i % resample_factor == 0:
                     write_table.write(line)
@@ -54,10 +76,10 @@ def _create_vertical_csv(data, fname):
         data (dict): a Dictionary where each key is the name
             of a field and set in the first column. The second
             column is set with the value of that key.
-        fname (string): a file path for the new table to be written to disk
+        fname (string): a file path for the new table to be written to disk.
 
     Returns:
-        Nothing
+        None
     """
     csv_file = open(fname, 'wb')
 
@@ -591,7 +613,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
@@ -629,7 +651,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
@@ -669,7 +691,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
@@ -709,7 +731,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
@@ -763,7 +785,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
@@ -820,7 +842,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # to replace SAMPLE_DATA
         resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
