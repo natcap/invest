@@ -45,6 +45,49 @@ def _resample_csv(src_path, dst_path, resample_factor):
                     write_table.write(line)
 
 
+def _make_simple_shp(base_shp_path, origin):
+    """Make a simple geometry shapefile.
+
+    Parameters:
+        base_shp_path (str): path to the shapefile.
+
+    Returns:
+        None.
+
+    """
+    # Create a new shapefile
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    data_source = driver.CreateDataSource(base_shp_path)
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(32619)  # WGS 84 / UTM zone 19N - Projected
+    layer = data_source.CreateLayer('layer', srs, ogr.wkbPolygon)
+
+    # Add an FID field to the layer
+    field_name = 'FID'
+    field = ogr.FieldDefn(field_name)
+    layer.CreateField(field)
+
+    # Create a rectangular geometry
+    lon, lat = origin[0], origin[1]
+    width = 50000  # in meters
+    rect = ogr.Geometry(ogr.wkbLinearRing)
+    rect.AddPoint(lon, lat)
+    rect.AddPoint(lon + width, lat)
+    rect.AddPoint(lon + width, lat - width)
+    # rect.AddPoint(lon, lat - width)
+    rect.AddPoint(lon, lat)
+
+    # Create the feature from the geometry
+    poly = ogr.Geometry(ogr.wkbPolygon)
+    poly.AddGeometry(rect)
+    feature = ogr.Feature(layer.GetLayerDefn())
+    feature.SetField(field_name, '1')
+    feature.SetGeometry(poly)
+    layer.CreateFeature(feature)
+
+    feature = None
+    data_source = None
+
 # def _create_csv(fields, data, fname):
 #     """Create a new CSV table from a dictionary.
 
@@ -895,6 +938,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
+        import pdb
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['workspace_dir'] = tempdir
@@ -908,6 +952,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
         _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
         args['wind_data_uri'] = resampled_wind_data_uri
 
+        # simple_aoi_uri = os.path.join(tempdir, 'simple_aoi.shp')
+        # origin = (223824, 4891223)  # near wind energy points
+        # _make_simple_shp(simple_aoi_uri, origin)
+        # args['aoi_uri'] = simple_aoi_uri
+
         # resampled_grid_pts_uri = os.path.join(tempdir, 'resample_grid_pts.csv')
         # _resample_csv(os.path.join(
         #     SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv'),
@@ -915,8 +964,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         #     resample_factor=50)
         # args['grid_points_uri'] = resampled_grid_pts_uri
 
-        args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        # args['aoi_uri'] = os.path.join(
+        #     SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
         args['min_distance'] = 0
@@ -930,7 +979,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
-
+        pdb.set_trace()
         wind_energy.execute(args)
 
         raster_results = [
