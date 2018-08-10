@@ -25,7 +25,10 @@ REGRESSION_DATA = os.path.join(
 
 
 def _resample_raster(base_raster_path, base_dst_path, resample_factor=5000):
-    """Resample (downsize) the raster size of a raster file by a certain factor.
+    """Resample (downsize) a raster file by a certain resample factor.
+
+    The default resample factor is good for global_dem, which has a raster size
+    of (10800, 5400).
 
     Parameters:
         base_raster_path (str): path to the source raster.
@@ -37,7 +40,6 @@ def _resample_raster(base_raster_path, base_dst_path, resample_factor=5000):
         None.
     """
     src = gdal.Open(base_raster_path, gdalconst.GA_ReadOnly)
-    #  Original raster size was (10800, 5400)
     x_size = src.RasterXSize / resample_factor
     y_size = src.RasterYSize / resample_factor
     pygeoprocessing.warp_raster(base_raster_path, (x_size, y_size),
@@ -45,8 +47,11 @@ def _resample_raster(base_raster_path, base_dst_path, resample_factor=5000):
     src = None
 
 
-def _resample_csv(base_csv_path, base_dst_path, resample_factor):
-    """Resample (downsize) a cvs file by a certain factor.
+def _resample_csv(base_csv_path, base_dst_path, resample_factor=300):
+    """Resample (downsize) a csv file by a certain resample factor.
+
+    The default resample factor is good for ECNA_EEZ_WEBPAR_Aug27_2012.csv,
+    which has 21782 data points.
 
     Parameters:
         base_csv_path (str): path to the source csv file to be resampled.
@@ -56,7 +61,6 @@ def _resample_csv(base_csv_path, base_dst_path, resample_factor):
 
     Returns:
         None
-
     """
     with open(base_csv_path, 'rb') as read_table:
         with open(base_dst_path, 'wb') as write_table:
@@ -617,7 +621,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         wind_energy.execute(args)
@@ -655,7 +659,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
@@ -695,7 +699,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
@@ -735,7 +739,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
@@ -789,7 +793,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
@@ -846,7 +850,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['bathymetry_uri'] = resampled_bathymetry_uri
 
         resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
         args['wind_data_uri'] = resampled_wind_data_uri
 
         args['land_polygon_uri'] = os.path.join(
