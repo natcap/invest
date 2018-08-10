@@ -539,7 +539,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             feat = layer.GetNextFeature()
 
 tempdir = r'C:\Users\Joanna Lin\Desktop\test_folder\windEnergy'
-tests_results_dir = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\test-data-wind_energy"
+tests_results_dir = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\new-test-data"
 
 
 class WindEnergyRegressionTests(unittest.TestCase):
@@ -808,6 +808,40 @@ class WindEnergyRegressionTests(unittest.TestCase):
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(tempdir, 'output', vector_path),
                 os.path.join(tests_results_dir, 'pricevalgridpts', vector_path))
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_grid_points_no_aoi(self):
+        """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
+        from natcap.invest.wind_energy import wind_energy
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['workspace_dir'] = tempdir
+
+        # to replace SAMPLE_DATA
+        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
+        _resample_global_dem(args['bathymetry_uri'], resampled_bathymetry_uri)
+        args['bathymetry_uri'] = resampled_bathymetry_uri
+
+        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
+        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri, resample_factor=300)
+        args['wind_data_uri'] = resampled_wind_data_uri
+
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        # Provide the grid points but not AOI
+        args['grid_points_uri'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['price_table'] = False
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
+
+        self.assertRaises(ValueError, wind_energy.execute, args)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
