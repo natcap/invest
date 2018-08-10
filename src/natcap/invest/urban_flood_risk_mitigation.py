@@ -179,11 +179,11 @@ def execute(args):
         target_path_list=[target_watershed_result_vector_path],
         task_name='build_service_vector_task')
 
-    q_pi_zonal_stats_task = task_graph.add_task(
+    mean_peak_flow_aggregate_task = task_graph.add_task(
         func=add_zonal_stats,
         args=(
             peak_flow_raster_path, target_watershed_result_vector_path,
-            'OBJECTID', 'q_pi'),
+            'OBJECTID', 'mean_peak_flow_retention_index'),
         target_path_list=[],
         dependent_task_list=[peak_flow_task, build_service_vector_task],
         task_name='q_pi stats')
@@ -211,16 +211,13 @@ def add_zonal_stats(
     stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), aggregate_vector_path,
         aggregate_field_name)
-    LOGGER.debug(stats)
 
     aggregate_vector = gdal.OpenEx(
         aggregate_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     aggregate_layer = aggregate_vector.GetLayer()
 
-    for summary_op_name in ['min', 'max', 'sum']:
-        aggregate_layer.CreateField(
-            ogr.FieldDefn('%s_%s' % (
-                target_field_name, summary_op_name), ogr.OFTReal))
+    aggregate_layer.CreateField(
+        ogr.FieldDefn(target_field_name, ogr.OFTReal))
 
     last_time = time.time()
     for aggregate_index, aggregate_feature in enumerate(aggregate_layer):
@@ -232,13 +229,14 @@ def add_zonal_stats(
                 aggregate_layer.GetFeatureCount())
             last_time = current_time
 
-        for summary_op_name in ['min', 'max', 'sum']:
-            LOGGER.debug(stats[aggregate_feature.GetField(
-                    aggregate_field_name)])
-            aggregate_feature.SetField(
-                '%s_%s' % (target_field_name, summary_op_name),
-                float(stats[aggregate_feature.GetField(
-                    aggregate_field_name)][summary_op_name]))
+        feature_id = aggregate_feature.GetField(aggregate_field_name)
+        if feature_id not in stats:
+            continue
+        pixel_count = stats[feature_id]['count']
+        if pixel_count > 0:
+            mean_value = stats[feature_id]['sum'] / float(pixel_count)
+            aggregate_feature.SetField(target_field_name, float(mean_value))
+        aggregate_layer.SetFeature(aggregate_feature)
 
 
 def build_service_vector(
