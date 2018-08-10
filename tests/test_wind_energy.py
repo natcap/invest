@@ -649,10 +649,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_no_distances(self):
-        """WindEnergy: testing case w/ AOI, land poly, but w/o distances."""
+    def test_no_dist_landpoly(self):
+        """WindEnergy: testing case w/ AOI, but w/o distances and land poly."""
         from natcap.invest.wind_energy import wind_energy
-        # this function tests line 243 & 244
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['workspace_dir'] = tempdir
@@ -668,8 +667,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
 
         wind_energy.execute(args)
 
