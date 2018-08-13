@@ -58,7 +58,6 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
-
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_mult_none(self):
