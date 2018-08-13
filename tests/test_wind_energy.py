@@ -587,11 +587,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'wind_data_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
+                REGRESSION_DATA, 'resampled_wind_points.csv'),
             'bathymetry_uri': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
+                REGRESSION_DATA, 'resampled_global_dem.tif'),
             'global_wind_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'global_wind_energy_parameters.csv'),
@@ -613,17 +611,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
-
         wind_energy.execute(args)
 
         raster_results = [
@@ -631,8 +618,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(tempdir, 'output', raster_path),
-                os.path.join(tests_results_dir, 'noaoi', raster_path))
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -640,8 +627,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(tempdir, 'output', vector_path),
-                os.path.join(tests_results_dir, 'noaoi', vector_path))
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -650,17 +637,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -672,8 +648,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(tempdir, 'output', raster_path),
-                os.path.join(tests_results_dir, 'nolandpoly', raster_path))
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -681,8 +657,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(tempdir, 'output', vector_path),
-                os.path.join(tests_results_dir, 'nolandpoly', vector_path))
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -690,17 +666,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -712,8 +677,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(tempdir, 'output', raster_path),
-                os.path.join(tests_results_dir, 'nodistances', raster_path))
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -721,8 +686,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(tempdir, 'output', vector_path),
-                os.path.join(tests_results_dir, 'nodistances', vector_path))
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -730,17 +695,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -766,8 +720,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(tempdir, 'output', raster_path),
-                os.path.join(tests_results_dir, 'pricevalgridpts', raster_path))
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -775,8 +729,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(tempdir, 'output', vector_path),
-                os.path.join(tests_results_dir, 'pricevalgridpts', vector_path))
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -784,17 +738,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
@@ -823,8 +766,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(tempdir, 'output', raster_path),
-                os.path.join(tests_results_dir, 'pricevalgridpts', raster_path))
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -832,8 +775,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-                os.path.join(tempdir, 'output', vector_path),
-                os.path.join(tests_results_dir, 'pricevalgridpts', vector_path))
+                os.path.join(args['workspace_dir'], 'output', vector_path),
+                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -841,17 +784,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['workspace_dir'] = tempdir
-
-        # to replace SAMPLE_DATA
-        resampled_bathymetry_uri = os.path.join(tempdir, 'resampled_global_dem.tif')
-        _resample_raster(args['bathymetry_uri'], resampled_bathymetry_uri)
-        args['bathymetry_uri'] = resampled_bathymetry_uri
-
-        resampled_wind_data_uri = os.path.join(tempdir, 'resampled_wind_points.csv')
-        _resample_csv(args['wind_data_uri'], resampled_wind_data_uri)
-        args['wind_data_uri'] = resampled_wind_data_uri
 
         args['land_polygon_uri'] = os.path.join(
             SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
