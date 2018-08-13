@@ -5,7 +5,6 @@ import shutil
 import os
 import csv
 
-import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
@@ -14,7 +13,7 @@ import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
 from shapely.geometry.polygon import LinearRing
-from osgeo import gdal, gdalconst
+from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
@@ -22,51 +21,6 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
-
-
-def _resample_raster(base_raster_path, base_dst_path, resample_factor=5000):
-    """Resample (downsize) a raster file by a certain resample factor.
-
-    The default resample factor is good for global_dem, which has a raster size
-    of (10800, 5400).
-
-    Parameters:
-        base_raster_path (str): path to the source raster.
-        base_dst (str): path to the destination raster.
-        resample_factor (int): the factor used to divide the height and width
-            of the raster dataset in pixels.
-
-    Returns:
-        None.
-    """
-    src = gdal.Open(base_raster_path, gdalconst.GA_ReadOnly)
-    x_size = src.RasterXSize / resample_factor
-    y_size = src.RasterYSize / resample_factor
-    pygeoprocessing.warp_raster(base_raster_path, (x_size, y_size),
-                                base_dst_path, 'average')
-    src = None
-
-
-def _resample_csv(base_csv_path, base_dst_path, resample_factor=300):
-    """Resample (downsize) a csv file by a certain resample factor.
-
-    The default resample factor is good for ECNA_EEZ_WEBPAR_Aug27_2012.csv,
-    which has 21782 data points.
-
-    Parameters:
-        base_csv_path (str): path to the source csv file to be resampled.
-        base_dst_path (str): path to the destination csv file.
-        resample_factor (int): the factor used to determined how many rows
-            should be skipped before writing a row to the destination file.
-
-    Returns:
-        None
-    """
-    with open(base_csv_path, 'rb') as read_table:
-        with open(base_dst_path, 'wb') as write_table:
-            for i, line in enumerate(read_table):
-                if i % resample_factor == 0:
-                    write_table.write(line)
 
 
 def _create_vertical_csv(data, fname):
@@ -563,9 +517,6 @@ class WindEnergyUnitTests(unittest.TestCase):
                         'Could not find field %s' % field)
 
             feat = layer.GetNextFeature()
-
-tempdir = r'C:\Users\Joanna Lin\Desktop\test_folder\windEnergy'
-tests_results_dir = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy\new-test-data"
 
 
 class WindEnergyRegressionTests(unittest.TestCase):
