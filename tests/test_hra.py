@@ -21,7 +21,7 @@ REGRESSION_DATA = os.path.join(
 
 SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-data"
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-test-data"
-
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\tempdir"
 
 class HRATests(unittest.TestCase):
     """Tests for Habitat Risk Assessment."""
@@ -30,11 +30,12 @@ class HRATests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempdir
+        # self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
+        # shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -48,11 +49,11 @@ class HRATests(unittest.TestCase):
             'csv_uri': os.path.join(
                 SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
             'decay_eq': 'None',
-            'grid_size': 200,
+            'grid_size': 30,
             'max_rating': 3,
-            'max_stress': 4,
+            'max_stress': 2,
             'risk_eq': 'Euclidean',
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': tempdir,
         }
         natcap.invest.habitat_risk_assessment.hra.execute(args)
 
@@ -77,9 +78,9 @@ class HRATests(unittest.TestCase):
             'csv_uri': os.path.join(
                 SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
             'decay_eq': 'None',
-            'grid_size': 200,
+            'grid_size': 30,
             'max_rating': 3,
-            'max_stress': 4,
+            'max_stress': 2,
             'risk_eq': 'Multiplicative',
             'workspace_dir': self.workspace_dir,
         }
@@ -106,9 +107,9 @@ class HRATests(unittest.TestCase):
             'csv_uri': os.path.join(
                 SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
             'decay_eq': 'Linear',
-            'grid_size': 200,
+            'grid_size': 30,
             'max_rating': 3,
-            'max_stress': 4,
+            'max_stress': 2,
             'risk_eq': 'Euclidean',
             'workspace_dir': self.workspace_dir,
         }
@@ -134,9 +135,9 @@ class HRATests(unittest.TestCase):
             'csv_uri': os.path.join(
                 SAMPLE_DATA, 'habitat_stressor_ratings_sample'),
             'decay_eq': 'Exponential',
-            'grid_size': 200,
+            'grid_size': 30,
             'max_rating': 3,
-            'max_stress': 4,
+            'max_stress': 2,
             'risk_eq': 'Euclidean',
             'workspace_dir': self.workspace_dir,
         }
@@ -209,6 +210,9 @@ class HRATests(unittest.TestCase):
             for file_path in file_list:
                 full_path = os.path.join(directory_path, file_path.rstrip())
                 if full_path == '':
+                    continue
+                if 'Sub_Region_Averaged_Results' in full_path and \
+                        full_path.endswith('.html'):
                     continue
                 if not os.path.isfile(full_path):
                     missing_files.append(full_path)
