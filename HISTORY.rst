@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Bumped pygeoprocessing requirement to ``pygeoprocessing>=1.2.3``.
+* Bumped taskgraph requirement to ``taskgraph>=0.6.1``.
 * Reimplemented the InVEST Scenic Quality model.  This new version removes the
   'population' and 'overlap' postprocessing steps, updates the available
   valuation functions and greatly improves the runtime and memory-efficiency of
