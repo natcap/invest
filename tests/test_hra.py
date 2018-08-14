@@ -21,7 +21,6 @@ class HRATests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        # self.workspace_dir = tempdir
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
