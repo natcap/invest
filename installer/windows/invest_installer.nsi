@@ -297,7 +297,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     CreateDirectory "${SMPATH}"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
-    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality (unstable)" "scenic_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality" "scenic_quality"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
     !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
     !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
@@ -361,6 +361,7 @@ Section "InVEST Tools" Section_InVEST_Tools
   
     ; Copy over all the sample parameter files
     File ..\..\data\invest-data\*.invs.json
+    File ..\..\data\invest-data\*.invest.json
   
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
