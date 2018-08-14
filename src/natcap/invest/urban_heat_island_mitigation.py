@@ -27,6 +27,24 @@ LOGGER = logging.getLogger(__name__)
 def execute(args):
     """Urban Flood Heat Island Mitigation model.
 
+    Parameters:
+        args['workspace_dir'] (str): path to target output directory.
+        args['air_temp_raster_path'] (str): raster of air temperature.
+        args['lulc_raster_path'] (str): path to landcover raster.
+        args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
+        args['aoi_vector_path'] (str): path to desired AOI.
+        args['biophysical_table_path'] (str): table to map landcover codes to
+            Shade, Kc, and Albedo values. Must contain the fields 'lucode',
+            'shade', 'kc', and 'albedo'.
+        args['urban_park_cooling_distance'] (float): Distance (in m) over
+            which large urban parks (> 2 ha) will have a cooling effect.
+        args['uhi_max'] (float): Magnitude of the UHI effect.
+        args['building_vector_path']: path to a vector of building footprints
+            that contains at least the field 'type'.
+        args['energy_consumption_table_path'] (str): path to a table that
+            maps building types to energy consumption. Must contain at least
+            the fields 'type' and 'consumption'.
+
     Returns:
         None.
 
