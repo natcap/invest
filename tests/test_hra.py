@@ -30,12 +30,12 @@ class HRATests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempdir
-        # self.workspace_dir = tempfile.mkdtemp()
+        # self.workspace_dir = tempdir
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        # shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -53,7 +53,7 @@ class HRATests(unittest.TestCase):
             'max_rating': 3,
             'max_stress': 2,
             'risk_eq': 'Euclidean',
-            'workspace_dir': tempdir,
+            'workspace_dir': self.workspace_dir,
         }
         natcap.invest.habitat_risk_assessment.hra.execute(args)
 
@@ -144,7 +144,7 @@ class HRATests(unittest.TestCase):
         natcap.invest.habitat_risk_assessment.hra.execute(args)
 
         HRATests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
+            os.path.join(REGRESSION_DATA, 'expected_file_list_euc_exp.txt'),
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'ecosys_risk_euc_exp.tif'),
@@ -210,9 +210,6 @@ class HRATests(unittest.TestCase):
             for file_path in file_list:
                 full_path = os.path.join(directory_path, file_path.rstrip())
                 if full_path == '':
-                    continue
-                if 'Sub_Region_Averaged_Results' in full_path and \
-                        full_path.endswith('.html'):
                     continue
                 if not os.path.isfile(full_path):
                     missing_files.append(full_path)
