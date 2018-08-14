@@ -19,13 +19,14 @@ def main():
     args = {
         'workspace_dir': 'urban_heat_island_invest_workspace',
         'results_suffix': '',
-        'aoi_watersheds_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
-        'rainfall_depth': 257.0,
-        'lulc_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\LULC_SFBA.tif",
-        'soils_hydrological_group_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\SoilHydroGroup_SFBA_reproj_0123.tif",
-        'curve_number_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Biophysical_water_SF.csv",
-        'built_infrastructure_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Built_infra_censusblock.shp",
-        'infrastructure_damage_loss_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Stormwater data SF\Damage.csv",
+        'air_temp_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Tair_Sept.tif",
+        'lulc_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\LULC_SFBA.tif",
+        'aoi_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
+        'biophysical_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Biophysical table_UHI.csv",
+        'urban_park_cooling_distance': 1000.0,
+        'uhi_max': 1.0,
+        'infrastructure_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
+        'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",
         }
     natcap.invest.urban_heat_island_mitigation.execute(args)
 
