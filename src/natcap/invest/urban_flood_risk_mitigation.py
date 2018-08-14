@@ -3,6 +3,8 @@ from __future__ import absolute_import
 import logging
 import os
 import time
+import multiprocessing
+import uuid
 
 from osgeo import gdal
 from osgeo import ogr
@@ -63,7 +65,8 @@ def execute(args):
         args['workspace_dir'], 'temp_working_dir')
     utils.make_directories([args['workspace_dir'], temporary_working_dir])
 
-    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
+    task_graph = taskgraph.TaskGraph(
+        temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
@@ -74,6 +77,7 @@ def execute(args):
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
     target_pixel_size = lulc_raster_info['pixel_size']
+    pixel_area = abs(target_pixel_size[0] * target_pixel_size[1])
     target_sr_wkt = lulc_raster_info['projection']
 
     soil_raster_info = pygeoprocessing.get_raster_info(
@@ -153,126 +157,231 @@ def execute(args):
         dependent_task_list=[s_max_task],
         task_name='create q_pi')
 
-    # Genereate Peak flow Retention
-    peak_flow_nodata = -9999.
-    peak_flow_raster_path = os.path.join(args['workspace_dir'], 'R_i.tif')
-    peak_flow_task = task_graph.add_task(
+    # Generate Runoff Retention
+    runoff_retention_nodata = -9999.
+    runoff_retention_raster_path = os.path.join(
+        args['workspace_dir'], 'R_i.tif')
+    runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (float(args['rainfall_depth']), 'raw'), (q_pi_raster_path, 1),
-            (q_pi_nodata, 'raw'), (peak_flow_nodata, 'raw')], peak_flow_op,
-            peak_flow_raster_path, gdal.GDT_Float32, peak_flow_nodata),
-        target_path_list=[peak_flow_raster_path],
+            (q_pi_raster_path, 1), (float(args['rainfall_depth']), 'raw'),
+            (q_pi_nodata, 'raw'), (runoff_retention_nodata, 'raw')],
+            runoff_retention_op, runoff_retention_raster_path,
+            gdal.GDT_Float32, runoff_retention_nodata),
+        target_path_list=[runoff_retention_raster_path],
         dependent_task_list=[q_pi_task],
-        task_name='create peak flow')
+        task_name='generate runoff retention')
 
-    # TODO: calculate peak flow retention in volume
-    # calculate this raster = (R_i * Qpi * cell_size) then sum under the polygon
-    peak_flow_ret_vol_raster_path = os.path.join(
-        args['workspace_dir'], 'peak_flow_retention_volume.tif')
+    # calculate runoff retention volumne
+    runoff_retention_ret_vol_raster_path = os.path.join(
+        args['workspace_dir'], 'R_i_m3.tif')
+    runoff_retention_ret_vol_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (runoff_retention_raster_path, 1),
+            (runoff_retention_nodata, 'raw'),
+            (float(args['rainfall_depth']), 'raw'),
+            (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
+            (runoff_retention_nodata, 'raw')], runoff_retention_ret_vol_op,
+            runoff_retention_ret_vol_raster_path, gdal.GDT_Float32,
+            runoff_retention_nodata),
+        target_path_list=[runoff_retention_ret_vol_raster_path],
+        dependent_task_list=[runoff_retention_task],
+        task_name='calculate runoff retention vol')
 
-    peak_flow_ret_vol_nodata = -1
-    pygeoprocessing.raster_calculator([
-        (peak_flow_raster_path, 1), (peak_flow_nodata, 'raw'),
-        (q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
-        (abs(target_pixel_size[0]*target_pixel_size[1]), 'raw'),
-        (peak_flow_ret_vol_nodata, 'raw')], peak_flow_ret_vol_op,
-        peak_flow_ret_vol_raster_path, gdal.GDT_Float32,
-        peak_flow_ret_vol_nodata)
+    # calculate flood vol raster
+    flood_vol_raster_path = os.path.join(
+        args['workspace_dir'], 'flood_vol.tif')
+    flood_vol_nodata = -1
+    service_built_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(float(args['rainfall_depth']), 'raw'),
+             (q_pi_raster_path, 1), (q_pi_nodata, 'raw'),
+             (pixel_area, 'raw'), (flood_vol_nodata, 'raw')],
+            flood_vol_op, flood_vol_raster_path, gdal.GDT_Float32,
+            flood_vol_nodata),
+        target_path_list=[flood_vol_raster_path],
+        dependent_task_list=[q_pi_task],
+        task_name='calculate service built raster')
 
     # intersect built_infrastructure_vector_path with aoi_watersheds_path
-    target_watershed_result_vector_path = os.path.join(
-        args['workspace_dir'], 'flood_risk_service.gpkg')
-    build_service_vector_task = task_graph.add_task(
-        func=build_service_vector,
+    intermediate_target_watershed_result_vector_path = os.path.join(
+        args['workspace_dir'], 'intermediate_flood_risk_service.gpkg')
+    intermediate_affected_vector_task = task_graph.add_task(
+        func=build_affected_vector,
         args=(
             args['aoi_watersheds_path'], target_sr_wkt,
             args['infrastructure_damage_loss_table_path'],
             args['built_infrastructure_vector_path'],
-            target_watershed_result_vector_path),
-        target_path_list=[target_watershed_result_vector_path],
-        task_name='build_service_vector_task')
-
-    add_zonal_stats(
-        peak_flow_raster_path, target_watershed_result_vector_path,
-        'OBJECTID', 'mean', 'mean_peak_flow_retention_index')
+            intermediate_target_watershed_result_vector_path),
+        target_path_list=[intermediate_target_watershed_result_vector_path],
+        task_name='affected_vector_task')
 
     task_graph.close()
     task_graph.join()
 
+    target_watershed_result_vector_path = os.path.join(
+        args['workspace_dir'], 'flood_risk_service.gpkg')
 
-def peak_flow_ret_vol_op(
-        peak_flow_array, peak_flow_nodata, q_pi_array, q_pi_nodata,
-        cell_area, target_nodata):
-    """Calculate peak flow retention as a volume (R_i*Qpi*cell_size)"""
-    result = numpy.empty(peak_flow_array.shape, dtype=numpy.float32)
+    add_zonal_stats(
+        runoff_retention_raster_path,
+        runoff_retention_ret_vol_raster_path,
+        flood_vol_raster_path,
+        intermediate_target_watershed_result_vector_path,
+        target_watershed_result_vector_path)
+
+    """
+    zonal_stats_task = task_graph.add_task(
+        func=add_zonal_stats,
+        args=(
+            runoff_retention_raster_path,
+            runoff_retention_ret_vol_raster_path,
+            flood_vol_raster_path,
+            intermediate_target_watershed_result_vector_path,
+            target_watershed_result_vector_path),
+        target_path_list=[target_watershed_result_vector_path],
+        dependent_task_list=[
+            intermediate_affected_vector_task, service_built_task,
+            runoff_retention_ret_vol_task, runoff_retention_task],
+        task_name='add zonal stats')
+    """
+
+
+
+def flood_vol_op(
+        rainfall_depth, q_pi_array, q_pi_nodata, pixel_area, target_nodata):
+    """Calculate vol of flood water."""
+    result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
-    valid_mask = (
-        (peak_flow_array != peak_flow_nodata) &
-        (q_pi_array != q_pi_nodata))
+    valid_mask = q_pi_array != q_pi_nodata
     result[valid_mask] = (
-        peak_flow_array[valid_mask] * q_pi_array[valid_mask] * cell_area)
+        0.001 * (rainfall_depth - q_pi_array[valid_mask]) * pixel_area)
+    return result
+
+
+def runoff_retention_ret_vol_op(
+        runoff_retention_array, runoff_retention_nodata, p_value,
+        cell_area, target_nodata):
+    """Calculate peak flow retention as a vol (R_i*Qpi*cell_size)."""
+    result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
+    result[:] = target_nodata
+    valid_mask = runoff_retention_array != runoff_retention_nodata
+    # the 1e-3 converts the mm of p_value to meters.
+    result[valid_mask] = (
+        runoff_retention_array[valid_mask] * p_value * cell_area * 1e-3)
     return result
 
 
 def add_zonal_stats(
-        base_raster_path, aggregate_vector_path, aggregate_field_name,
-        aggregate_operation, target_field_name):
+        runoff_retention_raster_path, runoff_retention_ret_vol_raster_path,
+        flood_vol_raster_path, base_watershed_result_vector_path,
+        target_watershed_result_vector_path):
     """Add watershed scale values of the given base_raster.
 
     Parameters:
-        base_raster_path (str): path to raster to aggregate over.
-        aggregate_vector_path (str): path to vector to aggregate values over
-        aggregate_field_name (str): key field in `aggregate_vector_path`
-            that can be used to index the per-feature results.
-        aggregate_operation (str): one of 'mean' or 'sum'
+        runoff_retention_raster_path (str): R_i raster
+        runoff_retention_ret_vol_raster_path (str): R_i_m3 raster
+        flood_vol_raster_path (str): 0.001 * (P - Q_pi) * pixel area raster
+        base_watershed_result_vector_path (str): path to existing vector
+            to aggregate values over.
+        target_watershed_result_vector_path (str): path to target vector that
+            will contain the additional fields:
+                * Runoff retention index
+                * Runoff_retention_m3
+                * Service_Build
 
     Return:
         None.
 
     """
-    LOGGER.info("Processing zonal stats for %s", target_field_name)
-    stats = pygeoprocessing.zonal_statistics(
-        (base_raster_path, 1), aggregate_vector_path,
-        aggregate_field_name)
+    LOGGER.info(
+        "Processing zonal stats for %s", target_watershed_result_vector_path)
 
-    aggregate_vector = gdal.OpenEx(
-        aggregate_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    aggregate_layer = aggregate_vector.GetLayer()
+    base_watershed_vector = gdal.OpenEx(
+        base_watershed_result_vector_path, gdal.OF_VECTOR)
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    target_watershed_vector = gpkg_driver.CreateCopy(
+        target_watershed_result_vector_path, base_watershed_vector)
+    base_watershed_vector = None
+    target_watershed_layer = target_watershed_vector.GetLayer()
 
-    aggregate_layer.CreateField(
-        ogr.FieldDefn(target_field_name, ogr.OFTReal))
+    target_watershed_layer.CreateField(
+        ogr.FieldDefn('runoff_retention_index', ogr.OFTReal))
+    target_watershed_layer.CreateField(
+        ogr.FieldDefn('runoff_retention_m3', ogr.OFTReal))
+    target_watershed_layer.CreateField(
+        ogr.FieldDefn('Service_Build', ogr.OFTReal))
+    feature_id_field = uuid.uuid1().hex[0:31]
+    target_watershed_layer.CreateField(
+        ogr.FieldDefn(feature_id_field, ogr.OFTInteger))
 
-    last_time = time.time()
-    for aggregate_index, aggregate_feature in enumerate(aggregate_layer):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info(
-                "processing watershed result %.2f%%",
-                (100.0 * (aggregate_index+1)) /
-                aggregate_layer.GetFeatureCount())
-            last_time = current_time
+    target_watershed_layer.ResetReading()
+    for target_index, target_feature in enumerate(target_watershed_layer):
+        target_feature.SetField(feature_id_field, target_index)
+        target_watershed_layer.SetFeature(target_feature)
+    target_watershed_layer.SyncToDisk()
+    target_watershed_layer = None
+    target_watershed_vector = None
 
-        feature_id = aggregate_feature.GetField(aggregate_field_name)
-        if feature_id not in stats:
-            continue
-        if aggregate_operation == 'mean':
-            pixel_count = stats[feature_id]['count']
+    # calculate runoff_retention_index
+    # TODO precalculate zonal stats as a pickle file
+    LOGGER.info("Calculate runoff stats")
+    runoff_retention_stats = pygeoprocessing.zonal_statistics(
+        (runoff_retention_raster_path, 1),
+        target_watershed_result_vector_path, feature_id_field)
+
+    LOGGER.info("Calculate runoff vol stats")
+    runoff_retention_vol_stats = pygeoprocessing.zonal_statistics(
+        (runoff_retention_ret_vol_raster_path, 1),
+        target_watershed_result_vector_path, feature_id_field)
+
+    LOGGER.info("Calculate flood vol stats")
+    flood_vol_stats = pygeoprocessing.zonal_statistics(
+        (flood_vol_raster_path, 1), target_watershed_result_vector_path,
+        feature_id_field)
+
+    target_watershed_vector = gdal.OpenEx(
+        target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_watershed_layer = target_watershed_vector.GetLayer()
+    for target_index, target_feature in enumerate(target_watershed_layer):
+        feature_id = target_feature.GetField(feature_id_field)
+
+        if feature_id in runoff_retention_stats:
+            pixel_count = runoff_retention_stats[feature_id]['count']
             if pixel_count > 0:
-                mean_value = stats[feature_id]['sum'] / float(pixel_count)
-                aggregate_feature.SetField(
-                    target_field_name, float(mean_value))
-        else:
-            aggregate_feature.SetField(
-                target_field_name, float(stats[feature_id]['sum']))
-        aggregate_layer.SetFeature(aggregate_feature)
+                mean_value = (
+                    runoff_retention_stats[feature_id]['sum'] /
+                    float(pixel_count))
+                target_feature.SetField(
+                    'runoff_retention_index', float(mean_value))
+
+        if feature_id in runoff_retention_vol_stats:
+            target_feature.SetField(
+                'runoff_retention_m3', float(
+                    runoff_retention_vol_stats[feature_id]['sum']))
+
+        if feature_id in flood_vol_stats:
+            pixel_count = flood_vol_stats[feature_id]['count']
+            if pixel_count > 0:
+                target_feature.SetField(
+                    'Service_Build',
+                    target_feature.GetField('Affected_Build') * float(
+                        runoff_retention_vol_stats[feature_id]['sum']))
+
+        target_watershed_layer.SetFeature(target_feature)
+    target_watershed_layer.SyncToDisk()
+    target_watershed_vector.ExecuteSQL(
+        'ALTER TABLE %s DROP COLUMN "%s"' % (
+            target_watershed_layer.GetName(), feature_id_field))
+    target_watershed_vector = None
 
 
-def build_service_vector(
+def build_affected_vector(
         base_watershed_vector_path, target_wkt, damage_table_path,
         built_infrastructure_vector_path,
         target_watershed_result_vector_path):
-    """Construct the service polygon.
+    """Construct the affected area polygon.
 
     The ``base_watershed_vector_path`` should be intersected with the
     ``built_infrastructure_vector_path`` to get
@@ -289,7 +398,8 @@ def build_service_vector(
             built_infrastructure_vector there must be a corresponding entry
             in this table.
         target_watershed_result_vector_path (str): path to desired target
-            watershed result vector with watershed scale values of stats.
+            watershed result vector that will have an additional field called
+            'Affected_Build'.
 
     Returns:
         None.
@@ -346,7 +456,7 @@ def build_service_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
-    watershed_layer.CreateField(ogr.FieldDefn('Affected.Build', ogr.OFTReal))
+    watershed_layer.CreateField(ogr.FieldDefn('Affected_Build', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
     last_time = time.time()
@@ -361,22 +471,22 @@ def build_service_vector(
         watershed_shapely = shapely.wkb.loads(
             watershed_feature.GetGeometryRef().ExportToWkb())
         watershed_prep_geom = shapely.prepared.prep(watershed_shapely)
-        intersect_area = 0.0
+        total_damage = 0.0
         for infrastructure_index in infrastructure_rtree.intersection(
                 watershed_shapely.bounds):
             infrastructure_geom = infrastructure_geometry_list[
                 infrastructure_index]['geom']
             if watershed_prep_geom.intersects(infrastructure_geom):
-                intersect_area += (
+                total_damage += (
                     watershed_shapely.intersection(infrastructure_geom).area *
                     infrastructure_geometry_list[infrastructure_index][
                         'damage'])
 
-        watershed_feature.SetField('Affected.Build', intersect_area)
+        watershed_feature.SetField('Affected_Build', total_damage)
         watershed_layer.SetFeature(watershed_feature)
 
 
-def peak_flow_op(p_value, q_pi_array, q_pi_nodata, result_nodata):
+def runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
     """Calculate peak flow retention."""
     result = numpy.empty_like(q_pi_array)
     result[:] = result_nodata
