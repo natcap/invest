@@ -316,6 +316,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
+
 
     !define OVERLAP "${SMPATH}\Overlap Analysis"
     CreateDirectory "${OVERLAP}"
@@ -352,32 +354,32 @@ Section "InVEST Tools" Section_InVEST_Tools
     WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
     WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
     WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
-  
-  
+
+
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
-  
+
     ; Copy over all the sample parameter files
     File ..\..\data\invest-data\*.invs.json
-  
+
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.
     File invest-autotest.bat
     File ..\..\scripts\invest-autotest.py
     File InVEST-2.ico
-  
+
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
     File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
-  
+
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
       nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
     ${EndIf}
-  
+
     ; Write the install log to a text file on disk.
     StrCpy $0 "$INSTDIR\install_log.txt"
     Push $0
