@@ -5,6 +5,7 @@ import os
 import time
 import multiprocessing
 import uuid
+import pickle
 
 from osgeo import gdal
 from osgeo import ogr
@@ -193,7 +194,7 @@ def execute(args):
     flood_vol_raster_path = os.path.join(
         args['workspace_dir'], 'flood_vol.tif')
     flood_vol_nodata = -1
-    service_built_task = task_graph.add_task(
+    flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
             [(float(args['rainfall_depth']), 'raw'),
@@ -207,46 +208,97 @@ def execute(args):
 
     # intersect built_infrastructure_vector_path with aoi_watersheds_path
     intermediate_target_watershed_result_vector_path = os.path.join(
-        args['workspace_dir'], 'intermediate_flood_risk_service.gpkg')
+        temporary_working_dir, 'intermediate_flood_risk_service.gpkg')
+    # this is the field name that can be used to uniquely identify a feature
+    key_field_id = 'objectid_invest_natcap'
     intermediate_affected_vector_task = task_graph.add_task(
         func=build_affected_vector,
         args=(
             args['aoi_watersheds_path'], target_sr_wkt,
             args['infrastructure_damage_loss_table_path'],
-            args['built_infrastructure_vector_path'],
+            args['built_infrastructure_vector_path'], key_field_id,
             intermediate_target_watershed_result_vector_path),
         target_path_list=[intermediate_target_watershed_result_vector_path],
-        task_name='affected_vector_task')
+        task_name='build affected vector')
 
-    task_graph.close()
-    task_graph.join()
+    # do the pickle
+    runoff_retention_pickle_path = os.path.join(
+        temporary_working_dir, 'runoff_retention_stats.pickle')
+    runoff_retention_pickle_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_target_watershed_result_vector_path, key_field_id,
+            runoff_retention_raster_path, runoff_retention_pickle_path),
+        dependent_task_list=[
+            intermediate_affected_vector_task, runoff_retention_task],
+        target_path_list=[runoff_retention_pickle_path],
+        task_name='pickle runoff index stats')
+
+    runoff_retention_ret_vol_pickle_path = os.path.join(
+        temporary_working_dir, 'runoff_retention_ret_vol_stats.pickle')
+    runoff_retention_ret_vol_pickle_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_target_watershed_result_vector_path, key_field_id,
+            runoff_retention_ret_vol_raster_path,
+            runoff_retention_ret_vol_pickle_path),
+        dependent_task_list=[
+            intermediate_affected_vector_task, runoff_retention_ret_vol_task],
+        target_path_list=[runoff_retention_ret_vol_pickle_path],
+        task_name='pickle runoff retention volume stats')
+
+    flood_vol_pickle_path = os.path.join(
+        temporary_working_dir, 'flood_vol_stats.pickle')
+    flood_vol_pickle_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_target_watershed_result_vector_path, key_field_id,
+            flood_vol_raster_path, flood_vol_pickle_path),
+        dependent_task_list=[
+            intermediate_affected_vector_task, flood_vol_task],
+        target_path_list=[flood_vol_pickle_path],
+        task_name='pickle flood volume stats')
 
     target_watershed_result_vector_path = os.path.join(
         args['workspace_dir'], 'flood_risk_service.gpkg')
 
-    add_zonal_stats(
-        runoff_retention_raster_path,
-        runoff_retention_ret_vol_raster_path,
-        flood_vol_raster_path,
-        intermediate_target_watershed_result_vector_path,
-        target_watershed_result_vector_path)
-
-    """
-    zonal_stats_task = task_graph.add_task(
+    task_graph.add_task(
         func=add_zonal_stats,
         args=(
-            runoff_retention_raster_path,
-            runoff_retention_ret_vol_raster_path,
-            flood_vol_raster_path,
+            runoff_retention_pickle_path,
+            runoff_retention_ret_vol_pickle_path,
+            flood_vol_pickle_path,
             intermediate_target_watershed_result_vector_path,
-            target_watershed_result_vector_path),
+            key_field_id, target_watershed_result_vector_path),
         target_path_list=[target_watershed_result_vector_path],
         dependent_task_list=[
-            intermediate_affected_vector_task, service_built_task,
-            runoff_retention_ret_vol_task, runoff_retention_task],
+            flood_vol_pickle_task, runoff_retention_ret_vol_pickle_task,
+            runoff_retention_pickle_task, intermediate_affected_vector_task],
         task_name='add zonal stats')
-    """
+    task_graph.close()
+    task_graph.join()
 
+
+def pickle_zonal_stats(
+        base_vector_path, key_field, base_raster_path, target_pickle_path):
+    """Calculate Zonal Stats for a vector/raster pair and pickle result.
+
+    Parameters:
+        base_vector_path (str): path to vector file
+        key_field (str): field in `base_vector_path` file that uniquely
+            identifies each feature.
+        base_raster_path (str): path to raster file to aggregate over.
+        target_pickle_path (str): path to desired target pickle file that will
+            be a pickle of the pygeoprocessing.zonal_stats function.
+
+    Returns:
+        None.
+
+    """
+    zonal_stats = pygeoprocessing.zonal_statistics(
+        (base_raster_path, 1), base_vector_path, key_field)
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(zonal_stats, pickle_file)
 
 
 def flood_vol_op(
@@ -274,21 +326,28 @@ def runoff_retention_ret_vol_op(
 
 
 def add_zonal_stats(
-        runoff_retention_raster_path, runoff_retention_ret_vol_raster_path,
-        flood_vol_raster_path, base_watershed_result_vector_path,
+        runoff_retention_pickle_path,
+        runoff_retention_ret_vol_pickle_path,
+        flood_vol_pickle_path,
+        base_watershed_result_vector_path, key_field_id,
         target_watershed_result_vector_path):
     """Add watershed scale values of the given base_raster.
 
     Parameters:
-        runoff_retention_raster_path (str): R_i raster
-        runoff_retention_ret_vol_raster_path (str): R_i_m3 raster
-        flood_vol_raster_path (str): 0.001 * (P - Q_pi) * pixel area raster
+        runoff_retention_pickle_path (str): path to runoff retention
+            zonal stats pickle file.
+        runoff_retention_ret_vol_pickle_path (str): path to runoff
+            retention volume zonal stats pickle file.
+        flood_vol_pickle_path (str): path to flood volume zonal stats
+            pickle file.
         base_watershed_result_vector_path (str): path to existing vector
-            to aggregate values over.
+            to copy for the target vector.
+        key_field_id (str): field id to uniquely define each feature in the
+            base vector
         target_watershed_result_vector_path (str): path to target vector that
             will contain the additional fields:
-                * Runoff retention index
-                * Runoff_retention_m3
+                * runoff_retention_index
+                * runoff_retention_m3
                 * Service_Build
 
     Return:
@@ -298,12 +357,21 @@ def add_zonal_stats(
     LOGGER.info(
         "Processing zonal stats for %s", target_watershed_result_vector_path)
 
+    with open(runoff_retention_pickle_path, 'rb') as runoff_retention_file:
+        runoff_retention_stats = pickle.load(runoff_retention_file)
+    with open(flood_vol_pickle_path, 'rb') as flood_vol_pickle_file:
+        runoff_retention_vol_stats = pickle.load(flood_vol_pickle_file)
+    with open(flood_vol_pickle_path, 'rb') as flood_vol_pickle_file:
+        flood_vol_stats = pickle.load(flood_vol_pickle_file)
+
     base_watershed_vector = gdal.OpenEx(
         base_watershed_result_vector_path, gdal.OF_VECTOR)
     gpkg_driver = gdal.GetDriverByName('GPKG')
-    target_watershed_vector = gpkg_driver.CreateCopy(
+    gpkg_driver.CreateCopy(
         target_watershed_result_vector_path, base_watershed_vector)
     base_watershed_vector = None
+    target_watershed_vector = gdal.OpenEx(
+        target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_watershed_layer = target_watershed_vector.GetLayer()
 
     target_watershed_layer.CreateField(
@@ -312,40 +380,11 @@ def add_zonal_stats(
         ogr.FieldDefn('runoff_retention_m3', ogr.OFTReal))
     target_watershed_layer.CreateField(
         ogr.FieldDefn('Service_Build', ogr.OFTReal))
-    feature_id_field = uuid.uuid1().hex[0:31]
-    target_watershed_layer.CreateField(
-        ogr.FieldDefn(feature_id_field, ogr.OFTInteger))
 
+    target_watershed_layer = target_watershed_vector.GetLayer()
     target_watershed_layer.ResetReading()
     for target_index, target_feature in enumerate(target_watershed_layer):
-        target_feature.SetField(feature_id_field, target_index)
-        target_watershed_layer.SetFeature(target_feature)
-    target_watershed_layer.SyncToDisk()
-    target_watershed_layer = None
-    target_watershed_vector = None
-
-    # calculate runoff_retention_index
-    # TODO precalculate zonal stats as a pickle file
-    LOGGER.info("Calculate runoff stats")
-    runoff_retention_stats = pygeoprocessing.zonal_statistics(
-        (runoff_retention_raster_path, 1),
-        target_watershed_result_vector_path, feature_id_field)
-
-    LOGGER.info("Calculate runoff vol stats")
-    runoff_retention_vol_stats = pygeoprocessing.zonal_statistics(
-        (runoff_retention_ret_vol_raster_path, 1),
-        target_watershed_result_vector_path, feature_id_field)
-
-    LOGGER.info("Calculate flood vol stats")
-    flood_vol_stats = pygeoprocessing.zonal_statistics(
-        (flood_vol_raster_path, 1), target_watershed_result_vector_path,
-        feature_id_field)
-
-    target_watershed_vector = gdal.OpenEx(
-        target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_watershed_layer = target_watershed_vector.GetLayer()
-    for target_index, target_feature in enumerate(target_watershed_layer):
-        feature_id = target_feature.GetField(feature_id_field)
+        feature_id = target_feature.GetField(key_field_id)
 
         if feature_id in runoff_retention_stats:
             pixel_count = runoff_retention_stats[feature_id]['count']
@@ -371,22 +410,20 @@ def add_zonal_stats(
 
         target_watershed_layer.SetFeature(target_feature)
     target_watershed_layer.SyncToDisk()
-    target_watershed_vector.ExecuteSQL(
-        'ALTER TABLE %s DROP COLUMN "%s"' % (
-            target_watershed_layer.GetName(), feature_id_field))
+    #target_watershed_vector.ExecuteSQL(
+    #    'ALTER TABLE "%s" DROP COLUMN "%s";' % (
+    #        target_watershed_layer.GetName(), key_field_id))
     target_watershed_vector = None
 
 
 def build_affected_vector(
         base_watershed_vector_path, target_wkt, damage_table_path,
-        built_infrastructure_vector_path,
+        built_infrastructure_vector_path, key_field_id,
         target_watershed_result_vector_path):
-    """Construct the affected area polygon.
+    """Construct the affected area vector.
 
-    The ``base_watershed_vector_path`` should be intersected with the
-    ``built_infrastructure_vector_path`` to get
-        * affected population ?
-        * affected build?
+    The ``base_watershed_vector_path`` will be intersected with the
+    ``built_infrastructure_vector_path`` to get the affected build area.
 
     Parameters:
         base_watershed_vector_path (str): path to base watershed vector,
@@ -397,6 +434,9 @@ def build_affected_vector(
             'Type' and 'Damage'. For every value of 'Type' in the
             built_infrastructure_vector there must be a corresponding entry
             in this table.
+        key_field_id (str): a field to add to the target watershed vector
+            that can be used to uniquely identify each feature for zonal
+            stats calculations later.
         target_watershed_result_vector_path (str): path to desired target
             watershed result vector that will have an additional field called
             'Affected_Build'.
@@ -456,6 +496,7 @@ def build_affected_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
+    watershed_layer.CreateField(ogr.FieldDefn(key_field_id, ogr.OFTInteger))
     watershed_layer.CreateField(ogr.FieldDefn('Affected_Build', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
@@ -483,7 +524,11 @@ def build_affected_vector(
                         'damage'])
 
         watershed_feature.SetField('Affected_Build', total_damage)
+        watershed_feature.SetField(key_field_id, watershed_index)
         watershed_layer.SetFeature(watershed_feature)
+    watershed_layer.SyncToDisk()
+    watershed_layer = None
+    watershed_vector = None
 
 
 def runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
@@ -563,7 +608,6 @@ def lu_to_cn_op(
         per_pixel_cn_array)
 
     return result
-
 
 
 @validation.invest_validator
