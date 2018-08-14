@@ -46,9 +46,6 @@ def execute(args):
         args['curve_number_table_path'] (string): path to a CSV table that
             contains at least the headers 'lucode', 'CN_A', 'CN_B', 'CN_C',
             'CN_D'.
-        args['flood_prone_areas_vector_path'] (string): path to vector of
-            polygon areas of known occurrence of flooding where peakflow
-            retention will be more critical.
         args['built_infrastructure_vector_path'] (string): path to a vector
             with built infrastructure footprints. Attribute table contains a
             column 'Type' with integers (e.g. 1=residential, 2=office, etc.).

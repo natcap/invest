@@ -56,15 +56,6 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.curve_number_table_path)
 
-        self.flood_prone_areas_vector_path = inputs.File(
-            args_key=u'flood_prone_areas_vector_path',
-            helptext=(
-                u"Path to vector of polygon areas of known occurrence of "
-                u"flooding where peakflow retention will be more critical."),
-            label=u'Flood Prone Areas Vector Path',
-            validator=self.validator)
-        self.add_input(self.flood_prone_areas_vector_path)
-
         self.built_infrastructure_vector_path = inputs.File(
             args_key=u'built_infrastructure_vector_path',
             helptext=(
@@ -82,7 +73,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 u"with values of built infrastructure type from the 'Type' "
                 "field in the 'Built Infrastructure Vector' and potential "
                 u"damage loss (in $/m^2)."),
-            label=u'Built Infrastructure Vector Path',
+            label=u'Built Infrastructure Damage Loss Table',
             validator=self.validator)
         self.add_input(self.infrastructure_damage_loss_table_path)
 
@@ -98,8 +89,6 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 self.soils_hydrological_group_raster_path.value(),
             self.curve_number_table_path.args_key:
                 self.curve_number_table_path.value(),
-            self.flood_prone_areas_vector_path.args_key:
-                self.flood_prone_areas_vector_path.value(),
             self.built_infrastructure_vector_path.args_key:
                 self.built_infrastructure_vector_path.value(),
             self.infrastructure_damage_loss_table_path.args_key:
