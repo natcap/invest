@@ -2,7 +2,7 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 172
+SVN_DATA_REPO_REV       := 173
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ SVN_TEST_DATA_REPO_REV  := 153
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 1448fa07b52c
+HG_UG_REPO_REV          := 8143946d26bd
 
 
 ENV = env
@@ -238,8 +238,7 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = AestheticQuality \
-		  Aquaculture \
+ZIPDIRS = Aquaculture \
 		  Freshwater \
 		  Marine \
 		  Terrestrial \

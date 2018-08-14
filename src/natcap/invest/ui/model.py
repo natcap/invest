@@ -15,6 +15,8 @@ import contextlib
 import functools
 import datetime
 import codecs
+import multiprocessing
+import importlib
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -1161,7 +1163,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
-        self.run_dialog = inputs.FileSystemRunDialog()
 
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
@@ -1182,8 +1183,31 @@ class InVESTModel(QtWidgets.QMainWindow):
             label='Results suffix (optional)',
             validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)
+
         self.add_input(self.workspace)
         self.add_input(self.suffix)
+
+        # If the model has a documented input for the number of taskgraph
+        # workers, add an input for it.
+        try:
+            if 'n_workers' in self.target.__doc__:
+                n_cpus = max(1, multiprocessing.cpu_count())
+                self.n_workers = inputs.Text(
+                    args_key='n_workers',
+                    helptext=(
+                        u'The number of workers to spawn for executing tasks. '
+                        u'If this input is not provided, the model will be '
+                        u'executed in the current process.  <br/><br/>'
+                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
+                    label='Number of parallel workers (optional)',
+                    validator=self.validator)
+                self.n_workers.textfield.setMaximumWidth(150)
+                self.add_input(self.n_workers)
+                self.n_workers.set_value(n_cpus)
+        except TypeError:
+            # When self.target doesn't have __doc__, assume that there's no
+            # n_workers parameter.
+            pass
 
         self.form.submitted.connect(self.execute_model)
 
@@ -1497,6 +1521,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
+
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
                                          logging_level=logfile_log_level):
@@ -1505,6 +1530,12 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
+
+                    try:
+                        args['n_workers'] = self.n_workers.value()
+                    except AttributeError:
+                        # When we don't have n_workers defined
+                        pass
 
                     try:
                         return self.target(args=args)
