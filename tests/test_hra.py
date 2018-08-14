@@ -13,15 +13,15 @@ mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'HabitatRiskAssess')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'habitat_risk_assessment', 'synthetic_data')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'habitat_risk_assessment')
 
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-data"
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\tempdir"
+# SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-data"
+# REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\invest-test-data"
+# tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\HRA\tempdir"
 
 class HRATests(unittest.TestCase):
     """Tests for Habitat Risk Assessment."""
