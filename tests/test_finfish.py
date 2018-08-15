@@ -8,7 +8,7 @@ from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Aquaculture',
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'aquaculture',
     'Input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -22,11 +22,12 @@ class FinfishTests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        # self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = r"C:\Users\Joanna Lin\Desktop\test_folder\finfish"
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
+        # shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)

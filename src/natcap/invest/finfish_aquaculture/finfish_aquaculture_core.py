@@ -596,9 +596,7 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
         Returns nothing.
     '''
     html_uri = os.path.join(output_dir,
-                            ("Harvest_Results_[%s].html" %
-                             datetime.datetime.now().strftime(
-                                 "%Y-%m-%d_%H_%M")))
+                            ("Harvest_Results.html"))
     doc = html.HTMLDocument(html_uri, 'Marine InVEST',
                             'Aquaculture Model (Finfish Harvest)')
 
