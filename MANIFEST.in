@@ -3,5 +3,5 @@ include README_PYTHON.rst
 include HISTORY.rst
 include LICENSE.txt
 include requirements.txt
-include src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pxd
-recursive-include src/natcap/invest *.cpp *.c *.txt *.js *.png *.json *.sh
+include requirements-dev.txt
+include requirements-gui.txt

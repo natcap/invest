@@ -1,10 +1,5 @@
-from PyInstaller.compat import is_linux
+# encoding=UTF-8
+from PyInstaller.utils.hooks import collect_submodules, collect_data_files
 
-hiddenimports = ['scipy._lib.messagestream']
-# Special hook necessary for PyInstaller v2.x (our linux builds)
-if is_linux:
-    from PyInstaller.hooks.hookutils import collect_submodules
-    hiddenimports.extend([
-        'scipy.special._ufuncs_cxx', 'scipy.io.matlab.streams',
-        'scipy.sparse.cgraph._validation',
-        ] + collect_submodules('scipy.linalg'))
+datas = collect_data_files('scipy')
+hiddenimports = collect_submodules('scipy')

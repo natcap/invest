@@ -4,47 +4,93 @@ import tempfile
 import shutil
 import os
 
-
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 from osgeo import gdal
-from osgeo import ogr
+from osgeo import osr
 import numpy
+import pygeoprocessing.testing
 
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'carbon')
+def make_simple_raster(base_raster_path, fill_val):
+    """Create a 10x10 raster on designated path with fill value.
+
+    Parameters:
+        raster_path (str): the raster path for making the new raster.
+        fill_val (int): the value used for filling the raster.
+
+    Returns:
+        lulc_path (str): the path of the raster file.
+
+    """
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(26910)  # UTM Zone 10N
+    projection_wkt = srs.ExportToWkt()
+
+    base_array = numpy.empty((10, 10))
+    base_array.fill(fill_val)
+    pygeoprocessing.testing.create_raster_on_disk(
+        [base_array],
+        (461261, 4923265),  # Origin based on the projection
+        projection_wkt,
+        -1,
+        (1, -1),
+        filename=base_raster_path)
+
+
+def assert_raster_equal_value(base_raster_path, val_to_compare):
+    """Assert that the entire output raster has the same value as specified.
+
+    Parameters:
+        base_raster_path (str): the filepath of the raster to be asserted.
+        val_to_compare (float): the value to be filled in the array to compare.
+
+    Returns:
+        None.
+
+    """
+    base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
+    base_band = base_raster.GetRasterBand(1)
+    base_array = base_band.ReadAsArray()
+
+    array_to_compare = numpy.empty(base_array.shape)
+    array_to_compare.fill(val_to_compare)
+    numpy.testing.assert_almost_equal(base_array, array_to_compare)
+
+
+def make_pools_csv(pools_csv_path):
+    """Create a carbon pools csv file with simplified land cover types.
+
+    Parameters:
+        pools_csv_path (str): the path of carbon pool csv.
+
+    Returns:
+        None.
+
+    """
+    with open(pools_csv_path, 'wb') as open_table:
+        open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
+        open_table.write('15,10,60,1,1,"lulc code 1"\n')
+        open_table.write('5,3,20,0,2,"lulc code 2"\n')
+        open_table.write('2,1,5,0,3,"lulc code 3"\n')
 
 
 class CarbonTests(unittest.TestCase):
-    """Tests for the Timber Model."""
+    """Tests for the Carbon Model."""
 
     def setUp(self):
-        """Overriding setUp function to create temp workspace directory."""
+        """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
-        """Overriding tearDown function to remove temporary directory."""
+        """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_carbon_full(self):
-        """Carbon: regression testing all functionality."""
+        """Carbon: full model run."""
         from natcap.invest import carbon
+
         args = {
-            u'carbon_pools_path': os.path.join(
-                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
-            u'lulc_cur_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
-            u'lulc_fut_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
-            u'lulc_redd_path': os.path.join(
-                SAMPLE_DATA, 'carbon/lulc_samp_redd.tif'),
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': True,
             u'price_per_metric_ton_of_c': 43.0,
@@ -53,27 +99,31 @@ class CarbonTests(unittest.TestCase):
             u'lulc_fut_year': 2030,
             u'discount_rate': -7.1,
         }
-        carbon.execute(args)
-        CarbonTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'file_list.txt'),
-            args['workspace_dir'])
-        for npv_filename in ['npv_fut.tif', 'npv_redd.tif']:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-                os.path.join(REGRESSION_DATA, npv_filename),
-                os.path.join(self.workspace_dir, npv_filename), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_future_no_val(self):
-        """Carbon: regression testing future scenario with no valuation."""
+        # Create LULC rasters and pools csv in workspace and add them to args.
+        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 1):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        carbon.execute(args)
+
+        # Add assertions for npv for future and REDD scenarios.
+        # The npv was calculated based on _calculate_npv in carbon.py.
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+    def test_carbon_future(self):
+        """Carbon: regression testing future scenario."""
         from natcap.invest import carbon
         args = {
-            u'carbon_pools_path': os.path.join(
-                SAMPLE_DATA, 'carbon/carbon_pools_samp.csv'),
-            u'lulc_cur_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
-            u'lulc_fut_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': True,
             u'price_per_metric_ton_of_c': 43.0,
@@ -82,58 +132,41 @@ class CarbonTests(unittest.TestCase):
             u'lulc_fut_year': 2030,
             u'discount_rate': -7.1,
         }
-        carbon.execute(args)
-        CarbonTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'file_list_fut_only.txt'),
-            args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(REGRESSION_DATA, 'delta_cur_fut.tif'),
-            os.path.join(self.workspace_dir, 'delta_cur_fut.tif'), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+        lulc_names = ['lulc_cur_path', 'lulc_fut_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 1):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        carbon.execute(args)
+        # Add assertions for npv for the future scenario.
+        # The npv was calculated based on _calculate_npv in carbon.py.
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
+
     def test_carbon_missing_landcover_values(self):
-        """Carbon: testing expected exception on incomplete  table."""
+        """Carbon: testing expected exception on missing LULC codes."""
         from natcap.invest import carbon
         args = {
-            u'carbon_pools_path': os.path.join(
-                REGRESSION_DATA, 'carbon_pools_missing_coverage.csv'),
-            u'lulc_cur_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_cur'),
-            u'lulc_fut_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data/Terrestrial/lulc_samp_fut'),
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': False,
         }
+
+        lulc_names = ['lulc_cur_path', 'lulc_fut_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 200):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        # Value error should be raised with lulc code 200
         with self.assertRaises(ValueError):
             carbon.execute(args)
-
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert files in `base_list_path` are in `directory_path`.
-
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
-
-        Returns:
-            None
-
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`
-        """
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))

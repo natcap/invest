@@ -31,7 +31,8 @@ class CoastalVulnerability(model.InVESTModel):
             args_key=u'aoi_uri',
             helptext=(
                 u"An OGR-supported, single-feature polygon vector "
-                u"file.  All outputs will be in the AOI's projection."),
+                u"file. Must have a projected coordinate system. "
+                u"All outputs will be in the AOI's projection."),
             label=u'Area of Interest (Vector)',
             validator=self.validator)
         self.general_tab.add_input(self.area_of_interest)
@@ -90,9 +91,10 @@ class CoastalVulnerability(model.InVESTModel):
         self.cell_size = inputs.Text(
             args_key=u'cell_size',
             helptext=(
-                u"Cell size in meters.  The higher the value, the "
-                u"faster the computation, but the coarser the output "
-                u"rasters produced by the model."),
+                u"Cell size measured in the projection units of the AOI. "
+                u"For example, UTM projections use meters. "
+                u"The higher the value, the faster the computation, "
+                u"but the coarser the output rasters produced by the model."),
             label=u'Model Resolution (Segment Size)',
             validator=self.validator)
         self.general_tab.add_input(self.cell_size)
@@ -103,6 +105,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"fetch rays project over deep areas."),
             label=u'Depth Threshold (meters)',
             validator=self.validator)
+        self.depth_threshold.set_value('0')
         self.general_tab.add_input(self.depth_threshold)
         self.exposure_proportion = inputs.Text(
             args_key=u'exposure_proportion',
@@ -112,6 +115,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"exposed."),
             label=u'Exposure Proportion',
             validator=self.validator)
+        self.exposure_proportion.set_value('0.8')
         self.general_tab.add_input(self.exposure_proportion)
         self.geomorphology_uri = inputs.File(
             args_key=u'geomorphology_uri',
@@ -296,6 +300,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"elevation will be computed within this radius."),
             label=u'Elevation Averaging Radius (meters)',
             validator=self.validator)
+        self.elevation_averaging_radius.set_value('5000')
         self.advanced_tab.add_input(self.elevation_averaging_radius)
         self.mean_sea_level_datum = inputs.Text(
             args_key=u'mean_sea_level_datum',
@@ -309,6 +314,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"bathymetry."),
             label=u'Mean Sea Level Datum (meters)',
             validator=self.validator)
+        self.mean_sea_level_datum.set_value('0')
         self.advanced_tab.add_input(self.mean_sea_level_datum)
         self.rays_per_sector = inputs.Text(
             args_key=u'rays_per_sector',
@@ -317,6 +323,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"within each of the 16 sectors."),
             label=u'Rays per Sector',
             validator=self.validator)
+        self.rays_per_sector.set_value('1')
         self.advanced_tab.add_input(self.rays_per_sector)
         self.max_fetch = inputs.Text(
             args_key=u'max_fetch',
@@ -325,6 +332,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u'(&gt;=60,000m).'),
             label=u'Maximum Fetch Distance (meters)',
             validator=self.validator)
+        self.max_fetch.set_value('12000')
         self.advanced_tab.add_input(self.max_fetch)
         self.spread_radius = inputs.Text(
             args_key=u'spread_radius',
@@ -341,6 +349,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"and n pixels seaward)."),
             label=u'Coastal Overlap (meters)',
             validator=self.validator)
+        self.spread_radius.set_value('250')
         self.advanced_tab.add_input(self.spread_radius)
         self.population_radius = inputs.Text(
             args_key=u'population_radius',
@@ -349,6 +358,7 @@ class CoastalVulnerability(model.InVESTModel):
                 u"people leaving close to the coast."),
             label=u'Coastal Neighborhood (radius in meters)',
             validator=self.validator)
+        self.population_radius.set_value('1000')
         self.advanced_tab.add_input(self.population_radius)
 
         # Set interactivity, requirement as input sufficiency changes

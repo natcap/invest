@@ -26,9 +26,6 @@ InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
   :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
 
 
-About  InVEST
-=============
-
 InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is a family
 of tools for quantifying the values of natural capital in clear, credible, and
 practical ways. In promising a return (of societal benefits) on investments in
@@ -50,501 +47,235 @@ but have almost all been ported over to a purely open-source python environment.
     at https://bitbucket.org/natcap/invest-natcap.invest-3.
 
 
-Contributing to Development
-===========================
-
-The best way to participate is to contribute a fix to a bug you are
-experiencing or to implement a pet feature!
-
-Issues, including ongoing work, are tracked in our issue tracker on this
-bitbucket project.  If you encounter a bug, please let us know!
-
-If you have something you'd like to contribute, please fork the repository
-and submit a pull request.  Since mercurial tracks branch names in the metadata
-of each commit, please be sure to make a feature branch off of ``develop``.  For example: ::
-
-    hg up develop
-    hg branch feature/<my-new-branch>
-
-``<my-new-branch>`` would be a short string describing your branch.  It need not be long :).
-Adhering to proper branching will help us retain a descriptive history as the project
-matures and will also help greatly with the pull request review process.
-
-As always, be sure to add a note about your change to the HISTORY file before
-submitting your PR.
-
-*Thanks for contributing!*
-
-InVEST Dependencies
-===================
-.. note::
-    Do this:
-
-    ``$ paver check``
-
-    This will verify required applications are available and that
-    you have some of the python packages that are more difficult to install
-    (especially those that depend on low-level C libraries).
-
-InVEST relies on the following python packages:
-  * GDAL
-  * shapely
-  * numpy
-  * scipy
-  * pyqt4  *(if running a model user interface)*
-  * matplotlib
-  * bs4
-  * pyAMG
-  * cython
-  * setuptools
-  * poster
-  * pygeoprocessing
-  * natcap.versioner
-  * rtree
-
-For development, we recommend using a virtual environment (such as provided by
-``virtualenv``).  We provide a paver command (``paver env``) to help with this process.
-See `Building Binaries`_ for an example.
-
-Binaries are generated with ``pyinstaller`` via ``paver build_bin``.  See `Building Binaries`_.
-
-To work with this repository, you'll also need these tools to be available
-on the command-line somewhere on your PATH, depending on what you'd like to build:
-
-  * ``hg`` (Mercurial, for cloning repositories)
-  * ``make`` (GNU Make, for building documentation)
-  * ``fpm`` (for generating .deb and .rpm packages, can be installed via ``gem``)
-  * ``makensis`` (NSIS, for generating Windows installers)
-  * ``dmgbuild`` (for generating mac DMGs)
-  * ``pdflatex`` (for generating PDF versions of the User's Guide)
-  * ``pandoc`` (for converting .docx files to rst when building the User's
-    Guide.  See http://pandoc.org/installing.html)
-
-
-For building InVEST binaries, you will also need to have a compiler configured.
-On linux, gcc/g++ will be sufficient.  On Windows, MinGW and MSVC work.  On Mac,
-you'll likely need the XCode command-line tools to be installed.
-
-
-Building Binaries
-=================
-
-One-Step Binary Builds
-----------------------
-The easiest way to build binaries is to call ``paver build``.  If your system
-is properly configured, this will do all of the heavy lifting to:
-
-    + Clone any hg, git, and svn repositories needed for the given steps
-    + Set up a virtual environment with needed package dependencies (skip with
-      ``--python=<your python interpreter here>``
-    + Build binaries out of the virtual environment (skip with ``--skip-bin``)
-    + Build User's Guide documentation (HTML, PDF) (skip with ``--skip-guide``)
-    + Build InVEST API documentation (HTML) (skip with ``--skip-api``)
-    + Build archives of sample data (skip with ``--skip-data``)
-    + Build a system-appropriate installer (skip with ``--skip-installer``)
-
-Assembled binaries are placed in ``dist/release_invest-<version>`` with the
-following directory structure: ::
-
-    dist/
-        natcap.invest-<version>.tar.gz          # Python source distribution
-        release_invest-<version>/
-            data/
-                # All data zipfiles available for this version
-            documentation/
-                # HTML documentation for InVEST
-            invest-<version>-apidics.zip        # Archived HTML API documentation
-            invest-<version>-userguide.zip      # Archived HTML User's Guide
-            InVEST_<version>_Documentation.pdf  # PDF User's Guide
-            invest-<version>.deb                # Debian dpkg
-            invest-<version>.rpm                # RPM package
-            InVEST_<version>_Setup.exe          # Windows installer
-            InVEST <version>.dmg                # Mac disk image
+General Information
+-------------------
 
-.. note::
-    ``paver build`` will only build binaries and and installer for the system
-    you are running.
+* Website: https://naturalcapitalproject.org/invest
+* Source code: https://bitbucket.org/natcap/invest
+* Issue tracker: https://bitbucket.org/natcap/invest/issues
+* Users' guide: http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/
+* API documentation: http://invest.readthedocs.io/en/latest/
 
 
+Dependencies
+------------
 
-Just building binaries
-----------------------
-The easiest way to build pyinstaller binaries on your platform is to use our
-one-step binary build.  This paver task will
-Binaries are built through ``paver build_bin``.  The simplest way to call this is
-``paver build_bin``, but this assumes that you have all dependencies (including natcap.invest)
-installed to your global python distribution.  More commonly, you'll want to install InVEST to
-a virtual environment before running build_bin.
+Run ``make check`` to test if all required dependencies are installed on your system.
+OS-specific installation instructions are found either online at
+http://invest.readthedocs.io/en/latest/installing.html or locally at ``doc/api-docs/installing.rst``.
 
-For example, if you want to build a new virtualenv via the paver command and then build the binaries
-using this new environment:
 
-::
+NSIS-specific requirements
+++++++++++++++++++++++++++
+The InVEST NSIS installer requires the following:
 
-    #!/bin/sh
-    # Example for linux or mac
+* NSIS version < 3
+* Installed Plugins:
+    * Nsisunz: http://nsis.sourceforge.net/Nsisunz_plug-in
+    * InetC: http://nsis.sourceforge.net/Inetc_plug-in
+    * NsProcess: http://nsis.sourceforge.net/NsProcess_plugin
 
-    $ ENVNAME=release_env
-    $ paver env \
-        --system-site-packages \
-        --clear \
-        --envname=$ENVNAME \
-        --with-invest
+Managing python dependencies
+++++++++++++++++++++++++++++
+We recommend using a virtual environment to manage your python dependencies, and there is
+a Makefile target to assist with this::
 
-    $ paver build_bin --python=release_env/bin/python
+    $ make env
+    $ source env/bin/activate
 
-This will build the pyinstaller binaries for whatever platform you're running this on and place them
-into ``dist/invest_dist``.  Console files will also be written to this folder, one for each model in InVEST.
-These console files simply call the ``invest`` binary with the corresponding InVEST modelname.  For example,
-the console files for Habitat Risk Assessment would look like:
+Or on Windows, use the following instead from a CMD prompt::
 
-**Windows:** ``dist\invest_dist\invest_hra.bat`` ::
+    > make env
+    > .\env\bin\activate
 
-    .\invest.exe hra
+This makefile target is included for convenience ... you may of course choose to
+manage your own virtual environment.  ``requirements.txt`` and
+``requirements-dev.txt`` list the python dependencies needed.
 
-**Linux/Mac:** ``dist/invest_dist/invest_hra.sh`` ::
+Using a different environment name
+""""""""""""""""""""""""""""""""""
+If you prefer a different name for your environment, you may pass the environment name as
+a parameter to make::
 
-    ./invest hra
+    $ make ENV=myEnv env
 
-InVEST currently uses a single CLI entry point, an executable within ``dist/invest-dist``.  This exe is not
-sensitive to your CWD, so if the binary (or a symlink to the binary) is available on your system PATH, you
-should be able to execute it like so: ::
+You could then activate the environment created at ``myEnv``.
 
-    $ invest --help
-    usage: invest [-h] [--version] [--list] [model]
 
-    Integrated Valuation of Ecosystem Services and Tradeoffs.InVEST (Integrated
-    Valuation of Ecosystem Services and Tradeoffs) is a family of tools for
-    quantifying the values of natural capital in clear, credible, and practical
-    ways. In promising a return (of societal benefits) on investments in nature,
-    the scientific community needs to deliver knowledge and tools to quantify and
-    forecast this return. InVEST enables decision-makers to quantify the
-    importance of natural capital, to assess the tradeoffs associated with
-    alternative choices, and to integrate conservation and human development.
-    Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox
-    environment, but have almost all been ported over to a purely open-source
-    python environment.
+Using a different environment management tool
+"""""""""""""""""""""""""""""""""""""""""""""
+The InVEST Makefile uses ``virtualenv`` to set up an environment, but this is
+not the only `environment management tool out there 
+<https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments>`_.
+You may elect to manage your virtual environment a different way, independent
+of ``make env``.  The only requirement for the build process is that the required
+tools are available on your PATH and the required python packages can be imported.
 
-    positional arguments:
-      model       The model/tool to run. Use --list to show available
-                  models/tools.
 
-    optional arguments:
-      -h, --help  show this help message and exit
-      --version   show program's version number and exit
-      --list      List available models
+Building InVEST Distributions
+-----------------------------
 
-On Windows, running ``invest.exe`` will also prompt you for user input if a modelname is not provided.
+Once the required tools and packages are available, we can build InVEST.
 
 
-Building Data Zipfiles
-======================
+Building ``natcap.invest`` python package
++++++++++++++++++++++++++++++++++++++++++
 
-Building data zipfiles is done by calling ``paver build_data``: ::
+A Makefile target has been created for your convenience::
 
-    Options:
-      -h, --help   display this help information
-      --force-dev  Zip data folders even if repo version does not match the known
-      state
+    $ make python_packages
 
+This will create a wheel for your platform and a zip source archive in ``dist/``.
+Both of these files (``dist/natcap.invest*.whl`` and ``dist/natcap.invest*.zip``)
+can be installed by pip.
 
-      Build data zipfiles for sample data.
+Building python packages without GNU make
+"""""""""""""""""""""""""""""""""""""""""
+Python distributions may be built with the standard distutils/setuptools commands::
 
-      Expects that sample data zipfiles are provided in the invest-data repo.
-      Data files should be stored in one directory per model, where the directory
-      name matches the model name.  This creates one zipfile per folder, where
-      the zipfile name matches the folder name.
+    $ python setup.py bdist_wheel
+    $ python setup.py sdist
 
-      options:
-      --force-dev : Provide this option if you know that the invest-data version
-                    does not match the version tracked in versions.json.  If the
-                    versions do not match and the flag is not provided, the task
-                    will print an error and quit.
+InVEST Standalone Binaries
+++++++++++++++++++++++++++
 
+Once the appropriate dependencies are available, InVEST can also be built as a
+standalone application::
 
-This will build the data zipfiles and store them in ``dist``.
+    $ make binaries
 
+An important detail about building binaries is that ``natcap.invest`` must be
+installed as a wheel to ensure that the distribution information is in the
+correct location.
 
-Building Documentation
-======================
+This will create a directory at ``dist/invest`` holding the application binaries
+and relevant shared libraries.
 
-All documentation is built through ``paver build_docs`` via sphinx.  Building
-the User's Guide requires that you have GNU make, sphinx, and LaTex installed.
-Building the API documentation requires only virtualenv and a compiler, as
-sphinx will be installed into a new virtualenv at build time.
+Binaries cannot be cross-compiled for other operating systems.
 
-The ``paver build_docs`` command has these options: ::
 
-    Usage: paver build_docs [options]
+InVEST Windows Installer
+++++++++++++++++++++++++
 
-    Options:
-      -h, --help    display this help information
-      --force-dev   Force development
-      --skip-api    Skip building the API docs
-      --skip-guide  Skip building the User's Guide
+The InVEST installer for Windows can be built with::
 
+    > make windows_installer
 
-      Build the sphinx user's guide for InVEST.
+This will create the installer at ``dist/InVEST_*_Setup.exe``.
 
-      Builds the sphinx user's guide in HTML, latex and PDF formats.
-      Compilation of the guides uses sphinx and requires that all needed
-      libraries are installed for compiling html, latex and pdf.
 
-      Requires make for the user's guide
-      The API docs requires sphinx and setuptools only.
+InVEST Mac Disk Image
++++++++++++++++++++++
 
-Note that building API documentation via ``paver build_docs`` is only currently supported
-on POSIX systems.  Documentation can still be built on Windows, but you'll need to run
-something like this: ::
+The InVEST disk image for Mac can be built with::
 
-    :: build_docs.bat
-    :: Example batch file for building documentation in a virtualenv
-    ::
+    $ make mac_installer
 
-    set ENV=doc_env
-    paver env --clear --system-site-packages --with-invest --envdir=%ENV% -r requirements-dev.txt
-    call %ENV%\Scripts\activate.bat
-    paver build_docs
+This will create the installed at ``dist/InVEST_*.dmg``.
 
-On Linux or Mac, setting up a virtual environment to be able to build documentation
-look like this: ::
 
-    #!/bin/sh
-    ENV=doc_env
-    paver env --clear \
-        --system-site-packages \
-        --with-invest \
-        --envdir=$ENV
-        -r requirements-dev.txt
-    source $ENV/bin/activate
-    paver build_docs
 
+Building InVEST Documentation
+-----------------------------
 
-Building Installer
-==================
+User's Guide
+++++++++++++
 
-Our paver configuraton supports 4 different installer types: ::
+To build the user's guide::
 
-    NSIS (Windows executable installer)
-    DMG  (Mac Disk Imagage)
-    DEB  (Debian binary package)
-    RPM  (RPM Package Manager binary package)
+    $ make userguide
 
-I suppose it's probably possible to cross-compile binaries for other platforms, but I wouldn't promise that
-it will work.  Try at your own risk!
+This will build HTML and PDF documentation, writing them to ``dist/userguide``
+and ``dist/InVEST_*_Documentation.pdf``, respectively.
 
-To build an installer, you'll first need to build the InVEST binary folder through ``paver build_bin``.
-Under normal conditions, this will save your binaries to ``dist/invest_dist``.  To build an installer
-from this folder, execute ::
 
-    $ paver build_installer --bindir=dist/invest_dist
+API Documentation
++++++++++++++++++
 
-If the ``--insttype`` flag is not provided, the system default will be used.  System defaults are:
+To build the ``natcap.invest`` python API documentation and developer's guide::
 
- * Linux: ``deb``
- * Mac: ``dmg``
- * Windows: ``nsis``
+    $ make apidocs
 
+This will build an HTML version of the API documentation, writing it to
+``dist/apidocs``.
 
-Developing InVEST
-=================
 
-Debian Systems
---------------
+InVEST Sample Data
+------------------
 
-.. note::
-    **Debian builds require GLIBC >= 2.15**
+InVEST is typically distributed with sample data, though, in the interest of
+disk space, these data are not included in any of the standard installers.  To
+build zip archives of the sample data::
 
-    Pyinstaller builds using a recent enough version of ``libpython2.7`` require that you have
-    GLIBC >= 2.15, which is available on Debian Jessie (8), or on Wheezy (7) through the testing
-    APT repository.
+    $ make sampledata
 
+This will write the data zipfiles to ``dist/data``
 
-Specific package dependencies include:
+Single archive of sample data
++++++++++++++++++++++++++++++
 
- * ``sudo apt-get install python-gdal``
- * ``sudo apt-get install python-matplotlib``
- * ``sudo apt-get install libgeos-dev python-dev``
- * ``sudo apt-get install python-qt4`` Install PyQt4
- * ``sudo pip install --upgrade sphinxcontrib-napoleon`` We use the Napoleon theme for the API documentation.
- * ``sudo apt-get install python-setuptools``  Fixes some path issues with setuptools (see https://bitbucket.org/pypa/setuptools/issue/368/module-object-has-no-attribute-packaging)
+For trainings, it is especially convenient to distribute all sample data as a
+single zip archive.  As an added bonus, this single zip archive can be provided
+to the InVEST installer for Windows as either the 'Advanced' input on the front
+page of the installer, or by a CLI flag, thus preventing the installer from
+downloading datasets from the internet.  See
+``installer/windows/invest_installer.nsi`` for more details.  To build a single
+archive of all InVEST sample data::
 
+    $ make sampledata_single
 
-Mac Systems
------------
+This will write the single sampledata archive to
+``dist/InVEST_*_sample_data.zip``.
 
-The easiest way to set up your system is to install all binary dependencies through the Homebrew
-package manager (http://brew.sh).
 
-Setting up an InVEST virtual environment
-----------------------------------------
-
-Most likely, the easiest way to run InVEST from your source tree is to build a
-virtual environment using the popular ``virtualenv``
-(https://virtualenv.pypa.io/en/latest/).  This can be done manually, but there
-is a paver task (``paver env``) to build up a virtual environment for you.  Here are a few
-examples:  ::
-
-    # Build an env with all dependencies installed only to this environment.
-    # This does not install InVEST, just the dependencies.
-    # The environment is created at test_env/
-    $ paver env -e test_env
-
-    # Build an env with access to system site-packages and also install InVEST
-    $ paver env --system-site-packages --clear --with-invest -e test_env
-
-    # You can also specify additional requirement to be installed with the -r
-    # flag.
-    $ paver env --sytem-site-packages -r requirements-dev.txt
-
-natcap.versioner ImportError
-----------------------------
-
-Since June, 2015, we have been moving our python projects to the ``natcap``
-package namespace and gradually publishing our projects on the Python Package
-Index.  Unfortunately, using a namespace package does not appear to work quite
-as seamlessly across multiple virtual python installations as one might hope.
-
-A common example of this breakdown comes when trying to run ``python setup.py
-install`` on the ``invest`` repository (this repository).  Example: ::
-
-    $ python setup.py install
-    Traceback (most recent call last):
-      File "setup.py", line 19, in <module>
-          import natcap.versioner
-    ImportError: No module named natcap.versioner
-
-To fix this, install ``natcap.versioner`` to the python environment that you're
-trying to install ``natcap.invest`` to before calling natcap.invest's setup.py.
-So if you're trying to install natcap.invest to your global site-packages,
-install natcap.versioner there.  If you're trying to install natcap.invest to
-your virtual environment, activate your virtual environment, ``pip install
-natcap.versioner`` and then ``python setup.py install`` for natcap.invest.
-
-**Using python setup.py develop for natcap.invest**
-
-``python setup.py develop`` appears to have some odd behavior when trying to
-import natcap.invest.  If you find that you need to import natcap.versioner
-before you can import natcap.invest, do this: ::
-
-    $ pip uninstall natcap.versioner
-    $ pip install --egg natcap.versioner
-
-`The relevant issue`_ on the python packaging authority's issue tracked has some
-more information if you're interested.
-
-.. _The relevant issue: https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version#comment-19426088
-
-Matplotlib ImportError
-----------------------
-
-On Fedora systems, some users encounter this exception when trying to run an
-InVEST model that uses matplotlib:
-
-::
-
-    ...
-    line 17, in <module>
-        from .backend_qt5agg import NavigationToolbar2QTAgg
-    ImportError: No module named backend_qt5agg
-
-This is a `known issue`_ with the RedHat build of ``python-matplotlib-qt4``.  The workaround
-is to ``yum install python-matplotlib-qt5``.
-
-.. _known issue: https://bugzilla.redhat.com/show_bug.cgi?id=1219556
-
-
-GDAL
-----
-
-InVEST relies on GDAL/OGR for its raster and vector handling.  This library is
-usually available in your system's package index.
-
-Debian: ``sudo apt-get install python-gdal``
-
-Mac:  ``brew install gdal``
-
-Installing GDAL on a windows computer is a little more complicated.  Christoph
-Gohlke has prebuilt binaries for the Python GDAL package
-(http://www.lfd.uci.edu/~gohlke/pythonlibs/#gdal), though these have often
-given side-by-side configuration errors.  Use at your own risk.
-
-An alternative is to install the GDAL binaries from here:
-http://www.gisinternals.com/, and then install the GDAL python package
-separately.  To install in this way:
-
-  * Download and install the correct version of the GDAL binaries.
-  * Add a ``GDAL_DATA`` environment variable pointing to the folder containing
-    these installed binaries.
-
-Then, download and install the gdal python package.
-
-RTREE
+Tests
 -----
 
-InVEST Coastal Vulnerability relies on the rtree package for spatial indexing
-geometries. Rtree depends on the libspatialindex library from
-http://libspatialindex.github.com.
+InVEST includes a battery of tests to ensure software quality.
 
-To install on \*nix download the libspatialindex library and run:
+Model tests
++++++++++++
 
-    ``sudo ./configure; sudo make; sudo make install``
+To run tests on the suite of Ecosytem Service models in InVEST::
 
-    ``sudo pip install rtree``
-
-Installing on a windows computer is a little more complicated. Christoph
-Gohlke has prebuilt binaries for the Rtree at
-http://www.lfd.uci.edu/~gohlke/pythonlibs/#rtree.
-
-Please see the packages PYPI page https://pypi.python.org/pypi/Rtree/ for
-more details as well as the installation instruction page
-http://toblerity.org/rtree/install.html.
+    $ make test
 
 
-Running Tests
-=============
+User interface tests
+++++++++++++++++++++
 
-To run the full suite of tests:
+To run tests for user interface functionality::
 
-::
-
-    $ paver test
-
-To specify a test (or multiple tests) to run via `paver test`, use the nosetests
-format to specify test files, classes, and/or test methods to run.  For example:
-
-::
-
-    $ paver test tests/test_example.py:ExampleTest.test_regression
-
-This will only run this one test, ignoring all other tests that would normally be
-run.
-
-If you're looking for some extra verbosity (or you're building on jenkins):
-
-::
-
-    $ paver test --jenkins
-
-You may also launch tests from the python shell:
-
-::
-
-    >>> import natcap.invest
-    >>> natcap.invest.test()
-
-Tests are implemented with ``unittest``, so any appropriate test runner should work.
+    $ make test_ui
 
 
-Releasing InVEST
-================
-This repository uses paver as a single entry point for common distribution needs.
-Run ``paver help`` for a list of commands provided by this repository's pavement.py.
+Changing how GNU make runs tests
+++++++++++++++++++++++++++++++++
 
-Note that while paver can in some cases replace a classic setup.py, this repository
-has its own setup.py file already created.  We therefore do not use this part of the
-paver functionality.
+The InVEST Makefile setup depends on ``nosetests`` and takes advantage of its
+plugins for line coverage and xunit reports.  You can force ``make`` to use a
+different test runner by setting a parameter at the command line.  For example,
+to run the tests with ``pytest``::
+
+    $ make TESTRUNNER=pytest test
 
 
+Running tests on installed binaries
++++++++++++++++++++++++++++++++++++
+
+The InVEST binaries for Windows include a python script to automatically
+execute and check the exit status of all InVEST models, running on the
+installed InVEST sample data.  This script requires Python version 2.7 to be on
+the PATH.  Once InVEST and all sample data have been installed on the target
+computer::
+
+    > cd C:\InVEST_<version>_x86\invest-3-x86
+    > .\invest-autotest.bat
 
 
+Copyright and license information
+---------------------------------
+
+A file called ``LICENSE.txt`` should have accompanied this distribution.  If it
+is missing, the license may be found on our project page,
+https://bitbucket.org/natcap/invest

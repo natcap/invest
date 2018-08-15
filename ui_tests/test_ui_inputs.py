@@ -63,6 +63,13 @@ class _QtTest(unittest.TestCase):
             QApplication = QtWidgets.QApplication
 
         self.qt_app = QApplication.instance()
+
+        # If we're running PyQt4, we need to instruct Qt to use UTF-8 strings
+        # internally.
+        if qtpy.API in ('pyqt', 'pyqt4'):
+            QtCore.QTextCodec.setCodecForCStrings(
+                QtCore.QTextCodec.codecForName('UTF-8'))
+
         if self.qt_app is None:
             self.qt_app = QApplication(sys.argv)
 
@@ -493,19 +500,30 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), u'foo')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
+    def test_set_value_latin1(self):
+        input_instance = self.__class__.create_input(label='text')
+        self.assertEqual(input_instance.value(), '')
+        input_instance.set_value('gr\xe9gory')  # Latin-1 bytestring
+        self.assertEqual(input_instance.value(),
+                         unicode('gr\xc3\xa9gory', 'utf-8'))
+        self.assertTrue(isinstance(input_instance.value(), six.text_type))
+
     def test_set_value_cyrillic_str(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('fooДЖЩя')
+        input_instance.set_value('fooДЖЩя')  # UTF-8 encoded bytestring
         self.assertEqual(input_instance.value(),
-                         unicode('fooДЖЩя', 'utf-8'))
+                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
+                                 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_unicode(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value(u'fooДЖЩя')
-        self.assertEqual(input_instance.value(), u'fooДЖЩя')
+        input_instance.set_value(u'fooДЖЩя')  # already UTF-8 unicode
+        self.assertEqual(input_instance.value(),
+                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
+                                 'utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_int(self):
@@ -947,6 +965,21 @@ class DropdownTest(GriddedInputTest):
             label='label', options=('foo', 'bar', 'baz'))
         self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
 
+    def test_options_with_return_value_map(self):
+        return_value_map = {'foo': 1, 'bar': 2, 'baz': 3}
+        input_instance = self.__class__.create_input(
+            label='label', options=('foo', 'bar', 'baz'),
+            return_value_map=return_value_map)
+        self.assertEqual(input_instance.options, [u'foo', u'bar', u'baz'])
+        self.assertEqual(input_instance.return_value_map,
+                         {'foo': '1', 'bar': '2', 'baz': '3'})
+
+    def test_options_return_value_mismatch(self):
+        with self.assertRaises(ValueError):
+            self.__class__.create_input(
+                label='label', options=(1, 2, 3),
+                return_value_map={'foo': 4, 1: 'bar'})
+
     def test_options_typecast(self):
         input_instance = self.__class__.create_input(
             label='label', options=(1, 2, 3))
@@ -990,6 +1023,19 @@ class DropdownTest(GriddedInputTest):
             label='label', options=(1, 2, 3))
         with self.assertRaises(ValueError):
             input_instance.set_value('foo')
+
+    def test_set_value_from_return_map(self):
+        input_instance = self.__class__.create_input(
+            label='label', options=(1, 2, 3),
+            return_value_map={1: 'a', 2: 'b', 3: 'c'}
+        )
+        input_instance.set_value('a')
+        self.assertEqual(input_instance.value(), 'a')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 0)
+
+        input_instance.set_value(3)
+        self.assertEqual(input_instance.value(), 'c')
+        self.assertEqual(input_instance.dropdown.currentIndex(), 2)
 
     def test_value(self):
         input_instance = self.__class__.create_input(
@@ -2009,15 +2055,24 @@ class ModelTests(_QtTest):
                 return []
             validate_func = _validate
 
+        # Fetch settings and clear them before the UI constructs.
+        # This avoids a scenario where invalid settings have been
+        # constructed and not destroyed properly before the test model object
+        # could complete its setup, causing lots of test failures.
+        label = 'Test model'
+        settings = model.SETTINGS_TEMPLATE(label)
+        settings.clear()
+
         class _TestInVESTModel(model.InVESTModel):
             def __init__(self):
-                model.InVESTModel.__init__(self,
-                                     label='Test model',
-                                     target=target_func,
-                                     validator=validate_func,
-                                     localdoc='testmodel.html')
-                # Default model class already has workspace and suffix input.
+                model.InVESTModel.__init__(
+                    self,
+                    label=label,
+                    target=target_func,
+                    validator=validate_func,
+                    localdoc='testmodel.html')
 
+            # Default model class already has workspace and suffix input.
             def assemble_args(self):
                 return {
                     self.workspace.args_key: self.workspace.value(),
@@ -2029,12 +2084,7 @@ class ModelTests(_QtTest):
                 self.settings.clear()
                 model.InVESTModel.__del__(self)
 
-        model = _TestInVESTModel()
-
-        # clear the model's settings before we run our test.
-        model.settings.clear()
-
-        return model
+        return _TestInVESTModel()
 
     def test_model_defaults(self):
         """UI Model: Check that workspace and suffix are added."""
@@ -3002,6 +3052,14 @@ class IsProbablyDatastackTests(unittest.TestCase):
     def tearDown(self):
         """Clean up the workspace created for each test."""
         shutil.rmtree(self.workspace)
+
+    def test_directory(self):
+        """Model UI datastack: directory is not a datastack."""
+        from natcap.invest.ui import model
+
+        dirpath = os.path.join(self.workspace, 'foo_dir')
+        os.makedirs(dirpath)
+        self.assertFalse(model.is_probably_datastack(dirpath))
 
     def test_json_extension(self):
         """Model UI datastack: invest.json extension is a datastack"""

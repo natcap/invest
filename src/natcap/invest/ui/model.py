@@ -15,6 +15,8 @@ import contextlib
 import functools
 import datetime
 import codecs
+import multiprocessing
+import importlib
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -56,6 +58,11 @@ _DATASTACK_SAVE_OPTS = {
         'savefile': _DATASTACK_BASE_FILENAME % 'tar.gz',
     }
 }
+# To create a QSettings object, call this with the model label as the only
+# argument.  Example:  settings = SETTINGS_TEMPLATE('My Model')
+SETTINGS_TEMPLATE = functools.partial(
+    QtCore.QSettings, QtCore.QSettings.IniFormat, QtCore.QSettings.UserScope,
+    'Natural Capital Project')
 
 
 @contextlib.contextmanager
@@ -76,14 +83,18 @@ def wait_on_signal(signal, timeout=250):
 
 
 def is_probably_datastack(filepath):
-    """Check to see if the file provided is probably a datastack.
+    """Check to see if the path provided is probably a datastack.
 
     Parameters:
-        filepath (string): A path to a file on disk.
+        filepath (string): A path to a location on disk.
 
     Returns:
-        True if the filepath is likely to be a datastack.  False otherwise.
+        True if the path is likely to be a datastack.  False otherwise.
     """
+    # If the filepath provided is a directory, it's not a datastack.
+    if os.path.isdir(filepath):
+        return False
+
     # Does the extension indicate that it's probably a datastack?
     if filepath.endswith((datastack.DATASTACK_EXTENSION,
                           datastack.PARAMETER_SET_EXTENSION)):
@@ -478,8 +489,6 @@ class AboutDialog(QtWidgets.QDialog):
                 ('PyInstaller', 'GPL', 'http://pyinstaller.org'),
                 ('GDAL', 'MIT and others', 'http://gdal.org'),
                 ('matplotlib', 'BSD', 'http://matplotlib.org'),
-                ('natcap.versioner', 'BSD',
-                 'http://bitbucket.org/jdouglass/versioner'),
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
@@ -1154,7 +1163,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
-        self.run_dialog = inputs.FileSystemRunDialog()
 
         # start with workspace and suffix inputs
         self.workspace = inputs.Folder(args_key='workspace_dir',
@@ -1175,17 +1183,37 @@ class InVESTModel(QtWidgets.QMainWindow):
             label='Results suffix (optional)',
             validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)
+
         self.add_input(self.workspace)
         self.add_input(self.suffix)
+
+        # If the model has a documented input for the number of taskgraph
+        # workers, add an input for it.
+        try:
+            if 'n_workers' in self.target.__doc__:
+                n_cpus = max(1, multiprocessing.cpu_count())
+                self.n_workers = inputs.Text(
+                    args_key='n_workers',
+                    helptext=(
+                        u'The number of workers to spawn for executing tasks. '
+                        u'If this input is not provided, the model will be '
+                        u'executed in the current process.  <br/><br/>'
+                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
+                    label='Number of parallel workers (optional)',
+                    validator=self.validator)
+                self.n_workers.textfield.setMaximumWidth(150)
+                self.add_input(self.n_workers)
+                self.n_workers.set_value(n_cpus)
+        except TypeError:
+            # When self.target doesn't have __doc__, assume that there's no
+            # n_workers parameter.
+            pass
 
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
-        self.settings = QtCore.QSettings(
-            QtCore.QSettings.IniFormat,
-            QtCore.QSettings.UserScope,
-            'Natural Capital Project',
-            self.label)
+        self.settings = SETTINGS_TEMPLATE(self.label)
+        LOGGER.info('Model settings stored in %s', self.settings.fileName())
 
         # Menu items.
         self.file_menu = QtWidgets.QMenu('&File', parent=self)
@@ -1249,7 +1277,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.open_menu.clear()
         self.open_file_action = self.open_menu.addAction(
             qtawesome.icon('fa.arrow-circle-o-up'),
-            'L&oad datastack, parameter set or logfile...', self.load_datastack,
+            'L&oad datastack, parameter set or logfile...',
+            self.load_datastack,
             QtGui.QKeySequence(QtGui.QKeySequence.Open))
         self.open_menu.addSeparator()
 
@@ -1261,7 +1290,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
             time_obj = datetime.datetime.strptime(timestamp,
                                                   '%Y-%m-%dT%H:%M:%S.%f')
-            if time_obj .date() == datetime.date.today():
+            if time_obj.date() == datetime.date.today():
                 date_label = 'Today at %s' % time_obj.strftime('%H:%M')
             else:
                 date_label = time_obj.strftime('%Y-%m-%d at %H:%m')
@@ -1317,7 +1346,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         # store the new value.
         recently_opened_datastacks = json.loads(
             self.settings.value('recent_datastacks', '{}'))
-        timestamp = datetime.datetime.now().isoformat()
+        timestamp = datetime.datetime.now().strftime('%Y-%m-%dT%H:%M:%S.%f')
 
         recently_opened_datastacks[datastack_path] = timestamp
 
@@ -1492,6 +1521,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
+
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
                                          logging_level=logfile_log_level):
@@ -1500,6 +1530,12 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
+
+                    try:
+                        args['n_workers'] = self.n_workers.value()
+                    except AttributeError:
+                        # When we don't have n_workers defined
+                        pass
 
                     try:
                         return self.target(args=args)

@@ -13,7 +13,7 @@ import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
 from .. import validation
 from .. import utils
-import ndr_core
+from natcap.invest.ndr import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
 

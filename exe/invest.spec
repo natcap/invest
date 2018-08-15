@@ -1,3 +1,4 @@
+# coding=UTF-8
 import sys
 import os
 import itertools
@@ -5,70 +6,41 @@ import glob
 from PyInstaller.compat import is_win, is_darwin
 
 # Global Variables
-current_dir = os.path.join(os.getcwd(), os.path.dirname(sys.argv[1]))
+current_dir = os.getcwd()  # assume we're building from the project root
+block_cipher = None
+exename = 'invest'
 
-# Analyze Scripts for Dependencies
-
-# Add the release virtual environment to the extended PATH.
-# This helps IMMENSELY with trying to get the binaries to work from within
-# a virtual environment, even if the virtual environment is hardcoded.
-path_extension = []
-release_env_dir = os.path.abspath(os.path.join('..', 'release_env'))
-if is_win:
-    import distutils
-    env_path_base = os.path.join(release_env_dir, 'lib')
-else:
-    env_path_base = os.path.join(release_env_dir, 'lib', 'python2.7')
-
-# We're in a virtualenv if the expected env lib dir exists AND the python
-# executable is within the release env dir.
-# NOTE: Pyinstaller seems to pick up packages within the global site-packages
-# just fine, so we don't need to modify the pathext when we're not in a
-# virtualenv.
-if os.path.exists(env_path_base) and sys.executable.startswith(release_env_dir):
-    env_path_base = os.path.abspath(env_path_base)
-    path_extension.insert(0, env_path_base)
-    path_extension.insert(0, os.path.join(env_path_base, 'site-packages'))
-
-print 'PATH EXT: %s' % path_extension
 
 kwargs = {
-    'hookspath': [os.path.join(current_dir, 'hooks')],
+    'hookspath': [os.path.join(current_dir, 'exe', 'hooks')],
     'excludes': None,
-    'pathex': path_extension,
-    'runtime_hooks': [os.path.join(current_dir, 'hooks', 'rthook.py')],
+    'pathex': sys.path,
+    'runtime_hooks': [os.path.join(current_dir, 'exe', 'hooks', 'rthook.py')],
     'hiddenimports': [
         'natcap',
         'natcap.invest',
-        'natcap.versioner',
-        'natcap.versioner.version',
-        'natcap.invest.version',
         'natcap.invest.ui.launcher',
         'yaml',
         'distutils',
         'distutils.dist',
         'rtree',  # mac builds aren't picking up rtree by default.
-        'taskgraph.version',
     ],
+    'datas': [('qt.conf', '.')],
+    'cipher': block_cipher,
 }
 
-cli_file = os.path.join(current_dir, '..', 'src', 'natcap', 'invest', 'cli.py')
+cli_file = os.path.join(current_dir, 'src', 'natcap', 'invest', 'cli.py')
 a = Analysis([cli_file], **kwargs)
 
 # Compress pyc and pyo Files into ZlibArchive Objects
-pyz = PYZ(a.pure)
+pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
-# .exe extension is required if we're on Windows.
-exename = 'invest'
-if is_win:
-    exename += '.exe'
-
 if is_darwin:
-    # remove shapely dynamic library collision
-    a.binaries = filter(lambda x: x[0] != 'libgeos_c.1.dylib', a.binaries)
-    # remove matplotlib dynamic library collision
-    a.binaries = filter(lambda x: x[0] != 'libpng16.16.dylib', a.binaries)
+    # Avoid shapely and matplotlib dylib collision with GDAL dylibs.
+    excluded_dylibs = set(['libgeos_c.1.dylib', 'libpng16.16.dylib'])
+    a.binaries = [x for x in a.binaries if x[0] not in excluded_dylibs]
+
     # add gdal dynamic libraries from homebrew
     a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
     a.binaries += [
@@ -79,32 +51,36 @@ if is_darwin:
             glob.glob('/usr/local/lib/libpng*.dylib'),
             glob.glob('/usr/local/lib/libspatialindex*.dylib')
         )]
-
-exe = EXE(
-    pyz,
-
-    # Taken from:
+elif is_win:
+    # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
     # Supposed to gather the mscvr/p DLLs from the local system before
     # packaging.  Skirts the issue of us needing to keep them under version
     # control.
-    a.binaries + [
+    a.binaries += [
         ('msvcp90.dll', 'C:\\Windows\\System32\\msvcp90.dll', 'BINARY'),
         ('msvcr90.dll', 'C:\\Windows\\System32\\msvcr90.dll', 'BINARY')
-    ] if is_win else a.binaries,
+    ]
+
+    # .exe extension is required if we're on windows.
+    exename += '.exe'
+
+exe = EXE(
+    pyz,
     a.scripts,
     name=exename,
-    exclude_binaries=1,
+    exclude_binaries=True,
     debug=False,
-    strip=None,
+    strip=False,
     upx=False,
     console=True)
 
 # Collect Files into Distributable Folder/File
-args = [exe, a.binaries, a.zipfiles, a.datas]
-
 dist = COLLECT(
-        *args,
-        name="invest_dist",
-        strip=None,
+        exe,
+        a.binaries,
+        a.zipfiles,
+        a.datas,
+        name="invest",  # name of the output folder
+        strip=False,
         upx=False)
