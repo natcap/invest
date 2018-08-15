@@ -22,6 +22,7 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger(__name__)
+TARGET_NODATA = -1
 
 
 def execute(args):
@@ -32,6 +33,7 @@ def execute(args):
         args['air_temp_raster_path'] (str): raster of air temperature.
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
+        args['et_max'] (float): maximum evapotranspiration.
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
@@ -90,20 +92,46 @@ def execute(args):
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
-    kc_nodata = -1
     kc_raster_path = os.path.join(temporary_working_dir, 'kc.tif')
     kc_task = task_graph.add_task(
         func=pygeoprocessing.reclassify_raster,
         args=(
             (aligned_lulc_raster_path, 1), kc_map, kc_raster_path,
-            gdal.GDT_Float32, kc_nodata),
+            gdal.GDT_Float32, TARGET_NODATA),
         kwargs={'values_required': True},
         target_path_list=[kc_raster_path],
         dependent_task_list=[align_task],
         task_name='reclassify to kc')
 
+    eto_nodata = pygeoprocessing.get_raster_info(
+        args['ref_eto_raster_path'])['nodata'][0]
+    eti_raster_path = os.path.join(args['workspace_dir'], 'eti.tif')
+    eti_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(
+            [(kc_raster_path, 1), (TARGET_NODATA, 'raw'),
+             (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
+             (float(args['et_max']), 'raw'), (TARGET_NODATA, 'raw')],
+            calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[eti_raster_path],
+        dependent_task_list=[kc_task],
+        task_name='calculate eti')
+
     task_graph.close()
     task_graph.join()
+
+
+def calc_eti_op(
+        kc_array, kc_nodata, et0_array, et0_nodata, et_max, target_nodata):
+    """Calculate ETI =(K_c ET_0)/ET_max ."""
+    result = numpy.empty(kc_array.shape, dtype=numpy.float32)
+    result[:] = target_nodata
+    valid_mask = ~(
+        numpy.isclose(kc_array,  kc_nodata) |
+        numpy.isclose(et0_array, et0_nodata))
+    result[valid_mask] = (
+        kc_array[valid_mask] * et0_array[valid_mask] / et_max)
+    return result
 
 
 @validation.invest_validator
