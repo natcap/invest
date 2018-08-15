@@ -23,7 +23,7 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
 
 
-def _create_vertical_csv(data, fname):
+def _create_vertical_csv(data, file_path):
     """Create a new CSV table where the fields are in the left column.
 
     This CSV table is created with fields / keys running vertically
@@ -34,12 +34,12 @@ def _create_vertical_csv(data, fname):
         data (dict): a Dictionary where each key is the name
             of a field and set in the first column. The second
             column is set with the value of that key.
-        fname (string): a file path for the new table to be written to disk.
+        file_path (string): a file path for the new table to be written to disk.
 
     Returns:
         None
     """
-    csv_file = open(fname, 'wb')
+    csv_file = open(file_path, 'wb')
 
     writer = csv.writer(csv_file)
     for key, val in data.iteritems():
@@ -501,7 +501,6 @@ class WindEnergyUnitTests(unittest.TestCase):
 
             feat = layer.GetNextFeature()
 
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy"
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -720,8 +719,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['workspace_dir'] = tempdir
-
         args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
                                                 'simple_global_polygon.shp')
         args['min_distance'] = 0
@@ -737,116 +734,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['rate_change'] = 0.2
 
         self.assertRaises(ValueError, wind_energy.execute, args)
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_suffix(self):
-        """WindEnergy: testing suffix handling."""
-        from natcap.invest.wind_energy import wind_energy
-
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-            'suffix': 'test'  # to be tested
-        }
-        wind_energy.execute(args)
-
-        raster_results = [
-            'carbon_emissions_tons_test.tif', 'density_W_per_m2_test.tif',
-            'harvested_energy_MWhr_per_yr_test.tif',
-            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif']
-
-        for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
-
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm_test.shp',
-            'wind_energy_points_test.shp']
-
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_suffix_underscore(self):
-        """WindEnergy: testing that suffix w/ underscore is handled correctly."""
-        from natcap.invest.wind_energy import wind_energy
-
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-            'suffix': '_test'  # to be tested
-        }
-        wind_energy.execute(args)
-
-        raster_results = [
-            'carbon_emissions_tons_test.tif', 'density_W_per_m2_test.tif',
-            'harvested_energy_MWhr_per_yr_test.tif',
-            'levelized_cost_price_per_kWh_test.tif', 'npv_US_millions_test.tif']
-
-        for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
-
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm_test.shp',
-            'wind_energy_points_test.shp']
-
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -879,15 +766,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a biophysical field / value. This should raise the exception
-        tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
             'turbines_per_circuit': 8
         }
-        _create_vertical_csv(data, fname)
-        args['turbine_parameters_uri'] = fname
+        _create_vertical_csv(data, file_path)
+        args['turbine_parameters_uri'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
@@ -930,15 +817,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a valuation field / value. This should raise the exception
-        tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
             'turbines_per_circuit': 8, 'rotor_diameter': 40
         }
-        _create_vertical_csv(data, fname)
-        args['turbine_parameters_uri'] = fname
+        _create_vertical_csv(data, file_path)
+        args['turbine_parameters_uri'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
@@ -982,7 +869,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # creating a stand in global wind params table that has a different
         # 'time' value than what is given in the wind schedule table.
         # This should raise the exception
-        tmp, fname = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'air_density': 1.225, 'exponent_power_curve': 2,
@@ -995,8 +882,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'carbon_coefficient': 6.8956e-4,
             'air_density_coefficient': 1.194e-4, 'loss_parameter': .05
         }
-        _create_vertical_csv(data, fname)
-        args['global_wind_parameters_uri'] = fname
+        _create_vertical_csv(data, file_path)
+        args['global_wind_parameters_uri'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
