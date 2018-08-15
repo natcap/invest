@@ -183,9 +183,8 @@ def execute(args):
         args=(
             intermediate_building_vector_path, 'OBJECTID',
             aligned_air_temp_raster_path, t_ref_stats_pickle_path),
-        target_path_list=[
-            t_ref_stats_pickle_path, align_task,
-            intermediate_building_vector_task],
+        target_path_list=[t_ref_stats_pickle_path],
+        dependent_task_list=[align_task, intermediate_building_vector_task],
         task_name='pickle t-ref stats')
 
     task_graph.close()
@@ -208,31 +207,22 @@ def reproject_and_label_vector(
         None.
 
     """
-    target_srs = osr.SpatialReference()
-    target_srs.ImportFromWkt(target_projection_wkt)
-    epsg_code = int(target_srs.GetAttrValue("AUTHORITY", 1))
-    LOGGER.debug('epsg target code: %s', epsg_code)
+    LOGGER.debug('reprojecting %s', base_vector_path)
+    pygeoprocessing.reproject_vector(
+        base_vector_path, target_projection_wkt,
+        target_vector_path, layer_index=0, driver_name='GPKG')
 
-    driver = gdal.GetDriverByName('GPKG')
-    base_vector = gdal.OpenEx(base_vector_path)
-    driver.CreateCopy(target_vector_path, base_vector)
+    """
     target_vector = gdal.OpenEx(
         target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-
     target_layer = target_vector.GetLayer()
     target_layer.CreateField(ogr.FieldDefn(target_key_field_id, ogr.OFTReal))
     target_layer.SyncToDisk()
-    geometry_field = target_layer.GetGeometryColumn()
-
     target_vector.ExecuteSQL(
-        'UPDATE %s SET %s=Transform(geom, 4326), %s=rowid' % (
-            target_layer.GetName(), geometry_field,
-            target_key_field_id))
+        'UPDATE %s SET %s=rowid' % (
+            target_layer.GetName(), target_key_field_id))
+    """
 
-    #LOGGER.debug('reprojecting %s', base_vector_path)
-    #pygeoprocessing.reproject_vector(
-    #    base_vector_path, target_projection_wkt,
-    #    target_vector_path, layer_index=0, driver_name='GPKG')
 
 
 def pickle_zonal_stats(
