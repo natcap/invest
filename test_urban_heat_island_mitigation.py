@@ -27,7 +27,7 @@ def main():
         'urban_park_cooling_distance': 1000.0,
         'uhi_max': 3.5,
         'et_max': 600.0,
-        'infrastructure_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
+        'building_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
         'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",
         }
     natcap.invest.urban_heat_island_mitigation.execute(args)

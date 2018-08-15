@@ -151,8 +151,110 @@ def execute(args):
         dependent_task_list=[cc_task, align_task],
         task_name='calculate T air')
 
+    # intersect built_infrastructure_vector_path with aoi_watersheds_path
+    intermediate_building_vector_path = os.path.join(
+        temporary_working_dir, 'intermediate_building_vector.gpkg')
+    # this is the field name that can be used to uniquely identify a feature
+    key_field_id = 'objectid_invest_natcap'
+    intermediate_building_vector_task = task_graph.add_task(
+        func=reproject_and_label_vector,
+        args=(
+            args['building_vector_path'], lulc_raster_info['projection'],
+            key_field_id, intermediate_building_vector_path),
+        target_path_list=[intermediate_building_vector_path],
+        task_name='reproject and label building vector')
+
+    # zonal stats over buildings for t_air
+    t_air_stats_pickle_path = os.path.join(
+        temporary_working_dir, 't_air_stats.pickle')
+    pickle_t_air_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_building_vector_path, 'OBJECTID', t_air_raster_path,
+            t_air_stats_pickle_path),
+        target_path_list=[t_air_stats_pickle_path],
+        dependent_task_list=[t_air_task, intermediate_building_vector_task],
+        task_name='pickle t-air stats')
+
+    t_ref_stats_pickle_path = os.path.join(
+        temporary_working_dir, 't_ref_stats.pickle')
+    pickle_t_ref_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_building_vector_path, 'OBJECTID',
+            aligned_air_temp_raster_path, t_ref_stats_pickle_path),
+        target_path_list=[
+            t_ref_stats_pickle_path, align_task,
+            intermediate_building_vector_task],
+        task_name='pickle t-ref stats')
+
     task_graph.close()
     task_graph.join()
+
+
+def reproject_and_label_vector(
+        base_vector_path, target_projection_wkt, target_key_field_id,
+        target_vector_path):
+    """Reproject to wkt and label features for unique ID.
+
+    Parameters:
+        base_vector_path (path): path to vector file.
+        target_projection_wkt (str): desired target projection in WKT.
+        target_key_field_id (str): field to add to target vector that will
+            have a unique feature integer id for each feature.
+        target_vector_path (str): path to desired output target vector.
+
+    Return:
+        None.
+
+    """
+    target_srs = osr.SpatialReference()
+    target_srs.ImportFromWkt(target_projection_wkt)
+    epsg_code = int(target_srs.GetAttrValue("AUTHORITY", 1))
+    LOGGER.debug('epsg target code: %s', epsg_code)
+
+    driver = gdal.GetDriverByName('GPKG')
+    base_vector = gdal.OpenEx(base_vector_path)
+    driver.CreateCopy(target_vector_path, base_vector)
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+
+    target_layer = target_vector.GetLayer()
+    target_layer.CreateField(ogr.FieldDefn(target_key_field_id, ogr.OFTReal))
+    target_layer.SyncToDisk()
+    geometry_field = target_layer.GetGeometryColumn()
+
+    target_vector.ExecuteSQL(
+        'UPDATE %s SET %s=Transform(geom, 4326), %s=rowid' % (
+            target_layer.GetName(), geometry_field,
+            target_key_field_id))
+
+    #LOGGER.debug('reprojecting %s', base_vector_path)
+    #pygeoprocessing.reproject_vector(
+    #    base_vector_path, target_projection_wkt,
+    #    target_vector_path, layer_index=0, driver_name='GPKG')
+
+
+def pickle_zonal_stats(
+        base_vector_path, key_field, base_raster_path, target_pickle_path):
+    """Calculate Zonal Stats for a vector/raster pair and pickle result.
+
+    Parameters:
+        base_vector_path (str): path to vector file
+        key_field (str): field in `base_vector_path` file that uniquely
+            identifies each feature.
+        base_raster_path (str): path to raster file to aggregate over.
+        target_pickle_path (str): path to desired target pickle file that will
+            be a pickle of the pygeoprocessing.zonal_stats function.
+
+    Returns:
+        None.
+
+    """
+    zonal_stats = pygeoprocessing.zonal_statistics(
+        (base_raster_path, 1), base_vector_path, key_field)
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(zonal_stats, pickle_file)
 
 
 def calc_t_air_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
