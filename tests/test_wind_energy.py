@@ -684,9 +684,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
         # there was no sample data that provided landing points, thus for
-        # testing, grid points in 'NE_sub_pts.csv' were duplicated and marked
-        # as land points. So the distances will be zero, keeping the result
-        # the same but testing that section of code
+        # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
+        # marked as land points. So the distances will be zero, keeping the
+        # result the same but testing that section of code
         args['grid_points_uri'] = os.path.join(SAMPLE_DATA,
                                                'resampled_grid_land_pts.csv')
         args['price_table'] = False
@@ -720,6 +720,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
+        args['workspace_dir'] = tempdir
+
         args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
                                                 'simple_global_polygon.shp')
         args['min_distance'] = 0
@@ -729,7 +731,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['discount_rate'] = 0.07
         # Provide the grid points but not AOI
         args['grid_points_uri'] = os.path.join(
-            SAMPLE_DATA, 'NE_sub_pts.csv')
+            SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
