@@ -103,8 +103,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         # Setup parameters for creating polygon and point shapefiles
         fields = {'vec_id': 'int'}
         attr_pt = [{'vec_id': 1}, {'vec_id': 2}, {'vec_id': 3}, {'vec_id': 4}]
@@ -124,7 +122,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         poly_geometries = [
             Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
-        poly_file = os.path.join(temp_dir, 'poly_shape.shp')
+        poly_file = os.path.join(self.workspace_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
         poly_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
             poly_geometries, srs.projection, fields, attr_poly,
@@ -133,7 +131,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         point_geometries = [
             Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
             Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
-        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         point_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
@@ -152,8 +150,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'add_field_to_shape_given_list' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         # Setup parameters for point shapefile
         fields = {'pt_id': 'int'}
         attributes = [{'pt_id': 1}, {'pt_id': 2}, {'pt_id': 3}, {'pt_id': 4}]
@@ -163,7 +159,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
                       Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
-        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile for testing input
         shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
@@ -253,8 +249,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'create_wind_farm_box' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         # Setup parameters for creating polyline shapefile
         fields = {'id': 'real'}
         attributes = [{'id': 1}]
@@ -268,7 +262,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                                   (pos_x + 200, pos_y + 150), (pos_x + 200, pos_y),
                                   (pos_x + 100, pos_y)])]
 
-        farm_1 = os.path.join(temp_dir, 'farm_1')
+        farm_1 = os.path.join(self.workspace_dir, 'farm_1')
         os.mkdir(farm_1)
         farm_file = os.path.join(farm_1, 'vector.shp')
         # Create polyline shapefile to use to test against
@@ -280,7 +274,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         x_len = 100
         y_len = 150
 
-        farm_2 = os.path.join(temp_dir, 'farm_2')
+        farm_2 = os.path.join(self.workspace_dir, 'farm_2')
         os.mkdir(farm_2)
         out_path = os.path.join(farm_2, 'vector.shp')
         # Call the function to test
@@ -293,8 +287,6 @@ class WindEnergyUnitTests(unittest.TestCase):
     def test_get_highest_harvested_geom(self):
         """WindEnergy: testing 'get_highest_harvested_geom' function."""
         from natcap.invest.wind_energy import wind_energy
-
-        temp_dir = self.workspace_dir
 
         # Setup parameters for creating point shapefile
         fields = {'pt_id': 'int', 'Harv_MWhr': 'real'}
@@ -309,7 +301,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
                       Point(pos_x, pos_y - 100),
                       Point(pos_x + 100, pos_y - 100)]
-        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use for testing input
         shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
@@ -332,8 +324,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         srs = sampledata.SRS_WILLAMETTE
         srs_wkt = srs.projection
         spat_ref = osr.SpatialReference()
@@ -355,7 +345,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
-        input_path = os.path.join(temp_dir, 'input_raster.tif')
+        input_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
         raster_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
             [matrix], latlong_origin, latlong_proj, -1.0,
@@ -387,8 +377,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'calculate_distances_grid' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         # Setup parameters to create point shapefile
         fields = {'id': 'real'}
         attrs = [{'id': 1}, {'id': 2}]
@@ -397,20 +385,20 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_y = srs.origin[1]
         geometries = [Point(pos_x + 50, pos_y - 50),
                       Point(pos_x + 50, pos_y - 150)]
-        point_file = os.path.join(temp_dir, 'point_shape.shp')
+        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
         land_shape_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attrs,
             vector_format='ESRI Shapefile', filename=point_file)
 
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
-        raster_path = os.path.join(temp_dir, 'raster.tif')
+        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
         # Create raster to use as testing input
         harvested_masked_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_path)
 
-        tmp_dist_final_path = os.path.join(temp_dir, 'dist_final.tif')
+        tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test
         wind_energy.calculate_distances_grid(
             land_shape_path, harvested_masked_path, tmp_dist_final_path)
@@ -426,8 +414,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'wind_data_to_point_shape' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
-
         dict_data = {
             (31.79, 123.76): {
                 'LONG': 123.76, 'LATI': 31.79, 'Ram-080m': 7.98,
@@ -435,7 +421,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
 
         layer_name = "datatopoint"
-        out_path = os.path.join(temp_dir, 'datatopoint.shp')
+        out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
         wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
 
@@ -474,7 +460,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """
         from natcap.invest.wind_energy import wind_energy
 
-        temp_dir = self.workspace_dir
         # Set up a coordinate with a longitude in the range of -360 to 0.
         dict_data = {
             (31.79, -200.0): {
@@ -483,7 +468,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
 
         layer_name = "datatopoint"
-        out_path = os.path.join(temp_dir, 'datatopoint.shp')
+        out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
         wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
 
