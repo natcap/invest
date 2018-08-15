@@ -52,9 +52,56 @@ def execute(args):
     temporary_working_dir = os.path.join(
         args['workspace_dir'], 'temp_working_dir')
     utils.make_directories([args['workspace_dir'], temporary_working_dir])
+    biophysical_lucode_map = utils.build_lookup_from_csv(
+        args['biophysical_table_path'], 'lucode', to_lower=True,
+        warn_if_missing=True)
+
+    kc_map = dict([
+        (lucode, x['kc']) for lucode, x in biophysical_lucode_map.items()])
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
+
+    # align all the input rasters.
+    aligned_air_temp_raster_path = os.path.join(
+        temporary_working_dir, 'air_temp.tif')
+    aligned_lulc_raster_path = os.path.join(
+        temporary_working_dir, 'lulc.tif')
+    aligned_ref_eto_raster_path = os.path.join(
+        temporary_working_dir, 'ref_eto.tif')
+
+    lulc_raster_info = pygeoprocessing.get_raster_info(
+        args['lulc_raster_path'])
+
+    aligned_raster_path_list = [
+        aligned_air_temp_raster_path, aligned_lulc_raster_path,
+        aligned_ref_eto_raster_path]
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            [args['air_temp_raster_path'], args['lulc_raster_path'],
+             args['ref_eto_raster_path']], aligned_raster_path_list, [
+                'cubicspline', 'mode', 'cubicspline'],
+            lulc_raster_info['pixel_size'], 'intersection'),
+        kwargs={
+            'base_vector_path_list': [args['aoi_vector_path']],
+            'raster_align_index': 1,
+            'target_sr_wkt': lulc_raster_info['projection']},
+        target_path_list=aligned_raster_path_list,
+        task_name='align rasters')
+
+    kc_nodata = -1
+    kc_raster_path = os.path.join(temporary_working_dir, 'kc.tif')
+    kc_task = task_graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=(
+            (aligned_lulc_raster_path, 1), kc_map, kc_raster_path,
+            gdal.GDT_Float32, kc_nodata),
+        kwargs={'values_required': True},
+        target_path_list=[kc_raster_path],
+        dependent_task_list=[align_task],
+        task_name='reclassify to kc')
+
     task_graph.close()
     task_graph.join()
 
