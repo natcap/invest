@@ -39,10 +39,8 @@ class FinfishTests(unittest.TestCase):
             'discount': 0.000192,
             'do_valuation': True,
             'farm_ID': 'FarmID',
-            'farm_op_tbl': os.path.join(
-                SAMPLE_DATA, 'Farm_Operations.csv'),
-            'ff_farm_loc': os.path.join(
-                SAMPLE_DATA, 'Finfish_Netpens.shp'),
+            'farm_op_tbl': os.path.join(SAMPLE_DATA, 'Farm_Operations.csv'),
+            'ff_farm_loc': os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp'),
             'frac_p': 0.3,
             'g_param_a': 0.038,
             'g_param_a_sd': 0.005,
@@ -53,8 +51,7 @@ class FinfishTests(unittest.TestCase):
             'outplant_buffer': 3,
             'p_per_kg': 2.25,
             'use_uncertainty': True,
-            'water_temp_tbl': os.path.join(
-                SAMPLE_DATA, 'Temp_Daily.csv'),
+            'water_temp_tbl': os.path.join(SAMPLE_DATA, 'Temp_Daily.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
@@ -66,6 +63,8 @@ class FinfishTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
+
+
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -127,45 +126,6 @@ class FinfishTests(unittest.TestCase):
             args['workspace_dir'])
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_finfish_duplicate_run(self):
-        """Finfish: duplicate test to ensure model can overwrite output."""
-        import natcap.invest.finfish_aquaculture.finfish_aquaculture
-
-        args = {
-            'discount': 0.000192,
-            'do_valuation': True,
-            'farm_ID': 'FarmID',
-            'farm_op_tbl': os.path.join(
-                SAMPLE_DATA, 'Farm_Operations.csv'),
-            'ff_farm_loc': os.path.join(
-                SAMPLE_DATA, 'Finfish_Netpens.shp'),
-            'frac_p': 0.3,
-            'g_param_a': 0.038,
-            'g_param_a_sd': 0.005,
-            'g_param_b': 0.6667,
-            'g_param_b_sd': 0.05,
-            'g_param_tau': 0.08,
-            'num_monte_carlo_runs': 2,
-            'outplant_buffer': 3,
-            'p_per_kg': 2.25,
-            'use_uncertainty': True,
-            'water_temp_tbl': os.path.join(
-                SAMPLE_DATA, 'Temp_Daily.csv'),
-            'workspace_dir': self.workspace_dir,
-        }
-
-        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
-        natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
-
-        FinfishTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
-            args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
 
     @staticmethod
