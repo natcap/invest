@@ -123,8 +123,37 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
+    cc_raster_path = os.path.join(args['workspace_dir'], 'cc.tif')
+    cc_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (task_path_prop_map['shade'][1], 1),
+            (task_path_prop_map['albedo'][1], 1),
+            (eti_raster_path, 1)], calc_cc_op, cc_raster_path,
+            gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[cc_raster_path],
+        dependent_task_list=[
+            task_path_prop_map['shade'][0], task_path_prop_map['albedo'][0],
+            eti_task],
+        task_name='calculate cc index')
+
     task_graph.close()
     task_graph.join()
+
+
+def calc_cc_op(shade_array, albedo_array, eti_array):
+    """Calculate the cooling capacity index CC_i=.6*shade+.2*albedo+.2*ETI."""
+    result = numpy.empty(shade_array.shape, dtype=numpy.float32)
+    result[:] = TARGET_NODATA
+    valid_mask = ~(
+        numpy.isclose(shade_array, TARGET_NODATA) |
+        numpy.isclose(albedo_array, TARGET_NODATA) |
+        numpy.isclose(eti_array, TARGET_NODATA))
+    result[valid_mask] = (
+        0.6*shade_array[valid_mask] +
+        0.2*albedo_array[valid_mask] +
+        0.2*eti_array[valid_mask])
+    return result
 
 
 def calc_eti_op(
