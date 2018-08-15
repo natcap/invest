@@ -65,8 +65,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'calculate_distances_land_grid' function."""
         from natcap.invest.wind_energy import wind_energy
 
-        # temp_dir = self.workspace_dir
-
         # Setup parameters for creating point shapefile
         fields = {'id': 'real', 'L2G': 'real'}
         attrs = [{'id': 1, 'L2G': 10}, {'id': 2, 'L2G': 20}]
