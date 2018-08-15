@@ -633,7 +633,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
-                                                'simple_global_polygon.shp')
+                                                'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -676,7 +676,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
-                                                'simple_global_polygon.shp')
+                                                'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -720,7 +720,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
-                                                'simple_global_polygon.shp')
+                                                'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
