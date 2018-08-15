@@ -58,9 +58,6 @@ def execute(args):
         args['biophysical_table_path'], 'lucode', to_lower=True,
         warn_if_missing=True)
 
-    kc_map = dict([
-        (lucode, x['kc']) for lucode, x in biophysical_lucode_map.items()])
-
     task_graph = taskgraph.TaskGraph(
         temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
 
@@ -92,16 +89,25 @@ def execute(args):
         target_path_list=aligned_raster_path_list,
         task_name='align rasters')
 
-    kc_raster_path = os.path.join(temporary_working_dir, 'kc.tif')
-    kc_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
-        args=(
-            (aligned_lulc_raster_path, 1), kc_map, kc_raster_path,
-            gdal.GDT_Float32, TARGET_NODATA),
-        kwargs={'values_required': True},
-        target_path_list=[kc_raster_path],
-        dependent_task_list=[align_task],
-        task_name='reclassify to kc')
+    task_path_prop_map = {}
+
+    for prop in ['kc', 'shade', 'albedo']:
+        prop_map = dict([
+            (lucode, x[prop])
+            for lucode, x in biophysical_lucode_map.items()])
+
+        prop_raster_path = os.path.join(
+            temporary_working_dir, '%s.tif' % prop)
+        prop_task = task_graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=(
+                (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
+                gdal.GDT_Float32, TARGET_NODATA),
+            kwargs={'values_required': True},
+            target_path_list=[prop_raster_path],
+            dependent_task_list=[align_task],
+            task_name='reclassify to %s' % prop)
+        task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
     eto_nodata = pygeoprocessing.get_raster_info(
         args['ref_eto_raster_path'])['nodata'][0]
@@ -109,12 +115,12 @@ def execute(args):
     eti_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
-            [(kc_raster_path, 1), (TARGET_NODATA, 'raw'),
+            [(task_path_prop_map['kc'][1], 1), (TARGET_NODATA, 'raw'),
              (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
              (float(args['et_max']), 'raw'), (TARGET_NODATA, 'raw')],
             calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[eti_raster_path],
-        dependent_task_list=[kc_task],
+        dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
     task_graph.close()
