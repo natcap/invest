@@ -162,12 +162,11 @@ def execute(args):
     else:
         value_history, farms_npv = None, None
 
+    histogram_paths, uncertainty_stats = None, None
     # Do uncertainty analysis if it's enabled.
     if 'g_param_a_sd' in args and 'g_param_b_sd' in args:
         histogram_paths, uncertainty_stats = compute_uncertainty_data(
             args, output_dir)
-    else:
-        histogram_paths, uncertainty_stats = None, None
 
     create_HTML_table(
         output_dir, args, cycle_history, sum_hrv_weight, hrv_weight, farms_npv,
