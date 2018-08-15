@@ -25,7 +25,7 @@ def main():
         'aoi_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
         'biophysical_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Biophysical table_UHI.csv",
         'urban_park_cooling_distance': 1000.0,
-        'uhi_max': 1.0,
+        'uhi_max': 3.5,
         'et_max': 600.0,
         'infrastructure_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
         'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",

@@ -137,8 +137,34 @@ def execute(args):
             eti_task],
         task_name='calculate cc index')
 
+    air_temp_nodata = pygeoprocessing.get_raster_info(
+        args['air_temp_raster_path'])['nodata'][0]
+    t_air_raster_path = os.path.join(args['workspace_dir'], 'T_air.tif')
+    t_air_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (aligned_air_temp_raster_path, 1), (air_temp_nodata, 'raw'),
+            (cc_raster_path, 1), (float(args['uhi_max']), 'raw')],
+            calc_t_air_op, t_air_raster_path, gdal.GDT_Float32,
+            TARGET_NODATA),
+        target_path_list=[t_air_raster_path],
+        dependent_task_list=[cc_task, align_task],
+        task_name='calculate T air')
+
     task_graph.close()
     task_graph.join()
+
+
+def calc_t_air_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
+    """Calculate air temperature T_(air,i)=T_(air,ref)+(1-HM_i)*UHI_max."""
+    result = numpy.empty(hm_array.shape, dtype=numpy.float32)
+    result[:] = TARGET_NODATA
+    valid_mask = ~(
+        numpy.isclose(hm_array, TARGET_NODATA) |
+        numpy.isclose(t_air_ref_array, t_air_ref_nodata))
+    result[valid_mask] = t_air_ref_array[valid_mask] + (
+        1-hm_array[valid_mask]) * uhi_max
+    return result
 
 
 def calc_cc_op(shade_array, albedo_array, eti_array):
