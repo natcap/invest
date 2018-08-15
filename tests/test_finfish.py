@@ -73,7 +73,7 @@ class FinfishTests(unittest.TestCase):
         args['num_monte_carlo_runs'] = 10
         args['p_per_kg'] = 2.25
 
-        _make_harvest_shp(self.workspace_dir)
+        _make_harvest_shp(self.workspace_dir)  # to test if it's recreated
 
         natcap.invest.finfish_aquaculture.finfish_aquaculture.execute(args)
 
