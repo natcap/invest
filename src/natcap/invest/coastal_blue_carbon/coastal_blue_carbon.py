@@ -1002,7 +1002,7 @@ def validate(args, limit_to=None):
         try:
             table = pandas.read_csv(args[csv_key], sep=None, engine='python')
             headers = list(table)
-            missing_headers = set(required_fields) - headers
+            missing_headers = set(required_fields) - set(headers)
             if missing_headers:
                 warnings.append((
                     [csv_key],
