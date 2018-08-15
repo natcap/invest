@@ -18,7 +18,7 @@ from osgeo import ogr
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy', 'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
 
@@ -229,7 +229,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         csv_path = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input',
+            SAMPLE_DATA,
             'global_wind_energy_parameters.csv')
 
         parameter_list = [
@@ -501,6 +501,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
             feat = layer.GetNextFeature()
 
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\windEnergy"
 
 class WindEnergyRegressionTests(unittest.TestCase):
     """Regression tests for the Wind Energy module."""
@@ -521,14 +522,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'wind_data_uri': os.path.join(
-                REGRESSION_DATA, 'resampled_wind_points.csv'),
+                SAMPLE_DATA, 'resampled_wind_points.csv'),
             'bathymetry_uri': os.path.join(
-                REGRESSION_DATA, 'resampled_global_dem.tif'),
+                SAMPLE_DATA, 'resampled_global_dem.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -573,7 +574,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
 
@@ -602,7 +603,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
 
@@ -631,9 +632,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
+                                                'simple_global_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -641,7 +642,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['discount_rate'] = 0.07
         # Test that only grid points are provided in grid_points_uri
         args['grid_points_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+            SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -655,7 +656,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -664,7 +665,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -674,9 +675,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
+                                                'simple_global_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -686,8 +687,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # testing, grid points in 'NE_sub_pts.csv' were duplicated and marked
         # as land points. So the distances will be zero, keeping the result
         # the same but testing that section of code
-        args['grid_points_uri'] = os.path.join(REGRESSION_DATA,
-                                               'grid_land_pts.csv')
+        args['grid_points_uri'] = os.path.join(SAMPLE_DATA,
+                                               'resampled_grid_land_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -701,7 +702,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', raster_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -710,7 +711,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridpts', vector_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -719,8 +720,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['land_polygon_uri'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
+                                                'simple_global_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -728,7 +729,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['discount_rate'] = 0.07
         # Provide the grid points but not AOI
         args['grid_points_uri'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+            SAMPLE_DATA, 'NE_sub_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -748,10 +749,10 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -768,7 +769,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+                SAMPLE_DATA, 'price_table_example.csv'),
             'suffix': 'test'  # to be tested
         }
         wind_energy.execute(args)
@@ -803,10 +804,10 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -823,7 +824,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+                SAMPLE_DATA, 'price_table_example.csv'),
             'suffix': '_test'  # to be tested
         }
         wind_energy.execute(args)
@@ -861,7 +862,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -904,7 +905,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -921,7 +922,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+                SAMPLE_DATA, 'price_table_example.csv'),
             'suffix': '_test'
         }
 
@@ -955,7 +956,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -972,7 +973,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+                SAMPLE_DATA, 'price_table_example.csv'),
             'suffix': '_test'
         }
 
@@ -1010,10 +1011,10 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_uri': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'turbine_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
+                SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
@@ -1030,7 +1031,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input', 'price_table_example.csv'),
+                SAMPLE_DATA, 'price_table_example.csv'),
         }
 
         wind_energy.execute(args)
