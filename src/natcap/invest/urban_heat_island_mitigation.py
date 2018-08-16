@@ -4,6 +4,7 @@ import logging
 import os
 import multiprocessing
 import pickle
+import time
 
 from osgeo import gdal
 from osgeo import ogr
@@ -19,6 +20,7 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
+_LOGGING_PERIOD = 5.0
 
 
 def execute(args):
@@ -55,7 +57,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_air_temp_raster_path = os.path.join(
@@ -166,8 +168,8 @@ def execute(args):
     pickle_t_air_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_building_vector_path, 'OBJECTID', t_air_raster_path,
-            t_air_stats_pickle_path),
+            intermediate_building_vector_path, key_field_id,
+            t_air_raster_path, t_air_stats_pickle_path),
         target_path_list=[t_air_stats_pickle_path],
         dependent_task_list=[t_air_task, intermediate_building_vector_task],
         task_name='pickle t-air stats')
@@ -177,7 +179,7 @@ def execute(args):
     pickle_t_ref_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_building_vector_path, 'OBJECTID',
+            intermediate_building_vector_path, key_field_id,
             aligned_air_temp_raster_path, t_ref_stats_pickle_path),
         target_path_list=[t_ref_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_building_vector_task],
@@ -189,7 +191,7 @@ def execute(args):
         func=calculate_energy_savings,
         args=(
             t_air_stats_pickle_path, t_ref_stats_pickle_path,
-            args['energy_consumption_table_path'],
+            float(args['uhi_max']), args['energy_consumption_table_path'],
             intermediate_building_vector_path,
             target_building_vector_path),
         target_path_list=[target_building_vector_path],
@@ -203,7 +205,7 @@ def execute(args):
 
 
 def calculate_energy_savings(
-        t_air_stats_pickle_path, t_ref_stats_pickle_path,
+        t_air_stats_pickle_path, t_ref_stats_pickle_path, uhi_max,
         energy_consumption_table_path, base_building_vector_path,
         target_building_vector_path):
     """Add watershed scale values of the given base_raster.
@@ -213,6 +215,7 @@ def calculate_energy_savings(
             'objectid_invest_natcap'.
         t_ref_stats_pickle_path (str): path to t_ref zonal stats indexed by
             'objectid_invest_natcap'.
+        uhi_max (float): UHI max parameter from documentation.
         base_building_vector_path (str): path to existing vector to copy for
             the target vector that contains at least the field 'type'.
         energy_consumption_table_path (str): path to energy consumption table
@@ -227,15 +230,17 @@ def calculate_energy_savings(
     """
     LOGGER.info(
         "Calculate energy savings for %s", target_building_vector_path)
-
+    LOGGER.info("load t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
+    LOGGER.info("load t_ref_stats")
     with open(t_ref_stats_pickle_path, 'rb') as t_ref_stats_pickle_file:
         t_ref_stats = pickle.load(t_ref_stats_pickle_file)
 
     base_building_vector = gdal.OpenEx(
         base_building_vector_path, gdal.OF_VECTOR)
     gpkg_driver = gdal.GetDriverByName('GPKG')
+    LOGGER.info("creating %s", os.path.basename(target_building_vector_path))
     gpkg_driver.CreateCopy(
         target_building_vector_path, base_building_vector)
     base_building_vector = None
@@ -249,7 +254,29 @@ def calculate_energy_savings(
     target_building_layer.CreateField(
         ogr.FieldDefn('mean_t_ref', ogr.OFTReal))
 
+    target_building_layer_defn = target_building_layer.GetLayerDefn()
+    for field_name in ['Type', 'type', 'TYPE']:
+        type_field_index = target_building_layer_defn.GetFieldIndex(
+            field_name)
+        if type_field_index != -1:
+            break
+    if type_field_index == -1:
+        raise ValueError(
+            "Could not find field 'Type' in %s", target_building_vector_path)
+
+    energy_consumption_table_path = utils.build_lookup_from_csv(
+        energy_consumption_table_path, 'type', to_lower=True,
+        warn_if_missing=True)
+
+    target_building_layer.StartTransaction()
+    last_time = time.time()
     for target_index, target_feature in enumerate(target_building_layer):
+        last_time = _invoke_timed_callback(
+            last_time, lambda: LOGGER.info(
+                "energy savings approximately %.1f%% complete ",
+                100.0 * float(target_index+1) /
+                target_building_layer.GetFeatureCount()),
+            _LOGGING_PERIOD)
         feature_id = target_feature.GetField('objectid_invest_natcap')
         t_air_mean = None
         if feature_id in t_air_stats:
@@ -260,6 +287,7 @@ def calculate_energy_savings(
                     float(pixel_count))
                 target_feature.SetField('mean_t_air', float(t_air_mean))
 
+        t_ref_mean = None
         if feature_id in t_ref_stats:
             pixel_count = t_ref_stats[feature_id]['count']
             if pixel_count > 0:
@@ -268,7 +296,15 @@ def calculate_energy_savings(
                     float(pixel_count))
                 target_feature.SetField('mean_t_ref', float(t_ref_mean))
 
+        consumption_increase = float(energy_consumption_table_path[
+            target_feature.GetField(type_field_index)]['consumption'])
+        if t_air_mean and t_ref_mean:
+            target_feature.SetField(
+                'energy_savings', consumption_increase * (
+                    t_air_mean-t_ref_mean) / 2. + uhi_max)
+
         target_building_layer.SetFeature(target_feature)
+    target_building_layer.CommitTransaction()
     target_building_layer.SyncToDisk()
 
 
@@ -296,12 +332,11 @@ def reproject_and_label_vector(
         target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_layer = target_vector.GetLayer()
     target_layer.CreateField(
-        ogr.FieldDefn('energy_savings', ogr.OFTReal))
+        ogr.FieldDefn(target_key_field_id, ogr.OFTInteger))
     target_layer.SyncToDisk()
-    target_layer = None
     target_vector.ExecuteSQL(
-        'UPDATE TABLE %s SET energy_savings = rowid;' %
-        target_layer.GetName())
+        'UPDATE TABLE %s SET %s = rowid;' %
+        (target_layer.GetName(), target_key_field_id))
 
 
 def pickle_zonal_stats(
@@ -437,3 +472,29 @@ def validate(args, limit_to=None):
                     del vector
 
     return validation_error_list
+
+
+def _invoke_timed_callback(
+        reference_time, callback_lambda, callback_period):
+    """Invoke callback if a certain amount of time has passed.
+
+    This is a convenience function to standardize update callbacks from the
+    module.
+
+    Parameters:
+        reference_time (float): time to base `callback_period` length from.
+        callback_lambda (lambda): function to invoke if difference between
+            current time and `reference_time` has exceeded `callback_period`.
+        callback_period (float): time in seconds to pass until
+            `callback_lambda` is invoked.
+
+    Returns:
+        `reference_time` if `callback_lambda` not invoked, otherwise the time
+        when `callback_lambda` was invoked.
+
+    """
+    current_time = time.time()
+    if current_time - reference_time > callback_period:
+        callback_lambda()
+        return current_time
+    return reference_time
