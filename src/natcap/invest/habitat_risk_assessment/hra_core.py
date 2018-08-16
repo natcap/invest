@@ -440,8 +440,7 @@ def make_aoi_tables(out_dir, aoi_pairs):
 
     filename = os.path.join(
         out_dir,
-        'Sub_Region_Averaged_Results_[%s].html'
-        % datetime.datetime.now().strftime("%Y-%m-%d_%H_%M"))
+        'Sub_Region_Averaged_Results.html')
 
     file = open(filename, "w")
 
