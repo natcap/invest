@@ -5,9 +5,9 @@ import shutil
 import os
 import csv
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
-from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
+import pygeoprocessing.testing
+from pygeoprocessing.testing import scm
+from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
 from shapely.geometry import Polygon
@@ -75,7 +75,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Point(pos_x + 50, pos_y - 50), Point(pos_x + 50, pos_y - 150)]
         shape_path = os.path.join(self.workspace_dir, 'temp_shape.shp')
         # Create point shapefile to use for testing input
-        land_shape_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        land_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attrs,
             vector_format='ESRI Shapefile', filename=shape_path)
 
@@ -83,7 +83,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(self.workspace_dir, 'temp_raster.tif')
         # Create raster to use for testing input
-        harvested_masked_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
+        harvested_masked_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_path)
 
@@ -124,7 +124,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
         poly_file = os.path.join(self.workspace_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
-        poly_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        poly_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             poly_geometries, srs.projection, fields, attr_poly,
             vector_format='ESRI Shapefile', filename=poly_file)
 
@@ -133,7 +133,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
-        point_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        point_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
@@ -143,7 +143,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_results = [.15, .1, .05, .05]
 
         for dist_a, dist_b in zip(results, exp_results):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
+            pygeoprocessing.testing.assert_close(
                 dist_a, dist_b)
 
     def test_add_field_to_shape_given_list(self):
@@ -161,7 +161,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile for testing input
-        shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=point_file)
 
@@ -187,7 +187,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
                 try:
                     field_val = feat.GetField(field_name)
-                    natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(
+                    pygeoprocessing.testing.assert_close(
                         results[pt_id][field_name], field_val)
                 except ValueError:
                     raise AssertionError(
@@ -266,7 +266,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         os.mkdir(farm_1)
         farm_file = os.path.join(farm_1, 'vector.shp')
         # Create polyline shapefile to use to test against
-        farm_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        farm_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=farm_file)
 
@@ -281,8 +281,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         wind_energy.create_wind_farm_box(
             spat_ref, start_point, x_len, y_len, out_path)
         # Compare results
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_path, farm_ds_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_path, farm_ds_path, 1E-6)
 
     def test_get_highest_harvested_geom(self):
         """WindEnergy: testing 'get_highest_harvested_geom' function."""
@@ -303,7 +303,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use for testing input
-        shape_ds_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attributes,
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
@@ -347,12 +347,12 @@ class WindEnergyUnitTests(unittest.TestCase):
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         input_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
-        raster_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
+        raster_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], latlong_origin, latlong_proj, -1.0,
             pixel_size(0.033333), filename=input_path)
 
-        raster_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
-            raster_path)
+        raster_gt = pygeoprocessing.geoprocessing.get_raster_info(
+            raster_path)['geotransform']
         point = (raster_gt[0], raster_gt[3])
         raster_wkt = latlong_proj
 
@@ -371,7 +371,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         # Compare
         for res, exp in zip(result, expected_res):
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_close(res, exp)
+            pygeoprocessing.testing.assert_close(res, exp)
 
     def test_calculate_distances_grid(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
@@ -387,14 +387,14 @@ class WindEnergyUnitTests(unittest.TestCase):
                       Point(pos_x + 50, pos_y - 150)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
-        land_shape_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_vector_on_disk(
+        land_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geometries, srs.projection, fields, attrs,
             vector_format='ESRI Shapefile', filename=point_file)
 
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         raster_path = os.path.join(self.workspace_dir, 'raster.tif')
         # Create raster to use as testing input
-        harvested_masked_path = natcap.invest.pygeoprocessing_0_3_3.testing.create_raster_on_disk(
+        harvested_masked_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], srs.origin, srs.projection, -1, srs.pixel_size(100),
             datatype=gdal.GDT_Int32, filename=raster_path)
 
@@ -551,18 +551,18 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', raster_path))
+                os.path.join(REGRESSION_DATA, 'noaoi', raster_path), 1E-6)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
         for vector_path in vector_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
+                os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -581,7 +581,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
 
@@ -590,9 +590,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'wind_energy_points.shp']
 
         for vector_path in vector_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
+                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -610,7 +610,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
 
@@ -619,9 +619,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'wind_energy_points.shp']
 
         for vector_path in vector_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
+                os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -653,7 +653,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
 
@@ -662,9 +662,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'wind_energy_points.shp']
 
         for vector_path in vector_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -699,18 +699,18 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
 
         for raster_path in raster_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+            pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path), 1E-6)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
             'wind_energy_points.shp']
 
         for vector_path in vector_results:
-            natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+            pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
