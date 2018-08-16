@@ -11,9 +11,12 @@ import numpy
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'globio')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-data"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data"
 
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\globio"
 
 class GLOBIOTests(unittest.TestCase):
     """Tests for the GLOBIO model."""
@@ -22,11 +25,12 @@ class GLOBIOTests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        # self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempdir
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
+        # shutil.rmtree(self.workspace_dir)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -37,7 +41,7 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'infrastructure_dir'),
             'intensification_fraction': '0.46',
@@ -55,31 +59,31 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(self.workspace_dir, 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_globio_duplicate_output(self):
-        """GLOBIO: testing that overwriting output does not crash."""
-        from natcap.invest import globio
+    # @scm.skip_if_data_missing(SAMPLE_DATA)
+    # @scm.skip_if_data_missing(REGRESSION_DATA)
+    # def test_globio_duplicate_output(self):
+    #     """GLOBIO: testing that overwriting output does not crash."""
+    #     from natcap.invest import globio
 
-        args = {
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
-            'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc_small.tif'),
-            'infrastructure_dir':  os.path.join(
-                SAMPLE_DATA, 'infrastructure_dir'),
-            'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'msa_parameters.csv'),
-            'predefined_globio': True,
-            'workspace_dir': self.workspace_dir,
-        }
+    #     args = {
+    #         'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+    #         'globio_lulc_uri': os.path.join(
+    #             REGRESSION_DATA, 'globio_lulc_small.tif'),
+    #         'infrastructure_dir':  os.path.join(
+    #             SAMPLE_DATA, 'infrastructure_dir'),
+    #         'intensification_fraction': '0.46',
+    #         'msa_parameters_uri': os.path.join(
+    #             SAMPLE_DATA, 'msa_parameters.csv'),
+    #         'predefined_globio': True,
+    #         'workspace_dir': self.workspace_dir,
+    #     }
 
-        # invoke twice to ensure no error is raised
-        globio.execute(args)
-        globio.execute(args)
+    #     # invoke twice to ensure no error is raised
+    #     globio.execute(args)
+    #     globio.execute(args)
 
-        # inferring an explicit 'pass'
-        self.assertTrue(True)
+    #     # inferring an explicit 'pass'
+    #     self.assertTrue(True)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -112,7 +116,7 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                REGRESSION_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 REGRESSION_DATA, 'small_infrastructure'),
             'intensification_fraction': '0.46',
