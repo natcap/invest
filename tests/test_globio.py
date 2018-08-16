@@ -11,8 +11,10 @@ import numpy
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'globio')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-data"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data"
 
 def _make_dummy_file(workspace_dir, file_name):
     """Within workspace, create a dummy output file.
@@ -46,7 +48,7 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'infrastructure_dir'),
             'intensification_fraction': '0.46',
@@ -95,7 +97,7 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 REGRESSION_DATA, 'small_infrastructure'),
             'intensification_fraction': '0.46',
