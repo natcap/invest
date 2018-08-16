@@ -4,7 +4,8 @@ import tempfile
 import shutil
 import os
 
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing
+from pygeoprocessing.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
@@ -80,9 +81,9 @@ class FinfishTests(unittest.TestCase):
         FinfishTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -100,9 +101,9 @@ class FinfishTests(unittest.TestCase):
             os.path.join(
                 REGRESSION_DATA, 'expected_file_list_no_valuation.txt'),
             args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest_no_valuation.shp'),
-            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'))
+            os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
