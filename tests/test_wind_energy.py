@@ -115,7 +115,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         poly_geoms = {
             'poly_1': [(pos_x + 200, pos_y), (pos_x + 250, pos_y),
-                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y -100),
+                       (pos_x + 250, pos_y - 100), (pos_x + 200, pos_y - 100),
                        (pos_x + 200, pos_y)],
             'poly_2': [(pos_x, pos_y - 150), (pos_x + 100, pos_y - 150),
                        (pos_x + 100, pos_y - 200), (pos_x, pos_y - 200),
@@ -261,8 +261,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_y = srs.origin[1]
 
         geometries = [LinearRing([(pos_x + 100, pos_y),
-            (pos_x + 100, pos_y + 150), (pos_x + 200, pos_y + 150),
-            (pos_x + 200, pos_y), (pos_x + 100, pos_y)])]
+                      (pos_x + 100, pos_y + 150), (pos_x + 200, pos_y + 150),
+                      (pos_x + 200, pos_y), (pos_x + 100, pos_y)])]
 
         farm_1 = os.path.join(self.workspace_dir, 'farm_1')
         os.mkdir(farm_1)
