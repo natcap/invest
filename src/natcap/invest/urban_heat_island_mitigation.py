@@ -59,7 +59,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_air_temp_raster_path = os.path.join(
@@ -187,8 +187,92 @@ def execute(args):
         dependent_task_list=[align_task, intermediate_building_vector_task],
         task_name='pickle t-ref stats')
 
+    target_building_vector_path = os.path.join(
+        args['workspace_dir'], 'buildings_with_stats.gpkg')
+    calculate_energy_savings_task = task_graph.add_task(
+        func=calculate_energy_savings,
+        args=(
+            t_air_stats_pickle_path, t_ref_stats_pickle_path,
+            args['energy_consumption_table_path'],
+            intermediate_building_vector_path,
+            target_building_vector_path),
+        target_path_list=[target_building_vector_path],
+        dependent_task_list=[
+            pickle_t_ref_task, pickle_t_air_task,
+            intermediate_building_vector_task])
+
     task_graph.close()
     task_graph.join()
+
+
+def calculate_energy_savings(
+        t_air_stats_pickle_path, t_ref_stats_pickle_path,
+        energy_consumption_table_path, base_building_vector_path,
+        target_building_vector_path):
+    """Add watershed scale values of the given base_raster.
+
+    Parameters:
+        t_air_stats_pickle_path (str): path to t_air zonal stats indexed by
+            'objectid_invest_natcap'.
+        t_ref_stats_pickle_path (str): path to t_ref zonal stats indexed by
+            'objectid_invest_natcap'.
+        base_building_vector_path (str): path to existing vector to copy for
+            the target vector that contains at least the field 'type'.
+        energy_consumption_table_path (str): path to energy consumption table
+            that contains at least the columns 'type', and 'consumption'.
+        target_building_vector_path (str): path to target vector that
+            will contain the additional field 'energy_savings' calculated as
+            consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))
+
+    Return:
+        None.
+
+    """
+    LOGGER.info(
+        "Calculate energy savings for %s", target_building_vector_path)
+
+    with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
+        t_air_stats = pickle.load(t_air_stats_pickle_file)
+    with open(t_ref_stats_pickle_path, 'rb') as t_ref_stats_pickle_file:
+        t_ref_stats = pickle.load(t_ref_stats_pickle_file)
+
+    base_building_vector = gdal.OpenEx(
+        base_building_vector_path, gdal.OF_VECTOR)
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    gpkg_driver.CreateCopy(
+        target_building_vector_path, base_building_vector)
+    base_building_vector = None
+    target_building_vector = gdal.OpenEx(
+        target_building_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_building_layer = target_building_vector.GetLayer()
+    target_building_layer.CreateField(
+        ogr.FieldDefn('energy_savings', ogr.OFTReal))
+    target_building_layer.CreateField(
+        ogr.FieldDefn('mean_t_air', ogr.OFTReal))
+    target_building_layer.CreateField(
+        ogr.FieldDefn('mean_t_ref', ogr.OFTReal))
+
+    for target_index, target_feature in enumerate(target_building_layer):
+        feature_id = target_feature.GetField('objectid_invest_natcap')
+        t_air_mean = None
+        if feature_id in t_air_stats:
+            pixel_count = t_air_stats[feature_id]['count']
+            if pixel_count > 0:
+                t_air_mean = (
+                    t_air_stats[feature_id]['sum'] /
+                    float(pixel_count))
+                target_feature.SetField('mean_t_air', float(t_air_mean))
+
+        if feature_id in t_ref_stats:
+            pixel_count = t_ref_stats[feature_id]['count']
+            if pixel_count > 0:
+                t_ref_mean = (
+                    t_ref_stats[feature_id]['sum'] /
+                    float(pixel_count))
+                target_feature.SetField('mean_t_ref', float(t_ref_mean))
+
+        target_building_layer.SetFeature(target_feature)
+    target_building_layer.SyncToDisk()
 
 
 def reproject_and_label_vector(
@@ -212,18 +296,6 @@ def reproject_and_label_vector(
         base_vector_path, target_projection_wkt,
         target_vector_path, layer_index=0, driver_name='GPKG')
 
-    """
-    target_vector = gdal.OpenEx(
-        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_layer = target_vector.GetLayer()
-    target_layer.CreateField(ogr.FieldDefn(target_key_field_id, ogr.OFTReal))
-    target_layer.SyncToDisk()
-    target_vector.ExecuteSQL(
-        'UPDATE %s SET %s=rowid' % (
-            target_layer.GetName(), target_key_field_id))
-    """
-
-
 
 def pickle_zonal_stats(
         base_vector_path, key_field, base_raster_path, target_pickle_path):
@@ -242,7 +314,8 @@ def pickle_zonal_stats(
 
     """
     zonal_stats = pygeoprocessing.zonal_statistics(
-        (base_raster_path, 1), base_vector_path, key_field)
+        (base_raster_path, 1), base_vector_path, key_field,
+        polygons_might_overlap=False)
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(zonal_stats, pickle_file)
 
