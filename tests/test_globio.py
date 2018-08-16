@@ -26,6 +26,8 @@ def _make_dummy_file(workspace_dir, file_name):
     output = open(output_path, 'wb')
     output.close()
 
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\globio"
+
 class GLOBIOTests(unittest.TestCase):
     """Tests for the GLOBIO model."""
 
@@ -104,7 +106,7 @@ class GLOBIOTests(unittest.TestCase):
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': tempdir  # self.workspace_dir
         }
         globio.execute(args)
         GLOBIOTests._test_same_files(
