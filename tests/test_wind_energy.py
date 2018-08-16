@@ -571,7 +571,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
@@ -599,10 +598,12 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
 
         wind_energy.execute(args)
 
@@ -632,8 +633,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['aoi_uri'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
-                                                'simple_north_america_polygon.shp')
+        args['land_polygon_uri'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -738,7 +739,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_field_error_missing_bio_param(self):
-        """WindEnergy: testing that FieldError raised when missing bio param."""
+        """WindEnergy: testing that ValueError raised when missing bio param."""
         from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -781,7 +782,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_missing_valuation_params(self):
-        """WindEnergy: testing that FieldError is thrown when val params miss."""
+        """WindEnergy: testing that ValueError is thrown when val params miss."""
         from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
@@ -832,7 +833,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_time_period_exceptoin(self):
-        """WindEnergy: raise TimePeriodError if 'time' and 'wind_sched' differ."""
+        """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
