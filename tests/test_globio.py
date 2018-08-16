@@ -14,6 +14,15 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
 
+def _make_dummy_file(workspace_dir, file_name):
+    """Within workspace, create a dummy output file.
+
+    Parameters:
+        workspace_dir: path to workspace for making the file
+    """
+    output_path = os.path.join(workspace_dir, file_name)
+    output = open(output_path, 'wb')
+    output.close()
 
 class GLOBIOTests(unittest.TestCase):
     """Tests for the GLOBIO model."""
@@ -54,32 +63,6 @@ class GLOBIOTests(unittest.TestCase):
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
             os.path.join(self.workspace_dir, 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_globio_duplicate_output(self):
-        """GLOBIO: testing that overwriting output does not crash."""
-        from natcap.invest import globio
-
-        args = {
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
-            'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc_small.tif'),
-            'infrastructure_dir':  os.path.join(
-                SAMPLE_DATA, 'infrastructure_dir'),
-            'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'msa_parameters.csv'),
-            'predefined_globio': True,
-            'workspace_dir': self.workspace_dir,
-        }
-
-        # invoke twice to ensure no error is raised
-        globio.execute(args)
-        globio.execute(args)
-
-        # inferring an explicit 'pass'
-        self.assertTrue(True)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -157,7 +140,10 @@ class GLOBIOTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
 
+        # Test that overwriting output does not crash.
+        _make_dummy_file(args['workspace_dir'], 'aoi_summary.shp')
         globio.execute(args)
+
         GLOBIOTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
@@ -167,6 +153,9 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(
                 args['workspace_dir'], 'aoi_summary.shp'),
             os.path.join(REGRESSION_DATA, 'globio_agg_results.csv'))
+
+        # inferring an explicit 'pass'
+        self.assertTrue(True)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
