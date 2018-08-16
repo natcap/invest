@@ -2,9 +2,7 @@
 from __future__ import absolute_import
 import logging
 import os
-import time
 import multiprocessing
-import uuid
 import pickle
 
 from osgeo import gdal
@@ -13,8 +11,6 @@ from osgeo import osr
 import pygeoprocessing
 import taskgraph
 import numpy
-import scipy
-import rtree
 import shapely.wkb
 import shapely.prepared
 
@@ -59,7 +55,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_air_temp_raster_path = os.path.join(
@@ -199,7 +195,8 @@ def execute(args):
         target_path_list=[target_building_vector_path],
         dependent_task_list=[
             pickle_t_ref_task, pickle_t_air_task,
-            intermediate_building_vector_task])
+            intermediate_building_vector_task],
+        task_name='calculate energy savings task')
 
     task_graph.close()
     task_graph.join()
@@ -295,6 +292,16 @@ def reproject_and_label_vector(
     pygeoprocessing.reproject_vector(
         base_vector_path, target_projection_wkt,
         target_vector_path, layer_index=0, driver_name='GPKG')
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+    target_layer.CreateField(
+        ogr.FieldDefn('energy_savings', ogr.OFTReal))
+    target_layer.SyncToDisk()
+    target_layer = None
+    target_vector.ExecuteSQL(
+        'UPDATE TABLE %s SET energy_savings = rowid;' %
+        target_layer.GetName())
 
 
 def pickle_zonal_stats(
