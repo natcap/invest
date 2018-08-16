@@ -298,10 +298,11 @@ def calculate_energy_savings(
 
         consumption_increase = float(energy_consumption_table_path[
             target_feature.GetField(type_field_index)]['consumption'])
+        LOGGER.debug(consumption_increase)
         if t_air_mean and t_ref_mean:
             target_feature.SetField(
-                'energy_savings', consumption_increase * (
-                    t_air_mean-t_ref_mean) / 2. + uhi_max)
+                'energy_savings', consumption_increase * ((
+                    t_ref_mean-t_air_mean) / 2. + uhi_max))
 
         target_building_layer.SetFeature(target_feature)
     target_building_layer.CommitTransaction()
