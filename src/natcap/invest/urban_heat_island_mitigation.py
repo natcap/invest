@@ -28,7 +28,7 @@ def execute(args):
 
     Parameters:
         args['workspace_dir'] (str): path to target output directory.
-        args['air_temp_raster_path'] (str): raster of air temperature.
+        args['t_air_ref_raster_path'] (str): raster of air temperature.
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['et_max'] (float): maximum evapotranspiration.
@@ -60,8 +60,8 @@ def execute(args):
         temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
-    aligned_air_temp_raster_path = os.path.join(
-        temporary_working_dir, 'air_temp.tif')
+    aligned_t_air_ref_raster_path = os.path.join(
+        temporary_working_dir, 't_air_ref.tif')
     aligned_lulc_raster_path = os.path.join(
         temporary_working_dir, 'lulc.tif')
     aligned_ref_eto_raster_path = os.path.join(
@@ -71,12 +71,12 @@ def execute(args):
         args['lulc_raster_path'])
 
     aligned_raster_path_list = [
-        aligned_air_temp_raster_path, aligned_lulc_raster_path,
+        aligned_t_air_ref_raster_path, aligned_lulc_raster_path,
         aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['air_temp_raster_path'], args['lulc_raster_path'],
+            [args['t_air_ref_raster_path'], args['lulc_raster_path'],
              args['ref_eto_raster_path']], aligned_raster_path_list, [
                 'cubicspline', 'mode', 'cubicspline'],
             lulc_raster_info['pixel_size'], 'intersection'),
@@ -136,12 +136,12 @@ def execute(args):
         task_name='calculate cc index')
 
     air_temp_nodata = pygeoprocessing.get_raster_info(
-        args['air_temp_raster_path'])['nodata'][0]
+        args['t_air_ref_raster_path'])['nodata'][0]
     t_air_raster_path = os.path.join(args['workspace_dir'], 'T_air.tif')
     t_air_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (aligned_air_temp_raster_path, 1), (air_temp_nodata, 'raw'),
+            (aligned_t_air_ref_raster_path, 1), (air_temp_nodata, 'raw'),
             (cc_raster_path, 1), (float(args['uhi_max']), 'raw')],
             calc_t_air_op, t_air_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
@@ -149,7 +149,6 @@ def execute(args):
         dependent_task_list=[cc_task, align_task],
         task_name='calculate T air')
 
-    # intersect built_infrastructure_vector_path with aoi_watersheds_path
     intermediate_building_vector_path = os.path.join(
         temporary_working_dir, 'intermediate_building_vector.gpkg')
     # this is the field name that can be used to uniquely identify a feature
@@ -180,7 +179,7 @@ def execute(args):
         func=pickle_zonal_stats,
         args=(
             intermediate_building_vector_path, key_field_id,
-            aligned_air_temp_raster_path, t_ref_stats_pickle_path),
+            aligned_t_air_ref_raster_path, t_ref_stats_pickle_path),
         target_path_list=[t_ref_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_building_vector_task],
         task_name='pickle t-ref stats')
@@ -200,8 +199,134 @@ def execute(args):
             intermediate_building_vector_task],
         task_name='calculate energy savings task')
 
+    intermediate_aoi_vector_path = os.path.join(
+        temporary_working_dir, 'intermediate_aoi.gpkg')
+    intermediate_uhi_result_vector_task = task_graph.add_task(
+        func=reproject_and_label_vector,
+        args=(
+            args['aoi_vector_path'], lulc_raster_info['projection'],
+            key_field_id, intermediate_aoi_vector_path),
+        target_path_list=[intermediate_aoi_vector_path],
+        task_name='reproject and label aoi')
+
+    cc_aoi_stats_pickle_path = os.path.join(
+        temporary_working_dir, 'cc_ref_aoi_stats.pickle')
+    pickle_t_ref_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_aoi_vector_path, key_field_id,
+            cc_raster_path, cc_aoi_stats_pickle_path),
+        target_path_list=[cc_aoi_stats_pickle_path],
+        dependent_task_list=[cc_task, intermediate_uhi_result_vector_task],
+        task_name='pickle cc ref stats')
+
+    t_air_ref_stats_pickle_path = os.path.join(
+        temporary_working_dir, 't_ref_aoi_stats.pickle')
+    pickle_t_air_ref_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_aoi_vector_path, key_field_id,
+            aligned_t_air_ref_raster_path, t_air_ref_stats_pickle_path),
+        target_path_list=[t_air_ref_stats_pickle_path],
+        dependent_task_list=[align_task, intermediate_uhi_result_vector_task],
+        task_name='pickle t-ref stats')
+
+    t_air_aoi_stats_pickle_path = os.path.join(
+        temporary_working_dir, 't_air_aoi_stats.pickle')
+    t_air_stats_task = task_graph.add_task(
+        func=pickle_zonal_stats,
+        args=(
+            intermediate_aoi_vector_path, key_field_id,
+            t_air_raster_path, t_air_aoi_stats_pickle_path),
+        target_path_list=[t_air_aoi_stats_pickle_path],
+        dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
+        task_name='pickle t-air stats')
+
     task_graph.close()
     task_graph.join()
+
+
+def calculate_uhi_result_vector(
+        base_aoi_path, target_key_field_id, t_air_stats_pickle_path,
+        t_air_ref_stats_pickle_path, cc_stats_pickle_path,
+        target_uhi_vector_path):
+    """Summarize UHI results.
+
+    Output vector will have fields with attributes summarizing:
+        * average cc value
+        * average temperature value
+        * average temperature anomaly
+        * avoided energy consumption
+
+    Parameters:
+        base_aoi_path (str): path to AOI vector.
+        target_key_field_id (str): field to identify the vector associated
+            with the stats field for each polygon.
+        target_uhi_vector_path (str): path to UHI vector created for result.
+            Will contain the fields:
+                * average_cc_value
+                * average_temp_value
+                * average_temp_anom
+                * avoided_energy_consumption
+
+    Returns:
+        None.
+
+    """
+    LOGGER.info(
+        "Calculate UHI summary results %s", os.path.basename(
+            target_uhi_vector_path))
+
+    LOGGER.info("load t_air_stats")
+    with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
+        t_air_stats = pickle.load(t_air_stats_pickle_file)
+    LOGGER.info("load t_air_ref_stats")
+    with open(t_air_ref_stats_pickle_path, 'rb') as \
+            t_air_ref_stats_pickle_file:
+        t_air_ref_stats = pickle.load(t_air_ref_stats_pickle_file)
+    LOGGER.info("load cc_stats")
+    with open(cc_stats_pickle_path, 'rb') as cc_stats_pickle_file:
+        cc_stats = pickle.load(cc_stats_pickle_file)
+
+    base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    LOGGER.info("creating %s", os.path.basename(target_uhi_vector_path))
+    gpkg_driver.CreateCopy(
+        target_uhi_vector_path, base_aoi_vector)
+    base_aoi_vector = None
+    target_uhi_vector = gdal.OpenEx(
+        target_uhi_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_uhi_layer = target_uhi_vector.GetLayer()
+
+    for field_id in [
+            'average_cc_value', 'average_temp_value', 'average_temp_anom',
+            'avoided_energy_consumption']:
+        target_uhi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
+
+    target_uhi_layer.StartTransaction()
+    for feature in target_uhi_layer:
+        feature_id = feature.GetField(target_key_field_id)
+        if cc_stats[feature_id]['count'] > 0:
+            mean_cc = (
+                cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
+            feature_id.SetField('average_cc_value', mean_cc)
+        mean_t_air = None
+        if t_air_stats[feature_id]['count'] > 0:
+            mean_t_air = (
+                t_air_stats[feature_id]['sum'] /
+                t_air_stats[feature_id]['count'])
+            feature_id.SetField('average_temp_value', mean_t_air)
+
+        mean_t_air_ref = None
+        if t_air_ref_stats[feature]['count'] > 0:
+            mean_t_air_ref = (
+                t_air_ref_stats[feature_id]['sum'] /
+                t_air_ref_stats[feature_id]['count'])
+
+        if mean_t_air and mean_t_air_ref:
+            feature_id.SetField(
+                'average_temp_anom', mean_t_air-mean_t_air_ref)
+    target_uhi_layer.CommitTransaction()
 
 
 def calculate_energy_savings(
