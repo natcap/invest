@@ -464,7 +464,7 @@ def make_add_overlap_rasters(dir, habitats, stress_dict, h_s_c, h_s_e, grid_size
     the 'DS' entry within each (h, s) pair key in h_s_e and h_s_c.
 
     Input:
-        dir- Directory into which all completed h-s overlap files shoudl be
+        dir- Directory into which all completed h-s overlap files should be
             placed.
         habitats- The habitats criteria dictionary, which will contain a
             dict[Habitat]['DS']. The structure will be as follows:
