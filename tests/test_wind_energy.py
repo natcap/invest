@@ -18,7 +18,8 @@ from osgeo import ogr
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy', 'input')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy',
+    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy')
 
@@ -158,7 +159,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_y = srs.origin[1]
 
         geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-                      Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
+                      Point(pos_x, pos_y - 100),
+                      Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile for testing input
         shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
@@ -258,9 +260,9 @@ class WindEnergyUnitTests(unittest.TestCase):
         pos_x = srs.origin[0]
         pos_y = srs.origin[1]
 
-        geometries = [LinearRing([(pos_x + 100, pos_y), (pos_x + 100, pos_y + 150),
-                                  (pos_x + 200, pos_y + 150), (pos_x + 200, pos_y),
-                                  (pos_x + 100, pos_y)])]
+        geometries = [LinearRing([(pos_x + 100, pos_y),
+            (pos_x + 100, pos_y + 150), (pos_x + 200, pos_y + 150),
+            (pos_x + 200, pos_y), (pos_x + 100, pos_y)])]
 
         farm_1 = os.path.join(self.workspace_dir, 'farm_1')
         os.mkdir(farm_1)
@@ -702,7 +704,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path), 1E-6)
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path),
+                1E-6)
 
         vector_results = [
             'example_size_and_orientation_of_a_possible_wind_farm.shp',
@@ -711,7 +714,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for vector_path in vector_results:
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path), 1E-6)
+                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path),
+                1E-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -767,7 +771,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a biophysical field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv',
+                                          dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
@@ -818,7 +823,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # creating a stand in turbine parameter csv file that is missing
         # a valuation field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv',
+                                          dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
@@ -870,7 +876,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # creating a stand in global wind params table that has a different
         # 'time' value than what is given in the wind schedule table.
         # This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv', dir=args['workspace_dir'])
+        tmp, file_path = tempfile.mkstemp(suffix='.csv',
+                                          dir=args['workspace_dir'])
         os.close(tmp)
         data = {
             'air_density': 1.225, 'exponent_power_curve': 2,
