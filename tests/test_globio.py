@@ -10,14 +10,14 @@ from osgeo import ogr
 import numpy
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'globio')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-data"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio', 'Input')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data\Input"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data"
 
 def _make_dummy_file(workspace_dir, file_name):
-    """Within workspace, create a dummy output file.
+    """Within workspace, create a dummy output file to be overwritten.
 
     Parameters:
         workspace_dir: path to workspace for making the file
@@ -65,7 +65,7 @@ class GLOBIOTests(unittest.TestCase):
             args['workspace_dir'])
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(self.workspace_dir, 'msa.tif'),
+            os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
@@ -77,9 +77,9 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc_small.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
-                REGRESSION_DATA, 'empty_dir'),
+                SAMPLE_DATA, 'empty_dir'),
             'intensification_fraction': '0.46',
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
@@ -101,12 +101,12 @@ class GLOBIOTests(unittest.TestCase):
             'globio_lulc_uri': os.path.join(
                 SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
-                REGRESSION_DATA, 'small_infrastructure'),
+                SAMPLE_DATA, 'small_infrastructure'),
             'intensification_fraction': '0.46',
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
-            'workspace_dir': tempdir  # self.workspace_dir
+            'workspace_dir': self.workspace_dir,
         }
         globio.execute(args)
         GLOBIOTests._test_same_files(
@@ -114,7 +114,7 @@ class GLOBIOTests(unittest.TestCase):
             args['workspace_dir'])
 
         natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(self.workspace_dir, 'msa.tif'),
+            os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
             1e-6)
 
@@ -153,12 +153,11 @@ class GLOBIOTests(unittest.TestCase):
             args['workspace_dir'])
 
         GLOBIOTests._assert_regression_results_eq(
-            args['workspace_dir'],
             os.path.join(
                 args['workspace_dir'], 'aoi_summary.shp'),
-            os.path.join(REGRESSION_DATA, 'globio_agg_results.csv'))
+            os.path.join(REGRESSION_DATA, 'agg_results.csv'))
 
-        # inferring an explicit 'pass'
+        # Infer an explicit 'pass'
         self.assertTrue(True)
 
     @staticmethod
@@ -192,12 +191,10 @@ class GLOBIOTests(unittest.TestCase):
                 '\n'.join(missing_files))
 
     @staticmethod
-    def _assert_regression_results_eq(
-            workspace_dir, result_vector_path, agg_results_path):
-        """Test workspace state against expected aggregate results.
+    def _assert_regression_results_eq(result_vector_path, agg_results_path):
+        """Test output vector against expected aggregate results.
 
         Parameters:
-            workspace_dir (string): path to the completed model workspace
             result_vector_path (string): path to the summary shapefile
                 produced by the Forest Carbon Edge model.
             agg_results_path (string): path to a csv file that has the
