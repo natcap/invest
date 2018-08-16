@@ -335,7 +335,7 @@ def reproject_and_label_vector(
         ogr.FieldDefn(target_key_field_id, ogr.OFTInteger))
     target_layer.SyncToDisk()
     target_vector.ExecuteSQL(
-        'UPDATE TABLE %s SET %s = rowid;' %
+        'UPDATE %s SET %s = rowid' %
         (target_layer.GetName(), target_key_field_id))
 
 
