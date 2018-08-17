@@ -14,6 +14,7 @@ import taskgraph
 import numpy
 import shapely.wkb
 import shapely.prepared
+import rtree
 
 from . import validation
 from . import utils
@@ -57,7 +58,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, 0)# max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(
@@ -184,7 +185,7 @@ def execute(args):
         dependent_task_list=[align_task, intermediate_building_vector_task],
         task_name='pickle t-ref stats')
 
-    target_building_vector_path = os.path.join(
+    energy_consumption_vector_path = os.path.join(
         args['workspace_dir'], 'buildings_with_stats.gpkg')
     calculate_energy_savings_task = task_graph.add_task(
         func=calculate_energy_savings,
@@ -192,8 +193,8 @@ def execute(args):
             t_air_stats_pickle_path, t_ref_stats_pickle_path,
             float(args['uhi_max']), args['energy_consumption_table_path'],
             intermediate_building_vector_path,
-            target_building_vector_path),
-        target_path_list=[target_building_vector_path],
+            energy_consumption_vector_path),
+        target_path_list=[energy_consumption_vector_path],
         dependent_task_list=[
             pickle_t_ref_task, pickle_t_air_task,
             intermediate_building_vector_task],
@@ -249,11 +250,14 @@ def execute(args):
         args=(
             intermediate_aoi_vector_path, key_field_id,
             t_air_aoi_stats_pickle_path, t_air_ref_aoi_stats_pickle_path,
-            cc_aoi_stats_pickle_path, target_uhi_vector_path),
+            cc_aoi_stats_pickle_path,
+            energy_consumption_vector_path,
+            target_uhi_vector_path),
         target_path_list=[target_uhi_vector_path],
         dependent_task_list=[
             pickle_t_air_aoi_task, pickle_t_air_ref_aoi_task,
-            pickle_cc_aoi_stats_task, intermediate_uhi_result_vector_task],
+            pickle_cc_aoi_stats_task, calculate_energy_savings_task,
+            intermediate_uhi_result_vector_task],
         task_name='calculate uhi results')
 
     task_graph.close()
@@ -263,7 +267,7 @@ def execute(args):
 def calculate_uhi_result_vector(
         base_aoi_path, target_key_field_id, t_air_stats_pickle_path,
         t_air_ref_stats_pickle_path, cc_stats_pickle_path,
-        target_uhi_vector_path):
+        energy_consumption_vector_path, target_uhi_vector_path):
     """Summarize UHI results.
 
     Output vector will have fields with attributes summarizing:
@@ -276,6 +280,8 @@ def calculate_uhi_result_vector(
         base_aoi_path (str): path to AOI vector.
         target_key_field_id (str): field to identify the vector associated
             with the stats field for each polygon.
+        energy_consumption_vector_path (str): path to vector that contains
+            building footprints with the field 'energy_savings'.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
                 * average_cc_value
@@ -301,6 +307,21 @@ def calculate_uhi_result_vector(
     LOGGER.info("load cc_stats")
     with open(cc_stats_pickle_path, 'rb') as cc_stats_pickle_file:
         cc_stats = pickle.load(cc_stats_pickle_file)
+
+    energy_consumption_vector = gdal.OpenEx(
+        energy_consumption_vector_path, gdal.OF_VECTOR)
+    energy_consumption_layer = energy_consumption_vector.GetLayer()
+
+    LOGGER.info('parsing building footprint geometry')
+    building_shapely_polygon_lookup = dict([
+        (poly_feat.GetFID(),
+         shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
+        for poly_feat in energy_consumption_layer])
+
+    LOGGER.info("constructing building footprint spatial index")
+    poly_rtree_index = rtree.index.Index(
+        [(poly_fid, poly.bounds, None)
+         for poly_fid, poly in building_shapely_polygon_lookup.items()])
 
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
     gpkg_driver = gdal.GetDriverByName('GPKG')
@@ -341,6 +362,22 @@ def calculate_uhi_result_vector(
         if mean_t_air and mean_t_air_ref:
             feature.SetField(
                 'average_temp_anom', mean_t_air-mean_t_air_ref)
+
+        aoi_geometry = feature.GetGeometryRef()
+        aoi_shapely_geometry = shapely.wkb.loads(aoi_geometry.ExportToWkb())
+        aoi_shapely_geometry_prep = shapely.prepared.prep(
+            aoi_shapely_geometry)
+        avoided_energy_consumption = 0.0
+        for building_id in poly_rtree_index.intersection(
+                aoi_shapely_geometry.bounds):
+            if aoi_shapely_geometry_prep.intersects(
+                    building_shapely_polygon_lookup[building_id]):
+                avoided_energy_consumption += float(
+                    energy_consumption_layer.GetFeature(
+                        building_id).GetField('energy_savings'))
+        feature.SetField(
+            'avoided_energy_consumption', avoided_energy_consumption)
+
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
 
@@ -498,7 +535,7 @@ def pickle_zonal_stats(
     """
     zonal_stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), base_vector_path, key_field,
-        polygons_might_overlap=False)
+        polygons_might_overlap=True, all_touched=True)
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(zonal_stats, pickle_file)
 

@@ -147,6 +147,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.urban_flood_risk_mitigation',
         gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
         aliases=('ufrm',)),
+    'urban_heat_island_mitigation': _UIMETA(
+        pyname='natcap.invest.urban_heat_island_mitigation',
+        gui='urban_heat_island_mitigation.UrbanHeatIslandMitigation',
+        aliases=('uhim',)),
 }
 
 # Build up an index mapping aliase to modelname.
