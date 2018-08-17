@@ -429,8 +429,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_biophysical_aoi(self):
-        """WaveEnergy: testing Biophysical component with an AOI."""
+    def test_aoi_no_val(self):
+        """WaveEnergy: testing Biophysical component w AOI but w/o valuation."""
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
@@ -458,8 +458,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_biophysical_no_aoi(self):
-        """WaveEnergy: testing Biophysical component with no AOI."""
+    def test_no_aoi_or_val(self):
+        """WaveEnergy: testing Biophysical component w/o AOI or valuation."""
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
