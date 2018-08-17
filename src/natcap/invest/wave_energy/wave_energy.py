@@ -1233,7 +1233,7 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             'found no intersection between: file - %s and file - %s. This '
             'could be caused by the AOI not overlapping any Wave Energy '
             'Points. '
-            'Suggestions: open workspace/intermediate/projected_wave_data.shp'
+            'Suggestions: open workspace/intermediate/projected_wave_data.shp '
             'and the AOI to make sure AOI overlaps at least on point.' %
             (shape_to_clip_path, binding_shape_path))
 
