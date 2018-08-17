@@ -4,8 +4,8 @@ import tempfile
 import shutil
 import os
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
+from pygeoprocessing.testing import scm
 from osgeo import ogr
 import numpy
 
@@ -63,7 +63,7 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+        pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
 
@@ -112,7 +112,7 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+        pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
             1e-6)
