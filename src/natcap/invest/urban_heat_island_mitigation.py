@@ -58,7 +58,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(

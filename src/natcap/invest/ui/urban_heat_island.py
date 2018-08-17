@@ -62,12 +62,6 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.energy_consumption_table_path)
 
-        self.urban_park_cooling_distance = inputs.Text(
-            args_key='urban_park_cooling_distance',
-            label='Distance (in m) over which large urban parks (> 2 ha) will have a cooling effect.',
-            validator=self.validator)
-        self.add_input(self.urban_park_cooling_distance)
-
         self.et_max = inputs.Text(
             args_key='et_max',
             label='maximum evapotranspiration.',
@@ -91,7 +85,6 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.biophysical_table_path.args_key: self.biophysical_table_path.value(),
             self.building_vector_path.args_key: self.building_vector_path.value(),
             self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
-            self.urban_park_cooling_distance.args_key: self.urban_park_cooling_distance.value(),
             self.et_max.args_key: self.et_max.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
         }
