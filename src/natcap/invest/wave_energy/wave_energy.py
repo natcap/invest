@@ -378,7 +378,7 @@ def execute(args):
             i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
             j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
             depth = dem_matrix[j][i]
-            # There are cases where the DEM may be to coarse and thus a wave
+            # There are cases where the DEM may be too coarse and thus a wave
             # energy point falls on land. If the depth value taken from the DEM
             # is greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
@@ -1233,7 +1233,7 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
             'found no intersection between: file - %s and file - %s. This '
             'could be caused by the AOI not overlapping any Wave Energy '
             'Points. '
-            'Suggestions: open workspace/intermediate/projected_wave_data.shp '
+            'Suggestions: open workspace/intermediate/projected_wave_data.shp'
             'and the AOI to make sure AOI overlaps at least on point.' %
             (shape_to_clip_path, binding_shape_path))
 
