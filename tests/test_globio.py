@@ -10,11 +10,11 @@ from osgeo import ogr
 import numpy
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio', 'Input')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data\Input"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio',
+    'Input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\globio\invest-test-data"
+
 
 def _make_dummy_file(workspace_dir, file_name):
     """Within workspace, create a dummy output file to be overwritten.
@@ -26,7 +26,6 @@ def _make_dummy_file(workspace_dir, file_name):
     output = open(output_path, 'wb')
     output.close()
 
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\globio"
 
 class GLOBIOTests(unittest.TestCase):
     """Tests for the GLOBIO model."""
@@ -44,7 +43,7 @@ class GLOBIOTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_predefined_lulc(self):
-        """GLOBIO: regression testing predefined LULC."""
+        """GLOBIO: regression testing predefined LULC (mode b)."""
         from natcap.invest import globio
 
         args = {
@@ -101,7 +100,7 @@ class GLOBIOTests(unittest.TestCase):
             'globio_lulc_uri': os.path.join(
                 SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
-                SAMPLE_DATA, 'small_infrastructure'),
+                SAMPLE_DATA, 'shape_infrastructure'),
             'intensification_fraction': '0.46',
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
@@ -121,7 +120,7 @@ class GLOBIOTests(unittest.TestCase):
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_full(self):
-        """GLOBIO: regression testing all functionality."""
+        """GLOBIO: regression testing all functionality (mode a)."""
         from natcap.invest import globio
 
         args = {
