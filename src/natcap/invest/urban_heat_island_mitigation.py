@@ -57,7 +57,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, 0)# max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(
@@ -211,7 +211,7 @@ def execute(args):
 
     cc_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 'cc_ref_aoi_stats.pickle')
-    pickle_t_ref_task = task_graph.add_task(
+    pickle_cc_aoi_stats_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path, key_field_id,
@@ -220,20 +220,20 @@ def execute(args):
         dependent_task_list=[cc_task, intermediate_uhi_result_vector_task],
         task_name='pickle cc ref stats')
 
-    t_air_ref_stats_pickle_path = os.path.join(
+    t_air_ref_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 't_ref_aoi_stats.pickle')
-    pickle_t_air_ref_task = task_graph.add_task(
+    pickle_t_air_ref_aoi_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path, key_field_id,
-            aligned_t_air_ref_raster_path, t_air_ref_stats_pickle_path),
-        target_path_list=[t_air_ref_stats_pickle_path],
+            aligned_t_air_ref_raster_path, t_air_ref_aoi_stats_pickle_path),
+        target_path_list=[t_air_ref_aoi_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-ref stats')
 
     t_air_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 't_air_aoi_stats.pickle')
-    t_air_stats_task = task_graph.add_task(
+    pickle_t_air_aoi_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path, key_field_id,
@@ -241,6 +241,20 @@ def execute(args):
         target_path_list=[t_air_aoi_stats_pickle_path],
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-air stats')
+
+    target_uhi_vector_path = os.path.join(
+        args['workspace_dir'], 'uhi_results.gpkg')
+    calculate_uhi_result_task = task_graph.add_task(
+        func=calculate_uhi_result_vector,
+        args=(
+            intermediate_aoi_vector_path, key_field_id,
+            t_air_aoi_stats_pickle_path, t_air_ref_aoi_stats_pickle_path,
+            cc_aoi_stats_pickle_path, target_uhi_vector_path),
+        target_path_list=[target_uhi_vector_path],
+        dependent_task_list=[
+            pickle_t_air_aoi_task, pickle_t_air_ref_aoi_task,
+            pickle_cc_aoi_stats_task, intermediate_uhi_result_vector_task],
+        task_name='calculate uhi results')
 
     task_graph.close()
     task_graph.join()
@@ -306,26 +320,28 @@ def calculate_uhi_result_vector(
     target_uhi_layer.StartTransaction()
     for feature in target_uhi_layer:
         feature_id = feature.GetField(target_key_field_id)
-        if cc_stats[feature_id]['count'] > 0:
+        if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature_id.SetField('average_cc_value', mean_cc)
+            feature.SetField('average_cc_value', mean_cc)
         mean_t_air = None
-        if t_air_stats[feature_id]['count'] > 0:
+        if feature_id in t_air_stats and t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature_id.SetField('average_temp_value', mean_t_air)
+            feature.SetField('average_temp_value', mean_t_air)
 
         mean_t_air_ref = None
-        if t_air_ref_stats[feature]['count'] > 0:
+        if feature_id in t_air_ref_stats and t_air_ref_stats[
+                feature_id]['count'] > 0:
             mean_t_air_ref = (
                 t_air_ref_stats[feature_id]['sum'] /
                 t_air_ref_stats[feature_id]['count'])
 
         if mean_t_air and mean_t_air_ref:
-            feature_id.SetField(
+            feature.SetField(
                 'average_temp_anom', mean_t_air-mean_t_air_ref)
+        target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
 
 
