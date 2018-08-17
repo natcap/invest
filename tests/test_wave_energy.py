@@ -22,7 +22,7 @@ SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\invest-data\i
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\invest-test-data"
-
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\workspace_dir"
 
 class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
@@ -363,11 +363,11 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempdir #tempfile.mkdtemp()
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
+        # shutil.rmtree(self.workspace_dir)
 
     @staticmethod
     def generate_base_args(workspace_dir):
