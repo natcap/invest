@@ -564,7 +564,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         workspace_dir = 'test_removing_filenames'
-        args = WaveEnergyRegressionTests.generate_base_args(workspace_dir)#self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(workspace_dir)
 
         args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
