@@ -1,10 +1,13 @@
 # coding=UTF-8
+import logging
 
 from natcap.invest.ui import model, inputs
 import natcap.invest.scenario_gen_proximity
 import natcap.invest.scenario_generator.scenario_generator
 
 from osgeo import gdal
+
+LOGGER = logging.getLogger(__name__)
 
 
 class ScenarioGenProximity(model.InVESTModel):
@@ -308,6 +311,9 @@ class ScenarioGenerator(model.InVESTModel):
         if new_interactivity:
             vector_path = vector_input.value()
             vector = gdal.OpenEx(vector_path)
+            if vector is None:
+                LOGGER.warn('Could not open vector %s', vector_path)
+                return
             layer = vector.GetLayer()
             colnames = [defn.GetName() for defn in layer.schema]
             dropdown_input.set_options(colnames)
