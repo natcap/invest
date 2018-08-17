@@ -43,21 +43,21 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
 
         self.biophysical_table_path = inputs.File(
             args_key='biophysical_table_path',
-            helptext=('table to map landcover codes to Shade, Kc, and Albed values. Must contain the fields 'lucode', 'shade', 'kc', and 'albedo'.'),
+            helptext=("table to map landcover codes to Shade, Kc, and Albed values. Must contain the fields 'lucode', 'shade', 'kc', and 'albedo'."),
             label='biophysical_table_path',
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
 
         self.building_vector_path = inputs.File(
             args_key='building_vector_path',
-            helptext=('path to a vector of building footprints that contains at least the field 'type'.'),
+            helptext=("path to a vector of building footprints that contains at least the field 'type'."),
             label='building_vector_path',
             validator=self.validator)
         self.add_input(self.building_vector_path)
 
         self.energy_consumption_table_path = inputs.File(
             args_key='energy_consumption_table_path',
-            helptext=('path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'.'),
+            helptext=("path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'."),
             label='energy_consumption_table_path',
             validator=self.validator)
         self.add_input(self.energy_consumption_table_path)
@@ -83,16 +83,17 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
 
     def assemble_args(self):
         args = {
-            self.t_air_ref_raster_path.args_key: self.self.t_air_ref_raster_path.value(),
-            self.lulc_raster_path.args_key: self.self.lulc_raster_path.value(),
-            self.ref_eto_raster_path.args_key: self.self.ref_eto_raster_path.value(),
-            self.aoi_vector_path.args_key: self.self.aoi_vector_path.value(),
-            self.biophysical_table_path.args_key: self.self.biophysical_table_path.value(),
-            self.building_vector_path.args_key: self.self.building_vector_path.value(),
-            self.energy_consumption_table_path.args_key: self.self.energy_consumption_table_path.value(),
-            self.urban_park_cooling_distance.args_key: self.self.urban_park_cooling_distance.value(),
-            self.et_max.args_key: self.self.et_max.value(),
-            self.uhi_max.args_key: self.self.uhi_max.value(),
+            self.workspace.args_key: self.workspace.value(),
+            self.t_air_ref_raster_path.args_key: self.t_air_ref_raster_path.value(),
+            self.lulc_raster_path.args_key: self.lulc_raster_path.value(),
+            self.ref_eto_raster_path.args_key: self.ref_eto_raster_path.value(),
+            self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
+            self.biophysical_table_path.args_key: self.biophysical_table_path.value(),
+            self.building_vector_path.args_key: self.building_vector_path.value(),
+            self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
+            self.urban_park_cooling_distance.args_key: self.urban_park_cooling_distance.value(),
+            self.et_max.args_key: self.et_max.value(),
+            self.uhi_max.args_key: self.uhi_max.value(),
         }
 
         return args

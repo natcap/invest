@@ -149,7 +149,7 @@ _MODEL_UIS = {
         aliases=('ufrm',)),
     'urban_heat_island_mitigation': _UIMETA(
         pyname='natcap.invest.urban_heat_island_mitigation',
-        gui='urban_heat_island_mitigation.UrbanHeatIslandMitigation',
+        gui='urban_heat_island.UrbanHeatIslandMitigation',
         aliases=('uhim',)),
 }
 

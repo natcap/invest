@@ -58,7 +58,7 @@ def execute(args):
         warn_if_missing=True)
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(
@@ -372,9 +372,14 @@ def calculate_uhi_result_vector(
                 aoi_shapely_geometry.bounds):
             if aoi_shapely_geometry_prep.intersects(
                     building_shapely_polygon_lookup[building_id]):
-                avoided_energy_consumption += float(
+                energy_consumption_value = (
                     energy_consumption_layer.GetFeature(
                         building_id).GetField('energy_savings'))
+                if energy_consumption_value:
+                    # this step lets us skip values that might be in nodata
+                    # ranges that we can't help.
+                    avoided_energy_consumption += float(
+                        energy_consumption_value)
         feature.SetField(
             'avoided_energy_consumption', avoided_energy_consumption)
 
