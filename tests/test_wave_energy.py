@@ -24,18 +24,35 @@ REGRESSION_DATA = os.path.join(
 
 
 def _make_dummy_shps(workspace_dir):
-    """Within workspace, make an output folder with dummy shapefiles.
+    """Within workspace, make an output folder with dummy files.
 
     Parameters:
-        workspace_dir: path to workspace for creating the output folder.
+        workspace_dir: path to workspace for creating intermediate/output folder.
     """
-    output_path = os.path.join(workspace_dir, 'output')
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-    shps = ['GridPts_prj.shp', 'LandPts_prj.shp']
-    for shp in shps:
-        with open(os.path.join(output_path, shp), 'wb') as open_shp:
-            open_shp.write('')
+    raster_results = [
+        'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',
+        'npv_rc.tif', 'npv_usd.tif']
+    vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
+    table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
+    output_results = raster_results + vector_results + table_results
+
+    intermediate_results = ['WEM_InputOutput_Pts.shp',
+                            'aoi_clipped_to_extract_uri.shp']
+
+    for folder in ['intermediate', 'output']:
+        folder_path = os.path.join(workspace_dir, folder)
+        if not os.path.exists(folder_path):
+            os.makedirs(folder_path)
+
+        if folder == 'intermediate':
+            for file_name in intermediate_results:
+                with open(os.path.join(folder_path, file_name), 'wb') as open_file:
+                    open_file.write('')
+
+        if folder == 'output':
+            for file_name in output_results:
+                with open(os.path.join(folder_path, file_name), 'wb') as open_file:
+                    open_file.write('')
 
 
 class WaveEnergyUnitTests(unittest.TestCase):
@@ -404,7 +421,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                                                 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
-        # Testing if output vectors were overwritten
+        # Testing if intermediate/output files were overwritten
         _make_dummy_shps(args['workspace_dir'])
 
         wave_energy.execute(args)
