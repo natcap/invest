@@ -25,7 +25,7 @@ def _make_harvest_shp(workspace_dir):
     output_path = os.path.join(workspace_dir, 'output')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-    with open(os.path.join(output_path), 'Finfish_Harvest.shp') as shp:
+    with open(os.path.join(output_path, 'Finfish_Harvest.shp'), 'wb') as shp:
         shp.write('')
 
 
