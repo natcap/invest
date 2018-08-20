@@ -434,21 +434,31 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'valuation', raster_path),
                 1e-6)
 
-        def print_geom(vectorpath):
-            from osgeo import ogr
-            shape = ogr.Open(vectorpath)
-            layer = shape.GetLayer(0)
-            feat = layer.GetNextFeature()
-            geom = feat.GetGeometryRef()
-            print vectorpath + ' has ' + str(geom.Centroid().ExportToWkt())
-            return geom
+        from osgeo import ogr
 
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
         for vector_path in vector_results:
-            geom = print_geom(os.path.join(args['workspace_dir'], 'output', vector_path))
-            geom_regression = print_geom(os.path.join(REGRESSION_DATA, 'valuation', vector_path))
-            print 'Does geom equals geom_regression? ' + str(bool(geom.Equals(geom_regression)))
+            vec_path = os.path.join(args['workspace_dir'], 'output', vector_path)
+            vec_shape = ogr.Open(vec_path)
+            vec_layer = vec_shape.GetLayer(0)
+            vec_feat = vec_layer.GetNextFeature()
+            vec_geom = vec_feat.GetGeometryRef()
+            print vec_path + ' has ' + str(vec_geom.Centroid().ExportToWkt())
+
+            reg_path = os.path.join(REGRESSION_DATA, 'valuation', vector_path)
+            reg_shape = ogr.Open(reg_path)
+            reg_layer = reg_shape.GetLayer(0)
+            reg_feat = reg_layer.GetNextFeature()
+            reg_geom = reg_feat.GetGeometryRef()
+            print reg_path + ' has ' + str(reg_geom.Centroid().ExportToWkt())
+
+            print 'Does geom equals geom_regression? ' + str(bool(vec_geom.Equals(reg_geom)))
+            vec_feat = None
+            reg_feat = None
+            vec_shape = None
+            reg_shape = None
+
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'valuation', vector_path),
