@@ -416,7 +416,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                                                 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
-        # Tests if output vectors were overwritten
+        # Testing if output vectors were overwritten
         _make_dummy_shps(args['workspace_dir'])
 
         wave_energy.execute(args)

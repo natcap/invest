@@ -1505,6 +1505,7 @@ def count_pixels_groups(raster_uri, group_values):
             corresponds to the pixel count of the value from 'group_values'
             found at the same index
     """
+    import pdb
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
@@ -1544,6 +1545,8 @@ def count_pixels_groups(raster_uri, group_values):
                 count_mask = numpy.zeros(dataset_block.shape)
                 numpy.equal(dataset_block, val, count_mask)
                 pixel_count[index] += numpy.count_nonzero(count_mask)
+
+            pdb.set_trace()
 
     dataset_block = None
     band = None
