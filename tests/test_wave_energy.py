@@ -17,12 +17,10 @@ from osgeo import gdal
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\invest-data\input"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy',
+    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\workspace_dir"
 
 
 def _make_dummy_shps(workspace_dir):
@@ -60,8 +58,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
-
         srs = sampledata.SRS_WILLAMETTE
         srs_wkt = srs.projection
         spat_ref = osr.SpatialReference()
@@ -81,7 +77,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
-        input_path = os.path.join(temp_dir, 'input_raster.tif')
+        input_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
         raster_uri = pygeoprocessing.testing.create_raster_on_disk(
             [matrix], latlong_origin, latlong_proj, -1.0,
@@ -112,8 +108,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'count_pixels_groups' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
-        raster_uri = os.path.join(temp_dir, 'pixel_groups.tif')
+        raster_uri = os.path.join(self.workspace_dir, 'pixel_groups.tif')
         srs = sampledata.SRS_WILLAMETTE
 
         group_values = [1, 3, 5, 7]
@@ -135,8 +130,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'calculate_percentiles_from_raster' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
-        raster_uri = os.path.join(temp_dir, 'percentile.tif')
+        raster_uri = os.path.join(self.workspace_dir, 'percentile.tif')
         srs = sampledata.SRS_WILLAMETTE
 
         matrix = numpy.arange(1, 101)
@@ -205,14 +199,11 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing clipping polygons from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
-        srs = sampledata.SRS_WILLAMETTE
-
         aoi_path = os.path.join(REGRESSION_DATA, 'aoi_proj_to_extract.shp')
         extract_path = os.path.join(SAMPLE_DATA, 'WaveData',
                                     'Global_extract.shp')
 
-        result_path = os.path.join(temp_dir, 'aoi_proj_clipped.shp')
+        result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
         wave_energy.clip_datasource_layer(aoi_path, extract_path, result_path)
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
@@ -223,7 +214,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
         srs = sampledata.SRS_WILLAMETTE
 
         pos_x = srs.origin[0]
@@ -244,19 +234,19 @@ class WaveEnergyUnitTests(unittest.TestCase):
             [(pos_x, pos_y), (pos_x + 60, pos_y), (pos_x + 60, pos_y - 60),
              (pos_x, pos_y - 60), (pos_x, pos_y)])]
 
-        shape_to_clip_uri = os.path.join(temp_dir, 'shape_to_clip.shp')
+        shape_to_clip_uri = os.path.join(self.workspace_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
             geom_one, srs.projection, fields_pt, attrs_one,
             vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
 
-        binding_shape_uri = os.path.join(temp_dir, 'binding_shape.shp')
+        binding_shape_uri = os.path.join(self.workspace_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
             geom_two, srs.projection, fields_poly, attrs_poly,
             vector_format='ESRI Shapefile', filename=binding_shape_uri)
 
-        output_path = os.path.join(temp_dir, 'vector.shp')
+        output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         wave_energy.clip_datasource_layer(
             shape_to_clip_uri, binding_shape_uri, output_path)
@@ -269,10 +259,10 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Need to save the expected shapefile in a sub folder since it must
         # have the same layer name / filename as what it will be compared
         # against.
-        if not os.path.isdir(os.path.join(temp_dir, 'exp_vector')):
-            os.mkdir(os.path.join(temp_dir, 'exp_vector'))
+        if not os.path.isdir(os.path.join(self.workspace_dir, 'exp_vector')):
+            os.mkdir(os.path.join(self.workspace_dir, 'exp_vector'))
 
-        expected_uri = os.path.join(temp_dir, 'exp_vector', 'vector.shp')
+        expected_uri = os.path.join(self.workspace_dir, 'exp_vector', 'vector.shp')
         expected_shape = pygeoprocessing.testing.create_vector_on_disk(
             geom_three, srs.projection, fields_pt, attrs_one,
             vector_format='ESRI Shapefile', filename=expected_uri)
@@ -284,7 +274,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'clip_datasource_layer' w/ no intersection."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
         srs = sampledata.SRS_WILLAMETTE
 
         pos_x = srs.origin[0]
@@ -302,19 +291,19 @@ class WaveEnergyUnitTests(unittest.TestCase):
             [(pos_x, pos_y), (pos_x + 60, pos_y), (pos_x + 60, pos_y - 60),
              (pos_x, pos_y - 60), (pos_x, pos_y)])]
 
-        shape_to_clip_uri = os.path.join(temp_dir, 'shape_to_clip.shp')
+        shape_to_clip_uri = os.path.join(self.workspace_dir, 'shape_to_clip.shp')
         # Create the point shapefile
         shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
             geom_one, srs.projection, fields_pt, attrs_one,
             vector_format='ESRI Shapefile', filename=shape_to_clip_uri)
 
-        binding_shape_uri = os.path.join(temp_dir, 'binding_shape.shp')
+        binding_shape_uri = os.path.join(self.workspace_dir, 'binding_shape.shp')
         # Create the polygon shapefile
         binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
             geom_two, srs.projection, fields_poly, attrs_poly,
             vector_format='ESRI Shapefile', filename=binding_shape_uri)
 
-        output_path = os.path.join(temp_dir, 'vector.shp')
+        output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(
             wave_energy.IntersectionError, wave_energy.clip_datasource_layer,
@@ -324,8 +313,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'create_attribute_csv_table' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        temp_dir = self.workspace_dir
-        table_uri = os.path.join(temp_dir, 'att_csv_file.csv')
+        table_uri = os.path.join(self.workspace_dir, 'att_csv_file.csv')
         fields = ['id', 'height', 'length']
         data = {1: {'id': 1, 'height': 10, 'length': 15},
                 0: {'id': 0, 'height': 10, 'length': 15},
@@ -379,11 +367,11 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """Overriding setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempdir #tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        # shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir)
 
     @staticmethod
     def generate_base_args(workspace_dir):
@@ -396,7 +384,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
             'machine_param_uri': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'resampled_global_dem_2.tif')
+            'dem_uri': os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif')
         }
         return args
 
