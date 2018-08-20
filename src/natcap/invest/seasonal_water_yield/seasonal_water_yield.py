@@ -479,25 +479,20 @@ def _execute(args):
             task_name='calculate local recharge')
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-    qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
-    qb_result = 0.0
-    if qb_valid_count > 0:
-        qb_result = qb_sum / qb_valid_count
+    file_registry['l_path']
+    file_registry['vri_path']
 
-    li_nodata = pygeoprocessing.get_raster_info(
-        file_registry['l_path'])['nodata'][0]
+    if args['user_defined_local_recharge']:
+        vri_dependent_task_list = [calculate_local_recharge_task]
+    else:
+        vri_dependent_task_list = None
 
-    def vri_op(li_array):
-        """Calculate vri index [Eq 10]."""
-        result = numpy.empty_like(li_array)
-        result[:] = li_nodata
-        if qb_sum > 0:
-            valid_mask = li_array != li_nodata
-            result[valid_mask] = li_array[valid_mask] / qb_sum
-        return result
-    pygeoprocessing.raster_calculator(
-        [(file_registry['l_path'], 1)], vri_op, file_registry['vri_path'],
-        gdal.GDT_Float32, li_nodata)
+    vri_task = task_graph.add_task(
+        func=_calculate_vri,
+        args=(file_registry['l_path'], file_registry['vri_path']),
+        target_path_list=[file_registry['vri_path']],
+        dependent_task_list=vri_dependent_task_list,
+        task_name='calculate vri')
 
     _aggregate_recharge(
         args['aoi_path'], file_registry['l_path'],
@@ -589,6 +584,48 @@ def _execute(args):
     LOGGER.info(' `--\' (v  __( / ||')
     LOGGER.info('       |||  ||| ||')
     LOGGER.info('      //_| //_|')
+
+
+def _calculate_vri(l_path, target_vri_path):
+    """Calculate VRI as li_array / qb_sum.
+
+    Parameters:
+        l_path (str): path to L raster.
+        target_vri_path (str): path to output Vri raster.
+
+    Returns:
+        None.
+
+    """
+    # TODO: I saw this 'qb_result' thing stuck in here, what's it for?
+    qb_sum = 0.0
+    qb_valid_count = 0
+    l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+
+    for _, block in pygeoprocessing.iterblocks(
+            l_path, band_index_list=[1]):
+        valid_mask = block != l_nodata
+        qb_sum += numpy.sum(block[valid_mask])
+        qb_valid_count += numpy.count_nonzero(valid_mask)
+    """
+    qb_result = 0.0
+    if qb_valid_count > 0:
+        qb_result = qb_sum / qb_valid_count
+    """
+
+    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+
+    def vri_op(li_array):
+        """Calculate vri index [Eq 10]."""
+        result = numpy.empty_like(li_array)
+        result[:] = li_nodata
+        if qb_sum > 0:
+            valid_mask = li_array != li_nodata
+            result[valid_mask] = li_array[valid_mask] / qb_sum
+        return result
+    pygeoprocessing.raster_calculator(
+        [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
+        li_nodata)
 
 
 def _calculate_annual_qfi(qfm_path_list, target_qf_path):
@@ -941,28 +978,6 @@ def _aggregate_recharge(
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
     aggregate_vector = None
-
-
-def _sum_valid(raster_path):
-    """Calculate the sum of the non-nodata pixels in the raster.
-
-    Parameters:
-        raster_path (string): path to raster on disk
-
-    Returns:
-        (sum, n_pixels) tuple where sum is the sum of the non-nodata pixels
-        and n_pixels is the count of them
-    """
-    raster_sum = 0
-    raster_count = 0
-    raster_nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
-
-    for _, block in pygeoprocessing.iterblocks(
-            raster_path, band_index_list=[1]):
-        valid_mask = block != raster_nodata
-        raster_sum += numpy.sum(block[valid_mask])
-        raster_count += numpy.count_nonzero(valid_mask)
-    return raster_sum, raster_count
 
 
 def _calculate_l_avail(l_path, gamma, target_l_avail_path):
