@@ -494,62 +494,112 @@ def _execute(args):
         dependent_task_list=vri_dependent_task_list,
         task_name='calculate vri')
 
-    _aggregate_recharge(
-        args['aoi_path'], file_registry['l_path'],
-        file_registry['vri_path'],
-        file_registry['aggregate_vector_path'])
+    aggregate_recharge_task = task_graph.add_task(
+        func=_aggregate_recharge,
+        args=(
+            args['aoi_path'], file_registry['l_path'],
+            file_registry['vri_path'],
+            file_registry['aggregate_vector_path']),
+        target_path_list=[file_registry['aggregate_vector_path']],
+        dependent_task_list=[vri_task],
+        task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    pygeoprocessing.new_raster_from_base(
-        file_registry['dem_aligned_path'],
-        file_registry['zero_absorption_source_path'],
-        gdal.GDT_Float32, [TARGET_NODATA], fill_value_list=[0.0])
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        file_registry['flow_dir_path'],
-        file_registry['dem_aligned_path'],
-        file_registry['l_path'],
-        file_registry['zero_absorption_source_path'],
-        file_registry['loss_path'],
-        file_registry['l_sum_pre_clamp'], 'flux_only',
-        stream_uri=file_registry['stream_path'])
+    l_sum_task = task_graph.add_task(
+        func=_calculate_l_sum,
+        args=(
+            file_registry['dem_pit_filled_path'],
+            file_registry['flow_dir_path'],
+            file_registry['l_path'],
+            file_registry['stream_path'],
+            file_registry['zero_absorption_source_path'],
+            file_registry['loss_path'],
+            file_registry['l_sum_pre_clamp'],
+            file_registry['l_sum_path']),
+        target_path_list=[
+            file_registry['zero_absorption_source_path'],
+            file_registry['loss_path'],
+            file_registry['l_sum_pre_clamp'],
+            file_registry['l_sum_path']],
+        dependent_task_list=vri_dependent_task_list + [
+            fill_pit_task, flow_dir_task, stream_threshold_task],
+        task_name='calculate l sum')
 
-    # The result of route_flux can be slightly negative due to roundoff error
-    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
-    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
-        file_registry['l_sum_pre_clamp'])['nodata'][0]
+    if args['user_defined_local_recharge']:
+        b_sum_dependent_task_list = [l_avail_task]
+    else:
+        b_sum_dependent_task_list = [calculate_local_recharge_task]
 
-    def clamp_l_sum(l_sum_pre_clamp):
-        """Clamp any negative values to 0.0."""
-        result = l_sum_pre_clamp.copy()
-        result[
-            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
-            (l_sum_pre_clamp < 0.0)] = 0.0
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
-        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
-
-    LOGGER.info('calculate B_sum')
-    seasonal_water_yield_core.route_baseflow_sum(
-        file_registry['dem_aligned_path'],
-        file_registry['l_path'],
-        file_registry['l_avail_path'],
-        file_registry['l_sum_path'],
-        file_registry['outflow_direction_path'],
-        file_registry['outflow_weights_path'],
-        file_registry['stream_path'],
-        file_registry['b_sum_path'])
+    b_sum_task = task_graph.add_task(
+        func=seasonal_water_yield_core.route_baseflow_sum,
+        args=(
+            file_registry['dem_pit_filled_path'],
+            file_registry['l_path'],
+            file_registry['l_avail_path'],
+            file_registry['l_sum_path'],
+            file_registry['stream_path'],
+            file_registry['b_sum_path']),
+        target_path_list=[file_registry['b_sum_path']],
+        dependent_task_list=[
+            fill_pit_task, l_sum_task, stream_threshold_task,
+            l_avail_task] + b_sum_dependent_task_list,
+        task_name='calculate B_sum')
 
     LOGGER.info('calculate B')
+    b_task = task_graph.add_task(
+        func=_calculate_b,
+        args=(
+            file_registry['b_sum_path'], file_registry['l_path'],
+            file_registry['l_sum_path'], file_registry['b_path']),
+        target_path_list=[file_registry['b_path']],
+        dependent_task_list=[b_sum_task],
+        task_name='calculate B')
 
+    """
+    LOGGER.info('deleting temporary files')
+    for file_id in _TMP_BASE_FILES:
+        try:
+            if isinstance(file_registry[file_id], str):
+                os.remove(file_registry[file_id])
+            elif isinstance(file_registry[file_id], list):
+                for index in range(len(file_registry[file_id])):
+                    os.remove(file_registry[file_id][index])
+        except OSError:
+            # Let it go.
+            pass
+    """
+
+    LOGGER.info('  (\\w/)  SWY Complete!')
+    LOGGER.info('  (..  \\ ')
+    LOGGER.info(' _/  )  \\______')
+    LOGGER.info('(oo /\'\\        )`,')
+    LOGGER.info(' `--\' (v  __( / ||')
+    LOGGER.info('       |||  ||| ||')
+    LOGGER.info('      //_| //_|')
+
+
+def _calculate_b(b_sum_path, l_path, l_sum_path, target_b_path):
+    """Calculate B.
+
+    Parameters:
+        b_sum_path (str): path to Bsum raster.
+        l_path (str): path to L raster.
+        l_sum_path (str): path to L_sum raster.
+        target_b_path (str): path to target B raster calculated by this fn.
+
+    Returns:
+        None.
+
+    """
+    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+    l_sum_nodata = pygeoprocessing.get_raster_info(l_sum_path)['nodata'][0]
     b_sum_nodata = li_nodata
 
     def op_b(b_sum, l_avail, l_sum):
         """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
         valid_mask = (
             (b_sum != b_sum_nodata) & (l_avail != li_nodata) & (l_sum > 0) &
-            (l_sum != l_sum_pre_clamp_nodata))
+            (l_sum != l_sum_nodata))
         result = numpy.empty(b_sum.shape)
         result[:] = b_sum_nodata
         result[valid_mask] = (
@@ -560,30 +610,61 @@ def _execute(args):
         return result
 
     pygeoprocessing.raster_calculator(
-        [(file_registry['b_sum_path'], 1),
-         (file_registry['l_path'], 1),
-         (file_registry['l_sum_path'], 1)], op_b, file_registry['b_path'],
+        [(b_sum_path, 1), (l_path, 1), (l_sum_path, 1)], op_b, target_b_path,
         gdal.GDT_Float32, b_sum_nodata)
 
-    LOGGER.info('deleting temporary files')
-    for file_id in _TMP_BASE_FILES:
-        try:
-            if isinstance(file_registry[file_id], basestring):
-                os.remove(file_registry[file_id])
-            elif isinstance(file_registry[file_id], list):
-                for index in range(len(file_registry[file_id])):
-                    os.remove(file_registry[file_id][index])
-        except OSError:
-            # Let it go.
-            pass
 
-    LOGGER.info('  (\\w/)  SWY Complete!')
-    LOGGER.info('  (..  \\ ')
-    LOGGER.info(' _/  )  \\______')
-    LOGGER.info('(oo /\'\\        )`,')
-    LOGGER.info(' `--\' (v  __( / ||')
-    LOGGER.info('       |||  ||| ||')
-    LOGGER.info('      //_| //_|')
+def _calculate_l_sum(
+        dem_pit_filled_path, flow_dir_path, l_path, stream_path,
+        zero_absorption_source_path, loss_path, l_sum_pre_clamp_path,
+        target_l_sum_path):
+    """Calcualte L_sum.
+
+    Parameters:
+        dem_pit_filled_path (str): path to filled DEM
+        flow_dir_path (str): path to flow dir raster
+        l_path (str): path to L raster.
+        stream_path (str): path to stream mask raster.
+        zero_absorption_source_path (str): path to intermediate file
+            for zero absorption.
+        loss_path (str): path to intermediate loss raster.
+        l_sum_pre_clamp_path (str): path to intermediate l_sum before
+            clamping.
+        target_l_sum_path (str): path to target L_sum raster.
+
+    Returns:
+        None.
+
+    """
+    pygeoprocessing.new_raster_from_base(
+        dem_pit_filled_path,
+        zero_absorption_source_path,
+        gdal.GDT_Float32, [TARGET_NODATA], fill_value_list=[0.0])
+    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
+        flow_dir_path,
+        dem_pit_filled_path,
+        l_path,
+        zero_absorption_source_path,
+        loss_path,
+        l_sum_pre_clamp_path, 'flux_only',
+        stream_uri=stream_path)
+
+    # The result of route_flux can be slightly negative due to roundoff error
+    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
+    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
+        l_sum_pre_clamp_path)['nodata'][0]
+
+    def clamp_l_sum(l_sum_pre_clamp):
+        """Clamp any negative values to 0.0."""
+        result = l_sum_pre_clamp.copy()
+        result[
+            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
+            (l_sum_pre_clamp < 0.0)] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(l_sum_pre_clamp_path, 1)], clamp_l_sum, target_l_sum_path,
+        gdal.GDT_Float32, l_sum_pre_clamp_nodata)
 
 
 def _calculate_vri(l_path, target_vri_path):

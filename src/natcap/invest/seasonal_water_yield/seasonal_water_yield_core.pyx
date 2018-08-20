@@ -544,7 +544,7 @@ def calculate_r_sum_avail_pour(
 @cython.boundscheck(False)
 def route_baseflow_sum(
     dem_path, l_path, l_avail_path, l_sum_path,
-    outflow_direction_path, outflow_weights_path, stream_path, b_sum_path):
+    stream_path, b_sum_path):
 
     #Pass transport
     cdef time_t start
