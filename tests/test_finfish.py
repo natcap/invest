@@ -25,8 +25,8 @@ def _make_harvest_shp(workspace_dir):
     output_path = os.path.join(workspace_dir, 'output')
     if not os.path.exists(output_path):
         os.makedirs(output_path)
-    shp = open(os.path.join(output_path, 'Finfish_Harvest.shp'), 'wb')
-    shp.close()
+    with open(os.path.join(output_path), 'Finfish_Harvest.shp') as shp:
+        shp.write('')
 
 
 class FinfishTests(unittest.TestCase):
