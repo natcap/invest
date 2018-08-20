@@ -7,14 +7,15 @@ import re
 import fractions
 import uuid
 import warnings
+import multiprocessing
 
 import scipy.special
 import numpy
 from osgeo import gdal
 from osgeo import ogr
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 import pygeoprocessing
+import pygeoprocessing.routing
+import taskgraph
 
 from .. import utils
 from .. import validation
@@ -46,9 +47,9 @@ _OUTPUT_BASE_FILES = {
 
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
-    'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
+    'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'flow_dir_path': 'flow_dir.tif',
-    'qfm_path_list': ['qf_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
+    'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
 }
 
@@ -59,14 +60,15 @@ _TMP_BASE_FILES = {
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
+    'dem_pit_filled_path': 'pit_filled_dem.tif',
     'loss_path': 'loss.tif',
     'zero_absorption_source_path': 'zero_absorption.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
     'flow_accum_path': 'flow_accum.tif',
-    'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in xrange(N_MONTHS)],
-    'n_events_path_list': ['n_events%d.tif' % x for x in xrange(N_MONTHS)],
-    'et0_path_aligned_list': ['et0_a%d.tif' % x for x in xrange(N_MONTHS)],
-    'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
+    'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in range(N_MONTHS)],
+    'n_events_path_list': ['n_events%d.tif' % x for x in range(N_MONTHS)],
+    'et0_path_aligned_list': ['et0_a%d.tif' % x for x in range(N_MONTHS)],
+    'kc_path_list': ['kc_%d.tif' % x for x in range(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
     'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
@@ -196,7 +198,7 @@ def _execute(args):
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
         alpha_month = dict(
-            (month_index+1, alpha_m) for month_index in xrange(12))
+            (month_index+1, alpha_m) for month_index in range(12))
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
@@ -206,14 +208,18 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
+    cache_dir = os.path.join(
+        args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, output_dir])
+    task_graph = taskgraph.TaskGraph(
+        cache_dir, max(1, multiprocessing.cpu_count()))
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_TMP_BASE_FILES, cache_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     if (os.path.normpath(args['aoi_path']) ==
@@ -275,15 +281,36 @@ def _execute(args):
             file_registry['cz_aligned_raster_path'])
     interpolate_list = ['near'] * len(input_align_list)
 
-    pygeoprocessing.align_and_resize_raster_stack(
-        input_align_list, output_align_list, interpolate_list,
-        pixel_size, 'intersection', base_vector_path_list=[args['aoi_path']],
-        raster_align_index=align_index)
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            input_align_list, output_align_list, interpolate_list,
+            pixel_size, 'intersection'),
+        kwargs={
+            'base_vector_path_list': [args['aoi_path']],
+            'raster_align_index': align_index},
+        target_path_list=output_align_list,
+        task_name='align rasters')
 
-    LOGGER.info('flow direction')
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        file_registry['dem_aligned_path'],
-        file_registry['flow_dir_path'])
+    fill_pit_task = task_graph.add_task(
+        func=pygeoprocessing.routing.fill_pits,
+        args=(
+            (file_registry['dem_aligned_path'], 1),
+            file_registry['dem_pit_filled_path']),
+        kwargs={'working_dir': cache_dir},
+        target_path_list=[file_registry['dem_pit_filled_path']],
+        dependent_task_list=[align_task],
+        task_name='fill dem pits')
+
+    flow_dir_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_dir_mfd,
+        args=(
+            (file_registry['dem_pit_filled_path'], 1),
+            file_registry['flow_dir_path']),
+        kwargs={'working_dir': cache_dir},
+        target_path_list=[file_registry['flow_dir_path']],
+        dependent_task_list=[fill_pit_task],
+        task_name='flow dir mfd')
 
     LOGGER.info('flow weights')
     natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
@@ -323,7 +350,7 @@ def _execute(args):
     else:
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
-        for month_id in xrange(N_MONTHS):
+        for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
                     utils.build_lookup_from_csv(
@@ -358,7 +385,7 @@ def _execute(args):
             file_registry['cn_path'], file_registry['stream_path'],
             file_registry['si_path'])
 
-        for month_index in xrange(N_MONTHS):
+        for month_index in range(N_MONTHS):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
             _calculate_monthly_quick_flow(
                 file_registry['precip_path_aligned_list'][month_index],
@@ -390,7 +417,7 @@ def _execute(args):
         LOGGER.info('calculate local recharge')
         kc_lookup = {}
         LOGGER.info('classify kc')
-        for month_index in xrange(12):
+        for month_index in range(12):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
@@ -515,7 +542,7 @@ def _execute(args):
             if isinstance(file_registry[file_id], basestring):
                 os.remove(file_registry[file_id])
             elif isinstance(file_registry[file_id], list):
-                for index in xrange(len(file_registry[file_id])):
+                for index in range(len(file_registry[file_id])):
                     os.remove(file_registry[file_id][index])
         except OSError:
             # Let it go.
@@ -817,7 +844,7 @@ def _aggregate_recharge(
                 else:
                     LOGGER.warn(
                         "no coverage for polygon %s", ', '.join(
-                            [str(poly_feat.GetField(_)) for _ in xrange(
+                            [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))
                     value = 0.0
             elif op_type == 'sum':
