@@ -24,6 +24,22 @@ REGRESSION_DATA = os.path.join(
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\waveEnergy\workspace_dir"
 
+
+def _make_dummy_shps(workspace_dir):
+    """Within workspace, make an output folder with dummy shapefiles.
+
+    Parameters:
+        workspace_dir: path to workspace for creating the output folder.
+    """
+    output_path = os.path.join(workspace_dir, 'output')
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    shps = ['GridPts_prj.shp', 'LandPts_prj.shp']
+    for shp in shps:
+        with open(os.path.join(output_path, shp), 'wb') as open_shp:
+            open_shp.write('')
+
+
 class WaveEnergyUnitTests(unittest.TestCase):
     """Unit tests for the Wave Energy module."""
 
@@ -400,6 +416,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                                                 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
+        # Tests if output vectors were overwritten
+        _make_dummy_shps(args['workspace_dir'])
+
         wave_energy.execute(args)
 
         raster_results = [
@@ -556,48 +575,3 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_removing_filenames(self):
-        """WaveEnergy: testing file paths which already exist are removed."""
-        from natcap.invest.wave_energy import wave_energy
-
-        workspace_dir = 'test_removing_filenames'
-        args = WaveEnergyRegressionTests.generate_base_args(workspace_dir)
-
-        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
-        args['valuation_container'] = True
-        args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] = os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
-        args['number_of_machines'] = 28
-
-        wave_energy.execute(args)
-        # Run through the model again, which should mean deleting
-        # shapefiles that have already been made, but which need
-        # to be created again.
-        wave_energy.execute(args)
-
-        raster_results = [
-            'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',
-            'npv_rc.tif', 'npv_usd.tif']
-
-        for raster_path in raster_results:
-            pygeoprocessing.testing.assert_rasters_equal(
-                os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'valuation', raster_path),
-                1e-9)
-
-        vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
-
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path), 1e-9)
-
-        table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
-
-        for table_path in table_results:
-            pygeoprocessing.testing.assert_csv_equal(
-                os.path.join(args['workspace_dir'], 'output', table_path),
-                os.path.join(REGRESSION_DATA, 'valuation', table_path))
