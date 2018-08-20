@@ -2,6 +2,17 @@
 
 Unreleased Changes
 ------------------
+* Fixing an issue with Coastal Blue Carbon validation to allow column names to
+  ignore case.
+
+3.5.0 (2018-08-14)
+------------------
+* Bumped pygeoprocessing requirement to ``pygeoprocessing>=1.2.3``.
+* Bumped taskgraph requirement to ``taskgraph>=0.6.1``.
+* Reimplemented the InVEST Scenic Quality model.  This new version removes the
+  'population' and 'overlap' postprocessing steps, updates the available
+  valuation functions and greatly improves the runtime and memory-efficiency of
+  the model.  See the InVEST User's Guide chapter for more information.
 * Updated Recreation server's database to include metadata from photos taken
   from 2005-2017 (previous range was 2005-2014). The new range is reflected
   in the UI.

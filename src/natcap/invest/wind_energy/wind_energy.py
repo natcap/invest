@@ -705,6 +705,10 @@ def execute(args):
 
     # Handle Grid Points
     if 'grid_points_uri' in args:
+        if 'aoi_uri' not in args:
+            raise ValueError(
+                'An AOI shapefile is required to clip and reproject the grid '
+                'points.')
         LOGGER.info('Grid Points Provided')
         LOGGER.info('Reading in the grid points')
 
