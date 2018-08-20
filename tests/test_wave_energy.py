@@ -141,7 +141,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         expected_results = [2, 2, 3, 2]
 
         for res, exp_res in zip(results, expected_results):
-            pygeoprocessing.testing.assert_close(res, exp_res, 1e-9)
+            pygeoprocessing.testing.assert_close(res, exp_res, 1e-6)
 
     def test_calculate_percentiles_from_raster(self):
         """WaveEnergy: testing 'calculate_percentiles_from_raster' function."""
@@ -225,7 +225,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
         pygeoprocessing.testing.assert_vectors_equal(
-            result_path, expected_path, 1e-9)
+            result_path, expected_path, 1e-6)
 
     def test_clip_datasource_layer_points(self):
         """WaveEnergy: testing clipping points from polygons."""
@@ -285,7 +285,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             vector_format='ESRI Shapefile', filename=expected_uri)
 
         pygeoprocessing.testing.assert_vectors_equal(
-            output_path, expected_shape, 1e-9)
+            output_path, expected_shape, 1e-6)
 
     def test_clip_datasouce_layer_no_intersection(self):
         """WaveEnergy: testing 'clip_datasource_layer' w/ no intersection."""
@@ -434,7 +434,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'valuation', raster_path),
-                1e-9)
+                1e-6)
 
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
@@ -442,7 +442,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1e-9)
+                1e-6)
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
 
@@ -470,7 +470,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'aoi', raster_path),
-                1e-9)
+                1e-6)
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 
@@ -478,7 +478,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'aoi', table_path),
-                1e-9)
+                1e-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
@@ -497,7 +497,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path),
-                1e-9)
+                1e-6)
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv']
 
@@ -505,7 +505,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_csv_equal(
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', table_path),
-                1e-9)
+                1e-6)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
