@@ -412,7 +412,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA,
@@ -421,7 +420,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                                                 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
-        # Testing if intermediate/output files were overwritten
+        # Testing if intermediate/output were overwritten
         _make_dummy_shps(args['workspace_dir'])
 
         wave_energy.execute(args)
@@ -458,7 +457,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
 
         wave_energy.execute(args)
@@ -514,7 +512,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
@@ -551,7 +548,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
