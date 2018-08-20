@@ -441,12 +441,14 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             feat = layer.GetNextFeature()
             geom = feat.GetGeometryRef()
             print vectorpath + ' has ' + str(geom.Centroid().ExportToWkt())
+            return geom
 
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
         for vector_path in vector_results:
-            print_geom(os.path.join(args['workspace_dir'], 'output', vector_path))
-            print_geom(os.path.join(REGRESSION_DATA, 'valuation', vector_path))
+            geom = print_geom(os.path.join(args['workspace_dir'], 'output', vector_path))
+            geom_regression = print_geom(os.path.join(REGRESSION_DATA, 'valuation', vector_path))
+            print 'Does geom equals geom_regression? ' + str(bool(geom.Equals(geom_regression)))
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'valuation', vector_path),
