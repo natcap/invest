@@ -23,21 +23,20 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 
 
-def _make_dummy_shps(workspace_dir):
+def _make_dummy_files(workspace_dir):
     """Within workspace, make an output folder with dummy files.
 
     Parameters:
         workspace_dir: path to workspace for creating intermediate/output folder.
     """
-    raster_results = [
-        'wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif', 'capwe_mwh.tif',
-        'npv_rc.tif', 'npv_usd.tif']
+    intermediate_results = ['WEM_InputOutput_Pts.shp',
+                            'aoi_clipped_to_extract_uri.shp']
+
+    raster_results = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
+                      'capwe_mwh.tif', 'npv_rc.tif', 'npv_usd.tif']
     vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
     table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
     output_results = raster_results + vector_results + table_results
-
-    intermediate_results = ['WEM_InputOutput_Pts.shp',
-                            'aoi_clipped_to_extract_uri.shp']
 
     for folder in ['intermediate', 'output']:
         folder_path = os.path.join(workspace_dir, folder)
@@ -45,13 +44,12 @@ def _make_dummy_shps(workspace_dir):
             os.makedirs(folder_path)
 
         if folder == 'intermediate':
-            for file_name in intermediate_results:
-                with open(os.path.join(folder_path, file_name), 'wb') as open_file:
-                    open_file.write('')
+            results = intermediate_results
+        else:
+            results = output_results
 
-        if folder == 'output':
-            for file_name in output_results:
-                with open(os.path.join(folder_path, file_name), 'wb') as open_file:
+        for filename in results:
+                with open(os.path.join(folder_path, filename), 'wb') as open_file:
                     open_file.write('')
 
 
@@ -88,8 +86,9 @@ class WaveEnergyUnitTests(unittest.TestCase):
         latlong_proj = reference.ExportToWkt()
         # Set origin to use for setting up geometries / geotransforms
         latlong_origin = (-70.5, 42.5)
+
         # Pixel size helper for defining lat/long pixel size
-        pixel_size = lambda x: (x, -1. * x)
+        def pixel_size(x): return (x, -1. * x)
 
         # Get a point from the clipped data object to use later in helping
         # determine proper pixel size
@@ -421,7 +420,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['number_of_machines'] = 28
 
         # Testing if intermediate/output were overwritten
-        _make_dummy_shps(args['workspace_dir'])
+        _make_dummy_files(args['workspace_dir'])
 
         wave_energy.execute(args)
 
@@ -435,9 +434,19 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'valuation', raster_path),
                 1e-6)
 
+        def print_geom(vectorpath):
+            from osgeo import ogr
+            shape = ogr.Open(vectorpath)
+            layer = shape.GetLayer(0)
+            feat = layer.GetNextFeature()
+            geom = feat.GetGeometryRef()
+            print vectorpath + ' has ' + str(geom.Centroid().ExportToWkt())
+
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
         for vector_path in vector_results:
+            print_geom(os.path.join(args['workspace_dir'], 'output', vector_path))
+            print_geom(os.path.join(REGRESSION_DATA, 'valuation', vector_path))
             pygeoprocessing.testing.assert_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'valuation', vector_path),
