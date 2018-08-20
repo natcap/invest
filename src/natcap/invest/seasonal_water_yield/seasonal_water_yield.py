@@ -340,23 +340,19 @@ def _execute(args):
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = file_registry['l_aligned_path']
-        li_nodata = pygeoprocessing.get_raster_info(
-            file_registry['l_path'])['nodata'][0]
 
-        def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = min(gamma*L, L)"""
-            result = numpy.empty(l_array.shape)
-            result[:] = li_nodata
-            valid_mask = (l_array != li_nodata)
-            result[valid_mask] = numpy.min(numpy.stack(
-                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
-            return result
-        pygeoprocessing.raster_calculator(
-            [(file_registry['l_path'], 1)], l_avail_op,
-            file_registry['l_avail_path'], gdal.GDT_Float32, li_nodata)
+        l_avail_task = task_graph.add_task(
+            func=_calculate_l_avail,
+            args=(
+                file_registry['l_path'], gamma,
+                file_registry['l_avail_path']),
+            target_path_list=[file_registry['l_avail_path']],
+            dependent_task_list=[align_task],
+            task_name='l avail task')
     else:
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
+        reclassify_n_events_task_list = []
         for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
@@ -367,72 +363,99 @@ def _execute(args):
                     (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
-                pygeoprocessing.reclassify_raster(
-                    (file_registry['cz_aligned_raster_path'], 1),
-                    climate_zone_rain_events_month,
-                    file_registry['n_events_path_list'][month_id],
-                    gdal.GDT_Float32, n_events_nodata, values_required=True)
+                n_events_task = task_graph.add_task(
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        (file_registry['cz_aligned_raster_path'], 1),
+                        climate_zone_rain_events_month,
+                        file_registry['n_events_path_list'][month_id],
+                        gdal.GDT_Float32, n_events_nodata),
+                    kwargs={'values_required': True},
+                    target_path_list=[
+                        file_registry['n_events_path_list'][month_id]],
+                    dependent_task_list=[align_task],
+                    task_name='n_events for month %d' % month_id)
+                reclassify_n_events_task_list.append(n_events_task)
             else:
                 # rain_events_lookup defined near entry point of execute
                 n_events = rain_events_lookup[month_id+1]['events']
-                pygeoprocessing.new_raster_from_base(
-                    file_registry['dem_aligned_path'],
-                    file_registry['n_events_path_list'][month_id],
-                    gdal.GDT_Float32, [TARGET_NODATA],
-                    fill_value_list=[n_events])
+                n_events_task = task_graph.add_task(
+                    func=pygeoprocessing.new_raster_from_base,
+                    args=(
+                        file_registry['dem_aligned_path'],
+                        file_registry['n_events_path_list'][month_id],
+                        gdal.GDT_Float32, [TARGET_NODATA]),
+                    kwargs={'fill_value_list': [n_events]},
+                    target_path_list=[
+                        file_registry['n_events_path_list'][month_id]],
+                    dependent_task_list=[align_task],
+                    task_name=(
+                        'n_events as a constant raster month %d' % month_id))
+                reclassify_n_events_task_list.append(n_events_task)
 
-        LOGGER.info('calculate curve number')
-        _calculate_curve_number_raster(
-            file_registry['lulc_aligned_path'],
-            file_registry['soil_group_aligned_path'],
-            biophysical_table, file_registry['cn_path'])
+        curve_number_task = task_graph.add_task(
+            func=_calculate_curve_number_raster,
+            args=(
+                file_registry['lulc_aligned_path'],
+                file_registry['soil_group_aligned_path'],
+                biophysical_table, file_registry['cn_path']),
+            target_path_list=[file_registry['cn_path']],
+            dependent_task_list=[align_task],
+            task_name='calculate curve number')
 
-        LOGGER.info('calculate Si raster')
-        _calculate_si_raster(
-            file_registry['cn_path'], file_registry['stream_path'],
-            file_registry['si_path'])
+        si_task = task_graph.add_task(
+            func=_calculate_si_raster,
+            args=(
+                file_registry['cn_path'], file_registry['stream_path'],
+                file_registry['si_path']),
+            target_path_list=[file_registry['si_path']],
+            dependent_task_list=[curve_number_task],
+            task_name='calculate Si raster')
 
+        quick_flow_task_list = []
         for month_index in range(N_MONTHS):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
-            _calculate_monthly_quick_flow(
-                file_registry['precip_path_aligned_list'][month_index],
-                file_registry['lulc_aligned_path'], file_registry['cn_path'],
-                file_registry['n_events_path_list'][month_index],
-                file_registry['stream_path'],
-                file_registry['qfm_path_list'][month_index],
-                file_registry['si_path'])
+            monthly_quick_flow_task = task_graph.add_task(
+                func=_calculate_monthly_quick_flow,
+                args=(
+                    file_registry['precip_path_aligned_list'][month_index],
+                    file_registry['lulc_aligned_path'], file_registry['cn_path'],
+                    file_registry['n_events_path_list'][month_index],
+                    file_registry['stream_path'],
+                    file_registry['si_path'],
+                    file_registry['qfm_path_list'][month_index]),
+                target_path_list=[
+                    file_registry['qfm_path_list'][month_index]],
+                dependent_task_list=[
+                    align_task, reclassify_n_events_task_list[month_index],
+                    si_task],
+                task_name='calculate quick flow for month %d' % month_index+1)
+            quick_flow_task_list.append(monthly_quick_flow_task)
 
-        qf_nodata = -1
-        LOGGER.info('calculate QFi')
-
-        # TODO: lose this loop
-        def qfi_sum_op(*qf_values):
-            """Sum the monthly qfis."""
-            qf_sum = numpy.zeros(qf_values[0].shape)
-            valid_mask = qf_values[0] != qf_nodata
-            valid_qf_sum = qf_sum[valid_mask]
-            for index in range(len(qf_values)):
-                valid_qf_sum += qf_values[index][valid_mask]
-            qf_sum[:] = qf_nodata
-            qf_sum[valid_mask] = valid_qf_sum
-            return qf_sum
-
-        pygeoprocessing.raster_calculator(
-            [(path, 1) for path in file_registry['qfm_path_list']],
-            qfi_sum_op, file_registry['qf_path'], gdal.GDT_Float32, qf_nodata)
+        qf_task = task_graph.add_task(
+            func=_calculate_annual_qfi,
+            args=(file_registry['qfm_path_list'], file_registry['qf_path']),
+            target_path_list=[file_registry['qf_path']],
+            dependent_task_list=quick_flow_task_list,
+            task_name='calculate QFi')
 
         LOGGER.info('calculate local recharge')
-        kc_lookup = {}
-        LOGGER.info('classify kc')
+        kc_task_list = []
         for month_index in range(12):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
-            pygeoprocessing.reclassify_raster(
-                (file_registry['lulc_aligned_path'], 1), kc_lookup,
-                file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
-                kc_nodata)
+            kc_task = task_graph.add_task(
+                func=pygeoprocessing.reclassify_raster,
+                args=(
+                    (file_registry['lulc_aligned_path'], 1), kc_lookup,
+                    file_registry['kc_path_list'][month_index],
+                    gdal.GDT_Float32, kc_nodata),
+                target_path_list=file_registry['kc_path_list'][month_index],
+                dependent_task_list=[align_task],
+                task_name='classify kc month %d' % month_index)
+            kc_task_list.add_task(kc_task)
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
@@ -564,6 +587,35 @@ def _execute(args):
     LOGGER.info('      //_| //_|')
 
 
+def _calculate_annual_qfi(qfm_path_list, target_qf_path):
+    """Calculate annual quickflow.
+
+    Parameters:
+        qfm_path_list (list): list of monthly quickflow raster paths.
+        target_qf_path (str): path to target annual quickflow raster.
+
+    Returns:
+        None.
+
+    """
+    qf_nodata = -1
+
+    def qfi_sum_op(*qf_values):
+        """Sum the monthly qfis."""
+        qf_sum = numpy.zeros(qf_values[0].shape)
+        valid_mask = qf_values[0] != qf_nodata
+        valid_qf_sum = qf_sum[valid_mask]
+        for index in range(len(qf_values)):
+            valid_qf_sum += qf_values[index][valid_mask]
+        qf_sum[:] = qf_nodata
+        qf_sum[valid_mask] = valid_qf_sum
+        return qf_sum
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in qfm_path_list],
+        qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
+
+
 def stream_threshold(
         flow_accum_path, threshold_flow_accum, target_stream_path):
     """Calculate stream threshold.
@@ -598,7 +650,7 @@ def stream_threshold(
 
 def _calculate_monthly_quick_flow(
         precip_path, lulc_raster_path, cn_path, n_events_raster_path,
-        stream_path, qf_monthly_path, si_path):
+        stream_path, si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
     Parameters:
@@ -611,28 +663,14 @@ def _calculate_monthly_quick_flow(
         stream_path (string): path to stream mask raster where 1 indicates a
             stream pixel, 0 is a non-stream but otherwise valid area from the
             original DEM, and nodata indicates areas outside the valid DEM.
+        si_path (string): path to raster that has potential maximum retention
         qf_monthly_path_list (list of string): list of paths to output monthly
             rasters.
-        si_path (string): list to output raster for potential maximum retention
 
     Returns:
         None
     """
-    si_nodata = -1
-    cn_nodata = pygeoprocessing.get_raster_info(cn_path)['nodata'][0]
-
-    def si_op(ci_array, stream_array):
-        """Potential maximum retention."""
-        result = numpy.empty_like(ci_array)
-        result[:] = si_nodata
-        valid_mask = (ci_array != cn_nodata) & (ci_array != 0)
-        result[valid_mask] = 1000.0 / ci_array[valid_mask] - 10
-        result[(stream_array == 1) & valid_mask] = 0
-        return result
-
-    pygeoprocessing.raster_calculator(
-         [(cn_path, 1), (stream_path, 1)], si_op, si_path, gdal.GDT_Float32,
-         si_nodata)
+    si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
 
     qf_nodata = -1
     p_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
@@ -653,6 +691,7 @@ def _calculate_monthly_quick_flow(
 
         Returns:
             quick flow (numpy.array)
+
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
@@ -673,7 +712,7 @@ def _calculate_monthly_quick_flow(
         # on large valid_si/a_im this number will be zero and the latter
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
-        E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1 = scipy.special.expn(1, valid_si / a_im)
         E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
@@ -921,6 +960,23 @@ def _sum_valid(raster_path):
         raster_count += numpy.count_nonzero(valid_mask)
     return raster_sum, raster_count
 
+
+def _calculate_l_avail(l_path, gamma, target_l_avail_path):
+    """l avail = l * gamma."""
+    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+
+    def l_avail_op(l_array):
+        """Calculate equation [8] L_avail = min(gamma*L, L)."""
+        result = numpy.empty(l_array.shape)
+        result[:] = li_nodata
+        valid_mask = (l_array != li_nodata)
+        result[valid_mask] = numpy.min(numpy.stack(
+            (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
+        li_nodata)
 
 @validation.invest_validator
 def validate(args, limit_to=None):
