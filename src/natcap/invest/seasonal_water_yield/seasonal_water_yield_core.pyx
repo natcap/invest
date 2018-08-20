@@ -47,8 +47,8 @@ cdef int N_BLOCK_COLS = 4
 cdef route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, li_path,
         li_avail_path, l_sum_avail_path, aet_path, numpy.ndarray alpha_month,
-        float beta_i, float gamma, qfi_path_list, outflow_direction_path,
-        outflow_weights_path, stream_path, deque[int] &sink_cell_deque):
+        float beta_i, float gamma, qfi_path_list, stream_path,
+        deque[int] &sink_cell_deque):
 
     #Pass transport
     cdef time_t start
@@ -390,12 +390,12 @@ cdef route_local_recharge(
 
 def calculate_local_recharge(
         precip_path_list, et0_path_list, qfm_path_list, flow_dir_path,
-        outflow_weights_path, outflow_direction_path, dem_path, lulc_path,
-        alpha_month, beta_i, gamma, stream_path, li_path,
-        li_avail_path, l_sum_avail_path, aet_path, kc_path_list):
+        dem_path, lulc_path, alpha_month, beta_i, gamma, stream_path, li_path,
+        kc_path_list, li_avail_path, l_sum_avail_path, aet_path):
     """wrapper for local recharge so we can statically type outlet lists"""
     cdef deque[int] outlet_cell_deque
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.find_outlets(dem_path, flow_dir_path, outlet_cell_deque)
+    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.find_outlets(
+        dem_path, flow_dir_path, outlet_cell_deque)
     # convert a dictionary of month -> alpha to an array of alphas in sorted
     # order by month
     cdef numpy.ndarray alpha_month_array = numpy.array(
@@ -403,8 +403,7 @@ def calculate_local_recharge(
     route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, li_path,
         li_avail_path, l_sum_avail_path, aet_path, alpha_month_array, beta_i,
-        gamma, qfm_path_list, outflow_direction_path, outflow_weights_path,
-        stream_path, outlet_cell_deque)
+        gamma, qfm_path_list, stream_path, outlet_cell_deque)
 
 @cython.boundscheck(False)
 @cython.wraparound(False)

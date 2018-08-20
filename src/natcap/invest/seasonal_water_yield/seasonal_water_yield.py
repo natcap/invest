@@ -331,12 +331,6 @@ def _execute(args):
         dependent_task_list=[flow_accum_task],
         task_name='stream threshold')
 
-    LOGGER.info('flow weights')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
-        file_registry['flow_dir_path'],
-        file_registry['outflow_weights_path'],
-        file_registry['outflow_direction_path'])
-
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = file_registry['l_aligned_path']
@@ -409,7 +403,7 @@ def _execute(args):
                 file_registry['cn_path'], file_registry['stream_path'],
                 file_registry['si_path']),
             target_path_list=[file_registry['si_path']],
-            dependent_task_list=[curve_number_task],
+            dependent_task_list=[curve_number_task, stream_threshold_task],
             task_name='calculate Si raster')
 
         quick_flow_task_list = []
@@ -428,7 +422,7 @@ def _execute(args):
                     file_registry['qfm_path_list'][month_index]],
                 dependent_task_list=[
                     align_task, reclassify_n_events_task_list[month_index],
-                    si_task],
+                    si_task, stream_threshold_task],
                 task_name='calculate quick flow for month %d' % month_index+1)
             quick_flow_task_list.append(monthly_quick_flow_task)
 
@@ -459,20 +453,30 @@ def _execute(args):
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
-        seasonal_water_yield_core.calculate_local_recharge(
-            file_registry['precip_path_aligned_list'],
-            file_registry['et0_path_aligned_list'],
-            file_registry['qfm_path_list'],
-            file_registry['flow_dir_path'],
-            file_registry['outflow_weights_path'],
-            file_registry['outflow_direction_path'],
-            file_registry['dem_aligned_path'],
-            file_registry['lulc_aligned_path'], alpha_month,
-            beta_i, gamma, file_registry['stream_path'],
-            file_registry['l_path'],
-            file_registry['l_avail_path'],
-            file_registry['l_sum_avail_path'],
-            file_registry['aet_path'], file_registry['kc_path_list'])
+        calculate_local_recharge_task = task_graph.add_task(
+            func=seasonal_water_yield_core.calculate_local_recharge,
+            args=(
+                file_registry['precip_path_aligned_list'],
+                file_registry['et0_path_aligned_list'],
+                file_registry['qfm_path_list'],
+                file_registry['flow_dir_path'],
+                file_registry['dem_pit_filled_path'],
+                file_registry['lulc_aligned_path'], alpha_month,
+                beta_i, gamma, file_registry['stream_path'],
+                file_registry['l_path'],
+                file_registry['kc_path_list'],
+                file_registry['l_avail_path'],
+                file_registry['l_sum_avail_path'],
+                file_registry['aet_path']),
+            target_path_list=[
+                file_registry['l_path'],
+                file_registry['l_avail_path'],
+                file_registry['l_sum_avail_path'],
+                file_registry['aet_path']],
+            dependent_task_list=[
+                align_task, flow_dir_task, stream_threshold_task,
+                fill_pit_task] + quick_flow_task_list,
+            task_name='calculate local recharge')
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
     qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
