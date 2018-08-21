@@ -541,7 +541,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
     @staticmethod
     def _assert_point_vectors_equal(a_uri, b_uri):
-        """Assert that the point geometries in the vectors are equal.
+        """Assert that two point geometries in the vectors are equal.
 
         Parameters:
             a_uri (str): a URI to an OGR vector.
@@ -549,6 +549,10 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
         Returns:
             None.
+
+        Raises:
+            AssertionError when the two point geometries are not equal up to
+            desired precision (default is 6).
         """
         a_shape = ogr.Open(a_uri)
         a_layer = a_shape.GetLayer(0)
