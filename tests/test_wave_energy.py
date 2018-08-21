@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import csv
+import re
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -14,7 +15,7 @@ from shapely.geometry import Polygon
 from shapely.geometry import Point
 
 from osgeo import gdal
-from osgeo import osr
+from osgeo import osr, ogr
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy',
@@ -28,6 +29,9 @@ def _make_dummy_files(workspace_dir):
 
     Parameters:
         workspace_dir: path to workspace for creating intermediate/output folder.
+
+    Returns:
+        None.
     """
     intermediate_results = ['WEM_InputOutput_Pts.shp',
                             'aoi_clipped_to_extract_uri.shp']
@@ -51,6 +55,52 @@ def _make_dummy_files(workspace_dir):
         for filename in results:
                 with open(os.path.join(folder_path, filename), 'wb') as open_file:
                     open_file.write('')
+
+
+def _assert_point_vectors_equal(a_uri, b_uri):
+    """Assert that the point geometries in the vectors are equal.
+
+    Parameters:
+        a_uri (str): a URI to an OGR vector.
+        b_uri (str): a URI to an OGR vector.
+
+    Returns:
+        None.
+    """
+    a_shape = ogr.Open(a_uri)
+    a_layer = a_shape.GetLayer(0)
+    a_feat = a_layer.GetNextFeature()
+
+    b_shape = ogr.Open(b_uri)
+    b_layer = b_shape.GetLayer(0)
+    b_feat = b_layer.GetNextFeature()
+
+    while a_feat is not None:
+        # Get coordinates from point geometry and store them in a list
+        a_geom = a_feat.GetGeometryRef()
+        a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
+        a_geom_list = [float(x) for x in a_geom_list]
+
+        b_geom = b_feat.GetGeometryRef()
+        b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
+        b_geom_list = [float(x) for x in b_geom_list]
+
+        try:
+            numpy.testing.assert_array_almost_equal(a_geom_list, b_geom_list)
+        except:
+            a_feature_fid = a_feat.GetFID()
+            b_feature_fid = b_feat.GetFID()
+            raise AssertionError(
+                'Geometries are not equal in feature %s, '
+                'regression feature %s in layer 0' % (
+                    a_feature_fid, b_feature_fid))
+        a_feat = None
+        b_feat = None
+        a_feat = a_layer.GetNextFeature()
+        b_feat = b_layer.GetNextFeature()
+
+    a_shape = None
+    b_shape = None
 
 
 class WaveEnergyUnitTests(unittest.TestCase):
@@ -434,35 +484,12 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'valuation', raster_path),
                 1e-6)
 
-        from osgeo import ogr
-
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
         for vector_path in vector_results:
-            vec_path = os.path.join(args['workspace_dir'], 'output', vector_path)
-            vec_shape = ogr.Open(vec_path)
-            vec_layer = vec_shape.GetLayer(0)
-            vec_feat = vec_layer.GetNextFeature()
-            vec_geom = vec_feat.GetGeometryRef()
-            print vec_path + ' has ' + str(vec_geom.Centroid().ExportToWkt())
-
-            reg_path = os.path.join(REGRESSION_DATA, 'valuation', vector_path)
-            reg_shape = ogr.Open(reg_path)
-            reg_layer = reg_shape.GetLayer(0)
-            reg_feat = reg_layer.GetNextFeature()
-            reg_geom = reg_feat.GetGeometryRef()
-            print reg_path + ' has ' + str(reg_geom.Centroid().ExportToWkt())
-
-            print 'Does geom equals geom_regression? ' + str(bool(vec_geom.Equals(reg_geom)))
-            vec_feat = None
-            reg_feat = None
-            vec_shape = None
-            reg_shape = None
-
-            pygeoprocessing.testing.assert_vectors_equal(
+            _assert_point_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1e-6)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
 
