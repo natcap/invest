@@ -588,39 +588,3 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         for table_path in table_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', table_path)))
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_valuation_suffix_underscore(self):
-        """WaveEnergy: testing suffix with an underscore through Valuation."""
-        from natcap.invest.wave_energy import wave_energy
-
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
-        args['valuation_container'] = True
-        args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] = os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
-        args['number_of_machines'] = 28
-        args['suffix'] = '_val'
-
-        wave_energy.execute(args)
-
-        raster_results = [
-            'wp_rc_val.tif', 'wp_kw_val.tif', 'capwe_rc_val.tif',
-            'capwe_mwh_val.tif', 'npv_rc_val.tif', 'npv_usd_val.tif']
-
-        for raster_path in raster_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', raster_path)))
-
-        vector_results = ['GridPts_prj_val.shp', 'LandPts_prj_val.shp']
-
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-        table_results = ['capwe_rc_val.csv', 'wp_rc_val.csv', 'npv_rc_val.csv']
-
-        for table_path in table_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', table_path)))
