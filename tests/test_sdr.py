@@ -9,13 +9,11 @@ from osgeo import ogr
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'input')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\SDR\invest-data"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr',
+    'input')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'sdr')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\SDR\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\SDR"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
+
 
 class SDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
@@ -58,7 +56,7 @@ class SDRTests(unittest.TestCase):
             REGRESSION_DATA, 'sample_drainage.tif')
         validate_result = sdr.validate(args, limit_to=None)
         self.assertFalse(
-            validate_result,
+            validate_result,  # List should be empty if validation passes
             "expected no failed validations instead got %s" % str(
                 validate_result))
 
@@ -67,8 +65,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         # swap watershed and dem for different types
         args['dem_path'], args['watersheds_path'] = (
             args['watersheds_path'], args['dem_path'])
@@ -78,7 +75,7 @@ class SDRTests(unittest.TestCase):
             "expected failed validations instead didn't get any")
         self.assertTrue(all(
             [x[1] in ['not a raster', 'not a vector']
-            for x in validate_result]))
+             for x in validate_result]))
 
     def test_sdr_validation_missing_key(self):
         """SDR test validation that's missing keys."""
@@ -230,7 +227,7 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
-            REGRESSION_DATA, 'sample_drainage.tif')
+            REGRESSION_DATA, 'sample_drainage_small.tif')
         sdr.execute(args)
 
         SDRTests._assert_regression_results_equal(
