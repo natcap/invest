@@ -139,7 +139,6 @@ class SDRTests(unittest.TestCase):
             'expected a `ws_id` validation error, but got %s' % (
                 validate_result))
 
-
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""
         from natcap.invest import sdr
@@ -174,7 +173,6 @@ class SDRTests(unittest.TestCase):
             'feature 0 has an invalid value of' in validate_result[0][1],
             'expected an invalid `ws_id` value but got %s' % (
                 validate_result))
-
 
     def test_base_regression(self):
         """SDR base regression test on sample data.
