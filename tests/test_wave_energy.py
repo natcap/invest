@@ -33,27 +33,23 @@ def _make_dummy_files(workspace_dir):
     Returns:
         None.
     """
-    intermediate_results = ['WEM_InputOutput_Pts.shp',
-                            'aoi_clipped_to_extract_uri.shp']
+    intermediate_files = ['WEM_InputOutput_Pts.shp',
+                          'aoi_clipped_to_extract_uri.shp']
 
-    raster_results = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
-                      'capwe_mwh.tif', 'npv_rc.tif', 'npv_usd.tif']
-    vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
-    table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
-    output_results = raster_results + vector_results + table_results
+    raster_files = ['wp_rc.tif', 'wp_kw.tif', 'capwe_rc.tif',
+                    'capwe_mwh.tif', 'npv_rc.tif', 'npv_usd.tif']
+    vector_files = ['GridPts_prj.shp', 'LandPts_prj.shp']
+    table_files = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
+    output_files = raster_files + vector_files + table_files
 
-    for folder in ['intermediate', 'output']:
+    for folder, folder_files in zip(['intermediate', 'output'],
+                                    [intermediate_files, output_files]):
         folder_path = os.path.join(workspace_dir, folder)
         if not os.path.exists(folder_path):
             os.makedirs(folder_path)
 
-        if folder == 'intermediate':
-            results = intermediate_results
-        else:
-            results = output_results
-
-        for filename in results:
-                with open(os.path.join(folder_path, filename), 'wb') as open_file:
+        for file_name in folder_files:
+                with open(os.path.join(folder_path, file_name), 'wb') as open_file:
                     open_file.write('')
 
 
