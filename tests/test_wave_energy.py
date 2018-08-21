@@ -25,7 +25,7 @@ REGRESSION_DATA = os.path.join(
 
 
 def _make_dummy_files(workspace_dir):
-    """Within workspace, make an output folder with dummy files.
+    """Within workspace, make intermediate and output folders with dummy files.
 
     Parameters:
         workspace_dir: path to workspace for creating intermediate/output folder.
