@@ -1,5 +1,4 @@
 """InVEST SDR model tests."""
-
 import unittest
 import tempfile
 import shutil
@@ -10,11 +9,10 @@ from osgeo import ogr
 from osgeo import osr
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'Base_Data', 'Freshwater')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr',
+    'input')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'sdr')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
 
 
 class SDRTests(unittest.TestCase):
@@ -34,13 +32,13 @@ class SDRTests(unittest.TestCase):
         args = {
             'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
-            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_path': os.path.join(SAMPLE_DATA, 'dem.tif'),
             'erodibility_path': os.path.join(
                 SAMPLE_DATA, 'erodibility_SI_clip.tif'),
-            'erosivity_path': os.path.join(SAMPLE_DATA, 'erosivity'),
+            'erosivity_path': os.path.join(SAMPLE_DATA, 'erosivity.tif'),
             'ic_0_param': '0.5',
             'k_param': '2',
-            'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90'),
+            'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90.tif'),
             'sdr_max': '0.8',
             'threshold_flow_accumulation': '1000',
             'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
@@ -53,13 +51,12 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
         validate_result = sdr.validate(args, limit_to=None)
         self.assertFalse(
-            validate_result,
+            validate_result,  # List should be empty if validation passes
             "expected no failed validations instead got %s" % str(
                 validate_result))
 
@@ -68,8 +65,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         # swap watershed and dem for different types
         args['dem_path'], args['watersheds_path'] = (
             args['watersheds_path'], args['dem_path'])
@@ -79,7 +75,7 @@ class SDRTests(unittest.TestCase):
             "expected failed validations instead didn't get any")
         self.assertTrue(all(
             [x[1] in ['not a raster', 'not a vector']
-            for x in validate_result]))
+             for x in validate_result]))
 
     def test_sdr_validation_missing_key(self):
         """SDR test validation that's missing keys."""
@@ -139,7 +135,6 @@ class SDRTests(unittest.TestCase):
             'expected a `ws_id` validation error, but got %s' % (
                 validate_result))
 
-
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""
         from natcap.invest import sdr
@@ -175,7 +170,6 @@ class SDRTests(unittest.TestCase):
             'expected an invalid `ws_id` value but got %s' % (
                 validate_result))
 
-
     def test_base_regression(self):
         """SDR base regression test on sample data.
 
@@ -206,8 +200,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
 
         # copy AOI on top of where the output shapefile should reside
         shutil.copy(
@@ -232,8 +225,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(
-            self.workspace_dir)
+        args = SDRTests.generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
         sdr.execute(args)
