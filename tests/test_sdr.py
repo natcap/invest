@@ -225,7 +225,7 @@ class SDRTests(unittest.TestCase):
         from natcap.invest import sdr
 
         # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
+        args = SDRTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\SDR")#self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
         sdr.execute(args)
