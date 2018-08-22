@@ -79,7 +79,7 @@ class ScenarioProximityTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_scenario_gen_far_scenario(self):
+    def test_scenario_gen_farthest(self):
         """Scenario Gen Proximity: testing small far functionality."""
         from natcap.invest import scenario_gen_proximity
 
@@ -90,13 +90,13 @@ class ScenarioProximityTests(unittest.TestCase):
         scenario_gen_proximity.execute(args)
         ScenarioProximityTests._test_same_files(
             os.path.join(
-                REGRESSION_DATA, 'expected_file_list_small_farthest.txt'),
+                REGRESSION_DATA, 'expected_file_list_farthest.txt'),
             args['workspace_dir'])
 
         pygeoprocessing.testing.assertions.assert_csv_equal(
             os.path.join(args['workspace_dir'], 'farthest_from_edge.csv'),
             os.path.join(
-                REGRESSION_DATA, 'small_farthest_from_edge_regression.csv'),
+                REGRESSION_DATA, 'farthest_from_edge_farthest.csv'),
             rel_tol=1e-6)
 
     def test_scenario_gen_no_scenario(self):
