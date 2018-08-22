@@ -63,14 +63,14 @@ class ScenarioProximityTests(unittest.TestCase):
             args['workspace_dir'])
 
         base_table = pandas.read_csv(
-            os.path.join(args['workspace_dir'], 'farthest_from_edge.csv'))
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
                 REGRESSION_DATA, 'farthest_from_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
         base_table = pandas.read_csv(
-            os.path.join(args['workspace_dir'], 'nearest_to_edge.csv'))
+            os.path.join(self.workspace_dir, 'nearest_to_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
                 REGRESSION_DATA, 'nearest_to_edge_regression.csv'))
@@ -93,7 +93,7 @@ class ScenarioProximityTests(unittest.TestCase):
             args['workspace_dir'])
 
         pygeoprocessing.testing.assertions.assert_csv_equal(
-            os.path.join(args['workspace_dir'], 'farthest_from_edge.csv'),
+            os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
                 REGRESSION_DATA, 'farthest_from_edge_farthest.csv'),
             rel_tol=1e-6)
