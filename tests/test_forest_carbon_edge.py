@@ -37,7 +37,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_two_aois.shp'),
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
                 SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
@@ -124,7 +124,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 args['workspace_dir'],
                 'aggregated_carbon_stocks_small_no_edge_effect.shp'),
             os.path.join(
-                REGRESSION_DATA, 'agg_results_small_no_edge_effect.csv'))
+                REGRESSION_DATA, 'agg_results_no_edge_effect.csv'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
