@@ -16,6 +16,7 @@ from osgeo import ogr
 from bisect import bisect
 import scipy
 
+import pygeoprocessing.geoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
 from .. import utils
@@ -378,7 +379,7 @@ def execute(args):
             i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
             j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
             depth = dem_matrix[j][i]
-            # There are cases where the DEM may be to coarse and thus a wave
+            # There are cases where the DEM may be too coarse and thus a wave
             # energy point falls on land. If the depth value taken from the DEM
             # is greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
@@ -1508,46 +1509,14 @@ def count_pixels_groups(raster_uri, group_values):
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
-    dataset = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
-    band = dataset.GetRasterBand(1)
-
-    n_rows = dataset.RasterYSize
-    n_cols = dataset.RasterXSize
-
-    block_size = band.GetBlockSize()
-    # Using block method for reading through a raster memory efficiently
-    # Taken from vectorize_datasets in natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-    cols_per_block, rows_per_block = block_size[0], block_size[1]
-    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
-    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
-
-    for row_block_index in xrange(n_row_blocks):
-        row_offset = row_block_index * rows_per_block
-        row_block_width = n_rows - row_offset
-        if row_block_width > rows_per_block:
-            row_block_width = rows_per_block
-
-        for col_block_index in xrange(n_col_blocks):
-            col_offset = col_block_index * cols_per_block
-            col_block_width = n_cols - col_offset
-            if col_block_width > cols_per_block:
-                col_block_width = cols_per_block
-
-            dataset_block = band.ReadAsArray(
-                xoff=col_offset, yoff=row_offset, win_xsize=col_block_width,
-                win_ysize=row_block_width)
-
-            # Cumulatively add the number of pixels found for each value
-            # in 'group_values'
-            for index in xrange(len(group_values)):
-                val = group_values[index]
-                count_mask = numpy.zeros(dataset_block.shape)
-                numpy.equal(dataset_block, val, count_mask)
-                pixel_count[index] += numpy.count_nonzero(count_mask)
-
-    dataset_block = None
-    band = None
-    dataset = None
+    for block_info, block_matrix in pygeoprocessing.geoprocessing.iterblocks(raster_uri):
+        # Cumulatively add the number of pixels found for each value
+        # in 'group_values'
+        for index in xrange(len(group_values)):
+            val = group_values[index]
+            count_mask = numpy.zeros(block_matrix.shape)
+            numpy.equal(block_matrix, val, count_mask)
+            pixel_count[index] += numpy.count_nonzero(count_mask)
 
     return pixel_count
 

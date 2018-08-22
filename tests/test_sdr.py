@@ -227,7 +227,7 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
-            REGRESSION_DATA, 'sample_drainage_small.tif')
+            REGRESSION_DATA, 'sample_drainage.tif')
         sdr.execute(args)
 
         SDRTests._assert_regression_results_equal(
