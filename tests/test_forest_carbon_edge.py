@@ -18,7 +18,7 @@ REGRESSION_DATA = os.path.join(
 
 
 class ForestCarbonEdgeTests(unittest.TestCase):
-    """Tests for the Forets Carbon Edge Model."""
+    """Tests for the Forest Carbon Edge Model."""
 
     def setUp(self):
         """Overriding setUp function to create temp workspace directory."""
@@ -84,11 +84,11 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
 
-        # explictily testing that invoking twice doesn't cause the model to
-        # crash because of exising outputs
+        # explicitly testing that invoking twice doesn't cause the model to
+        # crash because of existing outputs
         forest_carbon_edge_effect.execute(args)
         forest_carbon_edge_effect.execute(args)
-        self.assertTrue(True)  # explict pass of the model
+        self.assertTrue(True)  # explicit pass of the model
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
