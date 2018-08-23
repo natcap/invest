@@ -64,8 +64,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_dup_output(self):
-        """Forest Carbon Edge: small test for existing output overlap."""
+    def test_carbon_dup_output(self):
+        """Forest Carbon Edge: test for existing output overlap."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
@@ -92,8 +92,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_no_forest_edge(self):
-        """Forest Carbon Edge: small test for no forest edge effects."""
+    def test_carbon_no_forest_edge(self):
+        """Forest Carbon Edge: test for no forest edge effects."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
@@ -116,7 +116,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         ForestCarbonEdgeTests._test_same_files(
             os.path.join(
-                REGRESSION_DATA, 'file_list_small_no_edge_effect.txt'),
+                REGRESSION_DATA, 'file_list_no_edge_effect.txt'),
             args['workspace_dir'])
         ForestCarbonEdgeTests._assert_regression_results_eq(
             args['workspace_dir'],
@@ -128,8 +128,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_bad_pool_value(self):
-        """Forest Carbon Edge: small test with bad carbon pool value."""
+    def test_carbon_bad_pool_value(self):
+        """Forest Carbon Edge: test with bad carbon pool value."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
