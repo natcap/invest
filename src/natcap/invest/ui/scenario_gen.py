@@ -311,7 +311,7 @@ class ScenarioGenerator(model.InVESTModel):
         if new_interactivity:
             vector_path = vector_input.value()
             vector = gdal.OpenEx(vector_path)
-            if vector is None:
+            if not vector:
                 LOGGER.warn('Could not open vector %s', vector_path)
                 return
             layer = vector.GetLayer()
