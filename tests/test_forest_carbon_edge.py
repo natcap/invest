@@ -151,6 +151,38 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             forest_carbon_edge_effect.execute(args)
 
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_carbon_nodata_lulc(self):
+        """Forest Carbon Edge: regression testing all functionality."""
+        from natcap.invest import forest_carbon_edge_effect
+
+        args = {
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_uri': os.path.join(
+                SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': True,
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'nodata_lulc.tif'),
+            'n_nearest_model_points': 10,
+            'pools_to_calculate': 'all',
+            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+                SAMPLE_DATA, 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        forest_carbon_edge_effect.execute(args)
+        ForestCarbonEdgeTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list.txt'),
+            args['workspace_dir'])
+
+        ForestCarbonEdgeTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(
+                args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_nodata_lulc.csv'))
+
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
         """Assert files in `base_list_path` are in `directory_path`.
