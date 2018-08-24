@@ -9,12 +9,10 @@ import pandas
 import pygeoprocessing.testing
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-test-data\input"
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower',
+    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\output"
 
 
 class HydropowerTests(unittest.TestCase):
@@ -24,11 +22,11 @@ class HydropowerTests(unittest.TestCase):
         """Overriding setUp function to create temporary workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempdir # tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
         """Overriding tearDown function to remove temporary directory."""
-        # shutil.rmtree(self.workspace_dir)
+        shutil.rmtree(self.workspace_dir)
 
     @staticmethod
     def generate_base_args(workspace_dir):
@@ -39,7 +37,7 @@ class HydropowerTests(unittest.TestCase):
             'depth_to_root_rest_layer_uri': os.path.join(
                 SAMPLE_DATA,
                 'depth_to_root_rest_layer.tif'),
-            'precipitation_uri': os.path.join(SAMPLE_DATA, 'precip'),
+            'precipitation_uri': os.path.join(SAMPLE_DATA, 'precip.tif'),
             'pawc_uri': os.path.join(SAMPLE_DATA, 'pawc.tif'),
             'eto_uri': os.path.join(SAMPLE_DATA, 'eto.tif'),
             'watersheds_uri': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
@@ -134,8 +132,7 @@ class HydropowerTests(unittest.TestCase):
             SAMPLE_DATA, 'water_demand_table.csv')
         args['valuation_container'] = True
         args['valuation_table_uri'] = os.path.join(
-            SAMPLE_DATA,
-            'hydropower_valuation_table.csv')
+            SAMPLE_DATA, 'hydropower_valuation_table.csv')
         args['sub_watersheds_uri'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
@@ -169,8 +166,7 @@ class HydropowerTests(unittest.TestCase):
         """Hydro: test failure cases on the validation function."""
         from natcap.invest.hydropower import hydropower_water_yield
 
-        args = HydropowerTests.generate_base_args(
-            self.workspace_dir)
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
 
         # default args should be fine
         self.assertEqual(hydropower_water_yield.validate(args), [])
