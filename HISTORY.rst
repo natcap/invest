@@ -4,6 +4,8 @@ Unreleased Changes
 ------------------
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
+* Updating core carbon forest edge regression data coefficient to drop
+  impossible negative coefficients.
 
 3.5.0 (2018-08-14)
 ------------------
