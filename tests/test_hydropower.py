@@ -10,7 +10,7 @@ import pygeoprocessing.testing
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-data\input"
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-test-data\input"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-test-data"
@@ -35,19 +35,14 @@ class HydropowerTests(unittest.TestCase):
         """Generate an args list that is consistent across regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'lulc.tif'),
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'lulc.tif'),
             'depth_to_root_rest_layer_uri': os.path.join(
                 SAMPLE_DATA,
                 'depth_to_root_rest_layer.tif'),
-            'precipitation_uri': os.path.join(
-                SAMPLE_DATA, 'precip'),
-            'pawc_uri': os.path.join(
-                SAMPLE_DATA, 'pawc.tif'),
-            'eto_uri': os.path.join(
-                SAMPLE_DATA, 'eto.tif'),
-            'watersheds_uri': os.path.join(
-                SAMPLE_DATA, 'watersheds.shp'),
+            'precipitation_uri': os.path.join(SAMPLE_DATA, 'precip'),
+            'pawc_uri': os.path.join(SAMPLE_DATA, 'pawc.tif'),
+            'eto_uri': os.path.join(SAMPLE_DATA, 'eto.tif'),
+            'watersheds_uri': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
             'biophysical_table_uri': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
             'seasonality_constant': 5
