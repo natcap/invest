@@ -807,8 +807,8 @@ def execute(args):
 
     # THIS SHOULD BE OWN FUNCTION
     if args["calculate_transition"]:
-        LOGGER.info("Calculating transition...")
         for next_lulc in transition_dict:
+            LOGGER.info("Calculating transition for %s ...", next_lulc)
             transition_raster_fpath = os.path.join(
                 workspace, transition_name % next_lulc)
             reclass_dict = {}
@@ -818,22 +818,25 @@ def execute(args):
                 reclass_dict[this_lulc] = value * transition_scale
                 all_zeros = all_zeros and (value == 0)
 
-            if not all_zeros:
-                geoprocess.reclassify_dataset_uri(
-                    landcover_uri,
-                    reclass_dict,
-                    transition_raster_fpath,
-                    transition_dtype,
-                    suitability_nodata,
-                    exception_flag="values_required")
+            if all_zeros:
+                LOGGER.debug('LULC class %s is all zeros in the transition '
+                             'dict', next_lulc)
 
-                # Change nodata value so 0's no longer nodata
-                dataset = gdal.OpenEx(transition_raster_fpath, 1)
-                band = dataset.GetRasterBand(1)
-                nodata = band.SetNoDataValue(transition_nodata)
-                dataset = None
-                suitability_transition_dict[
-                    next_lulc] = transition_raster_fpath
+            geoprocess.reclassify_dataset_uri(
+                landcover_uri,
+                reclass_dict,
+                transition_raster_fpath,
+                transition_dtype,
+                suitability_nodata,
+                exception_flag="values_required")
+
+            # Change nodata value so 0's no longer nodata
+            dataset = gdal.OpenEx(transition_raster_fpath, 1)
+            band = dataset.GetRasterBand(1)
+            nodata = band.SetNoDataValue(transition_nodata)
+            dataset = None
+            suitability_transition_dict[
+                next_lulc] = transition_raster_fpath
 
     # THIS SHOULD BE OWN FUNCTION
     suitability_factors_dict = {}
