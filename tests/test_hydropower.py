@@ -14,7 +14,7 @@ SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-data\i
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower"
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\hydropower\output"
 
 
 class HydropowerTests(unittest.TestCase):
