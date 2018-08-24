@@ -4,23 +4,21 @@ import tempfile
 import shutil
 import os
 
-
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+from pygeoprocessing.testing import scm
 from osgeo import ogr
 import numpy
 
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'forest_carbon_edge_effect')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'forest_carbon_edge_effect', 'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'forest_carbon_edge_effect')
 
 
 class ForestCarbonEdgeTests(unittest.TestCase):
-    """Tests for the Forets Carbon Edge Model."""
+    """Tests for the Forest Carbon Edge Model."""
 
     def setUp(self):
         """Overriding setUp function to create temp workspace directory."""
@@ -39,14 +37,12 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
-                SAMPLE_DATA, 'forest_carbon_edge_demo_aoi.shp'),
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
                 SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
-            'lulc_uri': os.path.join(
-                SAMPLE_DATA, 'forest_carbon_edge_lulc_demo.tif'),
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'small_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -68,18 +64,18 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_dup_output(self):
-        """Forest Carbon Edge: small test for existing output overlap."""
+    def test_carbon_dup_output(self):
+        """Forest Carbon Edge: test for existing output overlap."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
                 SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
-            'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '1',
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'small_lulc.tif'),
+            'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -88,26 +84,26 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
 
-        # explictily testing that invoking twice doesn't cause the model to
-        # crash because of exising outputs
+        # explicitly testing that invoking twice doesn't cause the model to
+        # crash because of existing outputs
         forest_carbon_edge_effect.execute(args)
         forest_carbon_edge_effect.execute(args)
-        self.assertTrue(True)  # explict pass of the model
+        self.assertTrue(True)  # explicit pass of the model
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_no_forest_edge(self):
-        """Forest Carbon Edge: small test for no forest edge effects."""
+    def test_carbon_no_forest_edge(self):
+        """Forest Carbon Edge: test for no forest edge effects."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
-                REGRESSION_DATA, 'no_forest_edge_carbon_lu_table.csv'),
+                SAMPLE_DATA, 'no_forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': False,
-            'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '1',
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'small_lulc.tif'),
+            'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small_no_edge_effect',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -120,7 +116,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         ForestCarbonEdgeTests._test_same_files(
             os.path.join(
-                REGRESSION_DATA, 'file_list_small_no_edge_effect.txt'),
+                REGRESSION_DATA, 'file_list_no_edge_effect.txt'),
             args['workspace_dir'])
         ForestCarbonEdgeTests._assert_regression_results_eq(
             args['workspace_dir'],
@@ -128,22 +124,22 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 args['workspace_dir'],
                 'aggregated_carbon_stocks_small_no_edge_effect.shp'),
             os.path.join(
-                REGRESSION_DATA, 'agg_results_small_no_edge_effect.csv'))
+                REGRESSION_DATA, 'agg_results_no_edge_effect.csv'))
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_carbon_small_bad_pool_value(self):
-        """Forest Carbon Edge: small test with bad carbon pool value."""
+    def test_carbon_bad_pool_value(self):
+        """Forest Carbon Edge: test with bad carbon pool value."""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
-                REGRESSION_DATA,
+                SAMPLE_DATA,
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
-            'lulc_uri': os.path.join(REGRESSION_DATA, 'small_lulc.tif'),
-            'n_nearest_model_points': '1',
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'small_lulc.tif'),
+            'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
             'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
@@ -154,6 +150,38 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             forest_carbon_edge_effect.execute(args)
+
+    @scm.skip_if_data_missing(SAMPLE_DATA)
+    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_carbon_nodata_lulc(self):
+        """Forest Carbon Edge: regression testing all functionality."""
+        from natcap.invest import forest_carbon_edge_effect
+
+        args = {
+            'aoi_uri': os.path.join(SAMPLE_DATA, 'small_aoi.shp'),
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_uri': os.path.join(
+                SAMPLE_DATA, 'forest_edge_carbon_lu_table.csv'),
+            'compute_forest_edge_effects': True,
+            'lulc_uri': os.path.join(SAMPLE_DATA, 'nodata_lulc.tif'),
+            'n_nearest_model_points': 10,
+            'pools_to_calculate': 'all',
+            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+                SAMPLE_DATA, 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+
+        forest_carbon_edge_effect.execute(args)
+        ForestCarbonEdgeTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'file_list.txt'),
+            args['workspace_dir'])
+
+        ForestCarbonEdgeTests._assert_regression_results_eq(
+            args['workspace_dir'],
+            os.path.join(
+                args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_nodata_lulc.csv'))
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
