@@ -19,7 +19,7 @@ TEST_DATA = os.path.join(
     'pollination')
 TEST_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output_wrongproj"
+# tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output_wrongproj"
 
 class PollinationTests(unittest.TestCase):
     """Tests for the Pollination model."""
@@ -62,7 +62,7 @@ class PollinationTests(unittest.TestCase):
             },
         }
         result_vector = ogr.Open(
-            os.path.join(self.workspace_dir, 'farm_results.shp'))
+            os.path.join(args['workspace_dir'], 'farm_results.shp'))
         result_layer = result_vector.GetLayer()
         try:
             self.assertEqual(
