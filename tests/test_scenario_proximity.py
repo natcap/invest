@@ -32,8 +32,8 @@ class ScenarioProximityTests(unittest.TestCase):
         tests"""
         args = {
             'aoi_path': os.path.join(
-                TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.shp'),
-            'area_to_convert': '20000.0',
+                TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.gpkg'),
+            'area_to_convert': '3218.0',
             'base_lulc_path': os.path.join(
                 TEST_DATA_DIR, 'input', 'clipped_lulc.tif'),
             'workspace_dir': workspace_dir,
@@ -77,10 +77,10 @@ class ScenarioProximityTests(unittest.TestCase):
         from natcap.invest import scenario_gen_proximity
 
         args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
-        #del args['aoi_path']
         args['convert_farthest_from_edge'] = True
         args['convert_nearest_to_edge'] = False
-
+        # running without an AOI
+        del args['aoi_path']
         scenario_gen_proximity.execute(args)
         ScenarioProximityTests._test_same_files(
             os.path.join(
