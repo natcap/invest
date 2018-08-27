@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import os
 
-from osgeo import ogr
+from osgeo import gdal
 import numpy
 
 
@@ -89,7 +89,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(REGRESSION_DATA, 'small_aoi.shp'),
+            'aoi_uri': os.path.join(
+                REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
                 REGRESSION_DATA, 'input',
@@ -105,20 +106,19 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-        args['workspace_dir'] = 'testing_forest_carbon_edge_workspace'
         forest_carbon_edge_effect.execute(args)
 
         ForestCarbonEdgeTests._test_same_files(
             os.path.join(
                 REGRESSION_DATA, 'file_list_no_edge_effect.txt'),
             args['workspace_dir'])
-        ForestCarbonEdgeTests._assert_vector_results_close(
-            args['workspace_dir'],
+        self._assert_vector_results_close(
+            args['workspace_dir'], 'id', ['c_sum', 'c_ha_mean'],
             os.path.join(
                 args['workspace_dir'],
                 'aggregated_carbon_stocks_small_no_edge_effect.shp'),
             os.path.join(
-                REGRESSION_DATA, 'agg_results_no_edge_effect.csv'))
+                REGRESSION_DATA, 'agg_results_no_edge_effect.shp'))
 
     def test_carbon_bad_pool_value(self):
         """Forest Carbon Edge: test with bad carbon pool value."""
@@ -164,17 +164,17 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-
+        args['workspace_dir'] = 'testing_forest_carbon_edge_workspace'
         forest_carbon_edge_effect.execute(args)
         ForestCarbonEdgeTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'file_list.txt'),
             args['workspace_dir'])
 
-        ForestCarbonEdgeTests._assert_vector_results_close(
-            args['workspace_dir'],
+        self._assert_vector_results_close(
+            args['workspace_dir'], 'id', ['c_sum', 'c_ha_mean'],
             os.path.join(
                 args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_nodata_lulc.csv'))
+            os.path.join(REGRESSION_DATA, 'agg_results_nodata_lulc.shp'))
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
@@ -228,7 +228,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             AssertionError if results are not nearly equal or missing.
 
         """
-        result_vector = ogr.Open(result_vector_path)
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         try:
             result_layer = result_vector.GetLayer()
             result_lookup = {}
@@ -236,7 +236,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 result_lookup[feature.GetField(id_fieldname)] = dict(
                     [(fieldname, feature.GetField(fieldname))
                      for fieldname in field_list])
-            expected_vector = ogr.Open(expected_vector_path)
+            expected_vector = gdal.OpenEx(
+                expected_vector_path, gdal.OF_VECTOR)
             expected_layer = expected_vector.GetLayer()
             expected_lookup = {}
             for feature in expected_layer:
@@ -261,5 +262,5 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         finally:
             result_layer = None
             if result_vector:
-                ogr.DataSource.__swig_destroy__(result_vector)
+                gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
