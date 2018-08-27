@@ -18,8 +18,7 @@ TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'pollination')
 TEST_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output"
-# tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output_wrongproj"
+
 
 class PollinationTests(unittest.TestCase):
     """Tests for the Pollination model."""
@@ -41,24 +40,27 @@ class PollinationTests(unittest.TestCase):
 
         args = {
             'results_suffix': u'',
-            'workspace_dir': tempdir, #self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 SAMPLE_DATA, 'pollination_example_landcover.tif'),
             'guild_table_path': os.path.join(
                 SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, 'landcover_biophysical_table_simple.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
                 SAMPLE_DATA, 'blueberry_ridge_farm.shp'),
         }
-        # make an empty farm result to get coverage for removing if necessary
-        f = open(os.path.join(self.workspace_dir, 'farm_results.shp'), 'w')
-        f.close()
+        # make empty result files to get coverage for removing if necessary
+        result_files = ['farm_results.shp', 'total_pollinator_yield.tif',
+                        'wild_pollinator_yield.tif']
+        for file_name in result_files:
+            f = open(os.path.join(args['workspace_dir'], file_name), 'w')
+            f.close()
         pollination.execute(args)
         expected_farm_yields = {
             'blueberry': {
-                'y_tot': 0.41237348829,
-                'y_wild': 0.06237348829
+                'y_tot': 0.44934792607,
+                'y_wild': 0.09934792607
             },
         }
         result_vector = ogr.Open(
@@ -88,7 +90,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
+                SAMPLE_DATA, 'pollination_example_landcover.tif'),
             'guild_table_path': os.path.join(
                 SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
@@ -109,8 +111,9 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table_simple.csv'),
+                SAMPLE_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
@@ -129,7 +132,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
+                SAMPLE_DATA, 'pollination_example_landcover.tif'),
             'guild_table_path': os.path.join(
                 SAMPLE_DATA, 'missing_guild_table_header.csv'),
             'landcover_biophysical_table_path': os.path.join(
@@ -161,7 +164,7 @@ class PollinationTests(unittest.TestCase):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
-        self.assertAlmostEqual(result_sum, 4790.44, places=2)
+        self.assertAlmostEqual(result_sum, 58.669518, places=2)
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_guild_headers(self):
@@ -182,7 +185,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                SAMPLE_DATA, 'clipped_landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'landcover_biophysical_table.csv'),
@@ -207,7 +210,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                SAMPLE_DATA, 'clipped_landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': bad_biophysical_table_path,
             'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
@@ -241,7 +244,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                SAMPLE_DATA, 'clipped_landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': bad_biophysical_table_path,
             'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
@@ -275,7 +278,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                SAMPLE_DATA, 'clipped_landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'landcover_biophysical_table.csv'),
