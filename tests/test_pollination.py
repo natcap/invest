@@ -13,10 +13,13 @@ import shapely.geometry
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data\input"
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'pollination')
-
+TEST_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data"
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output"
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\output_wrongproj"
 
 class PollinationTests(unittest.TestCase):
     """Tests for the Pollination model."""
@@ -38,14 +41,15 @@ class PollinationTests(unittest.TestCase):
 
         args = {
             'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': tempdir, #self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+                SAMPLE_DATA, 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                SAMPLE_DATA, 'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'blueberry_ridge_farm.shp'),
+                SAMPLE_DATA, 'blueberry_ridge_farm.shp'),
         }
         # make an empty farm result to get coverage for removing if necessary
         f = open(os.path.join(self.workspace_dir, 'farm_results.shp'), 'w')
@@ -85,11 +89,12 @@ class PollinationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+            'guild_table_path': os.path.join(
+                SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'missing_headers_farm.shp'),
+                SAMPLE_DATA, 'missing_headers_farm.shp'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
@@ -105,11 +110,11 @@ class PollinationTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
                 TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'too_many_seasons_farm.shp'),
+                SAMPLE_DATA, 'too_many_seasons_farm.shp'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
@@ -126,14 +131,13 @@ class PollinationTests(unittest.TestCase):
             'landcover_raster_path': os.path.join(
                 TEST_DATA, 'pollination_example_landcover.tif'),
             'guild_table_path': os.path.join(
-                TEST_DATA, 'missing_guild_table_header.csv'),
+                SAMPLE_DATA, 'missing_guild_table_header.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                SAMPLE_DATA, r'landcover_biophysical_table_simple.csv'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
             pollination.execute(args)
-
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_no_farm_regression(self):
@@ -144,7 +148,7 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'clipped_landcover.tif'),
+                SAMPLE_DATA, 'clipped_landcover.tif'),
             'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 SAMPLE_DATA, r'landcover_biophysical_table.csv')
@@ -158,7 +162,6 @@ class PollinationTests(unittest.TestCase):
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
         self.assertAlmostEqual(result_sum, 4790.44, places=2)
-
 
     @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_guild_headers(self):

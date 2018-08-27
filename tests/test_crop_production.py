@@ -5,15 +5,14 @@ import shutil
 import os
 
 import pandas
-import numpy
 from pygeoprocessing.testing import scm
 
 MODEL_DATA_PATH = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'CropProduction', 'model_data')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'crop_production_model', 'input', 'model_data')
 SAMPLE_DATA_PATH = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'CropProduction', 'sample_user_data')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'crop_production_model', 'input', 'sample_user_data')
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'crop_production_model')
