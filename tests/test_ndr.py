@@ -11,7 +11,6 @@ from osgeo import ogr
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\NDR\invest-test-data"
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\NDR\output"
 
 
 class NDRTests(unittest.TestCase):
