@@ -10,9 +10,6 @@ from pygeoprocessing.testing import sampledata
 from osgeo import ogr
 import shapely.geometry
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data\input"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'pollination')
@@ -127,7 +124,7 @@ class PollinationTests(unittest.TestCase):
             pollination.execute(args)
 
     def test_pollination_missing_guild_header(self):
-        """Pollination: regression testing extra guild headers."""
+        """Pollination: regression testing missing guild headers."""
         from natcap.invest import pollination
 
         args = {
