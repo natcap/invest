@@ -16,7 +16,9 @@ import pygeoprocessing.testing as pygeotest
 from natcap.invest import utils
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'CoastalBlueCarbon')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'CoastalBlueCarbon')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\blueCarbon\CoastalBlueCarbon"
 LOGGER = logging.getLogger(__name__)
 
 
@@ -352,8 +354,6 @@ class TestPreprocessor(unittest.TestCase):
         First raster contains ones, second nodata, third zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        from natcap.invest import utils
-
         args = _get_preprocessor_args(4, self.workspace_dir)
         preprocessor.execute(args)
         trans_csv = os.path.join(
@@ -453,12 +453,11 @@ class TestPreprocessor(unittest.TestCase):
         preprocessor.execute(args)
 
     def test_binary(self):
-        """Coastal Blue Carbon: Test preprocessor  run against InVEST-Data."""
+        """Coastal Blue Carbon: Test preprocessor run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
         raster_0_uri = os.path.join(
-            SAMPLE_DATA,
-            'inputs/GBJC_2010_mean_Resample.tif')
+            SAMPLE_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
         raster_1_uri = os.path.join(
             SAMPLE_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
         raster_2_uri = os.path.join(
@@ -467,8 +466,7 @@ class TestPreprocessor(unittest.TestCase):
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
-                SAMPLE_DATA,
-                'inputs/lulc_lookup.csv'),
+                SAMPLE_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
         preprocessor.execute(args)
@@ -667,7 +665,7 @@ class TestModel(unittest.TestCase):
             import coastal_blue_carbon as cbc
 
         self.args = _get_args(valuation=False, workspace=self.workspace_dir)
-        self.args['lulc_baseline_year']= 2000
+        self.args['lulc_baseline_year'] = 2000
         self.args['lulc_transition_years_list'] = [2005, 2010]
         self.args['analysis_year'] = None
 
@@ -710,25 +708,20 @@ class TestModel(unittest.TestCase):
             'do_price_table': True,
             'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
-                SAMPLE_DATA,
-                'inputs/lulc_lookup.csv'),
+                SAMPLE_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_baseline_map_uri': os.path.join(
-                SAMPLE_DATA,
-                'inputs/GBJC_2010_mean_Resample.tif'),
+                SAMPLE_DATA, 'inputs/GBJC_2010_mean_Resample.tif'),
             'lulc_baseline_year': 2010,
             'lulc_transition_maps_list': [
                 os.path.join(
-                    SAMPLE_DATA,
-                    'inputs/GBJC_2030_mean_Resample.tif'),
+                    SAMPLE_DATA, 'inputs/GBJC_2030_mean_Resample.tif'),
                 os.path.join(
-                    SAMPLE_DATA,
-                    'inputs/GBJC_2050_mean_Resample.tif')],
+                    SAMPLE_DATA, 'inputs/GBJC_2050_mean_Resample.tif')],
             'lulc_transition_years_list': [2030, 2050],
             'price_table_uri': os.path.join(
                 SAMPLE_DATA, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
-                SAMPLE_DATA,
-                'outputs_preprocessor/transitions_sample.csv'),
+                SAMPLE_DATA, 'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
             'results_suffix': '150225'
         }
@@ -787,8 +780,9 @@ class TestModel(unittest.TestCase):
         try:
             cbc.execute(self.args)
         except AttributeError as error:
-            LOGGER.exception("Here's the traceback encountered:")
+            LOGGER.exception("Here's the traceback encountered: %s" % error)
             self.fail('CBC should not crash when only 1 transition provided')
+
 
 class CBCRefactorTest(unittest.TestCase):
     def setUp(self):
@@ -944,7 +938,3 @@ class CBCRefactorTest(unittest.TestCase):
 
         self.assertEqual(biomass_dict, expected_biomass_dict)
         self.assertEqual(soil_dict, expected_soil_dict)
-
-
-if __name__ == '__main__':
-    unittest.main()
