@@ -11,8 +11,7 @@ from osgeo import ogr
 import shapely.geometry
 
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'pollination')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'pollination')
 
 
 class PollinationTests(unittest.TestCase):
