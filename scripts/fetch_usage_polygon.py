@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
 
     OUT_FILENAME = 'invest_usage_%s.geojson' % (
-        datetime.datetime.now().isoformat('_'))
+        datetime.datetime.now().isoformat('_').replace(':', '_'))
     print 'Writing usage to %s' % OUT_FILENAME
     with open(OUT_FILENAME, 'w') as out_geojson:
         print 'downloading run_summary vector'
