@@ -16,7 +16,7 @@ import pygeoprocessing.testing as pygeotest
 from natcap.invest import utils
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
+    os.path.dirname(__file__), '..', 'data', 'invest-data', 'CoastalBlueCarbon')
 LOGGER = logging.getLogger(__name__)
 
 
@@ -95,17 +95,17 @@ def _create_workspace():
 
 
 def _get_args(workspace, num_transitions=2, valuation=True):
-    """Create and return arguements for CBC main model.
+    """Create and return arguments for CBC main model.
 
     Parameters:
-        workspace(string): A path to a folder on disk.  Generated inputs will be
-            saved to this directory.
+        workspace(string): A path to a folder on disk.  Generated inputs will
+            be saved to this directory.
         num_transitions=2 (int): The number of transitions to synthesize.
         valuation=True (bool): Whether to include parameters related to
             valuation in the args dict.
 
     Returns:
-        args (dict): main model arguements
+        args (dict): main model arguments.
     """
     band_matrices = [numpy.ones((2, 2))]
     band_matrices_two = [numpy.ones((2, 2)) * 2]
@@ -456,19 +456,18 @@ class TestPreprocessor(unittest.TestCase):
         """Coastal Blue Carbon: Test preprocessor  run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
-        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         raster_0_uri = os.path.join(
-            sample_data_path,
+            SAMPLE_DATA,
             'inputs/GBJC_2010_mean_Resample.tif')
         raster_1_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2030_mean_Resample.tif')
+            SAMPLE_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
         raster_2_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif')
+            SAMPLE_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'inputs/lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
@@ -698,38 +697,37 @@ class TestModel(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
-        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         args = {
             'workspace_dir': self.args['workspace_dir'],
             'carbon_pool_initial_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'outputs_preprocessor/carbon_pool_initial_sample.csv'),
             'carbon_pool_transient_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'outputs_preprocessor/carbon_pool_transient_sample.csv'),
             'discount_rate': 6.0,
             'do_economic_analysis': True,
             'do_price_table': True,
             'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'inputs/lulc_lookup.csv'),
             'lulc_baseline_map_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'inputs/GBJC_2010_mean_Resample.tif'),
             'lulc_baseline_year': 2010,
             'lulc_transition_maps_list': [
                 os.path.join(
-                    sample_data_path,
+                    SAMPLE_DATA,
                     'inputs/GBJC_2030_mean_Resample.tif'),
                 os.path.join(
-                    sample_data_path,
+                    SAMPLE_DATA,
                     'inputs/GBJC_2050_mean_Resample.tif')],
             'lulc_transition_years_list': [2030, 2050],
             'price_table_uri': os.path.join(
-                sample_data_path, 'inputs/Price_table_SCC3.csv'),
+                SAMPLE_DATA, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
-                sample_data_path,
+                SAMPLE_DATA,
                 'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
             'results_suffix': '150225'
