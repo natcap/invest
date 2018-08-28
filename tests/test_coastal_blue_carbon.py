@@ -12,9 +12,7 @@ import pprint
 
 import numpy
 from osgeo import gdal
-from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
-import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing as pygeotest
 from natcap.invest import utils
 
 SAMPLE_DATA = os.path.join(
@@ -285,7 +283,7 @@ class TestPreprocessor(unittest.TestCase):
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
-        transient_dict = geoprocess.get_lookup_from_table(filepath, 'code')
+        transient_dict = utils.build_lookup_from_csv(filepath, 'code')
         # demonstrate that output table contains all input land cover classes
         for i in [1, 2, 3]:
             self.assertTrue(i in transient_dict.keys())
@@ -454,7 +452,6 @@ class TestPreprocessor(unittest.TestCase):
 
         preprocessor.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
         """Coastal Blue Carbon: Test preprocessor  run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
@@ -696,7 +693,6 @@ class TestModel(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
         """Coastal Blue Carbon: Test CBC model against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon \
@@ -824,7 +820,7 @@ class CBCRefactorTest(unittest.TestCase):
         Returns:
             A dict of the model arguments.
         """
-        from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
+        from pygeoprocessing.testing import sampledata
 
         args = {
             'workspace_dir': workspace,
