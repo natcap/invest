@@ -15,10 +15,10 @@ from osgeo import gdal
 import pygeoprocessing.testing as pygeotest
 from natcap.invest import utils
 
-SAMPLE_DATA = os.path.join(
+REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'CoastalBlueCarbon')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\blueCarbon\CoastalBlueCarbon"
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\blueCarbon\CoastalBlueCarbon"
 LOGGER = logging.getLogger(__name__)
 
 
@@ -457,16 +457,16 @@ class TestPreprocessor(unittest.TestCase):
         from natcap.invest.coastal_blue_carbon import preprocessor
 
         raster_0_uri = os.path.join(
-            SAMPLE_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
         raster_1_uri = os.path.join(
-            SAMPLE_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
         raster_2_uri = os.path.join(
-            SAMPLE_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
-                SAMPLE_DATA, 'inputs', 'lulc_lookup.csv'),
+                REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
         preprocessor.execute(args)
@@ -698,30 +698,30 @@ class TestModel(unittest.TestCase):
         args = {
             'workspace_dir': self.args['workspace_dir'],
             'carbon_pool_initial_uri': os.path.join(
-                SAMPLE_DATA,
+                REGRESSION_DATA,
                 'outputs_preprocessor/carbon_pool_initial_sample.csv'),
             'carbon_pool_transient_uri': os.path.join(
-                SAMPLE_DATA,
+                REGRESSION_DATA,
                 'outputs_preprocessor/carbon_pool_transient_sample.csv'),
             'discount_rate': 6.0,
             'do_economic_analysis': True,
             'do_price_table': True,
             'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
-                SAMPLE_DATA, 'inputs', 'lulc_lookup.csv'),
+                REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_baseline_map_uri': os.path.join(
-                SAMPLE_DATA, 'inputs/GBJC_2010_mean_Resample.tif'),
+                REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif'),
             'lulc_baseline_year': 2010,
             'lulc_transition_maps_list': [
                 os.path.join(
-                    SAMPLE_DATA, 'inputs/GBJC_2030_mean_Resample.tif'),
+                    REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif'),
                 os.path.join(
-                    SAMPLE_DATA, 'inputs/GBJC_2050_mean_Resample.tif')],
+                    REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')],
             'lulc_transition_years_list': [2030, 2050],
             'price_table_uri': os.path.join(
-                SAMPLE_DATA, 'inputs/Price_table_SCC3.csv'),
+                REGRESSION_DATA, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
-                SAMPLE_DATA, 'outputs_preprocessor/transitions_sample.csv'),
+                REGRESSION_DATA, 'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
             'results_suffix': '150225'
         }
