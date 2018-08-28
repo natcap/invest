@@ -33,7 +33,6 @@ class PollinationTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_pollination_regression(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
