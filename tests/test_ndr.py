@@ -7,7 +7,7 @@ import os
 
 import numpy
 from osgeo import ogr
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
