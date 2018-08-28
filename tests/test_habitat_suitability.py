@@ -12,6 +12,7 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'habitat_suitability')
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\habitatSuitability\invest-test-data"
 
 
 class HabitatSuitabilityTests(unittest.TestCase):
@@ -67,7 +68,7 @@ class HabitatSuitabilityTests(unittest.TestCase):
         args['categorical_geometry'] = {
             'substrate': {
                 'vector_path': os.path.join(
-                    SAMPLE_DATA, 'substrate_3005.shp'),
+                    REGRESSION_DATA, 'input', 'substrate_3005.shp'),
                 'fieldname': 'Suitabilit',
             }
         }
@@ -115,28 +116,30 @@ class HabitatSuitabilityTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'results_suffix': '',
-            'aoi_path': os.path.join(SAMPLE_DATA, 'AOI_ocean.shp'),
+            'aoi_path': os.path.join(REGRESSION_DATA, 'input', 'AOI_ocean.shp'),
             'exclusion_path_list': [
-                os.path.join(SAMPLE_DATA, 'example_masks', "mask_1.shp"),
-                os.path.join(SAMPLE_DATA, 'example_masks', "mask_2.shp")],
+                os.path.join(
+                    REGRESSION_DATA, 'input', 'example_masks', "mask_1.shp"),
+                os.path.join(
+                    REGRESSION_DATA, 'input', 'example_masks', "mask_2.shp")],
             'habitat_threshold': 0.2,
             'hsi_ranges': {
                 'depth': {
                     'raster_path': os.path.join(
-                        SAMPLE_DATA, "bathyclip"),
+                        REGRESSION_DATA, 'input', "bathyclip"),
                     'suitability_range': (-50, -30, -10, -10),
                 },
                 'temperature': {
-                    'raster_path': os.path.join(SAMPLE_DATA, "sst"),
+                    'raster_path': os.path.join(REGRESSION_DATA, 'input', "sst"),
                     'suitability_range': (5, 7, 12.5, 16),
                 },
                 'salinity': {
-                    'raster_path': os.path.join(SAMPLE_DATA, "sss"),
+                    'raster_path': os.path.join(REGRESSION_DATA, 'input', "sss"),
                     'suitability_range': (28, 30, 31, 32),
                 },
                 'tidal_speed': {
                     'raster_path': os.path.join(
-                        SAMPLE_DATA, "tidalspeedcms.tif"),
+                        REGRESSION_DATA, 'input', "tidalspeedcms.tif"),
                     'suitability_range': (1.5, 5, 15, 30),
                 },
             },
