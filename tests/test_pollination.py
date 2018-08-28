@@ -6,7 +6,6 @@ import shutil
 import os
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 from osgeo import ogr
 import shapely.geometry
