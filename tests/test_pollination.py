@@ -45,7 +45,7 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
-                r'landcover_biophysical_table_simple.csv'),
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'blueberry_ridge_farm.shp'),
         }
@@ -97,7 +97,7 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
-                r'landcover_biophysical_table_simple.csv'),
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'missing_headers_farm.shp'),
         }
@@ -118,7 +118,7 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
-                r'landcover_biophysical_table_simple.csv'),
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'too_many_seasons_farm.shp'),
         }
@@ -139,7 +139,7 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'missing_guild_table_header.csv'),
             'landcover_biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
-                r'landcover_biophysical_table_simple.csv'),
+                'landcover_biophysical_table_simple.csv'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
@@ -157,7 +157,7 @@ class PollinationTests(unittest.TestCase):
             'guild_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                REGRESSION_DATA, 'input', r'landcover_biophysical_table.csv')
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv')
         }
         pollination.execute(args)
         result_raster_path = os.path.join(
@@ -190,7 +190,7 @@ class PollinationTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': os.path.join(
-                REGRESSION_DATA, 'input', r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
             'farm_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'farms.shp'),
         }
@@ -285,7 +285,7 @@ class PollinationTests(unittest.TestCase):
             'guild_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                REGRESSION_DATA, 'input', r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
             'farm_vector_path': farm_shape_path,
         }
         with self.assertRaises(ValueError):
