@@ -13,7 +13,6 @@ import shapely.geometry
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'pollination')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\pollination\invest-test-data"
 
 
 class PollinationTests(unittest.TestCase):
