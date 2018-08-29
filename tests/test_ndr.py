@@ -113,8 +113,9 @@ class NDRTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
     @staticmethod
-    def _assert_regression_results_equal(workspace_dir, file_list_path,
-                                         result_vector_path, agg_results_path):
+    def _assert_regression_results_equal(
+            workspace_dir, file_list_path, result_vector_path,
+            agg_results_path):
         """Test workspace state against expected aggregate results.
 
         Parameters:
@@ -145,18 +146,17 @@ class NDRTests(unittest.TestCase):
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
                 fid, p_load_tot, p_exp_tot, n_load_tot, n_exp_tot = [
-                    float(x) for x in line.split(',')
-                ]
+                    float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
                 if not feature:
                     raise AssertionError("The fid %s is missing." % fid)
-                for field, value in [('p_load_tot', p_load_tot), ('p_exp_tot',
-                                                                  p_exp_tot),
-                                     ('n_load_tot', n_load_tot), ('n_exp_tot',
-                                                                  n_exp_tot)]:
+                for field, value in [('p_load_tot', p_load_tot),
+                                     ('p_exp_tot', p_exp_tot),
+                                     ('n_load_tot', n_load_tot),
+                                     ('n_exp_tot', n_exp_tot)]:
                     if not numpy.isclose(feature.GetField(field), value):
-                        error_results[fid][field] = (feature.GetField(field),
-                                                     value)
+                        error_results[fid][field] = (
+                            feature.GetField(field), value)
 
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
@@ -185,7 +185,7 @@ class NDRTests(unittest.TestCase):
                 that don't exist in the directory indicated by `path`
         """
         missing_files = []
-        with open(base_list_path, 'rb') as file_list:
+        with open(base_list_path, 'r') as file_list:
             for file_path in file_list:
                 full_path = os.path.join(directory_path, file_path.rstrip())
                 if full_path == '':
