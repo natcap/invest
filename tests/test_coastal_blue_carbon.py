@@ -639,11 +639,7 @@ class TestModel(unittest.TestCase):
         netseq_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/total_net_carbon_sequestration_test.tif')
-        npv_output_raster = os.path.join(
-            self.args['workspace_dir'],
-            'outputs_core/net_present_value_test.tif')
         netseq_array = _read_array(netseq_output_raster)
-        npv_array = _read_array(npv_output_raster)
 
         # (Explanation for why netseq is 10.5.)
         # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2
