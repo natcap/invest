@@ -6,7 +6,6 @@ import os
 
 import pandas
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -46,8 +45,6 @@ class ScenarioProximityTests(unittest.TestCase):
         }
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scenario_gen_regression(self):
         """Scenario Gen Proximity: regression testing all functionality."""
         from natcap.invest import scenario_gen_proximity
@@ -76,8 +73,6 @@ class ScenarioProximityTests(unittest.TestCase):
                 REGRESSION_DATA, 'nearest_to_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_scenario_gen_farthest(self):
         """Scenario Gen Proximity: testing small far functionality."""
         from natcap.invest import scenario_gen_proximity

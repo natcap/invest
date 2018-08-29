@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pandas
-from pygeoprocessing.testing import scm
 
 MODEL_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -31,8 +30,6 @@ class CropProductionTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
-    @scm.skip_if_data_missing(MODEL_DATA_PATH)
     def test_crop_production_percentile(self):
         """Crop Production: test crop production percentile regression."""
         from natcap.invest import crop_production_percentile
@@ -62,8 +59,6 @@ class CropProductionTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
-    @scm.skip_if_data_missing(MODEL_DATA_PATH)
     def test_crop_production_percentile_bad_crop(self):
         """Crop Production: test crop production with a bad crop name."""
         from natcap.invest import crop_production_percentile
@@ -89,8 +84,6 @@ class CropProductionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             crop_production_percentile.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
-    @scm.skip_if_data_missing(MODEL_DATA_PATH)
     def test_crop_production_regression_bad_crop(self):
         """Crop Production: test crop regression with a bad crop name."""
         from natcap.invest import crop_production_regression
@@ -121,8 +114,6 @@ class CropProductionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             crop_production_regression.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA_PATH)
-    @scm.skip_if_data_missing(MODEL_DATA_PATH)
     def test_crop_production_regression(self):
         """Crop Production: test crop production regression model."""
         from natcap.invest import crop_production_regression
