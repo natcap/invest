@@ -5,8 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
-
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'Base_Data',
@@ -28,8 +26,6 @@ class RouteDEMTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_routedem_single_threshold(self):
         """RouteDem: regression testing single stream threshold."""
         from natcap.invest.routing import routedem
