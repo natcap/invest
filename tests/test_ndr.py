@@ -96,8 +96,8 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
 
-        # make an empty AOI on top of where the output shapefile should reside
-        # to ensure the model overwrites it
+        # make an empty output shapefile on top of where the new output
+        # shapefile should reside to ensure the model overwrites it
         with open(
                 os.path.join(self.workspace_dir, 'watershed_results_ndr.shp'),
                 'wb') as f:
