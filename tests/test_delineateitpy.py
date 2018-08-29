@@ -4,16 +4,14 @@ import tempfile
 import shutil
 import os
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
+from pygeoprocessing.testing import scm
 
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Base_Data',
-    'Freshwater')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\delineateIT\invest-test-data"
 
 
 class DelineateItTests(unittest.TestCase):
@@ -36,9 +34,10 @@ class DelineateItTests(unittest.TestCase):
         import natcap.invest.routing.delineateit
 
         args = {
-            'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_uri': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
             'flow_threshold': '500',
-            'outlet_shapefile_uri': os.path.join(SAMPLE_DATA, 'outlets.shp'),
+            'outlet_shapefile_uri': os.path.join(
+                REGRESSION_DATA, 'input', 'outlets.shp'),
             'snap_distance': '20',
             'workspace_dir': self.workspace_dir,
         }
@@ -47,9 +46,9 @@ class DelineateItTests(unittest.TestCase):
         DelineateItTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'watersheds.shp'),
-            os.path.join(self.workspace_dir, 'watersheds.shp'))
+            os.path.join(self.workspace_dir, 'watersheds.shp'), 1e-6)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):

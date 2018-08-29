@@ -6,12 +6,9 @@ import os
 
 import pygeoprocessing.testing
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Base_Data',
-    'Freshwater')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'routedem')
-
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\routeDEM\invest-test-data"
 
 class RouteDEMTests(unittest.TestCase):
     """Tests for RouteDEM."""
@@ -34,7 +31,7 @@ class RouteDEMTests(unittest.TestCase):
             'results_suffix': 'test',
             'calculate_downstream_distance': True,
             'calculate_slope': True,
-            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
             'calculate_stream_threshold': True,
             'calculate_flow_accumulation': True,
             'threshold_flow_accumulation': '1000',
@@ -42,7 +39,7 @@ class RouteDEMTests(unittest.TestCase):
         }
         routedem.execute(args)
         RouteDEMTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list_single.txt'),
+            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
         pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'v_stream_1000.tif'),
