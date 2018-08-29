@@ -12,8 +12,11 @@ from osgeo import ogr
 import six
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                         '..', 'data', 'invest-data')
-FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
-POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination')
+DATA_DIR = r"C:\Users\Joanna Lin\Desktop\test_folder\dataStack"
+# FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
+FW_DATA = os.path.join(DATA_DIR, 'fw_data')
+# POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination')
+POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination_data')
 
 
 class DatastacksTest(unittest.TestCase):
