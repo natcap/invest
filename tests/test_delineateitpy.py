@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 
 
 REGRESSION_DATA = os.path.join(
@@ -27,8 +26,6 @@ class DelineateItTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_routedem_multi_threshold(self):
         """DelineateIt: regression testing full run."""
         import natcap.invest.routing.delineateit
