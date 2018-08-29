@@ -141,8 +141,37 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
+        expected_message = 'Could not interpret carbon pool value'
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_missing_aoi(self):
+        """Forest carbon edge: ensure missing AOI causes exception."""
+        from natcap.invest import forest_carbon_edge_effect
+        args = {
+            'biomass_to_carbon_conversion_factor': '0.47',
+            'biophysical_table_uri': os.path.join(
+                REGRESSION_DATA, 'input',
+                'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
+            'compute_forest_edge_effects': False,
+            'lulc_uri': os.path.join(
+                REGRESSION_DATA, 'input', 'small_lulc.tif'),
+            'n_nearest_model_points': 1,
+            'pools_to_calculate': 'all',
+            'results_suffix': 'small_no_edge_effect',
+            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+                REGRESSION_DATA, 'input', 'core_data',
+                'forest_carbon_edge_regression_model_parameters.shp'),
+            'workspace_dir': self.workspace_dir,
+        }
+        args['aoi_uri'] = os.path.join('path', 'to', 'nonexistant', 'aoi.shp')
+        with self.assertRaises(ValueError) as cm:
+            forest_carbon_edge_effect.execute(args)
+        expected_message = 'Unable to open aoi at:'
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_carbon_nodata_lulc(self):
         """Forest Carbon Edge: regression testing all functionality."""
