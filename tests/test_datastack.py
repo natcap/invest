@@ -10,7 +10,7 @@ import pygeoprocessing.testing
 from osgeo import ogr
 import six
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        '..', 'data', 'invest-data')
+                        '..', 'data', 'invest-test-data', 'datastack')
 DATA_DIR = r"C:\Users\Joanna Lin\Desktop\test_folder\dataStack"
 
 
