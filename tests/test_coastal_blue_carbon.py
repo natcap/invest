@@ -17,8 +17,7 @@ from natcap.invest import utils
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'CoastalBlueCarbon')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\blueCarbon\CoastalBlueCarbon"
+    'coastal_blue_carbon')
 LOGGER = logging.getLogger(__name__)
 
 
