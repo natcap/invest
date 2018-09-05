@@ -10,7 +10,6 @@ import pygeoprocessing.testing
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\delineateIT\invest-test-data"
 
 
 class DelineateItTests(unittest.TestCase):
