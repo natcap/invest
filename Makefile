@@ -255,7 +255,6 @@ ZIPDIRS = Aquaculture \
 		  habitat_suitability \
 		  Hydropower \
 		  Malaria \
-		  OverlapAnalysis \
 		  pollination \
 		  recreation \
 		  ScenarioGenerator \

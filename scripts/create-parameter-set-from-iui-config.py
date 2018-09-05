@@ -28,8 +28,6 @@ IUI_SCENARIOS = {
     'hydropower_water_yield': 'Hydropower/annual_water_yield_willamette',
     'marine_water_quality_biophysical': 'MarineWaterQuality/marine_floathomes_wcvi',
     'ndr': 'Base_Data/Freshwater/ndr_n_p_willamette',
-    'overlap_analysis': 'OverlapAnalysis/overlap_wcvi',
-    'overlap_analysis_mz': 'OverlapAnalysis/overlap_mz_wcvi',
     'pollination': 'Pollination/pollination_willamette',
     'recreation': 'recreation/recreation_andros',
     'routedem': 'Base_Data/Freshwater/routedem_willamette',
