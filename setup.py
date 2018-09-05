@@ -116,6 +116,7 @@ setup(
             language="c++")
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
+    extensions=[Extension('*', ['*.pyx'])],
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
