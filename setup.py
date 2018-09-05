@@ -78,6 +78,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
+    extensions=[Extension('*', ['*.pyx'])],
     ext_modules=[
         Extension(
             name="natcap.invest.recreation.out_of_core_quadtree",
@@ -116,7 +117,6 @@ setup(
             language="c++")
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
-    extensions=[Extension('*', ['*.pyx'])],
     entry_points={
         'console_scripts': [
             'invest = natcap.invest.cli:main'
