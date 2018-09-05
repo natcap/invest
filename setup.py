@@ -10,6 +10,7 @@ For other commands, try `python setup.py --help-commands`
 from setuptools.extension import Extension
 from setuptools import setup
 import Cython.Build
+from Cython.Build import cythonize
 import numpy
 
 
@@ -22,6 +23,42 @@ _GUI_REQUIREMENTS = [req for req in open('requirements-gui.txt').readlines()
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
+extensions = [Extension(
+            name="natcap.invest.recreation.out_of_core_quadtree",
+            sources=[
+                'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.scenic_quality.viewshed",
+            sources=[
+                'src/natcap/invest/scenic_quality/viewshed.pyx'],
+            include_dirs=[numpy.get_include(),
+                          'src/natcap/invest/scenic_quality'],
+            language="c++"),
+        Extension(
+            name="natcap.invest.ndr.ndr_core",
+            sources=['src/natcap/invest/ndr/ndr_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.seasonal_water_yield.seasonal_water_yield_core",
+            sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
+            sources=[
+                'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
+            sources=[
+                'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++")
+    ]
 
 setup(
     name='natcap.invest',
@@ -78,44 +115,7 @@ setup(
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
-    extensions=[Extension('*', ['*.pyx'])],
-    ext_modules=[
-        Extension(
-            name="natcap.invest.recreation.out_of_core_quadtree",
-            sources=[
-                'src/natcap/invest/recreation/out_of_core_quadtree.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.scenic_quality.viewshed",
-            sources=[
-                'src/natcap/invest/scenic_quality/viewshed.pyx'],
-            include_dirs=[numpy.get_include(),
-                          'src/natcap/invest/scenic_quality'],
-            language="c++"),
-        Extension(
-            name="natcap.invest.ndr.ndr_core",
-            sources=['src/natcap/invest/ndr/ndr_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.seasonal_water_yield.seasonal_water_yield_core",
-            sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++")
-    ],
+    ext_modules=cythonize(extensions),
     cmdclass={'build_ext': Cython.Build.build_ext},
     entry_points={
         'console_scripts': [
