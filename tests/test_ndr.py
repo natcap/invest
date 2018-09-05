@@ -7,14 +7,9 @@ import os
 
 import numpy
 from osgeo import ogr
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'Base_Data', 'Freshwater')
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'ndr')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ndr')
 
 
 class NDRTests(unittest.TestCase):
@@ -32,26 +27,27 @@ class NDRTests(unittest.TestCase):
     def generate_base_args(workspace_dir):
         """Generate a base sample args dict for NDR."""
         args = {
-            'biophysical_table_path': os.path.join(
-                SAMPLE_DATA, 'biophysical_table.csv'),
+            'biophysical_table_path':
+            os.path.join(REGRESSION_DATA, 'input', 'biophysical_table.csv'),
             'calc_n': True,
             'calc_p': True,
-            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
             'k_param': 2.0,
-            'lulc_path': os.path.join(SAMPLE_DATA, 'landuse_90'),
-            'runoff_proxy_path': os.path.join(SAMPLE_DATA, 'precip'),
+            'lulc_path':
+            os.path.join(REGRESSION_DATA, 'input', 'landuse_90.tif'),
+            'runoff_proxy_path':
+            os.path.join(REGRESSION_DATA, 'input', 'precip.tif'),
             'subsurface_critical_length_n': 150,
             'subsurface_critical_length_p': '150',
             'subsurface_eff_n': 0.4,
             'subsurface_eff_p': '0.8',
             'threshold_flow_accumulation': '1000',
-            'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
+            'watersheds_path':
+            os.path.join(REGRESSION_DATA, 'input', 'watersheds.shp'),
             'workspace_dir': workspace_dir,
         }
         return args.copy()
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_missing_headers(self):
         """NDR biphysical headers missing should raise a ValueError."""
         from natcap.invest.ndr import ndr
@@ -60,12 +56,22 @@ class NDRTests(unittest.TestCase):
         args = NDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
-            REGRESSION_DATA, 'biophysical_table_missing_headers.csv')
+            REGRESSION_DATA, 'input', 'biophysical_table_missing_headers.csv')
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
+    def test_missing_lucode(self):
+        """NDR missing lucode in biophysical table should raise a KeyError."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['biophysical_table_path'] = os.path.join(
+            REGRESSION_DATA, 'input', 'biophysical_table_missing_lucode.csv')
+        with self.assertRaises(KeyError):
+            ndr.execute(args)
+
     def test_no_nutrient_selected(self):
         """NDR no nutrient selected should raise a ValueError."""
         from natcap.invest.ndr import ndr
@@ -78,8 +84,6 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_base_regression(self):
         """NDR base regression test on sample data.
 
@@ -92,12 +96,12 @@ class NDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
 
-        # copy a junk AOI on top of where the output shapefile should reside
-        # to ensure the model overwrites it
-        os.makedirs(os.path.join(self.workspace_dir, 'output'))
-        shutil.copy(
-            args['watersheds_path'], os.path.join(
-                self.workspace_dir, 'watershed_results_ndr.shp'))
+        # make an empty output shapefile on top of where the new output
+        # shapefile should reside to ensure the model overwrites it
+        with open(
+                os.path.join(self.workspace_dir, 'watershed_results_ndr.shp'),
+                'wb') as f:
+            f.write('')
 
         # make args explicit that this is a base run of SWY
         ndr.execute(args)
@@ -132,20 +136,11 @@ class NDRTests(unittest.TestCase):
             range by `tolerance_places`
         """
         # test that the workspace has the same files as we expect
-        NDRTests._test_same_files(
-            file_list_path, workspace_dir)
+        NDRTests._test_same_files(file_list_path, workspace_dir)
 
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
         result_layer = result_vector.GetLayer()
-
-        # The tolerance of 3 digits after the decimal was determined by
-        # experimentation on the application with the given range of numbers.
-        # This is an apparently reasonable approach as described by ChrisF:
-        # http://stackoverflow.com/a/3281371/42897
-        # and even more reading about picking numerical tolerance (it's hard):
-        # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
-        tolerance_places = 3
 
         error_results = collections.defaultdict(dict)
         with open(agg_results_path, 'rb') as agg_result_file:
@@ -153,11 +148,12 @@ class NDRTests(unittest.TestCase):
                 fid, p_load_tot, p_exp_tot, n_load_tot, n_exp_tot = [
                     float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
-                for field, value in [
-                        ('p_load_tot', p_load_tot),
-                        ('p_exp_tot', p_exp_tot),
-                        ('n_load_tot', n_load_tot),
-                        ('n_exp_tot', n_exp_tot)]:
+                if not feature:
+                    raise AssertionError("The fid %s is missing." % fid)
+                for field, value in [('p_load_tot', p_load_tot),
+                                     ('p_exp_tot', p_exp_tot),
+                                     ('n_load_tot', n_load_tot),
+                                     ('n_exp_tot', n_exp_tot)]:
                     if not numpy.isclose(feature.GetField(field), value):
                         error_results[fid][field] = (
                             feature.GetField(field), value)
@@ -170,7 +166,6 @@ class NDRTests(unittest.TestCase):
         if error_results:
             raise AssertionError(
                 "The following values are not equal: %s" % error_results)
-
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
