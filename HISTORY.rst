@@ -8,6 +8,7 @@ Unreleased Changes
   impossible negative coefficients.
 * Fixing an issue with the Scenario Generator: Proximity model that would
   raise an exception if no AOI were passed in even though the AOI is optional.
+* Removing Overlap Analysis and Overlap Analysis: Management Zones.
 
 3.5.0 (2018-08-14)
 ------------------

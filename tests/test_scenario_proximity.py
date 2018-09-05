@@ -6,7 +6,6 @@ import os
 
 import pandas
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 
 TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
