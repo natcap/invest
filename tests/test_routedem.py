@@ -8,7 +8,7 @@ import pygeoprocessing.testing
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'routedem')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\routeDEM\invest-test-data"
+
 
 class RouteDEMTests(unittest.TestCase):
     """Tests for RouteDEM."""
