@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from osgeo import ogr
 import numpy
 
@@ -40,8 +39,6 @@ class GLOBIOTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_predefined_lulc(self):
         """GLOBIO: regression testing predefined LULC (mode b)."""
         from natcap.invest import globio
@@ -67,8 +64,6 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_empty_infra(self):
         """GLOBIO: testing that empty infra directory raises exception."""
         from natcap.invest import globio
@@ -89,8 +84,6 @@ class GLOBIOTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             globio.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_shape_infra(self):
         """GLOBIO: regression testing with shapefile infrastructure."""
         from natcap.invest import globio
@@ -117,8 +110,6 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
             1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_full(self):
         """GLOBIO: regression testing all functionality (mode a)."""
         from natcap.invest import globio
