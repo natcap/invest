@@ -252,7 +252,6 @@ ZIPDIRS = Aquaculture \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  habitat_suitability \
 		  Hydropower \
 		  Malaria \
 		  pollination \
