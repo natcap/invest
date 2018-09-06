@@ -21,12 +21,14 @@ from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'recreation')
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'recreation_model')
+# SAMPLE_DATA = os.path.join(
+#     os.path.dirname(__file__), '..', 'data', 'invest-data',
+#     'recreation')
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
+# REGRESSION_DATA = os.path.join(
+#     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+#     'recreation_model')
+REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
@@ -480,6 +482,10 @@ class TestLocalRecServer(unittest.TestCase):
         self.recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
