@@ -4,13 +4,8 @@ import tempfile
 import shutil
 import os
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
 
-
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Base_Data',
-    'Freshwater')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'routedem')
 
@@ -28,8 +23,6 @@ class RouteDEMTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_routedem_single_threshold(self):
         """RouteDem: regression testing single stream threshold."""
         from natcap.invest.routing import routedem
@@ -38,7 +31,7 @@ class RouteDEMTests(unittest.TestCase):
             'results_suffix': 'test',
             'calculate_downstream_distance': True,
             'calculate_slope': True,
-            'dem_path': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
             'calculate_stream_threshold': True,
             'calculate_flow_accumulation': True,
             'threshold_flow_accumulation': '1000',
@@ -46,12 +39,11 @@ class RouteDEMTests(unittest.TestCase):
         }
         routedem.execute(args)
         RouteDEMTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list_single.txt'),
+            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
+        pygeoprocessing.testing.assert_rasters_equal(
             os.path.join(REGRESSION_DATA, 'v_stream_1000.tif'),
             os.path.join(self.workspace_dir, 'stream_mask_test.tif'), 1e-6)
-
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
