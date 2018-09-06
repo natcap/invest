@@ -70,14 +70,18 @@ def _timeout(max_timeout):
     return timeout_decorator
 
 
-def _make_dummy_file(base_file_path):
+def _make_dummy_files(base_file_list):
     """Create a dummy output file to be overwritten.
 
     Parameters:
-        base_file_path: path to the file.
+        base_file_list: a list of paths to files to be created.
+
+    Returns:
+        None.
     """
-    with open(base_file_path, 'w') as open_file:
-        open_file.write('')
+    for file_path in base_file_list:
+        with open(file_path, 'w') as open_file:
+            open_file.write('')
 
 
 class TestBufferedNumpyDiskMap(unittest.TestCase):
@@ -148,7 +152,7 @@ class TestRecServer(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             # intentionally construct start year > end year
-            _ = recmodel_server.RecModel(
+            recmodel_server.RecModel(
                 os.path.join(REGRESSION_DATA, 'sample_data.csv'),
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
@@ -156,7 +160,6 @@ class TestRecServer(unittest.TestCase):
     def test_workspace_fetcher(self):
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
         from natcap.invest.recreation import recmodel_server
-        from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_workspace_fetcher
 
         sample_point_data_path = os.path.join(
@@ -294,7 +297,6 @@ class TestRecServer(unittest.TestCase):
 
     def test_local_aggregate_points(self):
         """Recreation test single threaded local AOI aggregate calculation."""
-        from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
@@ -349,7 +351,6 @@ class TestRecServer(unittest.TestCase):
 
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
-        from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
@@ -375,7 +376,6 @@ class TestRecServer(unittest.TestCase):
 
     def test_local_calc_existing_cached(self):
         """Recreation local PUD calculation on existing quadtree."""
-        from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
@@ -803,9 +803,8 @@ class RecreationRegressionTests(unittest.TestCase):
         out_coefficient_vector_path = os.path.join(
             self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
-
-        _make_dummy_file(tmp_indexed_vector_path)
-        _make_dummy_file(out_coefficient_vector_path)
+        _make_dummy_files(
+            [tmp_indexed_vector_path, out_coefficient_vector_path])
 
         # build again to test against overwriting output
         recmodel_client._build_regression_coefficients(
