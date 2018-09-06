@@ -13,22 +13,22 @@ import functools
 import logging
 
 import Pyro4
-import natcap.invest.pygeoprocessing_0_3_3
-import natcap.invest.pygeoprocessing_0_3_3.testing
+import pygeoprocessing
+import pygeoprocessing.testing
 import numpy
 import pandas
 from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
-# SAMPLE_DATA = os.path.join(
-#     os.path.dirname(__file__), '..', 'data', 'invest-data',
-#     'recreation')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
-# REGRESSION_DATA = os.path.join(
-#     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-#     'recreation_model')
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
+SAMPLE_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-data',
+    'recreation')
+# SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'recreation_model')
+# REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
@@ -68,6 +68,16 @@ def _timeout(max_timeout):
                 raise RuntimeError("Timeout of %f exceeded" % max_timeout)
         return func_wrapper
     return timeout_decorator
+
+
+def _make_dummy_file(base_file_path):
+    """Create a dummy output file to be overwritten.
+
+    Parameters:
+        base_file_path: path to the file.
+    """
+    with open(base_file_path, 'w') as open_file:
+        open_file.write('')
 
 
 class TestBufferedNumpyDiskMap(unittest.TestCase):
@@ -224,9 +234,9 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, workspace_id + '.zip')
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(
             out_workspace_dir)
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     @_timeout(30.0)
     def test_empty_server(self):
@@ -322,8 +332,8 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, out_vector_filename)
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            expected_vector_path, result_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            expected_vector_path, result_vector_path, 1E-6)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -333,9 +343,9 @@ class TestRecServer(unittest.TestCase):
         workspace_zip_path = os.path.join(out_workspace_dir, 'workspace.zip')
         open(workspace_zip_path, 'wb').write(workspace_zip_binary)
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'))
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
@@ -655,8 +665,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'square_grid_vector_path.shp')
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_all_metrics(self):
@@ -682,15 +692,15 @@ class RecreationRegressionTests(unittest.TestCase):
             self.workspace_dir, 'regression_coefficients.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
         out_scenario_path = os.path.join(
             self.workspace_dir, 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'trivial_scenario_results.shp')
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_scenario_path, expected_scenario_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_scenario_path, expected_scenario_path, 1E-6)
 
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
@@ -706,8 +716,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
@@ -772,8 +782,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'hex_grid_vector_path.shp')
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
     def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
@@ -794,10 +804,8 @@ class RecreationRegressionTests(unittest.TestCase):
             self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
 
-        recmodel_client._build_regression_coefficients(
-            response_vector_path, predictor_table_path,
-            tmp_indexed_vector_path, out_coefficient_vector_path,
-            out_predictor_id_list)
+        _make_dummy_file(tmp_indexed_vector_path)
+        _make_dummy_file(out_coefficient_vector_path)
 
         # build again to test against overwriting output
         recmodel_client._build_regression_coefficients(
@@ -808,8 +816,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path)
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_coefficient_vector_path, expected_coeff_vector_path, 1E-6)
 
     def test_absolute_regression_coef(self):
         """Recreation test validation from full path."""
