@@ -143,8 +143,6 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_workspace_fetcher
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
-
         sample_point_data_path = os.path.join(
             REGRESSION_DATA, 'sample_data.csv')
 
@@ -230,7 +228,6 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([self.workspace_dir])
         empty_point_data_path = os.path.join(
             self.workspace_dir, 'empty_table.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
@@ -415,8 +412,6 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        natcap.invest.pygeoprocessing_0_3_3.create_directories(
-            [tempdir]) #self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
