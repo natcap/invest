@@ -7,13 +7,10 @@ import tarfile
 import textwrap
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from osgeo import ogr
 import six
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        '..', 'data', 'invest-data')
-FW_DATA = os.path.join(DATA_DIR, 'Base_Data', 'Freshwater')
-POLLINATION_DATA = os.path.join(DATA_DIR, 'pollination')
+                        '..', 'data', 'invest-test-data', 'data_stack')
 
 
 class DatastacksTest(unittest.TestCase):
@@ -48,11 +45,10 @@ class DatastacksTest(unittest.TestCase):
                              datastack.DATASTACK_PARAMETER_FILENAME)))['args'],
             {'a': 1, 'b': u'hello there', 'c': u'plain bytestring', 'd': ''})
 
-    @scm.skip_if_data_missing(FW_DATA)
     def test_collect_multipart_gdal_raster(self):
         from natcap.invest import datastack
         params = {
-            'raster': os.path.join(FW_DATA, 'dem'),
+            'raster': os.path.join(DATA_DIR, 'dem'),
         }
 
         # Collect the raster's files into a single archive
@@ -74,12 +70,11 @@ class DatastacksTest(unittest.TestCase):
             params['raster'], os.path.join(out_directory,
                                            archived_params['raster']))
 
-    @scm.skip_if_data_missing(POLLINATION_DATA)
     def test_collect_geotiff(self):
         # Necessary test, as this is proving to be an issue.
         from natcap.invest import datastack
         params = {
-            'raster': os.path.join(POLLINATION_DATA, 'landcover.tif'),
+            'raster': os.path.join(DATA_DIR, 'landcover.tif'),
         }
         archive_path = os.path.join(self.workspace, 'archive.invs.tar.gz')
         datastack.build_datastack_archive(params, 'sample_model', archive_path)
@@ -91,10 +86,9 @@ class DatastacksTest(unittest.TestCase):
             params['raster'],
             os.path.join(dest_dir, 'data', archived_params['raster']))
 
-    @scm.skip_if_data_missing(FW_DATA)
     def test_collect_ogr_vector(self):
         from natcap.invest import datastack
-        source_vector_path = os.path.join(FW_DATA, 'watersheds.shp')
+        source_vector_path = os.path.join(DATA_DIR, 'watersheds.shp')
         source_vector = ogr.Open(source_vector_path)
 
         for format_name, extension in (('ESRI Shapefile', 'shp'),
@@ -133,11 +127,10 @@ class DatastacksTest(unittest.TestCase):
 
             self.assertEqual(len(archived_params), 1)  # sanity check
 
-    @scm.skip_if_data_missing(FW_DATA)
     def test_collect_ogr_table(self):
         from natcap.invest import datastack
         params = {
-            'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
+            'table': os.path.join(DATA_DIR, 'carbon_pools_samp.csv'),
         }
 
         # Collect the raster's files into a single archive
@@ -311,9 +304,9 @@ class DatastacksTest(unittest.TestCase):
                 os.path.join(self.workspace, 'file2.txt'),
             ],
             'data_dir': os.path.join(self.workspace, 'data_dir'),
-            'raster': os.path.join(FW_DATA, 'dem'),
-            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
-            'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
+            'raster': os.path.join(DATA_DIR, 'dem'),
+            'vector': os.path.join(DATA_DIR, 'watersheds.shp'),
+            'table': os.path.join(DATA_DIR, 'carbon_pools_samp.csv'),
         }
         # synthesize sample data
         os.makedirs(params['data_dir'])
@@ -388,8 +381,8 @@ class DatastacksTest(unittest.TestCase):
                 os.path.join(self.workspace, 'file2.txt'),
             ],
             'data_dir': os.path.join(self.workspace, 'data_dir'),
-            'raster': os.path.join(FW_DATA, 'dem'),
-            'vector': os.path.join(FW_DATA, 'watersheds.shp'),
+            'raster': os.path.join(DATA_DIR, 'dem'),
+            'vector': os.path.join(DATA_DIR, 'watersheds.shp'),
             'table': os.path.join(DATA_DIR, 'carbon', 'carbon_pools_samp.csv'),
         }
         modelname = 'natcap.invest.foo'
@@ -630,7 +623,6 @@ class DatastacksTest(unittest.TestCase):
 
         extracted_paramset = datastack.extract_parameter_set(paramset_path)
         self.assertEqual(extracted_paramset.args, expected_args)
-
 
     def test_mixed_path_separators_in_archive(self):
         """Datastacks: datastack archives must handle windows, linux paths."""
