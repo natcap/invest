@@ -10,7 +10,7 @@ SVN_TEST_DATA_REPO_REV  := 177
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 8143946d26bd
+HG_UG_REPO_REV          := 10cd532ac720
 
 
 ENV = env
@@ -220,12 +220,12 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	-$(RM) build/userguide/latex
-	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide latex
+	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide html
+	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
@@ -255,7 +255,6 @@ ZIPDIRS = Aquaculture \
 		  habitat_suitability \
 		  Hydropower \
 		  Malaria \
-		  OverlapAnalysis \
 		  pollination \
 		  recreation \
 		  ScenarioGenerator \
