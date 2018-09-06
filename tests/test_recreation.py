@@ -27,6 +27,7 @@ SAMPLE_DATA = os.path.join(
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation_model')
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
 
@@ -415,7 +416,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         natcap.invest.pygeoprocessing_0_3_3.create_directories(
-            [self.workspace_dir])
+            [tempdir]) #self.workspace_dir])
         point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
 
         # attempt to get an open port; could result in race condition but
@@ -431,7 +432,7 @@ class TestRecServer(unittest.TestCase):
             'hostname': 'localhost',
             'port': port,
             'raw_csv_point_data_path': point_data_path,
-            'cache_workspace': self.workspace_dir,
+            'cache_workspace': tempdir, #self.workspace_dir,
             'min_year': 2004,
             'max_year': 2015,
             'max_points_per_node': 50,
@@ -458,7 +459,7 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 REGRESSION_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': tempdir, #self.workspace_dir,
         }
 
         recmodel_client.execute(args)
