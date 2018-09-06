@@ -75,6 +75,10 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
 
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir)
+
     def test_basic_operation(self):
         """Recreation test buffered file manager basic ops w/ no buffer."""
         from natcap.invest.recreation import buffered_numpy_disk_map
@@ -95,10 +99,6 @@ class TestBufferedNumpyDiskMap(unittest.TestCase):
         with self.assertRaises(IOError):
             file_manager.read(1234)
 
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
-
 
 class TestRecServer(unittest.TestCase):
     """Tests that set up local rec server on a port and call through."""
@@ -106,6 +106,10 @@ class TestRecServer(unittest.TestCase):
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_hashfile(self):
         """Recreation test for hash and fast hash of file."""
@@ -434,7 +438,7 @@ class TestRecServer(unittest.TestCase):
         }
 
         server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args,))
+            target=recmodel_server.execute, args=(server_args))
         server_thread.daemon = True
         server_thread.start()
 
@@ -464,10 +468,6 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
 
 class TestLocalRecServer(unittest.TestCase):
@@ -501,10 +501,6 @@ class TestLocalRecServer(unittest.TestCase):
             raise ValueError(
                 "Output table not the same as input. "
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
-
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir)
 
 
 class RecreationRegressionTests(unittest.TestCase):
