@@ -7,7 +7,6 @@ import csv
 import re
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
@@ -209,8 +208,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result_id, expected_result_id):
             self.assertEqual(res, exp_res)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_clip_datasource_layer_polygons(self):
         """WaveEnergy: testing clipping polygons from polygons."""
         from natcap.invest.wave_energy import wave_energy
@@ -349,7 +346,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         result_file.close()
 
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_load_binary_wave_data(self):
         """WaveEnergy: testing 'load_binary_wave_data' function."""
         from natcap.invest.wave_energy import wave_energy
@@ -404,8 +400,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         }
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_valuation(self):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
@@ -448,8 +442,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', table_path),
                 os.path.join(REGRESSION_DATA, 'valuation', table_path))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_aoi_no_val(self):
         """WaveEnergy: testing Biophysical component w AOI but w/o valuation."""
         from natcap.invest.wave_energy import wave_energy
@@ -476,8 +468,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'aoi', table_path),
                 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_aoi_or_val(self):
         """WaveEnergy: testing Biophysical component w/o AOI or valuation."""
         from natcap.invest.wave_energy import wave_energy
@@ -503,8 +493,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'noaoi', table_path),
                 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_valuation_suffix(self):
         """WaveEnergy: testing suffix through Valuation."""
         from natcap.invest.wave_energy import wave_energy

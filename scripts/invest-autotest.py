@@ -40,8 +40,6 @@ DATASTACKS = {
     'habitat_risk_assessment_preprocessor': ['hra_pre_wcvi.invs.json'],
     'hydropower_water_yield': ['annual_water_yield_willamette.invs.json'],
     'ndr': ['ndr_n_p_willamette.invs.json'],
-    'overlap_analysis': ['overlap_wcvi.invs.json'],
-    'overlap_analysis_mz': ['overlap_mz_wcvi.invs.json'],
     'pollination': ['pollination_willamette.invs.json'],
     'recreation': ['recreation_andros.invs.json'],
     'routedem': ['routedem_willamette.invs.json'],

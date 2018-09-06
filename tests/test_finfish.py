@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing
-from pygeoprocessing.testing import scm
 
 
 SAMPLE_DATA = os.path.join(
@@ -61,8 +60,6 @@ class FinfishTests(unittest.TestCase):
         }
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_finfish_full_run(self):
         """Finfish: regression test to run model with all options on."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
@@ -85,8 +82,6 @@ class FinfishTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'Finfish_Harvest.shp'),
             os.path.join(self.workspace_dir, 'output', 'Finfish_Harvest.shp'), 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_finfish_mc_no_valuation(self):
         """Finfish: run model with MC analysis and no valuation."""
         import natcap.invest.finfish_aquaculture.finfish_aquaculture
