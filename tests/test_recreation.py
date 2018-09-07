@@ -303,7 +303,7 @@ class TestRecServer(unittest.TestCase):
 
         client_args = {
             'aoi_path': os.path.join(
-                REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+                REGRESSION_DATA, 'test_aoi_for_subset.shp'), # change shp on Monday
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
