@@ -80,6 +80,7 @@ def _make_dummy_files(base_file_list):
 
     Returns:
         None.
+
     """
     for file_path in base_file_list:
         with open(file_path, 'w') as open_file:
@@ -100,6 +101,7 @@ def _resample_csv(base_csv_path, base_dst_path, resample_factor=1000):
 
     Returns:
         None
+
     """
     with open(base_csv_path, 'rb') as read_table:
         with open(base_dst_path, 'wb') as write_table:
