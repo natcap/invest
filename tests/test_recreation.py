@@ -521,7 +521,10 @@ class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
-        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+        aoi_path = os.path.join(
+            REGRESSION_DATA, 'input', 'test_aoi_for_subset.shp')
+        # make a simplified layer in QGIS on Monday
+        # aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
         date_range = (
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
