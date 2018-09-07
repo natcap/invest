@@ -502,7 +502,7 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
 
 
-class TestLocalRecServer(unittest.TestCase):
+class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make a difference!
     """Tests using a local rec server."""
 
     def setUp(self):
