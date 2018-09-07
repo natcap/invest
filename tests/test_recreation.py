@@ -25,10 +25,12 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
     'recreation')
 SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
+SAMPLE_DATA = r"C:\Users\chiay\Desktop\test_recreation\input"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation_model')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
+REGRESSION_DATA = r"C:\Users\chiay\Desktop\test_recreation\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
@@ -143,11 +145,11 @@ class TestRecServer(unittest.TestCase):
 
     def setUp(self):
         """Setup workspace."""
-        self.workspace_dir = tempdir #tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp()
 
-    # def tearDown(self):
-    #     """Delete workspace."""
-    #     shutil.rmtree(self.workspace_dir, ignore_errors=True)
+    def tearDown(self):
+        """Delete workspace."""
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_hashfile(self):
         """Recreation test for hash and fast hash of file."""
@@ -191,30 +193,30 @@ class TestRecServer(unittest.TestCase):
         # entire suite run which we suspect is because of a race condition
         server_launched = False
         for _ in range(3):
-            # try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.bind(('', 0))
-            port = sock.getsockname()[1]
-            sock.close()
-            sock = None
+            try:
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.bind(('', 0))
+                port = sock.getsockname()[1]
+                sock.close()
+                sock = None
 
-            server_args = {
-                'hostname': 'locahost',
-                'port': port,
-                'raw_csv_point_data_path': sample_point_data_path,
-                'cache_workspace': self.workspace_dir,
-                'min_year': 2004,
-                'max_year': 2015,
-            }
+                server_args = {
+                    'hostname': 'locahost',
+                    'port': port,
+                    'raw_csv_point_data_path': sample_point_data_path,
+                    'cache_workspace': self.workspace_dir,
+                    'min_year': 2004,
+                    'max_year': 2015,
+                }
 
-            server_thread = threading.Thread(
-                target=recmodel_server.execute, args=(server_args,))
-            server_thread.daemon = True
-            server_thread.start()
-            server_launched = True
-            break
-            # except:
-            #     LOGGER.warn("Can't start server process on port %d", port)
+                server_thread = threading.Thread(
+                    target=recmodel_server.execute, args=(server_args,))
+                server_thread.daemon = True
+                server_thread.start()
+                server_launched = True
+                break
+            except:
+                LOGGER.warn("Can't start server process on port %d", port)
         if not server_launched:
             self.fail("Server didn't start")
 
@@ -321,9 +323,12 @@ class TestRecServer(unittest.TestCase):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
 
-        _resample_csv(base_csv_path, base_dst_path, resample_factor=1000)
-        recreation_server = recmodel_server.RecModel(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+        # Resample the sample file to speed up the test runtime
+        sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
+        resampled_data_path = os.path.join(self.workspace_dir,
+                                           'resampled_data.csv')
+        _resample_csv(sample_data_path, resampled_data_path)
+        recreation_server = recmodel_server.RecModel(resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
         aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
