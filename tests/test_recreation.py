@@ -146,25 +146,25 @@ class TestRecServer(unittest.TestCase):
     def setUp(self):
         """Setup workspace."""
         self.workspace_dir = tempfile.mkdtemp()
+        self.resample_data_path = os.path.join(
+            self.workspace_dir, 'resampled_data.csv')
 
     def tearDown(self):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
-    def test_hashfile(self):
+    def test_hashfile(self): # failed
         """Recreation test for hash and fast hash of file."""
         from natcap.invest.recreation import recmodel_server
-        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         file_hash = recmodel_server._hashfile(
-            file_path, blocksize=2**20, fast_hash=False)
+            self.resampled_data_path, blocksize=2**20, fast_hash=False)
         self.assertEqual(file_hash, 'b372f3f062afb3e8')
 
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
         from natcap.invest.recreation import recmodel_server
-        file_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         file_hash = recmodel_server._hashfile(
-            file_path, blocksize=2**20, fast_hash=True)
+            self.resampled_data_path, blocksize=2**20, fast_hash=True)
         # we can't assert the full hash since it is dependant on the file
         # last access time and we can't reliably set that in Python.
         # instead we just check that at the very least it ends with _fast_hash
@@ -177,11 +177,11 @@ class TestRecServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             # intentionally construct start year > end year
             recmodel_server.RecModel(
-                os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+                self.resampled_data_path,
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
     @_timeout(30.0)
-    def test_workspace_fetcher(self):
+    def test_workspace_fetcher(self):  # failed
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_workspace_fetcher
@@ -266,7 +266,7 @@ class TestRecServer(unittest.TestCase):
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     @_timeout(30.0)
-    def test_empty_server(self):
+    def test_empty_server(self):  #failed
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
@@ -811,7 +811,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    def test_existing_regression_coef(self):
+    def test_existing_regression_coef(self):  #failed
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
 
