@@ -186,9 +186,6 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_workspace_fetcher
 
-        sample_point_data_path = os.path.join(
-            REGRESSION_DATA, 'sample_data.csv')
-
         # Attempt a few connections, we've had this test be flaky on the
         # entire suite run which we suspect is because of a race condition
         server_launched = False
@@ -203,7 +200,7 @@ class TestRecServer(unittest.TestCase):
                 server_args = {
                     'hostname': 'locahost',
                     'port': port,
-                    'raw_csv_point_data_path': sample_point_data_path,
+                    'raw_csv_point_data_path': self.resampled_data_path,
                     'cache_workspace': self.workspace_dir,
                     'min_year': 2004,
                     'max_year': 2015,
@@ -323,12 +320,7 @@ class TestRecServer(unittest.TestCase):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
 
-        # Resample the sample file to speed up the test runtime
-        sample_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-        resampled_data_path = os.path.join(self.workspace_dir,
-                                           'resampled_data.csv')
-        _resample_csv(sample_data_path, resampled_data_path)
-        recreation_server = recmodel_server.RecModel(resampled_data_path,
+        recreation_server = recmodel_server.RecModel(self.resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
         aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
@@ -379,7 +371,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            self.resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
         date_range = (
@@ -404,12 +396,12 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
 
         recreation_server = recmodel_server.RecModel(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            self.resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
         recreation_server = None
         # This will not generate a new quadtree but instead load existing one
         recreation_server = recmodel_server.RecModel(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            self.resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
         date_range = (
@@ -433,13 +425,13 @@ class TestRecServer(unittest.TestCase):
         """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
 
-        csv_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
         block_offset_size_queue = Queue.Queue()
         block_offset_size_queue.put((0, 2**10))
         block_offset_size_queue.put('STOP')
         numpy_array_queue = Queue.Queue()
         recmodel_server._parse_input_csv(
-            block_offset_size_queue, csv_path, numpy_array_queue)
+            block_offset_size_queue, self.resampled_data_path,
+            numpy_array_queue)
         val = numpy_array_queue.get()
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 3, 17))
@@ -454,8 +446,6 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
-        point_data_path = os.path.join(REGRESSION_DATA, 'sample_data.csv')
-
         # attempt to get an open port; could result in race condition but
         # will be okay for a test. if this test ever fails because of port
         # in use, that's probably why
@@ -468,7 +458,7 @@ class TestRecServer(unittest.TestCase):
         server_args = {
             'hostname': 'localhost',
             'port': port,
-            'raw_csv_point_data_path': point_data_path,
+            'raw_csv_point_data_path': self.resampled_data_path,
             'cache_workspace': self.workspace_dir,
             'min_year': 2004,
             'max_year': 2015,
