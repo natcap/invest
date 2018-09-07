@@ -121,11 +121,11 @@ class TestRecServer(unittest.TestCase):
 
     def setUp(self):
         """Setup workspace."""
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempdir #tempfile.mkdtemp()
 
-    def tearDown(self):
-        """Delete workspace."""
-        shutil.rmtree(self.workspace_dir, ignore_errors=True)
+    # def tearDown(self):
+    #     """Delete workspace."""
+    #     shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_hashfile(self):
         """Recreation test for hash and fast hash of file."""
