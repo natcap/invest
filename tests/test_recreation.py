@@ -84,6 +84,28 @@ def _make_dummy_files(base_file_list):
             open_file.write('')
 
 
+def _resample_csv(base_csv_path, base_dst_path, resample_factor=1000):
+    """Resample (downsize) a csv file by a certain resample factor.
+
+    The default resample factor is good for sample_data.csv,
+    which has 100000 data points.
+
+    Parameters:
+        base_csv_path (str): path to the source csv file to be resampled.
+        base_dst_path (str): path to the destination csv file.
+        resample_factor (int): the factor used to determined how many rows
+            should be skipped before writing a row to the destination file.
+
+    Returns:
+        None
+    """
+    with open(base_csv_path, 'rb') as read_table:
+        with open(base_dst_path, 'wb') as write_table:
+            for i, line in enumerate(read_table):
+                if i % resample_factor == 0:
+                    write_table.write(line)
+
+
 class TestBufferedNumpyDiskMap(unittest.TestCase):
     """Tests for BufferedNumpyDiskMap."""
 
@@ -299,6 +321,7 @@ class TestRecServer(unittest.TestCase):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
 
+        _resample_csv(base_csv_path, base_dst_path, resample_factor=1000)
         recreation_server = recmodel_server.RecModel(
             os.path.join(REGRESSION_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
