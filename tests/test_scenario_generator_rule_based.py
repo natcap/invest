@@ -318,7 +318,3 @@ class UnitTests(unittest.TestCase):
     def tearDown(self):
         """Tear Down."""
         shutil.rmtree(self.args['workspace_dir'])
-
-
-if __name__ == '__main__':
-    unittest.main()
