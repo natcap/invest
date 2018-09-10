@@ -496,7 +496,7 @@ def _file_len(file_path):
     """Count lines in file, return -1 if not supported."""
     wc_process = subprocess.Popen(
         ['wc', '-l', file_path], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, shell=True) #remove later
+        stderr=subprocess.PIPE)
     result, err = wc_process.communicate()
     if wc_process.returncode != 0:
         LOGGER.warn(err)
