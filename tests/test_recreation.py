@@ -185,9 +185,8 @@ class TestRecServer(unittest.TestCase):
                 self.resampled_data_path,
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
-    # @unittest.skip("temporarily skipping to avoid long runtime")
     @_timeout(30.0)
-    def test_workspace_fetcher(self):  # CommunicationError: the target machine actively refused it
+    def test_workspace_fetcher(self):
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_workspace_fetcher
@@ -204,7 +203,7 @@ class TestRecServer(unittest.TestCase):
                 sock = None
 
                 server_args = {
-                    'hostname': 'locahost',
+                    'hostname': 'localhost',
                     'port': port,
                     'raw_csv_point_data_path': self.resampled_data_path,
                     'cache_workspace': self.workspace_dir,
@@ -444,7 +443,6 @@ class TestRecServer(unittest.TestCase):
         self.assertEqual(val[0][0], datetime.date(2013, 3, 16))
 
     @_timeout(30.0)
-    # @unittest.skip("skipping to avoid CommunicationError (Errno 10061)")
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
