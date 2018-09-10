@@ -151,7 +151,7 @@ class TestRecServer(unittest.TestCase):
         """Delete workspace."""
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
-    def test_hashfile(self): # failed
+    def test_hashfile(self):
         """Recreation test for hash of file."""
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
@@ -261,7 +261,7 @@ class TestRecServer(unittest.TestCase):
             os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     @_timeout(30.0)
-    def test_empty_server(self):  #failed
+    def test_empty_server(self):
         """Recreation test a client call to simple server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_client
@@ -460,7 +460,7 @@ class TestRecServer(unittest.TestCase):
             'cache_workspace': self.workspace_dir,
             'min_year': 2004,
             'max_year': 2015,
-            'max_points_per_node': 50,
+            'max_points_per_node': 200,
         }
 
         server_thread = threading.Thread(
@@ -496,7 +496,7 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
 
 
-class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make a difference!
+class TestLocalRecServer(unittest.TestCase):
     """Tests using a local rec server."""
 
     def setUp(self):
@@ -529,7 +529,7 @@ class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make
 
         if output_lines != expected_lines:
             raise ValueError(
-                "Output table not the same as input. "
+                "Output table not the same as input.\n"
                 "Expected:\n%s\nGot:\n%s" % (expected_lines, output_lines))
 
 
@@ -799,7 +799,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    def test_existing_regression_coef(self):  #AttributeError on line 836
+    def test_existing_regression_coef(self):
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
 
