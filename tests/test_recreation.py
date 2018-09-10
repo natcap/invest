@@ -24,14 +24,14 @@ Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'recreation_model')
+    'recreation')
 SAMPLE_DATA = os.path.join(
     REGRESSION_DATA, 'input')
 
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
-REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
+# SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
+# REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
 
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
+# tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
 
@@ -813,7 +813,7 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(
-            tempdir, 'hex_grid_vector_path.shp')
+            self.workspace_dir, 'hex_grid_vector_path.shp')
 
         recmodel_client._grid_vector(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
@@ -823,9 +823,9 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # make outputs to be overwritten
         tmp_indexed_vector_path = os.path.join(
-            tempdir, 'tmp_indexed_vector.shp')
+            self.workspace_dir, 'tmp_indexed_vector.shp')
         out_coefficient_vector_path = os.path.join(
-            tempdir, 'out_coefficient_vector.shp')
+            self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
         _make_dummy_files(
             [tmp_indexed_vector_path, out_coefficient_vector_path])
