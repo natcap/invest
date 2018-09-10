@@ -128,7 +128,7 @@ help:
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
-test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+test: $(SVN_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
 test_ui:
