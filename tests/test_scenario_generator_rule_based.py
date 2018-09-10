@@ -15,9 +15,6 @@ import shapely
 import pygeoprocessing.testing
 
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-
 LOGGER = logging.getLogger('test_scenario_generator')
 
 land_cover_array = [
