@@ -21,16 +21,16 @@ from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'recreation')
-SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
-# SAMPLE_DATA = r"C:\Users\chiay\Desktop\test_recreation\input"
+
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation_model')
+SAMPLE_DATA = os.path.join(
+    REGRESSION_DATA, 'input')
+
+SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
-# REGRESSION_DATA = r"C:\Users\chiay\Desktop\test_recreation\invest-test-data"
+
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
@@ -185,9 +185,9 @@ class TestRecServer(unittest.TestCase):
                 self.resampled_data_path,
                 2014, 2005, os.path.join(self.workspace_dir, 'server_cache'))
 
-    @unittest.skip("temporarily skipping to avoid long runtime")
+    # @unittest.skip("temporarily skipping to avoid long runtime")
     @_timeout(30.0)
-    def test_workspace_fetcher(self):  # failed
+    def test_workspace_fetcher(self):  # CommunicationError: the target machine actively refused it
         """Recreation test workspace fetcher on a local Pyro4 empty server."""
         from natcap.invest.recreation import recmodel_server
         from natcap.invest.recreation import recmodel_workspace_fetcher
@@ -326,8 +326,9 @@ class TestRecServer(unittest.TestCase):
         """Recreation test single threaded local AOI aggregate calculation."""
         from natcap.invest.recreation import recmodel_server
 
-        recreation_server = recmodel_server.RecModel(self.resampled_data_path,
-            2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
+        recreation_server = recmodel_server.RecModel(
+            self.resampled_data_path, 2005, 2014,
+            os.path.join(self.workspace_dir, 'server_cache'))
 
         aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
 
@@ -442,8 +443,8 @@ class TestRecServer(unittest.TestCase):
         # we know what the first date is
         self.assertEqual(val[0][0], datetime.date(2013, 1, 30))
 
-    # @_timeout(30.0)
-    @unittest.skip("skipping to avoid CommunicationError (Errno 10061)")
+    @_timeout(30.0)
+    # @unittest.skip("skipping to avoid CommunicationError (Errno 10061)")
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
@@ -807,7 +808,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    def test_existing_regression_coef(self):  #error
+    def test_existing_regression_coef(self):  #AttributeError on line 836
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
 
@@ -820,6 +821,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
+        # make outputs to be overwritten
         tmp_indexed_vector_path = os.path.join(
             tempdir, 'tmp_indexed_vector.shp')
         out_coefficient_vector_path = os.path.join(
@@ -856,13 +858,13 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # these are absolute paths for predictor data
         predictor_list = [
-            ('ports', os.path.join(SAMPLE_DATA, 'scenario', 'dredged_ports.shp'),
+            ('ports', os.path.join(SAMPLE_DATA, 'scenarios', 'dredged_ports.shp'),
              'point_count'),
-            ('airdist', os.path.join(SAMPLE_DATA, 'scenario', 'airport.shp'),
+            ('airdist', os.path.join(SAMPLE_DATA, 'scenarios', 'airport.shp'),
              'point_nearest_distance'),
-            ('bonefish', os.path.join(SAMPLE_DATA, 'scenario', 'bonefish.shp'),
+            ('bonefish', os.path.join(SAMPLE_DATA, 'scenarios', 'bonefish.shp'),
              'polygon_percent_coverage'),
-            ('bathy', os.path.join(SAMPLE_DATA, 'scenario', 'dem90m.tif'),
+            ('bathy', os.path.join(SAMPLE_DATA, 'scenarios', 'dem90m.tif'),
              'raster_mean'),
             ]
 
