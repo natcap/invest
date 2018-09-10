@@ -21,17 +21,11 @@ from osgeo import gdal
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
-
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation')
 SAMPLE_DATA = os.path.join(
     REGRESSION_DATA, 'input')
-
-# SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
-# REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
-
-tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
 
