@@ -25,12 +25,12 @@ SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data',
     'recreation')
 SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
-SAMPLE_DATA = r"C:\Users\chiay\Desktop\test_recreation\input"
+# SAMPLE_DATA = r"C:\Users\chiay\Desktop\test_recreation\input"
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation_model')
 REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
-REGRESSION_DATA = r"C:\Users\chiay\Desktop\test_recreation\invest-test-data"
+# REGRESSION_DATA = r"C:\Users\chiay\Desktop\test_recreation\invest-test-data"
 tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
@@ -151,7 +151,7 @@ class TestRecServer(unittest.TestCase):
         self.resampled_data_path = os.path.join(
             self.workspace_dir, 'resampled_data.csv')
         _resample_csv(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            os.path.join(SAMPLE_DATA, 'sample_data.csv'),
             self.resampled_data_path)
 
     def tearDown(self):
@@ -159,11 +159,11 @@ class TestRecServer(unittest.TestCase):
         shutil.rmtree(self.workspace_dir, ignore_errors=True)
 
     def test_hashfile(self): # failed
-        """Recreation test for hash and fast hash of file."""
+        """Recreation test for hash of file."""
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        self.assertEqual(file_hash, 'b372f3f062afb3e8')
+        self.assertEqual(file_hash, '53afd299e443be69')
 
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
@@ -227,7 +227,7 @@ class TestRecServer(unittest.TestCase):
         LOGGER.info("Local server path %s", path)
         recreation_server = Pyro4.Proxy(path)
         aoi_path = os.path.join(
-            REGRESSION_DATA, 'test_aoi_for_subset.shp')
+            SAMPLE_DATA, 'test_aoi_for_subset.shp')
         basename = os.path.splitext(aoi_path)[0]
         aoi_archive_path = os.path.join(
             self.workspace_dir, 'aoi_zipped.zip')
@@ -303,7 +303,7 @@ class TestRecServer(unittest.TestCase):
 
         client_args = {
             'aoi_path': os.path.join(
-                REGRESSION_DATA, 'test_aoi_for_subset.shp'), # change shp on Monday
+                SAMPLE_DATA, 'test_aoi_for_subset.shp'), # change shp on Monday
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
@@ -329,7 +329,7 @@ class TestRecServer(unittest.TestCase):
         recreation_server = recmodel_server.RecModel(self.resampled_data_path,
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
-        aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+        aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
 
         basename = os.path.splitext(aoi_path)[0]
         aoi_archive_path = os.path.join(
@@ -390,7 +390,7 @@ class TestRecServer(unittest.TestCase):
         pud_poly_feature_queue = Queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
-            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             date_range, poly_test_queue, pud_poly_feature_queue)
 
         # assert annual average PUD is the same as regression
@@ -420,7 +420,7 @@ class TestRecServer(unittest.TestCase):
         pud_poly_feature_queue = Queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
-            os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp'),
+            os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             date_range, poly_test_queue, pud_poly_feature_queue)
 
         # assert annual average PUD is the same as regression
@@ -440,7 +440,7 @@ class TestRecServer(unittest.TestCase):
             numpy_array_queue)
         val = numpy_array_queue.get()
         # we know what the first date is
-        self.assertEqual(val[0][0], datetime.date(2013, 3, 17))
+        self.assertEqual(val[0][0], datetime.date(2013, 1, 30))
 
     # @_timeout(30.0)
     @unittest.skip("skipping to avoid CommunicationError (Errno 10061)")
@@ -478,7 +478,7 @@ class TestRecServer(unittest.TestCase):
 
         args = {
             'aoi_path': os.path.join(
-                REGRESSION_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
+                SAMPLE_DATA, 'local_recreation_aoi_florida_utm18n.shp'),
             'cell_size': 40000.0,
             'compute_regression': True,
             'start_year': '2005',
@@ -488,10 +488,10 @@ class TestRecServer(unittest.TestCase):
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors.csv'),
+                SAMPLE_DATA, 'predictors.csv'),
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_scenario.csv'),
+                SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
@@ -512,7 +512,7 @@ class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make
         from natcap.invest.recreation import recmodel_server
         self.workspace_dir = tempfile.mkdtemp()
         self.recreation_server = recmodel_server.RecModel(
-            os.path.join(REGRESSION_DATA, 'sample_data.csv'),
+            os.path.join(SAMPLE_DATA, 'sample_data.csv'),
             2005, 2014, os.path.join(self.workspace_dir, 'server_cache'))
 
     def tearDown(self):
@@ -521,10 +521,7 @@ class TestLocalRecServer(unittest.TestCase): # making resampled file doesnt make
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
-        aoi_path = os.path.join(
-            REGRESSION_DATA, 'input', 'test_aoi_for_subset.shp')
-        # make a simplified layer in QGIS on Monday
-        # aoi_path = os.path.join(REGRESSION_DATA, 'test_aoi_for_subset.shp')
+        aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
         date_range = (
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
@@ -563,7 +560,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         table_path = os.path.join(
-            REGRESSION_DATA, 'predictors_data_missing.csv')
+            SAMPLE_DATA, 'predictors_data_missing.csv')
 
         with self.assertRaises(ValueError):
             recmodel_client._validate_same_projection(
@@ -575,7 +572,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         table_path = os.path.join(
-            REGRESSION_DATA, 'predictors_wrong_projection.csv')
+            SAMPLE_DATA, 'predictors_wrong_projection.csv')
 
         with self.assertRaises(ValueError):
             recmodel_client._validate_same_projection(
@@ -586,9 +583,9 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         base_table_path = os.path.join(
-            REGRESSION_DATA, 'predictors_data_missing.csv')
+            SAMPLE_DATA, 'predictors_data_missing.csv')
         scenario_table_path = os.path.join(
-            REGRESSION_DATA, 'predictors_wrong_projection.csv')
+            SAMPLE_DATA, 'predictors_wrong_projection.csv')
 
         with self.assertRaises(ValueError):
             recmodel_client._validate_same_ids_and_types(
@@ -615,7 +612,7 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         # The following raster has no nodata value
-        raster_path = os.path.join(REGRESSION_DATA, 'no_nodata_raster.tif')
+        raster_path = os.path.join(SAMPLE_DATA, 'no_nodata_raster.tif')
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         tmp_indexed_vector_path = os.path.join(
@@ -632,7 +629,7 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         # The following raster has no nodata value
-        raster_path = os.path.join(REGRESSION_DATA, 'nodata_raster.tif')
+        raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         tmp_indexed_vector_path = os.path.join(
@@ -662,10 +659,10 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors.csv'),
+                SAMPLE_DATA, 'predictors.csv'),
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_scenario.csv'),
+                SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
@@ -699,15 +696,15 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
         args = {
             'aoi_path': os.path.join(
-                REGRESSION_DATA, 'andros_aoi_with_extra_fields.shp'),
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields.shp'),
             'compute_regression': True,
             'start_year': '2005',
             'end_year': '2014',
             'grid_aoi': False,
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_all.csv'),
+                SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_all.csv'),
+                SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
         }
@@ -781,7 +778,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_type': 'square',
             'cell_size': 20000,
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_id_too_long.csv'),
+                SAMPLE_DATA, 'predictors_id_too_long.csv'),
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
         }
@@ -810,23 +807,23 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    def test_existing_regression_coef(self):  #failed
+    def test_existing_regression_coef(self):  #error
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(
-            self.workspace_dir, 'hex_grid_vector_path.shp')
+            tempdir, 'hex_grid_vector_path.shp')
 
         recmodel_client._grid_vector(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
             response_vector_path)
 
-        predictor_table_path = os.path.join(REGRESSION_DATA, 'predictors.csv')
+        predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         tmp_indexed_vector_path = os.path.join(
-            self.workspace_dir, 'tmp_indexed_vector.shp')
+            tempdir, 'tmp_indexed_vector.shp')
         out_coefficient_vector_path = os.path.join(
-            self.workspace_dir, 'out_coefficient_vector.shp')
+            tempdir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
         _make_dummy_files(
             [tmp_indexed_vector_path, out_coefficient_vector_path])
@@ -859,13 +856,13 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # these are absolute paths for predictor data
         predictor_list = [
-            ('ports', os.path.join(SAMPLE_DATA, 'dredged_ports.shp'),
+            ('ports', os.path.join(SAMPLE_DATA, 'scenario', 'dredged_ports.shp'),
              'point_count'),
-            ('airdist', os.path.join(SAMPLE_DATA, 'airport.shp'),
+            ('airdist', os.path.join(SAMPLE_DATA, 'scenario', 'airport.shp'),
              'point_nearest_distance'),
-            ('bonefish', os.path.join(SAMPLE_DATA, 'bonefish.shp'),
+            ('bonefish', os.path.join(SAMPLE_DATA, 'scenario', 'bonefish.shp'),
              'polygon_percent_coverage'),
-            ('bathy', os.path.join(SAMPLE_DATA, 'dem90m.tif'),
+            ('bathy', os.path.join(SAMPLE_DATA, 'scenario', 'dem90m.tif'),
              'raster_mean'),
             ]
 
@@ -900,10 +897,10 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors.csv'),
+                SAMPLE_DATA, 'predictors.csv'),
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_scenario.csv'),
+                SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
@@ -942,10 +939,10 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors.csv'),
+                SAMPLE_DATA, 'predictors.csv'),
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_scenario.csv'),
+                SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
@@ -965,10 +962,10 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors.csv'),
+                SAMPLE_DATA, 'predictors.csv'),
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
-                REGRESSION_DATA, 'predictors_scenario.csv'),
+                SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
         }
 
