@@ -6,7 +6,6 @@ import os
 
 import numpy
 import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-data', 'Fisheries')
@@ -345,7 +344,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(TEST_DATA)
     def test_sampledata_shrimp_multiple_regions(self):
         """Fisheries: Verify shrimp run on multiple identical regions."""
         from natcap.invest.fisheries import fisheries
