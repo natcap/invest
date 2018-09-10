@@ -31,7 +31,7 @@ SAMPLE_DATA = os.path.join(
 # SAMPLE_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\input"
 # REGRESSION_DATA = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\invest-test-data"
 
-# tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
+tempdir = r"C:\Users\Joanna Lin\Desktop\test_folder\recreation\workspace_dir"
 
 LOGGER = logging.getLogger('test_recreation')
 
@@ -87,7 +87,7 @@ def _make_dummy_files(base_file_list):
             open_file.write('')
 
 
-def _resample_csv(base_csv_path, base_dst_path, resample_factor=1000):
+def _resample_csv(base_csv_path, base_dst_path, resample_factor=10):
     """Resample (downsize) a csv file by a certain resample factor.
 
     The default resample factor is good for sample_data.csv,
@@ -163,7 +163,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        self.assertEqual(file_hash, '53afd299e443be69')
+        self.assertEqual(file_hash, 'c052e7a0a4c5e528')
 
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
@@ -303,7 +303,7 @@ class TestRecServer(unittest.TestCase):
 
         client_args = {
             'aoi_path': os.path.join(
-                SAMPLE_DATA, 'test_aoi_for_subset.shp'), # change shp on Monday
+                SAMPLE_DATA, 'test_aoi_for_subset.shp'),
             'cell_size': 7000.0,
             'hostname': 'localhost',
             'port': port,
@@ -396,7 +396,7 @@ class TestRecServer(unittest.TestCase):
 
         # assert annual average PUD is the same as regression
         self.assertEqual(
-            53.3, pud_poly_feature_queue.get()[1][0])
+            83.2, pud_poly_feature_queue.get()[1][0])
 
     def test_local_calc_existing_cached(self):
         """Recreation local PUD calculation on existing quadtree."""
@@ -426,7 +426,7 @@ class TestRecServer(unittest.TestCase):
 
         # assert annual average PUD is the same as regression
         self.assertEqual(
-            53.3, pud_poly_feature_queue.get()[1][0])
+            83.2, pud_poly_feature_queue.get()[1][0])
 
     def test_parse_input_csv(self):
         """Recreation test parsing raw CSV."""
@@ -441,7 +441,7 @@ class TestRecServer(unittest.TestCase):
             numpy_array_queue)
         val = numpy_array_queue.get()
         # we know what the first date is
-        self.assertEqual(val[0][0], datetime.date(2013, 1, 30))
+        self.assertEqual(val[0][0], datetime.date(2013, 3, 16))
 
     @_timeout(30.0)
     # @unittest.skip("skipping to avoid CommunicationError (Errno 10061)")
@@ -473,7 +473,7 @@ class TestRecServer(unittest.TestCase):
         }
 
         server_thread = threading.Thread(
-            target=recmodel_server.execute, args=(server_args))
+            target=recmodel_server.execute, args=(server_args,))
         server_thread.daemon = True
         server_thread.start()
 
