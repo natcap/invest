@@ -1,24 +1,18 @@
 # -*- coding: utf-8 -*-
 """Tests for Scenario Generator model."""
 
-import importlib
-import itertools
 import logging
 import os
-import pkgutil
 import shutil
-import tempfile
 import unittest
 import csv
-import pprint as pp
 from decimal import Decimal
 import hashlib
 
 import numpy as np
-from osgeo import gdal, ogr, osr
+from osgeo import gdal
 import shapely
-from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
-import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
+import pygeoprocessing.testing
 
 
 SAMPLE_DATA = os.path.join(
@@ -95,8 +89,8 @@ def create_raster(raster_path, array):
     Returns:
         raster_path (str): path to output raster.
     """
-    srs = pygeotest.sampledata.SRS_WILLAMETTE
-    pygeotest.create_raster_on_disk(
+    srs = pygeoprocessing.testing.sampledata.SRS_WILLAMETTE
+    pygeoprocessing.testing.create_raster_on_disk(
         [array],
         srs.origin,
         srs.projection,
@@ -114,8 +108,8 @@ def create_shapefile(shapefile_path, geometries, fields=None):
         shapefile_path (str): path to shapefile.
         geometries (list): list of shapely geometry objects
     """
-    srs = pygeotest.sampledata.SRS_WILLAMETTE
-    return pygeotest.create_vector_on_disk(
+    srs = pygeoprocessing.testing.sampledata.SRS_WILLAMETTE
+    return pygeoprocessing.testing.create_vector_on_disk(
         geometries,
         srs.projection,
         fields=fields,
@@ -177,7 +171,7 @@ def get_args():
     create_csv_table(
         suitability_factors_csv_uri, land_suitability_factors_table)
 
-    srs = pygeotest.sampledata.SRS_WILLAMETTE
+    srs = pygeoprocessing.testing.sampledata.SRS_WILLAMETTE
     x, y = srs.origin
 
     constraints_shapefile_uri = os.path.join(workspace_dir, 'constraints.shp')
