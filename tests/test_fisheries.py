@@ -56,7 +56,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
                 'harvest': float(harvest),
             }
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_shrimp(self):
         """Fisheries: Verify run on Shrimp sample data."""
         from natcap.invest.fisheries import fisheries
@@ -90,7 +89,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_lobster(self):
         """Fisheries: Verify run on Lobster sample data."""
         from natcap.invest.fisheries import fisheries
@@ -127,7 +125,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['harvest'], 963108.36)
 
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab(self):
         """Fisheries: Verify run on Blue Crab sample data."""
         from natcap.invest.fisheries import fisheries
@@ -159,7 +156,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], 42649419.32)
         self.assertEqual(final_timestep_data['harvest'], 24789383.34)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab_batch(self):
         """Fisheries: Verify run on (batched) Blue Crab sample data."""
         from natcap.invest.fisheries import fisheries
@@ -191,7 +187,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], 42649419.32)
         self.assertEqual(final_timestep_data['harvest'], 24789383.34)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_dungeness_crab(self):
         """Fisheries: Verify run on Dungeness Crab sample data."""
         from natcap.invest.fisheries import fisheries
@@ -283,8 +278,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         })
         return args
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_fecundity(self):
         """Fisheries: Verify run with fecundity recruitment."""
         # Based on the lobster inputs, but need coverage for fecundity.
@@ -296,7 +289,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], 594922.52)
         self.assertEqual(final_timestep_data['harvest'], 205666.3)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_custom_function(self):
         """Fisheries: Verify results with custom function."""
         from natcap.invest.fisheries import fisheries
@@ -315,7 +307,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], 100.0)
         self.assertEqual(final_timestep_data['harvest'], 1.83)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_custom_function(self):
         """Fisheries: Verify exception with invalid custom function."""
         from natcap.invest.fisheries import fisheries
@@ -330,7 +321,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_recruitment(self):
         """Fisheries: Verify exception with invalid recruitment type."""
         from natcap.invest.fisheries import fisheries
@@ -343,7 +333,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_population_type(self):
         """Fisheries: Verify exception with invalid population type."""
         from natcap.invest.fisheries import fisheries
@@ -424,7 +413,6 @@ class FisheriesHSTTest(unittest.TestCase):
         """Clean up the test environment by removing the workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_neutral(self):
         """Fisheries-HST: Verify outputs of sex-neutral run."""
         from natcap.invest.fisheries import fisheries_hst
@@ -446,7 +434,6 @@ class FisheriesHSTTest(unittest.TestCase):
             os.path.join(TEST_DATA, 'pop_params_modified.csv'),
             os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
         """Fisheries-HST: Verify outputs of sex-specific run."""
         from natcap.invest.fisheries import fisheries_hst
