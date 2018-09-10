@@ -24,8 +24,7 @@ Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation')
-SAMPLE_DATA = os.path.join(
-    REGRESSION_DATA, 'input')
+SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 LOGGER = logging.getLogger('test_recreation')
 
