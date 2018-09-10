@@ -5,6 +5,7 @@ import logging
 import os
 import shutil
 import unittest
+import tempfile
 import csv
 from decimal import Decimal
 import hashlib
@@ -131,19 +132,15 @@ def create_csv_table(table_path, rows_list):
     return table_path
 
 
-def get_args():
+def get_args(workspace_dir):
     """Create test-case arguments for Scenario Generator model.
+
+    Parameters:
+        workspace_dir (str): path to the workspace for saving files.
 
     Returns:
         args (dict): main model arguments.
     """
-    workspace_dir = os.path.join(
-        os.path.dirname(os.path.realpath(__file__)), 'workspace')
-    if os.path.exists(workspace_dir):
-        shutil.rmtree(workspace_dir)
-    if not os.path.exists(workspace_dir):
-        os.mkdir(workspace_dir)
-
     array = np.array(land_cover_array)
     land_cover_raster_uri = os.path.join(workspace_dir, 'lulc.tif')
     create_raster(land_cover_raster_uri, array)
@@ -217,8 +214,9 @@ class ModelTests(unittest.TestCase):
     """Test execute function in scenario generator model."""
 
     def setUp(self):
-        """Setup."""
-        self.args = get_args()
+        """Setup workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.args = get_args(self.workspace_dir)
 
     def test_execute(self):
         """Scenario Generator: Test Execute."""
@@ -231,7 +229,7 @@ class ModelTests(unittest.TestCase):
 
     def tearDown(self):
         """Tear Down."""
-        shutil.rmtree(self.args['workspace_dir'])
+        shutil.rmtree(self.workspace_dir)
 
 
 class UnitTests(unittest.TestCase):
@@ -239,7 +237,8 @@ class UnitTests(unittest.TestCase):
 
     def setUp(self):
         """Setup."""
-        self.args = get_args()
+        self.workspace_dir = tempfile.mkdtemp()
+        self.args = get_args(self.workspace_dir)
 
     def test_calculate_weights(self):
         """Scenario Generator: test calculate weights."""
@@ -317,4 +316,4 @@ class UnitTests(unittest.TestCase):
 
     def tearDown(self):
         """Tear Down."""
-        shutil.rmtree(self.args['workspace_dir'])
+        shutil.rmtree(self.workspace_dir)
