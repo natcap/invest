@@ -6,7 +6,6 @@ import logging
 
 import numpy
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
 import natcap.invest.pygeoprocessing_0_3_3
 
