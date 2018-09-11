@@ -14,7 +14,6 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
-
 LOGGER = logging.getLogger('natcap.invest.habitat_quality')
 
 
@@ -398,8 +397,10 @@ def execute(args):
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
-        base_area = pygeoprocessing.get_raster_info(lulc_base_uri)['mean_pixel_size'] ** 2
-        base_nodata = pygeoprocessing.get_raster_info(lulc_base_uri)['nodata'][0]
+        base_area = pygeoprocessing.get_raster_info(
+            lulc_base_uri)['mean_pixel_size'] ** 2
+        base_nodata = pygeoprocessing.get_raster_info(
+            lulc_base_uri)['nodata'][0]
         rarity_nodata = -64329.0
 
         lulc_code_count_b = raster_pixel_count(lulc_base_uri)
@@ -625,9 +626,11 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
     integration = 0.0
     for row_index in xrange(kernel_size):
         distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
         kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0, (max_distance - distance_kernel_row) / max_distance)
+            distance_kernel_row > max_distance, 0.0,
+            (max_distance - distance_kernel_row) / max_distance)
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
