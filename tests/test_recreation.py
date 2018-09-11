@@ -25,6 +25,7 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
+RESAMPLE_FACTOR = 10
 
 LOGGER = logging.getLogger('test_recreation')
 
@@ -65,11 +66,11 @@ def _timeout(max_timeout):
     return timeout_decorator
 
 
-def _make_dummy_files(base_file_list):
-    """Create a dummy output file to be overwritten.
+def _make_empty_files(base_file_list):
+    """Create a list of empty files.
 
     Parameters:
-        base_file_list: a list of paths to files to be created.
+        base_file_list: a list of paths to empty files to be created.
 
     Returns:
         None.
@@ -80,11 +81,8 @@ def _make_dummy_files(base_file_list):
             open_file.write('')
 
 
-def _resample_csv(base_csv_path, base_dst_path, resample_factor=10):
+def _resample_csv(base_csv_path, base_dst_path, resample_factor):
     """Resample (downsize) a csv file by a certain resample factor.
-
-    The default resample factor is good for sample_data.csv,
-    which has 100000 data points.
 
     Parameters:
         base_csv_path (str): path to the source csv file to be resampled.
@@ -145,7 +143,7 @@ class TestRecServer(unittest.TestCase):
             self.workspace_dir, 'resampled_data.csv')
         _resample_csv(
             os.path.join(SAMPLE_DATA, 'sample_data.csv'),
-            self.resampled_data_path)
+            self.resampled_data_path, resample_factor=10)
 
     def tearDown(self):
         """Delete workspace."""
