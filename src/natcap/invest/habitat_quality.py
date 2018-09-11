@@ -164,8 +164,8 @@ def execute(args):
         pygeoprocessing.new_raster_from_base(
             cur_landuse_uri, access_dataset_path, gdal.GDT_Float32,
             [out_nodata], fill_value_list=[1.0])
-        # Fill raster to all 1's (fully accessible) incase polygons do not cover
-        # land area
+        # Fill raster to all 1's (fully accessible) in case polygons do not
+        # cover land area
 
         pygeoprocessing.rasterize(
             args['access_uri'], access_dataset_path, burn_values=None,
