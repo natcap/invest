@@ -815,7 +815,7 @@ class RecreationRegressionTests(unittest.TestCase):
         out_coefficient_vector_path = os.path.join(
             self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
-        _make_dummy_files(
+        _make_empty_files(
             [tmp_indexed_vector_path, out_coefficient_vector_path])
 
         # build again to test against overwriting output
