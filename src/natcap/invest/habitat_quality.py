@@ -8,7 +8,6 @@ import tempfile
 import numpy
 from osgeo import gdal
 from osgeo import osr
-import natcap.invest.pygeoprocessing_0_3_3
 import pygeoprocessing
 
 from . import utils
@@ -188,11 +187,11 @@ def execute(args):
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
 
         # Create raster of habitat based on habitat field
-        habitat_uri = os.path.join(
+        habitat_path = os.path.join(
             inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
 
         map_raster_to_dict_values(
-            lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
+            lulc_ds_uri, habitat_path, sensitivity_dict, 'HABITAT', out_nodata,
             'none')
 
         # initialize a list that will store all the density/threat rasters
@@ -331,6 +330,7 @@ def execute(args):
             out_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting aligning and resizing degradation rasters')
+
         aligned_degradation_raster_list = [
             path.replace('.tif', '_aligned.tif') for path in
             degradation_raster_list]
@@ -338,20 +338,18 @@ def execute(args):
             degradation_raster_list, aligned_degradation_raster_list,
             ['near']*len(degradation_raster_list), lulc_cell_size,
             'intersection')
+
         LOGGER.debug('Finished aligning and resizing degradation rasters')
 
         LOGGER.debug('Starting raster calculation on total_degradation')
+
         degradation_raster_band_list = [
             (path, 1) for path in aligned_degradation_raster_list]
         pygeoprocessing.raster_calculator(
             degradation_raster_band_list, total_degradation, deg_sum_path,
             gdal.GDT_Float32, out_nodata)
-        LOGGER.debug('Finished raster calculation on total_degradation')
 
-        # natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        #     degradation_raster_list, total_degradation, deg_sum_path,
-        #     gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-        #     vectorize_op=False)
+        LOGGER.debug('Finished raster calculation on total_degradation')
 
         # Compute habitat quality
         # scaling_param is a scaling parameter set to 2.5 as noted in the users
@@ -381,17 +379,33 @@ def execute(args):
                     (habitat * (1.0 - ((degredataion_clamped**scaling_param) /
                      (degredataion_clamped**scaling_param + ksq)))))
 
-        quality_uri = os.path.join(
+        quality_path = os.path.join(
             out_dir, 'quality_out' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting vectorize on quality_op')
+        LOGGER.debug('Starting aligning and resizing degradation and habitat \
+                     rasters.')
 
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [deg_sum_path, habitat_uri], quality_op, quality_uri,
-            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-            vectorize_op=False)
+        deg_hab_raster_list = [deg_sum_path, habitat_path]
+        aligned_deg_hab_raster_list = [
+            path.replace('.tif', '_aligned.tif') for path in
+            deg_hab_raster_list]
+        pygeoprocessing.align_and_resize_raster_stack(
+            deg_hab_raster_list, aligned_deg_hab_raster_list,
+            ['near']*len(deg_hab_raster_list), lulc_cell_size,
+            'intersection')
 
-        LOGGER.debug('Finished vectorize on quality_op')
+        LOGGER.debug('Finished aligning and resizing degradation and habitat \
+                     rasters.')
+
+        LOGGER.debug('Starting raster calculation on quality_op')
+
+        deg_hab_raster_band_list = [
+            (path, 1) for path in aligned_deg_hab_raster_list]
+        pygeoprocessing.raster_calculator(
+            deg_hab_raster_band_list, quality_op, quality_path,
+            gdal.GDT_Float32, out_nodata)
+
+        LOGGER.debug('Finished raster calculation on quality_op')
 
     # Compute Rarity if user supplied baseline raster
     if '_b' not in landuse_uri_dict:
@@ -415,6 +429,11 @@ def execute(args):
             if lulc_cover not in landuse_uri_dict:
                 continue
             lulc_cover_path = landuse_uri_dict[lulc_cover]
+
+            if lulc_cover == '_c':
+                lulc_time = 'current'
+            elif lulc_cover == '_f':
+                lulc_time = 'future'
 
             # get the area of a cur/fut pixel
             lulc_area = pygeoprocessing.get_raster_info(
@@ -440,17 +459,40 @@ def execute(args):
 
             LOGGER.debug('Create new cover for %s', lulc_cover)
 
-            new_cover_uri = os.path.join(
+            new_cover_path = os.path.join(
                 inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
 
             # set the current/future land cover to be masked to the base
             # land cover
-            natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-                [lulc_base_uri, lulc_cover_path], trim_op, new_cover_uri,
-                gdal.GDT_Int32, base_nodata, lulc_cell_size,
-                "intersection", vectorize_op=False)
 
-            lulc_code_count_x = raster_pixel_count(new_cover_uri)
+            LOGGER.debug('Starting aligning and resizing %s and base lulc \
+                rasters.' % lulc_time)
+
+            lulc_raster_list = [lulc_base_uri, lulc_cover_path]
+            aligned_lulc_raster_list = [
+                path.replace('.tif', '_aligned.tif') for path in
+                lulc_raster_list]
+            pygeoprocessing.align_and_resize_raster_stack(
+                lulc_raster_list, aligned_lulc_raster_list,
+                ['near']*len(lulc_raster_list), lulc_cell_size,
+                'intersection')
+
+            LOGGER.debug('Finished aligning and resizing %s and base lulc \
+                rasters.' % lulc_time)
+
+            LOGGER.debug('Starting masking %s land cover to base land cover'
+                         % lulc_time)
+
+            lulc_raster_band_list = [
+                (path, 1) for path in aligned_lulc_raster_list]
+            pygeoprocessing.raster_calculator(
+                lulc_raster_band_list, trim_op, new_cover_path,
+                gdal.GDT_Float32, out_nodata)
+
+            LOGGER.debug('Finished masking %s land cover to base land cover'
+                         % lulc_time)
+
+            lulc_code_count_x = raster_pixel_count(new_cover_path)
 
             # a dictionary to map LULC types to a number that depicts how
             # rare they are considered
@@ -473,7 +515,7 @@ def execute(args):
                 out_dir, 'rarity' + lulc_cover + suffix + '.tif')
 
             pygeoprocessing.reclassify_raster(
-                (new_cover_uri, 1), code_index, rarity_uri, gdal.GDT_Float32,
+                (new_cover_path, 1), code_index, rarity_uri, gdal.GDT_Float32,
                 rarity_nodata)
 
             LOGGER.debug('Finished vectorize on map_ratio')
