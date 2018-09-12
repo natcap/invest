@@ -25,7 +25,6 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'recreation')
 SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
-RESAMPLE_FACTOR = 10
 
 LOGGER = logging.getLogger('test_recreation')
 
