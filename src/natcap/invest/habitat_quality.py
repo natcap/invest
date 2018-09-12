@@ -89,11 +89,10 @@ def execute(args):
     # columns in the sensitivity table. Raise exception if they don't.
     sens_row = sensitivity_dict.itervalues().next()
     for threat in threat_dict:
-        if 'L_' + threat not in sens_row:
+        if threat not in sens_row:
             raise ValueError(
-                'Threat "L_%s" does not match any column in the sensitivity '
-                'table. Possible columns: %s' % (
-                    threat, str(sens_row.keys())))
+                'Threat "%s" does not match any column in the sensitivity '
+                'table. Possible columns: %s' % (threat, str(sens_row.keys())))
 
     # get the half saturation constant
     half_saturation = float(args['half_saturation_constant'])
@@ -267,7 +266,7 @@ def execute(args):
 
             map_raster_to_dict_values(
                 lulc_ds_uri, sens_uri, sensitivity_dict,
-                'L_' + threat, out_nodata, 'values_required')
+                threat, out_nodata, 'values_required')
 
             # get the normalized weight for each threat
             weight_avg = float(threat_data['WEIGHT']) / weight_sum

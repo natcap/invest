@@ -157,7 +157,7 @@ def make_sensitivity_samp_csv(csv_path, include_threat=True):
     """
     if include_threat:
         with open(csv_path, 'wb') as open_table:
-            open_table.write('LULC,NAME,HABITAT,L_threat_1\n')
+            open_table.write('LULC,NAME,HABITAT,threat_1\n')
             open_table.write('0,"lulc 0",1,1\n')
             open_table.write('1,"lulc 1",0.5,0.5\n')
             open_table.write('2,"lulc 2",0,0.3\n')
