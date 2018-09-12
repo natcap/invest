@@ -227,7 +227,7 @@ def execute(args):
             # rasters
             lulc_cell_size = (
                 pygeoprocessing.get_raster_info(
-                    args['landuse_cur_uri']))['mean_pixel_size']
+                    args['landuse_cur_uri']))['pixel_size']
 
             # need the cell size for the threat raster so we can create
             # an appropriate kernel for convolution
@@ -330,24 +330,28 @@ def execute(args):
         deg_sum_path = os.path.join(
             out_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
 
+        LOGGER.debug('Starting aligning and resizing degradation rasters')
+        aligned_degradation_raster_list = [
+            path.replace('.tif', '_aligned.tif') for path in
+            degradation_raster_list]
+        pygeoprocessing.align_and_resize_raster_stack(
+            degradation_raster_list, aligned_degradation_raster_list,
+            ['near']*len(degradation_raster_list), lulc_cell_size,
+            'intersection')
+        LOGGER.debug('Finished aligning and resizing degradation rasters')
+
         LOGGER.debug('Starting raster calculation on total_degradation')
-
-        # aligned_degradation_raster_list = [
-        #     path.replace('.tif', '_aligned.tif') for path in degradation_raster_list]
-        # pygeoprocessing.align_and_resize_raster_stack(
-        #     degradation_raster_list, aligned_degradation_raster_list,
-        #     ['near']*len(degradation_raster_list), lulc_cell_size, 'intersection')
-        # degradation_raster_band_list = [
-        #     (path, 1) for path in aligned_degradation_raster_list]
-        # pygeoprocessing.raster_calculator(
-        #     degradation_raster_band_list, total_degradation, deg_sum_path,
-        #     gdal.GDT_Float32, out_nodata)
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            degradation_raster_list, total_degradation, deg_sum_path,
-            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-            vectorize_op=False)
-
+        degradation_raster_band_list = [
+            (path, 1) for path in aligned_degradation_raster_list]
+        pygeoprocessing.raster_calculator(
+            degradation_raster_band_list, total_degradation, deg_sum_path,
+            gdal.GDT_Float32, out_nodata)
         LOGGER.debug('Finished raster calculation on total_degradation')
+
+        # natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+        #     degradation_raster_list, total_degradation, deg_sum_path,
+        #     gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
+        #     vectorize_op=False)
 
         # Compute habitat quality
         # scaling_param is a scaling parameter set to 2.5 as noted in the users
