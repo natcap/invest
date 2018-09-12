@@ -164,18 +164,16 @@ def execute(args):
 
     out_nodata = -1.0
 
-    # Convert access vector to raster, if value is null set to 1,
-    # else set to value
+    # Rasterize access vector, if value is null set to 1 (fully accessible),
+    # else set to value in the ACCESS attribute
     try:
         LOGGER.debug('Handling Access Shape')
         access_dataset_path = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
+        # create a new raster based on cur_landuse_path and fill with 1s
         pygeoprocessing.new_raster_from_base(
             cur_landuse_path, access_dataset_path, gdal.GDT_Float32,
             [out_nodata], fill_value_list=[1.0])
-        # Fill raster to all 1's (fully accessible) in case polygons do not
-        # cover land area
-
         pygeoprocessing.rasterize(
             args['access_path'], access_dataset_path, burn_values=None,
             option_list=['ATTRIBUTE=ACCESS'])
@@ -193,16 +191,15 @@ def execute(args):
     LOGGER.debug('landuse_path_dict : %s', landuse_path_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds_path in landuse_path_dict.iteritems():
+    for lulc_key, lulc_raster_path in landuse_path_dict.iteritems():
         LOGGER.debug('Calculating results for landuse : %s', lulc_key)
 
         # Create raster of habitat based on habitat field
-        habitat_path = os.path.join(
-            inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
-
+        habitat_raster_path = os.path.join(
+            inter_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
         map_raster_to_dict_values(
-            lulc_ds_path, habitat_path, sensitivity_dict, 'HABITAT', out_nodata,
-            'none')
+            lulc_raster_path, habitat_raster_path, sensitivity_dict, 'HABITAT',
+            out_nodata, values_required=False)
 
         # initialize a list that will store all the density/threat rasters
         # after they have been adjusted for distance, weight, and access
@@ -244,7 +241,7 @@ def execute(args):
                 threat_dataset_path)['mean_pixel_size']
 
             # convert max distance (given in KM) to meters
-            dr_max = float(threat_data['MAX_DIST']) * 1000.0
+            dr_max = threat_data['MAX_DIST'] * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
@@ -252,7 +249,7 @@ def execute(args):
             LOGGER.debug('Max distance in pixels: %f', dr_pixel)
 
             filtered_threat_path = os.path.join(
-                inter_dir, threat + '_filtered_%s%s.tif' % (lulc_key, suffix))
+                inter_dir, threat + '_filtered%s%s.tif' % (lulc_key, suffix))
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -266,21 +263,21 @@ def execute(args):
             else:
                 raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
-                    "either 'linear' or 'exponential' input was %s" % (
+                    "either 'linear' or 'exponential'. Input was %s" % (
                         decay_type))
             pygeoprocessing.convolve_2d(
                 (threat_dataset_path, 1), (kernel_path, 1), filtered_threat_path)
             os.remove(kernel_path)
+
             # create sensitivity raster based on threat
             sens_path = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
-
             map_raster_to_dict_values(
-                lulc_ds_path, sens_path, sensitivity_dict,
-                threat, out_nodata, 'values_required')
+                lulc_raster_path, sens_path, sensitivity_dict, threat,
+                out_nodata, values_required=True)
 
             # get the normalized weight for each threat
-            weight_avg = float(threat_data['WEIGHT']) / weight_sum
+            weight_avg = threat_data['WEIGHT'] / weight_sum
 
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
@@ -336,7 +333,7 @@ def execute(args):
         # raster filled with all 1's if not
         degradation_raster_list.append(access_dataset_path)
 
-        deg_sum_path = os.path.join(
+        deg_sum_raster_path = os.path.join(
             out_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting aligning and resizing degradation rasters')
@@ -356,7 +353,7 @@ def execute(args):
         degradation_raster_band_list = [
             (path, 1) for path in aligned_degradation_raster_list]
         pygeoprocessing.raster_calculator(
-            degradation_raster_band_list, total_degradation, deg_sum_path,
+            degradation_raster_band_list, total_degradation, deg_sum_raster_path,
             gdal.GDT_Float32, out_nodata)
 
         LOGGER.debug('Finished raster calculation on total_degradation')
@@ -395,7 +392,7 @@ def execute(args):
         LOGGER.debug('Starting aligning and resizing degradation and habitat \
                      rasters.')
 
-        deg_hab_raster_list = [deg_sum_path, habitat_path]
+        deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
         aligned_deg_hab_raster_list = [
             path.replace('.tif', '_aligned.tif') for path in
             deg_hab_raster_list]
@@ -611,7 +608,7 @@ def raster_pixel_count(raster_path):
 
 
 def map_raster_to_dict_values(
-        key_raster_path, out_path, attr_dict, field, out_nodata, raise_error):
+        key_raster_path, out_path, attr_dict, field, out_nodata, values_required):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
        corresponding to those keys is what is written to the new raster. If a
@@ -643,7 +640,7 @@ def map_raster_to_dict_values(
 
     pygeoprocessing.reclassify_raster(
         (key_raster_path, 1), int_attr_dict, out_path, gdal.GDT_Float32,
-        out_nodata)
+        out_nodata, values_required)
 
 
 def make_linear_decay_kernel_path(max_distance, kernel_path):
