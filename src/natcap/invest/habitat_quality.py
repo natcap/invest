@@ -48,7 +48,7 @@ def execute(args):
             the spread and central tendency of habitat quality scores
             (required)
         suffix (string): a python string that will be inserted into all
-            raster path paths just before the file lu_keyension.
+            raster path paths just before the file extension.
 
     Example Args Dictionary::
 
@@ -114,19 +114,21 @@ def execute(args):
 
     # Determine which land cover scenarios we should run, and store it in
     # landuse_path_dict (landuse_cur_path is required)
-    landuse_path_dict = {'_c': 'landuse_cur_path'}
-    optional_landuse_path_dict = {'_f': 'landuse_fut_path',
+    landuse_scenarios = {'_c': 'landuse_cur_path'}
+    optional_landuse_scenarios = {'_f': 'landuse_fut_path',
                                   '_b': 'landuse_bas_path'}
-    for lu_key, lu_path in optional_landuse_path_dict.iteritems():
-        if lu_path in args:
-            landuse_path_dict[lu_key] = lu_path
+    for lu_key, lu_args in optional_landuse_scenarios.iteritems():
+        if lu_args in args:
+            landuse_scenarios[lu_key] = lu_args
 
-    # declare dictionaries to store the density rasters pertaining to the
-    # different threats
+    # declare dictionaries to store the land use and the density rasters
+    # pertaining to the different threats
+    landuse_path_dict = {}
     density_path_dict = {}
     # compile all the threat/density rasters associated with the land cover
-    for lu_key, lu_path in landuse_path_dict.iteritems():
+    for lu_key, lu_args in landuse_scenarios.iteritems():
 
+        landuse_path_dict[lu_key] = args[lu_args]
         # add a key to the density dictionary that associates all density/threat
         # rasters with this land cover
         density_path_dict['density' + lu_key] = {}
@@ -134,6 +136,7 @@ def execute(args):
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in threat_raster_folder
         for threat in threat_dict:
+            # it's okay to have no threat raster for baseline scenario
             if lu_key == '_b':
                 density_path_dict['density' + lu_key][threat] = (
                     resolve_ambiguous_raster_path(
@@ -159,16 +162,17 @@ def execute(args):
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
     # Rasterize access vector, if value is null set to 1 (fully accessible),
-    # else set to value in the ACCESS attribute
+    # else set to the value according to the ACCESS attribute
     cur_landuse_path = landuse_path_dict['_c']
+    fill_value = 1.0
     try:
         LOGGER.debug('Handling Access Shape')
         access_dataset_path = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
-        # create a new raster based on info of cur_landuse_path and fill with 1
+        # create a new raster based on info of cur_landuse_path
         pygeoprocessing.new_raster_from_base(
             cur_landuse_path, access_dataset_path, gdal.GDT_Float32,
-            [_OUT_NODATA], fill_value_list=[1.0])
+            [_OUT_NODATA], fill_value_list=[fill_value])
         pygeoprocessing.rasterize(
             args['access_path'], access_dataset_path, burn_values=None,
             option_list=['ATTRIBUTE=ACCESS'])
@@ -181,7 +185,7 @@ def execute(args):
     weight_sum = 0.0
     for threat_data in threat_dict.itervalues():
         # Sum weight of threats
-        weight_sum = weight_sum + float(threat_data['WEIGHT'])
+        weight_sum = weight_sum + threat_data['WEIGHT']
 
     LOGGER.debug('landuse_path_dict : %s', landuse_path_dict)
 
@@ -251,7 +255,8 @@ def execute(args):
             if decay_type == 'linear':
                 make_linear_decay_kernel_path(max_dist_pixel, kernel_path)
             elif decay_type == 'exponential':
-                utils.exponential_decay_kernel_raster(max_dist_pixel, kernel_path)
+                utils.exponential_decay_kernel_raster(
+                    max_dist_pixel, kernel_path)
             else:
                 raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
@@ -286,7 +291,7 @@ def execute(args):
             weight_list = numpy.append(weight_list, weight_avg)
 
         # check to see if we got here because a threat raster was missing
-        # and if so then we want to skip to the nlu_key landcover
+        # and if so then we want to skip to the next landcover
         if exit_landcover:
             continue
 
@@ -330,7 +335,7 @@ def execute(args):
         degradation_raster_list.append(access_dataset_path)
 
         deg_sum_raster_path = os.path.join(
-            out_dir, 'deg_sum_out' + lu_key + suffix + '.tif')
+            out_dir, 'degrad' + lu_key + suffix + '.tif')
 
         LOGGER.debug('Starting aligning and resizing degradation rasters')
 
@@ -526,17 +531,17 @@ def execute(args):
 
 
 def resolve_ambiguous_raster_path(path, raise_error=True):
-    """Determine real path when we don't know true path lu_keyension.
+    """Determine real path when we don't know true path extension.
 
     Parameters:
         path (string): file path that includes the name of the file but not
-            its lu_keyension
+            its extension
 
         raise_error (boolean): if True then function will raise an
             ValueError if a valid raster file could not be found.
 
     Return:
-        the full path, plus lu_keyension, to the valid raster.
+        the full path, plus extension, to the valid raster.
     """
     # Turning on exceptions so that if an error occurs when trying to open a
     # file path we can catch it and handle it properly
@@ -552,8 +557,8 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
 
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
-    for suffix in possible_ext:
-        full_path = path + suffix
+    for ext in possible_ext:
+        full_path = path + ext
         if not os.path.exists(full_path):
             continue
         try:
