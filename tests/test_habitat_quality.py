@@ -242,29 +242,29 @@ class HabitatQualityTests(unittest.TestCase):
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios):
-            args['landuse' + scenario + 'path'] = os.path.join(
+            args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_lulc_raster(args['landuse' + scenario + 'path'], lulc_val)
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'])
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
 
         habitat_quality.execute(args)
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_out_c_regression.tif': 19.5529461,
-                'deg_sum_out_f_regression.tif': 13.9218416,
-                'quality_out_c_regression.tif': 7499.9941406,
-                'quality_out_f_regression.tif': 4999.9995117,
+                'deg_sum_c_regression.tif': 19.5529461,
+                'deg_sum_f_regression.tif': 13.9218416,
+                'quality_c_regression.tif': 7499.9941406,
+                'quality_f_regression.tif': 4999.9995117,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
         }.iteritems():
@@ -286,21 +286,21 @@ class HabitatQualityTests(unittest.TestCase):
         make_access_shp(args['access_path'])
 
         # Include a missing threat to the sensitivity csv table
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
         make_sensitivity_samp_csv(
-            args['sensitivity_path'], include_threat=False)
+            args['sensitivity_table_path'], include_threat=False)
 
-        args['landuse_cur_path'] = os.path.join(args['workspace_dir'],
-                                                'lc_samp_cur_b.tif')
-        make_lulc_raster(args['landuse_cur_path'], 1)
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+        make_lulc_raster(args['lulc_cur_path'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'])
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -318,21 +318,22 @@ class HabitatQualityTests(unittest.TestCase):
                                            'access_samp.shp')
         make_access_shp(args['access_path'])
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['landuse_cur_path'] = os.path.join(args['workspace_dir'],
-                                                'lc_samp_cur_b.tif')
-        make_lulc_raster(args['landuse_cur_path'], 1)
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+        make_lulc_raster(args['lulc_cur_path'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
         # Include a missing threat to the threats csv table
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'], include_missing_threat=True)
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(
+            args['threats_table_path'], include_missing_threat=True)
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -350,21 +351,22 @@ class HabitatQualityTests(unittest.TestCase):
                                            'access_samp.shp')
         make_access_shp(args['access_path'])
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['landuse_cur_path'] = os.path.join(args['workspace_dir'],
-                                                'lc_samp_cur_b.tif')
-        make_lulc_raster(args['landuse_cur_path'], 1)
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+        make_lulc_raster(args['lulc_cur_path'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
         # Include an invalid decay function name to the threats csv table.
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'], include_invalid_decay=True)
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(
+            args['threats_table_path'], include_invalid_decay=True)
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -378,21 +380,21 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['landuse_cur_path'] = os.path.join(args['workspace_dir'],
-                                                'lc_samp_cur_b.tif')
-        make_lulc_raster(args['landuse_cur_path'], 1)
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+        make_lulc_raster(args['lulc_cur_path'], 1)
 
         # Make an empty threat raster in the workspace folder.
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'], make_bad_raster=True)
 
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'])
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
 
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
@@ -406,26 +408,26 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
-        args['landuse_cur_path'] = os.path.join(args['workspace_dir'],
-                                                'lc_samp_cur_b.tif')
-        make_lulc_raster(args['landuse_cur_path'], 1)
+        args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
+                                             'lc_samp_cur_b.tif')
+        make_lulc_raster(args['lulc_cur_path'], 1)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'])
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
 
         habitat_quality.execute(args)
 
         # Reasonable to just check quality out in this case
         assert_array_sum(
-            os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
+            os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
             7499.9316406)
 
     def test_habitat_quality_nodata_small_fut(self):
@@ -437,26 +439,26 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['sensitivity_path'] = os.path.join(args['workspace_dir'],
-                                                'sensitivity_samp.csv')
-        make_sensitivity_samp_csv(args['sensitivity_path'])
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         scenarios = ['_bas_', '_cur_']  # Missing '_fut_'
         for lulc_val, scenario in enumerate(scenarios):
-            args['landuse' + scenario + 'path'] = os.path.join(
+            args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_lulc_raster(args['landuse' + scenario + 'path'], lulc_val)
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
 
-        args['threats_path'] = os.path.join(args['workspace_dir'],
-                                            'threats_samp.csv')
-        make_threats_csv(args['threats_path'])
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
 
         habitat_quality.execute(args)
 
         # Reasonable to just check quality out in this case
         assert_array_sum(
-            os.path.join(args['workspace_dir'], 'output', 'quality_out_c.tif'),
+            os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
             7499.9316406)
