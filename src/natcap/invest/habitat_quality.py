@@ -113,7 +113,7 @@ def execute(args):
     half_saturation = float(args['half_saturation_constant'])
 
     # Determine which land cover scenarios we should run, and store it in
-    # landuse_path_dict
+    # landuse_path_dict (landuse_cur_path is required)
     landuse_path_dict = {'_c': 'landuse_cur_path'}
     optional_landuse_path_dict = {'_f': 'landuse_fut_path',
                                   '_b': 'landuse_bas_path'}
@@ -546,13 +546,13 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         raise ValueError()
     gdal.PushErrorHandler(_error_handler)
 
-    # a list of possible suffixes for raster datasets. We currently can handle
-    # .tif and directory paths
-    possible_suffixes = ['', '.tif', '.img']
+    # a list of possible extensions for raster datasets. We currently can
+    # handle .tif and directory paths
+    possible_ext = ['', '.tif', '.img']
 
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
-    for suffix in possible_suffixes:
+    for suffix in possible_ext:
         full_path = path + suffix
         if not os.path.exists(full_path):
             continue
