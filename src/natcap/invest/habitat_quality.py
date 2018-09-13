@@ -356,14 +356,13 @@ def execute(args):
         degradation_raster_band_list = [
             (path, 1) for path in aligned_degradation_raster_list]
         pygeoprocessing.raster_calculator(
-            degradation_raster_band_list, total_degradation, deg_sum_raster_path,
-            gdal.GDT_Float32, _OUT_NODATA)
+            degradation_raster_band_list, total_degradation,
+            deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
         LOGGER.debug('Finished raster calculation on total_degradation')
 
         # Compute habitat quality
-
-        # a term used below to compute habitat quality
+        # ksq: a term used below to compute habitat quality
         ksq = half_saturation**_SCALING_PARAM
 
         def quality_op(degradation, habitat):
