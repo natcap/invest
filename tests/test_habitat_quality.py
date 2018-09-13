@@ -261,12 +261,12 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 19.5529461,
-                'deg_sum_f_regression.tif': 13.9218416,
-                'quality_c_regression.tif': 7499.9941406,
-                'quality_f_regression.tif': 4999.9995117,
-                'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000
+            'deg_sum_c_regression.tif': 19.5529461,
+            'deg_sum_f_regression.tif': 13.9218416,
+            'quality_c_regression.tif': 7499.9941406,
+            'quality_f_regression.tif': 4999.9995117,
+            'rarity_c_regression.tif': 2500.0000000,
+            'rarity_f_regression.tif': 2500.0000000
         }.iteritems():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),

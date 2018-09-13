@@ -43,9 +43,9 @@ def execute(args):
             following names: 'THREAT','MAX_DIST','WEIGHT' (required).
         access_vector_path (string): a path to an input polygon shapefile
             containing data on the relative protection against threats (optional)
-        sensitivity_table_path (string): a path to an input CSV file of LULC types,
-            whether they are considered habitat, and their sensitivity to each
-            threat (required)
+        sensitivity_table_path (string): a path to an input CSV file of LULC
+            types, whether they are considered habitat, and their sensitivity
+            to each threat (required)
         half_saturation_constant (float): a python float that determines
             the spread and central tendency of habitat quality scores
             (required)
@@ -119,47 +119,86 @@ def execute(args):
     lulc_scenarios = {'_c': 'lulc_cur_path'}
     optional_lulc_scenarios = {'_f': 'lulc_fut_path',
                                '_b': 'lulc_bas_path'}
-    for lulc_key, lu_args in optional_lulc_scenarios.iteritems():
-        if lu_args in args:
-            lulc_scenarios[lulc_key] = lu_args
+    for lulc_key, lulc_args in optional_lulc_scenarios.iteritems():
+        if lulc_args in args:
+            lulc_scenarios[lulc_key] = lulc_args
 
-    # declare dictionaries to store the land use and the density rasters
+    # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
     lulc_path_dict = {}
-    density_path_dict = {}
-    # compile all the threat/density rasters associated with the land cover
-    for lulc_key, lu_args in lulc_scenarios.iteritems():
+    threat_path_dict = {}
+    # also store land cover and threat rasters in a list
+    lulc_and_threat_raster_list = []
+    aligned_raster_list = []
 
-        lulc_path_dict[lulc_key] = args[lu_args]
-        # add a key to the density dictionary that associates all density/threat
+    # compile all the threat rasters associated with the land cover
+    for lulc_key, lulc_args in lulc_scenarios.iteritems():
+
+        lulc_path = args[lulc_args]
+        lulc_path_dict[lulc_key] = lulc_path
+        # save land cover paths in a list for alignment and resize
+        lulc_and_threat_raster_list.append(lulc_path)
+        aligned_raster_list.append(
+            os.path.join(
+                inter_dir, os.path.basename(lulc_path).replace(
+                    '.tif', '_aligned.tif')))
+
+        # add a key to the threat dictionary that associates all threat/threat
         # rasters with this land cover
-        density_path_dict['density' + lulc_key] = {}
+        threat_path_dict['threat' + lulc_key] = {}
 
         # for each threat given in the CSV file try opening the associated
         # raster which should be found in threat_raster_folder
         for threat in threat_dict:
             # it's okay to have no threat raster for baseline scenario
             if lulc_key == '_b':
-                density_path_dict['density' + lulc_key][threat] = (
+                threat_path_dict['threat' + lulc_key][threat] = (
                     resolve_ambiguous_raster_path(
                         os.path.join(threat_raster_dir, threat + lulc_key),
                         raise_error=False))
             else:
-                density_path_dict['density' + lulc_key][threat] = (
+                threat_path_dict['threat' + lulc_key][threat] = (
                     resolve_ambiguous_raster_path(
                         os.path.join(threat_raster_dir, threat + lulc_key)))
 
-    # checking to make sure the land covers have the same projections, and
-    # printing warnings in case projections are not identical
-    lulc_info_list = [
-        pygeoprocessing.get_raster_info(path) for path in
-        lulc_path_dict.values()]
-    projection_set = set([x['projection'] for x in lulc_info_list])
-    if len(projection_set) != 1:
-        LOGGER.warn(
-            "Projections are not identical. Here's the projections: %s" %
-            [(path, x['projection']) for path, x in zip(
-              lulc_path_dict.values(), lulc_info_list)])
+            # save threat paths in a list for alignment and resize
+            threat_path = threat_path_dict['threat' + lulc_key][threat]
+            if threat_path:
+                lulc_and_threat_raster_list.append(threat_path)
+                aligned_raster_list.append(
+                    os.path.join(
+                        inter_dir, os.path.basename(lulc_path).replace(
+                            '.tif', '_aligned.tif')))
+
+    # Align and resize all the land cover and threat rasters.
+    # Store them in the intermediate folder to be used for calculations
+    LOGGER.debug('Starting aligning and resizing land cover and threat rasters')
+
+    lulc_pixel_size = (
+        pygeoprocessing.get_raster_info(args['lulc_cur_path']))['pixel_size']
+
+    aligned_raster_list = [
+        os.path.join(inter_dir, os.path.basename(path).replace(
+            '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        lulc_and_threat_raster_list, aligned_raster_list,
+        ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
+        'intersection')
+
+    LOGGER.debug('Finished aligning and resizing land cover and threat rasters')
+
+    # modify lulc_path_dict and threat_path_dict to store the aligned rasters
+    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+        lulc_path_dict[lulc_key] = os.path.join(
+            inter_dir, os.path.basename(lulc_path).replace(
+                '.tif', '_aligned.tif'))
+        for threat in threat_dict:
+            threat_path = threat_path_dict['threat' + lulc_key][threat]
+            if threat_path in lulc_and_threat_raster_list:
+                threat_path_dict['threat' + lulc_key][threat] = os.path.join(
+                    inter_dir, os.path.basename(threat_path).replace(
+                        '.tif', '_aligned.tif'))
 
     LOGGER.debug('Starting habitat_quality biophysical calculations')
 
@@ -169,14 +208,14 @@ def execute(args):
     fill_value = 1.0
     try:
         LOGGER.debug('Handling Access Shape')
-        access_dataset_path = os.path.join(
+        access_raster_path = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
-        # create a new raster based on info of cur_lulc_path
+        # create a new raster based on the raster info of current land cover
         pygeoprocessing.new_raster_from_base(
-            cur_lulc_path, access_dataset_path, gdal.GDT_Float32,
+            cur_lulc_path, access_raster_path, gdal.GDT_Float32,
             [_OUT_NODATA], fill_value_list=[fill_value])
         pygeoprocessing.rasterize(
-            args['access_vector_path'], access_dataset_path, burn_values=None,
+            args['access_vector_path'], access_raster_path, burn_values=None,
             option_list=['ATTRIBUTE=ACCESS'])
 
     except KeyError:
@@ -193,7 +232,7 @@ def execute(args):
 
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.iteritems():
-        LOGGER.debug('Calculating habitat quality for landuse : %s', lulc_key)
+        LOGGER.debug('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -202,9 +241,9 @@ def execute(args):
             lulc_path, habitat_raster_path, sensitivity_dict, 'HABITAT',
             _OUT_NODATA, values_required=False)
 
-        # initialize a list that will store all the density/threat rasters
+        # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
-        degradation_raster_list = []
+        deg_raster_list = []
 
         # a list to keep track of the normalized weight for each threat
         weight_list = numpy.array([])
@@ -213,14 +252,14 @@ def execute(args):
         # for a land cover because a threat raster was not found
         exit_landcover = False
 
-        # adjust each density/threat raster for distance, weight, and access
+        # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.iteritems():
 
             LOGGER.debug('Calculating threat : %s', threat)
             LOGGER.debug('Threat Data : %s', threat_data)
 
-            # get the density raster for the specific threat
-            threat_raster_path = density_path_dict['density' + lulc_key][threat]
+            # get the threat raster for the specific threat
+            threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
             LOGGER.debug('threat_raster_path %s', threat_raster_path)
             if threat_raster_path is None:
                 LOGGER.info(
@@ -285,8 +324,8 @@ def execute(args):
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
             # vectorized_rasters below
-            degradation_raster_list.append(filtered_threat_raster_path)
-            degradation_raster_list.append(sens_raster_path)
+            deg_raster_list.append(filtered_threat_raster_path)
+            deg_raster_list.append(sens_raster_path)
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
@@ -334,27 +373,15 @@ def execute(args):
         # add the access_raster onto the end of the collected raster list. The
         # access_raster will be values from the shapefile if provided or a
         # raster filled with all 1's if not
-        degradation_raster_list.append(access_dataset_path)
+        deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
             out_dir, 'deg_sum' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting aligning and resizing degradation rasters')
-
-        aligned_degradation_raster_list = [
-            path.replace('.tif', '_aligned.tif') for path in
-            degradation_raster_list]
-        pygeoprocessing.align_and_resize_raster_stack(
-            degradation_raster_list, aligned_degradation_raster_list,
-            ['near']*len(degradation_raster_list), lulc_pixel_size,
-            'intersection')
-
-        LOGGER.debug('Finished aligning and resizing degradation rasters')
-
         LOGGER.debug('Starting raster calculation on total_degradation')
 
         degradation_raster_band_list = [
-            (path, 1) for path in aligned_degradation_raster_list]
+            (path, 1) for path in deg_raster_list]
         pygeoprocessing.raster_calculator(
             degradation_raster_band_list, total_degradation,
             deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
@@ -388,25 +415,12 @@ def execute(args):
         quality_path = os.path.join(
             out_dir, 'quality' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting aligning and resizing degradation and habitat \
-                     rasters.')
-
-        deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
-        aligned_deg_hab_raster_list = [
-            path.replace('.tif', '_aligned.tif') for path in
-            deg_hab_raster_list]
-        pygeoprocessing.align_and_resize_raster_stack(
-            deg_hab_raster_list, aligned_deg_hab_raster_list,
-            ['near']*len(deg_hab_raster_list), lulc_pixel_size,
-            'intersection')
-
-        LOGGER.debug('Finished aligning and resizing degradation and habitat \
-                     rasters.')
-
         LOGGER.debug('Starting raster calculation on quality_op')
 
+        deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
+
         deg_hab_raster_band_list = [
-            (path, 1) for path in aligned_deg_hab_raster_list]
+            (path, 1) for path in deg_hab_raster_list]
         pygeoprocessing.raster_calculator(
             deg_hab_raster_band_list, quality_op, quality_path,
             gdal.GDT_Float32, _OUT_NODATA)
@@ -470,27 +484,13 @@ def execute(args):
 
             # set the current/future land cover to be masked to the base
             # land cover
-
-            LOGGER.debug('Starting aligning and resizing %s and base lulc \
-                rasters.' % lulc_time)
-
             lulc_raster_list = [lulc_base_path, lulc_path]
-            aligned_lulc_raster_list = [
-                path.replace('.tif', '_aligned.tif') for path in
-                lulc_raster_list]
-            pygeoprocessing.align_and_resize_raster_stack(
-                lulc_raster_list, aligned_lulc_raster_list,
-                ['near']*len(lulc_raster_list), lulc_pixel_size,
-                'intersection')
-
-            LOGGER.debug('Finished aligning and resizing %s and base lulc \
-                rasters.' % lulc_time)
 
             LOGGER.debug('Starting masking %s land cover to base land cover.'
                          % lulc_time)
 
             lulc_raster_band_list = [
-                (path, 1) for path in aligned_lulc_raster_list]
+                (path, 1) for path in lulc_raster_list]
             pygeoprocessing.raster_calculator(
                 lulc_raster_band_list, trim_op, new_cover_path,
                 gdal.GDT_Float32, _OUT_NODATA)
