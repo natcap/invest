@@ -219,9 +219,9 @@ def execute(args):
             LOGGER.debug('Threat Data : %s', threat_data)
 
             # get the density raster for the specific threat
-            threat_dataset_path = density_path_dict['density' + lulc_key][threat]
-            LOGGER.debug('threat_dataset_path %s', threat_dataset_path)
-            if threat_dataset_path is None:
+            threat_raster_path = density_path_dict['density' + lulc_key][threat]
+            LOGGER.debug('threat_raster_path %s', threat_raster_path)
+            if threat_raster_path is None:
                 LOGGER.info(
                     'A certain threat raster could not be found for the '
                     'Baseline Land Cover. Skipping Habitat Quality '
@@ -238,18 +238,15 @@ def execute(args):
             # need the cell size for the threat raster so we can create
             # an appropriate kernel for convolution
             threat_cell_size = pygeoprocessing.get_raster_info(
-                threat_dataset_path)['mean_pixel_size']
+                threat_raster_path)['mean_pixel_size']  # use pixel_size???
 
             # convert max distance (given in KM) to meters
-            dr_max = threat_data['MAX_DIST'] * 1000.0
+            max_dist_m = threat_data['MAX_DIST'] * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            dr_pixel = dr_max / threat_cell_size
-            LOGGER.debug('Max distance in pixels: %f', dr_pixel)
-
-            filtered_threat_path = os.path.join(
-                inter_dir, threat + '_filtered%s%s.tif' % (lulc_key, suffix))
+            max_dist_pixel = max_dist_m / threat_cell_size
+            LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
             # blur the threat raster based on the effect of the threat over
             # distance
@@ -257,23 +254,27 @@ def execute(args):
             kernel_handle, kernel_path = tempfile.mkstemp()
             os.close(kernel_handle)
             if decay_type == 'linear':
-                make_linear_decay_kernel_path(dr_pixel, kernel_path)
+                make_linear_decay_kernel_path(max_dist_pixel, kernel_path)
             elif decay_type == 'exponential':
-                utils.exponential_decay_kernel_raster(dr_pixel, kernel_path)
+                utils.exponential_decay_kernel_raster(max_dist_pixel, kernel_path)
             else:
                 raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
                     "either 'linear' or 'exponential'. Input was %s" % (
                         decay_type))
+
+            filtered_threat_raster_path = os.path.join(
+                inter_dir, threat + '_filtered%s%s.tif' % (lulc_key, suffix))
             pygeoprocessing.convolve_2d(
-                (threat_dataset_path, 1), (kernel_path, 1), filtered_threat_path)
+                (threat_raster_path, 1), (kernel_path, 1),
+                filtered_threat_raster_path)
             os.remove(kernel_path)
 
             # create sensitivity raster based on threat
-            sens_path = os.path.join(
+            sens_raster_path = os.path.join(
                 inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
             map_raster_to_dict_values(
-                lulc_raster_path, sens_path, sensitivity_dict, threat,
+                lulc_raster_path, sens_raster_path, sensitivity_dict, threat,
                 out_nodata, values_required=True)
 
             # get the normalized weight for each threat
@@ -282,8 +283,8 @@ def execute(args):
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
             # vectorized_rasters below
-            degradation_raster_list.append(filtered_threat_path)
-            degradation_raster_list.append(sens_path)
+            degradation_raster_list.append(filtered_threat_raster_path)
+            degradation_raster_list.append(sens_raster_path)
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
