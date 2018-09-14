@@ -8,6 +8,8 @@ Unreleased Changes
   impossible negative coefficients.
 * Fixing an issue with the Scenario Generator: Proximity model that would
   raise an exception if no AOI were passed in even though the AOI is optional.
+* Removing Overlap Analysis and Overlap Analysis: Management Zones.
+* Removing Habitat Suitability.
 * Added comprehensive error checking to hydropower model to test for the VERY
   common errors of missing biophysical, demand, and valuation coefficients in
   their respective tables.

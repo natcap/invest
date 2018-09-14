@@ -42,7 +42,6 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
-        'natcap.invest.overlap_analysis',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',

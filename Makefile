@@ -2,15 +2,15 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 175
+SVN_DATA_REPO_REV       := 177
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 174
+SVN_TEST_DATA_REPO_REV  := 183
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 8143946d26bd
+HG_UG_REPO_REV          := 10cd532ac720
 
 
 ENV = env
@@ -128,7 +128,7 @@ help:
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
-test: $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+test: $(SVN_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
 test_ui:
@@ -220,12 +220,12 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	-$(RM) build/userguide/latex
-	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide latex
+	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD="..$(/)..$(/)$(ENV_SCRIPTS)$(/)sphinx-build" BUILDDIR=../../build/userguide html
+	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
 	-$(RM) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
@@ -252,10 +252,8 @@ ZIPDIRS = Aquaculture \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  habitat_suitability \
 		  Hydropower \
 		  Malaria \
-		  OverlapAnalysis \
 		  pollination \
 		  recreation \
 		  ScenarioGenerator \
@@ -320,5 +318,5 @@ jenkins:
 jenkins_test_ui: env
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
-jenkins_test: env $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test

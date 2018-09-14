@@ -12,13 +12,12 @@ import pprint
 
 import numpy
 from osgeo import gdal
-from natcap.invest.pygeoprocessing_0_3_3 import geoprocessing as geoprocess
-import natcap.invest.pygeoprocessing_0_3_3.testing as pygeotest
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing as pygeotest
 from natcap.invest import utils
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+    'coastal_blue_carbon')
 LOGGER = logging.getLogger(__name__)
 
 
@@ -97,17 +96,17 @@ def _create_workspace():
 
 
 def _get_args(workspace, num_transitions=2, valuation=True):
-    """Create and return arguements for CBC main model.
+    """Create and return arguments for CBC main model.
 
     Parameters:
-        workspace(string): A path to a folder on disk.  Generated inputs will be
-            saved to this directory.
+        workspace(string): A path to a folder on disk.  Generated inputs will
+            be saved to this directory.
         num_transitions=2 (int): The number of transitions to synthesize.
         valuation=True (bool): Whether to include parameters related to
             valuation in the args dict.
 
     Returns:
-        args (dict): main model arguements
+        args (dict): main model arguments.
     """
     band_matrices = [numpy.ones((2, 2))]
     band_matrices_two = [numpy.ones((2, 2)) * 2]
@@ -285,7 +284,7 @@ class TestPreprocessor(unittest.TestCase):
         code_to_lulc_dict = {1: 'one', 2: 'two', 3: 'three'}
         preprocessor._create_carbon_pool_transient_table_template(
             filepath, code_to_lulc_dict)
-        transient_dict = geoprocess.get_lookup_from_table(filepath, 'code')
+        transient_dict = utils.build_lookup_from_csv(filepath, 'code')
         # demonstrate that output table contains all input land cover classes
         for i in [1, 2, 3]:
             self.assertTrue(i in transient_dict.keys())
@@ -354,8 +353,6 @@ class TestPreprocessor(unittest.TestCase):
         First raster contains ones, second nodata, third zeros.
         """
         from natcap.invest.coastal_blue_carbon import preprocessor
-        from natcap.invest import utils
-
         args = _get_preprocessor_args(4, self.workspace_dir)
         preprocessor.execute(args)
         trans_csv = os.path.join(
@@ -454,25 +451,21 @@ class TestPreprocessor(unittest.TestCase):
 
         preprocessor.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
-        """Coastal Blue Carbon: Test preprocessor  run against InVEST-Data."""
+        """Coastal Blue Carbon: Test preprocessor run against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon import preprocessor
 
-        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         raster_0_uri = os.path.join(
-            sample_data_path,
-            'inputs/GBJC_2010_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif')
         raster_1_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2030_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif')
         raster_2_uri = os.path.join(
-            sample_data_path, 'inputs/GBJC_2050_mean_Resample.tif')
+            REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')
         args = {
             'workspace_dir': _create_workspace(),
             'results_suffix': '150225',
             'lulc_lookup_uri': os.path.join(
-                sample_data_path,
-                'inputs/lulc_lookup.csv'),
+                REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_snapshot_list': [raster_0_uri, raster_1_uri, raster_2_uri]
         }
         preprocessor.execute(args)
@@ -645,11 +638,7 @@ class TestModel(unittest.TestCase):
         netseq_output_raster = os.path.join(
             self.args['workspace_dir'],
             'outputs_core/total_net_carbon_sequestration_test.tif')
-        npv_output_raster = os.path.join(
-            self.args['workspace_dir'],
-            'outputs_core/net_present_value_test.tif')
         netseq_array = _read_array(netseq_output_raster)
-        npv_array = _read_array(npv_output_raster)
 
         # (Explanation for why netseq is 10.5.)
         # LULC Code: Baseline: 1 --> Year 2000: 1, Year 2005: 2
@@ -671,7 +660,7 @@ class TestModel(unittest.TestCase):
             import coastal_blue_carbon as cbc
 
         self.args = _get_args(valuation=False, workspace=self.workspace_dir)
-        self.args['lulc_baseline_year']= 2000
+        self.args['lulc_baseline_year'] = 2000
         self.args['lulc_transition_years_list'] = [2005, 2010]
         self.args['analysis_year'] = None
 
@@ -696,45 +685,38 @@ class TestModel(unittest.TestCase):
         numpy.testing.assert_array_almost_equal(
             netseq_array, netseq_test, decimal=4)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_binary(self):
         """Coastal Blue Carbon: Test CBC model against InVEST-Data."""
         from natcap.invest.coastal_blue_carbon \
             import coastal_blue_carbon as cbc
 
-        sample_data_path = os.path.join(SAMPLE_DATA, 'CoastalBlueCarbon')
         args = {
             'workspace_dir': self.args['workspace_dir'],
             'carbon_pool_initial_uri': os.path.join(
-                sample_data_path,
+                REGRESSION_DATA,
                 'outputs_preprocessor/carbon_pool_initial_sample.csv'),
             'carbon_pool_transient_uri': os.path.join(
-                sample_data_path,
+                REGRESSION_DATA,
                 'outputs_preprocessor/carbon_pool_transient_sample.csv'),
             'discount_rate': 6.0,
             'do_economic_analysis': True,
             'do_price_table': True,
             'inflation_rate': 3.0,
             'lulc_lookup_uri': os.path.join(
-                sample_data_path,
-                'inputs/lulc_lookup.csv'),
+                REGRESSION_DATA, 'inputs', 'lulc_lookup.csv'),
             'lulc_baseline_map_uri': os.path.join(
-                sample_data_path,
-                'inputs/GBJC_2010_mean_Resample.tif'),
+                REGRESSION_DATA, 'inputs/GBJC_2010_mean_Resample.tif'),
             'lulc_baseline_year': 2010,
             'lulc_transition_maps_list': [
                 os.path.join(
-                    sample_data_path,
-                    'inputs/GBJC_2030_mean_Resample.tif'),
+                    REGRESSION_DATA, 'inputs/GBJC_2030_mean_Resample.tif'),
                 os.path.join(
-                    sample_data_path,
-                    'inputs/GBJC_2050_mean_Resample.tif')],
+                    REGRESSION_DATA, 'inputs/GBJC_2050_mean_Resample.tif')],
             'lulc_transition_years_list': [2030, 2050],
             'price_table_uri': os.path.join(
-                sample_data_path, 'inputs/Price_table_SCC3.csv'),
+                REGRESSION_DATA, 'inputs/Price_table_SCC3.csv'),
             'lulc_transition_matrix_uri': os.path.join(
-                sample_data_path,
-                'outputs_preprocessor/transitions_sample.csv'),
+                REGRESSION_DATA, 'outputs_preprocessor/transitions_sample.csv'),
             'price': 10.0,
             'results_suffix': '150225'
         }
@@ -793,8 +775,9 @@ class TestModel(unittest.TestCase):
         try:
             cbc.execute(self.args)
         except AttributeError as error:
-            LOGGER.exception("Here's the traceback encountered:")
+            LOGGER.exception("Here's the traceback encountered: %s" % error)
             self.fail('CBC should not crash when only 1 transition provided')
+
 
 class CBCRefactorTest(unittest.TestCase):
     def setUp(self):
@@ -824,7 +807,7 @@ class CBCRefactorTest(unittest.TestCase):
         Returns:
             A dict of the model arguments.
         """
-        from natcap.invest.pygeoprocessing_0_3_3.testing import sampledata
+        from pygeoprocessing.testing import sampledata
 
         args = {
             'workspace_dir': workspace,
@@ -950,7 +933,3 @@ class CBCRefactorTest(unittest.TestCase):
 
         self.assertEqual(biomass_dict, expected_biomass_dict)
         self.assertEqual(soil_dict, expected_soil_dict)
-
-
-if __name__ == '__main__':
-    unittest.main()
