@@ -378,6 +378,8 @@ def execute(args):
 
         LOGGER.debug('Starting raster calculation on total_degradation')
 
+        print [os.path.basename(fpath) for fpath in deg_raster_list]
+
         deg_raster_band_list = [(path, 1) for path in deg_raster_list]
         pygeoprocessing.raster_calculator(
             deg_raster_band_list, total_degradation,
