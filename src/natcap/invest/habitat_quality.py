@@ -112,7 +112,11 @@ def execute(args):
                 (threat, missing_threat_header_list))
 
     # get the half saturation constant
-    half_saturation = float(args['half_saturation_constant'])
+    try:
+        half_saturation = float(args['half_saturation_constant'])
+    except ValueError:
+        raise ValueError('Half-saturation constant is not a numeric number.'
+                         'It is: %s' % args['half_saturation_constant'])
 
     # Determine which land cover scenarios we should run, and store it in
     # lulc_path_dict (lulc_cur_path is required)
