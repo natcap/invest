@@ -170,8 +170,8 @@ def execute(args):
                         inter_dir, os.path.basename(lulc_path).replace(
                             '.tif', '_aligned.tif')))
 
-    # Align and resize all the land cover and threat rasters.
-    # Store them in the intermediate folder to be used for calculations
+    # Align and resize all the land cover and threat rasters,
+    # and tore them in the intermediate folder
     LOGGER.debug('Starting aligning and resizing land cover and threat rasters')
 
     lulc_pixel_size = (
@@ -188,7 +188,7 @@ def execute(args):
 
     LOGGER.debug('Finished aligning and resizing land cover and threat rasters')
 
-    # modify lulc_path_dict and threat_path_dict to store the aligned rasters
+    # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.iteritems():
         lulc_path_dict[lulc_key] = os.path.join(
             inter_dir, os.path.basename(lulc_path).replace(
@@ -268,12 +268,6 @@ def execute(args):
                     'land cover.' % (threat, lulc_key))
                 exit_landcover = True
                 break
-
-            # get the pixel size from LULC to use for intermediate / output
-            # rasters
-            lulc_pixel_size = (
-                pygeoprocessing.get_raster_info(
-                    args['lulc_cur_path']))['pixel_size']
 
             # need the pixel size for the threat raster so we can create
             # an appropriate kernel for convolution
@@ -380,10 +374,9 @@ def execute(args):
 
         LOGGER.debug('Starting raster calculation on total_degradation')
 
-        degradation_raster_band_list = [
-            (path, 1) for path in deg_raster_list]
+        deg_raster_band_list = [(path, 1) for path in deg_raster_list]
         pygeoprocessing.raster_calculator(
-            degradation_raster_band_list, total_degradation,
+            deg_raster_band_list, total_degradation,
             deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
         LOGGER.debug('Finished raster calculation on total_degradation')

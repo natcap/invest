@@ -104,6 +104,8 @@ def make_access_shp(access_shp_path):
         feature.SetGeometry(poly)
         layer.CreateFeature(feature)
         feature = None
+    layer.SyncToDisk()
+    data_source.SyncToDisk()
     data_source = None
 
 
@@ -231,14 +233,17 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            'half_saturation_constant': '0.5',
-            'suffix': 'regression',
-            u'workspace_dir': self.workspace_dir,
+            'half_saturation_constant':
+            '0.5',
+            'suffix':
+            'regression',
+            u'workspace_dir':
+            r"C:\Users\Joanna Lin\Desktop\test_folder\habitat_quality_workspace"  #self.workspace_dir,
         }
 
-        args['access_path'] = os.path.join(args['workspace_dir'],
-                                           'access_samp.shp')
-        make_access_shp(args['access_path'])
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios):
@@ -261,12 +266,12 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-            'deg_sum_c_regression.tif': 19.5529461,
-            'deg_sum_f_regression.tif': 13.9218416,
-            'quality_c_regression.tif': 7499.9941406,
-            'quality_f_regression.tif': 4999.9995117,
-            'rarity_c_regression.tif': 2500.0000000,
-            'rarity_f_regression.tif': 2500.0000000
+                'deg_sum_c_regression.tif': 19.5529461,
+                'deg_sum_f_regression.tif': 13.9218416,
+                'quality_c_regression.tif': 7499.9941406,
+                'quality_f_regression.tif': 4999.9995117,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000
         }.iteritems():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),
@@ -281,9 +286,9 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['access_path'] = os.path.join(args['workspace_dir'],
-                                           'access_samp.shp')
-        make_access_shp(args['access_path'])
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
 
         # Include a missing threat to the sensitivity csv table
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -314,9 +319,9 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['access_path'] = os.path.join(args['workspace_dir'],
-                                           'access_samp.shp')
-        make_access_shp(args['access_path'])
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
                                                       'sensitivity_samp.csv')
@@ -347,9 +352,9 @@ class HabitatQualityTests(unittest.TestCase):
             u'workspace_dir': self.workspace_dir,
         }
 
-        args['access_path'] = os.path.join(args['workspace_dir'],
-                                           'access_samp.shp')
-        make_access_shp(args['access_path'])
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
                                                       'sensitivity_samp.csv')
