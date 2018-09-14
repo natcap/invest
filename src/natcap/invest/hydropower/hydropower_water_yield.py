@@ -91,6 +91,10 @@ def execute(args):
             valuation:
                 ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
                 'cost', 'height', 'kw_price')
+            Required if ``calculate_valuation`` is True.
+
+        args['calculate_valuation'] (bool): (optional) if True, valuation will
+            be calculated.
 
     Returns:
         None
@@ -562,12 +566,10 @@ def execute(args):
         LOGGER.warn("Could not remove temporary directory %s", temp_dir)
 
     # Check to see if Valuation was selected to run
-    if 'valuation_container' in args:
-        valuation_checked = args['valuation_container']
-    else:
-        valuation_checked = False
-
-    if not valuation_checked:
+    try:
+        if not args['calculate_valuation']:
+            raise KeyError('Valuation not selected')
+    except KeyError:
         LOGGER.debug('Valuation Not Selected')
         # Since Valuation are not selected write out
         # the CSV table
