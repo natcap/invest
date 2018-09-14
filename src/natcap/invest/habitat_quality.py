@@ -276,7 +276,7 @@ def execute(args):
             # need the pixel size for the threat raster so we can create
             # an appropriate kernel for convolution
             threat_pixel_size = pygeoprocessing.get_raster_info(
-                threat_raster_path)['mean_pixel_size']  # use pixel_size??????????
+                threat_raster_path)['mean_pixel_size']  # use pixel_size????
 
             # convert max distance (given in KM) to meters
             max_dist_m = threat_data['MAX_DIST'] * 1000.0
@@ -377,8 +377,6 @@ def execute(args):
             out_dir, 'deg_sum' + lulc_key + suffix + '.tif')
 
         LOGGER.debug('Starting raster calculation on total_degradation')
-
-        print [os.path.basename(fpath) for fpath in deg_raster_list]
 
         deg_raster_band_list = [(path, 1) for path in deg_raster_list]
         pygeoprocessing.raster_calculator(
