@@ -101,6 +101,32 @@ def execute(args):
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
+    if 'valuation_table_uri' in args and args['valuation_table_uri'] != '':
+        LOGGER.info(
+            'Checking that watersheds have entries for every `ws_id` in the '
+            'valuation table.')
+        # TODO: check
+        # Open/read in valuation parameters from CSV file
+        valuation_params = utils.build_lookup_from_csv(
+            args['valuation_table_uri'], 'ws_id')
+        watershed_vector = gdal.OpenEx(
+            args['watersheds_uri'], gdal.OF_VECTOR)
+        watershed_layer = watershed_vector.GetLayer()
+        missing_ws_ids = []
+        for watershed_feature in watershed_layer:
+            watershed_ws_id = watershed_feature.GetField('ws_id')
+            if watershed_ws_id not in valuation_params:
+                missing_ws_ids.append(watershed_ws_id)
+        watershed_feature = None
+        watershed_layer = None
+        watershed_vector = None
+        if missing_ws_ids:
+            raise ValueError(
+                'The following `ws_id`s exist in the watershed vector file '
+                'but are not found in the valuation table. Check your '
+                'valuation table to see if they are missing: "%s"' % (
+                    ', '.join(str(x) for x in sorted(missing_ws_ids))))
+
     # Construct folder paths
     workspace_dir = args['workspace_dir']
     output_dir = os.path.join(workspace_dir, 'output')
@@ -136,14 +162,67 @@ def execute(args):
         'intersection', raster_align_index=4,
         base_vector_path_list=[sheds_uri])
 
+    lulc_info = pygeoprocessing.get_raster_info(clipped_lulc_uri)
+
+    # Open/read in the csv file into a dictionary and add to arguments
+    LOGGER.info(
+        'Checking that biophysical table has landcover codes for every value '
+        'in the landcover map.')
+    bio_dict = utils.build_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode', to_lower=True)
+
+    lulc_nodata = lulc_info['nodata'][0]
+    if 'demand_table_uri' in args and args['demand_table_uri'] != '':
+        LOGGER.info(
+            'Checking that demand table has landcover codes for every value '
+            'in the landcover map.')
+        demand_dict = utils.build_lookup_from_csv(
+            args['demand_table_uri'], 'lucode')
+        demand_reclassify_dict = dict(
+            [(lucode, demand_dict[lucode]['demand'])
+             for lucode in demand_dict])
+        demand_lucodes = set(demand_dict.keys())
+        demand_lucodes.add(lulc_nodata)
+        LOGGER.debug('demand_lucodes %s', demand_lucodes)
+        missing_demand_lucodes = set()
+    else:
+        missing_demand_lucodes = None
+
+    bio_lucodes = set(bio_dict.keys())
+    bio_lucodes.add(lulc_nodata)
+    LOGGER.debug('bio_lucodes %s', bio_lucodes)
+    missing_bio_lucodes = set()
+    # these are such common errors we'll explicitly check before runtime
+    for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_uri):
+        unique_codes = set(numpy.unique(lulc_block))
+        missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
+        if missing_demand_lucodes is not None:
+            missing_demand_lucodes.update(
+                unique_codes.difference(demand_lucodes))
+
+    missing_message = ''
+    if missing_bio_lucodes:
+        missing_message += (
+            'The following landcover codes were found in the landcover '
+            'raster but they did not have corresponding entries in the '
+            'biophysical table. Check your biophysical table to see if they '
+            'are missing. %s.\n\n' % ', '.join([str(x) for x in sorted(
+                missing_bio_lucodes)]))
+    if missing_demand_lucodes:
+        missing_message += (
+            'The following landcover codes were found in the landcover '
+            'raster but they did not have corresponding entries in the water '
+            'demand table. Check your demand table to see if they are '
+            'missing. "%s".\n\n' % ', '.join([str(x) for x in sorted(
+                missing_demand_lucodes)]))
+
+    if missing_message:
+        raise ValueError(missing_message)
+
     sub_sheds_uri = None
     # If subwatersheds was input get the URI
     if 'sub_watersheds_uri' in args and args['sub_watersheds_uri'] != '':
         sub_sheds_uri = args['sub_watersheds_uri']
-
-    # Open/read in the csv file into a dictionary and add to arguments
-    bio_dict = utils.build_lookup_from_csv(
-        args['biophysical_table_uri'], 'lucode', to_lower=True)
 
     # Append a _ to the suffix if it's not empty and doens't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -507,10 +586,6 @@ def execute(args):
         return
 
     LOGGER.info('Starting Water Scarcity')
-    demand_dict = utils.build_lookup_from_csv(
-        args['demand_table_uri'], 'lucode')
-    demand_reclassify_dict = dict(
-        [(lucode, demand_dict[lucode]['demand']) for lucode in demand_dict])
 
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
@@ -576,10 +651,6 @@ def execute(args):
         return
 
     LOGGER.info('Starting Valuation Calculation')
-
-    # Open/read in valuation parameters from CSV file
-    valuation_params = utils.build_lookup_from_csv(
-        args['valuation_table_uri'], 'ws_id')
 
     # Compute NPV and Energy for the watersheds
     LOGGER.info('Calculating NPV/ENERGY for Sheds')
