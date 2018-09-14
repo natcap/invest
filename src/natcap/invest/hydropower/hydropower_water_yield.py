@@ -105,7 +105,6 @@ def execute(args):
         LOGGER.info(
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
-        # TODO: check
         # Open/read in valuation parameters from CSV file
         valuation_params = utils.build_lookup_from_csv(
             args['valuation_table_uri'], 'ws_id')
