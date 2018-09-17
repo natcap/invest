@@ -130,7 +130,7 @@ class HydropowerTests(unittest.TestCase):
         args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
-        args['valuation_container'] = True
+        args['calculate_valuation'] = True
         args['valuation_table_uri'] = os.path.join(
             SAMPLE_DATA, 'hydropower_valuation_table.csv')
         args['sub_watersheds_uri'] = os.path.join(

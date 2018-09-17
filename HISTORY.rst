@@ -13,6 +13,9 @@ Unreleased Changes
 * Added comprehensive error checking to hydropower model to test for the VERY
   common errors of missing biophysical, demand, and valuation coefficients in
   their respective tables.
+* Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
+  valuation would never be triggered when running the model through the User
+  Interface.
 
 3.5.0 (2018-08-14)
 ------------------
