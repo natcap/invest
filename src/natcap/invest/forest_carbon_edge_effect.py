@@ -52,7 +52,7 @@ def execute(args):
             the fields 'c_below', 'c_dead', and 'c_soil'.
 
                 * ``lucode``: an integer that corresponds to landcover codes in
-                  the raster ``args['lulc_uri']``
+                  the raster ``args['lulc_raster_path']``
                 * ``is_tropical_forest``: either 0 or 1 indicating whether the
                   landcover type is forest (1) or not (0).  If 1, the value
                   in ``c_above`` is ignored and instead calculated from the
@@ -73,7 +73,7 @@ def execute(args):
 
                 Note the "n/a" in ``c_above`` are optional since that field
                 is ignored when ``is_tropical_forest==1``.
-        args['lulc_uri'] (string): path to a integer landcover code raster
+        args['lulc_raster_path'] (string): path to a integer landcover code raster
         args['pools_to_calculate'] (string): if "all" then all carbon pools
             will be calculted.  If any other value only above ground carbon
             pools will be calculated and expect only a 'c_above' header in
@@ -120,6 +120,18 @@ def execute(args):
         if not aoi_vector:
             raise ValueError("Unable to open aoi at: %s" % args['aoi_vector_path'])
         aoi_vector = None
+
+    for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
+        edge_distance_uri, largest_block=2**12):
+        current_time = time.time()
+        if current_time - last_time > 5.0:
+            LOGGER.info(
+                'carbon edge calculation approx. %.2f%% complete',
+                (n_cells_processed / float(n_cells) * 100.0))
+            last_time = current_time
+        n_cells_processed += (
+            edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
+        valid_edge_distance_mask = (edge_distance_block > 0)
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
@@ -169,7 +181,7 @@ def execute(args):
             carbon_maps.append(
                 output_file_registry[carbon_pool_type+'_map'])
             _calculate_lulc_carbon_map(
-                args['lulc_uri'], args['biophysical_table_uri'],
+                args['lulc_raster_path'], args['biophysical_table_uri'],
                 carbon_pool_type, ignore_tropical_type,
                 args['compute_forest_edge_effects'], carbon_maps[-1])
 
@@ -177,14 +189,14 @@ def execute(args):
         # generate a map of pixel distance to forest edge from the landcover map
         LOGGER.info('calculating distance from forest edge')
         _map_distance_from_tropical_forest_edge(
-            args['lulc_uri'], args['biophysical_table_uri'],
+            args['lulc_raster_path'], args['biophysical_table_uri'],
             output_file_registry['edge_distance'])
 
         # Build spatial index for gridded global model for closest 3 points
         LOGGER.info('Building spatial index for forest edge models.')
         kd_tree, theta_model_parameters, method_model_parameter = (
             _build_spatial_index(
-                args['lulc_uri'], intermediate_dir,
+                args['lulc_raster_path'], intermediate_dir,
                 args['tropical_forest_edge_carbon_model_shape_uri']))
 
         # calculate the edge carbon effect on forests
@@ -203,7 +215,7 @@ def execute(args):
     # combine maps into a single output
     LOGGER.info('combining carbon maps into single raster')
     cell_size_in_meters = pygeoprocessing.get_raster_info(
-        args['lulc_uri'])['pixel_size']
+        args['lulc_raster_path'])['pixel_size']
 
     def combine_carbon_maps(*carbon_maps):
         """This combines the carbon maps into one and leaves nodata where all
@@ -326,13 +338,13 @@ def _aggregate_carbon_map(
 
 
 def _calculate_lulc_carbon_map(
-        lulc_uri, biophysical_table_uri, carbon_pool_type,
+        lulc_raster_path, biophysical_table_uri, carbon_pool_type,
         ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
     """Calculates the carbon on the map based on non-forest landcover types
     only.
 
     Parameters:
-        lulc_uri (string): a filepath to the landcover map that contains
+        lulc_raster_path (string): a filepath to the landcover map that contains
             integer landcover codes
         biophysical_table_uri (string): a filepath to a csv table that indexes
             landcover codes to surface carbon, contains at least the fields
@@ -358,7 +370,7 @@ def _calculate_lulc_carbon_map(
 
     lucode_to_per_pixel_carbon = {}
     cell_area_ha = pygeoprocessing.get_raster_info(
-        lulc_uri)['mean_pixel_size'] ** 2 / 10000.0
+        lulc_raster_path)['mean_pixel_size'] ** 2 / 10000.0
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -383,17 +395,17 @@ def _calculate_lulc_carbon_map(
 
     # map aboveground carbon from table to lulc that is not forest
     pygeoprocessing.reclassify_raster(
-        (lulc_uri, 1), lucode_to_per_pixel_carbon,
+        (lulc_raster_path, 1), lucode_to_per_pixel_carbon,
         carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
 
 
 def _map_distance_from_tropical_forest_edge(
-        lulc_uri, biophysical_table_uri, edge_distance_uri):
+        lulc_raster_path, biophysical_table_uri, edge_distance_uri):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
     Parameters:
-        lulc_uri (string): path to the landcover raster that contains integer
+        lulc_raster_path (string): path to the landcover raster that contains integer
             landcover codes
         biophysical_table_uri (string): a path to a csv table that indexes
             landcover codes to forest type, contains at least the fields
@@ -401,7 +413,7 @@ def _map_distance_from_tropical_forest_edge(
             depending on landcover code type)
         edge_distance_uri (string): path to output raster where each pixel
             contains the euclidian pixel distance to nearest forest edges on
-            all non-nodata values of lulc_uri
+            all non-nodata values of lulc_raster_path
 
     Returns:
         None"""
@@ -415,7 +427,7 @@ def _map_distance_from_tropical_forest_edge(
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     forest_mask_nodata = 255
-    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_uri)
+    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_raster_path)
 
     def mask_non_forest_op(lulc_array):
         """converts forest lulc codes to 1"""
@@ -424,9 +436,9 @@ def _map_distance_from_tropical_forest_edge(
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
     non_forest_mask_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
-    out_pixel_size = pygeoprocessing.get_raster_info(lulc_uri)['mean_pixel_size']
+    out_pixel_size = pygeoprocessing.get_raster_info(lulc_raster_path)['mean_pixel_size']
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [lulc_uri], mask_non_forest_op, non_forest_mask_uri,
+        [lulc_raster_path], mask_non_forest_op, non_forest_mask_uri,
         gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
         vectorize_op=False)
 
@@ -706,7 +718,7 @@ def validate(args, limit_to=None):
 
     for key in [
             'workspace_dir',
-            'lulc_uri',
+            'lulc_raster_path',
             'biophysical_table_uri',
             'pools_to_calculate',
             'compute_forest_edge_effects',
@@ -732,14 +744,14 @@ def validate(args, limit_to=None):
 
     # check required files exist
     for key in [
-            'lulc_uri',
+            'lulc_raster_path',
             'biophysical_table_uri']:
         if (limit_to is None or limit_to == key) and (
                 not os.path.exists(args[key])):
             validation_error_list.append(
                 ([key], 'not found on disk'))
 
-    optional_file_type_list = [('lulc_uri', 'raster', True)]
+    optional_file_type_list = [('lulc_raster_path', 'raster', True)]
     if args['compute_forest_edge_effects']:
         optional_file_type_list.extend(
             [('tropical_forest_edge_carbon_model_shape_uri', 'vector', True),
