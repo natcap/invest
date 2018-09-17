@@ -203,7 +203,7 @@ def execute(args):
     # combine maps into a single output
     LOGGER.info('combining carbon maps into single raster')
     cell_size_in_meters = pygeoprocessing.get_raster_info(
-        args['lulc_uri'])['mean_pixel_size']
+        args['lulc_uri'])['pixel_size']
 
     def combine_carbon_maps(*carbon_maps):
         """This combines the carbon maps into one and leaves nodata where all
@@ -218,10 +218,24 @@ def execute(args):
         result[nodata_mask] = CARBON_MAP_NODATA
         return result
 
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        carbon_maps, combine_carbon_maps, output_file_registry['carbon_map'],
-        gdal.GDT_Float32, CARBON_MAP_NODATA, cell_size_in_meters,
-        'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
+    aligned_raster_list = [
+        os.path.join(intermediate_dir, os.path.basename(path).replace(
+            '.tif', '_aligned.tif')) for path in carbon_maps]
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        carbon_maps, aligned_raster_list,
+        ['near']*len(carbon_maps), cell_size_in_meters, 'intersection')
+
+    carbon_maps = [
+        os.path.join(intermediate_dir, os.path.basename(path).replace(
+            '.tif', '_aligned.tif')) for path in carbon_maps]
+
+    carbon_maps_band_list = [(path, 1) for path in carbon_maps]
+
+    pygeoprocessing.raster_calculator(
+        carbon_maps_band_list, combine_carbon_maps,
+        output_file_registry['carbon_map'], gdal.GDT_Float32, CARBON_MAP_NODATA
+        )
 
     # generate report (optional) by aoi if they exist
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
@@ -232,18 +246,18 @@ def execute(args):
 
 
 def _aggregate_carbon_map(
-        aoi_vector_path, carbon_map_uri, target_aggregate_vector_path):
+        aoi_vector_path, carbon_map_path, target_aggregate_vector_path):
     """Helper function to aggregate carbon values for the given serviceshed.
     Generates a new shapefile that's a copy of 'aoi_vector_path' in
     'workspace_dir' with mean and sum values from the raster at
-    'carbon_map_uri'
+    'carbon_map_path'
 
     Parameters:
         aoi_vector_path (string): path to shapefile that will be used to
-            aggregate raster at'carbon_map_uri'.
+            aggregate raster at'carbon_map_path'.
         workspace_dir (string): path to a directory that function can copy
             the shapefile at aoi_vector_path into.
-        carbon_map_uri (string): path to raster that will be aggregated by
+        carbon_map_path (string): path to raster that will be aggregated by
             the given serviceshed polygons
         target_aggregate_vector_path (string): path to an ESRI shapefile that
             will be created by this function as the aggregating output.
@@ -277,10 +291,8 @@ def _aggregate_carbon_map(
     target_aggregate_layer.SyncToDisk()
 
     # aggregate carbon stocks by the new ID field
-    serviceshed_stats = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-        carbon_map_uri, target_aggregate_vector_path,
-        shapefile_field=poly_id_field, ignore_nodata=True,
-        all_touched=False)
+    serviceshed_stats = pygeoprocessing.zonal_statistics(
+        (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
 
     # don't need a random poly id anymore
     target_aggregate_layer.DeleteField(
@@ -298,18 +310,24 @@ def _aggregate_carbon_map(
 
     target_aggregate_layer.ResetReading()
     target_aggregate_layer.StartTransaction()
+
     for poly_index, poly_feat in enumerate(target_aggregate_layer):
         poly_feat.SetField(
-            'c_sum', serviceshed_stats.total[poly_index])
+            'c_sum', serviceshed_stats[poly_index]['sum'])
+        # calculates mean pixel value per ha in for each feature in AOI
+        poly_geom = poly_feat.GetGeometryRef()
+        poly_area_ha = poly_geom.GetArea() / 1e4  # converts m^2 to hectare
+        poly_geom = None
         poly_feat.SetField(
-            'c_ha_mean', serviceshed_stats.hectare_mean[poly_index])
+            'c_ha_mean', serviceshed_stats[poly_index]['sum']/poly_area_ha)
+
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
 
 
 def _calculate_lulc_carbon_map(
         lulc_uri, biophysical_table_uri, carbon_pool_type,
-        ignore_tropical_type, compute_forest_edge_effects, carbon_map_uri):
+        ignore_tropical_type, compute_forest_edge_effects, carbon_map_path):
     """Calculates the carbon on the map based on non-forest landcover types
     only.
 
@@ -328,7 +346,7 @@ def _calculate_lulc_carbon_map(
             carbon pool type.
         compute_forest_edge_effects (boolean): if true the 'is_tropical_forest'
             header will be considered, if not, it is ignored
-        carbon_map_uri (string): a filepath to the output raster
+        carbon_map_path (string): a filepath to the output raster
             that will contain total mapped carbon per cell.
 
     Returns:
@@ -364,9 +382,9 @@ def _calculate_lulc_carbon_map(
                      biophysical_table[lucode][carbon_pool_type]))
 
     # map aboveground carbon from table to lulc that is not forest
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        lulc_uri, lucode_to_per_pixel_carbon,
-        carbon_map_uri, gdal.GDT_Float32, CARBON_MAP_NODATA)
+    pygeoprocessing.reclassify_raster(
+        (lulc_uri, 1), lucode_to_per_pixel_carbon,
+        carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
 
 
 def _map_distance_from_tropical_forest_edge(
@@ -489,7 +507,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         edge_distance_uri, kd_tree, theta_model_parameters,
         method_model_parameter, n_nearest_model_points,
         biomass_to_carbon_conversion_factor,
-        tropical_forest_edge_carbon_map_uri):
+        tropical_forest_edge_carbon_map_path):
     """Calculates the carbon on the forest pixels accounting for their global
     position with respect to precalculated edge carbon models.
 
@@ -508,7 +526,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             for.
         biomass_to_carbon_conversion_factor (float): number by which to
             multiply the biomass by to get carbon.
-        tropical_forest_edge_carbon_map_uri (string): a filepath to the output
+        tropical_forest_edge_carbon_map_path (string): a filepath to the output
             raster which will contain total carbon stocks per cell of forest
             type.
 
@@ -518,10 +536,10 @@ def _calculate_tropical_forest_edge_carbon_map(
     # create output raster and open band for writing
     # fill nodata, in case we skip entire memory blocks that are non-forest
     natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        edge_distance_uri, tropical_forest_edge_carbon_map_uri, 'GTiff',
+        edge_distance_uri, tropical_forest_edge_carbon_map_path, 'GTiff',
         CARBON_MAP_NODATA, gdal.GDT_Float32, fill_value=CARBON_MAP_NODATA)
     edge_carbon_dataset = gdal.OpenEx(
-        tropical_forest_edge_carbon_map_uri, gdal.GA_Update)
+        tropical_forest_edge_carbon_map_path, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
     edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
 
