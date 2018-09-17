@@ -276,6 +276,3 @@ class HydropowerTests(unittest.TestCase):
         self.assertTrue(
             'but are not found in the valuation table' in
             actual_message, actual_message)
-
-        args['valuation_table_uri'] = os.path.join(
-            SAMPLE_DATA, 'hydropower_valuation_table.csv')
