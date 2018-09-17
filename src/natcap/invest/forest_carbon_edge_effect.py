@@ -202,8 +202,8 @@ def execute(args):
 
     # combine maps into a single output
     LOGGER.info('combining carbon maps into single raster')
-    cell_size_in_meters = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        args['lulc_uri'])
+    cell_size_in_meters = pygeoprocessing.get_raster_info(
+        args['lulc_uri'])['mean_pixel_size']
 
     def combine_carbon_maps(*carbon_maps):
         """This combines the carbon maps into one and leaves nodata where all
@@ -339,8 +339,8 @@ def _calculate_lulc_carbon_map(
         biophysical_table_uri, 'lucode', to_lower=False)
 
     lucode_to_per_pixel_carbon = {}
-    cell_area_ha = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        lulc_uri) ** 2 / 10000.0
+    cell_area_ha = pygeoprocessing.get_raster_info(
+        lulc_uri)['mean_pixel_size'] ** 2 / 10000.0
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -406,7 +406,7 @@ def _map_distance_from_tropical_forest_edge(
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
     non_forest_mask_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_uri)
+    out_pixel_size = pygeoprocessing.get_raster_info(lulc_uri)['mean_pixel_size']
     natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
         [lulc_uri], mask_non_forest_op, non_forest_mask_uri,
         gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
@@ -533,10 +533,10 @@ def _calculate_tropical_forest_edge_carbon_map(
     # timer to give updates per call
     last_time = time.time()
 
-    cell_area_ha = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        edge_distance_uri) ** 2 / 10000.0
-    cell_size_km = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        edge_distance_uri) / 1000.0
+    cell_area_ha = pygeoprocessing.get_raster_info(
+        edge_distance_uri)['mean_pixel_size'] ** 2 / 10000.0
+    cell_size_km = pygeoprocessing.get_raster_info(
+        edge_distance_uri)['mean_pixel_size'] / 1000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
