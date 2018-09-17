@@ -34,14 +34,14 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
             'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -64,7 +64,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
             'lulc_raster_path': os.path.join(
@@ -72,7 +72,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -92,7 +92,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': False,
@@ -101,7 +101,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -126,7 +126,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         args = {
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
@@ -135,7 +135,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -152,7 +152,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
         args = {
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
@@ -161,7 +161,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -181,14 +181,14 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
             'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'nodata_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
