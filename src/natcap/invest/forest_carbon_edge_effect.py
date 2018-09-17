@@ -14,7 +14,6 @@ from . import utils
 import numpy
 from osgeo import gdal
 from osgeo import ogr
-import natcap.invest.pygeoprocessing_0_3_3
 import pygeoprocessing
 import scipy.spatial
 
@@ -203,8 +202,6 @@ def execute(args):
 
     # combine maps into a single output
     LOGGER.info('combining carbon maps into single raster')
-    cell_size_in_meters = pygeoprocessing.get_raster_info(
-        args['lulc_raster_path'])['pixel_size']
 
     def combine_carbon_maps(*carbon_maps):
         """This combines the carbon maps into one and leaves nodata where all
@@ -393,7 +390,7 @@ def _calculate_lulc_carbon_map(
 
 
 def _map_distance_from_tropical_forest_edge(
-        lulc_raster_path, biophysical_table_uri, edge_distance_uri):
+        lulc_raster_path, biophysical_table_uri, edge_distance_path):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
@@ -404,7 +401,7 @@ def _map_distance_from_tropical_forest_edge(
             landcover codes to forest type, contains at least the fields
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
             depending on landcover code type)
-        edge_distance_uri (string): path to output raster where each pixel
+        edge_distance_path (string): path to output raster where each pixel
             contains the euclidian pixel distance to nearest forest edges on
             all non-nodata values of lulc_raster_path
 
@@ -436,26 +433,26 @@ def _map_distance_from_tropical_forest_edge(
 
     # Do the distance transform on non-forest pixels
     pygeoprocessing.distance_transform_edt(
-        (non_forest_mask_path, 1), edge_distance_uri)
+        (non_forest_mask_path, 1), edge_distance_path)
 
     # good practice to delete temporary files when we're done with them
     os.remove(non_forest_mask_path)
 
 
 def _build_spatial_index(
-        base_raster_uri, local_model_dir,
-        tropical_forest_edge_carbon_model_shapefile_uri):
+        base_raster_path, local_model_dir,
+        tropical_forest_edge_carbon_model_shapefile_path):
     """Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
     Parameters:
-        base_raster_uri (string): path to a raster that is used to define the
+        base_raster_path (string): path to a raster that is used to define the
             bounding box and projection of the local model.
         local_model_dir (string): path to a directory where we can write a
             shapefile of the locally projected global data model grid.
             Function will create a file called 'local_carbon_shape.shp' in
             that location and overwrite one if it exists.
-        tropical_forest_edge_carbon_model_shapefile_uri (string): a path to an
+        tropical_forest_edge_carbon_model_shapefile_path (string): a path to an
             OGR shapefile that has the parameters for the global carbon edge
             model. Each georeferenced feature should have fields 'theta1',
             'theta2', 'theta3', and 'method'
@@ -469,15 +466,15 @@ def _build_spatial_index(
     """
 
     # Reproject the global model into local coordinate system
-    carbon_model_reproject_uri = os.path.join(
+    carbon_model_reproject_path = os.path.join(
         local_model_dir, 'local_carbon_shape.shp')
-    lulc_projection_wkt = natcap.invest.pygeoprocessing_0_3_3.get_dataset_projection_wkt_uri(
-        base_raster_uri)
-    natcap.invest.pygeoprocessing_0_3_3.reproject_datasource_uri(
-        tropical_forest_edge_carbon_model_shapefile_uri, lulc_projection_wkt,
-        carbon_model_reproject_uri)
+    lulc_projection_wkt = pygeoprocessing.get_raster_info(
+        base_raster_path)['projection']
+    pygeoprocessing.reproject_vector(
+        tropical_forest_edge_carbon_model_shapefile_path, lulc_projection_wkt,
+        carbon_model_reproject_path)
 
-    model_shape_ds = gdal.OpenEx(carbon_model_reproject_uri)
+    model_shape_ds = gdal.OpenEx(carbon_model_reproject_path)
     model_shape_layer = model_shape_ds.GetLayer()
 
     kd_points = []
@@ -508,7 +505,7 @@ def _build_spatial_index(
 
 
 def _calculate_tropical_forest_edge_carbon_map(
-        edge_distance_uri, kd_tree, theta_model_parameters,
+        edge_distance_path, kd_tree, theta_model_parameters,
         method_model_parameter, n_nearest_model_points,
         biomass_to_carbon_conversion_factor,
         tropical_forest_edge_carbon_map_path):
@@ -516,7 +513,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     position with respect to precalculated edge carbon models.
 
     Parameters:
-        edge_distance_uri (string): path to the a raster where each pixel
+        edge_distance_path (string): path to the a raster where each pixel
             contains the pixel distance to forest edge.
         kd_tree (scipy.spatial.cKDTree): a kd-tree that has indexed the valid
             model parameter points for fast nearest neighbor calculations.
@@ -539,9 +536,10 @@ def _calculate_tropical_forest_edge_carbon_map(
 
     # create output raster and open band for writing
     # fill nodata, in case we skip entire memory blocks that are non-forest
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        edge_distance_uri, tropical_forest_edge_carbon_map_path, 'GTiff',
-        CARBON_MAP_NODATA, gdal.GDT_Float32, fill_value=CARBON_MAP_NODATA)
+    pygeoprocessing.new_raster_from_base(
+        edge_distance_path, tropical_forest_edge_carbon_map_path,
+        gdal.GDT_Float32, [CARBON_MAP_NODATA],
+        fill_value_list=[CARBON_MAP_NODATA])
     edge_carbon_dataset = gdal.OpenEx(
         tropical_forest_edge_carbon_map_path, gdal.GA_Update)
     edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
@@ -556,14 +554,14 @@ def _calculate_tropical_forest_edge_carbon_map(
     last_time = time.time()
 
     cell_area_ha = pygeoprocessing.get_raster_info(
-        edge_distance_uri)['mean_pixel_size'] ** 2 / 10000.0
+        edge_distance_path)['mean_pixel_size'] ** 2 / 10000.0
     cell_size_km = pygeoprocessing.get_raster_info(
-        edge_distance_uri)['mean_pixel_size'] / 1000.0
+        edge_distance_path)['mean_pixel_size'] / 1000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
     for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
-            edge_distance_uri, largest_block=2**12):
+            edge_distance_path, largest_block=2**12):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
