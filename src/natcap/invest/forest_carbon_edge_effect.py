@@ -6,6 +6,7 @@ near tropical forest edges', by Chaplin-Kramer et. al (in review).
 from __future__ import absolute_import
 import os
 import logging
+import tempfile
 import time
 import uuid
 
@@ -218,17 +219,17 @@ def execute(args):
         result[nodata_mask] = CARBON_MAP_NODATA
         return result
 
-    aligned_raster_list = [
-        os.path.join(intermediate_dir, os.path.basename(path).replace(
-            '.tif', '_aligned.tif')) for path in carbon_maps]
+    # aligned_raster_list = [
+    #     os.path.join(intermediate_dir, os.path.basename(path).replace(
+    #         '.tif', '_aligned.tif')) for path in carbon_maps]
 
-    pygeoprocessing.align_and_resize_raster_stack(
-        carbon_maps, aligned_raster_list,
-        ['near']*len(carbon_maps), cell_size_in_meters, 'intersection')
+    # pygeoprocessing.align_and_resize_raster_stack(
+    #     carbon_maps, aligned_raster_list,
+    #     ['near']*len(carbon_maps), cell_size_in_meters, 'intersection')
 
-    carbon_maps = [
-        os.path.join(intermediate_dir, os.path.basename(path).replace(
-            '.tif', '_aligned.tif')) for path in carbon_maps]
+    # carbon_maps = [
+    #     os.path.join(intermediate_dir, os.path.basename(path).replace(
+    #         '.tif', '_aligned.tif')) for path in carbon_maps]
 
     carbon_maps_band_list = [(path, 1) for path in carbon_maps]
 
@@ -295,8 +296,8 @@ def _aggregate_carbon_map(
         serviceshed_stats = pygeoprocessing.zonal_statistics(
             (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
     except ValueError:
-        raise ValueError('There is no intersection between the land cover map '
-                         'and service areas of interest.')
+        raise ValueError("There is no intersection between the land cover map "
+                         "and service areas of interest.")
 
     # don't need a random poly id anymore
     target_aggregate_layer.DeleteField(
@@ -419,7 +420,7 @@ def _map_distance_from_tropical_forest_edge(
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     forest_mask_nodata = 255
-    lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_raster_path)
+    lulc_nodata = pygeoprocessing.get_raster_info(lulc_raster_path)['nodata']
 
     def mask_non_forest_op(lulc_array):
         """converts forest lulc codes to 1"""
@@ -427,19 +428,18 @@ def _map_distance_from_tropical_forest_edge(
             lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
-    non_forest_mask_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
-    out_pixel_size = pygeoprocessing.get_raster_info(lulc_raster_path)['mean_pixel_size']
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [lulc_raster_path], mask_non_forest_op, non_forest_mask_uri,
-        gdal.GDT_Byte, forest_mask_nodata, out_pixel_size, "intersection",
-        vectorize_op=False)
+    non_forest_mask_path_handle, non_forest_mask_path = tempfile.mkstemp()
+    os.close(non_forest_mask_path_handle)
+    pygeoprocessing.raster_calculator(
+        [(lulc_raster_path, 1)], mask_non_forest_op, non_forest_mask_path,
+        gdal.GDT_Byte, forest_mask_nodata)
 
     # Do the distance transform on non-forest pixels
-    natcap.invest.pygeoprocessing_0_3_3.distance_transform_edt(
-        non_forest_mask_uri, edge_distance_uri)
+    pygeoprocessing.distance_transform_edt(
+        (non_forest_mask_path, 1), edge_distance_uri)
 
     # good practice to delete temporary files when we're done with them
-    os.remove(non_forest_mask_uri)
+    os.remove(non_forest_mask_path)
 
 
 def _build_spatial_index(
