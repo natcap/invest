@@ -14,6 +14,7 @@ import numpy
 from osgeo import gdal
 from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 import scipy.spatial
 
 from . import validation
@@ -40,7 +41,7 @@ def execute(args):
             name (optional)
         args['n_nearest_model_points'] (int): number of nearest neighbor model
             points to search for
-        args['aoi_uri'] (string): (optional) if present, a path to a
+        args['aoi_vector_path'] (string): (optional) if present, a path to a
             shapefile that will be used to aggregate carbon stock results at
             the end of the run.
         args['biophysical_table_uri'] (string): a path to a CSV table that has
@@ -114,16 +115,16 @@ def execute(args):
     """
     # just check that the AOI exists since it wouldn't crash until the end of
     # the whole model run if it didn't.
-    if 'aoi_uri' in args and args['aoi_uri'] != '':
-        aoi_vector = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
+        aoi_vector = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
         if not aoi_vector:
-            raise ValueError("Unable to open aoi at: %s" % args['aoi_uri'])
+            raise ValueError("Unable to open aoi at: %s" % args['aoi_vector_path'])
         aoi_vector = None
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    natcap.invest.pygeoprocessing_0_3_3.create_directories(
+    utils.make_directories(
         [output_dir, intermediate_dir])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -223,25 +224,25 @@ def execute(args):
         'intersection', vectorize_op=False, datasets_are_pre_aligned=True)
 
     # generate report (optional) by aoi if they exist
-    if 'aoi_uri' in args and args['aoi_uri'] != '':
+    if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('aggregating carbon map by aoi')
         _aggregate_carbon_map(
-            args['aoi_uri'], output_file_registry['carbon_map'],
+            args['aoi_vector_path'], output_file_registry['carbon_map'],
             output_file_registry['aoi_datasource'])
 
 
 def _aggregate_carbon_map(
-        aoi_uri, carbon_map_uri, target_aggregate_vector_path):
+        aoi_vector_path, carbon_map_uri, target_aggregate_vector_path):
     """Helper function to aggregate carbon values for the given serviceshed.
-    Generates a new shapefile that's a copy of 'aoi_uri' in
+    Generates a new shapefile that's a copy of 'aoi_vector_path' in
     'workspace_dir' with mean and sum values from the raster at
     'carbon_map_uri'
 
     Parameters:
-        aoi_uri (string): path to shapefile that will be used to
+        aoi_vector_path (string): path to shapefile that will be used to
             aggregate raster at'carbon_map_uri'.
         workspace_dir (string): path to a directory that function can copy
-            the shapefile at aoi_uri into.
+            the shapefile at aoi_vector_path into.
         carbon_map_uri (string): path to raster that will be aggregated by
             the given serviceshed polygons
         target_aggregate_vector_path (string): path to an ESRI shapefile that
@@ -250,7 +251,7 @@ def _aggregate_carbon_map(
     Returns:
         None
     """
-    aoi_vector = gdal.OpenEx(aoi_uri, gdal.OF_VECTOR)
+    aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
 
     if os.path.exists(target_aggregate_vector_path):
@@ -724,7 +725,7 @@ def validate(args, limit_to=None):
     if args['compute_forest_edge_effects']:
         optional_file_type_list.extend(
             [('tropical_forest_edge_carbon_model_shape_uri', 'vector', True),
-             ('aoi_uri', 'vector', False)])
+             ('aoi_vector_path', 'vector', False)])
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():

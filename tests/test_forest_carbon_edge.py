@@ -31,7 +31,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
@@ -61,7 +61,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
@@ -89,7 +89,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
@@ -166,7 +166,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-        args['aoi_uri'] = os.path.join('path', 'to', 'nonexistant', 'aoi.shp')
+        args['aoi_vector_path'] = os.path.join('path', 'to', 'nonexistant', 'aoi.shp')
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
         expected_message = 'Unable to open aoi at:'
@@ -178,7 +178,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
             'biophysical_table_uri': os.path.join(
