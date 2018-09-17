@@ -134,7 +134,7 @@ def execute(args):
             intermediate_dir, 'c_above_carbon_stocks%s.tif' % file_suffix),
         'carbon_map': os.path.join(
             output_dir, 'carbon_map%s.tif' % file_suffix),
-        'aoi_datasource': os.path.join(
+        'aggregated_result_vector': os.path.join(
             output_dir, 'aggregated_carbon_stocks%s.shp' % file_suffix)
     }
 
@@ -156,8 +156,8 @@ def execute(args):
     # Map non-forest landcover codes to carbon biomasses
     LOGGER.info('calculating direct mapped carbon stocks')
     carbon_maps = []
-    biophysical_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
-        args['biophysical_table_uri'], 'lucode')
+    biophysical_table = utils.build_lookup_from_csv(
+        args['biophysical_table_uri'], 'lucode', to_lower=False)
     biophysical_keys = [
         x.lower() for x in biophysical_table.itervalues().next().keys()]
     pool_list = [('c_above', True)]
@@ -228,7 +228,7 @@ def execute(args):
         LOGGER.info('aggregating carbon map by aoi')
         _aggregate_carbon_map(
             args['aoi_vector_path'], output_file_registry['carbon_map'],
-            output_file_registry['aoi_datasource'])
+            output_file_registry['aggregated_result_vector'])
 
 
 def _aggregate_carbon_map(
@@ -335,8 +335,8 @@ def _calculate_lulc_carbon_map(
         None"""
 
     # classify forest pixels from lulc
-    biophysical_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
-        biophysical_table_uri, 'lucode')
+    biophysical_table = utils.build_lookup_from_csv(
+        biophysical_table_uri, 'lucode', to_lower=False)
 
     lucode_to_per_pixel_carbon = {}
     cell_area_ha = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
@@ -389,8 +389,8 @@ def _map_distance_from_tropical_forest_edge(
         None"""
 
     # Build a list of forest lucodes
-    biophysical_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
-        biophysical_table_uri, 'lucode')
+    biophysical_table = utils.build_lookup_from_csv(
+        biophysical_table_uri, 'lucode', to_lower=False)
     forest_codes = [
         lucode for (lucode, ludata) in biophysical_table.iteritems()
         if int(ludata['is_tropical_forest']) == 1]
