@@ -540,7 +540,7 @@ def _calculate_tropical_forest_edge_carbon_map(
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
-    for edge_distance_data, edge_distance_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
+    for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
             edge_distance_uri, largest_block=2**12):
         current_time = time.time()
         if current_time - last_time > 5.0:
@@ -695,7 +695,7 @@ def validate(args, limit_to=None):
             'tropical_forest_edge_carbon_model_shape_uri',
             'n_nearest_model_points',
             'biomass_to_carbon_conversion_factor',
-        ]:
+            ]:
         if limit_to is None or limit_to == key:
             if key not in args:
                 missing_key_list.append(key)
