@@ -10,6 +10,9 @@ Unreleased Changes
   raise an exception if no AOI were passed in even though the AOI is optional.
 * Removing Overlap Analysis and Overlap Analysis: Management Zones.
 * Removing Habitat Suitability.
+* Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
+  valuation would never be triggered when running the model through the User
+  Interface.
 
 3.5.0 (2018-08-14)
 ------------------
