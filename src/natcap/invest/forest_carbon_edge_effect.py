@@ -121,18 +121,6 @@ def execute(args):
             raise ValueError("Unable to open aoi at: %s" % args['aoi_vector_path'])
         aoi_vector = None
 
-    for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
-        edge_distance_uri, largest_block=2**12):
-        current_time = time.time()
-        if current_time - last_time > 5.0:
-            LOGGER.info(
-                'carbon edge calculation approx. %.2f%% complete',
-                (n_cells_processed / float(n_cells) * 100.0))
-            last_time = current_time
-        n_cells_processed += (
-            edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
-        valid_edge_distance_mask = (edge_distance_block > 0)
-
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
@@ -303,8 +291,12 @@ def _aggregate_carbon_map(
     target_aggregate_layer.SyncToDisk()
 
     # aggregate carbon stocks by the new ID field
-    serviceshed_stats = pygeoprocessing.zonal_statistics(
-        (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
+    try:
+        serviceshed_stats = pygeoprocessing.zonal_statistics(
+            (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
+    except ValueError:
+        raise ValueError('There is no intersection between the land cover map '
+                         'and service areas of interest.')
 
     # don't need a random poly id anymore
     target_aggregate_layer.DeleteField(
