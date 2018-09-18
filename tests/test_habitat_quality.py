@@ -125,7 +125,7 @@ def make_lulc_raster(raster_path, lulc_val):
     make_raster_from_array(lulc_array, raster_path)
 
 
-def make_threats_raster(folder_path, make_bad_raster=False):
+def make_threats_raster(folder_path, make_empty_raster=False):
     """Create a 100x100 raster on designated path with 1 as threat and 0 as none.
 
     Parameters:
@@ -141,13 +141,14 @@ def make_threats_raster(folder_path, make_bad_raster=False):
         for i, threat in enumerate(['threat_1', 'threat_2']):
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
             threat_array[100/(i+1):, :] = 1  # making variations among threats
-            if make_bad_raster:
+            if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
                 make_raster_from_array(threat_array, raster_path)
 
 
-def make_sensitivity_samp_csv(csv_path, include_threat=True):
+def make_sensitivity_samp_csv(csv_path,
+                              include_threat=True, missing_lines=False):
     """Create a simplified sensitivity csv file with five land cover types.
 
     Parameters:
@@ -162,14 +163,16 @@ def make_sensitivity_samp_csv(csv_path, include_threat=True):
         with open(csv_path, 'wb') as open_table:
             open_table.write('LULC,NAME,HABITAT,threat_1,threat_2\n')
             open_table.write('0,"lulc 0",1,1,1\n')
-            open_table.write('1,"lulc 1",0.5,0.5,1\n')
-            open_table.write('2,"lulc 2",0,0.3,1\n')
+            if not missing_lines:
+                open_table.write('1,"lulc 1",0.5,0.5,1\n')
+                open_table.write('2,"lulc 2",0,0.3,1\n')
     else:
         with open(csv_path, 'wb') as open_table:
             open_table.write('LULC,NAME,HABITAT\n')
             open_table.write('0,"lulc 0",1\n')
-            open_table.write('1,"lulc 1",0.5\n')
-            open_table.write('2,"lulc 2",0\n')
+            if not missing_lines:
+                open_table.write('1,"lulc 1",0.5\n')
+                open_table.write('2,"lulc 2",0\n')
 
 
 def make_threats_csv(csv_path,
@@ -235,10 +238,8 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            'half_saturation_constant':
-            '0.5',
-            'suffix':
-            'regression',
+            'half_saturation_constant': '0.5',
+            'suffix': 'regression',
             u'workspace_dir': self.workspace_dir,
         }
 
@@ -396,7 +397,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Make an empty threat raster in the workspace folder.
         args['threat_raster_folder'] = args['workspace_dir']
-        make_threats_raster(args['threat_raster_folder'], make_bad_raster=True)
+        make_threats_raster(args['threat_raster_folder'], make_empty_raster=True)
 
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')
@@ -405,7 +406,7 @@ class HabitatQualityTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             habitat_quality.execute(args)
 
-    def test_habitat_quality_nodata_small(self):
+    def test_habitat_quality_nodata(self):
         """Habitat Quality: on missing base and future LULC rasters."""
         from natcap.invest import habitat_quality
 
@@ -436,7 +437,7 @@ class HabitatQualityTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
             7499.9931641)
 
-    def test_habitat_quality_nodata_small_fut(self):
+    def test_habitat_quality_nodata_fut(self):
         """Habitat Quality: on missing future LULC raster."""
         from natcap.invest import habitat_quality
 
@@ -468,3 +469,41 @@ class HabitatQualityTests(unittest.TestCase):
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
             7499.9931641)
+
+    def test_habitat_quality_missing_lucodes_in_table(self):
+        """Habitat Quality: on missing lucodes in the sensitivity table."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'],
+                                  missing_lines=True)
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'])
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        with self.assertRaises(ValueError) as cm:
+            habitat_quality.execute(args)
+            actual_message = str(cm.exception)
+            self.assertTrue(
+                'The following land cover codes were found in ' in
+                actual_message, actual_message)

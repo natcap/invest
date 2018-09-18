@@ -126,6 +126,8 @@ def execute(args):
     # also store land cover and threat rasters in a list
     lulc_and_threat_raster_list = []
     aligned_raster_list = []
+    # declare a set to store unique codes from lulc rasters
+    raster_unique_lucodes = set()
 
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in {'_c': 'lulc_cur_path',
@@ -140,6 +142,10 @@ def execute(args):
                 os.path.join(
                     inter_dir, os.path.basename(lulc_path).replace(
                         '.tif', '_aligned.tif')))
+
+            # save unique codes to check if it's missing in sensitivity table
+            for _, lulc_block in pygeoprocessing.iterblocks(lulc_path):
+                raster_unique_lucodes.update(numpy.unique(lulc_block))
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -162,6 +168,15 @@ def execute(args):
                         os.path.join(
                             inter_dir, os.path.basename(lulc_path).replace(
                                 '.tif', '_aligned.tif')))
+    # check if there's any lucode from the LULC rasters missing in the
+    # sensitivity table
+    table_unique_lucodes = set(sensitivity_dict.keys())
+    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
+    if missing_lucodes:
+        raise ValueError(
+            'The following land cover codes were found in the sensitivity '
+            'table. Check your sensitivity table to see if they are missing: '
+            '%s. \n\n' % ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
