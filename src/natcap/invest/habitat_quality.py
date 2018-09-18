@@ -451,11 +451,7 @@ def execute(args):
             if lulc_key not in lulc_path_dict:
                 continue
             lulc_path = lulc_path_dict[lulc_key]
-
-            if lulc_key == '_c':
-                lulc_time = 'current'
-            else:
-                lulc_time = 'future'
+            lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             # get the area of a cur/fut pixel
             lulc_pixel_size = pygeoprocessing.get_raster_info(
