@@ -481,17 +481,11 @@ def execute(args):
             new_cover_path = os.path.join(
                 inter_dir, 'new_cover' + lulc_key + suffix + '.tif')
 
-            # set the current/future land cover to be masked to the base
-            # land cover
-            lulc_raster_list = [lulc_base_path, lulc_path]
-
             LOGGER.info('Starting masking %s land cover to base land cover.'
                         % lulc_time)
 
-            lulc_raster_band_list = [
-                (path, 1) for path in lulc_raster_list]
             pygeoprocessing.raster_calculator(
-                lulc_raster_band_list, trim_op, new_cover_path,
+                [(lulc_base_path, 1), (lulc_path, 1)], trim_op, new_cover_path,
                 gdal.GDT_Float32, _OUT_NODATA)
 
             LOGGER.info('Finished masking %s land cover to base land cover.'
