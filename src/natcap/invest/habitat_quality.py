@@ -118,15 +118,6 @@ def execute(args):
         raise ValueError('Half-saturation constant is not a numeric number.'
                          'It is: %s' % args['half_saturation_constant'])
 
-    # Determine which land cover scenarios we should run, and store it in
-    # lulc_path_dict (lulc_cur_path is required)
-    lulc_scenarios = {'_c': 'lulc_cur_path'}
-    optional_lulc_scenarios = {'_f': 'lulc_fut_path',
-                               '_b': 'lulc_bas_path'}
-    for lulc_key, lulc_args in optional_lulc_scenarios.iteritems():
-        if lulc_args in args:
-            lulc_scenarios[lulc_key] = lulc_args
-
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
     lulc_path_dict = {}
@@ -136,43 +127,45 @@ def execute(args):
     aligned_raster_list = []
 
     # compile all the threat rasters associated with the land cover
-    for lulc_key, lulc_args in lulc_scenarios.iteritems():
+    for lulc_key, lulc_args in {'_c': 'lulc_cur_path',
+                                '_f': 'lulc_fut_path',
+                                '_b': 'lulc_bas_path'}.iteritems():
+        if lulc_args in args:
+            lulc_path = args[lulc_args]
+            lulc_path_dict[lulc_key] = lulc_path
+            # save land cover paths in a list for alignment and resize
+            lulc_and_threat_raster_list.append(lulc_path)
+            aligned_raster_list.append(
+                os.path.join(
+                    inter_dir, os.path.basename(lulc_path).replace(
+                        '.tif', '_aligned.tif')))
 
-        lulc_path = args[lulc_args]
-        lulc_path_dict[lulc_key] = lulc_path
-        # save land cover paths in a list for alignment and resize
-        lulc_and_threat_raster_list.append(lulc_path)
-        aligned_raster_list.append(
-            os.path.join(
-                inter_dir, os.path.basename(lulc_path).replace(
-                    '.tif', '_aligned.tif')))
+            # add a key to the threat dictionary that associates all threat
+            # rasters with this land cover
+            threat_path_dict['threat' + lulc_key] = {}
 
-        # add a key to the threat dictionary that associates all threat/threat
-        # rasters with this land cover
-        threat_path_dict['threat' + lulc_key] = {}
+            # for each threat given in the CSV file try opening the associated
+            # raster which should be found in threat_raster_folder
+            for threat in threat_dict:
+                # it's okay to have no threat raster for baseline scenario
+                if lulc_key == '_b':
+                    threat_path_dict['threat' + lulc_key][threat] = (
+                        resolve_ambiguous_raster_path(
+                            os.path.join(threat_raster_dir, threat + lulc_key),
+                            raise_error=False))
+                else:
+                    threat_path_dict['threat' + lulc_key][threat] = (
+                        resolve_ambiguous_raster_path(
+                            os.path.join(threat_raster_dir, threat + lulc_key)))
 
-        # for each threat given in the CSV file try opening the associated
-        # raster which should be found in threat_raster_folder
-        for threat in threat_dict:
-            # it's okay to have no threat raster for baseline scenario
-            if lulc_key == '_b':
-                threat_path_dict['threat' + lulc_key][threat] = (
-                    resolve_ambiguous_raster_path(
-                        os.path.join(threat_raster_dir, threat + lulc_key),
-                        raise_error=False))
-            else:
-                threat_path_dict['threat' + lulc_key][threat] = (
-                    resolve_ambiguous_raster_path(
-                        os.path.join(threat_raster_dir, threat + lulc_key)))
-
-            # save threat paths in a list for alignment and resize
-            threat_path = threat_path_dict['threat' + lulc_key][threat]
-            if threat_path:
-                lulc_and_threat_raster_list.append(threat_path)
-                aligned_raster_list.append(
-                    os.path.join(
-                        inter_dir, os.path.basename(lulc_path).replace(
-                            '.tif', '_aligned.tif')))
+                # save threat paths in a list for alignment and resize
+                threat_path = threat_path_dict['threat' + lulc_key][threat]
+                if threat_path:
+                    lulc_and_threat_raster_list.append(threat_path)
+                    aligned_raster_list.append(
+                        os.path.join(
+                            inter_dir, os.path.basename(lulc_path).replace(
+                                '.tif', '_aligned.tif')))
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
