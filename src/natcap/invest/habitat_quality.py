@@ -79,7 +79,8 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    utils.make_directories([inter_dir, out_dir])
+    kernel_dir = os.path.join(inter_dir, 'kernels')
+    utils.make_directories([inter_dir, out_dir, kernel_dir])
 
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
@@ -264,21 +265,24 @@ def execute(args):
             # need the pixel size for the threat raster so we can create
             # an appropriate kernel for convolution
             threat_pixel_size = pygeoprocessing.get_raster_info(
-                threat_raster_path)['mean_pixel_size']  # use pixel_size????
+                threat_raster_path)['pixel_size']
+            # pixel size tuple could have negative value
+            mean_threat_pixel_size = (
+                abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
 
             # convert max distance (given in KM) to meters
             max_dist_m = threat_data['MAX_DIST'] * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            max_dist_pixel = max_dist_m / threat_pixel_size
+            max_dist_pixel = max_dist_m / mean_threat_pixel_size
             LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
             # blur the threat raster based on the effect of the threat over
             # distance
             decay_type = threat_data['DECAY']
-            kernel_handle, kernel_path = tempfile.mkstemp()
-            os.close(kernel_handle)
+            kernel_path = os.path.join(
+                kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
             if decay_type == 'linear':
                 make_linear_decay_kernel_path(max_dist_pixel, kernel_path)
             elif decay_type == 'exponential':
@@ -291,15 +295,14 @@ def execute(args):
                     " %s." % (decay_type, threat))
 
             filtered_threat_raster_path = os.path.join(
-                inter_dir, threat + '_filtered%s%s.tif' % (lulc_key, suffix))
+                inter_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
                 filtered_threat_raster_path)
-            os.remove(kernel_path)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
+                inter_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
             map_raster_to_dict_values(
                 lulc_path, sens_raster_path, sensitivity_dict, threat,
                 _OUT_NODATA, values_required=True)
