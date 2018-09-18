@@ -148,15 +148,10 @@ def execute(args):
             # raster which should be found in threat_raster_folder
             for threat in threat_dict:
                 # it's okay to have no threat raster for baseline scenario
-                if lulc_key == '_b':
-                    threat_path_dict['threat' + lulc_key][threat] = (
-                        resolve_ambiguous_raster_path(
-                            os.path.join(threat_raster_dir, threat + lulc_key),
-                            raise_error=False))
-                else:
-                    threat_path_dict['threat' + lulc_key][threat] = (
-                        resolve_ambiguous_raster_path(
-                            os.path.join(threat_raster_dir, threat + lulc_key)))
+                threat_path_dict['threat' + lulc_key][threat] = (
+                    resolve_ambiguous_raster_path(
+                        os.path.join(threat_raster_dir, threat + lulc_key),
+                        raise_error=(lulc_key != '_b')))
 
                 # save threat paths in a list for alignment and resize
                 threat_path = threat_path_dict['threat' + lulc_key][threat]
@@ -169,7 +164,7 @@ def execute(args):
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
-    LOGGER.debug('Starting aligning and resizing land cover and threat rasters')
+    LOGGER.info('Starting aligning and resizing land cover and threat rasters')
 
     lulc_pixel_size = (
         pygeoprocessing.get_raster_info(args['lulc_cur_path']))['pixel_size']
@@ -183,7 +178,7 @@ def execute(args):
         ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
         'intersection')
 
-    LOGGER.debug('Finished aligning and resizing land cover and threat rasters')
+    LOGGER.info('Finished aligning and resizing land cover and threat rasters')
 
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.iteritems():
@@ -197,14 +192,14 @@ def execute(args):
                     inter_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
 
-    LOGGER.debug('Starting habitat_quality biophysical calculations')
+    LOGGER.info('Starting habitat_quality biophysical calculations')
 
     # Rasterize access vector, if value is null set to 1 (fully accessible),
     # else set to the value according to the ACCESS attribute
     cur_lulc_path = lulc_path_dict['_c']
     fill_value = 1.0
     try:
-        LOGGER.debug('Handling Access Shape')
+        LOGGER.info('Handling Access Shape')
         access_raster_path = os.path.join(
             inter_dir, 'access_layer%s.tif' % suffix)
         # create a new raster based on the raster info of current land cover
@@ -216,7 +211,7 @@ def execute(args):
             option_list=['ATTRIBUTE=ACCESS'])
 
     except KeyError:
-        LOGGER.debug(
+        LOGGER.info(
             'No Access Shape Provided, access raster filled with 1s.')
 
     # calculate the weight sum which is the sum of all the threats' weights
@@ -229,7 +224,7 @@ def execute(args):
 
     # for each land cover raster provided compute habitat quality
     for lulc_key, lulc_path in lulc_path_dict.iteritems():
-        LOGGER.debug('Calculating habitat quality for landuse: %s', lulc_path)
+        LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
@@ -252,12 +247,12 @@ def execute(args):
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.iteritems():
 
-            LOGGER.debug('Calculating threat : %s', threat)
-            LOGGER.debug('Threat Data : %s', threat_data)
+            LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
+                        (threat, threat_data))
 
             # get the threat raster for the specific threat
             threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
-            LOGGER.debug('threat_raster_path %s', threat_raster_path)
+            LOGGER.info('threat_raster_path %s', threat_raster_path)
             if threat_raster_path is None:
                 LOGGER.info(
                     'The threat raster for %s could not be found for the land '
@@ -369,14 +364,14 @@ def execute(args):
         deg_sum_raster_path = os.path.join(
             out_dir, 'deg_sum' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting raster calculation on total_degradation')
+        LOGGER.info('Starting raster calculation on total_degradation')
 
         deg_raster_band_list = [(path, 1) for path in deg_raster_list]
         pygeoprocessing.raster_calculator(
             deg_raster_band_list, total_degradation,
             deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
-        LOGGER.debug('Finished raster calculation on total_degradation')
+        LOGGER.info('Finished raster calculation on total_degradation')
 
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
@@ -405,7 +400,7 @@ def execute(args):
         quality_path = os.path.join(
             out_dir, 'quality' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting raster calculation on quality_op')
+        LOGGER.info('Starting raster calculation on quality_op')
 
         deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
 
@@ -415,7 +410,7 @@ def execute(args):
             deg_hab_raster_band_list, quality_op, quality_path,
             gdal.GDT_Float32, _OUT_NODATA)
 
-        LOGGER.debug('Finished raster calculation on quality_op')
+        LOGGER.info('Finished raster calculation on quality_op')
 
     # Compute Rarity if user supplied baseline raster
     if '_b' not in lulc_path_dict:
@@ -467,7 +462,7 @@ def execute(args):
                     (base == base_nodata) | (cover_x == lulc_nodata),
                     base_nodata, cover_x)
 
-            LOGGER.debug('Create new cover for %s', lulc_path)
+            LOGGER.info('Create new cover for %s', lulc_path)
 
             new_cover_path = os.path.join(
                 inter_dir, 'new_cover' + lulc_key + suffix + '.tif')
@@ -476,8 +471,8 @@ def execute(args):
             # land cover
             lulc_raster_list = [lulc_base_path, lulc_path]
 
-            LOGGER.debug('Starting masking %s land cover to base land cover.'
-                         % lulc_time)
+            LOGGER.info('Starting masking %s land cover to base land cover.'
+                        % lulc_time)
 
             lulc_raster_band_list = [
                 (path, 1) for path in lulc_raster_list]
@@ -485,11 +480,11 @@ def execute(args):
                 lulc_raster_band_list, trim_op, new_cover_path,
                 gdal.GDT_Float32, _OUT_NODATA)
 
-            LOGGER.debug('Finished masking %s land cover to base land cover.'
-                         % lulc_time)
+            LOGGER.info('Finished masking %s land cover to base land cover.'
+                        % lulc_time)
 
-            LOGGER.debug('Starting rarity computation on %s land cover.'
-                         % lulc_time)
+            LOGGER.info('Starting rarity computation on %s land cover.'
+                        % lulc_time)
 
             lulc_code_count_x = raster_pixel_count(new_cover_path)
 
@@ -516,9 +511,9 @@ def execute(args):
                 (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
                 _RARITY_NODATA)
 
-            LOGGER.debug('Finished rarity computation on %s land cover.'
-                         % lulc_time)
-    LOGGER.debug('Finished habitat_quality biophysical calculations')
+            LOGGER.info('Finished rarity computation on %s land cover.'
+                        % lulc_time)
+    LOGGER.info('Finished habitat_quality biophysical calculations')
 
 
 def resolve_ambiguous_raster_path(path, raise_error=True):
@@ -625,7 +620,7 @@ def map_raster_to_dict_values(
            2) the value from 'key_raster' is not a key in 'attr_dict'
     """
 
-    LOGGER.debug('Starting map_raster_to_dict_values')
+    LOGGER.info('Starting map_raster_to_dict_values')
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
