@@ -104,8 +104,8 @@ def execute(args):
     # columns in the sensitivity table. Raise exception if they don't.
     for threat in threat_dict:
         if threat not in sens_header_list:
-            missing_threat_header_list = set(sens_header_list) - \
-                                         set(required_sens_header_list)
+            missing_threat_header_list = (
+                set(sens_header_list) - set(required_sens_header_list))
             raise ValueError(
                 'Threat "%s" does not match any column in the sensitivity '
                 'table. Possible columns: %s' %
