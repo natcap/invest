@@ -158,7 +158,7 @@ def execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=False)
     biophysical_keys = [
-        x.lower() for x in biophysical_table.itervalues().next().keys()]
+        x.lower() for x in biophysical_table[0].keys()]
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -358,8 +358,9 @@ def _calculate_lulc_carbon_map(
         biophysical_table_path, 'lucode', to_lower=False)
 
     lucode_to_per_pixel_carbon = {}
-    cell_area_ha = pygeoprocessing.get_raster_info(
-        lulc_raster_path)['mean_pixel_size'] ** 2 / 10000.0
+    pixel_size = pygeoprocessing.get_raster_info(
+        lulc_raster_path)['pixel_size']  # in meters
+    cell_area_ha = abs(pixel_size[0]) * abs(pixel_size[1]) / 10000.0
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -369,7 +370,7 @@ def _calculate_lulc_carbon_map(
         else:
             is_tropical_forest = 0
         if ignore_tropical_type and is_tropical_forest == 1:
-            # if forest, lookup table is nodata
+            # if tropical forest above ground, lookup table is nodata
             lucode_to_per_pixel_carbon[int(lucode)] = CARBON_MAP_NODATA
         else:
             try:
