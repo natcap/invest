@@ -397,7 +397,8 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Make an empty threat raster in the workspace folder.
         args['threat_raster_folder'] = args['workspace_dir']
-        make_threats_raster(args['threat_raster_folder'], make_empty_raster=True)
+        make_threats_raster(args['threat_raster_folder'],
+                            make_empty_raster=True)
 
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')

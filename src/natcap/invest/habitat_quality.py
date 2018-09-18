@@ -440,7 +440,7 @@ def execute(args):
         # pixel sizes are different between base and cur/fut rasters
         base_pixel_size = pygeoprocessing.get_raster_info(
             lulc_base_path)['pixel_size']
-        base_area = float(base_pixel_size[0] * base_pixel_size[1])
+        base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
         base_nodata = pygeoprocessing.get_raster_info(
             lulc_base_path)['nodata'][0]
 
@@ -460,7 +460,7 @@ def execute(args):
             # get the area of a cur/fut pixel
             lulc_pixel_size = pygeoprocessing.get_raster_info(
                 lulc_path)['pixel_size']
-            lulc_area = float(lulc_pixel_size[0] * lulc_pixel_size[1])
+            lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
             lulc_nodata = pygeoprocessing.get_raster_info(
                 lulc_path)['nodata'][0]
 
