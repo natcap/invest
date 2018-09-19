@@ -49,7 +49,6 @@ setup(
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.wave_energy',
-        'natcap.invest.wind_energy',
         'natcap.invest.pygeoprocessing_0_3_3',
         'natcap.invest.pygeoprocessing_0_3_3.routing',
         'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
