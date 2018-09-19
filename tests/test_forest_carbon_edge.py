@@ -44,7 +44,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
-            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\forest_carbon_workspace"#self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
         forest_carbon_edge_effect.execute(args)
         ForestCarbonEdgeTests._test_same_files(
