@@ -215,18 +215,6 @@ def execute(args):
         result[nodata_mask] = CARBON_MAP_NODATA
         return result
 
-    # aligned_raster_list = [
-    #     os.path.join(intermediate_dir, os.path.basename(path).replace(
-    #         '.tif', '_aligned.tif')) for path in carbon_maps]
-
-    # pygeoprocessing.align_and_resize_raster_stack(
-    #     carbon_maps, aligned_raster_list,
-    #     ['near']*len(carbon_maps), cell_size_in_meters, 'intersection')
-
-    # carbon_maps = [
-    #     os.path.join(intermediate_dir, os.path.basename(path).replace(
-    #         '.tif', '_aligned.tif')) for path in carbon_maps]
-
     carbon_maps_band_list = [(path, 1) for path in carbon_maps]
 
     pygeoprocessing.raster_calculator(
@@ -395,8 +383,8 @@ def _map_distance_from_tropical_forest_edge(
     distance to the edge of the forest in meters.
 
     Parameters:
-        lulc_raster_path (string): path to the landcover raster that contains integer
-            landcover codes
+        lulc_raster_path (string): path to the landcover raster that contains
+            integer landcover codes
         biophysical_table_path (string): a path to a csv table that indexes
             landcover codes to forest type, contains at least the fields
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
