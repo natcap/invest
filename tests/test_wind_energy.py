@@ -63,7 +63,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_distances_land_grid(self):
         """WindEnergy: testing 'calculate_distances_land_grid' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters for creating point shapefile
         fields = {'id': 'real', 'L2G': 'real'}
@@ -101,7 +101,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_point_to_polygon_distance(self):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters for creating polygon and point shapefiles
         fields = {'vec_id': 'int'}
@@ -148,7 +148,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_add_field_to_shape_given_list(self):
         """WindEnergy: testing 'add_field_to_shape_given_list' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters for point shapefile
         fields = {'pt_id': 'int'}
@@ -198,7 +198,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_combine_dictionaries(self):
         """WindEnergy: testing 'combine_dictionaries' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         dict_1 = {"name": "bob", "age": 3, "sex": "female"}
         dict_2 = {"hobby": "crawling", "food": "milk"}
@@ -212,7 +212,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_combine_dictionaries_duplicates(self):
         """WindEnergy: testing 'combine_dictionaries' function w/ duplicates."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         dict_1 = {"name": "bob", "age": 3, "sex": "female"}
         dict_2 = {"hobby": "crawling", "food": "milk", "age": 4}
@@ -226,7 +226,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_read_csv_wind_parameters(self):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         csv_path = os.path.join(
             SAMPLE_DATA,
@@ -247,7 +247,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_create_wind_farm_box(self):
         """WindEnergy: testing 'create_wind_farm_box' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters for creating polyline shapefile
         fields = {'id': 'real'}
@@ -286,7 +286,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_get_highest_harvested_geom(self):
         """WindEnergy: testing 'get_highest_harvested_geom' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters for creating point shapefile
         fields = {'pt_id': 'int', 'Harv_MWhr': 'real'}
@@ -322,7 +322,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         Function name is : 'pixel_size_based_on_coordinate_transform_uri'.
         """
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         srs = sampledata.SRS_WILLAMETTE
         srs_wkt = srs.projection
@@ -375,7 +375,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_calculate_distances_grid(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Setup parameters to create point shapefile
         fields = {'id': 'real'}
@@ -412,7 +412,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
     def test_wind_data_to_point_shape(self):
         """WindEnergy: testing 'wind_data_to_point_shape' function."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         dict_data = {
             (31.79, 123.76): {
@@ -458,7 +458,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         This test is to test that when Longitude values range from -360 to 0,
             instead of the normal -180 to 180, they are handled properly.
         """
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
         dict_data = {
@@ -539,7 +539,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_no_aoi(self):
         """WindEnergy: testing base case w/o AOI, distances, or valuation."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
@@ -564,7 +564,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(
@@ -591,7 +591,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(
@@ -620,7 +620,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_path'] = os.path.join(
@@ -661,7 +661,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_path'] = os.path.join(
@@ -707,7 +707,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_grid_points_no_aoi(self):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['land_polygon_path'] = os.path.join(SAMPLE_DATA,
@@ -728,7 +728,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that ValueError raised when missing bio param."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
         # created by hand and has no numerical validity. Helps test the
@@ -770,7 +770,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_missing_valuation_params(self):
         """WindEnergy: testing that ValueError is thrown when val params miss."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
         # created by hand and has no numerical validity. Helps test the
@@ -820,7 +820,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_time_period_exceptoin(self):
         """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         # for testing raised exceptions, running on a set of data that was
         # created by hand and has no numerical validity. Helps test the
@@ -877,7 +877,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
     def test_remove_datasources(self):
         """WindEnergy: testing datasources which already exist are removed."""
-        from natcap.invest.wind_energy import wind_energy
+        from natcap.invest import wind_energy
 
         args = {
             'workspace_dir': self.workspace_dir,

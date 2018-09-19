@@ -21,8 +21,9 @@ import shapely.ops
 from shapely import speedups
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-from .. import validation
-from .. import utils
+import pygeoprocessing
+from . import validation
+from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
 
@@ -138,8 +139,7 @@ def execute(args):
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
-        [workspace, inter_dir, out_dir])
+    utils.make_directories([inter_dir, out_dir])
 
     bathymetry_path = args['bathymetry_path']
     number_of_turbines = int(args['number_of_turbines'])
@@ -176,10 +176,11 @@ def execute(args):
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
     if len(bio_parameters_dict.keys()) != len(biophysical_params):
-        raise ValueError('An Error occured from reading in a field value from '
-        'either the turbine CSV file or the global parameters JSON file. '
-        'Please make sure all the necessary fields are present and spelled '
-        'correctly.')
+        raise ValueError(
+            'An Error occurred from reading in a field value from either '
+            'the turbine CSV file or the global parameters JSON file. '
+            'Please make sure all the necessary fields are present and '
+            'spelled correctly.')
 
     # Hub Height to use for setting weibell paramaters
     hub_height = int(bio_parameters_dict['hub_height'])
