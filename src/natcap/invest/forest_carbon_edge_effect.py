@@ -6,7 +6,6 @@ near tropical forest edges', by Chaplin-Kramer et. al (2015).
 from __future__ import absolute_import
 import os
 import logging
-import tempfile
 import time
 import uuid
 
@@ -21,7 +20,7 @@ from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
-# grid cells are 100km.  becky says 500km is a good upper bound to search
+# grid cells are 100km. Becky says 500km is a good upper bound to search
 DISTANCE_UPPER_BOUND = 500e3
 
 # helpful to have a global nodata defined for all the carbon map rasters
@@ -348,10 +347,10 @@ def _calculate_lulc_carbon_map(
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
 
-    lucode_to_per_pixel_carbon = {}
-    pixel_size = pygeoprocessing.get_raster_info(
+    lucode_to_per_cell_carbon = {}
+    cell_size = pygeoprocessing.get_raster_info(
         lulc_raster_path)['pixel_size']  # in meters
-    pixel_area_ha = abs(pixel_size[0]) * abs(pixel_size[1]) / 10000.0
+    cell_area_ha = abs(cell_size[0]) * abs(cell_size[1]) / 10000.0
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -362,11 +361,11 @@ def _calculate_lulc_carbon_map(
             is_tropical_forest = 0
         if ignore_tropical_type and is_tropical_forest == 1:
             # if tropical forest above ground, lookup table is nodata
-            lucode_to_per_pixel_carbon[int(lucode)] = CARBON_MAP_NODATA
+            lucode_to_per_cell_carbon[int(lucode)] = CARBON_MAP_NODATA
         else:
             try:
-                lucode_to_per_pixel_carbon[int(lucode)] = float(
-                    biophysical_table[lucode][carbon_pool_type]) * pixel_area_ha
+                lucode_to_per_cell_carbon[int(lucode)] = float(
+                    biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
             except ValueError:
                 raise ValueError(
                     "Could not interpret carbon pool value as a number. "
@@ -376,7 +375,7 @@ def _calculate_lulc_carbon_map(
 
     # map aboveground carbon from table to lulc that is not forest
     pygeoprocessing.reclassify_raster(
-        (lulc_raster_path, 1), lucode_to_per_pixel_carbon,
+        (lulc_raster_path, 1), lucode_to_per_cell_carbon,
         carbon_map_path, gdal.GDT_Float32, CARBON_MAP_NODATA)
 
 
@@ -541,10 +540,10 @@ def _calculate_tropical_forest_edge_carbon_map(
     # timer to give updates per call
     last_time = time.time()
 
-    pixel_XSize, pixel_YSize = pygeoprocessing.get_raster_info(
+    cell_XSize, cell_YSize = pygeoprocessing.get_raster_info(
         edge_distance_path)['pixel_size']
-    pixel_size_km = (abs(pixel_XSize) + abs(pixel_YSize))/2 / 1000.0
-    pixel_area_ha = (abs(pixel_XSize) * abs(pixel_YSize)) / 10000.0
+    cell_size_km = (abs(cell_XSize) + abs(cell_YSize))/2 / 1000.0
+    cell_area_ha = (abs(cell_XSize) * abs(cell_YSize)) / 10000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
@@ -553,8 +552,8 @@ def _calculate_tropical_forest_edge_carbon_map(
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
-                'carbon edge calculation approx. %.2f%% complete',
-                (n_cells_processed / float(n_cells) * 100.0))
+                'Carbon edge calculation approx. %.2f%% complete',
+                (n_cells_processed / n_cells * 100.0))
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
@@ -583,7 +582,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         col_coords, row_coords = numpy.meshgrid(col_range, row_range)
 
         # query nearest points for every point in the grid
-        # n_jobs=-1 means use all available cpus
+        # n_jobs=-1 means use all available CPUs
         coord_points = zip(
             row_coords[valid_edge_distance_mask].ravel(),
             col_coords[valid_edge_distance_mask].ravel())
@@ -607,7 +606,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             (indexes.shape[0], indexes.shape[1], 3))
         # reshape to an N,nearest_points so we can multiply by thetas
         valid_edge_distances_km = numpy.repeat(
-            edge_distance_block[valid_edge_distance_mask] * pixel_size_km,
+            edge_distance_block[valid_edge_distance_mask] * cell_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
         # asymptotic model
@@ -615,19 +614,19 @@ def _calculate_tropical_forest_edge_carbon_map(
         biomass_model[:, :, 0] = (
             thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
                 -thetas[:, :, 2] * valid_edge_distances_km)
-            ) * pixel_area_ha
+            ) * cell_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass_model[:, :, 1] = (
             thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                valid_edge_distances_km)) * pixel_area_ha
+                valid_edge_distances_km)) * cell_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass_model[:, :, 2] = (
             (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances_km) *
-            pixel_area_ha)
+            cell_area_ha)
 
         # Collapse the biomass down to the valid models
         model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
@@ -635,8 +634,8 @@ def _calculate_tropical_forest_edge_carbon_map(
             method_model_parameter[indexes[valid_index_mask]] - 1)
 
         # reduce the axis=1 dimensionality of the model by selecting the
-        # appropriate value via the model_index array
-        # Got this trick from http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
+        # appropriate value via the model_index array. Got this trick from
+        # http://stackoverflow.com/questions/18702746/reduce-a-dimension-of-numpy-array-by-selecting
         biomass_y, biomass_x = numpy.meshgrid(
             numpy.arange(biomass_model.shape[1]),
             numpy.arange(biomass_model.shape[0]))
@@ -669,7 +668,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         edge_carbon_band.WriteArray(
             result, xoff=edge_distance_data['xoff'],
             yoff=edge_distance_data['yoff'])
-    LOGGER.info('carbon edge calculation 100.0% complete')
+    LOGGER.info('Carbon edge calculation 100.0% complete')
 
 
 @validation.invest_validator
