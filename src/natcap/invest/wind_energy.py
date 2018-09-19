@@ -24,7 +24,7 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
 from .. import utils
 
-LOGGER = logging.getLogger('natcap.invest.wind_energy.wind_energy')
+LOGGER = logging.getLogger('natcap.invest.wind_energy')
 
 speedups.enable()
 
@@ -38,31 +38,31 @@ def execute(args):
     Args:
         workspace_dir (string): a python string which is the uri path to where
             the outputs will be saved (required)
-        wind_data_uri (string): path to a CSV file with the following header:
+        wind_data_path (string): path to a CSV file with the following header:
             ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
             with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
             collected (required)
-        aoi_uri (string): a uri to an OGR datasource that is of type polygon
+        aoi_path (string): a uri to an OGR datasource that is of type polygon
             and projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
             of the land polygon that is of interest (optional for biophysical
             and no distance masking, required for biophysical and distance
             masking, required for valuation)
-        bathymetry_uri (string): a uri to a GDAL dataset that has the depth
+        bathymetry_path (string): a uri to a GDAL dataset that has the depth
             values of the area of interest (required)
-        land_polygon_uri (string): a uri to an OGR datasource of type polygon
+        land_polygon_path (string): a uri to an OGR datasource of type polygon
             that provides a coastline for determining distances from wind farm
             bins. Enabled by AOI and required if wanting to mask by distances
             or run valuation
-        global_wind_parameters_uri (string): a float for the average distance
+        global_wind_parameters_path (string): a float for the average distance
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
             provided)
         suffix (string): a String to append to the end of the output files
             (optional)
-        turbine_parameters_uri (string): a uri to a CSV file that holds the
+        turbine_parameters_path (string): a uri to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters
             (required)
         number_of_turbines (int): an integer value for the number of machines
@@ -85,7 +85,7 @@ def execute(args):
             will cost for the specific type of turbine (required for valuation)
         discount_rate (float): a float value for the discount rate (required
             for valuation)
-        grid_points_uri (string): a uri to a CSV file that specifies the
+        grid_points_path (string): a uri to a CSV file that specifies the
             landing and grid point locations (optional)
         avg_grid_distance (float): a float for the average distance in
             kilometers from a grid connection point to a land connection point
@@ -104,13 +104,13 @@ def execute(args):
 
         {
             'workspace_dir': 'path/to/workspace_dir',
-            'wind_data_uri': 'path/to/file',
-            'aoi_uri': 'path/to/shapefile',
-            'bathymetry_uri': 'path/to/raster',
-            'land_polygon_uri': 'path/to/shapefile',
-            'global_wind_parameters_uri': 'path/to/csv',
+            'wind_data_path': 'path/to/file',
+            'aoi_path': 'path/to/shapefile',
+            'bathymetry_path': 'path/to/raster',
+            'land_polygon_path': 'path/to/shapefile',
+            'global_wind_parameters_path': 'path/to/csv',
             'suffix': '_results',
-            'turbine_parameters_uri': 'path/to/csv',
+            'turbine_parameters_path': 'path/to/csv',
             'number_of_turbines': 10,
             'min_depth': 3,
             'max_depth': 60,
@@ -119,7 +119,7 @@ def execute(args):
             'valuation_container': True,
             'foundation_cost': 3.4,
             'discount_rate': 7.0,
-            'grid_points_uri': 'path/to/csv',
+            'grid_points_path': 'path/to/csv',
             'avg_grid_distance': 4,
             'price_table': True,
             'wind_schedule': 'path/to/csv',
@@ -141,7 +141,7 @@ def execute(args):
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
         [workspace, inter_dir, out_dir])
 
-    bathymetry_uri = args['bathymetry_uri']
+    bathymetry_path = args['bathymetry_path']
     number_of_turbines = int(args['number_of_turbines'])
 
     # Set the output nodata value to use throughout the model
@@ -160,11 +160,11 @@ def execute(args):
 
     # Read the biophysical turbine parameters into a dictionary
     bio_turbine_dict = read_csv_wind_parameters(
-            args['turbine_parameters_uri'], biophysical_params)
+            args['turbine_parameters_path'], biophysical_params)
 
     # Read the biophysical global parameters into a dictionary
     bio_global_param_dict = read_csv_wind_parameters(
-            args['global_wind_parameters_uri'], biophysical_params)
+            args['global_wind_parameters_path'], biophysical_params)
 
     # Combine the turbine and global parameters into one dictionary
     bio_parameters_dict = combine_dictionaries(
@@ -192,12 +192,12 @@ def execute(args):
 
     # Read the wind energy data into a dictionary
     LOGGER.info('Reading in Wind Data')
-    wind_data = read_csv_wind_data(args['wind_data_uri'], hub_height)
+    wind_data = read_csv_wind_data(args['wind_data_path'], hub_height)
 
-    if 'aoi_uri' in args:
+    if 'aoi_path' in args:
         LOGGER.info('AOI Provided')
 
-        aoi_uri = args['aoi_uri']
+        aoi_path = args['aoi_path']
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -218,7 +218,7 @@ def execute(args):
         # Clip and project the wind energy points datasource
         LOGGER.debug('Clip and project wind points to AOI')
         clip_and_reproject_shapefile(
-            wind_point_shape_uri, aoi_uri, wind_points_proj_uri)
+            wind_point_shape_uri, aoi_path, wind_points_proj_uri)
 
         # Define the uri for projecting the bathymetry to AOI
         bathymetry_proj_uri = os.path.join(
@@ -226,12 +226,12 @@ def execute(args):
 
         # Clip and project the bathymetry dataset
         LOGGER.debug('Clip and project bathymetry to AOI')
-        clip_and_reproject_raster(bathymetry_uri, aoi_uri, bathymetry_proj_uri)
+        clip_and_reproject_raster(bathymetry_path, aoi_path, bathymetry_proj_uri)
 
         # Set the bathymetry and points URI to use in the rest of the model. In
         # this case these URIs refer to the projected files. This may not be
         # the case if an AOI is not provided
-        final_bathymetry_uri = bathymetry_proj_uri
+        final_bathymetry_path = bathymetry_proj_uri
         final_wind_points_uri = wind_points_proj_uri
 
         # Try to handle the distance inputs and land datasource if they
@@ -239,7 +239,7 @@ def execute(args):
         try:
             min_distance = float(args['min_distance'])
             max_distance = float(args['max_distance'])
-            land_polygon_uri = args['land_polygon_uri']
+            land_polygon_path = args['land_polygon_path']
         except KeyError:
             LOGGER.info('Distance information not provided')
         else:
@@ -251,11 +251,11 @@ def execute(args):
             # Clip and project the land polygon datasource
             LOGGER.debug('Clip and project land poly to AOI')
             clip_and_reproject_shapefile(
-                land_polygon_uri, aoi_uri, land_poly_proj_uri)
+                land_polygon_path, aoi_path, land_poly_proj_uri)
 
             # Get the cell size to use in new raster outputs from the DEM
             cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-                final_bathymetry_uri)
+                final_bathymetry_path)
 
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
@@ -266,13 +266,13 @@ def execute(args):
             LOGGER.debug('Create Raster From AOI')
             # Make a raster from AOI using the bathymetry rasters pixel size
             natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-                aoi_uri, cell_size, gdal.GDT_Float32, out_nodata,
+                aoi_path, cell_size, gdal.GDT_Float32, out_nodata,
                 aoi_raster_uri)
 
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
             natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-                aoi_raster_uri, aoi_uri, [0],
+                aoi_raster_uri, aoi_path, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
@@ -319,7 +319,7 @@ def execute(args):
         # this case these URIs refer to the unprojected files. This may not be
         # the case if an AOI is provided
         final_wind_points_uri = wind_point_shape_uri
-        final_bathymetry_uri = bathymetry_uri
+        final_bathymetry_path = bathymetry_path
 
         # Determines whether to check projections in future vectorize_datasets
         # calls. Since no AOI is provided set to False since all our data is in
@@ -352,12 +352,12 @@ def execute(args):
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
     cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        final_bathymetry_uri)
+        final_bathymetry_path)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [final_bathymetry_uri], depth_op, depth_mask_uri, gdal.GDT_Float32,
+        [final_bathymetry_path], depth_op, depth_mask_uri, gdal.GDT_Float32,
         out_nodata, cell_size, 'intersection',
         assert_datasets_projected=projected, vectorize_op=False)
 
@@ -674,11 +674,11 @@ def execute(args):
 
     # Read the valuation turbine parameters into a dictionary
     val_turbine_dict = read_csv_wind_parameters(
-        args['turbine_parameters_uri'], valuation_turbine_params)
+        args['turbine_parameters_path'], valuation_turbine_params)
 
     # Read the valuation global parameters into a dictionary
     val_global_param_dict = read_csv_wind_parameters(
-        args['global_wind_parameters_uri'], valuation_global_params)
+        args['global_wind_parameters_path'], valuation_global_params)
 
     # Combine the turbine and global parameters into one dictionary
     val_parameters_dict = combine_dictionaries(
@@ -704,15 +704,15 @@ def execute(args):
         inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     # Handle Grid Points
-    if 'grid_points_uri' in args:
-        if 'aoi_uri' not in args:
+    if 'grid_points_path' in args:
+        if 'aoi_path' not in args:
             raise ValueError(
                 'An AOI shapefile is required to clip and reproject the grid '
                 'points.')
         LOGGER.info('Grid Points Provided')
         LOGGER.info('Reading in the grid points')
 
-        grid_file = open(args['grid_points_uri'], 'rU')
+        grid_file = open(args['grid_points_path'], 'rU')
         reader = csv.DictReader(grid_file)
 
         grid_dict = {}
@@ -756,7 +756,7 @@ def execute(args):
         # what then????????
         grid_projected_uri = os.path.join(
             inter_dir, 'grid_point_projected%s.shp' % suffix)
-        clip_and_reproject_shapefile(grid_ds_uri, aoi_uri, grid_projected_uri)
+        clip_and_reproject_shapefile(grid_ds_uri, aoi_path, grid_projected_uri)
 
         if land_exists:
             land_ds_uri = os.path.join(
@@ -774,7 +774,7 @@ def execute(args):
             land_projected_uri = os.path.join(
                 inter_dir, 'land_point_projected%s.shp' % suffix)
             clip_and_reproject_shapefile(
-                land_ds_uri, aoi_uri, land_projected_uri)
+                land_ds_uri, aoi_path, land_projected_uri)
 
             # Get the shortest distances from each grid point to the land
             # points
@@ -1420,11 +1420,11 @@ def mask_by_distance(
         assert_datasets_projected = True, vectorize_op = False)
 
 
-def read_csv_wind_data(wind_data_uri, hub_height):
+def read_csv_wind_data(wind_data_path, hub_height):
     """Unpack the csv wind data into a dictionary.
 
     Parameters:
-        wind_data_uri (string): a path for the csv wind data file with header
+        wind_data_path (string): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
 
         hub_height (int): the hub height to use for calculating weibell
@@ -1444,7 +1444,7 @@ def read_csv_wind_data(wind_data_uri, hub_height):
     wind_dict = {}
 
     # LONG, LATI, RAM, K, REF
-    wind_file = open(wind_data_uri, 'rU')
+    wind_file = open(wind_data_path, 'rU')
     reader = csv.DictReader(wind_file)
 
     for row in reader:
@@ -1535,12 +1535,12 @@ def wind_data_to_point_shape(dict_data, layer_name, output_uri):
     output_datasource = None
 
 
-def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
+def clip_and_reproject_raster(raster_uri, aoi_path, projected_uri):
     """Clip and project a Dataset to an area of interest
 
         raster_uri - a URI to a gdal Dataset
 
-        aoi_uri - a URI to a ogr DataSource of geometry type polygon
+        aoi_path - a URI to a ogr DataSource of geometry type polygon
 
         projected_uri - a URI string for the output dataset to be written to
             disk
@@ -1549,7 +1549,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
 
     LOGGER.debug('Entering clip_and_reproject_raster')
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_uri)
+    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_path)
     aoi_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the raster
@@ -1561,7 +1561,7 @@ def clip_and_reproject_raster(raster_uri, aoi_uri, projected_uri):
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        aoi_uri, raster_wkt, aoi_reprojected_uri)
+        aoi_path, raster_wkt, aoi_reprojected_uri)
 
     # Temporary URI for an intermediate step
     clipped_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
@@ -1636,12 +1636,12 @@ def clip_and_reproject_shapefile(
     shutil.rmtree(clipped_path)
 
 
-def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
+def clip_datasource(aoi_path, orig_ds_uri, output_uri):
     """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
         geometry type polygon. The aoi should be a shapefile with a layer
         that has only one polygon feature
 
-        aoi_uri - a URI to an OGR Datasource that is the clipping bounding box
+        aoi_path - a URI to an OGR Datasource that is the clipping bounding box
 
         orig_ds_uri - a URI to an OGR Datasource to clip
 
@@ -1651,7 +1651,7 @@ def clip_datasource(aoi_uri, orig_ds_uri, output_uri):
 
     LOGGER.debug('Entering clip_datasource')
 
-    aoi_ds = gdal.OpenEx(aoi_uri)
+    aoi_ds = gdal.OpenEx(aoi_path)
     orig_ds = gdal.OpenEx(orig_ds_uri)
 
     orig_layer = orig_ds.GetLayer()
@@ -1959,10 +1959,10 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
-        'wind_data_uri',
-        'bathymetry_uri',
-        'global_wind_parameters_uri',
-        'turbine_parameters_uri',
+        'wind_data_path',
+        'bathymetry_path',
+        'global_wind_parameters_path',
+        'turbine_parameters_path',
         'number_of_turbines',
         'min_depth',
         'max_depth',
@@ -2001,7 +2001,7 @@ def validate(args, limit_to=None):
         warnings.append((keys_missing_value,
                          'Parameter must have a value.'))
 
-    for vector_key in ('aoi_uri', 'land_polygon_uri'):
+    for vector_key in ('aoi_path', 'land_polygon_path'):
         try:
             if args[vector_key] not in ('', None):
                 with utils.capture_gdal_logging():
@@ -2015,24 +2015,24 @@ def validate(args, limit_to=None):
             # neither of these vectors are required, so they may be omitted.
             pass
 
-    if limit_to in ('bathymetry_uri', None):
+    if limit_to in ('bathymetry_path', None):
         with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['bathymetry_uri'])
+            raster = gdal.OpenEx(args['bathymetry_path'])
         if raster is None:
-            warnings.append((['bathymetry_uri'],
+            warnings.append((['bathymetry_path'],
                              ('Parameter must be a path to a GDAL-compatible '
                               'raster on disk.')))
 
-    if limit_to in ('wind_data_uri', None):
+    if limit_to in ('wind_data_path', None):
         try:
             table_dict = utils.build_lookup_from_csv(
-                args['wind_data_uri'], 'REF')
+                args['wind_data_path'], 'REF')
 
             missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) -
                               set(table_dict.itervalues().next().keys()))
             if len(missing_fields) > 0:
                 warnings.append((
-                    ['wind_data_uri'],
+                    ['wind_data_path'],
                     ('CSV missing required fields: %s' % (
                         ', '.join(missing_fields)))))
 
@@ -2043,7 +2043,7 @@ def validate(args, limit_to=None):
                             float(record[float_field])
                         except ValueError:
                             warnings.append(
-                                (['wind_data_uri'],
+                                (['wind_data_path'],
                                 ('Ref %s column %s must be a number.'
                                 % (ref_key, float_field))))
 
@@ -2052,34 +2052,34 @@ def validate(args, limit_to=None):
                                 raise ValueError()
                         except ValueError:
                             warnings.append(
-                                (['wind_data_uri'],
+                                (['wind_data_path'],
                                 ('Ref %s ust be an integer.' % ref_key)))
             except KeyError:
                 # missing keys are reported earlier.
                 pass
         except IOError:
-            warnings.append((['wind_data_uri'], 'Could not locate file.'))
+            warnings.append((['wind_data_path'], 'Could not locate file.'))
         except csv.Error:
-            warnings.append((['wind_data_uri'],
+            warnings.append((['wind_data_path'],
                              'Could not open CSV file.'))
 
-    if limit_to in ('aoi_uri', None):
+    if limit_to in ('aoi_path', None):
         try:
-            if args['aoi_uri'] not in ('', None):
+            if args['aoi_path'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_uri'])
+                    vector = gdal.OpenEx(args['aoi_path'])
                     layer = vector.GetLayer()
                     srs = layer.GetSpatialRef()
                     units = srs.GetLinearUnitsName().lower()
                     if units not in ('meter', 'metre'):
-                        warnings.append((['aoi_uri'],
+                        warnings.append((['aoi_path'],
                                          'Vector must be projected in meters'))
         except KeyError:
             # Parameter is not required.
             pass
 
-    for simple_csv_key in ('global_wind_parameters_uri',
-                           'turbine_parameters_uri'):
+    for simple_csv_key in ('global_wind_parameters_path',
+                           'turbine_parameters_path'):
         try:
             csv.reader(open(args[simple_csv_key]))
         except IOError:
@@ -2112,16 +2112,16 @@ def validate(args, limit_to=None):
         except KeyError:
             pass
 
-    if limit_to in ('grid_points_uri', None):
+    if limit_to in ('grid_points_path', None):
         try:
             table_dict = utils.build_lookup_from_csv(
-                args['grid_points_uri'], 'id')
+                args['grid_points_path'], 'id')
 
             missing_fields = (set(['long', 'lati', 'id', 'type']) -
                               set(table_dict.itervalues().next().keys()))
             if len(missing_fields) > 0:
                 warnings.append((
-                    ['grid_points_uri'],
+                    ['grid_points_path'],
                     ('CSV missing required fields: %s' % (
                         ', '.join(missing_fields)))))
 
@@ -2132,7 +2132,7 @@ def validate(args, limit_to=None):
                             float(record[float_field])
                         except ValueError:
                             warnings.append(
-                                (['grid_points_uri'],
+                                (['grid_points_path'],
                                  ('ID %s column %s must be a number.'
                                   % (id_key, float_field))))
 
@@ -2141,12 +2141,12 @@ def validate(args, limit_to=None):
                                 raise ValueError()
                         except ValueError:
                             warnings.append(
-                                (['grid_points_uri'],
+                                (['grid_points_path'],
                                  ('ID %s must be an integer.' % id_key)))
 
                         if record['type'] not in ('land', 'grid'):
                             warnings.append((
-                                ['grid_points_uri'],
+                                ['grid_points_path'],
                                 ('ID %s column TYPE must be either "land" or '
                                  '"grid" (case-insensitive)') % id_key))
             except KeyError:
@@ -2156,9 +2156,9 @@ def validate(args, limit_to=None):
             # This is not a required input.
             pass
         except IOError:
-            warnings.append((['grid_points_uri'], 'Could not locate file.'))
+            warnings.append((['grid_points_path'], 'Could not locate file.'))
         except csv.Error:
-            warnings.append((['grid_points_uri'],
+            warnings.append((['grid_points_path'],
                              'Could not open CSV file.'))
 
     if limit_to in ('wind_schedule', None) and (
@@ -2204,14 +2204,14 @@ def validate(args, limit_to=None):
                              'Could not open CSV file.'))
 
     if limit_to is None:
-        # Require land_polygon_uri if any of min_distance, max_distance, or
+        # Require land_polygon_path if any of min_distance, max_distance, or
         # valuation_container have a value.
         try:
             if any((args['min_distance'] not in ('', None),
                     args['max_distance'] not in ('', None),
                     args['valuation_container'] is True)):
-                if args['land_polygon_uri'] in ('', None):
-                    warnings.append((['land_polygon_uri'],
+                if args['land_polygon_path'] in ('', None):
+                    warnings.append((['land_polygon_path'],
                                     'Parameter is required, but has no value.'))
         except KeyError:
             # It's possible for some of these args to be missing, in which case

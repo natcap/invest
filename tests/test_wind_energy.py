@@ -520,14 +520,14 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """Generate an args list that is consistent across regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'wind_data_uri': os.path.join(
+            'wind_data_path': os.path.join(
                 SAMPLE_DATA, 'resampled_wind_points.csv'),
-            'bathymetry_uri': os.path.join(
+            'bathymetry_path': os.path.join(
                 SAMPLE_DATA, 'resampled_global_dem.tif'),
-            'global_wind_parameters_uri': os.path.join(
+            'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
+            'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
@@ -567,7 +567,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(
+        args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
@@ -594,9 +594,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(
+        args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
+        args['land_polygon_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
 
         wind_energy.execute(args)
@@ -623,17 +623,17 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
+        args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(
+        args['land_polygon_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
-        # Test that only grid points are provided in grid_points_uri
-        args['grid_points_uri'] = os.path.join(
+        # Test that only grid points are provided in grid_points_path
+        args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
@@ -664,9 +664,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_uri'] = os.path.join(
+        args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
+        args['land_polygon_path'] = os.path.join(SAMPLE_DATA,
                                                 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
@@ -677,7 +677,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
         # marked as land points. So the distances will be zero, keeping the
         # result the same but testing that section of code
-        args['grid_points_uri'] = os.path.join(SAMPLE_DATA,
+        args['grid_points_path'] = os.path.join(SAMPLE_DATA,
                                                'resampled_grid_land_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
@@ -710,7 +710,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wind_energy import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['land_polygon_uri'] = os.path.join(SAMPLE_DATA,
+        args['land_polygon_path'] = os.path.join(SAMPLE_DATA,
                                                 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
@@ -718,7 +718,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
         # Provide the grid points but not AOI
-        args['grid_points_uri'] = os.path.join(
+        args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
@@ -735,19 +735,19 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # raised exception quicker
         args = {
             'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
+            'wind_data_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
+            'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
+            'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
+            'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000
@@ -764,7 +764,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'turbines_per_circuit': 8
         }
         _create_vertical_csv(data, file_path)
-        args['turbine_parameters_uri'] = file_path
+        args['turbine_parameters_path'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
@@ -777,19 +777,19 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # raised exception quicker
         args = {
             'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
+            'wind_data_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
+            'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
+            'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
+            'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
@@ -814,7 +814,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'turbines_per_circuit': 8, 'rotor_diameter': 40
         }
         _create_vertical_csv(data, file_path)
-        args['turbine_parameters_uri'] = file_path
+        args['turbine_parameters_path'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
@@ -827,19 +827,19 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # raised exception quicker
         args = {
             'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
+            'wind_data_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
+            'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'turbine_parameters_uri': os.path.join(
+            'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
+            'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
@@ -871,7 +871,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'air_density_coefficient': 1.194e-4, 'loss_parameter': .05
         }
         _create_vertical_csv(data, file_path)
-        args['global_wind_parameters_uri'] = file_path
+        args['global_wind_parameters_path'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
@@ -881,22 +881,22 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args = {
             'workspace_dir': self.workspace_dir,
-            'wind_data_uri': os.path.join(
+            'wind_data_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_uri': os.path.join(
+            'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_uri': os.path.join(
+            'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 'global_wind_energy_parameters.csv'),
-            'turbine_parameters_uri': os.path.join(
+            'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA,
                 '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_uri': os.path.join(
+            'aoi_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_uri': os.path.join(
+            'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
