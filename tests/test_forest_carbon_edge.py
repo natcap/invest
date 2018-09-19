@@ -166,7 +166,8 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-        args['aoi_vector_path'] = os.path.join('path', 'to', 'nonexistant', 'aoi.shp')
+        args['aoi_vector_path'] = os.path.join(
+            'path', 'to', 'nonexistant', 'aoi.shp')
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
         expected_message = 'Unable to open aoi at:'
