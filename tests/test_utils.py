@@ -290,16 +290,16 @@ class LogToFileTests(unittest.TestCase):
 
         def _log_from_other_thread():
             thread_logger = logging.getLogger()
-            thread_logger.info('this should be logged')
+            thread_logger.info('this should not be logged')
+            thread_logger.info('neither should this message')
 
         local_logger = logging.getLogger()
 
         thread = threading.Thread(target=_log_from_other_thread)
 
-        with log_to_file(logfile, threadname=thread.name) as handler:
+        with log_to_file(logfile, exclude_threads=[thread.name]) as handler:
             thread.start()
-            local_logger.info('this should not be logged')
-            local_logger.info('neither should this message')
+            local_logger.info('this should be logged')
 
             thread.join()
             handler.flush()
@@ -326,7 +326,7 @@ class ThreadFilterTests(unittest.TestCase):
         filterer = ThreadFilter(threading.currentThread().name)
 
         # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), True)
+        self.assertEqual(filterer.filter(record), False)
 
     def test_thread_filter_different_thread(self):
         from natcap.invest.utils import ThreadFilter
@@ -344,7 +344,7 @@ class ThreadFilterTests(unittest.TestCase):
         filterer = ThreadFilter('Thread-nonexistent')
 
         # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), False)
+        self.assertEqual(filterer.filter(record), True)
 
 
 class BuildLookupFromCsvTests(unittest.TestCase):
