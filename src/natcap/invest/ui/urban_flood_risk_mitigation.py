@@ -50,9 +50,10 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
         self.curve_number_table_path = inputs.File(
             args_key=u'curve_number_table_path',
             helptext=(
-                u"Path to a CSV table that contains at least the headers "
-                u"'lucode', 'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
-            label=u'Landcover to Curve Number Table',
+                u"Path to a CSV table that to map landcover codes to curve "
+                u"numbers and contains at least the headers 'lucode', "
+                u"'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
+            label=u'Biophysical Table',
             validator=self.validator)
         self.add_input(self.curve_number_table_path)
 

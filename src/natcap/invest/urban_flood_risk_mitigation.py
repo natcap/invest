@@ -60,8 +60,11 @@ def execute(args):
 
     """
     temporary_working_dir = os.path.join(
-        args['workspace_dir'], 'temp_working_dir')
-    utils.make_directories([args['workspace_dir'], temporary_working_dir])
+        args['workspace_dir'], 'temp_working_dir_not_for_humans')
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], 'intermediate_files')
+    utils.make_directories([
+        args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
     task_graph = taskgraph.TaskGraph(
         temporary_working_dir, max(1, multiprocessing.cpu_count()))
@@ -116,7 +119,7 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    cn_raster_path = os.path.join(args['workspace_dir'], 'cn_raster.tif')
+    cn_raster_path = os.path.join(temporary_working_dir, 'cn_raster.tif')
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
@@ -132,7 +135,7 @@ def execute(args):
 
     # Generate S_max
     s_max_nodata = -9999
-    s_max_raster_path = os.path.join(args['workspace_dir'], 's_max.tif')
+    s_max_raster_path = os.path.join(temporary_working_dir, 's_max.tif')
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -144,7 +147,7 @@ def execute(args):
 
     # Generate Qpi
     q_pi_nodata = -9999.
-    q_pi_raster_path = os.path.join(args['workspace_dir'], 'q_pi.tif')
+    q_pi_raster_path = os.path.join(intermediate_dir, 'Q_mm.tif')
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -158,7 +161,7 @@ def execute(args):
     # Generate Runoff Retention
     runoff_retention_nodata = -9999.
     runoff_retention_raster_path = os.path.join(
-        args['workspace_dir'], 'R_i.tif')
+        args['workspace_dir'], 'Runoff_retention.tif')
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -172,7 +175,7 @@ def execute(args):
 
     # calculate runoff retention volumne
     runoff_retention_ret_vol_raster_path = os.path.join(
-        args['workspace_dir'], 'R_i_m3.tif')
+        args['workspace_dir'], 'Runoff_retention_m3.tif')
     runoff_retention_ret_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -188,8 +191,7 @@ def execute(args):
         task_name='calculate runoff retention vol')
 
     # calculate flood vol raster
-    flood_vol_raster_path = os.path.join(
-        args['workspace_dir'], 'flood_vol.tif')
+    flood_vol_raster_path = os.path.join(intermediate_dir, 'Q_m3.tif')
     flood_vol_nodata = -1
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
