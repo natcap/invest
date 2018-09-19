@@ -85,7 +85,7 @@ def execute(args):
             biophysical table to have 'is_tropical_forest' forest field, and
             any landcover codes that have a 1 in this column calculate carbon
             stocks using the Chaplin-Kramer et. al method and ignore 'c_above'.
-        args['tropical_forest_edge_carbon_model_shape_path'] (string): path to a
+        args['tropical_forest_edge_carbon_model_vector_path'] (string): path to a
             shapefile that defines the regions for the local carbon edge
             models.  Has at least the fields 'method', 'theta1', 'theta2',
             'theta3'.  Where 'method' is an int between 1..3 describing the
@@ -151,9 +151,11 @@ def execute(args):
         output_file_registry['tropical_forest_edge_carbon_map'] = os.path.join(
             intermediate_dir, 'tropical_forest_edge_carbon_stocks%s.tif' %
             file_suffix)
+        output_file_registry['non_forest_mask'] = os.path.join(
+            intermediate_dir, 'non_forest_mask%s.tif' % file_suffix)
 
     # Map non-forest landcover codes to carbon biomasses
-    LOGGER.info('calculating direct mapped carbon stocks')
+    LOGGER.info('Calculating direct mapped carbon stocks')
     carbon_maps = []
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=False)
@@ -174,20 +176,21 @@ def execute(args):
 
     if args['compute_forest_edge_effects']:
         # generate a map of pixel distance to forest edge from the landcover map
-        LOGGER.info('calculating distance from forest edge')
+        LOGGER.info('Calculating distance from forest edge')
         _map_distance_from_tropical_forest_edge(
             args['lulc_raster_path'], args['biophysical_table_path'],
-            output_file_registry['edge_distance'])
+            output_file_registry['edge_distance'],
+            output_file_registry['non_forest_mask'])
 
         # Build spatial index for gridded global model for closest 3 points
         LOGGER.info('Building spatial index for forest edge models.')
         kd_tree, theta_model_parameters, method_model_parameter = (
             _build_spatial_index(
                 args['lulc_raster_path'], intermediate_dir,
-                args['tropical_forest_edge_carbon_model_shape_path']))
+                args['tropical_forest_edge_carbon_model_vector_path']))
 
-        # calculate the edge carbon effect on forests
-        LOGGER.info('calculating forest edge carbon')
+        # calculate the carbon edge effect on forests
+        LOGGER.info('Calculating forest edge carbon')
         _calculate_tropical_forest_edge_carbon_map(
             output_file_registry['edge_distance'], kd_tree,
             theta_model_parameters, method_model_parameter,
@@ -348,7 +351,7 @@ def _calculate_lulc_carbon_map(
     lucode_to_per_pixel_carbon = {}
     pixel_size = pygeoprocessing.get_raster_info(
         lulc_raster_path)['pixel_size']  # in meters
-    cell_area_ha = abs(pixel_size[0]) * abs(pixel_size[1]) / 10000.0
+    pixel_area_ha = abs(pixel_size[0]) * abs(pixel_size[1]) / 10000.0
 
     # Build a lookup table
     for lucode in biophysical_table:
@@ -363,7 +366,7 @@ def _calculate_lulc_carbon_map(
         else:
             try:
                 lucode_to_per_pixel_carbon[int(lucode)] = float(
-                    biophysical_table[lucode][carbon_pool_type]) * cell_area_ha
+                    biophysical_table[lucode][carbon_pool_type]) * pixel_area_ha
             except ValueError:
                 raise ValueError(
                     "Could not interpret carbon pool value as a number. "
@@ -378,7 +381,8 @@ def _calculate_lulc_carbon_map(
 
 
 def _map_distance_from_tropical_forest_edge(
-        lulc_raster_path, biophysical_table_path, edge_distance_path):
+        lulc_raster_path, biophysical_table_path, edge_distance_path,
+        non_forest_mask_path):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
@@ -390,7 +394,7 @@ def _map_distance_from_tropical_forest_edge(
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
             depending on landcover code type)
         edge_distance_path (string): path to output raster where each pixel
-            contains the euclidian pixel distance to nearest forest edges on
+            contains the euclidean pixel distance to nearest forest edges on
             all non-nodata values of lulc_raster_path
 
     Returns:
@@ -413,8 +417,7 @@ def _map_distance_from_tropical_forest_edge(
             lulc_array.flatten(), forest_codes).reshape(lulc_array.shape)
         nodata_mask = lulc_array == lulc_nodata
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
-    non_forest_mask_path_handle, non_forest_mask_path = tempfile.mkstemp()
-    os.close(non_forest_mask_path_handle)
+
     pygeoprocessing.raster_calculator(
         [(lulc_raster_path, 1)], mask_non_forest_op, non_forest_mask_path,
         gdal.GDT_Byte, forest_mask_nodata)
@@ -423,13 +426,10 @@ def _map_distance_from_tropical_forest_edge(
     pygeoprocessing.distance_transform_edt(
         (non_forest_mask_path, 1), edge_distance_path)
 
-    # good practice to delete temporary files when we're done with them
-    os.remove(non_forest_mask_path)
-
 
 def _build_spatial_index(
         base_raster_path, local_model_dir,
-        tropical_forest_edge_carbon_model_shapefile_path):
+        tropical_forest_edge_carbon_model_vector_path):
     """Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
@@ -440,7 +440,7 @@ def _build_spatial_index(
             shapefile of the locally projected global data model grid.
             Function will create a file called 'local_carbon_shape.shp' in
             that location and overwrite one if it exists.
-        tropical_forest_edge_carbon_model_shapefile_path (string): a path to an
+        tropical_forest_edge_carbon_model_vector_path (string): a path to an
             OGR shapefile that has the parameters for the global carbon edge
             model. Each georeferenced feature should have fields 'theta1',
             'theta2', 'theta3', and 'method'
@@ -459,18 +459,18 @@ def _build_spatial_index(
     lulc_projection_wkt = pygeoprocessing.get_raster_info(
         base_raster_path)['projection']
     pygeoprocessing.reproject_vector(
-        tropical_forest_edge_carbon_model_shapefile_path, lulc_projection_wkt,
+        tropical_forest_edge_carbon_model_vector_path, lulc_projection_wkt,
         carbon_model_reproject_path)
 
-    model_shape_ds = gdal.OpenEx(carbon_model_reproject_path)
-    model_shape_layer = model_shape_ds.GetLayer()
+    model_vector = gdal.OpenEx(carbon_model_reproject_path)
+    model_layer = model_vector.GetLayer()
 
     kd_points = []
     theta_model_parameters = []
     method_model_parameter = []
 
     # put all the polygons in the kd_tree because it's fast and simple
-    for poly_feature in model_shape_layer:
+    for poly_feature in model_layer:
         poly_geom = poly_feature.GetGeometryRef()
         poly_centroid = poly_geom.Centroid()
         # put in row/col order since rasters are row/col indexed
@@ -486,9 +486,9 @@ def _build_spatial_index(
     theta_model_parameters = numpy.array(
         theta_model_parameters, dtype=numpy.float32)
 
-    LOGGER.info('building kd_tree')
+    LOGGER.info('Building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
-    LOGGER.info('done building kd_tree with %d points', len(kd_points))
+    LOGGER.info('Done building kd_tree with %d points', len(kd_points))
     return kd_tree, theta_model_parameters, method_model_parameter
 
 
@@ -526,25 +526,25 @@ def _calculate_tropical_forest_edge_carbon_map(
     # fill nodata, in case we skip entire memory blocks that are non-forest
     pygeoprocessing.new_raster_from_base(
         edge_distance_path, tropical_forest_edge_carbon_map_path,
-        gdal.GDT_Float32, [CARBON_MAP_NODATA],
+        gdal.GDT_Float32, band_nodata_list=[CARBON_MAP_NODATA],
         fill_value_list=[CARBON_MAP_NODATA])
-    edge_carbon_dataset = gdal.OpenEx(
+    edge_carbon_raster = gdal.OpenEx(
         tropical_forest_edge_carbon_map_path, gdal.GA_Update)
-    edge_carbon_band = edge_carbon_dataset.GetRasterBand(1)
-    edge_carbon_geotransform = edge_carbon_dataset.GetGeoTransform()
+    edge_carbon_band = edge_carbon_raster.GetRasterBand(1)
+    edge_carbon_geotransform = edge_carbon_raster.GetGeoTransform()
 
     # create edge distance band for memory block reading
-    n_rows = edge_carbon_dataset.RasterYSize
-    n_cols = edge_carbon_dataset.RasterXSize
+    n_rows = edge_carbon_raster.RasterYSize
+    n_cols = edge_carbon_raster.RasterXSize
     n_cells = n_rows * n_cols
     n_cells_processed = 0
     # timer to give updates per call
     last_time = time.time()
 
-    cell_area_ha = pygeoprocessing.get_raster_info(
-        edge_distance_path)['mean_pixel_size'] ** 2 / 10000.0
-    cell_size_km = pygeoprocessing.get_raster_info(
-        edge_distance_path)['mean_pixel_size'] / 1000.0
+    pixel_XSize, pixel_YSize = pygeoprocessing.get_raster_info(
+        edge_distance_path)['pixel_size']
+    pixel_size_km = (abs(pixel_XSize) + abs(pixel_YSize))/2 / 1000.0
+    pixel_area_ha = (abs(pixel_XSize) * abs(pixel_YSize)) / 10000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
@@ -607,7 +607,7 @@ def _calculate_tropical_forest_edge_carbon_map(
             (indexes.shape[0], indexes.shape[1], 3))
         # reshape to an N,nearest_points so we can multiply by thetas
         valid_edge_distances_km = numpy.repeat(
-            edge_distance_block[valid_edge_distance_mask] * cell_size_km,
+            edge_distance_block[valid_edge_distance_mask] * pixel_size_km,
             n_nearest_model_points).reshape(-1, n_nearest_model_points)
 
         # asymptotic model
@@ -615,19 +615,19 @@ def _calculate_tropical_forest_edge_carbon_map(
         biomass_model[:, :, 0] = (
             thetas[:, :, 0] - thetas[:, :, 1] * numpy.exp(
                 -thetas[:, :, 2] * valid_edge_distances_km)
-            ) * cell_area_ha
+            ) * pixel_area_ha
 
         # logarithmic model
         # biomass_2 = t1 + t2 * numpy.log(edge_dist_km)
         biomass_model[:, :, 1] = (
             thetas[:, :, 0] + thetas[:, :, 1] * numpy.log(
-                valid_edge_distances_km)) * cell_area_ha
+                valid_edge_distances_km)) * pixel_area_ha
 
         # linear regression
         # biomass_3 = t1 + t2 * edge_dist_km
         biomass_model[:, :, 2] = (
             (thetas[:, :, 0] + thetas[:, :, 1] * valid_edge_distances_km) *
-            cell_area_ha)
+            pixel_area_ha)
 
         # Collapse the biomass down to the valid models
         model_index = numpy.zeros(indexes.shape, dtype=numpy.int8)
@@ -700,7 +700,7 @@ def validate(args, limit_to=None):
             'biophysical_table_path',
             'pools_to_calculate',
             'compute_forest_edge_effects',
-            'tropical_forest_edge_carbon_model_shape_path',
+            'tropical_forest_edge_carbon_model_vector_path',
             'n_nearest_model_points',
             'biomass_to_carbon_conversion_factor',
             ]:
@@ -732,7 +732,7 @@ def validate(args, limit_to=None):
     optional_file_type_list = [('lulc_raster_path', 'raster', True)]
     if args['compute_forest_edge_effects']:
         optional_file_type_list.extend(
-            [('tropical_forest_edge_carbon_model_shape_path', 'vector', True),
+            [('tropical_forest_edge_carbon_model_vector_path', 'vector', True),
              ('aoi_vector_path', 'vector', False)])
 
     # check that existing/optional files are the correct types

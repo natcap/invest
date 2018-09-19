@@ -41,10 +41,10 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\forest_carbon_workspace"#self.workspace_dir,
         }
         forest_carbon_edge_effect.execute(args)
         ForestCarbonEdgeTests._test_same_files(
@@ -72,7 +72,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -101,7 +101,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -135,7 +135,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -161,7 +161,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -188,7 +188,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'nodata_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_path': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
