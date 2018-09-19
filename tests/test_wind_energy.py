@@ -320,7 +320,7 @@ class WindEnergyUnitTests(unittest.TestCase):
     def test_pixel_size_transform(self):
         """WindEnergy: testing pixel size transform helper function.
 
-        Function name is : 'pixel_size_based_on_coordinate_transform_uri'.
+        Function name is : 'pixel_size_based_on_coordinate_transform_path'.
         """
         from natcap.invest import wind_energy
 
@@ -364,7 +364,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         # the reprojected raster
         coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
         # Call the function to test
-        result = wind_energy.pixel_size_based_on_coordinate_transform_uri(
+        result = wind_energy.pixel_size_based_on_coordinate_transform_path(
             raster_path, coord_trans, point)
 
         expected_res = (5553.93306384, 1187.37081348)
@@ -525,11 +525,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 SAMPLE_DATA, 'resampled_global_dem.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
+                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 60
