@@ -1,7 +1,5 @@
 import unittest
 
-from osgeo import gdal
-
 
 class ValidatorTest(unittest.TestCase):
     def test_args_wrong_type(self):

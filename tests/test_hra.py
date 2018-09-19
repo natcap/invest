@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pygeoprocessing
-from pygeoprocessing.testing import scm
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
@@ -28,8 +27,6 @@ class HRATests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_euc_none(self):
         """HRA: euclidean and no decay."""
         import natcap.invest.habitat_risk_assessment.hra
@@ -57,8 +54,6 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_mult_none(self):
         """HRA: multiplicative and no decay."""
         import natcap.invest.habitat_risk_assessment.hra
@@ -86,8 +81,6 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_euc_lin(self):
         """HRA: euclidean and linear."""
         import natcap.invest.habitat_risk_assessment.hra
@@ -114,8 +107,6 @@ class HRATests(unittest.TestCase):
             os.path.join(
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_euc_exp(self):
         """HRA: euclidean and exponential."""
         import natcap.invest.habitat_risk_assessment.hra
@@ -143,8 +134,6 @@ class HRATests(unittest.TestCase):
                 self.workspace_dir, 'output', 'Maps', 'ecosys_risk.tif'),
             1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_hra_preprocessor(self):
         """HRA: preprocessor coverage."""
         import natcap.invest.habitat_risk_assessment.hra_preprocessor

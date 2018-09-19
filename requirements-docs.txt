@@ -16,7 +16,7 @@
 sphinx
 sphinx-rtd-theme
 nose
-cython
+Cython
 mock
 numpy
 scipy

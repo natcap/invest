@@ -4,6 +4,18 @@ Unreleased Changes
 ------------------
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
+* Updating core carbon forest edge regression data coefficient to drop
+  impossible negative coefficients.
+* Fixing an issue with the Scenario Generator: Proximity model that would
+  raise an exception if no AOI were passed in even though the AOI is optional.
+* Removing Overlap Analysis and Overlap Analysis: Management Zones.
+* Removing Habitat Suitability.
+* Added comprehensive error checking to hydropower model to test for the VERY
+  common errors of missing biophysical, demand, and valuation coefficients in
+  their respective tables.
+* Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
+  valuation would never be triggered when running the model through the User
+  Interface.
 
 3.5.0 (2018-08-14)
 ------------------

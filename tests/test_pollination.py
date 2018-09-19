@@ -6,16 +6,12 @@ import shutil
 import os
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 from osgeo import ogr
 import shapely.geometry
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'pollination')
-TEST_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'pollination')
+REGRESSION_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'pollination')
 
 
 class PollinationTests(unittest.TestCase):
@@ -31,7 +27,6 @@ class PollinationTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(TEST_DATA)
     def test_pollination_regression(self):
         """Pollination: regression testing sample data."""
         from natcap.invest import pollination
@@ -40,21 +35,26 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input',
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'blueberry_ridge_farm.shp'),
+                REGRESSION_DATA, 'input', 'blueberry_ridge_farm.shp'),
         }
-        # make an empty farm result to get coverage for removing if necessary
-        f = open(os.path.join(self.workspace_dir, 'farm_results.shp'), 'w')
-        f.close()
+        # make empty result files to get coverage for removing if necessary
+        result_files = ['farm_results.shp', 'total_pollinator_yield.tif',
+                        'wild_pollinator_yield.tif']
+        for file_name in result_files:
+            f = open(os.path.join(self.workspace_dir, file_name), 'w')
+            f.close()
         pollination.execute(args)
         expected_farm_yields = {
             'blueberry': {
-                'y_tot': 0.41237348829,
-                'y_wild': 0.06237348829
+                'y_tot': 0.44934792607,
+                'y_wild': 0.09934792607
             },
         }
         result_vector = ogr.Open(
@@ -75,7 +75,10 @@ class PollinationTests(unittest.TestCase):
             result_layer = None
             result_vector = None
 
-    @scm.skip_if_data_missing(TEST_DATA)
+        PollinationTests._test_same_files(
+            os.path.join(REGRESSION_DATA, 'expected_file_list_regression.txt'),
+            self.workspace_dir)
+
     def test_pollination_missing_farm_header(self):
         """Pollination: regression testing missing farm headers."""
         from natcap.invest import pollination
@@ -84,18 +87,19 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input',
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'missing_headers_farm.shp'),
+                REGRESSION_DATA, 'input', 'missing_headers_farm.shp'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-    @scm.skip_if_data_missing(TEST_DATA)
     def test_pollination_too_many_farm_seasons(self):
         """Pollination: regression testing too many seasons in farm."""
         from natcap.invest import pollination
@@ -104,38 +108,38 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
-            'guild_table_path': os.path.join(TEST_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table_simple.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input',
+                'landcover_biophysical_table_simple.csv'),
             'farm_vector_path': os.path.join(
-                TEST_DATA, 'too_many_seasons_farm.shp'),
+                REGRESSION_DATA, 'input', 'too_many_seasons_farm.shp'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-    @scm.skip_if_data_missing(TEST_DATA)
     def test_pollination_missing_guild_header(self):
-        """Pollination: regression testing extra guild headers."""
+        """Pollination: regression testing missing guild headers."""
         from natcap.invest import pollination
 
         args = {
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'pollination_example_landcover.tif'),
+                REGRESSION_DATA, 'input', 'pollination_example_landcover.tif'),
             'guild_table_path': os.path.join(
-                TEST_DATA, 'missing_guild_table_header.csv'),
+                REGRESSION_DATA, 'input', 'missing_guild_table_header.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                TEST_DATA, r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input',
+                'landcover_biophysical_table_simple.csv'),
         }
         # should error when not finding an expected farm header
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_no_farm_regression(self):
         """Pollination: regression testing sample data with no farms."""
         from natcap.invest import pollination
@@ -144,10 +148,11 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                TEST_DATA, 'clipped_landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'landcover_biophysical_table.csv')
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv')
         }
         pollination.execute(args)
         result_raster_path = os.path.join(
@@ -157,10 +162,8 @@ class PollinationTests(unittest.TestCase):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
-        self.assertAlmostEqual(result_sum, 4790.44, places=2)
+        self.assertAlmostEqual(result_sum, 58.669518, places=2)
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_guild_headers(self):
         """Pollination: testing that model detects bad guild headers."""
         from natcap.invest import pollination
@@ -179,16 +182,16 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
-            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
+            'farm_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_biophysical_headers(self):
         """Pollination: testing that model detects bad biophysical headers."""
         from natcap.invest import pollination
@@ -204,15 +207,16 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table.csv'),
             'landcover_biophysical_table_path': bad_biophysical_table_path,
-            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
+            'farm_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_cross_table_headers(self):
         """Pollination: ensure detection of missing headers in one table."""
         from natcap.invest import pollination
@@ -238,15 +242,15 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
             'guild_table_path': bad_guild_table_path,
             'landcover_biophysical_table_path': bad_biophysical_table_path,
-            'farm_vector_path': os.path.join(SAMPLE_DATA, 'farms.shp'),
+            'farm_vector_path': os.path.join(
+                REGRESSION_DATA, 'input', 'farms.shp'),
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_pollination_bad_farm_type(self):
         """Pollination: ensure detection of bad farm geometry type."""
         from natcap.invest import pollination
@@ -272,11 +276,42 @@ class PollinationTests(unittest.TestCase):
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
             'landcover_raster_path': os.path.join(
-                SAMPLE_DATA, 'landcover.tif'),
-            'guild_table_path': os.path.join(SAMPLE_DATA, 'guild_table.csv'),
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table.csv'),
             'landcover_biophysical_table_path': os.path.join(
-                SAMPLE_DATA, r'landcover_biophysical_table.csv'),
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv'),
             'farm_vector_path': farm_shape_path,
         }
         with self.assertRaises(ValueError):
             pollination.execute(args)
+
+    @staticmethod
+    def _test_same_files(base_list_path, directory_path):
+        """Assert files in `base_list_path` are in `directory_path`.
+
+        Parameters:
+            base_list_path (string): a path to a file that has one relative
+                file path per line.
+            directory_path (string): a path to a directory whose contents will
+                be checked against the files listed in `base_list_file`
+
+        Returns:
+            None
+
+        Raises:
+            AssertionError when there are files listed in `base_list_file`
+                that don't exist in the directory indicated by `path`
+        """
+        missing_files = []
+        with open(base_list_path, 'r') as file_list:
+            for file_path in file_list:
+                full_path = os.path.join(directory_path, file_path.rstrip())
+                if full_path == '':
+                    continue
+                if not os.path.isfile(full_path):
+                    missing_files.append(full_path)
+        if len(missing_files) > 0:
+            raise AssertionError(
+                "The following files were expected but not found: " +
+                '\n'.join(missing_files))

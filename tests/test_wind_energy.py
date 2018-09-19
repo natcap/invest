@@ -6,7 +6,6 @@ import os
 import csv
 
 import pygeoprocessing.testing
-from pygeoprocessing.testing import scm
 from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
@@ -225,7 +224,6 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         self.assertDictEqual(expected_result, result)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_read_csv_wind_parameters(self):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
         from natcap.invest.wind_energy import wind_energy
@@ -539,8 +537,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         return args
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_aoi(self):
         """WindEnergy: testing base case w/o AOI, distances, or valuation."""
         from natcap.invest.wind_energy import wind_energy
@@ -566,8 +562,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -595,8 +589,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest.wind_energy import wind_energy
@@ -626,8 +618,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -669,8 +659,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', vector_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest.wind_energy import wind_energy
@@ -717,8 +705,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path),
                 1E-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_grid_points_no_aoi(self):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
         from natcap.invest.wind_energy import wind_energy
@@ -740,8 +726,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that ValueError raised when missing bio param."""
         from natcap.invest.wind_energy import wind_energy
@@ -784,8 +768,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_missing_valuation_params(self):
         """WindEnergy: testing that ValueError is thrown when val params miss."""
         from natcap.invest.wind_energy import wind_energy
@@ -836,8 +818,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_time_period_exceptoin(self):
         """WindEnergy: raise ValueError if 'time' and 'wind_sched' differ."""
         from natcap.invest.wind_energy import wind_energy
@@ -895,8 +875,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_remove_datasources(self):
         """WindEnergy: testing datasources which already exist are removed."""
         from natcap.invest.wind_energy import wind_energy
