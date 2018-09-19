@@ -13,6 +13,7 @@ from osgeo import ogr
 from osgeo import osr
 
 import numpy as np
+import pandas
 from scipy import integrate
 # required for py2exe to build
 from scipy.sparse.csgraph import _validation
@@ -1226,33 +1227,30 @@ def point_to_polygon_distance(poly_ds_uri, point_ds_uri):
     return distances
 
 
-def read_csv_wind_parameters(csv_uri, parameter_list):
+def read_csv_wind_parameters(csv_path, parameter_list):
     """Construct a dictionary from a csv file given a list of keys in
         'parameter_list'. The list of keys corresponds to the parameters names
-        in 'csv_uri' which are represented in the first column of the file.
+        in 'csv_path' which are represented in the first column of the file.
 
-        csv_uri - a URI to a CSV file where every row is a parameter with the
+        csv_path - a path to a CSV file where every row is a parameter with the
             parameter name in the first column followed by the value in the
             second column
 
-        parameter_list - a List of Strings that represent the parameter names to
-            be found in 'csv_uri'. These Strings will be the keys in the
+        parameter_list - a List of Strings that represent the parameter names
+            to be found in 'csv_path'. These Strings will be the keys in the
             returned dictionary
 
         returns - a Dictionary where the the 'parameter_list' Strings are the
-            keys that have values pulled from 'csv_uri'
+            keys that have values pulled from 'csv_path'
     """
-    csv_file = open(csv_uri, 'rU')
-    csv_reader = csv.reader(csv_file)
-    output_dict = {}
+    # use the parameters in the first column as indeces for the dataframe
+    wind_df = pandas.read_csv(csv_path, header=None, index_col=0)
+    wind_df.index = wind_df.index.str.lower()
+    # only get the biophysical parameters and leave out the valuation ones
+    wind_df = wind_df[wind_df.index.isin(parameter_list)]
+    wind_dict = wind_df.to_dict()[1]
 
-    for csv_row in csv_reader:
-        # Only get the biophysical parameters and leave out the valuation ones
-        if csv_row[0].lower() in parameter_list:
-            output_dict[csv_row[0].lower()] = csv_row[1]
-
-    csv_file.close()
-    return output_dict
+    return wind_dict
 
 
 def combine_dictionaries(dict_1, dict_2):
@@ -1276,7 +1274,7 @@ def combine_dictionaries(dict_1, dict_2):
     # from
     for key, value in dict_2.iteritems():
         # Ignore fields that already exist in dictionary we are adding to
-        if not key in dict_3.keys():
+        if key not in dict_3.keys():
             dict_3[key] = value
 
     return dict_3

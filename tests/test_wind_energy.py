@@ -239,9 +239,9 @@ class WindEnergyUnitTests(unittest.TestCase):
         result = wind_energy.read_csv_wind_parameters(csv_path, parameter_list)
 
         expected_result = {
-            'air_density': '1.225', 'exponent_power_curve': '2',
-            'decommission_cost': '.037', 'operation_maintenance_cost': '.035',
-            'miscellaneous_capex_cost': '.05'
+            'air_density': 1.225, 'exponent_power_curve': 2.0,
+            'decommission_cost': 0.037000000000000005,
+            'operation_maintenance_cost': .035, 'miscellaneous_capex_cost': .05
         }
         self.assertDictEqual(expected_result, result)
 
@@ -666,8 +666,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_path'] = os.path.join(SAMPLE_DATA,
-                                                'simple_north_america_polygon.shp')
+        args['land_polygon_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -677,8 +677,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
         # marked as land points. So the distances will be zero, keeping the
         # result the same but testing that section of code
-        args['grid_points_path'] = os.path.join(SAMPLE_DATA,
-                                               'resampled_grid_land_pts.csv')
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_grid_land_pts.csv')
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -710,8 +710,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['land_polygon_path'] = os.path.join(SAMPLE_DATA,
-                                                'simple_north_america_polygon.shp')
+        args['land_polygon_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
         args['valuation_container'] = True
@@ -760,8 +760,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         os.close(tmp)
         data = {
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6, 'turbine_cost': 8.0,
-            'turbines_per_circuit': 8
+            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
+            'turbine_cost': 8.0, 'turbines_per_circuit': 8
         }
         _create_vertical_csv(data, file_path)
         args['turbine_parameters_path'] = file_path
@@ -782,8 +782,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
