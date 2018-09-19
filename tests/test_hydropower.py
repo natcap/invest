@@ -130,7 +130,7 @@ class HydropowerTests(unittest.TestCase):
         args['calculate_water_scarcity'] = True
         args['demand_table_uri'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
-        args['valuation_container'] = True
+        args['calculate_valuation'] = True
         args['valuation_table_uri'] = os.path.join(
             SAMPLE_DATA, 'hydropower_valuation_table.csv')
         args['sub_watersheds_uri'] = os.path.join(
@@ -190,3 +190,89 @@ class HydropowerTests(unittest.TestCase):
         del args_missing_key['eto_uri']
         with self.assertRaises(KeyError):
             hydropower_water_yield.validate(args_missing_key)
+
+        # ensure that a missing landcover code in the biophysical table will
+        # raise an exception that's helpful
+        args_bad_biophysical_table = args.copy()
+        bad_biophysical_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+        with open(bad_biophysical_path, 'wb') as bad_biophysical_file:
+            with open(args['biophysical_table_uri'], 'rb') as (
+                    biophysical_table_file):
+                lines_to_write = 2
+                for line in biophysical_table_file.readlines():
+                    bad_biophysical_file.write(line)
+                    lines_to_write -= 1
+                    if lines_to_write == 0:
+                        break
+        args_bad_biophysical_table['biophysical_table_uri'] = (
+            bad_biophysical_path)
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args_bad_biophysical_table)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'did not have corresponding entries in the biophysical table' in
+            actual_message, actual_message)
+
+        # ensure that a missing landcover code in the demand table will
+        # raise an exception that's helpful
+        args_bad_biophysical_table = args.copy()
+        bad_biophysical_path = os.path.join(
+            self.workspace_dir, 'bad_biophysical_table.csv')
+        with open(bad_biophysical_path, 'wb') as bad_biophysical_file:
+            with open(args['biophysical_table_uri'], 'rb') as (
+                    biophysical_table_file):
+                lines_to_write = 2
+                for line in biophysical_table_file.readlines():
+                    bad_biophysical_file.write(line)
+                    lines_to_write -= 1
+                    if lines_to_write == 0:
+                        break
+        args_bad_demand_table = args.copy()
+        bad_demand_path = os.path.join(
+            self.workspace_dir, 'bad_demand_table.csv')
+        args_bad_demand_table['demand_table_uri'] = (
+            bad_demand_path)
+        with open(bad_demand_path, 'wb') as bad_demand_file:
+            with open(os.path.join(
+                SAMPLE_DATA, 'water_demand_table.csv'), 'rb') as (
+                    demand_table_file):
+                lines_to_write = 2
+                for line in demand_table_file.readlines():
+                    bad_demand_file.write(line)
+                    lines_to_write -= 1
+                    if lines_to_write == 0:
+                        break
+
+        # ensure that a missing watershed id the valuation table will
+        # raise an exception that's helpful
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args_bad_demand_table)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'did not have corresponding entries in the water demand table' in
+            actual_message, actual_message)
+
+        args_bad_valuation_table = args.copy()
+        bad_valuation_path = os.path.join(
+            self.workspace_dir, 'bad_valuation_table.csv')
+
+        args_bad_valuation_table['valuation_table_uri'] = (
+            bad_valuation_path)
+        with open(bad_valuation_path, 'wb') as bad_valuation_file:
+            with open(os.path.join(
+                SAMPLE_DATA, 'hydropower_valuation_table.csv'), 'rb') as (
+                    valuation_table_file):
+                lines_to_write = 2
+                for line in valuation_table_file.readlines():
+                    bad_valuation_file.write(line)
+                    lines_to_write -= 1
+                    if lines_to_write == 0:
+                        break
+
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args_bad_valuation_table)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'but are not found in the valuation table' in
+            actual_message, actual_message)
