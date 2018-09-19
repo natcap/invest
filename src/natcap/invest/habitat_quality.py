@@ -129,9 +129,9 @@ def execute(args):
     raster_unique_lucodes = set()
 
     # compile all the threat rasters associated with the land cover
-    for lulc_key, lulc_args in {'_c': 'lulc_cur_path',
-                                '_f': 'lulc_fut_path',
-                                '_b': 'lulc_bas_path'}.iteritems():
+    for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
+                                ('_f', 'lulc_fut_path'),
+                                ('_b', 'lulc_bas_path')):
         if lulc_args in args:
             lulc_path = args[lulc_args]
             lulc_path_dict[lulc_key] = lulc_path
