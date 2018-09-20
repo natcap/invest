@@ -562,7 +562,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_path'] = os.path.join(
+        args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
         wind_energy.execute(args)
@@ -586,7 +586,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_path'] = os.path.join(
+        args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
@@ -612,7 +612,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_path'] = os.path.join(
+        args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
@@ -648,9 +648,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['aoi_path'] = os.path.join(
+        args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
@@ -728,7 +728,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_path': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
@@ -769,7 +769,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_path': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
@@ -819,7 +819,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_path': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
@@ -876,7 +876,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
-            'aoi_path': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
