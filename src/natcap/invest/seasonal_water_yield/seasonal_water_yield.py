@@ -213,7 +213,7 @@ def _execute(args):
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, output_dir])
     task_graph = taskgraph.TaskGraph(
-        cache_dir, max(1, multiprocessing.cpu_count()))
+        cache_dir, -1)#max(1, multiprocessing.cpu_count()))
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -423,7 +423,8 @@ def _execute(args):
                 dependent_task_list=[
                     align_task, reclassify_n_events_task_list[month_index],
                     si_task, stream_threshold_task],
-                task_name='calculate quick flow for month %d' % month_index+1)
+                task_name='calculate quick flow for month %d' % (
+                    month_index+1))
             quick_flow_task_list.append(monthly_quick_flow_task)
 
         qf_task = task_graph.add_task(
@@ -449,7 +450,7 @@ def _execute(args):
                 target_path_list=file_registry['kc_path_list'][month_index],
                 dependent_task_list=[align_task],
                 task_name='classify kc month %d' % month_index)
-            kc_task_list.add_task(kc_task)
+            kc_task_list.append(kc_task)
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
@@ -485,7 +486,7 @@ def _execute(args):
     if args['user_defined_local_recharge']:
         vri_dependent_task_list = [calculate_local_recharge_task]
     else:
-        vri_dependent_task_list = None
+        vri_dependent_task_list = []
 
     vri_task = task_graph.add_task(
         func=_calculate_vri,
@@ -540,9 +541,8 @@ def _execute(args):
             file_registry['stream_path'],
             file_registry['b_sum_path']),
         target_path_list=[file_registry['b_sum_path']],
-        dependent_task_list=[
-            fill_pit_task, l_sum_task, stream_threshold_task,
-            l_avail_task] + b_sum_dependent_task_list,
+        dependent_task_list=b_sum_dependent_task_list + [
+            fill_pit_task, l_sum_task, stream_threshold_task],
         task_name='calculate B_sum')
 
     LOGGER.info('calculate B')
@@ -568,6 +568,9 @@ def _execute(args):
             # Let it go.
             pass
     """
+
+    task_graph.close()
+    task_graph.join()
 
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
