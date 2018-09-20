@@ -4,7 +4,6 @@ import logging
 import os
 import time
 import multiprocessing
-import uuid
 import pickle
 
 from osgeo import gdal
@@ -67,7 +66,7 @@ def execute(args):
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
@@ -450,7 +449,7 @@ def build_affected_vector(
     pygeoprocessing.reproject_vector(
         base_watershed_vector_path, target_wkt,
         target_watershed_result_vector_path, layer_index=0,
-        driver_name='GPKG')
+        driver_name='ESRI Shapefile')
 
     target_srs = osr.SpatialReference()
     target_srs.ImportFromWkt(target_wkt)
@@ -634,6 +633,13 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
+        'aoi_watersheds_path',
+        'rainfall_depth',
+        'lulc_path',
+        'soils_hydrological_group_raster_path',
+        'curve_number_table_path',
+        'built_infrastructure_vector_path',
+        'infrastructure_damage_loss_table_path',
         ]
 
     for key in required_keys:
@@ -654,6 +660,10 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     file_type_list = [
+        ('aoi_watersheds_path', 'vector'),
+        ('lulc_path', 'raster'),
+        ('soils_hydrological_group_raster_path', 'raster'),
+        ('built_infrastructure_vector_path', 'vector'),
         ]
 
     # check that existing/optional files are the correct types
