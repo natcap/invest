@@ -188,7 +188,7 @@ def execute(args):
             'Please make sure all the necessary fields are present and '
             'spelled correctly.')
 
-    # Hub Height to use for setting Weibull paramaters
+    # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
 
     LOGGER.debug('hub_height : %s', hub_height)
@@ -595,52 +595,6 @@ def execute(args):
         harvest_mask_list, mask_out_depth_dist, harvested_masked_path,
         gdal.GDT_Float32, out_nodata, cell_size, 'intersection',
         assert_datasets_projected = projected, vectorize_op = False)
-
-    # Create the farm polygon shapefile, which is an example of how big the farm
-    # will be with a rough representation of its dimensions.
-    # The number of turbines allowed per circuit for infield cabling
-    turbines_per_circuit = int(bio_parameters_dict['turbines_per_circuit'])
-    # The rotor diameter of the turbines
-    rotor_diameter = int(bio_parameters_dict['rotor_diameter'])
-    # The rotor diameter factor is a rule by which to use in deciding how far
-    # apart the turbines should be spaced
-    rotor_diameter_factor = int(bio_parameters_dict['rotor_diameter_factor'])
-
-    # Calculate the number of circuits there will be based on the number of
-    # turbines and the number of turbines per circuit. If a fractional value is
-    # returned we want to round up and error on the side of having the farm be
-    # slightly larger
-    num_circuits = math.ceil(float(number_of_turbines) / turbines_per_circuit)
-    # The distance needed between turbines
-    spacing_dist = rotor_diameter * rotor_diameter_factor
-
-    # Calculate the width
-    width = (num_circuits - 1) * spacing_dist
-    # Calculate the length
-    length = (turbines_per_circuit - 1) * spacing_dist
-
-    # Retrieve the geometry for a point that has the highest harvested energy
-    # value, to use as the starting location for building the polygon
-    pt_geometry = get_highest_harvested_geom(final_wind_points_path)
-    # Get the X and Y location for the selected wind farm point. These
-    # coordinates will be the starting point of which to create the farm lines
-    center_x = pt_geometry.GetX()
-    center_y = pt_geometry.GetY()
-    start_point = (center_x, center_y)
-    spat_ref = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-        final_wind_points_path)
-
-    farm_poly_path = os.path.join(
-        out_dir,
-        'example_size_and_orientation_of_a_possible_wind_farm%s.shp' % suffix)
-    # If the file path already exist, remove it.
-    if os.path.isfile(farm_poly_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(farm_poly_path)
-
-    # Create the actual polygon
-    LOGGER.info('Creating Example Farm Polygon')
-    create_wind_farm_box(spat_ref, start_point, width, length, farm_poly_path)
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
@@ -1430,27 +1384,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
     # values. See equation 3 in the users guide.
     alpha = 0.11
 
-    # wind_dict_ = {}
-
-    # # LONG, LATI, RAM, K, REF
-    # wind_file = open(wind_data_path, 'rU')
-    # reader = csv.DictReader(wind_file)
-
-    # for row in reader:
-    #     ref_height = float(row['REF'])
-    #     ref_scale = float(row['LAM'])
-    #     ref_shape = float(row['K'])
-    #     # Calculate scale value at new hub height given reference values.
-    #     # See equation 3 in users guide
-    #     scale_value = (ref_scale * (hub_height / ref_height)**alpha)
-
-    #     wind_dict_[float(row['LATI']), float(row['LONG'])] = {
-    #         'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
-    #         'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
-
-    # wind_file.close()
-###############################################################################
-
     wind_point_df = pandas.read_csv(wind_data_path)
 
     # Calculate scale value at new hub height given reference values.
@@ -1460,9 +1393,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
         lambda row: row.REF_LAM * (hub_height / row.REF)**alpha, axis=1)
     wind_point_df.drop(['REF'], axis=1)  # REF is no longer needed
     wind_dict = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
-
-    # import pdb
-    # pdb.set_trace()
 
     return wind_dict
 

@@ -551,14 +551,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'noaoi', raster_path), 1E-6)
 
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_path = 'wind_energy_points.shp'
 
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
 
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
@@ -578,14 +575,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
 
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_path = 'wind_energy_points.shp'
 
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
 
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
@@ -607,14 +601,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
 
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_path = 'wind_energy_points.shp'
 
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
@@ -648,19 +639,16 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
 
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_path = 'wind_energy_points.shp'
 
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
 
         args['aoi_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -693,14 +681,11 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 os.path.join(REGRESSION_DATA, 'pricevalgridland', raster_path),
                 1E-6)
 
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_path = 'wind_energy_points.shp'
 
-        for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
-                os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path),
+        pygeoprocessing.testing.assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path),
                 1E-6)
 
     def test_grid_points_no_aoi(self):
@@ -909,9 +894,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         # Make sure the output files were created.
-        vector_results = [
-            'example_size_and_orientation_of_a_possible_wind_farm.shp',
-            'wind_energy_points.shp']
+        vector_results = ['wind_energy_points.shp']
         for vector_path in vector_results:
             self.assertTrue(os.path.exists(
                 os.path.join(args['workspace_dir'], 'output', vector_path)))
