@@ -197,33 +197,46 @@ def execute(args):
     LOGGER.info('Reading in Wind Data into a dictionary')
     wind_data = read_csv_wind_data(args['wind_data_path'], hub_height)
 
-    # Since an AOI was provided the wind energy points shapefile will need
-    # to be clipped and projected. Thus save the construction of the
-    # shapefile from dictionary in the intermediate directory. The final
-    # projected shapefile will be written to the output directory
-    wind_point_shape_path = os.path.join(
-            inter_dir, 'wind_energy_points%s.shp' % suffix)
-
-    # Create point shapefile from wind data
-    LOGGER.info('Create point shapefile from wind data')
-    wind_data_to_point_vector(wind_data, 'wind_data', wind_point_shape_path)
-
     if 'aoi_path' in args:
         LOGGER.info('AOI Provided')
-
         aoi_path = args['aoi_path']
+
+        # Since an AOI was provided the wind energy points shapefile will need
+        # to be clipped and projected. Thus save the construction of the
+        # shapefile from dictionary in the intermediate directory. The final
+        # projected shapefile will be written to the output directory
+        wind_point_vector_path = os.path.join(
+                inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
+
+        # Create point shapefile from wind data
+        LOGGER.info('Create point shapefile from wind data')
+        wind_data_to_point_vector(
+            wind_data, 'wind_data', wind_point_vector_path)
 
         # Define the path for projecting the wind energy data points to that of
         # the AOI
-        wind_points_proj_path = os.path.join(
+        wind_point_proj_vecotr_path = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
 
         # Clip and project the wind energy points datasource
         LOGGER.debug('Clip and project wind points to AOI')
         clip_and_reproject_shapefile(
-            wind_point_shape_path, aoi_path, wind_points_proj_path)
+            wind_point_vector_path, aoi_path, wind_point_proj_vecotr_path)
 
-        # Define the uri for projecting the bathymetry to AOI
+        # Define the path for projecting the bathymetry to AOI
+        bathymetry_proj_path = os.path.join(
+                inter_dir, 'bathymetry_projected%s.tif' % suffix)
+
+        # Clip and project the bathymetry dataset
+        LOGGER.debug('Clip and project bathymetry to AOI')
+        clip_and_reproject_raster(bathymetry_path, aoi_path, bathymetry_proj_path)
+
+        # Clip and project the wind energy points datasource
+        LOGGER.debug('Clip and project wind points to AOI')
+        clip_and_reproject_shapefile(
+            wind_point_vector_path, aoi_path, wind_point_proj_vecotr_path)
+
+        # Define the path for projecting the bathymetry to AOI
         bathymetry_proj_path = os.path.join(
                 inter_dir, 'bathymetry_projected%s.tif' % suffix)
 
@@ -236,7 +249,7 @@ def execute(args):
         # this case these URIs refer to the projected files. This may not be
         # the case if an AOI is not provided
         final_bathymetry_path = bathymetry_proj_path
-        final_wind_points_path = wind_points_proj_path
+        final_wind_points_path = wind_point_proj_vecotr_path
 
         # Try to handle the distance inputs and land datasource if they
         # are present
@@ -309,10 +322,20 @@ def execute(args):
     else:
         LOGGER.info("AOI argument was not selected")
 
+        # Since no AOI was provided the wind energy points shapefile that is
+        # created directly from dictionary will be the final output, so set the
+        # uri to point to the output folder
+        wind_point_vector_path = os.path.join(
+            out_dir, 'wind_energy_points%s.shp' % suffix)
+
+        # Create point shapefile from wind data dictionary
+        LOGGER.debug('Create point shapefile from wind data')
+        wind_data_to_point_vector(wind_data, 'wind_data', wind_point_vector_path)
+
         # Set the bathymetry and points URI to use in the rest of the model. In
         # this case these URIs refer to the unprojected files. This may not be
         # the case if an AOI is provided
-        final_wind_points_path = wind_point_shape_path
+        final_wind_points_path = wind_point_vector_path
         final_bathymetry_path = bathymetry_path
 
         # Determines whether to check projections in future vectorize_datasets
@@ -1488,25 +1511,25 @@ def clip_and_reproject_raster(raster_path, aoi_path, projected_path):
     LOGGER.debug('Entering clip_and_reproject_raster')
     # Get the AOIs spatial reference as strings in Well Known Text
     aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_path)
-    aoi_wkt = aoi_sr.ExportToWkt()
+    aoi_vector_wkt = aoi_sr.ExportToWkt()
 
     # Get the Well Known Text of the raster
     raster_wkt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_dataset_projection_wkt_uri(raster_path)
 
     # Temporary filename for an intermediate step
-    aoi_reprojected_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
+    reprojected_vector_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
 
     # Reproject the AOI to the spatial reference of the raster so that the
     # AOI can be used to clip the raster properly
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        aoi_path, raster_wkt, aoi_reprojected_path)
+        aoi_path, raster_wkt, reprojected_vector_path)
 
     # Temporary URI for an intermediate step
     clipped_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
 
     LOGGER.debug('Clipping dataset')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        raster_path, aoi_reprojected_path, clipped_path, False)
+        raster_path, reprojected_vector_path, clipped_path, False)
 
     # Get a point from the clipped data object to use later in helping
     # determine proper pixel size
@@ -1527,7 +1550,7 @@ def clip_and_reproject_raster(raster_path, aoi_path, projected_path):
     LOGGER.debug('Reprojecting dataset')
     # Reproject the raster to the projection of the AOI
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_dataset_uri(
-        clipped_path, pixel_size[0], aoi_wkt, 'bilinear', projected_path)
+        clipped_path, pixel_size[0], aoi_vector_wkt, 'bilinear', projected_path)
 
     LOGGER.debug('Leaving clip_and_reproject_dataset')
 
@@ -1546,32 +1569,21 @@ def clip_and_reproject_shapefile(
         None.
     """
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
-    aoi_wkt = aoi_sr.ExportToWkt()
+    aoi_vector_wkt = pygeoprocessing.get_vector_info(
+        aoi_vector_path)['projection']
 
-    # Get the Well Known Text of the shapefile
-    base_vector = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-        base_vector_path)
-    base_vector_coordinate_system = base_vector.ExportToWkt()
+    # Create path for the reprojected shapefile
+    reprojected_vector_path = os.path.join(
+        os.path.dirname(base_vector_path),
+        os.path.basename(base_vector_path).replace('.shp', '_reprojected.shp'))
 
-    # Temporary URI for an intermediate step
-    aoi_reprojected_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
-
-    # Reproject the AOI to the spatial reference of the shapefile so that the
-    # AOI can be used to clip the shapefile properly
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        aoi_vector_path, base_vector_coordinate_system, aoi_reprojected_path)
-
-    # Temporary URI for an intermediate step
-    clipped_path = tempfile.mkdtemp()
+    # Reproject the shapefile to the spatial reference of AOI so that AOI
+    # can be used to clip the shapefile properly
+    pygeoprocessing.reproject_vector(
+        base_vector_path, aoi_vector_wkt, reprojected_vector_path)
 
     # Clip the shapefile to the AOI
-    clip_datasource(aoi_reprojected_path, base_vector_path, clipped_path)
-
-    # Reproject the clipped shapefile to that of the AOI
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        clipped_path, aoi_wkt, output_vector_path)
-    shutil.rmtree(clipped_path)
+    clip_datasource(aoi_vector_path, reprojected_vector_path, output_vector_path)
 
 
 def clip_datasource(aoi_path, orig_ds_path, output_path):

@@ -685,8 +685,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path),
-                1E-6)
+            os.path.join(
+                REGRESSION_DATA, 'pricevalgridland', vector_path), 1E-6)
 
     def test_grid_points_no_aoi(self):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
