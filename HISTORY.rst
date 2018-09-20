@@ -16,6 +16,9 @@ Unreleased Changes
 * Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
   valuation would never be triggered when running the model through the User
   Interface.
+* Fixing an issue with how logging is captured when a model is run through the
+  InVEST User Interface.  Now, logging from any thread started by the executor
+  thread will be written to the log file, which we expect to aid in debugging.
 
 3.5.0 (2018-08-14)
 ------------------
