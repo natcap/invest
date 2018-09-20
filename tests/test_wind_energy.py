@@ -410,8 +410,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         res_array = res_band.ReadAsArray()
         numpy.testing.assert_array_equal(res_array, exp_array)
 
-    def test_wind_data_to_point_shape(self):
-        """WindEnergy: testing 'wind_data_to_point_shape' function."""
+    def test_wind_data_to_point_vector(self):
+        """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy
 
         dict_data = {
@@ -423,7 +423,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
+        wind_energy.wind_data_to_point_vector(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -452,8 +452,8 @@ class WindEnergyUnitTests(unittest.TestCase):
 
             feat = layer.GetNextFeature()
 
-    def test_wind_data_to_point_shape_360(self):
-        """WindEnergy: testing 'wind_data_to_point_shape' function.
+    def test_wind_data_to_point_vector_360(self):
+        """WindEnergy: testing 'wind_data_to_point_vector' function.
 
         This test is to test that when Longitude values range from -360 to 0,
             instead of the normal -180 to 180, they are handled properly.
@@ -470,7 +470,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_shape(dict_data, layer_name, out_path)
+        wind_energy.wind_data_to_point_vector(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)

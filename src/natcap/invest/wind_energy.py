@@ -31,6 +31,11 @@ LOGGER = logging.getLogger('natcap.invest.wind_energy')
 speedups.enable()
 
 
+# The _SCALE_KEY is used in getting the right wind energy arguments that are
+# dependent on the hub height.
+_SCALE_KEY = 'LAM'
+
+
 def execute(args):
     """Wind Energy.
 
@@ -183,36 +188,32 @@ def execute(args):
             'Please make sure all the necessary fields are present and '
             'spelled correctly.')
 
-    # Hub Height to use for setting Weibell paramaters
+    # Hub Height to use for setting Weibull paramaters
     hub_height = int(bio_parameters_dict['hub_height'])
-
-    # The scale_key is used in getting the right wind energy arguments that are
-    # dependent on the hub height.
-    scale_key = 'LAM'
 
     LOGGER.debug('hub_height : %s', hub_height)
 
     # Read the wind energy data into a dictionary
-    LOGGER.info('Reading in Wind Data')
+    LOGGER.info('Reading in Wind Data into a dictionary')
     wind_data = read_csv_wind_data(args['wind_data_path'], hub_height)
+
+    # Since an AOI was provided the wind energy points shapefile will need
+    # to be clipped and projected. Thus save the construction of the
+    # shapefile from dictionary in the intermediate directory. The final
+    # projected shapefile will be written to the output directory
+    wind_point_shape_path = os.path.join(
+            inter_dir, 'wind_energy_points%s.shp' % suffix)
+
+    # Create point shapefile from wind data
+    LOGGER.info('Create point shapefile from wind data')
+    wind_data_to_point_vector(wind_data, 'wind_data', wind_point_shape_path)
 
     if 'aoi_path' in args:
         LOGGER.info('AOI Provided')
 
         aoi_path = args['aoi_path']
 
-        # Since an AOI was provided the wind energy points shapefile will need
-        # to be clipped and projected. Thus save the construction of the
-        # shapefile from dictionary in the intermediate directory. The final
-        # projected shapefile will be written to the output directory
-        wind_point_shape_path = os.path.join(
-                inter_dir, 'wind_energy_points_from_data%s.shp' % suffix)
-
-        # Create point shapefile from wind data
-        LOGGER.info('Create point shapefile from wind data')
-        wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_path)
-
-        # Define the uri for projecting the wind energy data points to that of
+        # Define the path for projecting the wind energy data points to that of
         # the AOI
         wind_points_proj_path = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
@@ -307,16 +308,6 @@ def execute(args):
         projected = True
     else:
         LOGGER.info("AOI argument was not selected")
-
-        # Since no AOI was provided the wind energy points shapefile that is
-        # created directly from dictionary will be the final output, so set the
-        # uri to point to the output folder
-        wind_point_shape_path = os.path.join(
-            out_dir, 'wind_energy_points%s.shp' % suffix)
-
-        # Create point shapefile from wind data dictionary
-        LOGGER.debug('Create point shapefile from wind data')
-        wind_data_to_point_shape(wind_data, 'wind_data', wind_point_shape_path)
 
         # Set the bathymetry and points URI to use in the rest of the model. In
         # this case these URIs refer to the unprojected files. This may not be
@@ -458,7 +449,7 @@ def execute(args):
         feature = wind_points_layer.GetFeature(0)
 
         # Get the indexes for the scale and shape parameters
-        scale_index = feature.GetFieldIndex(scale_key)
+        scale_index = feature.GetFieldIndex(_SCALE_KEY)
         shape_index = feature.GetFieldIndex(shape_key)
         LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
 
@@ -1245,11 +1236,11 @@ def read_csv_wind_parameters(csv_path, parameter_list):
             keys that have values pulled from 'csv_path'
     """
     # use the parameters in the first column as indeces for the dataframe
-    wind_df = pandas.read_csv(csv_path, header=None, index_col=0)
-    wind_df.index = wind_df.index.str.lower()
+    wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
+    wind_param_df.index = wind_param_df.index.str.lower()
     # only get the biophysical parameters and leave out the valuation ones
-    wind_df = wind_df[wind_df.index.isin(parameter_list)]
-    wind_dict = wind_df.to_dict()[1]
+    wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
+    wind_dict = wind_param_df.to_dict()[1]
 
     return wind_dict
 
@@ -1427,7 +1418,7 @@ def read_csv_wind_data(wind_data_path, hub_height):
         wind_data_path (string): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
 
-        hub_height (int): the hub height to use for calculating weibell
+        hub_height (int): the hub height to use for calculating Weibull
             parameters and wind energy values
 
     Returns:
@@ -1435,62 +1426,79 @@ def read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
     """
 
-    LOGGER.debug('Entering read_wind_data')
-
     # Constant used in getting Scale value at hub height from reference height
     # values. See equation 3 in the users guide.
     alpha = 0.11
 
-    wind_dict = {}
+    # wind_dict_ = {}
 
-    # LONG, LATI, RAM, K, REF
-    wind_file = open(wind_data_path, 'rU')
-    reader = csv.DictReader(wind_file)
+    # # LONG, LATI, RAM, K, REF
+    # wind_file = open(wind_data_path, 'rU')
+    # reader = csv.DictReader(wind_file)
 
-    for row in reader:
-        ref_height = float(row['REF'])
-        ref_scale = float(row['LAM'])
-        ref_shape = float(row['K'])
-        # Calculate scale value at new hub height given reference values.
-        # See equation 3 in users guide
-        scale_value = (ref_scale * (hub_height / ref_height)**alpha)
+    # for row in reader:
+    #     ref_height = float(row['REF'])
+    #     ref_scale = float(row['LAM'])
+    #     ref_shape = float(row['K'])
+    #     # Calculate scale value at new hub height given reference values.
+    #     # See equation 3 in users guide
+    #     scale_value = (ref_scale * (hub_height / ref_height)**alpha)
 
-        wind_dict[float(row['LATI']), float(row['LONG'])] = {
-            'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
-            'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
+    #     wind_dict_[float(row['LATI']), float(row['LONG'])] = {
+    #         'LONG': float(row['LONG']), 'LATI': float(row['LATI']),
+    #         'LAM': scale_value, 'K': ref_shape, 'REF_LAM': ref_scale}
 
-    wind_file.close()
+    # wind_file.close()
+###############################################################################
+
+    wind_point_df = pandas.read_csv(wind_data_path)
+
+    # Calculate scale value at new hub height given reference values.
+    # See equation 3 in users guide
+    wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
+    wind_point_df['LAM'] = wind_point_df.apply(
+        lambda row: row.REF_LAM * (hub_height / row.REF)**alpha, axis=1)
+    wind_point_df.drop(['REF'], axis=1)  # REF is no longer needed
+    wind_dict = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
+
+    # import pdb
+    # pdb.set_trace()
+
     return wind_dict
 
 
-def wind_data_to_point_shape(dict_data, layer_name, output_path):
+def wind_data_to_point_vector(
+        dict_data, layer_name, out_vector_path, aoi_path=None):
     """Given a dictionary of the wind data create a point shapefile that
-        represents this data
+        represents this data.
 
-        dict_data - a python dictionary with the wind data, where the keys are
-            tuples of the lat/long coordinates:
-            {
-            (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
-            (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
-            (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
-            }
+        Parameters:
+            dict_data (dict): a  dictionary with the wind data, where the keys
+                are tuples of the lat/long coordinates:
+                {
+                (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+                (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+                (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
+                }
 
-        layer_name - a python string for the name of the layer
+            layer_name (string): the name of the layer.
 
-        output_path - a uri for the output destination of the shapefile
+            out_vector_path (string): a path to the output destination of the
+                shapefile.
 
-        return - nothing"""
+        Returns:
+            None"""
 
-    LOGGER.debug('Entering wind_data_to_point_shape')
+    LOGGER.debug('Entering wind_data_to_point_vector')
 
-    # If the output_path exists delete it
-    if os.path.isfile(output_path):
+    # If the out_vector_path exists delete it
+    if os.path.isfile(out_vector_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(output_path)
+        driver.DeleteDataSource(out_vector_path)
 
     LOGGER.debug('Creating new datasource')
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(output_path)
+    output_datasource = output_driver.CreateDataSource(out_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
@@ -1531,7 +1539,7 @@ def wind_data_to_point_shape(dict_data, layer_name, output_path):
         output_layer.SetFeature(output_feature)
         output_feature = None
 
-    LOGGER.debug('Leaving wind_data_to_point_shape')
+    LOGGER.debug('Leaving wind_data_to_point_vector')
     output_datasource = None
 
 
