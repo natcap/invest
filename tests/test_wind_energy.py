@@ -561,7 +561,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 

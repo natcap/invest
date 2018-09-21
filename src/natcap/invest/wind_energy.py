@@ -218,14 +218,17 @@ def execute(args):
         LOGGER.debug('Clip and project wind points to AOI')
         wind_point_proj_vector_path = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
-        clip_and_reproject_shapefile(
+        import pdb
+        # pdb.set_trace()
+        clip_and_reproject_vector(
             wind_point_vector_path, aoi_vector_path, wind_point_proj_vector_path)
 
         # Clip and project the bathymetry shapefile to AOI
         LOGGER.debug('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
                 inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        clip_and_reproject_raster(
+        # pdb.set_trace()
+        clip_to_projected_coordinate_system(
             bathymetry_path, aoi_vector_path, bathymetry_proj_raster_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
@@ -250,7 +253,7 @@ def execute(args):
             land_poly_proj_path = os.path.join(
                 inter_dir, os.path.basename(land_polygon_path).replace(
                     '.shp', '_projected%s.shp' % suffix))
-            clip_and_reproject_shapefile(
+            clip_and_reproject_vector(
                 land_polygon_path, aoi_vector_path, land_poly_proj_path)
 
             # Get the cell size to use in new raster outputs from the DEM
@@ -711,7 +714,7 @@ def execute(args):
         # what then????????
         grid_projected_path = os.path.join(
             inter_dir, 'grid_point_projected%s.shp' % suffix)
-        clip_and_reproject_shapefile(grid_ds_path, aoi_vector_path, grid_projected_path)
+        clip_and_reproject_vector(grid_ds_path, aoi_vector_path, grid_projected_path)
 
         if land_exists:
             land_ds_path = os.path.join(
@@ -728,7 +731,7 @@ def execute(args):
             # the AOI, what then????????
             land_projected_path = os.path.join(
                 inter_dir, 'land_point_projected%s.shp' % suffix)
-            clip_and_reproject_shapefile(
+            clip_and_reproject_vector(
                 land_ds_path, aoi_vector_path, land_projected_path)
 
             # Get the shortest distances from each grid point to the land
@@ -1413,14 +1416,14 @@ def wind_data_to_point_vector(
             dict_data (dict): a  dictionary with the wind data, where the keys
                 are tuples of the lat/long coordinates:
                 {
-                (97, 43) : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
-                (55, 51) : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
-                (73, 47) : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
+                1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+                2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+                3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
                 }
 
             layer_name (string): the name of the layer.
 
-            target_vector_path (string): a path to the output destination of the
+            target_vector_path (string): path to the output destination of the
                 shapefile.
 
         Returns:
@@ -1521,7 +1524,103 @@ def clip_and_reproject_raster(
     LOGGER.debug('Leaving clip_and_reproject_raster')
 
 
-def clip_and_reproject_shapefile(
+def clip_to_projected_coordinate_system(
+        base_raster_path, clip_vector_path, target_raster_path):
+    """Clip raster with vector into projected coordinate system.
+
+    If base raster is not already projected, choose a suitable UTM zone.
+
+    Parameters:
+        base_raster_path (string): path to base raster
+        clip_vector_path (string): path to base clip vector.
+        target_raster_path (string): path to output clipped raster.
+
+    Returns:
+        None.
+    """
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    clip_vector_info = pygeoprocessing.get_vector_info(clip_vector_path)
+
+    base_raster_srs = osr.SpatialReference()
+    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+
+    if not base_raster_srs.IsProjected():
+        wgs84_sr = osr.SpatialReference()
+        wgs84_sr.ImportFromEPSG(4326)
+        clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+            clip_vector_info['bounding_box'], clip_vector_info['projection'],
+            wgs84_sr.ExportToWkt())
+        base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
+            base_raster_info['bounding_box'], base_raster_info['projection'],
+            wgs84_sr.ExportToWkt())
+        target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
+            clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
+
+        clip_vector_srs = osr.SpatialReference()
+        clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
+
+        centroid_x = (
+            target_bounding_box_wgs84[2] +
+            target_bounding_box_wgs84[0]) / 2
+        centroid_y = (
+            target_bounding_box_wgs84[3] +
+            target_bounding_box_wgs84[1]) / 2
+        utm_code = (math.floor((centroid_x + 180)/6) % 60) + 1
+        lat_code = 6 if centroid_y > 0 else 7
+        epsg_code = int('32%d%02d' % (lat_code, utm_code))
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(epsg_code)
+        target_bounding_box = pygeoprocessing.transform_bounding_box(
+            target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
+            target_srs.ExportToWkt())
+
+        target_pixel_size = convert_degree_pixel_size_to_meters(
+            base_raster_info['pixel_size'], centroid_y)
+
+        pygeoprocessing.warp_raster(
+            base_raster_path, target_pixel_size, target_raster_path,
+            None, target_bb=target_bounding_box,
+            target_sr_wkt=target_srs.ExportToWkt())
+    else:
+        pygeoprocessing.align_and_resize_raster_stack(
+            [base_raster_path], [target_raster_path], ['near'],
+            base_raster_info['pixel_size'], 'intersection',
+            base_vector_path_list=[clip_vector_path],
+            target_sr_wkt=base_raster_info['projection'])
+
+
+def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
+    """Calculate meter size of a wgs84 square pixel.
+
+    Adapted from: https://gis.stackexchange.com/a/127327/2397
+
+    Parameters:
+        pixel_size (float): [xsize, ysize] in degrees.
+        center_lat (float): latitude of the center of the pixel. Note this
+            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            latitude or an invalid area will be calculated.
+
+    Returns:
+        `pixel_size` in meters.
+
+    """
+    m1 = 111132.92
+    m2 = -559.82
+    m3 = 1.175
+    m4 = -0.0023
+    p1 = 111412.84
+    p2 = -93.5
+    p3 = 0.118
+    lat = center_lat * math.pi / 180
+    latlen = (
+        m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
+        m4 * math.cos(6 * lat))
+    longlen = abs(
+        p1 * math.cos(lat) + p2 * math.cos(3 * lat) + p3 * math.cos(5 * lat))
+    return (longlen * pixel_size[0], latlen * pixel_size[1])
+
+
+def clip_and_reproject_vector(
         base_vector_path, clip_vector_path, target_vector_path):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
@@ -1536,6 +1635,8 @@ def clip_and_reproject_shapefile(
     Returns:
         None.
     """
+    LOGGER.info('Entering clip_and_reproject_vector')
+
     # Get the AOIs spatial reference as strings in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(
         clip_vector_path)['projection']
@@ -1551,67 +1652,81 @@ def clip_and_reproject_shapefile(
         base_vector_path, target_sr_wkt, reprojected_vector_path)
 
     # Clip the shapefile to the AOI
-    filter_points(reprojected_vector_path, clip_vector_path, target_vector_path)
+    clip_features(
+        reprojected_vector_path, clip_vector_path, target_vector_path)
+    LOGGER.info('Finished clip_and_reproject_vector')
 
 
-def filter_points(
-        base_point_vector_path, clip_vector_path, target_point_vector_path):
+def clip_features(
+        base_vector_path, clip_vector_path, target_vector_path):
     """Create a new target point vector where base points are contained in the
         single polygon in clip_vector_path. Assumes all data are in the same
         projection.
 
         Parameters:
-            base_point_vector_path (string): a path to a point vector to clip
+            base_vector_path (string): path to a point vector to clip
 
-            clip_vector_path (string): a path to a single polygon vector for
+            clip_vector_path (string): path to a single polygon vector for
                 clipping.
 
             target_vector_path (string): output path for the clipped vector.
 
         Returns:
-            None."""
+            None.
+    """
+    LOGGER.info('Entering clip_features')
 
-    LOGGER.info('Entering filter_points')
+    # Get layer and geometry informations from path
+    base_vector = gdal.OpenEx(base_vector_path)
+    base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+    base_layer_geom = base_layer.GetGeomType()
 
-    base_point_vector = gdal.OpenEx(base_point_vector_path)
-    base_point_layer = base_point_vector.GetLayer()
-    base_point_layer_defn = base_point_layer.GetLayerDefn()
     clip_vector = gdal.OpenEx(clip_vector_path)
     clip_layer = clip_vector.GetLayer()
-
-    # Assuming one feature in clip_layer
-    clip_feat = next(clip_layer)
+    clip_feat = next(clip_layer)  # Assuming one feature in clip_layer
     clip_geom = clip_feat.GetGeometryRef()
     clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
     clip_prep = shapely.prepared.prep(clip_shapely)
 
     # Create a target point vector based on the properties of base point vector
-    target_point_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_point_vector = target_point_driver.CreateDataSource(
-        target_point_vector_path)
-    target_point_layer = target_point_vector.CreateLayer(
-        base_point_layer_defn.GetName(), base_point_layer.GetSpatialRef(),
-        ogr.wkbPoint)
-    target_point_layer = target_point_vector.GetLayer()
-    target_point_defn = target_point_layer.GetLayerDefn()
+    target_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_vector = target_driver.CreateDataSource(target_vector_path)
+    target_layer = target_vector.CreateLayer(
+        base_layer_defn.GetName(), base_layer.GetSpatialRef(), base_layer_geom)
+    target_layer = target_vector.GetLayer()
+    target_defn = target_layer.GetLayerDefn()
+
+    # Add input Layer Fields to the output Layer
+    for i in range(0, base_layer_defn.GetFieldCount()):
+        base_field_defn = base_layer_defn.GetFieldDefn(i)
+        target_layer.CreateField(base_field_defn)
 
     # Write any point feature that lies within the polygon to the target vector
-    for base_point_feat in base_point_layer:
-        base_point_geom = base_point_feat.GetGeometryRef()
-        base_point_shapely = shapely.wkb.loads(base_point_geom.ExportToWkb())
-        if clip_prep.intersects(base_point_shapely):
-            target_point_feat = ogr.Feature(target_point_defn)
-            target_point_feat.SetGeometry(base_point_geom.Clone())
-            target_point_layer.CreateFeature(target_point_feat)
+    for base_feat in base_layer:
+        base_geom = base_feat.GetGeometryRef()
+        base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
 
-    target_point_layer = None
-    target_point_vector = None
+        if clip_prep.intersects(base_shapely):
+            # Create output feature
+            target_feat = ogr.Feature(target_defn)
+            target_feat.SetGeometry(base_geom.Clone())
+
+            # Add field values from input Layer
+            for i in range(0, target_defn.GetFieldCount()):
+                target_feat.SetField(target_defn.GetFieldDefn(i).GetNameRef(),
+                                     base_feat.GetField(i))
+            target_layer.CreateFeature(target_feat)
+            target_feat = None
+
+    target_layer = None
+    target_vector = None
     clip_layer = None
     clip_vector = None
-    base_point_layer = None
-    base_point_vector = None
+    base_layer = None
+    base_vector = None
 
-    LOGGER.info('Finished filter_points')
+    LOGGER.info('Finished clip_features')
 
 
 def calculate_distances_land_grid(
