@@ -381,21 +381,23 @@ def _calculate_lulc_carbon_map(
 
 
 def _map_distance_from_tropical_forest_edge(
-        lulc_raster_path, biophysical_table_path, edge_distance_path,
-        non_forest_mask_path):
+        base_lulc_raster_path, biophysical_table_path, edge_distance_path,
+        target_non_forest_mask_path):
     """Generates a raster of forest edge distances where each pixel is the
     distance to the edge of the forest in meters.
 
     Parameters:
-        lulc_raster_path (string): path to the landcover raster that contains
-            integer landcover codes
-        biophysical_table_path (string): a path to a csv table that indexes
+        base_lulc_raster_path (string): path to the landcover raster that
+            contains integer landcover codes
+        biophysical_table_path (string): path to a csv table that indexes
             landcover codes to forest type, contains at least the fields
             'lucode' (landcover integer code) and 'is_tropical_forest' (0 or 1
             depending on landcover code type)
         edge_distance_path (string): path to output raster where each pixel
             contains the euclidean pixel distance to nearest forest edges on
-            all non-nodata values of lulc_raster_path
+            all non-nodata values of base_lulc_raster_path
+        target_non_forest_mask_path (string): path to the output non forest
+            mask raster
 
     Returns:
         None"""
@@ -409,7 +411,8 @@ def _map_distance_from_tropical_forest_edge(
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
     forest_mask_nodata = 255
-    lulc_nodata = pygeoprocessing.get_raster_info(lulc_raster_path)['nodata']
+    lulc_nodata = pygeoprocessing.get_raster_info(
+        base_lulc_raster_path)['nodata']
 
     def mask_non_forest_op(lulc_array):
         """converts forest lulc codes to 1"""
@@ -419,12 +422,12 @@ def _map_distance_from_tropical_forest_edge(
         return numpy.where(nodata_mask, forest_mask_nodata, non_forest_mask)
 
     pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1)], mask_non_forest_op, non_forest_mask_path,
-        gdal.GDT_Byte, forest_mask_nodata)
+        [(base_lulc_raster_path, 1)], mask_non_forest_op,
+        target_non_forest_mask_path, gdal.GDT_Byte, forest_mask_nodata)
 
     # Do the distance transform on non-forest pixels
     pygeoprocessing.distance_transform_edt(
-        (non_forest_mask_path, 1), edge_distance_path)
+        (target_non_forest_mask_path, 1), edge_distance_path)
 
 
 def _build_spatial_index(
