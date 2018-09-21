@@ -218,8 +218,6 @@ def execute(args):
         LOGGER.debug('Clip and project wind points to AOI')
         wind_point_proj_vector_path = os.path.join(
                 out_dir, 'wind_energy_points%s.shp' % suffix)
-        import pdb
-        # pdb.set_trace()
         clip_and_reproject_vector(
             wind_point_vector_path, aoi_vector_path, wind_point_proj_vector_path)
 
@@ -227,7 +225,6 @@ def execute(args):
         LOGGER.debug('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
                 inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        # pdb.set_trace()
         clip_to_projected_coordinate_system(
             bathymetry_path, aoi_vector_path, bathymetry_proj_raster_path)
 
@@ -274,16 +271,15 @@ def execute(args):
 
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
-            # pygeoprocessing.rasterize()
-            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-                aoi_raster_path, aoi_vector_path, [0],
+            pygeoprocessing.rasterize(
+                aoi_vector_path, aoi_raster_path, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
             # where they overlap
-            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-                aoi_raster_path, land_poly_proj_path, [1],
+            pygeoprocessing.rasterize(
+                land_poly_proj_path, aoi_raster_path, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
 
             dist_mask_path = os.path.join(
@@ -297,8 +293,8 @@ def execute(args):
 
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
-            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
-                aoi_raster_path, dist_trans_path)
+            pygeoprocessing.distance_transform_edt(
+                (aoi_raster_path, 1), dist_trans_path)
             mask_by_distance(
                 dist_trans_path, min_distance, max_distance,
                 _OUT_NODATA, dist_meters_path, dist_mask_path)
@@ -1328,51 +1324,51 @@ def get_highest_harvested_geom(wind_points_path):
 
 
 def mask_by_distance(
-        dataset_path, min_dist, max_dist, _OUT_NODATA, dist_path, mask_path):
+        base_raster_path, min_dist, max_dist, _OUT_NODATA,
+        target_dist_raster_path, target_mask_raster_path):
     """Given a raster whose pixels are distances, bound them by a minimum and
-        maximum distance
+        maximum distance.
 
-        dataset_path - a path to a GDAL raster with distance values
+        Parameters:
+            base_raster_path (string): path to a raster with distance values.
+            min_dist (int): the minimum distance allowed in meters.
+            max_dist (int): the maximum distance allowed in meters.
+            target_dist_raster_path (string): path output to the raster
+                converted from distance transform ranks to distance values in
+                meters.
+            target_mask_raster_path (string): path output to the raster masked
+                by distance values.
+            _OUT_NODATA (float): the nodata value of the raster.
 
-        min_dist - an integer of the minimum distance allowed in meters
+        Returns:
+            None.
+        """
 
-        max_dist - an integer of the maximum distance allowed in meters
-
-        mask_path - the path output of the raster masked by distance values
-
-        dist_path - the path output of the raster converted from distance
-            transform ranks to distance values in meters
-
-        _OUT_NODATA - the nodata value of the raster
-
-        returns - nothing"""
-
-    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(dataset_path)
-    dataset_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(dataset_path)
+    cell_size = pygeoprocessing.get_raster_info(base_raster_path)['pixel_size']
+    raster_nodata = pygeoprocessing.get_raster_info(
+        base_raster_path)['nodata'][0]
 
     def dist_op(dist_pix):
-        """Vectorize_dataset operation that multiplies distance
+        """Raster_calculator operation that multiplies distance
             transform values by a cell size, to get distances
             in meters"""
         return np.where(
-            dist_pix == dataset_nodata, _OUT_NODATA, dist_pix * cell_size)
+            dist_pix == raster_nodata, _OUT_NODATA, dist_pix * cell_size)
 
     def mask_op(dist_pix):
-        """Vectorize_dataset operation to bound dist_pix values between
+        """Raster_calculator operation to bound dist_pix values between
             two integer values"""
         return np.where(
             ((dist_pix >= max_dist) | (dist_pix <= min_dist)), _OUT_NODATA,
             dist_pix)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [dataset_path], dist_op, dist_path, gdal.GDT_Float32,
-        _OUT_NODATA, cell_size, 'intersection',
-        assert_datasets_projected = True, vectorize_op = False)
+    pygeoprocessing.raster_calculator(
+        [(base_raster_path, 1)], dist_op, target_dist_raster_path,
+        gdal.GDT_Float32, _OUT_NODATA)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [dist_path], mask_op, mask_path, gdal.GDT_Float32,
-        _OUT_NODATA, cell_size, 'intersection',
-        assert_datasets_projected = True, vectorize_op = False)
+    pygeoprocessing.raster_calculator(
+        [(target_dist_raster_path, 1)], mask_op, target_mask_raster_path,
+        gdal.GDT_Float32, _OUT_NODATA)
 
 
 def read_csv_wind_data(wind_data_path, hub_height):
