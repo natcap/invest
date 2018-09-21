@@ -7,7 +7,6 @@ import re
 import fractions
 import uuid
 import warnings
-import multiprocessing
 
 import scipy.special
 import numpy
@@ -208,10 +207,9 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    cache_dir = os.path.join(
-        args['workspace_dir'], 'cache_dir')
+    cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
     task_graph = taskgraph.TaskGraph(
         cache_dir, -1)#max(1, multiprocessing.cpu_count()))
 
@@ -447,7 +445,7 @@ def _execute(args):
                     (file_registry['lulc_aligned_path'], 1), kc_lookup,
                     file_registry['kc_path_list'][month_index],
                     gdal.GDT_Float32, kc_nodata),
-                target_path_list=file_registry['kc_path_list'][month_index],
+                target_path_list=[file_registry['kc_path_list'][month_index]],
                 dependent_task_list=[align_task],
                 task_name='classify kc month %d' % month_index)
             kc_task_list.append(kc_task)
@@ -480,8 +478,6 @@ def _execute(args):
             task_name='calculate local recharge')
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-    file_registry['l_path']
-    file_registry['vri_path']
 
     if args['user_defined_local_recharge']:
         vri_dependent_task_list = [calculate_local_recharge_task]
@@ -764,7 +760,7 @@ def stream_threshold(
         result = numpy.empty(value_array.shape, dtype=numpy.int8)
         result[:] = mask_nodata
         valid_mask = ~numpy.isclose(value_array, value_nodata)
-        result[valid_mask] = value_array >= threshold_val
+        result[valid_mask] = value_array[valid_mask] >= threshold_val
         return result
 
     pygeoprocessing.raster_calculator(

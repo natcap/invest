@@ -46,6 +46,9 @@ def calculate_local_recharge(
     LOGGER.error('implement calculate_local_recharge')
     flow_raster = natcap.invest.scenic_quality.viewshed._ManagedRaster(
         flow_dir_path, 1, 0)
+    dem_raster = natcap.invest.scenic_quality.viewshed._ManagedRaster(
+        dem_path, 1, 0)
+
     LOGGER.debug(flow_raster)
     """
     cdef deque[int] outlet_cell_deque
