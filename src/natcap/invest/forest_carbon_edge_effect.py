@@ -117,7 +117,8 @@ def execute(args):
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         aoi_vector = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
         if not aoi_vector:
-            raise ValueError("Unable to open aoi at: %s" % args['aoi_vector_path'])
+            raise ValueError(
+                "Unable to open aoi at: %s" % args['aoi_vector_path'])
         aoi_vector = None
 
     output_dir = args['workspace_dir']
@@ -159,7 +160,7 @@ def execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=False)
     biophysical_keys = [
-        x.lower() for x in biophysical_table[0].keys()]
+        x.lower() for x in biophysical_table.itervalues().next().keys()]
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
