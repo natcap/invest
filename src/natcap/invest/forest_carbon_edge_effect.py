@@ -544,10 +544,10 @@ def _calculate_tropical_forest_edge_carbon_map(
     # timer to give updates per call
     last_time = time.time()
 
-    cell_XSize, cell_YSize = pygeoprocessing.get_raster_info(
+    cell_xsize, cell_ysize = pygeoprocessing.get_raster_info(
         edge_distance_path)['pixel_size']
-    cell_size_km = (abs(cell_XSize) + abs(cell_YSize))/2 / 1000.0
-    cell_area_ha = (abs(cell_XSize) * abs(cell_YSize)) / 10000.0
+    cell_size_km = (abs(cell_xsize) + abs(cell_ysize))/2 / 1000.0
+    cell_area_ha = (abs(cell_xsize) * abs(cell_ysize)) / 10000.0
 
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
