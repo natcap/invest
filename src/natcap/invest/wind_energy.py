@@ -17,8 +17,9 @@ import pandas
 from scipy import integrate
 # required for py2exe to build
 from scipy.sparse.csgraph import _validation
-import shapely.wkt
+import shapely.wkb
 import shapely.ops
+import shapely.prepared
 from shapely import speedups
 
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
@@ -270,6 +271,7 @@ def execute(args):
 
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
+            # pygeoprocessing.rasterize()
             natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
                 aoi_raster_path, aoi_vector_path, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
@@ -1478,73 +1480,55 @@ def wind_data_to_point_vector(
     output_datasource = None
 
 
-def clip_and_reproject_raster(raster_path, aoi_vector_path, projected_path):
-    """Clip and project a Dataset to an area of interest
+def clip_and_reproject_raster(
+        base_raster_path, clip_vector_path, target_raster_path):
+    """Clip and project a raster to a shapefile.
 
-        raster_path - a URI to a gdal Dataset
+        Parameters:
+            base_raster_path (string): a path to a raster to be clipped.
 
-        aoi_vector_path - a URI to a ogr DataSource of geometry type polygon
+            clip_vector_path (string): a path to a shapefile used to clip.
 
-        projected_path - a URI string for the output dataset to be written to
-            disk
+            target_raster_path (string): a path for the output raster to be
+                written to disk.
 
-        returns - nothing"""
+        Returns:
+            None."""
 
     LOGGER.debug('Entering clip_and_reproject_raster')
-    # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_vector_path)
-    aoi_vector_wkt = aoi_sr.ExportToWkt()
 
-    # Get the Well Known Text of the raster
-    raster_wkt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_dataset_projection_wkt_uri(raster_path)
+    # Get the spatial reference and bounding box of the clip vector
+    target_sr_wkt = pygeoprocessing.get_vector_info(
+        clip_vector_path)['projection']
+    target_bounding_box = pygeoprocessing.get_vector_info(
+        clip_vector_path)['bounding_box']
 
-    # Temporary filename for an intermediate step
-    reprojected_vector_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_folder()
+    # Use the same pixel in base raster as target pixel size
+    target_pixel_size = pygeoprocessing.get_raster_info(
+        base_raster_path)['pixel_size']
 
-    # Reproject the AOI to the spatial reference of the raster so that the
-    # AOI can be used to clip the raster properly
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        aoi_vector_path, raster_wkt, reprojected_vector_path)
+    resample_method = 'near'
 
-    # Temporary URI for an intermediate step
-    clipped_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+    # Reproject the base raster to the spatial reference of the clip shapefile
 
-    LOGGER.debug('Clipping dataset')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        raster_path, reprojected_vector_path, clipped_path, False)
+    import pdb
+    pdb.set_trace()
 
-    # Get a point from the clipped data object to use later in helping
-    # determine proper pixel size
-    raster_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(clipped_path)
-    point_one = (raster_gt[0], raster_gt[3])
+    pygeoprocessing.warp_raster(
+        base_raster_path, target_pixel_size, target_raster_path,
+        resample_method, target_bounding_box, target_sr_wkt)
 
-    # Create a Spatial Reference from the rasters WKT
-    raster_sr = osr.SpatialReference()
-    raster_sr.ImportFromWkt(raster_wkt)
-
-    # A coordinate transformation to help get the proper pixel size of
-    # the reprojected raster
-    coord_trans = osr.CoordinateTransformation(raster_sr, aoi_sr)
-
-    pixel_size = pixel_size_based_on_coordinate_transform_path(
-        clipped_path, coord_trans, point_one)
-
-    LOGGER.debug('Reprojecting dataset')
-    # Reproject the raster to the projection of the AOI
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_dataset_uri(
-        clipped_path, pixel_size[0], aoi_vector_wkt, 'bilinear', projected_path)
-
-    LOGGER.debug('Leaving clip_and_reproject_dataset')
+    LOGGER.debug('Leaving clip_and_reproject_raster')
 
 
 def clip_and_reproject_shapefile(
-        base_vector_path, aoi_vector_path, target_vector_path):
+        base_vector_path, clip_vector_path, target_vector_path):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
         base_vector_path (string): a path to a base vector
 
-        aoi_vector_path (string): path to an AOI vector
+        clip_vector_path (string): path to an AOI vector
 
         target_vector_path (string): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
@@ -1553,8 +1537,8 @@ def clip_and_reproject_shapefile(
         None.
     """
     # Get the AOIs spatial reference as strings in Well Known Text
-    aoi_vector_wkt = pygeoprocessing.get_vector_info(
-        aoi_vector_path)['projection']
+    target_sr_wkt = pygeoprocessing.get_vector_info(
+        clip_vector_path)['projection']
 
     # Create path for the reprojected shapefile
     reprojected_vector_path = os.path.join(
@@ -1564,95 +1548,70 @@ def clip_and_reproject_shapefile(
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
     pygeoprocessing.reproject_vector(
-        base_vector_path, aoi_vector_wkt, reprojected_vector_path)
+        base_vector_path, target_sr_wkt, reprojected_vector_path)
 
     # Clip the shapefile to the AOI
-    clip_datasource(reprojected_vector_path, aoi_vector_path, target_vector_path)
+    filter_points(reprojected_vector_path, clip_vector_path, target_vector_path)
 
 
-def clip_datasource(base_vector_path, clip_vector_path, target_vector_path):
-    """Clip an OGR Datasource of geometry type polygon by another OGR Datasource
-        geometry type polygon. The aoi should be a shapefile with a layer
-        that has only one polygon feature
+def filter_points(
+        base_point_vector_path, clip_vector_path, target_point_vector_path):
+    """Create a new target point vector where base points are contained in the
+        single polygon in clip_vector_path. Assumes all data are in the same
+        projection.
 
         Parameters:
-            base_vector_path (string): a path to an OGR Datasource to clip
+            base_point_vector_path (string): a path to a point vector to clip
 
-            clip_vector_path (string): a path to an OGR Datasource that is the
-                clipping bounding box.
+            clip_vector_path (string): a path to a single polygon vector for
+                clipping.
 
-            out_path (string): output path for the clipped datasource
+            target_vector_path (string): output path for the clipped vector.
 
-        returns - Nothing"""
+        Returns:
+            None."""
 
-    LOGGER.debug('Entering clip_datasource')
+    LOGGER.info('Entering filter_points')
 
-    base_vector = gdal.OpenEx(base_vector_path)
+    base_point_vector = gdal.OpenEx(base_point_vector_path)
+    base_point_layer = base_point_vector.GetLayer()
+    base_point_layer_defn = base_point_layer.GetLayerDefn()
     clip_vector = gdal.OpenEx(clip_vector_path)
-
-    base_layer = base_vector.GetLayer()
     clip_layer = clip_vector.GetLayer()
 
-    LOGGER.debug('Creating new datasource')
-    # Create a new shapefile from the orginal_datasource
-    target_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_datasource = target_driver.CreateDataSource(target_vector_path)
-
-    # Get the original_layer definition which holds needed attribute values
-    base_layer_defn = base_layer.GetLayerDefn()
-
-    # Create the new layer for target_datasource using same name and geometry
-    # type from original_datasource as well as spatial reference
-    target_layer = target_datasource.CreateLayer(
-        base_layer_defn.GetName(), base_layer.GetSpatialRef(),
-        base_layer_defn.GetGeomType())
-
-    # Get the number of fields in original_layer
-    base_field_count = base_layer_defn.GetFieldCount()
-
-    LOGGER.debug('Creating new fields')
-    # For every field, create a duplicate field and add it to the new
-    # shapefiles layer
-    for fld_index in range(base_field_count):
-        base_field = base_layer_defn.GetFieldDefn(fld_index)
-        target_field = ogr.FieldDefn(
-            base_field.GetName(), base_field.GetType())
-        # NOT setting the WIDTH or PRECISION because that seems to be unneeded
-        # and causes interesting OGR conflicts
-        target_layer.CreateField(target_field)
-
-    # Get the feature and geometry of the aoi
-    clip_feat = clip_layer.GetFeature(0)
+    # Assuming one feature in clip_layer
+    clip_feat = next(clip_layer)
     clip_geom = clip_feat.GetGeometryRef()
+    clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
+    clip_prep = shapely.prepared.prep(clip_shapely)
 
-    LOGGER.debug('Starting iteration over geometries')
-    # Iterate over each feature in original layer
-    for base_feat in base_layer:
-        # Get the geometry for the feature
-        base_geom = base_feat.GetGeometryRef()
+    # Create a target point vector based on the properties of base point vector
+    target_point_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_point_vector = target_point_driver.CreateDataSource(
+        target_point_vector_path)
+    target_point_layer = target_point_vector.CreateLayer(
+        base_point_layer_defn.GetName(), base_point_layer.GetSpatialRef(),
+        ogr.wkbPoint)
+    target_point_layer = target_point_vector.GetLayer()
+    target_point_defn = target_point_layer.GetLayerDefn()
 
-        # Check to see if the feature and the aoi intersect. This will return a
-        # new geometry if there is an intersection. If there is not an
-        # intersection it will return an empty geometry or it will return None
-        # and print an error to standard out
-        if clip_geom.Intersects(base_geom):
-            intersect_geom = clip_geom.Intersection(base_geom)
-            if intersect_geom is not None and not intersect_geom.IsEmpty():
-                # Copy original_datasource's feature and set
-                target_feature = ogr.Feature(
-                    feature_def=target_layer.GetLayerDefn())
+    # Write any point feature that lies within the polygon to the target vector
+    for base_point_feat in base_point_layer:
+        base_point_geom = base_point_feat.GetGeometryRef()
+        base_point_shapely = shapely.wkb.loads(base_point_geom.ExportToWkb())
+        if clip_prep.intersects(base_point_shapely):
+            target_point_feat = ogr.Feature(target_point_defn)
+            target_point_feat.SetGeometry(base_point_geom.Clone())
+            target_point_layer.CreateFeature(target_point_feat)
 
-                # Since the original feature is of interest add it's fields and
-                # Values to the new feature from the intersecting geometries
-                # The False in SetFrom() signifies that the fields must match
-                # exactly
-                target_feature.SetFrom(base_feat, False)
-                target_feature.SetGeometry(intersect_geom)
-                target_layer.CreateFeature(target_feature)
-                target_feature = None
+    target_point_layer = None
+    target_point_vector = None
+    clip_layer = None
+    clip_vector = None
+    base_point_layer = None
+    base_point_vector = None
 
-    LOGGER.debug('Leaving clip_datasource')
-    target_datasource = None
+    LOGGER.info('Finished filter_points')
 
 
 def calculate_distances_land_grid(
