@@ -565,7 +565,7 @@ def _calculate_tropical_forest_edge_carbon_map(
         if current_time - last_time > 5.0:
             LOGGER.info(
                 'Carbon edge calculation approx. %.2f%% complete',
-                (n_cells_processed / n_cells * 100.0))
+                (n_cells_processed / float(n_cells) * 100.0))
             last_time = current_time
         n_cells_processed += (
             edge_distance_data['win_xsize'] * edge_distance_data['win_ysize'])
