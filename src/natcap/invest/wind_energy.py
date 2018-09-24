@@ -53,26 +53,25 @@ def execute(args):
     given the following dictionary:
 
     Args:
-        workspace_dir (string): a python string which is the path path to where
-            the outputs will be saved (required)
+        workspace_dir (string): a path to the output workspace folder (required)
         wind_data_path (string): path to a CSV file with the following header:
             ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
             with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
             collected (required)
-        aoi_vector_path (string): a path to an OGR datasource that is of type polygon
-            and projected in linear units of meters. The polygon specifies the
+        aoi_vector_path (string): a path to an OGR polygon vector that is
+            projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
             of the land polygon that is of interest (optional for biophysical
             and no distance masking, required for biophysical and distance
             masking, required for valuation)
-        bathymetry_path (string): a path to a GDAL dataset that has the depth
+        bathymetry_path (string): a path to a GDAL raster that has the depth
             values of the area of interest (required)
-        land_polygon_path (string): a path to an OGR datasource of type polygon
-            that provides a coastline for determining distances from wind farm
-            bins. Enabled by AOI and required if wanting to mask by distances
-            or run valuation
+        land_polygon_path (string): a path to an OGR polygon vector that
+            provides a coastline for determining distances from wind farm bins.
+            Enabled by AOI and required if wanting to mask by distances or run
+            valuation
         global_wind_parameters_path (string): a float for the average distance
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
@@ -342,7 +341,7 @@ def execute(args):
     max_depth = abs(float(args['max_depth'])) * -1.0
 
     def depth_op(bath):
-        """A function that determines if a value falls within the range.
+        """Determine if a value falls within the range.
 
         The function takes a value and uses a range to determine if that falls
         within the range.
@@ -459,7 +458,7 @@ def execute(args):
     harvest_field_name = 'Harv_MWhr'
 
     def compute_density_harvested_path(wind_pts_path):
-        """A path wrapper to compute the density and harvested energy.
+        """Compute the density and harvested energy.
 
         This is to help not open and pass around datasets / datasources.
 
@@ -482,7 +481,7 @@ def execute(args):
         # Get the indexes for the scale and shape parameters
         scale_index = feature.GetFieldIndex(_SCALE_KEY)
         shape_index = feature.GetFieldIndex(_SHAPE_KEY)
-        LOGGER.debug('scale/shape index : %s:%s', scale_index, shape_index)
+        LOGGER.debug('Scale/shape index : %s:%s', scale_index, shape_index)
 
         wind_points_layer.ResetReading()
 
@@ -501,8 +500,8 @@ def execute(args):
             scale_value = feat.GetField(scale_index)
             shape_value = feat.GetField(shape_index)
 
-            # Integrate over the probability density function. 0 and 50 are hard
-            # coded values set in CKs documentation
+            # Integrate over the probability density function. 0 and 50 are
+            # hard coded values set in CKs documentation
             density_results = integrate.quad(density_wind_energy_fun, 0, 50,
                                              (shape_value, scale_value))
 
@@ -513,7 +512,7 @@ def execute(args):
             harv_results = integrate.quad(harvested_wind_energy_fun, v_in,
                                           v_rate, (shape_value, scale_value))
 
-            # Integrate over the weibull probability function
+            # Integrate over the Weibull probability function
             weibull_results = integrate.quad(weibull_probability, v_rate,
                                              v_out, (shape_value, scale_value))
 
@@ -569,18 +568,14 @@ def execute(args):
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Vectorize Density Points')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        final_wind_points_vector_path,
-        density_field_name,
-        density_temp_path,
-        interpolation='linear')
+    pygeoprocessing.interpolate_points(
+        final_wind_points_vector_path, density_field_name,
+        (density_temp_path, 1), interpolation_mode='linear')
 
     LOGGER.info('Vectorize Harvested Points')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        final_wind_points_vector_path,
-        harvest_field_name,
-        harvested_temp_path,
-        interpolation='linear')
+    pygeoprocessing.interpolate_points(
+        final_wind_points_vector_path, harvest_field_name,
+        (harvested_temp_path, 1), interpolation_mode='linear')
 
     def mask_out_depth_dist(*rasters):
         """Returns the value of the first item in the list if and only if all
