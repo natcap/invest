@@ -119,7 +119,19 @@ def execute(args):
         if not aoi_vector:
             raise ValueError(
                 "Unable to open aoi at: %s" % args['aoi_vector_path'])
-        aoi_vector = None
+        else:
+            aoi_vector = None
+            lulc_raster_bb = pygeoprocessing.get_raster_info(
+                args['lulc_raster_path'])['bounding_box']
+            aoi_vector_bb = pygeoprocessing.get_vector_info(
+                args['aoi_vector_path'])['bounding_box']
+            merged_bb = pygeoprocessing._merge_bounding_boxes(
+                lulc_raster_bb, aoi_vector_bb, 'intersection')
+            if merged_bb[0] > merged_bb[2] or merged_bb[1] > merged_bb[3]:
+                raise ValueError(
+                    "The landcover raster %s and AOI %s do not touch each "
+                    "other." % (args['lulc_raster_path'], args[
+                    'aoi_vector_path']))
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
@@ -279,12 +291,8 @@ def _aggregate_carbon_map(
     target_aggregate_layer.SyncToDisk()
 
     # aggregate carbon stocks by the new ID field
-    try:
-        serviceshed_stats = pygeoprocessing.zonal_statistics(
-            (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
-    except ValueError:
-        raise ValueError("There is no intersection between the land cover map "
-                         "and service areas of interest.")
+    serviceshed_stats = pygeoprocessing.zonal_statistics(
+        (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
 
     # don't need a random poly id anymore
     target_aggregate_layer.DeleteField(

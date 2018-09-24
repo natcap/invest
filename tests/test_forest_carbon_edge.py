@@ -196,7 +196,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         }
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
-        expected_message = 'There is no intersection between '
+        expected_message = 'The landcover raster '
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
