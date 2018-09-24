@@ -299,7 +299,7 @@ def execute(args):
                 dist_trans_path, min_distance, max_distance,
                 _OUT_NODATA, dist_meters_path, dist_mask_path)
 
-        # Determines whether to check projections in future vectorize_datasets
+        # Determines whether to check projections in future raster_calculator
         # calls
         projected = True
     else:
@@ -321,7 +321,7 @@ def execute(args):
         final_wind_points_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
 
-        # Determines whether to check projections in future vectorize_datasets
+        # Determines whether to check projections in future raster_calculator
         # calls. Since no AOI is provided set to False since all our data is in
         # geographical format
         projected = False
@@ -351,14 +351,15 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    cell_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        final_bathy_raster_path)
+    cell_size = pygeoprocessing.get_raster_info(
+        final_bathy_raster_path)['pixel_size']
+    mean_cell_size = (abs(cell_size[0]) + abs(cell_size[1]))/2
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [final_bathy_raster_path], depth_op, depth_mask_path, gdal.GDT_Float32,
-        _OUT_NODATA, cell_size, 'intersection',
+        _OUT_NODATA, mean_cell_size, 'intersection',
         assert_datasets_projected=projected, vectorize_op=False)
 
     # The String name for the shape field. So far this is a default from the
@@ -532,12 +533,12 @@ def execute(args):
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-        final_wind_points_vector_path, cell_size, gdal.GDT_Float32, _OUT_NODATA,
+        final_wind_points_vector_path, mean_cell_size, gdal.GDT_Float32, _OUT_NODATA,
         density_temp_path)
 
     LOGGER.info('Create Harvested Raster')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-        final_wind_points_vector_path, cell_size, gdal.GDT_Float32, _OUT_NODATA,
+        final_wind_points_vector_path, mean_cell_size, gdal.GDT_Float32, _OUT_NODATA,
         harvested_temp_path)
 
     # Interpolate points onto raster for density values and harvested values:
@@ -593,13 +594,13 @@ def execute(args):
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         density_mask_list, mask_out_depth_dist, density_masked_path,
-        gdal.GDT_Float32, _OUT_NODATA, cell_size, 'intersection',
+        gdal.GDT_Float32, _OUT_NODATA, mean_cell_size, 'intersection',
         assert_datasets_projected = projected, vectorize_op = False)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         harvest_mask_list, mask_out_depth_dist, harvested_masked_path,
-        gdal.GDT_Float32, _OUT_NODATA, cell_size, 'intersection',
+        gdal.GDT_Float32, _OUT_NODATA, mean_cell_size, 'intersection',
         assert_datasets_projected = projected, vectorize_op = False)
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
@@ -1345,6 +1346,7 @@ def mask_by_distance(
         """
 
     cell_size = pygeoprocessing.get_raster_info(base_raster_path)['pixel_size']
+    mean_cell_size = (abs(cell_size[0]) + abs(cell_size[1]))/2
     raster_nodata = pygeoprocessing.get_raster_info(
         base_raster_path)['nodata'][0]
 
@@ -1353,7 +1355,7 @@ def mask_by_distance(
             transform values by a cell size, to get distances
             in meters"""
         return np.where(
-            dist_pix == raster_nodata, _OUT_NODATA, dist_pix * cell_size)
+            dist_pix == raster_nodata, _OUT_NODATA, dist_pix * mean_cell_size)
 
     def mask_op(dist_pix):
         """Raster_calculator operation to bound dist_pix values between
