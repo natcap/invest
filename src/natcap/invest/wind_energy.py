@@ -368,13 +368,12 @@ def execute(args):
     # come in a project unprojected format
     pixel_size = pygeoprocessing.get_raster_info(final_bathy_raster_path)[
         'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
-                                      depth_mask_path, gdal.GDT_Float32,
-                                      _OUT_NODATA)
+    pygeoprocessing.raster_calculator(
+        [(final_bathy_raster_path, 1)], depth_op, depth_mask_path,
+        gdal.GDT_Float32, _OUT_NODATA)
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -455,7 +454,7 @@ def execute(args):
     # The field names for the two outputs, Harvested Wind Energy and Wind
     # Density, to be added to the point shapefile
     density_field_name = 'Dens_W/m2'
-    harvest_field_name = 'Harv_MWhr'
+    harvested_field_name = 'Harv_MWhr'
 
     def compute_density_harvested_path(wind_pts_path):
         """Compute the density and harvested energy.
@@ -487,7 +486,7 @@ def execute(args):
 
         LOGGER.debug('Creating Harvest and Density Fields')
         # Create new fields for the density and harvested values
-        for new_field_name in [density_field_name, harvest_field_name]:
+        for new_field_name in [density_field_name, harvested_field_name]:
             new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
             wind_points_layer.CreateField(new_field)
 
@@ -536,7 +535,7 @@ def execute(args):
             # Save the results to their respective fields
             for field_name, result_value in [(density_field_name,
                                               density_results),
-                                             (harvest_field_name,
+                                             (harvested_field_name,
                                               harvested_wind_energy)]:
                 out_index = feat.GetFieldIndex(field_name)
                 feat.SetField(out_index, result_value)
@@ -552,8 +551,8 @@ def execute(args):
 
     # Temp paths for creating density and harvested rasters
     density_temp_path = os.path.join(inter_dir, 'density_temp%s.tif' % suffix)
-    harvested_temp_path = os.path.join(inter_dir,
-                                       'harvested_temp%s.tif' % suffix)
+    harvested_temp_path = os.path.join(
+        inter_dir, 'harvested_temp%s.tif' % suffix)
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
@@ -574,7 +573,7 @@ def execute(args):
 
     LOGGER.info('Vectorize Harvested Points')
     pygeoprocessing.interpolate_points(
-        final_wind_points_vector_path, harvest_field_name,
+        final_wind_points_vector_path, harvested_field_name,
         (harvested_temp_path, 1), interpolation_mode='linear')
 
     def mask_out_depth_dist(*rasters):
@@ -601,48 +600,48 @@ def execute(args):
 
     # Output paths for final Density and Harvested rasters after they've been
     # masked by depth and distance
-    density_masked_path = os.path.join(out_dir,
-                                       'density_W_per_m2%s.tif' % suffix)
+    density_masked_path = os.path.join(
+        out_dir, 'density_W_per_m2%s.tif' % suffix)
     harvested_masked_path = os.path.join(
         out_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
 
-    # List of paths to pass to vectorize_datasets for operations
+    # List of paths to pass to raster_calculator for operations
     density_mask_list = [density_temp_path, depth_mask_path]
-    harvest_mask_list = [harvested_temp_path, depth_mask_path]
+    harvested_mask_list = [harvested_temp_path, depth_mask_path]
 
     # If a distance mask was created then add it to the raster list to pass in
     # for masking out the output datasets
     try:
         density_mask_list.append(dist_mask_path)
-        harvest_mask_list.append(dist_mask_path)
+        harvested_mask_list.append(dist_mask_path)
     except NameError:
         LOGGER.debug('NO Distance Mask to add to list')
+
+    # Align and resize the mask rasters
+    LOGGER.info('Align and resize the Density rasters')
+    aligned_density_mask_list = [
+        path.replace('.tif', '_aligned.tif') for path in density_mask_list]
+    pygeoprocessing.align_and_resize_raster_stack(
+        density_mask_list, aligned_density_mask_list,
+        ['near']*len(density_mask_list), pixel_size, 'intersection')
+
+    aligned_harvested_mask_list = [
+        path.replace('.tif', '_aligned.tif') for path in density_mask_list]
+    pygeoprocessing.align_and_resize_raster_stack(
+        harvested_mask_list, aligned_harvested_mask_list,
+        ['near']*len(harvested_mask_list), pixel_size, 'intersection')
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        density_mask_list,
-        mask_out_depth_dist,
-        density_masked_path,
-        gdal.GDT_Float32,
-        _OUT_NODATA,
-        mean_pixel_size,
-        'intersection',
-        assert_datasets_projected=projected,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in aligned_density_mask_list], mask_out_depth_dist,
+        density_masked_path, gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        harvest_mask_list,
-        mask_out_depth_dist,
-        harvested_masked_path,
-        gdal.GDT_Float32,
-        _OUT_NODATA,
-        mean_pixel_size,
-        'intersection',
-        assert_datasets_projected=projected,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in aligned_harvested_mask_list], mask_out_depth_dist,
+        harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
