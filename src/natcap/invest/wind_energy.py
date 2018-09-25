@@ -666,145 +666,147 @@ def execute(args):
         return
     else:
         valuation_checked = args['valuation_container']
+        LOGGER.info('Starting Wind Energy Valuation Model')
 
-    LOGGER.info('Starting Wind Energy Valuation Model')
+        # Create a list of the valuation parameters we are looking for from the
+        # input files
+        valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
 
-    # Create a list of the valuation parameters we are looking for from the
-    # input files
-    valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+        valuation_global_params = [
+            'carbon_coefficient', 'time_period', 'infield_cable_cost',
+            'infield_cable_length', 'installation_cost',
+            'miscellaneous_capex_cost', 'operation_maintenance_cost',
+            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc'
+        ]
 
-    valuation_global_params = [
-        'carbon_coefficient', 'time_period', 'infield_cable_cost',
-        'infield_cable_length', 'installation_cost',
-        'miscellaneous_capex_cost', 'operation_maintenance_cost',
-        'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
-        'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc'
-    ]
+        # Read the valuation turbine parameters into a dictionary
+        val_turbine_dict = read_csv_wind_parameters(
+            args['turbine_parameters_path'], valuation_turbine_params)
 
-    # Read the valuation turbine parameters into a dictionary
-    val_turbine_dict = read_csv_wind_parameters(
-        args['turbine_parameters_path'], valuation_turbine_params)
+        # Read the valuation global parameters into a dictionary
+        val_global_param_dict = read_csv_wind_parameters(
+            args['global_wind_parameters_path'], valuation_global_params)
 
-    # Read the valuation global parameters into a dictionary
-    val_global_param_dict = read_csv_wind_parameters(
-        args['global_wind_parameters_path'], valuation_global_params)
+        # Combine the turbine and global parameters into one dictionary
+        val_parameters_dict = combine_dictionaries(val_turbine_dict,
+                                                   val_global_param_dict)
 
-    # Combine the turbine and global parameters into one dictionary
-    val_parameters_dict = combine_dictionaries(val_turbine_dict,
-                                               val_global_param_dict)
+        LOGGER.debug('Valuation Turbine Parameters: %s', val_parameters_dict)
 
-    LOGGER.debug('Valuation Turbine Parameters: %s', val_parameters_dict)
+        val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
+        if len(val_parameters_dict.keys()) != val_param_len:
+            raise ValueError(
+                'An Error occurred from reading in a field value from '
+                'either the turbine CSV file or the global parameters JSON '
+                'file. Please make sure all the necessary fields are present '
+                'and spelled correctly.')
 
-    val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
-    if len(val_parameters_dict.keys()) != val_param_len:
-        raise ValueError(
-            'An Error occurred from reading in a field value from '
-            'either the turbine CSV file or the global parameters JSON '
-            'file. Please make sure all the necessary fields are present '
-            'and spelled correctly.')
+        LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
 
-    LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
+        # Pixel size to be used in later calculations and raster creations
+        pixel_size = pygeoprocessing.get_raster_info(
+            harvested_masked_path)['pixel_size']
+        mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1]))/2
+        # path for final distance transform used in valuation calculations
+        tmp_dist_final_path = os.path.join(inter_dir,
+                                           'val_distance_trans%s.tif' % suffix)
 
-    # Pixel size to be used in later calculations and raster creations
-    pixel_size = pygeoprocessing.get_raster_info(
-        harvested_masked_path)['pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1]))/2
-    # path for final distance transform used in valuation calculations
-    tmp_dist_final_path = os.path.join(inter_dir,
-                                       'val_distance_trans%s.tif' % suffix)
+    if 'grid_points_path' in args:
+        # Handle Grid Points
+        LOGGER.info('Grid Points Provided. Reading in the grid points')
 
-    # Handle Grid Points
-    LOGGER.info('Reading in the grid points')
+        grid_file = open(args['grid_points_path'], 'rU')
+        reader = csv.DictReader(grid_file)
 
-    grid_file = open(args['grid_points_path'], 'rU')
-    reader = csv.DictReader(grid_file)
+        grid_dict = {}
+        land_dict = {}
+        # Making a shallow copy of the attribute 'fieldnames' explicitly to
+        # edit to all the fields to lowercase because it is more readable
+        # and easier than editing the attribute itself
+        field_names = reader.fieldnames
 
-    grid_dict = {}
-    land_dict = {}
-    # Making a shallow copy of the attribute 'fieldnames' explicitly to
-    # edit to all the fields to lowercase because it is more readable
-    # and easier than editing the attribute itself
-    field_names = reader.fieldnames
+        for index, field_name in enumerate(field_names):
+            field_names[index] = field_name.lower()
 
-    for index, field_name in enumerate(field_names):
-        field_names[index] = field_name.lower()
+        # Iterate through the CSV file and construct two different dictionaries
+        # for grid and land points.
+        for row in reader:
+            if row['type'].lower() == 'grid':
+                grid_dict[row['id']] = row
+            else:
+                land_dict[row['id']] = row
 
-    # Iterate through the CSV file and construct two different dictionaries
-    # for grid and land points.
-    for row in reader:
-        if row['type'].lower() == 'grid':
-            grid_dict[row['id']] = row
-        else:
-            land_dict[row['id']] = row
+        grid_file.close()
 
-    grid_file.close()
+        import pdb
+        pdb.set_trace()
 
-    import pdb
-    pdb.set_trace()
+        grid_land_df = pandas.read_csv(args['grid_points_path'], index_col='ID')
 
-    # It's possible that no land points were provided, and we need to
-    # handle both cases
-    land_exists = bool(land_dict)
+        # It's possible that no land points were provided, and we need to
+        # handle both cases
+        land_exists = bool(land_dict)
 
-    grid_ds_path = os.path.join(inter_dir,
-                                'val_grid_points%s.shp' % suffix)
+        grid_ds_path = os.path.join(inter_dir,
+                                    'val_grid_points%s.shp' % suffix)
 
-    # Create a point shapefile from the grid point dictionary.
-    # This makes it easier for future distance calculations and provides a
-    # nice intermediate output for users
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
-        grid_dict, 'grid_points', grid_ds_path)
-
-    # In case any of the above points lie outside the AOI, clip the
-    # shapefiles and then project them to the AOI as well.
-    # NOTE: There could be an error here where NO points lie within the AOI,
-    # what then????????
-    grid_projected_path = os.path.join(
-        inter_dir, 'grid_point_projected%s.shp' % suffix)
-    clip_and_reproject_vector(grid_ds_path, aoi_vector_path,
-                              grid_projected_path)
-
-    if land_exists:
-        land_ds_path = os.path.join(inter_dir,
-                                    'val_land_points%s.shp' % suffix)
-        # Create a point shapefile from the land point dictionary.
-        # This makes it easier for future distance calculations and
-        # provides a nice intermediate output for users
+        # Create a point shapefile from the grid point dictionary.
+        # This makes it easier for future distance calculations and provides a
+        # nice intermediate output for users
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
-            land_dict, 'land_points', land_ds_path)
+            grid_dict, 'grid_points', grid_ds_path)
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
-        # NOTE: There could be an error here where NO points lie within
-        # the AOI, what then????????
-        land_projected_path = os.path.join(
-            inter_dir, 'land_point_projected%s.shp' % suffix)
-        clip_and_reproject_vector(land_ds_path, aoi_vector_path,
-                                  land_projected_path)
+        # NOTE: There could be an error here where NO points lie within the AOI,
+        # what then????????
+        grid_projected_path = os.path.join(
+            inter_dir, 'grid_point_projected%s.shp' % suffix)
+        clip_and_reproject_vector(grid_ds_path, aoi_vector_path,
+                                  grid_projected_path)
 
-        # Get the shortest distances from each grid point to the land
-        # points
-        grid_to_land_dist_local = point_to_polygon_distance(
-            grid_projected_path, land_projected_path)
+        if land_exists:
+            land_ds_path = os.path.join(inter_dir,
+                                        'val_land_points%s.shp' % suffix)
+            # Create a point shapefile from the land point dictionary.
+            # This makes it easier for future distance calculations and
+            # provides a nice intermediate output for users
+            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
+                land_dict, 'land_points', land_ds_path)
 
-        # Add the distances for land to grid points as a new field onto the
-        # land points datasource
-        LOGGER.debug(
-            'Adding land to grid distances to land point datasource')
-        land_to_grid_field = 'L2G'
-        add_field_to_shape_given_list(land_projected_path,
-                                      grid_to_land_dist_local,
-                                      land_to_grid_field)
+            # In case any of the above points lie outside the AOI, clip the
+            # shapefiles and then project them to the AOI as well.
+            # NOTE: There could be an error here where NO points lie within
+            # the AOI, what then????????
+            land_projected_path = os.path.join(
+                inter_dir, 'land_point_projected%s.shp' % suffix)
+            clip_and_reproject_vector(land_ds_path, aoi_vector_path,
+                                      land_projected_path)
 
-        # Calculate distance raster
-        calculate_distances_land_grid(land_projected_path,
-                                      harvested_masked_path,
-                                      tmp_dist_final_path)
-    else:
-        # Calculate distance raster
-        calculate_distances_grid(grid_projected_path,
-                                 harvested_masked_path,
-                                 tmp_dist_final_path)
+            # Get the shortest distances from each grid point to the land
+            # points
+            grid_to_land_dist_local = point_to_polygon_distance(
+                grid_projected_path, land_projected_path)
+
+            # Add the distances for land to grid points as a new field onto the
+            # land points datasource
+            LOGGER.debug(
+                'Adding land to grid distances to land point datasource')
+            land_to_grid_field = 'L2G'
+            add_field_to_shape_given_list(land_projected_path,
+                                          grid_to_land_dist_local,
+                                          land_to_grid_field)
+
+            # Calculate distance raster
+            calculate_distances_land_grid(land_projected_path,
+                                          harvested_masked_path,
+                                          tmp_dist_final_path)
+        else:
+            # Calculate distance raster
+            calculate_distances_grid(grid_projected_path,
+                                     harvested_masked_path,
+                                     tmp_dist_final_path)
     else:
         LOGGER.info('Grid points not provided')
         LOGGER.debug(
@@ -1590,9 +1592,6 @@ def clip_and_reproject_raster(base_raster_path, clip_vector_path,
     resample_method = 'near'
 
     # Reproject the base raster to the spatial reference of the clip shapefile
-
-    import pdb
-    pdb.set_trace()
 
     pygeoprocessing.warp_raster(base_raster_path, target_pixel_size,
                                 target_raster_path, resample_method,
