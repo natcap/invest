@@ -716,18 +716,17 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        # based on the 'type' column
+        # based on the 'TYPE' column
         grid_land_df = pandas.read_csv(
             args['grid_points_path'], index_col='ID')
-        # Make all the headers and the 'type' columns to lower case, so it is
-        # more readable and easier to edit
-        grid_land_df.columns = [
-            header.lower() for header in grid_land_df.columns]
-        grid_land_df['type'] = grid_land_df['type'].str.lower()
 
-        grid_df = grid_land_df.loc[(grid_land_df['type'] == 'grid')]
-        land_df = grid_land_df.loc[(grid_land_df['type'] == 'land')]
+        # Make separate dataframes based on 'TYPE'
+        grid_df = grid_land_df.loc[
+            (grid_land_df['TYPE'].str.lower() == 'grid')]
+        land_df = grid_land_df.loc[
+            (grid_land_df['TYPE'].str.lower() == 'land')]
 
+        # Convert the dataframes to dictionaries, using 'ID' (the index) as key
         grid_dict = grid_df.to_dict('index')
         land_dict = land_df.to_dict('index')
 
@@ -741,8 +740,7 @@ def execute(args):
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
-            grid_dict, 'grid_points', grid_ds_path)
+        dictionary_to_point_shapefile(grid_dict, 'grid_points', grid_ds_path)
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
@@ -759,7 +757,7 @@ def execute(args):
             # Create a point shapefile from the land point dictionary.
             # This makes it easier for future distance calculations and
             # provides a nice intermediate output for users
-            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
+            dictionary_to_point_shapefile(
                 land_dict, 'land_points', land_ds_path)
 
             # In case any of the above points lie outside the AOI, clip the
@@ -1546,6 +1544,100 @@ def wind_data_to_point_vector(dict_data,
 
     LOGGER.debug('Leaving wind_data_to_point_vector')
     output_datasource = None
+
+
+def dictionary_to_point_shapefile(
+        base_dict_data, layer_name, target_vector_path):
+    """Create a point shapefile from a dictionary.
+
+    The point shapefile created is not projected and uses latitude and
+        longitude for its geometry.
+
+    Args:
+        base_dict_data (dict): a python dictionary with keys being unique id's
+            that point to sub-dictionaries that have key-value pairs. These
+            inner key-value pairs will represent the field-value pair for the
+            point features. At least two fields are required in the sub-
+            dictionaries. All the keys in the sub dictionary should have the
+            same name and order. All the values in the sub dictionary should
+            have the same type 'LATI' and 'LONG'. These fields determine the
+            geometry of the point.
+            0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
+            1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
+            2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
+        layer_name (string): a python string for the name of the layer
+        target_vector_path (string): a path to the output path of the point
+            vector.
+
+    Returns:
+        None
+    """
+    # If the target_vector_path exists delete it
+    if os.path.isfile(target_vector_path):
+        os.remove(target_vector_path)
+    elif os.path.isdir(target_vector_path):
+        shutil.rmtree(target_vector_path)
+
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(target_vector_path)
+
+    # Set the spatial reference to WGS84 (lat/long)
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+
+    output_layer = output_datasource.CreateLayer(
+        layer_name, source_sr, ogr.wkbPoint)
+
+    # Outer unique keys
+    outer_keys = base_dict_data.keys()
+
+    # Construct a list of fields to add from the keys of the inner dictionary
+    field_list = base_dict_data[outer_keys[0]].keys()
+
+    # Create a dictionary to store what variable types the fields are
+    type_dict = {}
+    for field in field_list:
+        # Get a value from the field
+        val = base_dict_data[outer_keys[0]][field]
+        # Check to see if the value is a String of characters or a number. This
+        # will determine the type of field created in the shapefile
+        if isinstance(val, str):
+            type_dict[field] = 'str'
+        else:
+            type_dict[field] = 'number'
+
+    for field in field_list:
+        field_type = None
+        # Distinguish if the field type is of type String or other. If Other,
+        # we are assuming it to be a float
+        if type_dict[field] == 'str':
+            field_type = ogr.OFTString
+        else:
+            field_type = ogr.OFTReal
+
+        output_field = ogr.FieldDefn(field, field_type)
+        output_layer.CreateField(output_field)
+
+    # For each inner dictionary (for each point) create a point and set its
+    # fields
+    for point_dict in base_dict_data.itervalues():
+        latitude = float(point_dict['LATI'])
+        longitude = float(point_dict['LONG'])
+
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(output_layer.GetLayerDefn())
+
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+
+        output_feature.SetGeometryDirectly(geom)
+        output_layer.CreateFeature(output_feature)
+        output_feature = None
+
+    output_layer.SyncToDisk()
 
 
 def clip_and_reproject_raster(base_raster_path, clip_vector_path,
