@@ -45,6 +45,10 @@ _OUT_NODATA = -64329.0
 # The harvested energy is on a per year basis
 _NUM_DAYS = 365
 
+# Constant used in getting Scale value at hub height from reference height
+# values. See equation 3 in the users guide.
+_ALPHA = 0.11
+
 
 def execute(args):
     """Wind Energy.
@@ -241,8 +245,8 @@ def execute(args):
                                             bathymetry_proj_raster_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
-        # In this case these paths refer to the projected files. This may not be
-        # the case if an AOI is not provided
+        # In this case these paths refer to the projected files. This may not
+        # be the case if an AOI is not provided
         final_bathy_raster_path = bathymetry_proj_raster_path
         final_wind_points_vector_path = wind_point_proj_vector_path
 
@@ -330,9 +334,9 @@ def execute(args):
         wind_data_to_point_vector(wind_data, 'wind_data',
                                   wind_point_vector_path)
 
-        # Set the bathymetry and points path to use in the rest of the model. In
-        # this case these paths refer to the unprojected files. This may not be
-        # the case if an AOI is provided
+        # Set the bathymetry and points path to use in the rest of the model.
+        # In this case these paths refer to the unprojected files. This may not
+        # be the case if an AOI is provided
         final_wind_points_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
 
@@ -657,14 +661,11 @@ def execute(args):
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
-    if 'valuation_container' in args:
-        valuation_checked = args['valuation_container']
-    else:
-        valuation_checked = False
-
-    if not valuation_checked:
+    if 'valuation_container' not in args:
         LOGGER.debug('Valuation Not Selected')
         return
+    else:
+        valuation_checked = args['valuation_container']
 
     LOGGER.info('Starting Wind Energy Valuation Model')
 
@@ -737,6 +738,9 @@ def execute(args):
             land_dict[row['id']] = row
 
     grid_file.close()
+
+    import pdb
+    pdb.set_trace()
 
     # It's possible that no land points were provided, and we need to
     # handle both cases
@@ -1464,18 +1468,14 @@ def read_csv_wind_data(wind_data_path, hub_height):
             to dictionaries that hold wind data at that location.
     """
 
-    # Constant used in getting Scale value at hub height from reference height
-    # values. See equation 3 in the users guide.
-    alpha = 0.11
-
     wind_point_df = pandas.read_csv(wind_data_path)
 
     # Calculate scale value at new hub height given reference values.
     # See equation 3 in users guide
     wind_point_df.rename(columns={'LAM': 'REF_LAM'}, inplace=True)
     wind_point_df['LAM'] = wind_point_df.apply(
-        lambda row: row.REF_LAM * (hub_height / row.REF)**alpha, axis=1)
-    wind_point_df.drop(['REF'], axis=1)  # REF is no longer needed
+        lambda row: row.REF_LAM * (hub_height / row.REF)**_ALPHA, axis=1)
+    wind_point_df.drop(['REF'], axis=1)  # REF is not needed after calculation
     wind_dict = wind_point_df.to_dict('index')  # so keys will be 0, 1, 2, ...
 
     return wind_dict
