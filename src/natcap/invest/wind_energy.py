@@ -658,9 +658,9 @@ def execute(args):
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     pygeoprocessing.raster_calculator(
-        [(path, 1)
-         for path in aligned_harvested_mask_list], mask_out_depth_dist,
-        harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+        [(path, 1) for path in aligned_harvested_mask_list],
+        mask_out_depth_dist, harvested_masked_path, gdal.GDT_Float32,
+        _OUT_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
 
@@ -782,18 +782,18 @@ def execute(args):
                 if land_layer.GetFeatureCount() != 0:
                     LOGGER.debug('There are %s land point(s) within AOI.' %
                                  land_layer.GetFeatureCount())
-                    # Get the shortest distances from each grid point to the
-                    # land points
-                    grid_to_land_dist_local = point_to_polygon_distance(
-                        grid_projected_vector_path, land_projected_vector_path)
+                    # Get the shortest distances from each land point to the
+                    # grid points
+                    land_to_grid_dist_local = point_to_polygon_distance(
+                        land_projected_vector_path, grid_projected_vector_path)
 
                     # Add the distances for land to grid points as a new field
                     # onto the land points datasource
                     LOGGER.info(
                         'Adding land to grid distances ("L2G") to land point '
-                        'shapefile')
+                        'shapefile.')
                     add_field_to_shape_given_list(land_projected_vector_path,
-                                                  grid_to_land_dist_local,
+                                                  land_to_grid_dist_local,
                                                   _LAND_TO_GRID_FIELD)
 
                     # Calculate distance raster
@@ -1220,25 +1220,32 @@ def add_field_to_shape_given_list(vector_path, value_list, field_name):
     shape_ds = None
 
 
-def point_to_polygon_distance(poly_ds_path, point_ds_path):
-    """Calculates the distances from points in a point geometry shapefile to the
-        nearest polygon from a polygon shapefile. Both datasources must be
-        projected in meters
+def point_to_polygon_distance(
+        base_point_vector_path, base_polygon_vector_path):
+    """Calculate the distances from points to the nearest polygon.
 
-        poly_ds_path - a path to an OGR polygon geometry datasource projected in
-            meters
-        point_ds_path - a path to an OGR point geometry datasource projected in
-            meters
+    Distances are calculated from points in a point geometry shapefile to the
+    nearest polygon from a polygon shapefile. Both shapefiles must be
+    projected in meters
 
-        returns - a list of the distances from each point"""
-    poly_ds = gdal.OpenEx(poly_ds_path)
-    point_ds = gdal.OpenEx(point_ds_path)
+    Parameters:
+        base_polygon_vector_path (string): a path to an OGR polygon shapefile
+            projected in meters
+        base_point_vector_path (string): a path to an OGR point geometry
+            shapefile projected in meters
 
-    poly_layer = poly_ds.GetLayer()
+    Returns:
+        a list of distances from each point to the nearest polygon.
+
+    """
+    point_vector = gdal.OpenEx(base_point_vector_path)
+    poly_vector = gdal.OpenEx(base_polygon_vector_path)
+
+    poly_layer = poly_vector.GetLayer()
     # List to store the polygons geometries as shapely objects
     poly_list = []
 
-    LOGGER.debug('Loading the polygons into Shapely')
+    LOGGER.info('Loading the polygons into Shapely')
     for poly_feat in poly_layer:
         # Get the geometry of the polygon in WKT format
         poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
@@ -1250,15 +1257,15 @@ def point_to_polygon_distance(poly_ds_path, point_ds_path):
             shapely_polygon.simplify(0.01, preserve_topology=False))
 
     # Take the union over the list of polygons to get one defined polygon object
-    LOGGER.debug(
+    LOGGER.info(
         'Get the collection of polygon geometries by taking the union')
     polygon_collection = shapely.ops.unary_union(poly_list)
 
-    point_layer = point_ds.GetLayer()
+    point_layer = point_vector.GetLayer()
     # List to store the shapely point objects
     point_list = []
 
-    LOGGER.debug('Loading the points into shapely')
+    LOGGER.info('Loading the points into shapely')
     for point_feat in point_layer:
         # Get the geometry of the point in WKT format
         point_wkt = point_feat.GetGeometryRef().ExportToWkt()
@@ -1267,7 +1274,7 @@ def point_to_polygon_distance(poly_ds_path, point_ds_path):
         # Add the point to a list to iterate through
         point_list.append(shapely_point)
 
-    LOGGER.debug('find distances')
+    LOGGER.info('Find distances')
     distances = []
     for point in point_list:
         # Get the distance in meters and convert to km
@@ -1277,8 +1284,8 @@ def point_to_polygon_distance(poly_ds_path, point_ds_path):
 
     LOGGER.debug('Distance List Length : %s', len(distances))
 
-    point_ds = None
-    poly_ds = None
+    point_vector = None
+    poly_vector = None
 
     return distances
 
@@ -1954,7 +1961,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
     pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
         harvested_masked_path)
 
-    # Get the original_layer definition which holds needed attribute values
+    # Get the original layer definition which holds needed attribute values
     base_layer_defn = land_pts_layer.GetLayerDefn()
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     single_feature_vector_path = tempfile.mkdtemp()
