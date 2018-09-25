@@ -1933,7 +1933,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     """Creates a distance transform raster.
 
     The distances are calculated based on the shortest distances of each point
-    feature in 'base_point_vector_path' and each features 'L2G' field.
+    feature in 'base_point_vector_path' and each feature's 'L2G' field.
 
     Parameters:
         base_point_vector_path (string): a path to an OGR shapefile that has
@@ -1956,7 +1956,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # features 'L2G' field
     l2g_dist = []
     # A list to hold the individual distance transform path's in order
-    land_point_distance_raster_path_list = []
+    land_point_dist_raster_path_list = []
 
     # Get pixel size
     pixel_size = pygeoprocessing.get_raster_info(
@@ -1966,7 +1966,10 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    single_feature_vector_path = tempfile.mkdtemp()
+    single_feature_vector_path = os.path.join(
+        os.path.dirname(base_point_vector_path),
+        os.path.basename(base_point_vector_path).replace(
+            '.shp', '_single_feature.shp'))
     target_vector = output_driver.CreateDataSource(
         single_feature_vector_path)
 
@@ -1991,9 +1994,9 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
     # Create a new shapefile with only one feature to burn onto a raster
     # in order to get the distance transform based on that one feature
-    for point_feature in base_point_layer:
+    for feature_index, point_feature in enumerate(base_point_layer):
         # Get the point features land to grid value and add it to the list
-        field_index = point_feature.GetFieldIndex("L2G")
+        field_index = point_feature.GetFieldIndex('L2G')
         l2g_dist.append(float(point_feature.GetField(field_index)))
 
         # Copy original_datasource's feature and set as new shapes feature
@@ -2007,39 +2010,41 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         target_layer.CreateFeature(output_feature)
         target_vector.SyncToDisk()
 
-        base_point_rasterized_path = (natcap.invest.pygeoprocessing_0_3_3.
-                                      geoprocessing.temporary_filename('.tif'))
+        base_point_rasterized_path = os.path.join(
+            os.path.dirname(base_point_vector_path),
+            os.path.basename(base_point_vector_path).replace(
+                '.shp', '_rasterized.tif'))
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
+        pygeoprocessing.new_raster_from_base(
             base_raster_path,
             base_point_rasterized_path,
-            'GTiff',
-            _OUT_NODATA,
             gdal.GDT_Float32,
-            fill_value=0.0)
+            [_OUT_NODATA],
+            fill_value_list=[0.0])
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-            base_point_rasterized_path,
+        pygeoprocessing.rasterize(
             single_feature_vector_path,
+            base_point_rasterized_path,
             burn_values=[1.0],
             option_list=["ALL_TOUCHED=TRUE"])
 
         target_layer.DeleteFeature(point_feature.GetFID())
 
-        dist_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
-            '.tif')
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
-            base_point_rasterized_path, dist_path)
+        dist_raster_path = os.path.join(
+            os.path.dirname(base_point_rasterized_path), 'distance_rasters',
+            os.path.basename(base_point_rasterized_path).replace(
+                '.tif', '_dist_%s.tif' % feature_index))
+        pygeoprocessing.distance_transform_edt(
+            (base_point_rasterized_path, 1), dist_raster_path)
         # Add each features distance transform result to list
-        land_point_distance_raster_path_list.append(dist_path)
+        land_point_dist_raster_path_list.append(dist_raster_path)
 
     target_layer = None
     target_vector = None
     base_point_layer = None
     base_point_vector = None
-    shutil.rmtree(single_feature_vector_path)
     l2g_dist_array = np.array(l2g_dist)
 
     def _min_land_ocean_dist(*grid_distances):
@@ -2048,9 +2053,11 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
             shortest distances combined with each features land to grid
             distance
 
-            *grid_distances - a numpy array of numpy nd arrays
+        Parameters:
+            *grid_distances (numpy.ndarray): a variable number of numpy.ndarray
 
-            returns - a nd numpy array of the shortest distances
+        Returns:
+            a numpy.ndarray of the shortest distances
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
@@ -2058,16 +2065,12 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
         return min_distances * mean_pixel_size + min_land_grid_dist
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        land_point_distance_raster_path_list,
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in land_point_dist_raster_path_list],
         _min_land_ocean_dist,
         target_dist_raster_path,
         gdal.GDT_Float32,
-        _OUT_NODATA,
-        pixel_size,
-        'intersection',
-        vectorize_op=False,
-        datasets_are_pre_aligned=True)
+        _OUT_NODATA)
 
 
 def calculate_distances_grid(land_vector_path, harvested_masked_path,
