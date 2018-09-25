@@ -665,7 +665,6 @@ def execute(args):
         LOGGER.debug('Valuation Not Selected')
         return
     else:
-        valuation_checked = args['valuation_container']
         LOGGER.info('Starting Wind Energy Valuation Model')
 
         # Create a list of the valuation parameters we are looking for from the
@@ -716,33 +715,21 @@ def execute(args):
         # Handle Grid Points
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
-        grid_file = open(args['grid_points_path'], 'rU')
-        reader = csv.DictReader(grid_file)
+        # Read the grid points csv, and convert it to land and grid dictionary
+        # based on the 'type' column
+        grid_land_df = pandas.read_csv(
+            args['grid_points_path'], index_col='ID')
+        # Make all the headers and the 'type' columns to lower case, so it is
+        # more readable and easier to edit
+        grid_land_df.columns = [
+            header.lower() for header in grid_land_df.columns]
+        grid_land_df['type'] = grid_land_df['type'].str.lower()
 
-        grid_dict = {}
-        land_dict = {}
-        # Making a shallow copy of the attribute 'fieldnames' explicitly to
-        # edit to all the fields to lowercase because it is more readable
-        # and easier than editing the attribute itself
-        field_names = reader.fieldnames
+        grid_df = grid_land_df.loc[(grid_land_df['type'] == 'grid')]
+        land_df = grid_land_df.loc[(grid_land_df['type'] == 'land')]
 
-        for index, field_name in enumerate(field_names):
-            field_names[index] = field_name.lower()
-
-        # Iterate through the CSV file and construct two different dictionaries
-        # for grid and land points.
-        for row in reader:
-            if row['type'].lower() == 'grid':
-                grid_dict[row['id']] = row
-            else:
-                land_dict[row['id']] = row
-
-        grid_file.close()
-
-        import pdb
-        pdb.set_trace()
-
-        grid_land_df = pandas.read_csv(args['grid_points_path'], index_col='ID')
+        grid_dict = grid_df.to_dict('index')
+        land_dict = land_df.to_dict('index')
 
         # It's possible that no land points were provided, and we need to
         # handle both cases
