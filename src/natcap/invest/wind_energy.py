@@ -371,9 +371,9 @@ def execute(args):
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    pygeoprocessing.raster_calculator(
-        [(final_bathy_raster_path, 1)], depth_op, depth_mask_path,
-        gdal.GDT_Float32, _OUT_NODATA)
+    pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
+                                      depth_mask_path, gdal.GDT_Float32,
+                                      _OUT_NODATA)
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -388,7 +388,7 @@ def execute(args):
             a float
 
         """
-        return ((k_shape / l_scale) * (v_speed / l_scale) **
+        return ((k_shape / l_scale) * (v_speed / l_scale)**
                 (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
 
     # Density wind energy function to integrate over
@@ -551,8 +551,8 @@ def execute(args):
 
     # Temp paths for creating density and harvested rasters
     density_temp_path = os.path.join(inter_dir, 'density_temp%s.tif' % suffix)
-    harvested_temp_path = os.path.join(
-        inter_dir, 'harvested_temp%s.tif' % suffix)
+    harvested_temp_path = os.path.join(inter_dir,
+                                       'harvested_temp%s.tif' % suffix)
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
@@ -566,19 +566,23 @@ def execute(args):
         gdal.GDT_Float32, _OUT_NODATA)
 
     # Interpolate points onto raster for density values and harvested values:
-    LOGGER.info('Vectorize Density Points')
+    LOGGER.info('Calculate Density Points')
     pygeoprocessing.interpolate_points(
-        final_wind_points_vector_path, density_field_name,
-        (density_temp_path, 1), interpolation_mode='linear')
+        final_wind_points_vector_path,
+        density_field_name, (density_temp_path, 1),
+        interpolation_mode='linear')
 
-    LOGGER.info('Vectorize Harvested Points')
+    LOGGER.info('Calculate Harvested Points')
     pygeoprocessing.interpolate_points(
-        final_wind_points_vector_path, harvested_field_name,
-        (harvested_temp_path, 1), interpolation_mode='linear')
+        final_wind_points_vector_path,
+        harvested_field_name, (harvested_temp_path, 1),
+        interpolation_mode='linear')
 
     def mask_out_depth_dist(*rasters):
-        """Returns the value of the first item in the list if and only if all
-            other values are not a nodata value.
+        """Return the value of an item in the list based on some condition.
+
+        Return the value of an item in the list if and only if all other values
+        are not a nodata value.
 
         Parameters:
             *rasters (list): a list of values as follows:
@@ -590,7 +594,6 @@ def execute(args):
             a float of either _OUT_NODATA or rasters[0]
 
         """
-
         nodata_mask = np.empty(rasters[0].shape, dtype=np.int8)
         nodata_mask[:] = 0
         for array in rasters:
@@ -600,8 +603,8 @@ def execute(args):
 
     # Output paths for final Density and Harvested rasters after they've been
     # masked by depth and distance
-    density_masked_path = os.path.join(
-        out_dir, 'density_W_per_m2%s.tif' % suffix)
+    density_masked_path = os.path.join(out_dir,
+                                       'density_W_per_m2%s.tif' % suffix)
     harvested_masked_path = os.path.join(
         out_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
 
@@ -620,16 +623,18 @@ def execute(args):
     # Align and resize the mask rasters
     LOGGER.info('Align and resize the Density rasters')
     aligned_density_mask_list = [
-        path.replace('.tif', '_aligned.tif') for path in density_mask_list]
+        path.replace('.tif', '_aligned.tif') for path in density_mask_list
+    ]
     pygeoprocessing.align_and_resize_raster_stack(
         density_mask_list, aligned_density_mask_list,
-        ['near']*len(density_mask_list), pixel_size, 'intersection')
+        ['near'] * len(density_mask_list), pixel_size, 'intersection')
 
     aligned_harvested_mask_list = [
-        path.replace('.tif', '_aligned.tif') for path in density_mask_list]
+        path.replace('.tif', '_aligned.tif') for path in density_mask_list
+    ]
     pygeoprocessing.align_and_resize_raster_stack(
         harvested_mask_list, aligned_harvested_mask_list,
-        ['near']*len(harvested_mask_list), pixel_size, 'intersection')
+        ['near'] * len(harvested_mask_list), pixel_size, 'intersection')
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
@@ -640,7 +645,8 @@ def execute(args):
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     pygeoprocessing.raster_calculator(
-        [(path, 1) for path in aligned_harvested_mask_list], mask_out_depth_dist,
+        [(path, 1)
+         for path in aligned_harvested_mask_list], mask_out_depth_dist,
         harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model Complete')
@@ -685,7 +691,7 @@ def execute(args):
     val_param_len = len(valuation_turbine_params) + len(valuation_global_params)
     if len(val_parameters_dict.keys()) != val_param_len:
         raise ValueError(
-            'An Error occured from reading in a field value from '
+            'An Error occurred from reading in a field value from '
             'either the turbine CSV file or the global parameters JSON '
             'file. Please make sure all the necessary fields are present '
             'and spelled correctly.')
@@ -693,8 +699,9 @@ def execute(args):
     LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
 
     # Pixel size to be used in later calculations and raster creations
-    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        harvested_masked_path)
+    pixel_size = pygeoprocessing.get_raster_info(
+        harvested_masked_path)['pixel_size']
+    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1]))/2
     # path for final distance transform used in valuation calculations
     tmp_dist_final_path = os.path.join(inter_dir,
                                        'val_distance_trans%s.tif' % suffix)
@@ -839,7 +846,7 @@ def execute(args):
                     land distance factored in
             """
             return np.where(tmp_dist != _OUT_NODATA,
-                            tmp_dist * pixel_size + avg_grid_distance,
+                            tmp_dist * mean_pixel_size + avg_grid_distance,
                             _OUT_NODATA)
 
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
@@ -848,7 +855,7 @@ def execute(args):
             tmp_dist_final_path,
             gdal.GDT_Float32,
             _OUT_NODATA,
-            pixel_size,
+            mean_pixel_size,
             'intersection',
             vectorize_op=False)
 
@@ -1127,7 +1134,7 @@ def execute(args):
         npv_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
-        pixel_size,
+        mean_pixel_size,
         'intersection',
         vectorize_op=False)
 
@@ -1137,7 +1144,7 @@ def execute(args):
         levelized_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
-        pixel_size,
+        mean_pixel_size,
         'intersection',
         vectorize_op=False)
 
@@ -1147,7 +1154,7 @@ def execute(args):
         carbon_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
-        pixel_size,
+        mean_pixel_size,
         'intersection',
         vectorize_op=False)
     LOGGER.info('Wind Energy Valuation Model Complete')
@@ -1559,17 +1566,18 @@ def clip_and_reproject_raster(base_raster_path, clip_vector_path,
                               target_raster_path):
     """Clip and project a raster to a shapefile.
 
-        Parameters:
-            base_raster_path (string): a path to a raster to be clipped.
+    Parameters:
+        base_raster_path (string): a path to a raster to be clipped.
 
-            clip_vector_path (string): a path to a shapefile used to clip.
+        clip_vector_path (string): a path to a shapefile used to clip.
 
-            target_raster_path (string): a path for the output raster to be
-                written to disk.
+        target_raster_path (string): a path for the output raster to be
+            written to disk.
 
-        Returns:
-            None."""
+    Returns:
+        None.
 
+    """
     LOGGER.debug('Entering clip_and_reproject_raster')
 
     # Get the spatial reference and bounding box of the clip vector
