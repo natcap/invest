@@ -49,6 +49,9 @@ _NUM_DAYS = 365
 # values. See equation 3 in the users guide.
 _ALPHA = 0.11
 
+_LAND_TO_GRID_FIELD = 'L2G'
+
+
 
 def execute(args):
     """Wind Energy.
@@ -708,8 +711,8 @@ def execute(args):
             harvested_masked_path)['pixel_size']
         mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1]))/2
         # path for final distance transform used in valuation calculations
-        tmp_dist_final_path = os.path.join(inter_dir,
-                                           'val_distance_trans%s.tif' % suffix)
+        final_dist_raster_path = os.path.join(
+            inter_dir, 'val_distance_trans%s.tif' % suffix)
 
     if 'grid_points_path' in args:
         # Handle Grid Points
@@ -730,68 +733,100 @@ def execute(args):
         grid_dict = grid_df.to_dict('index')
         land_dict = land_df.to_dict('index')
 
-        # It's possible that no land points were provided, and we need to
-        # handle both cases
-        land_exists = bool(land_dict)
-
-        grid_ds_path = os.path.join(inter_dir,
-                                    'val_grid_points%s.shp' % suffix)
+        grid_vector_path = os.path.join(inter_dir,
+                                        'val_grid_points%s.shp' % suffix)
 
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        dictionary_to_point_shapefile(grid_dict, 'grid_points', grid_ds_path)
+        dictionary_to_point_vector(grid_dict, 'grid_points', grid_vector_path)
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
         # NOTE: There could be an error here where NO points lie within the AOI,
         # what then????????
-        grid_projected_path = os.path.join(
+        grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected%s.shp' % suffix)
-        clip_and_reproject_vector(grid_ds_path, aoi_vector_path,
-                                  grid_projected_path)
+        clip_and_reproject_vector(grid_vector_path, aoi_vector_path,
+                                  grid_projected_vector_path)
 
-        if land_exists:
-            land_ds_path = os.path.join(inter_dir,
-                                        'val_land_points%s.shp' % suffix)
-            # Create a point shapefile from the land point dictionary.
-            # This makes it easier for future distance calculations and
-            # provides a nice intermediate output for users
-            dictionary_to_point_shapefile(
-                land_dict, 'land_points', land_ds_path)
+        # It is possible that NO grid points lie within the AOI, so we need to
+        # handle both cases
+        grid_vector = gdal.OpenEx(grid_projected_vector_path)
+        grid_layer = grid_vector.GetLayer()
+        if grid_layer.GetFeatureCount() != 0:
+            LOGGER.debug('There are %s grid point(s) within AOI.' %
+                         grid_layer.GetFeatureCount())
+            # It's possible that no land points were provided, and we need to
+            # handle both cases
+            if land_dict:
+                land_vector_path = os.path.join(
+                    inter_dir, 'val_land_points%s.shp' % suffix)
+                # Create a point shapefile from the land point dictionary.
+                # This makes it easier for future distance calculations and
+                # provides a nice intermediate output for users
+                dictionary_to_point_vector(
+                    land_dict, 'land_points', land_vector_path)
 
-            # In case any of the above points lie outside the AOI, clip the
-            # shapefiles and then project them to the AOI as well.
-            # NOTE: There could be an error here where NO points lie within
-            # the AOI, what then????????
-            land_projected_path = os.path.join(
-                inter_dir, 'land_point_projected%s.shp' % suffix)
-            clip_and_reproject_vector(land_ds_path, aoi_vector_path,
-                                      land_projected_path)
+                # In case any of the above points lie outside the AOI, clip the
+                # shapefiles and then project them to the AOI as well.
+                land_projected_vector_path = os.path.join(
+                    inter_dir, 'land_point_projected%s.shp' % suffix)
+                clip_and_reproject_vector(land_vector_path, aoi_vector_path,
+                                          land_projected_vector_path)
 
-            # Get the shortest distances from each grid point to the land
-            # points
-            grid_to_land_dist_local = point_to_polygon_distance(
-                grid_projected_path, land_projected_path)
+                # It is possible that NO land point lie within the AOI, so we
+                # need to handle both cases
+                land_vector = gdal.OpenEx(land_projected_vector_path)
+                land_layer = land_vector.GetLayer()
+                if land_layer.GetFeatureCount() != 0:
+                    LOGGER.debug('There are %s land point(s) within AOI.' %
+                                 land_layer.GetFeatureCount())
+                    # Get the shortest distances from each grid point to the
+                    # land points
+                    grid_to_land_dist_local = point_to_polygon_distance(
+                        grid_projected_vector_path, land_projected_vector_path)
 
-            # Add the distances for land to grid points as a new field onto the
-            # land points datasource
-            LOGGER.debug(
-                'Adding land to grid distances to land point datasource')
-            land_to_grid_field = 'L2G'
-            add_field_to_shape_given_list(land_projected_path,
-                                          grid_to_land_dist_local,
-                                          land_to_grid_field)
+                    # Add the distances for land to grid points as a new field
+                    # onto the land points datasource
+                    LOGGER.info(
+                        'Adding land to grid distances ("L2G") to land point '
+                        'shapefile')
+                    add_field_to_shape_given_list(land_projected_vector_path,
+                                                  grid_to_land_dist_local,
+                                                  _LAND_TO_GRID_FIELD)
 
-            # Calculate distance raster
-            calculate_distances_land_grid(land_projected_path,
-                                          harvested_masked_path,
-                                          tmp_dist_final_path)
+                    # Calculate distance raster
+                    calculate_distances_land_grid(land_projected_vector_path,
+                                                  harvested_masked_path,
+                                                  final_dist_raster_path)
+                else:
+                    LOGGER.debug(
+                        'No land point lies within AOI. Energy transmission '
+                        'cable distances are calculated from grid data.')
+                    # Calculate distance raster
+                    calculate_distances_grid(grid_projected_vector_path,
+                                             harvested_masked_path,
+                                             final_dist_raster_path)
+                land_layer = None
+                land_vector = None
+
+            else:
+                LOGGER.info(
+                    'No land points provided in the Grid Connection Points '
+                    'CSV file. Energy transmission cable distances are '
+                    'calculated from grid data.')
+                # Calculate distance raster
+                calculate_distances_grid(grid_projected_vector_path,
+                                         harvested_masked_path,
+                                         final_dist_raster_path)
         else:
-            # Calculate distance raster
-            calculate_distances_grid(grid_projected_path,
-                                     harvested_masked_path,
-                                     tmp_dist_final_path)
+            LOGGER.debug(
+                'No grid or land point lies in AOI. Energy transmission '
+                'cable distances are not calculated.')
+        grid_layer = None
+        grid_vector = None
+
     else:
         LOGGER.info('Grid points not provided')
         LOGGER.debug(
@@ -840,7 +875,7 @@ def execute(args):
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
             [tmp_dist_path],
             add_avg_dist_op,
-            tmp_dist_final_path,
+            final_dist_raster_path,
             gdal.GDT_Float32,
             _OUT_NODATA,
             mean_pixel_size,
@@ -1117,7 +1152,7 @@ def execute(args):
     carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [harvested_masked_path, tmp_dist_final_path],
+        [harvested_masked_path, final_dist_raster_path],
         calculate_npv_op,
         npv_path,
         gdal.GDT_Float32,
@@ -1127,7 +1162,7 @@ def execute(args):
         vectorize_op=False)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [harvested_masked_path, tmp_dist_final_path],
+        [harvested_masked_path, final_dist_raster_path],
         calculate_levelized_op,
         levelized_path,
         gdal.GDT_Float32,
@@ -1546,7 +1581,7 @@ def wind_data_to_point_vector(dict_data,
     output_datasource = None
 
 
-def dictionary_to_point_shapefile(
+def dictionary_to_point_vector(
         base_dict_data, layer_name, target_vector_path):
     """Create a point shapefile from a dictionary.
 
@@ -1887,7 +1922,7 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
 
 def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
-                                  tmp_dist_final_path):
+                                  final_dist_raster_path):
     """Creates a distance transform raster based on the shortest distances
         of each point feature in 'land_vector_path' and each features
         'L2G' field.
@@ -1898,7 +1933,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
         harvested_masked_path - a path to a GDAL raster that is used to get
             the proper extents and configuration for new rasters
 
-        tmp_dist_final_path - a path to a GDAL raster for the final
+        final_dist_raster_path - a path to a GDAL raster for the final
             distance transform raster output
 
         returns - Nothing
@@ -2015,7 +2050,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         land_point_distance_raster_path_list,
         _min_land_ocean_dist,
-        tmp_dist_final_path,
+        final_dist_raster_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
         pixel_size,
@@ -2025,7 +2060,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
 
 
 def calculate_distances_grid(land_vector_path, harvested_masked_path,
-                             tmp_dist_final_path):
+                             final_dist_raster_path):
     """Creates a distance transform raster from an OGR shapefile. The function
         first burns the features from 'land_vector_path' onto a raster using
         'harvested_masked_path' as the base for that raster. It then does a
@@ -2038,7 +2073,7 @@ def calculate_distances_grid(land_vector_path, harvested_masked_path,
         harvested_masked_path - a path to a GDAL raster that is used to get
             the proper extents and configuration for new rasters
 
-        tmp_dist_final_path - a path to a GDAL raster for the final
+        final_dist_raster_path - a path to a GDAL raster for the final
             distance transform raster output
 
         returns - Nothing
@@ -2087,7 +2122,7 @@ def calculate_distances_grid(land_vector_path, harvested_masked_path,
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [tmp_dist_path],
         dist_meters_op,
-        tmp_dist_final_path,
+        final_dist_raster_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
         pixel_size,
