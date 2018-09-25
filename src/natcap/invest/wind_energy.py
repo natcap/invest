@@ -1928,50 +1928,52 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
     LOGGER.info('Finished clip_features')
 
 
-def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
-                                  final_dist_raster_path):
-    """Creates a distance transform raster based on the shortest distances
-        of each point feature in 'land_vector_path' and each features
-        'L2G' field.
+def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
+                                  target_dist_raster_path):
+    """Creates a distance transform raster.
 
-        land_vector_path - a path to an OGR shapefile that has the desired
-            features to get the distance from (required)
+    The distances are calculated based on the shortest distances of each point
+    feature in 'base_point_vector_path' and each features 'L2G' field.
 
-        harvested_masked_path - a path to a GDAL raster that is used to get
-            the proper extents and configuration for new rasters
+    Parameters:
+        base_point_vector_path (string): a path to an OGR shapefile that has
+            the desired features to get the distance from.
 
-        final_dist_raster_path - a path to a GDAL raster for the final
+        base_raster_path (string): a path to a GDAL raster that is used to
+            get the proper extents and configuration for the new raster
+
+        target_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
 
-        returns - Nothing
+    Returns:
+        None.
+
     """
     # Open the point shapefile and get the layer
-    land_points = gdal.OpenEx(land_vector_path)
-    land_pts_layer = land_points.GetLayer()
+    base_point_vector = gdal.OpenEx(base_point_vector_path)
+    base_point_layer = base_point_vector.GetLayer()
     # A list to hold the land to grid distances in order for each point
     # features 'L2G' field
     l2g_dist = []
     # A list to hold the individual distance transform path's in order
     land_point_distance_raster_path_list = []
 
-    # Get nodata value from biophsyical output raster
-    _OUT_NODATA = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        harvested_masked_path)
     # Get pixel size
-    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-        harvested_masked_path)
+    pixel_size = pygeoprocessing.get_raster_info(
+        base_raster_path)['pixel_size']
+    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
 
     # Get the original layer definition which holds needed attribute values
-    base_layer_defn = land_pts_layer.GetLayerDefn()
+    base_layer_defn = base_point_layer.GetLayerDefn()
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     single_feature_vector_path = tempfile.mkdtemp()
-    output_datasource = output_driver.CreateDataSource(
+    target_vector = output_driver.CreateDataSource(
         single_feature_vector_path)
 
-    # Create the new layer for output_datasource using same name and
-    # geometry type from original_datasource as well as spatial reference
-    target_layer = output_datasource.CreateLayer(
-        base_layer_defn.GetName(), land_pts_layer.GetSpatialRef(),
+    # Create the new layer for target_vector using same name and
+    # geometry type from base_vector as well as spatial reference
+    target_layer = target_vector.CreateLayer(
+        base_layer_defn.GetName(), base_point_layer.GetSpatialRef(),
         base_layer_defn.GetGeomType())
 
     # Get the number of fields in original_layer
@@ -1989,7 +1991,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
 
     # Create a new shapefile with only one feature to burn onto a raster
     # in order to get the distance transform based on that one feature
-    for point_feature in land_pts_layer:
+    for point_feature in base_point_layer:
         # Get the point features land to grid value and add it to the list
         field_index = point_feature.GetFieldIndex("L2G")
         l2g_dist.append(float(point_feature.GetField(field_index)))
@@ -2003,15 +2005,15 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
         # exactly
         output_feature.SetFrom(point_feature, False)
         target_layer.CreateFeature(output_feature)
-        output_datasource.SyncToDisk()
+        target_vector.SyncToDisk()
 
-        land_pts_rasterized_path = (natcap.invest.pygeoprocessing_0_3_3.
-                                    geoprocessing.temporary_filename('.tif'))
+        base_point_rasterized_path = (natcap.invest.pygeoprocessing_0_3_3.
+                                      geoprocessing.temporary_filename('.tif'))
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
-            harvested_masked_path,
-            land_pts_rasterized_path,
+            base_raster_path,
+            base_point_rasterized_path,
             'GTiff',
             _OUT_NODATA,
             gdal.GDT_Float32,
@@ -2019,7 +2021,7 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-            land_pts_rasterized_path,
+            base_point_rasterized_path,
             single_feature_vector_path,
             burn_values=[1.0],
             option_list=["ALL_TOUCHED=TRUE"])
@@ -2029,12 +2031,14 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
         dist_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
             '.tif')
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.distance_transform_edt(
-            land_pts_rasterized_path, dist_path)
+            base_point_rasterized_path, dist_path)
         # Add each features distance transform result to list
         land_point_distance_raster_path_list.append(dist_path)
 
     target_layer = None
-    output_datasource = None
+    target_vector = None
+    base_point_layer = None
+    base_point_vector = None
     shutil.rmtree(single_feature_vector_path)
     l2g_dist_array = np.array(l2g_dist)
 
@@ -2052,12 +2056,12 @@ def calculate_distances_land_grid(land_vector_path, harvested_masked_path,
         # Initialize with land to grid distances from the first array
         min_distances = np.min(grid_distances, axis=0)
         min_land_grid_dist = l2g_dist_array[np.argmin(grid_distances, axis=0)]
-        return min_distances * pixel_size + min_land_grid_dist
+        return min_distances * mean_pixel_size + min_land_grid_dist
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         land_point_distance_raster_path_list,
         _min_land_ocean_dist,
-        final_dist_raster_path,
+        target_dist_raster_path,
         gdal.GDT_Float32,
         _OUT_NODATA,
         pixel_size,
