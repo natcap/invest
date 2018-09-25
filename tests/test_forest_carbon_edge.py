@@ -31,17 +31,17 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -61,18 +61,18 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -89,19 +89,19 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': False,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'above_ground',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -126,16 +126,16 @@ class ForestCarbonEdgeTests(unittest.TestCase):
 
         args = {
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
@@ -152,21 +152,22 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         from natcap.invest import forest_carbon_edge_effect
         args = {
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input',
                 'no_forest_edge_carbon_lu_table_bad_pool_value.csv'),
             'compute_forest_edge_effects': False,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_lulc.tif'),
             'n_nearest_model_points': 1,
             'pools_to_calculate': 'all',
             'results_suffix': 'small_no_edge_effect',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-        args['aoi_uri'] = os.path.join('path', 'to', 'nonexistant', 'aoi.shp')
+        args['aoi_vector_path'] = os.path.join(
+            'path', 'to', 'nonexistant', 'aoi.shp')
         with self.assertRaises(ValueError) as cm:
             forest_carbon_edge_effect.execute(args)
         expected_message = 'Unable to open aoi at:'
@@ -174,36 +175,30 @@ class ForestCarbonEdgeTests(unittest.TestCase):
         self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_carbon_nodata_lulc(self):
-        """Forest Carbon Edge: regression testing all functionality."""
+        """Forest Carbon Edge: ensure nodata lulc raster cause exception"""
         from natcap.invest import forest_carbon_edge_effect
 
         args = {
-            'aoi_uri': os.path.join(
+            'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'small_aoi.shp'),
             'biomass_to_carbon_conversion_factor': '0.47',
-            'biophysical_table_uri': os.path.join(
+            'biophysical_table_path': os.path.join(
                 REGRESSION_DATA, 'input', 'forest_edge_carbon_lu_table.csv'),
             'compute_forest_edge_effects': True,
-            'lulc_uri': os.path.join(
+            'lulc_raster_path': os.path.join(
                 REGRESSION_DATA, 'input', 'nodata_lulc.tif'),
             'n_nearest_model_points': 10,
             'pools_to_calculate': 'all',
-            'tropical_forest_edge_carbon_model_shape_uri': os.path.join(
+            'tropical_forest_edge_carbon_model_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
         }
-        args['workspace_dir'] = 'testing_forest_carbon_edge_workspace'
-        forest_carbon_edge_effect.execute(args)
-        ForestCarbonEdgeTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'file_list.txt'),
-            args['workspace_dir'])
-
-        self._assert_vector_results_close(
-            args['workspace_dir'], 'id', ['c_sum', 'c_ha_mean'],
-            os.path.join(
-                args['workspace_dir'], 'aggregated_carbon_stocks.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_nodata_lulc.shp'))
+        with self.assertRaises(ValueError) as cm:
+            forest_carbon_edge_effect.execute(args)
+        expected_message = 'The landcover raster '
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):

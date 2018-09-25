@@ -16,13 +16,13 @@ import functools
 import datetime
 import codecs
 import multiprocessing
-import importlib
+import threading
 
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
-import natcap.invest
 import qtawesome
+import natcap.invest
 
 from . import inputs
 from . import usage
@@ -1517,14 +1517,21 @@ class InVESTModel(QtWidgets.QMainWindow):
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 return
 
+        # This is the thread that the UI is executing within.
+        ui_thread_name = threading.current_thread().name
+
         def _logged_target():
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
 
+            threads_to_exclude = [ui_thread_name,
+                                  usage._USAGE_LOGGING_THREAD_NAME]
+
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
-                                         logging_level=logfile_log_level):
+                                         logging_level=logfile_log_level,
+                                         exclude_threads=threads_to_exclude):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
