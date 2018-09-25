@@ -204,6 +204,12 @@ def execute(args):
     LOGGER.info('Reading in Wind Data into a dictionary')
     wind_data = read_csv_wind_data(args['wind_data_path'], hub_height)
 
+    if 'grid_points_path' in args:
+        if 'aoi_vector_path' not in args:
+            raise ValueError(
+                'An AOI shapefile is required to clip and reproject the grid '
+                'points.')
+
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
@@ -707,103 +713,94 @@ def execute(args):
                                        'val_distance_trans%s.tif' % suffix)
 
     # Handle Grid Points
-    if 'grid_points_path' in args:
-        if 'aoi_vector_path' not in args:
-            raise ValueError(
-                'An AOI shapefile is required to clip and reproject the grid '
-                'points.')
-        LOGGER.info('Grid Points Provided')
-        LOGGER.info('Reading in the grid points')
+    LOGGER.info('Reading in the grid points')
 
-        grid_file = open(args['grid_points_path'], 'rU')
-        reader = csv.DictReader(grid_file)
+    grid_file = open(args['grid_points_path'], 'rU')
+    reader = csv.DictReader(grid_file)
 
-        grid_dict = {}
-        land_dict = {}
-        # Making a shallow copy of the attribute 'fieldnames' explicitly to
-        # edit to all the fields to lowercase because it is more readable
-        # and easier than editing the attribute itself
-        field_names = reader.fieldnames
+    grid_dict = {}
+    land_dict = {}
+    # Making a shallow copy of the attribute 'fieldnames' explicitly to
+    # edit to all the fields to lowercase because it is more readable
+    # and easier than editing the attribute itself
+    field_names = reader.fieldnames
 
-        for index in range(len(field_names)):
-            field_names[index] = field_names[index].lower()
+    for index, field_name in enumerate(field_names):
+        field_names[index] = field_name.lower()
 
-        # Iterate through the CSV file and construct two different dictionaries
-        # for grid and land points.
-        for row in reader:
-            if row['type'].lower() == 'grid':
-                grid_dict[row['id']] = row
-            else:
-                land_dict[row['id']] = row
-
-        grid_file.close()
-
-        # It's possible that no land points were provided, and we need to
-        # handle both cases
-        if land_dict:
-            land_exists = True
+    # Iterate through the CSV file and construct two different dictionaries
+    # for grid and land points.
+    for row in reader:
+        if row['type'].lower() == 'grid':
+            grid_dict[row['id']] = row
         else:
-            land_exists = False
+            land_dict[row['id']] = row
 
-        grid_ds_path = os.path.join(inter_dir,
-                                    'val_grid_points%s.shp' % suffix)
+    grid_file.close()
 
-        # Create a point shapefile from the grid point dictionary.
-        # This makes it easier for future distance calculations and provides a
-        # nice intermediate output for users
+    # It's possible that no land points were provided, and we need to
+    # handle both cases
+    land_exists = bool(land_dict)
+
+    grid_ds_path = os.path.join(inter_dir,
+                                'val_grid_points%s.shp' % suffix)
+
+    # Create a point shapefile from the grid point dictionary.
+    # This makes it easier for future distance calculations and provides a
+    # nice intermediate output for users
+    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
+        grid_dict, 'grid_points', grid_ds_path)
+
+    # In case any of the above points lie outside the AOI, clip the
+    # shapefiles and then project them to the AOI as well.
+    # NOTE: There could be an error here where NO points lie within the AOI,
+    # what then????????
+    grid_projected_path = os.path.join(
+        inter_dir, 'grid_point_projected%s.shp' % suffix)
+    clip_and_reproject_vector(grid_ds_path, aoi_vector_path,
+                              grid_projected_path)
+
+    if land_exists:
+        land_ds_path = os.path.join(inter_dir,
+                                    'val_land_points%s.shp' % suffix)
+        # Create a point shapefile from the land point dictionary.
+        # This makes it easier for future distance calculations and
+        # provides a nice intermediate output for users
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
-            grid_dict, 'grid_points', grid_ds_path)
+            land_dict, 'land_points', land_ds_path)
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
-        # NOTE: There could be an error here where NO points lie within the AOI,
-        # what then????????
-        grid_projected_path = os.path.join(
-            inter_dir, 'grid_point_projected%s.shp' % suffix)
-        clip_and_reproject_vector(grid_ds_path, aoi_vector_path,
-                                  grid_projected_path)
+        # NOTE: There could be an error here where NO points lie within
+        # the AOI, what then????????
+        land_projected_path = os.path.join(
+            inter_dir, 'land_point_projected%s.shp' % suffix)
+        clip_and_reproject_vector(land_ds_path, aoi_vector_path,
+                                  land_projected_path)
 
-        if land_exists:
-            land_ds_path = os.path.join(inter_dir,
-                                        'val_land_points%s.shp' % suffix)
-            # Create a point shapefile from the land point dictionary.
-            # This makes it easier for future distance calculations and
-            # provides a nice intermediate output for users
-            natcap.invest.pygeoprocessing_0_3_3.geoprocessing.dictionary_to_point_shapefile(
-                land_dict, 'land_points', land_ds_path)
+        # Get the shortest distances from each grid point to the land
+        # points
+        grid_to_land_dist_local = point_to_polygon_distance(
+            grid_projected_path, land_projected_path)
 
-            # In case any of the above points lie outside the AOI, clip the
-            # shapefiles and then project them to the AOI as well.
-            # NOTE: There could be an error here where NO points lie within
-            # the AOI, what then????????
-            land_projected_path = os.path.join(
-                inter_dir, 'land_point_projected%s.shp' % suffix)
-            clip_and_reproject_vector(land_ds_path, aoi_vector_path,
-                                      land_projected_path)
+        # Add the distances for land to grid points as a new field onto the
+        # land points datasource
+        LOGGER.debug(
+            'Adding land to grid distances to land point datasource')
+        land_to_grid_field = 'L2G'
+        add_field_to_shape_given_list(land_projected_path,
+                                      grid_to_land_dist_local,
+                                      land_to_grid_field)
 
-            # Get the shortest distances from each grid point to the land
-            # points
-            grid_to_land_dist_local = point_to_polygon_distance(
-                grid_projected_path, land_projected_path)
-
-            # Add the distances for land to grid points as a new field onto the
-            # land points datasource
-            LOGGER.debug(
-                'Adding land to grid distances to land point datasource')
-            land_to_grid_field = 'L2G'
-            add_field_to_shape_given_list(land_projected_path,
-                                          grid_to_land_dist_local,
-                                          land_to_grid_field)
-
-            # Calculate distance raster
-            calculate_distances_land_grid(land_projected_path,
-                                          harvested_masked_path,
-                                          tmp_dist_final_path)
-        else:
-            # Calculate distance raster
-            calculate_distances_grid(grid_projected_path,
-                                     harvested_masked_path,
-                                     tmp_dist_final_path)
+        # Calculate distance raster
+        calculate_distances_land_grid(land_projected_path,
+                                      harvested_masked_path,
+                                      tmp_dist_final_path)
+    else:
+        # Calculate distance raster
+        calculate_distances_grid(grid_projected_path,
+                                 harvested_masked_path,
+                                 tmp_dist_final_path)
     else:
         LOGGER.info('Grid points not provided')
         LOGGER.debug(
