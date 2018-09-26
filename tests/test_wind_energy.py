@@ -544,7 +544,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_path'] = os.path.join(
+        args['land_polygon_vector_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
 
         wind_energy.execute(args)
@@ -570,7 +570,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_path'] = os.path.join(
+        args['land_polygon_vector_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
@@ -608,7 +608,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_path'] = os.path.join(
+        args['land_polygon_vector_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
@@ -649,7 +649,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
-        args['land_polygon_path'] = os.path.join(
+        args['land_polygon_vector_path'] = os.path.join(
             SAMPLE_DATA, 'simple_north_america_polygon.shp')
         args['min_distance'] = 0
         args['max_distance'] = 200000
@@ -686,7 +686,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'max_depth': 200,
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_path': os.path.join(
+            'land_polygon_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000
@@ -727,7 +727,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'max_depth': 200,
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_path': os.path.join(
+            'land_polygon_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
@@ -777,7 +777,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'max_depth': 200,
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_path': os.path.join(
+            'land_polygon_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
@@ -834,7 +834,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'max_depth': 200,
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_path': os.path.join(
+            'land_polygon_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
