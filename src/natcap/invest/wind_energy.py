@@ -194,12 +194,55 @@ def execute(args):
     # Check that all the necessary input fields from the CSV files have been
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
-    if len(bio_parameters_dict.keys()) != len(biophysical_params):
+    missing_biophysical_params = list(
+        set(bio_parameters_dict.keys()) - set(biophysical_params))
+    if missing_biophysical_params:
         raise ValueError(
-            'An Error occurred from reading in a field value from either '
-            'the turbine CSV file or the global parameters CSV file. '
+            'The following field value(s) are missing from either the Turbine '
+            'CSV file or the Global Wind Energy parameters CSV file: %s'
             'Please make sure all the necessary fields are present and '
-            'spelled correctly.')
+            'spelled correctly.' % missing_biophysical_params)
+
+    if 'valuation_container' not in args:
+        LOGGER.debug('Valuation Not Selected')
+    else:
+        LOGGER.info(
+            'Valuation Selected. Checking required parameters from CSV files.')
+
+        # Create a list of the valuation parameters we are looking for from the
+        # input files
+        valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
+        # Read the biophysical turbine parameters into a dictionary
+        val_turbine_dict = read_csv_wind_parameters(
+            args['turbine_parameters_path'], valuation_turbine_params)
+        # Check that all the necessary input fields from the CSV file
+        missing_turbine_params = list(
+            set(valuation_turbine_params) - set(val_turbine_dict.keys()))
+
+        valuation_global_params = [
+            'carbon_coefficient', 'time_period', 'infield_cable_cost',
+            'infield_cable_length', 'installation_cost',
+            'miscellaneous_capex_cost', 'operation_maintenance_cost',
+            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
+            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc'
+        ]
+        # Read the biophysical global parameters into a dictionary
+        val_global_param_dict = read_csv_wind_parameters(
+            args['global_wind_parameters_path'], valuation_global_params)
+        # Check that all the necessary input fields from the CSV file
+        missing_global_params = list(
+            set(valuation_global_params) - set(val_global_param_dict.keys()))
+
+        if missing_turbine_params or missing_global_params:
+            raise ValueError(
+                'The following field value(s) are missing: \nTurbine CSV file:'
+                ' %s. \nGlobal Wind Energy parameters CSV file: %s. \nPlease '
+                'make sure all the necessary fields are present and spelled '
+                'correctly.' % (missing_turbine_params, missing_global_params))
+
+        # Combine the turbine and global parameters into one dictionary
+        val_parameters_dict = combine_dictionaries(
+            val_turbine_dict, val_global_param_dict)
 
     # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
@@ -662,51 +705,9 @@ def execute(args):
          for path in aligned_harvested_mask_list], mask_out_depth_dist,
         harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
 
-    LOGGER.info('Wind Energy Biophysical Model Complete')
+    LOGGER.info('Wind Energy Biophysical Model completed')
 
-    if 'valuation_container' not in args:
-        LOGGER.debug('Valuation Not Selected')
-        return
-    else:
-        LOGGER.info('Starting Wind Energy Valuation Model')
-
-        # Create a list of the valuation parameters we are looking for from the
-        # input files
-        valuation_turbine_params = ['turbine_cost', 'turbine_rated_pwr']
-
-        valuation_global_params = [
-            'carbon_coefficient', 'time_period', 'infield_cable_cost',
-            'infield_cable_length', 'installation_cost',
-            'miscellaneous_capex_cost', 'operation_maintenance_cost',
-            'decommission_cost', 'ac_dc_distance_break', 'mw_coef_ac',
-            'mw_coef_dc', 'cable_coef_ac', 'cable_coef_dc'
-        ]
-
-        # Read the valuation turbine parameters into a dictionary
-        val_turbine_dict = read_csv_wind_parameters(
-            args['turbine_parameters_path'], valuation_turbine_params)
-
-        # Read the valuation global parameters into a dictionary
-        val_global_param_dict = read_csv_wind_parameters(
-            args['global_wind_parameters_path'], valuation_global_params)
-
-        # Combine the turbine and global parameters into one dictionary
-        val_parameters_dict = combine_dictionaries(val_turbine_dict,
-                                                   val_global_param_dict)
-
-        LOGGER.debug('Valuation Turbine Parameters: %s', val_parameters_dict)
-
-        val_param_len = len(valuation_turbine_params) + len(
-            valuation_global_params)
-        if len(val_parameters_dict.keys()) != val_param_len:
-            raise ValueError(
-                'An Error occurred from reading in a field value from '
-                'either the turbine CSV file or the global parameters JSON '
-                'file. Please make sure all the necessary fields are present '
-                'and spelled correctly.')
-
-        LOGGER.debug('Turbine Dictionary: %s', val_parameters_dict)
-
+    if 'valuation_container' in args:
         # Pixel size to be used in later calculations and raster creations
         pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
             'pixel_size']
@@ -714,6 +715,9 @@ def execute(args):
         # path for final distance transform used in valuation calculations
         final_dist_raster_path = os.path.join(
             inter_dir, 'val_distance_trans%s.tif' % suffix)
+    else:
+        LOGGER.info('Valuation Not Selected. Model completed')
+        return
 
     if 'grid_points_path' in args:
         # Handle Grid Points
@@ -855,8 +859,8 @@ def execute(args):
             os.path.dirname(land_poly_raster_path),
             os.path.basename(land_poly_raster_path).replace(
                 '.tif', '_dist.tif'))
-        pygeoprocessing.distance_transform_edt(
-            (land_poly_raster_path, 1), land_poly_dist_raster_path)
+        pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
+                                               land_poly_dist_raster_path)
 
         def add_avg_dist_op(tmp_dist):
             """vectorize_datasets operation to convert distances
@@ -872,11 +876,8 @@ def execute(args):
                             _OUT_NODATA)
 
         pygeoprocessing.raster_calculator(
-            [(land_poly_dist_raster_path, 1)],
-            add_avg_dist_op,
-            final_dist_raster_path,
-            gdal.GDT_Float32,
-            _OUT_NODATA)
+            [(land_poly_dist_raster_path, 1)], add_avg_dist_op,
+            final_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -893,9 +894,9 @@ def execute(args):
     misc_capex_cost = float(val_parameters_dict['miscellaneous_capex_cost'])
     # The operations and maintenance costs as a decimal factor of CAPEX
     op_maint_cost = float(val_parameters_dict['operation_maintenance_cost'])
-    # The distcount rate as a decimal
+    # The discount rate as a decimal
     discount_rate = float(args['discount_rate'])
-    # The cost to decommission the farm as a decmial factor of CAPEX
+    # The cost to decommission the farm as a decimal factor of CAPEX
     decom = float(val_parameters_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(val_parameters_dict['turbine_rated_pwr'])
@@ -941,9 +942,6 @@ def execute(args):
         price_list = []
         for index in xrange(len(year_keys)):
             price_list.append(price_dict[year_keys[index]])
-
-        import pdb
-        pdb.set_trace()
     else:
         change_rate = float(args["rate_change"])
         wind_price = float(args["wind_price"])
@@ -1270,7 +1268,7 @@ def read_csv_wind_parameters(csv_path, parameter_list):
     # use the parameters in the first column as indeces for the dataframe
     wind_param_df = pandas.read_csv(csv_path, header=None, index_col=0)
     wind_param_df.index = wind_param_df.index.str.lower()
-    # only get the biophysical parameters and leave out the valuation ones
+    # only get the required parameters and leave out the rest
     wind_param_df = wind_param_df[wind_param_df.index.isin(parameter_list)]
     wind_dict = wind_param_df.to_dict()[1]
 
