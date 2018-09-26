@@ -195,7 +195,7 @@ def execute(args):
     # collected by comparing the number of dictionary keys to the number of
     # elements in our known list
     missing_biophysical_params = list(
-        set(bio_parameters_dict.keys()) - set(biophysical_params))
+        set(biophysical_params) - set(bio_parameters_dict.keys()))
     if missing_biophysical_params:
         raise ValueError(
             'The following field value(s) are missing from either the Turbine '
@@ -241,8 +241,8 @@ def execute(args):
                 'correctly.' % (missing_turbine_params, missing_global_params))
 
         # Combine the turbine and global parameters into one dictionary
-        val_parameters_dict = combine_dictionaries(
-            val_turbine_dict, val_global_param_dict)
+        val_parameters_dict = combine_dictionaries(val_turbine_dict,
+                                                   val_global_param_dict)
 
     # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
@@ -708,6 +708,7 @@ def execute(args):
     LOGGER.info('Wind Energy Biophysical Model completed')
 
     if 'valuation_container' in args:
+        LOGGER.info('Starting Wind Energy Valuation Model')
         # Pixel size to be used in later calculations and raster creations
         pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
             'pixel_size']
@@ -913,35 +914,19 @@ def execute(args):
 
     # If Price Table provided use that for price of energy
     if args["price_table"]:
-        csv_file = open(args["wind_schedule"], 'rU')
-        csv_reader = csv.DictReader(csv_file)
-        price_dict = {}
+        wind_price_df = pandas.read_csv(args["wind_schedule"])
+        wind_price_df.columns = wind_price_df.columns.str.lower()
+        year_count = len(wind_price_df['year'])
 
-        # Making a shallow copy of the attribute 'fieldnames' explicitly to
-        # edit to all the fields to lowercase because it is more readable
-        # and easier than editing the attribute itself
-        field_names = csv_reader.fieldnames
-        for index, field_name in enumerate(field_names):
-            field_names[index] = field_name.lower()
-        # Build up temporary dictionary for year and price
-        for row in csv_reader:
-            price_dict[int(row['year'])] = float(row['price'])
-        csv_file.close()
-
-        # Get the years or time steps and sort
-        year_keys = price_dict.keys()
-        year_keys.sort()
-
-        if len(year_keys) != time + 1:
+        if year_count != time + 1:
             raise ValueError(
-                "The 'time' argument in the Global Wind Energy Parameters"
-                "file must equal the number years provided in the table.")
+                "The 'time' argument in the Global Wind Energy Parameters file"
+                " must equal the number years provided in the price table.")
 
         # Save the price values into a list where the indices of the list
-        # indicate the time steps for the lifespand of the wind farm
-        price_list = []
-        for index in xrange(len(year_keys)):
-            price_list.append(price_dict[year_keys[index]])
+        # indicate the time steps for the lifespan of the wind farm
+        wind_price_df.sort_values('year', inplace=True)
+        price_list = wind_price_df['price'].tolist()
     else:
         change_rate = float(args["rate_change"])
         wind_price = float(args["wind_price"])
@@ -952,7 +937,7 @@ def execute(args):
         for time_step in xrange(time + 1):
             price_list.append(wind_price * (1 + change_rate)**(time_step))
 
-    # The total mega watt compacity of the wind farm where mega watt is the
+    # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
     total_mega_watt = mega_watt * number_of_turbines
 
@@ -1047,13 +1032,15 @@ def execute(args):
             comp_one_sum - decommish_capex - capex, _OUT_NODATA)
 
     def calculate_levelized_op(harvested_row, distance_row):
-        """vectorize_datasets operation that computes the levelized cost
+        """Raster Calculator operation that computes the levelized cost.
 
-            harvested_row - a nd numpy array for wind harvested
+        Parameters:
+            harvested_row (numpy.ndarray): a nd numpy array for wind harvested
+            distance_row (numpy.ndarray): a nd numpy array for distances
 
-            distance_row - a nd numpy array for distances
+        Returns:
+            the levelized cost (numpy.ndarray)
 
-            returns - the levelized cost
         """
         # Total cable distance converted to kilometers
         total_cable_dist = distance_row / 1000.0
@@ -1143,41 +1130,24 @@ def execute(args):
                         carbon_coef * energy_val)
 
     # paths for output rasters
-    npv_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
-    levelized_path = os.path.join(
+    npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
+    levelized_raster_path = os.path.join(
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [harvested_masked_path, final_dist_raster_path],
-        calculate_npv_op,
-        npv_path,
-        gdal.GDT_Float32,
-        _OUT_NODATA,
-        mean_pixel_size,
-        'intersection',
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(harvested_masked_path, 1), (final_dist_raster_path, 1)],
+        calculate_npv_op, npv_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [harvested_masked_path, final_dist_raster_path],
-        calculate_levelized_op,
-        levelized_path,
-        gdal.GDT_Float32,
-        _OUT_NODATA,
-        mean_pixel_size,
-        'intersection',
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(harvested_masked_path, 1),
+         (final_dist_raster_path, 1)], calculate_levelized_op,
+        levelized_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [harvested_masked_path],
-        calculate_carbon_op,
-        carbon_path,
-        gdal.GDT_Float32,
-        _OUT_NODATA,
-        mean_pixel_size,
-        'intersection',
-        vectorize_op=False)
-    LOGGER.info('Wind Energy Valuation Model Complete')
+    pygeoprocessing.raster_calculator([(harvested_masked_path, 1)],
+                                      calculate_carbon_op, carbon_path,
+                                      gdal.GDT_Float32, _OUT_NODATA)
+    LOGGER.info('Wind Energy Valuation Model Completed')
 
 
 def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
@@ -1250,19 +1220,21 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
 
 
 def read_csv_wind_parameters(csv_path, parameter_list):
-    """Construct a dictionary from a csv file given a list of keys in
-        'parameter_list'. The list of keys corresponds to the parameters names
-        in 'csv_path' which are represented in the first column of the file.
+    """Construct a dictionary from a csv file given a list of keys.
 
-        csv_path - a path to a CSV file where every row is a parameter with the
-            parameter name in the first column followed by the value in the
-            second column
+    The list of keys corresponds to the parameters names in 'csv_path' which
+    are represented in the first column of the file.
 
-        parameter_list - a List of Strings that represent the parameter names
-            to be found in 'csv_path'. These Strings will be the keys in the
-            returned dictionary
+    Parameters:
+        csv_path (string): a path to a CSV file where every row is a parameter
+            with the parameter name in the first column followed by the value
+            in the second column
 
-        returns - a Dictionary where the the 'parameter_list' Strings are the
+        parameter_list (list) : a List of Strings that represent the parameter
+            names to be found in 'csv_path'. These Strings will be the keys in
+            the returned dictionary
+
+    Returns: a Dictionary where the 'parameter_list' Strings are the
             keys that have values pulled from 'csv_path'
     """
     # use the parameters in the first column as indeces for the dataframe
@@ -1276,19 +1248,19 @@ def read_csv_wind_parameters(csv_path, parameter_list):
 
 
 def combine_dictionaries(dict_1, dict_2):
-    """Add dict_2 to dict_1 and return in a new dictionary. Both dictionaries
-        should be single level with a key that points to a value. If there is a
-        key in 'dict_2' that already exists in 'dict_1' it will be ignored.
+    """Add dict_2 to dict_1 and return in a new dictionary.
 
-        dict_1 - a python dictionary
-            ex: {'ws_id':1, 'vol':65}
+    Both dictionaries should be single level with a key that points to a value.
+    If there is a key in 'dict_2' that already exists in 'dict_1' it will be
+    ignored.
 
-        dict_2 - a python dictionary
-            ex: {'size':11, 'area':5}
+    Parameters:
+        dict_1 (dict): a dictionary. ex: {'ws_id':1, 'vol':65}
 
-        returns - a python dictionary that is the combination of 'dict_1' and
-        'dict_2' ex:
-            ex: {'ws_id':1, 'vol':65, 'area':5, 'size':11}
+        dict_2 (dict): a dictionary. ex: {'size':11, 'area':5}
+
+    Returns: a python dictionary that is the combination of 'dict_1' and
+        'dict_2'. ex: {'ws_id':1, 'vol':65, 'area':5, 'size':11}
     """
     # Make a copy of dict_1 the dictionary we want to add on to
     dict_3 = dict_1.copy()
@@ -1303,9 +1275,10 @@ def combine_dictionaries(dict_1, dict_2):
 
 
 def create_wind_farm_box(spat_ref, start_point, x_len, y_len, out_path):
-    """Create an OGR shapefile where the geometry is a set of lines
+    """Create an OGR shapefile where the geometry is a set of lines.
 
-        spat_ref - a SpatialReference to use in creating the output shapefile
+    Parameters:
+        spat_ref () a SpatialReference to use in creating the output shapefile
             (required)
         start_point - a tuple of floats indicating the first vertice of the
             line (required)
