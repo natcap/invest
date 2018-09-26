@@ -782,19 +782,15 @@ def execute(args):
                 if land_layer.GetFeatureCount() != 0:
                     LOGGER.debug('There are %s land point(s) within AOI.' %
                                  land_layer.GetFeatureCount())
-                    # Get the shortest distances from each land point to the
-                    # grid points
-                    land_to_grid_dist_local = point_to_polygon_distance(
-                        land_projected_vector_path, grid_projected_vector_path)
 
-                    # Add the distances for land to grid points as a new field
-                    # onto the land points datasource
+                    # Calculate and add the shortest distances from each land
+                    # point to the grid points and add them to the new field
                     LOGGER.info(
                         'Adding land to grid distances ("L2G") to land point '
                         'shapefile.')
-                    add_field_to_shape_given_list(land_projected_vector_path,
-                                                  land_to_grid_dist_local,
-                                                  _LAND_TO_GRID_FIELD)
+                    point_to_polygon_distance(land_projected_vector_path,
+                                              grid_projected_vector_path,
+                                              _LAND_TO_GRID_FIELD)
 
                     # Calculate distance raster
                     calculate_distances_land_grid(land_projected_vector_path,
@@ -1183,45 +1179,8 @@ def execute(args):
     LOGGER.info('Wind Energy Valuation Model Complete')
 
 
-def add_field_to_shape_given_list(vector_path, value_list, field_name):
-    """Adds a field and a value to a given shapefile from a list of values. The
-        list of values must be the same size as the number of features in the
-        shape
-
-        vector_path - a path to an OGR datasource
-
-        value_list - a list of values that is the same length as there are
-            features in 'shape_ds'
-
-        field_name - a String for the name of the new field
-
-        returns - nothing"""
-    LOGGER.debug('Entering add_field_to_shape_given_list')
-    shape_ds = gdal.OpenEx(vector_path, 1)
-    layer = shape_ds.GetLayer()
-
-    # Create new field
-    LOGGER.debug('Creating new field')
-    new_field = ogr.FieldDefn(field_name, ogr.OFTReal)
-    layer.CreateField(new_field)
-
-    # Iterator for indexing into array
-    value_iterator = 0
-    LOGGER.debug('Length of value_list : %s', len(value_list))
-    LOGGER.debug('Feature Count : %s', layer.GetFeatureCount())
-    LOGGER.debug('Adding values to new field for each point')
-    for feat in layer:
-        field_index = feat.GetFieldIndex(field_name)
-        feat.SetField(field_index, value_list[value_iterator])
-        layer.SetFeature(feat)
-        value_iterator = value_iterator + 1
-
-    layer.SyncToDisk()
-    shape_ds = None
-
-
 def point_to_polygon_distance(
-        base_point_vector_path, base_polygon_vector_path):
+        base_point_vector_path, base_polygon_vector_path, dist_field_name):
     """Calculate the distances from points to the nearest polygon.
 
     Distances are calculated from points in a point geometry shapefile to the
@@ -1229,16 +1188,20 @@ def point_to_polygon_distance(
     projected in meters
 
     Parameters:
-        base_polygon_vector_path (string): a path to an OGR polygon shapefile
-            projected in meters
         base_point_vector_path (string): a path to an OGR point geometry
             shapefile projected in meters
+        base_polygon_vector_path (string): a path to an OGR polygon shapefile
+            projected in meters
+        dist_field_name (string): the name of the new distance field to be
+            added to the attribute table of base_point_vector
 
     Returns:
-        a list of distances from each point to the nearest polygon.
+        None.
 
     """
-    point_vector = gdal.OpenEx(base_point_vector_path)
+    LOGGER.info('Starting point_to_polygon_distance.')
+    driver = ogr.GetDriverByName('ESRI Shapefile')
+    point_vector = driver.Open(base_point_vector_path, 1)  # for writing field
     poly_vector = gdal.OpenEx(base_polygon_vector_path)
 
     poly_layer = poly_vector.GetLayer()
@@ -1262,8 +1225,9 @@ def point_to_polygon_distance(
     polygon_collection = shapely.ops.unary_union(poly_list)
 
     point_layer = point_vector.GetLayer()
-    # List to store the shapely point objects
-    point_list = []
+    # Create a new distance field based on the name given
+    dist_field_defn = ogr.FieldDefn(dist_field_name, ogr.OFTReal)
+    point_layer.CreateField(dist_field_defn)
 
     LOGGER.info('Loading the points into shapely')
     for point_feat in point_layer:
@@ -1271,24 +1235,18 @@ def point_to_polygon_distance(
         point_wkt = point_feat.GetGeometryRef().ExportToWkt()
         # Load the geometry into shapely making it a shapely object
         shapely_point = shapely.wkt.loads(point_wkt)
-        # Add the point to a list to iterate through
-        point_list.append(shapely_point)
-
-    LOGGER.info('Find distances')
-    distances = []
-    for point in point_list:
         # Get the distance in meters and convert to km
-        point_dist = point.distance(polygon_collection) / 1000.0
-        # Add the distances to a list
-        distances.append(point_dist)
+        point_dist = shapely_point.distance(polygon_collection) / 1000.0
+        # Add the distance value to the new field and set to the feature
+        point_feat.SetField(dist_field_name, point_dist)
+        point_layer.SetFeature(point_feat)
 
-    LOGGER.debug('Distance List Length : %s', len(distances))
-
+    point_layer = None
     point_vector = None
+    poly_layer = None
     poly_vector = None
 
-    return distances
-
+    LOGGER.info('Finished point_to_polygon_distance.')
 
 def read_csv_wind_parameters(csv_path, parameter_list):
     """Construct a dictionary from a csv file given a list of keys in
@@ -1842,7 +1800,8 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     # Create path for the reprojected shapefile
     reprojected_vector_path = os.path.join(
         os.path.dirname(base_vector_path),
-        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp'))
+        os.path.basename(base_vector_path).replace(
+            '.shp', '_projected.shp'))
 
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
@@ -1949,6 +1908,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         None.
 
     """
+    LOGGER.info('Starting calculate_distances_land_grid.')
     # Open the point shapefile and get the layer
     base_point_vector = gdal.OpenEx(base_point_vector_path)
     base_point_layer = base_point_vector.GetLayer()
@@ -2058,6 +2018,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
         Returns:
             a numpy.ndarray of the shortest distances
+
         """
         # Get the shape of the incoming numpy arrays
         # Initialize with land to grid distances from the first array
@@ -2071,6 +2032,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         target_dist_raster_path,
         gdal.GDT_Float32,
         _OUT_NODATA)
+
+    LOGGER.info('Finished calculate_distances_land_grid.')
 
 
 def calculate_distances_grid(land_vector_path, harvested_masked_path,

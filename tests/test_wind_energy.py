@@ -124,7 +124,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             Polygon(poly_geoms['poly_1']), Polygon(poly_geoms['poly_2'])]
         poly_file = os.path.join(self.workspace_dir, 'poly_shape.shp')
         # Create polygon shapefile to use as testing input
-        poly_ds_path = pygeoprocessing.testing.create_vector_on_disk(
+        poly_vector_path = pygeoprocessing.testing.create_vector_on_disk(
             poly_geometries, srs.projection, fields, attr_poly,
             vector_format='ESRI Shapefile', filename=poly_file)
 
@@ -133,18 +133,24 @@ class WindEnergyUnitTests(unittest.TestCase):
             Point(pos_x, pos_y - 100), Point(pos_x + 100, pos_y - 100)]
         point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
         # Create point shapefile to use as testing input
-        point_ds_path = pygeoprocessing.testing.create_vector_on_disk(
+        point_vector_path = pygeoprocessing.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
-        results = wind_energy.point_to_polygon_distance(
-            poly_ds_path, point_ds_path)
+        field_name = 'L2G'
+        wind_energy.point_to_polygon_distance(
+            point_vector_path, poly_vector_path, field_name)
 
         exp_results = [.15, .1, .05, .05]
 
-        for dist_a, dist_b in zip(results, exp_results):
-            pygeoprocessing.testing.assert_close(
-                dist_a, dist_b)
+        point_vector = gdal.OpenEx(point_vector_path)
+        point_layer = point_vector.GetLayer()
+        field_index = point_layer.GetFeature(0).GetFieldIndex(field_name)
+        for i, point_feat in enumerate(point_layer):
+            # import pdb
+            # pdb.set_trace()
+            result_val = point_feat.GetField(field_index)
+            pygeoprocessing.testing.assert_close(result_val, exp_results[i])
 
     def test_add_field_to_shape_given_list(self):
         """WindEnergy: testing 'add_field_to_shape_given_list' function."""
