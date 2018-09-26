@@ -201,78 +201,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         self.assertDictEqual(expected_result, result)
 
-    def test_create_wind_farm_box(self):
-        """WindEnergy: testing 'create_wind_farm_box' function."""
-        from natcap.invest import wind_energy
-
-        # Setup parameters for creating polyline shapefile
-        fields = {'id': 'real'}
-        attributes = [{'id': 1}]
-        srs = sampledata.SRS_WILLAMETTE
-        spat_ref = osr.SpatialReference()
-        spat_ref.ImportFromWkt(srs.projection)
-        pos_x = srs.origin[0]
-        pos_y = srs.origin[1]
-
-        geometries = [LinearRing([(pos_x + 100, pos_y),
-                      (pos_x + 100, pos_y + 150), (pos_x + 200, pos_y + 150),
-                      (pos_x + 200, pos_y), (pos_x + 100, pos_y)])]
-
-        farm_1 = os.path.join(self.workspace_dir, 'farm_1')
-        os.mkdir(farm_1)
-        farm_file = os.path.join(farm_1, 'vector.shp')
-        # Create polyline shapefile to use to test against
-        farm_ds_path = pygeoprocessing.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=farm_file)
-
-        start_point = (pos_x + 100, pos_y)
-        x_len = 100
-        y_len = 150
-
-        farm_2 = os.path.join(self.workspace_dir, 'farm_2')
-        os.mkdir(farm_2)
-        out_path = os.path.join(farm_2, 'vector.shp')
-        # Call the function to test
-        wind_energy.create_wind_farm_box(
-            spat_ref, start_point, x_len, y_len, out_path)
-        # Compare results
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_path, farm_ds_path, 1E-6)
-
-    def test_get_highest_harvested_geom(self):
-        """WindEnergy: testing 'get_highest_harvested_geom' function."""
-        from natcap.invest import wind_energy
-
-        # Setup parameters for creating point shapefile
-        fields = {'pt_id': 'int', 'Harv_MWhr': 'real'}
-        attributes = [{'pt_id': 1, 'Harv_MWhr': 20.5},
-                      {'pt_id': 2, 'Harv_MWhr': 24.5},
-                      {'pt_id': 3, 'Harv_MWhr': 13},
-                      {'pt_id': 4, 'Harv_MWhr': 15}]
-        srs = sampledata.SRS_WILLAMETTE
-        pos_x = srs.origin[0]
-        pos_y = srs.origin[1]
-
-        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-                      Point(pos_x, pos_y - 100),
-                      Point(pos_x + 100, pos_y - 100)]
-        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
-        # Create point shapefile to use for testing input
-        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=point_file)
-        # Call function to test
-        result = wind_energy.get_highest_harvested_geom(shape_ds_path)
-
-        ogr_point = ogr.Geometry(ogr.wkbPoint)
-        ogr_point.AddPoint_2D(443823.12732787791, 4956546.9059804128)
-
-        if not ogr_point.Equals(result):
-            raise AssertionError(
-                'Expected geometry %s is not equal to the result %s' %
-                (ogr_point, result))
-
     def test_pixel_size_transform(self):
         """WindEnergy: testing pixel size transform helper function.
 
@@ -486,7 +414,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 60
+            'max_depth': 200
             }
 
         return args
@@ -566,7 +494,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -604,7 +532,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
