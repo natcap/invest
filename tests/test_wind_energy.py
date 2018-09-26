@@ -152,56 +152,6 @@ class WindEnergyUnitTests(unittest.TestCase):
             result_val = point_feat.GetField(field_index)
             pygeoprocessing.testing.assert_close(result_val, exp_results[i])
 
-    def test_add_field_to_shape_given_list(self):
-        """WindEnergy: testing 'add_field_to_shape_given_list' function."""
-        from natcap.invest import wind_energy
-
-        # Setup parameters for point shapefile
-        fields = {'pt_id': 'int'}
-        attributes = [{'pt_id': 1}, {'pt_id': 2}, {'pt_id': 3}, {'pt_id': 4}]
-        srs = sampledata.SRS_WILLAMETTE
-        pos_x = srs.origin[0]
-        pos_y = srs.origin[1]
-
-        geometries = [Point(pos_x, pos_y), Point(pos_x + 100, pos_y),
-                      Point(pos_x, pos_y - 100),
-                      Point(pos_x + 100, pos_y - 100)]
-        point_file = os.path.join(self.workspace_dir, 'point_shape.shp')
-        # Create point shapefile for testing input
-        shape_ds_path = pygeoprocessing.testing.create_vector_on_disk(
-            geometries, srs.projection, fields, attributes,
-            vector_format='ESRI Shapefile', filename=point_file)
-
-        value_list = [10, 20, 30, 40]
-        field_name = "num_turb"
-        # Call function to test
-        wind_energy.add_field_to_shape_given_list(
-            shape_ds_path, value_list, field_name)
-
-        # Compare results
-        results = {1: {'num_turb': 10}, 2: {'num_turb': 20},
-                   3: {'num_turb': 30}, 4: {'num_turb': 40}}
-
-        shape = ogr.Open(shape_ds_path)
-        layer_count = shape.GetLayerCount()
-
-        for layer_num in range(layer_count):
-            layer = shape.GetLayer(layer_num)
-
-            feat = layer.GetNextFeature()
-            while feat is not None:
-                pt_id = feat.GetField('pt_id')
-
-                try:
-                    field_val = feat.GetField(field_name)
-                    pygeoprocessing.testing.assert_close(
-                        results[pt_id][field_name], field_val)
-                except ValueError:
-                    raise AssertionError(
-                        'Could not find field %s' % field_name)
-
-                feat = layer.GetNextFeature()
-
     def test_combine_dictionaries(self):
         """WindEnergy: testing 'combine_dictionaries' function."""
         from natcap.invest import wind_energy
