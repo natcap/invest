@@ -414,7 +414,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 200
+            'max_depth': 60
             }
 
         return args
@@ -423,7 +423,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing base case w/o AOI, distances, or valuation."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\noaoi")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         wind_energy.execute(args)
 
@@ -445,7 +445,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\nolandpoly")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
@@ -469,7 +469,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\nodistances")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_vector_path'] = os.path.join(
@@ -494,7 +494,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgrid")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -532,7 +532,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgridland")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -611,7 +611,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 60,
+            'max_depth': 200,
             'aoi_vector_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_vector_path': os.path.join(
