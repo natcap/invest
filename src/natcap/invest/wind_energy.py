@@ -21,7 +21,6 @@ import shapely.ops
 import shapely.prepared
 from shapely import speedups
 
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 import pygeoprocessing
 from . import validation
 from . import utils
@@ -280,7 +279,8 @@ def execute(args):
         wind_point_proj_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
         clip_and_reproject_vector(wind_point_vector_path, aoi_vector_path,
-                                  wind_point_proj_vector_path)
+                                  wind_point_proj_vector_path, inter_dir,
+                                  suffix)
 
         # Clip and project the bathymetry shapefile to AOI
         LOGGER.debug('Clip and project bathymetry to AOI')
@@ -304,17 +304,15 @@ def execute(args):
         except KeyError:
             LOGGER.info('Distance information not provided')
         else:
-            LOGGER.info('Handling distance parameters')
-
             # Clip and project the land polygon shapefile to AOI
-            LOGGER.debug('Clip and project land poly to AOI')
+            LOGGER.info('Clip and project land poly to AOI')
             land_poly_proj_vector_path = os.path.join(
                 inter_dir,
                 os.path.basename(land_polygon_vector_path).replace(
-                    '.shp', '_projected%s.shp' % suffix))
-            clip_and_reproject_vector(land_polygon_vector_path,
-                                      aoi_vector_path,
-                                      land_poly_proj_vector_path)
+                    '.shp', '_projected_clipped%s.shp' % suffix))
+            clip_and_reproject_vector(
+                land_polygon_vector_path, aoi_vector_path,
+                land_poly_proj_vector_path, inter_dir, suffix)
 
             # Get the cell size to use in new raster outputs from the DEM
             pixel_size = pygeoprocessing.get_raster_info(
@@ -672,14 +670,16 @@ def execute(args):
     # Align and resize the mask rasters
     LOGGER.info('Align and resize the Density rasters')
     aligned_density_mask_list = [
-        path.replace('.tif', '_aligned.tif') for path in density_mask_list
+        path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
+        for path in density_mask_list
     ]
     pygeoprocessing.align_and_resize_raster_stack(
         density_mask_list, aligned_density_mask_list,
         ['near'] * len(density_mask_list), pixel_size, 'intersection')
 
     aligned_harvested_mask_list = [
-        path.replace('.tif', '_aligned.tif') for path in density_mask_list
+        path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
+        for path in harvested_mask_list
     ]
     pygeoprocessing.align_and_resize_raster_stack(
         harvested_mask_list, aligned_harvested_mask_list,
@@ -743,9 +743,10 @@ def execute(args):
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
         grid_projected_vector_path = os.path.join(
-            inter_dir, 'grid_point_projected%s.shp' % suffix)
+            inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
         clip_and_reproject_vector(grid_vector_path, aoi_vector_path,
-                                  grid_projected_vector_path)
+                                  grid_projected_vector_path, inter_dir,
+                                  suffix)
 
         # It is possible that NO grid points lie within the AOI, so we need to
         # handle both cases
@@ -757,20 +758,21 @@ def execute(args):
             # It's possible that no land points were provided, and we need to
             # handle both cases
             if land_dict:
-                land_vector_path = os.path.join(
+                land_point_vector_path = os.path.join(
                     inter_dir, 'val_land_points%s.shp' % suffix)
                 # Create a point shapefile from the land point dictionary.
                 # This makes it easier for future distance calculations and
                 # provides a nice intermediate output for users
                 dictionary_to_point_vector(land_dict, 'land_points',
-                                           land_vector_path)
+                                           land_point_vector_path)
 
                 # In case any of the above points lie outside the AOI, clip the
                 # shapefiles and then project them to the AOI as well.
                 land_projected_vector_path = os.path.join(
-                    inter_dir, 'land_point_projected%s.shp' % suffix)
-                clip_and_reproject_vector(land_vector_path, aoi_vector_path,
-                                          land_projected_vector_path)
+                    inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
+                clip_and_reproject_vector(
+                    land_point_vector_path, aoi_vector_path,
+                    land_projected_vector_path, inter_dir, suffix)
 
                 # It is possible that NO land point lie within the AOI, so we
                 # need to handle both cases
@@ -790,9 +792,9 @@ def execute(args):
                                               _LAND_TO_GRID_FIELD)
 
                     # Calculate distance raster
-                    calculate_distances_land_grid(land_projected_vector_path,
-                                                  harvested_masked_path,
-                                                  final_dist_raster_path)
+                    calculate_distances_land_grid(
+                        land_projected_vector_path, harvested_masked_path,
+                        final_dist_raster_path, suffix)
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -800,7 +802,7 @@ def execute(args):
                     # Calculate distance raster
                     calculate_distances_grid(grid_projected_vector_path,
                                              harvested_masked_path,
-                                             final_dist_raster_path)
+                                             final_dist_raster_path, suffix)
                 land_layer = None
                 land_vector = None
 
@@ -810,12 +812,10 @@ def execute(args):
                     'CSV file. Energy transmission cable distances are '
                     'calculated from grid data.')
 
-                # import pdb
-                # pdb.set_trace()
                 # Calculate distance raster
                 calculate_distances_grid(grid_projected_vector_path,
                                          harvested_masked_path,
-                                         final_dist_raster_path)
+                                         final_dist_raster_path, suffix)
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
@@ -835,7 +835,7 @@ def execute(args):
         land_poly_raster_path = os.path.join(
             os.path.dirname(land_poly_proj_vector_path),
             os.path.basename(land_poly_proj_vector_path).replace(
-                '.shp', '_rasterized.tif'))
+                '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
         # Create new raster and fill with 0s to set up for distance transform
         pygeoprocessing.new_raster_from_base(
             harvested_masked_path,
@@ -853,7 +853,7 @@ def execute(args):
         land_poly_dist_raster_path = os.path.join(
             os.path.dirname(land_poly_raster_path),
             os.path.basename(land_poly_raster_path).replace(
-                '.tif', '_dist.tif'))
+                '%s.tif' % suffix, '_dist%s.tif' % suffix))
         pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
                                                land_poly_dist_raster_path)
 
@@ -1657,16 +1657,20 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
-                              target_vector_path):
+                              target_vector_path, temp_dir, suffix):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
-        base_vector_path (string): a path to a base vector
+        base_vector_path (string): path to a base vector
 
         clip_vector_path (string): path to an AOI vector
 
         target_vector_path (string): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
+
+        temp_dir (string): path to save the intermediate projected file.
+
+        suffix (string): a string to append at the end of the output files.
 
     Returns:
         None.
@@ -1679,8 +1683,9 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Create path for the reprojected shapefile
     reprojected_vector_path = os.path.join(
-        os.path.dirname(base_vector_path),
-        os.path.basename(base_vector_path).replace('.shp', '_projected.shp'))
+        temp_dir,
+        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp')
+        % suffix)
 
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
@@ -1767,7 +1772,7 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
-                                  target_dist_raster_path):
+                                  target_dist_raster_path, suffix):
     """Creates a distance transform raster.
 
     The distances are calculated based on the shortest distances of each point
@@ -1782,6 +1787,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
         target_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
+
+        suffix (string): a string to append at the end of the output files.
 
     Returns:
         None.
@@ -1851,7 +1858,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         base_point_raster_path = os.path.join(
             os.path.dirname(base_point_vector_path),
             os.path.basename(base_point_vector_path).replace(
-                '.shp', '_rasterized.tif'))
+                '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
         pygeoprocessing.new_raster_from_base(
@@ -1912,7 +1919,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
 
 def calculate_distances_grid(grid_vector_path, harvested_masked_path,
-                             final_dist_raster_path):
+                             final_dist_raster_path, suffix):
     """Creates a distance transform raster from an OGR shapefile.
 
     The function first burns the features from 'grid_vector_path' onto a raster
@@ -1930,13 +1937,16 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
         final_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
 
+        suffix (string): a string to append at the end of output filenames.
+
     Returns:
         None
 
     """
     grid_point_raster_path = os.path.join(
         os.path.dirname(grid_vector_path),
-        os.path.basename(grid_vector_path).replace('.shp', '_rasterized.tif'))
+        os.path.basename(grid_vector_path).replace(
+            '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
 
     # Get nodata value to use in raster creation and masking
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
@@ -1963,7 +1973,8 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
 
     grid_poly_dist_raster_path = os.path.join(
         os.path.dirname(grid_point_raster_path),
-        os.path.basename(grid_point_raster_path).replace('.tif', '_dist.tif'))
+        os.path.basename(grid_point_raster_path).replace(
+            '%s.tif' % suffix, '_dist%s.tif' % suffix))
     # Run distance transform
     pygeoprocessing.distance_transform_edt((grid_point_raster_path, 1),
                                            grid_poly_dist_raster_path)
@@ -2136,7 +2147,7 @@ def validate(args, limit_to=None):
                                   (ref_key, float_field))))
 
                         try:
-                            if not float(ref_key) == int(float(ref_key)):
+                            if float(ref_key) != int(float(ref_key)):
                                 raise ValueError()
                         except ValueError:
                             warnings.append(
@@ -2177,7 +2188,7 @@ def validate(args, limit_to=None):
     if limit_to in ('number_of_turbines', None):
         try:
             num_turbines = args['number_of_turbines']
-            if not float(num_turbines) == int(float(num_turbines)):
+            if float(num_turbines) != int(float(num_turbines)):
                 raise ValueError()
         except ValueError:
             warnings.append((['number_of_turbines'],
@@ -2217,7 +2228,7 @@ def validate(args, limit_to=None):
                                   (id_key, float_field))))
 
                         try:
-                            if not float(id_key) == int(float(id_key)):
+                            if float(id_key) != int(float(id_key)):
                                 raise ValueError()
                         except ValueError:
                             warnings.append(
@@ -2256,7 +2267,7 @@ def validate(args, limit_to=None):
             try:
                 for year_key, record in table_dict.iteritems():
                     try:
-                        if not float(year_key) == int(float(year_key)):
+                        if float(year_key) != int(float(year_key)):
                             raise ValueError()
                     except ValueError:
                         warnings.append(
@@ -2281,8 +2292,8 @@ def validate(args, limit_to=None):
             warnings.append((['wind_schedule'], 'Could not open CSV file.'))
 
     if limit_to is None:
-        # Require land_polygon_vector_path if any of min_distance, max_distance, or
-        # valuation_container have a value.
+        # Require land_polygon_vector_path if any of min_distance,
+        # max_distance, or valuation_container have a value.
         try:
             if any((args['min_distance'] not in ('', None),
                     args['max_distance'] not in ('', None),

@@ -494,7 +494,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
