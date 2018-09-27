@@ -481,6 +481,16 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif', 'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
+            ds = gdal.Open(os.path.join(args['workspace_dir'], 'output', raster_path))
+            outarray = numpy.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'output: array'
+            print outarray
+            ds = gdal.Open(os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
+            testarray = numpy.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'output: array'
+            print testarray
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
