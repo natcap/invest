@@ -435,7 +435,7 @@ def execute(args):
             a float
 
         """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**
+        return ((k_shape / l_scale) * (v_speed / l_scale) **
                 (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
 
     # Density wind energy function to integrate over
@@ -2113,12 +2113,12 @@ def validate(args, limit_to=None):
         except KeyError:
             missing_keys.add(required_key)
 
-    if len(missing_keys) > 0:
+    if missing_keys:
         return [(missing_keys,
                  'Required keys are missing from args: %s' % ', '.join(
                      sorted(missing_keys)))]
 
-    if len(keys_missing_value) > 0:
+    if keys_missing_value:
         warnings.append((keys_missing_value, 'Parameter must have a value.'))
 
     for vector_key in ('aoi_vector_path', 'land_polygon_vector_path'):
@@ -2150,7 +2150,7 @@ def validate(args, limit_to=None):
 
             missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) - set(
                 table_dict.itervalues().next().keys()))
-            if len(missing_fields) > 0:
+            if missing_fields:
                 warnings.append((['wind_data_path'],
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
@@ -2231,7 +2231,7 @@ def validate(args, limit_to=None):
 
             missing_fields = (set(['long', 'lati', 'id', 'type']) - set(
                 table_dict.itervalues().next().keys()))
-            if len(missing_fields) > 0:
+            if missing_fields:
                 warnings.append((['grid_points_path'],
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
@@ -2279,7 +2279,7 @@ def validate(args, limit_to=None):
 
             missing_fields = (set(['year', 'price']) - set(
                 table_dict.itervalues().next().keys()))
-            if len(missing_fields) > 0:
+            if missing_fields:
                 warnings.append((['wind_schedule'],
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
