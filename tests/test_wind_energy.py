@@ -414,7 +414,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 60
+            'max_depth': 180
             }
 
         return args
