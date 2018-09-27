@@ -435,7 +435,7 @@ def execute(args):
             a float
 
         """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**
+        return ((k_shape / l_scale) * (v_speed / l_scale) **
                 (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
 
     # Density wind energy function to integrate over
