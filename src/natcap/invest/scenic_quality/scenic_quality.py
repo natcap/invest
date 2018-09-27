@@ -175,13 +175,13 @@ def execute(args):
             geometry = point.GetGeometryRef()
             viewpoint = (geometry.GetX(), geometry.GetY())
 
-            if not _viewpoint_within_raster(viewpoint, args['dem_path']):
+            if not _viewpoint_within_raster(viewpoint, file_registry['clipped_dem']):
                 LOGGER.info(
                     ('Feature %s in layer %s is outside of the DEM bounding '
                      'box. Skipping.'), layer_name, point.GetFID())
                 continue
 
-            if _viewpoint_over_nodata(viewpoint, args['dem_path']):
+            if _viewpoint_over_nodata(viewpoint, file_registry['clipped_dem']):
                 LOGGER.info(
                     'Feature %s in layer %s is over nodata; skipping.',
                     point.GetFID(), layer_name)
