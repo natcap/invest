@@ -1456,7 +1456,9 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
             0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
             1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
             2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
+
         layer_name (string): a python string for the name of the layer
+
         target_vector_path (string): a path to the output path of the point
             vector.
 
@@ -1530,45 +1532,6 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
         output_feature = None
 
     output_layer.SyncToDisk()
-
-
-def clip_and_reproject_raster(base_raster_path, clip_vector_path,
-                              target_raster_path):
-    """Clip and project a raster to a shapefile.
-
-    Parameters:
-        base_raster_path (string): a path to a raster to be clipped.
-
-        clip_vector_path (string): a path to a shapefile used to clip.
-
-        target_raster_path (string): a path for the output raster to be
-            written to disk.
-
-    Returns:
-        None.
-
-    """
-    LOGGER.debug('Entering clip_and_reproject_raster')
-
-    # Get the spatial reference and bounding box of the clip vector
-    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
-    target_bounding_box = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'bounding_box']
-
-    # Use the same pixel in base raster as target pixel size
-    target_pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-
-    resample_method = 'near'
-
-    # Reproject the base raster to the spatial reference of the clip shapefile
-
-    pygeoprocessing.warp_raster(base_raster_path, target_pixel_size,
-                                target_raster_path, resample_method,
-                                target_bounding_box, target_sr_wkt)
-
-    LOGGER.debug('Leaving clip_and_reproject_raster')
 
 
 def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
