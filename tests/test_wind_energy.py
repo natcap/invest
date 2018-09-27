@@ -90,7 +90,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test given testing inputs
         wind_energy.calculate_distances_land_grid(
-            land_shape_path, harvested_masked_path, tmp_dist_final_path)
+            land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare the results
         result = gdal.Open(tmp_dist_final_path)
@@ -285,7 +285,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test
         wind_energy.calculate_distances_grid(
-            land_shape_path, harvested_masked_path, tmp_dist_final_path)
+            land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
         exp_array = numpy.array([[0, 100, 200, 300], [0, 100, 200, 300]])

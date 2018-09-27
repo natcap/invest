@@ -7,19 +7,20 @@ import csv
 import shutil
 import math
 
-from osgeo import gdal
-from osgeo import ogr
-from osgeo import osr
-
 import numpy as np
 import pandas
 from scipy import integrate
 # required for py2exe to build
 from scipy.sparse.csgraph import _validation
+
 import shapely.wkb
 import shapely.ops
 import shapely.prepared
 from shapely import speedups
+
+from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 
 import pygeoprocessing
 from . import validation
@@ -957,13 +958,16 @@ def execute(args):
     LOGGER.debug('disc_time : %s', disc_time)
 
     def calculate_npv_op(harvested_row, distance_row):
-        """vectorize_datasets operation that computes the net present value
+        """Compute the net present value in Raster Calculator
 
-            harvested_row - a nd numpy array for wind harvested
+        Parameters:
+            harvested_row (np.ndarray): an nd numpy array for wind harvested
 
-            distance_row - a nd numpy array for distances
+            distance_row (np.ndarray): an nd numpy array for distances
 
-            returns - net present value
+        Returns:
+            an nd numpy array of net present values
+
         """
         # Total cable distance converted to kilometers
         total_cable_dist = distance_row / 1000.0
@@ -1029,8 +1033,9 @@ def execute(args):
         """Raster Calculator operation that computes the levelized cost.
 
         Parameters:
-            harvested_row (numpy.ndarray): a nd numpy array for wind harvested
-            distance_row (numpy.ndarray): a nd numpy array for distances
+            harvested_row (numpy.ndarray): an nd numpy array for wind harvested
+
+            distance_row (numpy.ndarray): an nd numpy array for distances
 
         Returns:
             the levelized cost (numpy.ndarray)
@@ -1112,10 +1117,10 @@ def execute(args):
         """vectorize_dataset operation to calculate the carbon offset.
 
         Parameters:
-            harvested_row (np.ndarray) a nd numpy array
+            harvested_row (np.ndarray) an nd numpy array
 
         Returns:
-            a nd numpy array of carbon offset values
+            an nd numpy array of carbon offset values
 
         """
         # The energy value converted from MWhr/yr (Mega Watt hours as output
@@ -1158,8 +1163,10 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     Parameters:
         base_point_vector_path (string): a path to an OGR point geometry
             shapefile projected in meters
+
         base_polygon_vector_path (string): a path to an OGR polygon shapefile
             projected in meters
+
         dist_field_name (string): the name of the new distance field to be
             added to the attribute table of base_point_vector
 
@@ -1279,13 +1286,18 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     Parameters:
         base_raster_path (string): path to a raster with distance values.
+
         min_dist (int): the minimum distance allowed in meters.
+
         max_dist (int): the maximum distance allowed in meters.
+
         target_dist_raster_path (string): path output to the raster
             converted from distance transform ranks to distance values in
             meters.
+
         target_mask_raster_path (string): path output to the raster masked
             by distance values.
+
         out_nodata (float): the nodata value of the raster.
 
     Returns:
@@ -1526,7 +1538,9 @@ def clip_and_reproject_raster(base_raster_path, clip_vector_path,
 
     Parameters:
         base_raster_path (string): a path to a raster to be clipped.
+
         clip_vector_path (string): a path to a shapefile used to clip.
+
         target_raster_path (string): a path for the output raster to be
             written to disk.
 
@@ -1564,8 +1578,10 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
     If base raster is not already projected, choose a suitable UTM zone.
 
     Parameters:
-        base_raster_path (string): path to base raster
+        base_raster_path (string): path to base raster.
+
         clip_vector_path (string): path to base clip vector.
+
         target_raster_path (string): path to output clipped raster.
 
     Returns:
@@ -1633,6 +1649,7 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 
     Parameters:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
+
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the `pixel-size` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
@@ -2003,13 +2020,14 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
     A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
     path as an input and opens it before sending it along.
 
-    Args:
+    Parameters:
         dataset_path (string): a path to a gdal dataset
 
         All other parameters pass along
 
     Returns:
         result (tuple): (pixel_width_meters, pixel_height_meters)
+
     """
     dataset = gdal.OpenEx(dataset_path, gdal.OF_RASTER)
     geo_tran = dataset.GetGeoTransform()
@@ -2042,6 +2060,7 @@ def validate(args, limit_to=None):
 
     Parameters:
         args (dict): The args dictionary.
+
         limit_to=None (str or None): If a string key, only this args parameter
             will be validated.  If ``None``, all args parameters will be
             validated.
@@ -2049,6 +2068,7 @@ def validate(args, limit_to=None):
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
+
     """
     warnings = []
     keys_missing_value = set([])
