@@ -2123,6 +2123,9 @@ def create_raster_from_vector_extents(
                     shp_extent = [
                         f(shp_extent[index], feature_extent[index])
                         for index, f in enumerate([min, max, min, max])]
+                print 'fetext', list(feature_extent)
+                print 'newext', [f(shp_extent[index], feature_extent[index]) for index, f in enumerate([min, max, min, max])]
+                print
             except AttributeError as error:
                 # For some valid OGR objects the geometry can be undefined
                 # since it's valid to have a NULL entry in the attribute table
@@ -2136,6 +2139,7 @@ def create_raster_from_vector_extents(
         abs((shp_extent[1] - shp_extent[0]) / target_pixel_size[0])))
     n_rows = int(np.ceil(
         abs((shp_extent[3] - shp_extent[2]) / target_pixel_size[1])))
+    print '\nn_cols, n_rows', n_cols, n_rows
 
     driver = gdal.GetDriverByName('GTiff')
     n_bands = 1
@@ -2158,6 +2162,7 @@ def create_raster_from_vector_extents(
         x_source, target_pixel_size[0], 0.0,
         y_source, 0.0, target_pixel_size[1]]
     raster.SetGeoTransform(raster_transform)
+    print '\nraster_transform', raster_transform
 
     # Use the same projection on the raster as the shapefile
     raster.SetProjection(vector.GetLayer(0).GetSpatialRef().ExportToWkt())
