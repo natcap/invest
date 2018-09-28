@@ -638,6 +638,12 @@ def execute(args):
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
 
+    print
+    print 'pixel size'
+    print pixel_size
+    print 'out nodata'
+    print _OUT_NODATA
+
     ds = gdal.Open(temp_density_raster_path)
     outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
     print
@@ -1629,11 +1635,20 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
             clip_vector_info['bounding_box'], clip_vector_info['projection'],
             wgs84_sr.ExportToWkt())
+        print
+        print 'clip_wgs84_bounding_box'
+        print clip_wgs84_bounding_box
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
             base_raster_info['bounding_box'], base_raster_info['projection'],
             wgs84_sr.ExportToWkt())
+        print
+        print 'base_raster_bounding_box'
+        print base_raster_bounding_box
         target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
             clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
+        print
+        print 'target_bounding_box_wgs84'
+        print target_bounding_box_wgs84
 
         clip_vector_srs = osr.SpatialReference()
         clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
@@ -1651,9 +1666,15 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         target_bounding_box = pygeoprocessing.transform_bounding_box(
             target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
             target_srs.ExportToWkt())
+        print
+        print 'centroid_x', centroid_x, 'centroid_y', centroid_y, 'utm_code', utm_code, 'lat_code', lat_code, 'epsg_code', epsg_code, 'target_bounding_box', target_bounding_box
 
         target_pixel_size = convert_degree_pixel_size_to_meters(
             base_raster_info['pixel_size'], centroid_y)
+
+        print
+        print 'target_pixel_size'
+        print target_pixel_size
 
         pygeoprocessing.warp_raster(
             base_raster_path,
@@ -1695,10 +1716,13 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     p2 = -93.5
     p3 = 0.118
     lat = center_lat * math.pi / 180
+    print '\nlat', lat
     latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
               m4 * math.cos(6 * lat))
+    print '\nlatlen', latlen
     longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
                   p3 * math.cos(5 * lat))
+    print '\nlonglen', longlen
     return (longlen * pixel_size[0], latlen * pixel_size[1])
 
 
