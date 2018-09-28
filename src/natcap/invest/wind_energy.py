@@ -1034,7 +1034,6 @@ def execute(args):
 
         Parameters:
             harvested_row (np.ndarray): an nd numpy array for wind harvested
-
             distance_row (np.ndarray): an nd numpy array for distances
 
         Returns:
@@ -1106,7 +1105,6 @@ def execute(args):
 
         Parameters:
             harvested_row (numpy.ndarray): an nd numpy array for wind harvested
-
             distance_row (numpy.ndarray): an nd numpy array for distances
 
         Returns:
@@ -1235,10 +1233,8 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     Parameters:
         base_point_vector_path (string): a path to an OGR point geometry
             shapefile projected in meters
-
         base_polygon_vector_path (string): a path to an OGR polygon shapefile
             projected in meters
-
         dist_field_name (string): the name of the new distance field to be
             added to the attribute table of base_point_vector
 
@@ -1305,7 +1301,6 @@ def read_csv_wind_parameters(csv_path, parameter_list):
         csv_path (string): a path to a CSV file where every row is a parameter
             with the parameter name in the first column followed by the value
             in the second column
-
         parameter_list (list) : a List of Strings that represent the parameter
             names to be found in 'csv_path'. These Strings will be the keys in
             the returned dictionary
@@ -1333,7 +1328,6 @@ def combine_dictionaries(dict_1, dict_2):
 
     Parameters:
         dict_1 (dict): a dictionary. ex: {'ws_id':1, 'vol':65}
-
         dict_2 (dict): a dictionary. ex: {'size':11, 'area':5}
 
     Returns: a python dictionary that is the combination of 'dict_1' and
@@ -1358,18 +1352,13 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     Parameters:
         base_raster_path (string): path to a raster with distance values.
-
         min_dist (int): the minimum distance allowed in meters.
-
         max_dist (int): the maximum distance allowed in meters.
-
         target_dist_raster_path (string): path output to the raster
             converted from distance transform ranks to distance values in
             meters.
-
         target_mask_raster_path (string): path output to the raster masked
             by distance values.
-
         out_nodata (float): the nodata value of the raster.
 
     Returns:
@@ -1409,7 +1398,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
     Parameters:
         wind_data_path (string): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
-
         hub_height (int): the hub height to use for calculating Weibull
             parameters and wind energy values
 
@@ -1446,9 +1434,7 @@ def wind_data_to_point_vector(dict_data,
             2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
             3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
-
         layer_name (string): the name of the layer.
-
         target_vector_path (string): path to the output destination of the
             shapefile.
 
@@ -1528,9 +1514,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
             0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
             1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
             2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
-
         layer_name (string): a python string for the name of the layer
-
         target_vector_path (string): a path to the output path of the point
             vector.
 
@@ -1614,9 +1598,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
     Parameters:
         base_raster_path (string): path to base raster.
-
         clip_vector_path (string): path to base clip vector.
-
         target_raster_path (string): path to output clipped raster.
 
     Returns:
@@ -1699,7 +1681,6 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 
     Parameters:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
-
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the `pixel-size` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
@@ -1732,14 +1713,10 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     Parameters:
         base_vector_path (string): path to a base vector
-
         clip_vector_path (string): path to an AOI vector
-
         target_vector_path (string): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-
         temp_dir (string): path to save the intermediate projected file.
-
         suffix (string): a string to append at the end of the output files.
 
     Returns:
@@ -1775,10 +1752,8 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
         Parameters:
             base_vector_path (string): path to a point vector to clip
-
             clip_vector_path (string): path to a single polygon vector for
                 clipping.
-
             target_vector_path (string): output path for the clipped vector.
 
         Returns:
@@ -1851,13 +1826,10 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     Parameters:
         base_point_vector_path (string): a path to an OGR shapefile that has
             the desired features to get the distance from.
-
         base_raster_path (string): a path to a GDAL raster that is used to
             get the proper extents and configuration for the new raster
-
         target_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
-
         suffix (string): a string to append at the end of the output files.
 
     Returns:
@@ -2000,13 +1972,10 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     Parameters:
         grid_vector_path (string) a path to an OGR shapefile that has the
             desired features to get the distance from
-
         harvested_masked_path (string): a path to a GDAL raster that is used to
             get the proper extents and configuration for new rasters
-
         final_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
-
         suffix (string): a string to append at the end of output filenames.
 
     Returns:
@@ -2075,7 +2044,6 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
 
     Parameters:
         dataset_path (string): a path to a gdal dataset
-
         All other parameters pass along
 
     Returns:
@@ -2127,19 +2095,18 @@ def create_raster_from_vector_extents(
         target_nodata: target nodata value
         fill_value (int/float): value to fill in the target raster; no fill if
             value is None
-        gtiff_creation_options (list): this is an argument list that will be
-            passed to the GTiff driver.  Useful for blocksizes, compression,
-            and more.
 
     Returns:
         None
 
     """
-    # Determine the width and height of the tiff in pixels based on the
-    # maximum size of the combined envelope of all the features
+    # an argument list that will be passed to the GTiff driver.  Useful for
+    # blocksizes, compression, and more.
     gtiff_creation_options = (
         'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
         'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+    # Determine the width and height of the tiff in pixels based on the
+    # maximum size of the combined envelope of all the features
     vector = gdal.OpenEx(base_vector_path)
     shp_extent = None
     for layer_index in range(vector.GetLayerCount()):
