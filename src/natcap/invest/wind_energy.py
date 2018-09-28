@@ -638,10 +638,22 @@ def execute(args):
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
 
+    ds = gdal.Open(temp_density_raster_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'temp_density_raster_path'
+    print outarray
+
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
+
+    ds = gdal.Open(temp_harvested_raster_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'temp_harvested_raster_path'
+    print outarray
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Calculate Density Points')

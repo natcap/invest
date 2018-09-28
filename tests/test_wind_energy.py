@@ -460,7 +460,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             print
             print 'output array'
             print outarray
-            ds = gdal.Open(os.path.join(REGRESSION_DATA, 'nodistances', raster_path))
+            ds = gdal.Open(os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
             testarray = numpy.array(ds.GetRasterBand(1).ReadAsArray())
             print
             print 'test array'
