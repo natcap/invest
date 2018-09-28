@@ -331,12 +331,24 @@ def execute(args):
                 aoi_vector_path, aoi_raster_path, pixel_size, gdal.GDT_Float32,
                 _OUT_NODATA)
 
+            ds = gdal.Open(aoi_raster_path)
+            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'aoi_raster_path'
+            print outarray
+
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
             pygeoprocessing.rasterize(
                 aoi_vector_path,
                 aoi_raster_path, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
+
+            ds = gdal.Open(aoi_raster_path)
+            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'rasterized aoi_raster_path with aoi'
+            print outarray
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
@@ -345,6 +357,12 @@ def execute(args):
                 land_poly_proj_vector_path,
                 aoi_raster_path, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
+
+            ds = gdal.Open(aoi_raster_path)
+            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'rasterized aoi_raster_path with land poly'
+            print outarray
 
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
@@ -361,6 +379,12 @@ def execute(args):
                                                    dist_trans_path)
             mask_by_distance(dist_trans_path, min_distance, max_distance,
                              _OUT_NODATA, dist_meters_path, dist_mask_path)
+
+            ds = gdal.Open(dist_trans_path)
+            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+            print
+            print 'dist_trans_path'
+            print outarray
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -421,6 +445,12 @@ def execute(args):
     pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
                                       depth_mask_path, gdal.GDT_Float32,
                                       _OUT_NODATA)
+
+    ds = gdal.Open(depth_mask_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'depth_mask_path'
+    print outarray
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -626,6 +656,18 @@ def execute(args):
         harvested_field_name, (temp_harvested_raster_path, 1),
         interpolation_mode='linear')
 
+    ds = gdal.Open(temp_density_raster_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'temp_density_raster_path'
+    print outarray
+
+    ds = gdal.Open(temp_harvested_raster_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'temp_harvested_raster_path'
+    print outarray
+
     def mask_out_depth_dist(*rasters):
         """Return the value of an item in the list based on some condition.
 
@@ -698,6 +740,18 @@ def execute(args):
         [(path, 1)
          for path in aligned_harvested_mask_list], mask_out_depth_dist,
         harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+
+    ds = gdal.Open(density_masked_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'density_masked_path'
+    print outarray
+
+    ds = gdal.Open(harvested_masked_path)
+    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
+    print
+    print 'harvested_masked_path'
+    print outarray
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
