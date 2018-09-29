@@ -327,7 +327,7 @@ def execute(args):
 
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
-            create_raster_from_vector_extents(
+            pygeoprocessing.create_raster_from_vector_extents(
                 aoi_vector_path, aoi_raster_path, pixel_size, gdal.GDT_Float32,
                 _OUT_NODATA)
 
@@ -634,7 +634,7 @@ def execute(args):
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
-    create_raster_from_vector_extents(
+    pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
 
@@ -651,7 +651,7 @@ def execute(args):
     print outarray
 
     LOGGER.info('Create Harvested Raster')
-    create_raster_from_vector_extents(
+    pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
 
@@ -1419,83 +1419,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
     return wind_dict
 
 
-def wind_data_to_point_vector(dict_data,
-                              layer_name,
-                              target_vector_path,
-                              aoi_vector_path=None):
-    """Given a dictionary of the wind data create a point shapefile that
-        represents this data.
-
-    Parameters:
-        dict_data (dict): a  dictionary with the wind data, where the keys
-            are tuples of the lat/long coordinates:
-            {
-            1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
-            2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
-            3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
-            }
-        layer_name (string): the name of the layer.
-        target_vector_path (string): path to the output destination of the
-            shapefile.
-
-    Returns:
-        None
-
-    """
-    LOGGER.debug('Entering wind_data_to_point_vector')
-
-    # If the target_vector_path exists delete it
-    if os.path.isfile(target_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(target_vector_path)
-
-    LOGGER.debug('Creating new datasource')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
-
-    # Set the spatial reference to WGS84 (lat/long)
-    source_sr = osr.SpatialReference()
-    source_sr.SetWellKnownGeogCS("WGS84")
-
-    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
-
-    # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = dict_data[dict_data.keys()[0]].keys()
-    LOGGER.debug('field_list : %s', field_list)
-
-    LOGGER.debug('Creating fields for the datasource')
-    for field in field_list:
-        target_field = ogr.FieldDefn(field, ogr.OFTReal)
-        target_layer.CreateField(target_field)
-
-    LOGGER.debug('Entering iteration to create and set the features')
-    # For each inner dictionary (for each point) create a point
-    for point_dict in dict_data.itervalues():
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
-        # When projecting to WGS84, extents -180 to 180 are used for
-        # longitude. In case input longitude is from -360 to 0 convert
-        if longitude < -180:
-            longitude += 360
-        geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(longitude, latitude)
-
-        output_feature = ogr.Feature(target_layer.GetLayerDefn())
-        target_layer.CreateFeature(output_feature)
-
-        for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
-
-        output_feature.SetGeometryDirectly(geom)
-        target_layer.SetFeature(output_feature)
-        output_feature = None
-
-    LOGGER.debug('Leaving wind_data_to_point_vector')
-    output_datasource = None
-
-
 def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     """Create a point shapefile from a dictionary.
 
@@ -1707,6 +1630,83 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     return (longlen * pixel_size[0], latlen * pixel_size[1])
 
 
+def wind_data_to_point_vector(dict_data,
+                              layer_name,
+                              target_vector_path,
+                              aoi_vector_path=None):
+    """Given a dictionary of the wind data create a point shapefile that
+        represents this data.
+
+    Parameters:
+        dict_data (dict): a  dictionary with the wind data, where the keys
+            are tuples of the lat/long coordinates:
+            {
+            1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+            2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+            3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
+            }
+        layer_name (string): the name of the layer.
+        target_vector_path (string): path to the output destination of the
+            shapefile.
+
+    Returns:
+        None
+
+    """
+    LOGGER.debug('Entering wind_data_to_point_vector')
+
+    # If the target_vector_path exists delete it
+    if os.path.isfile(target_vector_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(target_vector_path)
+
+    LOGGER.debug('Creating new datasource')
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(target_vector_path)
+
+    # Set the spatial reference to WGS84 (lat/long)
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+
+    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
+                                                 ogr.wkbPoint)
+
+    # Construct a list of fields to add from the keys of the inner dictionary
+    field_list = dict_data[dict_data.keys()[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
+
+    LOGGER.debug('Creating fields for the datasource')
+    for field in field_list:
+        target_field = ogr.FieldDefn(field, ogr.OFTReal)
+        target_layer.CreateField(target_field)
+
+    LOGGER.debug('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point
+    for point_dict in dict_data.itervalues():
+        latitude = float(point_dict['LATI'])
+        longitude = float(point_dict['LONG'])
+        # When projecting to WGS84, extents -180 to 180 are used for
+        # longitude. In case input longitude is from -360 to 0 convert
+        if longitude < -180:
+            longitude += 360
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(output_feature)
+
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+
+        output_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(output_feature)
+        output_feature = None
+
+    LOGGER.debug('Leaving wind_data_to_point_vector')
+    output_datasource = None
+
+
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
                               target_vector_path, temp_dir, suffix):
     """Clip a vector against an AOI and output result in AOI coordinates.
@@ -1793,7 +1793,7 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
         base_geom = base_feat.GetGeometryRef()
         base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
 
-        if clip_prep.intersects(base_shapely):
+        if base_shapely.intersects(clip_prep):
             # Create output feature
             target_feat = ogr.Feature(target_defn)
             target_feat.SetGeometry(base_geom.Clone())
@@ -2073,107 +2073,6 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
     gdal.Dataset.__swig_destroy__(dataset)
     dataset = None
     return (pixel_diff_x, pixel_diff_y)
-
-
-def create_raster_from_vector_extents(
-        base_vector_path, target_raster_path, target_pixel_size,
-        target_pixel_type, target_nodata, fill_value=None):
-    """Create a blank raster based on a vector file extent.
-
-    Parameters:
-        base_vector_path (string): path to vector shapefile to base the
-            bounding box for the target raster.
-        target_raster_path (string): path to location of generated geotiff;
-            the upper left hand corner of this raster will be aligned with the
-            bounding box of the source vector and the extent will be exactly
-            equal or contained the source vector's bounding box depending on
-            whether the pixel size divides evenly into the source bounding
-            box; if not coordinates will be rounded up to contain the original
-            extent.
-        target_pixel_size (list): the x/y pixel size as a list [30.0, -30.0]
-        target_pixel_type (int): gdal GDT pixel type of target raster
-        target_nodata: target nodata value
-        fill_value (int/float): value to fill in the target raster; no fill if
-            value is None
-
-    Returns:
-        None
-
-    """
-    # an argument list that will be passed to the GTiff driver.  Useful for
-    # blocksizes, compression, and more.
-    gtiff_creation_options = (
-        'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-        'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
-    # Determine the width and height of the tiff in pixels based on the
-    # maximum size of the combined envelope of all the features
-    vector = gdal.OpenEx(base_vector_path)
-    shp_extent = None
-    for layer_index in range(vector.GetLayerCount()):
-        layer = vector.GetLayer(layer_index)
-        for feature in layer:
-            try:
-                # envelope is [xmin, xmax, ymin, ymax]
-                feature_extent = feature.GetGeometryRef().GetEnvelope()
-                if shp_extent is None:
-                    shp_extent = list(feature_extent)
-                else:
-                    # expand bounds of current bounding box to include that
-                    # of the newest feature
-                    shp_extent = [
-                        f(shp_extent[index], feature_extent[index])
-                        for index, f in enumerate([min, max, min, max])]
-                print 'fetext', list(feature_extent)
-                print 'newext', [f(shp_extent[index], feature_extent[index]) for index, f in enumerate([min, max, min, max])]
-                print
-            except AttributeError as error:
-                # For some valid OGR objects the geometry can be undefined
-                # since it's valid to have a NULL entry in the attribute table
-                # this is expressed as a None value in the geometry reference
-                # this feature won't contribute
-                LOGGER.warn(error)
-
-    # round up on the rows and cols so that the target raster encloses the
-    # base vector
-    n_cols = int(np.ceil(
-        abs((shp_extent[1] - shp_extent[0]) / target_pixel_size[0])))
-    n_rows = int(np.ceil(
-        abs((shp_extent[3] - shp_extent[2]) / target_pixel_size[1])))
-    print '\nn_cols, n_rows', n_cols, n_rows
-
-    driver = gdal.GetDriverByName('GTiff')
-    n_bands = 1
-    raster = driver.Create(
-        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
-        options=gtiff_creation_options)
-    raster.GetRasterBand(1).SetNoDataValue(target_nodata)
-
-    # Set the transform based on the upper left corner and given pixel
-    # dimensions
-    if target_pixel_size[0] < 0:
-        x_source = shp_extent[1]
-    else:
-        x_source = shp_extent[0]
-    if target_pixel_size[1] < 0:
-        y_source = shp_extent[3]
-    else:
-        y_source = shp_extent[2]
-    raster_transform = [
-        x_source, target_pixel_size[0], 0.0,
-        y_source, 0.0, target_pixel_size[1]]
-    raster.SetGeoTransform(raster_transform)
-    print '\nraster_transform', raster_transform
-
-    # Use the same projection on the raster as the shapefile
-    raster.SetProjection(vector.GetLayer(0).GetSpatialRef().ExportToWkt())
-
-    # Initialize everything to nodata
-    if fill_value is not None:
-        band = raster.GetRasterBand(1)
-        band.Fill(fill_value)
-        band.FlushCache()
-        band = None
-    raster = None
 
 
 @validation.invest_validator
