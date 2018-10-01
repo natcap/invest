@@ -331,24 +331,12 @@ def execute(args):
                 aoi_vector_path, aoi_raster_path, pixel_size, gdal.GDT_Float32,
                 _OUT_NODATA)
 
-            ds = gdal.Open(aoi_raster_path)
-            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'aoi_raster_path'
-            print outarray
-
             LOGGER.debug('Rasterize AOI onto raster')
             # Burn the area of interest onto the raster
             pygeoprocessing.rasterize(
                 aoi_vector_path,
                 aoi_raster_path, [0],
                 option_list=["ALL_TOUCHED=TRUE"])
-
-            ds = gdal.Open(aoi_raster_path)
-            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'rasterized aoi_raster_path with aoi'
-            print outarray
 
             LOGGER.debug('Rasterize Land Polygon onto raster')
             # Burn the land polygon onto the raster, covering up the AOI values
@@ -357,12 +345,6 @@ def execute(args):
                 land_poly_proj_vector_path,
                 aoi_raster_path, [1],
                 option_list=["ALL_TOUCHED=TRUE"])
-
-            ds = gdal.Open(aoi_raster_path)
-            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'rasterized aoi_raster_path with land poly'
-            print outarray
 
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
@@ -379,12 +361,6 @@ def execute(args):
                                                    dist_trans_path)
             mask_by_distance(dist_trans_path, min_distance, max_distance,
                              _OUT_NODATA, dist_meters_path, dist_mask_path)
-
-            ds = gdal.Open(dist_trans_path)
-            outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'dist_trans_path'
-            print outarray
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -445,12 +421,6 @@ def execute(args):
     pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
                                       depth_mask_path, gdal.GDT_Float32,
                                       _OUT_NODATA)
-
-    ds = gdal.Open(depth_mask_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'depth_mask_path'
-    print outarray
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -638,28 +608,10 @@ def execute(args):
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
 
-    print
-    print 'pixel size'
-    print pixel_size
-    print 'out nodata'
-    print _OUT_NODATA
-
-    ds = gdal.Open(temp_density_raster_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'temp_density_raster_path'
-    print outarray
-
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
         gdal.GDT_Float32, _OUT_NODATA)
-
-    ds = gdal.Open(temp_harvested_raster_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'temp_harvested_raster_path'
-    print outarray
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Calculate Density Points')
@@ -673,18 +625,6 @@ def execute(args):
         final_wind_point_vector_path,
         harvested_field_name, (temp_harvested_raster_path, 1),
         interpolation_mode='linear')
-
-    ds = gdal.Open(temp_density_raster_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'temp_density_raster_path'
-    print outarray
-
-    ds = gdal.Open(temp_harvested_raster_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'temp_harvested_raster_path'
-    print outarray
 
     def mask_out_depth_dist(*rasters):
         """Return the value of an item in the list based on some condition.
@@ -758,18 +698,6 @@ def execute(args):
         [(path, 1)
          for path in aligned_harvested_mask_list], mask_out_depth_dist,
         harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
-
-    ds = gdal.Open(density_masked_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'density_masked_path'
-    print outarray
-
-    ds = gdal.Open(harvested_masked_path)
-    outarray = np.array(ds.GetRasterBand(1).ReadAsArray())
-    print
-    print 'harvested_masked_path'
-    print outarray
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
@@ -1540,20 +1468,13 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
             clip_vector_info['bounding_box'], clip_vector_info['projection'],
             wgs84_sr.ExportToWkt())
-        print
-        print 'clip_wgs84_bounding_box'
-        print clip_wgs84_bounding_box
+
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
             base_raster_info['bounding_box'], base_raster_info['projection'],
             wgs84_sr.ExportToWkt())
-        print
-        print 'base_raster_bounding_box'
-        print base_raster_bounding_box
+
         target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
             clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
-        print
-        print 'target_bounding_box_wgs84'
-        print target_bounding_box_wgs84
 
         clip_vector_srs = osr.SpatialReference()
         clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
@@ -1571,15 +1492,9 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         target_bounding_box = pygeoprocessing.transform_bounding_box(
             target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
             target_srs.ExportToWkt())
-        print
-        print 'centroid_x', centroid_x, 'centroid_y', centroid_y, 'utm_code', utm_code, 'lat_code', lat_code, 'epsg_code', epsg_code, 'target_bounding_box', target_bounding_box
 
         target_pixel_size = convert_degree_pixel_size_to_meters(
             base_raster_info['pixel_size'], centroid_y)
-
-        print
-        print 'target_pixel_size'
-        print target_pixel_size
 
         pygeoprocessing.warp_raster(
             base_raster_path,
@@ -1619,14 +1534,13 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     p1 = 111412.84
     p2 = -93.5
     p3 = 0.118
+
     lat = center_lat * math.pi / 180
-    print '\nlat', lat
     latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
               m4 * math.cos(6 * lat))
-    print '\nlatlen', latlen
     longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
                   p3 * math.cos(5 * lat))
-    print '\nlonglen', longlen
+
     return (longlen * pixel_size[0], latlen * pixel_size[1])
 
 
