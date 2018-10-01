@@ -1793,7 +1793,7 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
         base_geom = base_feat.GetGeometryRef()
         base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
 
-        if base_shapely.intersects(clip_prep):
+        if clip_prep.intersects(base_shapely):
             # Create output feature
             target_feat = ogr.Feature(target_defn)
             target_feat.SetGeometry(base_geom.Clone())
