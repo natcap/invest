@@ -962,7 +962,6 @@ def execute(args):
 
         Parameters:
             harvested_row (np.ndarray): an nd numpy array for wind harvested
-
             distance_row (np.ndarray): an nd numpy array for distances
 
         Returns:
@@ -1034,7 +1033,6 @@ def execute(args):
 
         Parameters:
             harvested_row (numpy.ndarray): an nd numpy array for wind harvested
-
             distance_row (numpy.ndarray): an nd numpy array for distances
 
         Returns:
@@ -1163,10 +1161,8 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     Parameters:
         base_point_vector_path (string): a path to an OGR point geometry
             shapefile projected in meters
-
         base_polygon_vector_path (string): a path to an OGR polygon shapefile
             projected in meters
-
         dist_field_name (string): the name of the new distance field to be
             added to the attribute table of base_point_vector
 
@@ -1233,7 +1229,6 @@ def read_csv_wind_parameters(csv_path, parameter_list):
         csv_path (string): a path to a CSV file where every row is a parameter
             with the parameter name in the first column followed by the value
             in the second column
-
         parameter_list (list) : a List of Strings that represent the parameter
             names to be found in 'csv_path'. These Strings will be the keys in
             the returned dictionary
@@ -1261,7 +1256,6 @@ def combine_dictionaries(dict_1, dict_2):
 
     Parameters:
         dict_1 (dict): a dictionary. ex: {'ws_id':1, 'vol':65}
-
         dict_2 (dict): a dictionary. ex: {'size':11, 'area':5}
 
     Returns: a python dictionary that is the combination of 'dict_1' and
@@ -1286,18 +1280,13 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     Parameters:
         base_raster_path (string): path to a raster with distance values.
-
         min_dist (int): the minimum distance allowed in meters.
-
         max_dist (int): the maximum distance allowed in meters.
-
         target_dist_raster_path (string): path output to the raster
             converted from distance transform ranks to distance values in
             meters.
-
         target_mask_raster_path (string): path output to the raster masked
             by distance values.
-
         out_nodata (float): the nodata value of the raster.
 
     Returns:
@@ -1337,7 +1326,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
     Parameters:
         wind_data_path (string): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
-
         hub_height (int): the hub height to use for calculating Weibull
             parameters and wind energy values
 
@@ -1359,85 +1347,6 @@ def read_csv_wind_data(wind_data_path, hub_height):
     return wind_dict
 
 
-def wind_data_to_point_vector(dict_data,
-                              layer_name,
-                              target_vector_path,
-                              aoi_vector_path=None):
-    """Given a dictionary of the wind data create a point shapefile that
-        represents this data.
-
-    Parameters:
-        dict_data (dict): a  dictionary with the wind data, where the keys
-            are tuples of the lat/long coordinates:
-            {
-            1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
-            2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
-            3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
-            }
-
-        layer_name (string): the name of the layer.
-
-        target_vector_path (string): path to the output destination of the
-            shapefile.
-
-    Returns:
-        None
-
-    """
-    LOGGER.debug('Entering wind_data_to_point_vector')
-
-    # If the target_vector_path exists delete it
-    if os.path.isfile(target_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(target_vector_path)
-
-    LOGGER.debug('Creating new datasource')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
-
-    # Set the spatial reference to WGS84 (lat/long)
-    source_sr = osr.SpatialReference()
-    source_sr.SetWellKnownGeogCS("WGS84")
-
-    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
-
-    # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = dict_data[dict_data.keys()[0]].keys()
-    LOGGER.debug('field_list : %s', field_list)
-
-    LOGGER.debug('Creating fields for the datasource')
-    for field in field_list:
-        target_field = ogr.FieldDefn(field, ogr.OFTReal)
-        target_layer.CreateField(target_field)
-
-    LOGGER.debug('Entering iteration to create and set the features')
-    # For each inner dictionary (for each point) create a point
-    for point_dict in dict_data.itervalues():
-        latitude = float(point_dict['LATI'])
-        longitude = float(point_dict['LONG'])
-        # When projecting to WGS84, extents -180 to 180 are used for
-        # longitude. In case input longitude is from -360 to 0 convert
-        if longitude < -180:
-            longitude += 360
-        geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(longitude, latitude)
-
-        output_feature = ogr.Feature(target_layer.GetLayerDefn())
-        target_layer.CreateFeature(output_feature)
-
-        for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
-
-        output_feature.SetGeometryDirectly(geom)
-        target_layer.SetFeature(output_feature)
-        output_feature = None
-
-    LOGGER.debug('Leaving wind_data_to_point_vector')
-    output_datasource = None
-
-
 def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     """Create a point shapefile from a dictionary.
 
@@ -1456,9 +1365,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
             0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
             1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
             2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
-
         layer_name (string): a python string for the name of the layer
-
         target_vector_path (string): a path to the output path of the point
             vector.
 
@@ -1542,9 +1449,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
     Parameters:
         base_raster_path (string): path to base raster.
-
         clip_vector_path (string): path to base clip vector.
-
         target_raster_path (string): path to output clipped raster.
 
     Returns:
@@ -1563,9 +1468,11 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
             clip_vector_info['bounding_box'], clip_vector_info['projection'],
             wgs84_sr.ExportToWkt())
+
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
             base_raster_info['bounding_box'], base_raster_info['projection'],
             wgs84_sr.ExportToWkt())
+
         target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
             clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
 
@@ -1612,7 +1519,6 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 
     Parameters:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
-
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the `pixel-size` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
@@ -1628,12 +1534,91 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     p1 = 111412.84
     p2 = -93.5
     p3 = 0.118
+
     lat = center_lat * math.pi / 180
     latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
               m4 * math.cos(6 * lat))
     longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
                   p3 * math.cos(5 * lat))
+
     return (longlen * pixel_size[0], latlen * pixel_size[1])
+
+
+def wind_data_to_point_vector(dict_data,
+                              layer_name,
+                              target_vector_path,
+                              aoi_vector_path=None):
+    """Given a dictionary of the wind data create a point shapefile that
+        represents this data.
+
+    Parameters:
+        dict_data (dict): a  dictionary with the wind data, where the keys
+            are tuples of the lat/long coordinates:
+            {
+            1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
+            2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
+            3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
+            }
+        layer_name (string): the name of the layer.
+        target_vector_path (string): path to the output destination of the
+            shapefile.
+
+    Returns:
+        None
+
+    """
+    LOGGER.debug('Entering wind_data_to_point_vector')
+
+    # If the target_vector_path exists delete it
+    if os.path.isfile(target_vector_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(target_vector_path)
+
+    LOGGER.debug('Creating new datasource')
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(target_vector_path)
+
+    # Set the spatial reference to WGS84 (lat/long)
+    source_sr = osr.SpatialReference()
+    source_sr.SetWellKnownGeogCS("WGS84")
+
+    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
+                                                 ogr.wkbPoint)
+
+    # Construct a list of fields to add from the keys of the inner dictionary
+    field_list = dict_data[dict_data.keys()[0]].keys()
+    LOGGER.debug('field_list : %s', field_list)
+
+    LOGGER.debug('Creating fields for the datasource')
+    for field in field_list:
+        target_field = ogr.FieldDefn(field, ogr.OFTReal)
+        target_layer.CreateField(target_field)
+
+    LOGGER.debug('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point
+    for point_dict in dict_data.itervalues():
+        latitude = float(point_dict['LATI'])
+        longitude = float(point_dict['LONG'])
+        # When projecting to WGS84, extents -180 to 180 are used for
+        # longitude. In case input longitude is from -360 to 0 convert
+        if longitude < -180:
+            longitude += 360
+        geom = ogr.Geometry(ogr.wkbPoint)
+        geom.AddPoint_2D(longitude, latitude)
+
+        output_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(output_feature)
+
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+
+        output_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(output_feature)
+        output_feature = None
+
+    LOGGER.debug('Leaving wind_data_to_point_vector')
+    output_datasource = None
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
@@ -1642,14 +1627,10 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     Parameters:
         base_vector_path (string): path to a base vector
-
         clip_vector_path (string): path to an AOI vector
-
         target_vector_path (string): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-
         temp_dir (string): path to save the intermediate projected file.
-
         suffix (string): a string to append at the end of the output files.
 
     Returns:
@@ -1685,10 +1666,8 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
         Parameters:
             base_vector_path (string): path to a point vector to clip
-
             clip_vector_path (string): path to a single polygon vector for
                 clipping.
-
             target_vector_path (string): output path for the clipped vector.
 
         Returns:
@@ -1761,13 +1740,10 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     Parameters:
         base_point_vector_path (string): a path to an OGR shapefile that has
             the desired features to get the distance from.
-
         base_raster_path (string): a path to a GDAL raster that is used to
             get the proper extents and configuration for the new raster
-
         target_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
-
         suffix (string): a string to append at the end of the output files.
 
     Returns:
@@ -1910,13 +1886,10 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     Parameters:
         grid_vector_path (string) a path to an OGR shapefile that has the
             desired features to get the distance from
-
         harvested_masked_path (string): a path to a GDAL raster that is used to
             get the proper extents and configuration for new rasters
-
         final_dist_raster_path (string) a path to a GDAL raster for the final
             distance transform raster output
-
         suffix (string): a string to append at the end of output filenames.
 
     Returns:
@@ -1985,7 +1958,6 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
 
     Parameters:
         dataset_path (string): a path to a gdal dataset
-
         All other parameters pass along
 
     Returns:
