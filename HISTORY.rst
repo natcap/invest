@@ -19,6 +19,8 @@ Unreleased Changes
 * Fixing an issue with how logging is captured when a model is run through the
   InVEST User Interface.  Now, logging from any thread started by the executor
   thread will be written to the log file, which we expect to aid in debugging.
+* Fixing an issue with Scenic Quality where viewpoints outside of the AOI
+  were not being properly excluded.  Viewpoints are now excluded correctly.
 
 3.5.0 (2018-08-14)
 ------------------
