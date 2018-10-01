@@ -18,7 +18,7 @@ pandas>=0.22.0
 numpy>=1.11.0
 Rtree>=0.8.2
 scipy>=0.16.1
-Shapely>=1.6.4
+Shapely>=1.6.4.post1
 six
 pygeoprocessing>=1.2.3
 taskgraph[niced_processes]>=0.6.1
