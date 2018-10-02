@@ -43,27 +43,27 @@ def execute(args):
     Args:
         workspace_dir (string): Where the intermediate and output folder/files
             will be saved. (required)
-        wave_base_data_uri (string): Directory location of wave base data
+        wave_base_data_path (string): Directory location of wave base data
             including WW3 data and analysis area shapefile. (required)
-        analysis_area_uri (string): A string identifying the analysis area of
+        analysis_area_path (string): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
-        aoi_uri (string): A polygon shapefile outlining a more detailed area
+        aoi_path (string): A polygon shapefile outlining a more detailed area
             within the analysis area. This shapefile should be projected with
             linear units being in meters. (required to run Valuation model)
-        machine_perf_uri (string): The path of a CSV file that holds the
+        machine_perf_path (string): The path of a CSV file that holds the
             machine performance table. (required)
-        machine_param_uri (string): The path of a CSV file that holds the
+        machine_param_path (string): The path of a CSV file that holds the
             machine parameter table. (required)
-        dem_uri (string): The path of the Global Digital Elevation Model (DEM).
+        dem_path (string): The path of the Global Digital Elevation Model (DEM).
             (required)
         suffix (string): A python string of characters to append to each output
             filename (optional)
         valuation_container (boolean): Indicates whether the model includes
             valuation
-        land_gridPts_uri (string): A CSV file path containing the Landing and
+        land_gridPts_path (string): A CSV file path containing the Landing and
             Power Grid Connection Points table. (required for Valuation)
-        machine_econ_uri (string): A CSV file path for the machine economic
+        machine_econ_path (string): A CSV file path for the machine economic
             parameters table. (required for Valuation)
         number_of_machines (int): An integer specifying the number of
             machines for a wave farm site. (required for Valuation)
@@ -72,16 +72,16 @@ def execute(args):
 
         {
             'workspace_dir': 'path/to/workspace_dir',
-            'wave_base_data_uri': 'path/to/base_data_dir',
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'aoi_uri': 'path/to/shapefile',
-            'machine_perf_uri': 'path/to/csv',
-            'machine_param_uri': 'path/to/csv',
-            'dem_uri': 'path/to/raster',
+            'wave_base_data_path': 'path/to/base_data_dir',
+            'analysis_area_path': 'West Coast of North America and Hawaii',
+            'aoi_path': 'path/to/shapefile',
+            'machine_perf_path': 'path/to/csv',
+            'machine_param_path': 'path/to/csv',
+            'dem_path': 'path/to/raster',
             'suffix': '_results',
             'valuation_container': True,
-            'land_gridPts_uri': 'path/to/csv',
-            'machine_econ_uri': 'path/to/csv',
+            'land_gridPts_path': 'path/to/csv',
+            'machine_econ_path': 'path/to/csv',
             'number_of_machines': 28,
         }
 
@@ -104,13 +104,13 @@ def execute(args):
         file_suffix = ''
 
     # Get the uri for the DEM
-    dem_uri = args['dem_uri']
+    dem_path = args['dem_path']
 
     # Create a dictionary that stores the wave periods and wave heights as
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_file = open(args['machine_perf_uri'], 'rU')
+    machine_perf_file = open(args['machine_perf_path'], 'rU')
     reader = csv.reader(machine_perf_file)
     # Get the column header which is the first row in the file
     # and specifies the range of wave periods
@@ -132,7 +132,7 @@ def execute(args):
     # Create a dictionary whose keys are the 'NAMES' from the machine parameter
     # table and whose values are from the corresponding 'VALUES' field.
     machine_param_dict = {}
-    machine_param_file = open(args['machine_param_uri'], 'rU')
+    machine_param_file = open(args['machine_param_path'], 'rU')
     reader = csv.DictReader(machine_param_file)
     for row in reader:
         row_name = row['NAME'].strip().lower()
@@ -142,67 +142,67 @@ def execute(args):
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
     # that stores the related uri paths to the needed inputs
-    wave_base_data_uri = args['wave_base_data_uri']
+    wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
             'West Coast of North America and Hawaii': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'NAmerica_WestCoast_4m.shp'),
+                wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'WCNA_extract.shp'),
+                 wave_base_data_path, 'WCNA_extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'NAmerica_WestCoast_4m.txt.bin')
+                 wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
             },
             'East Coast of North America and Puerto Rico': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'NAmerica_EastCoast_4m.shp'),
+                wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'ECNA_extract.shp'),
+                 wave_base_data_path, 'ECNA_extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'NAmerica_EastCoast_4m.txt.bin')
+                 wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
             },
             'North Sea 4 meter resolution': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'North_Sea_4m.shp'),
+                wave_base_data_path, 'North_Sea_4m.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'North_Sea_4m_Extract.shp'),
+                 wave_base_data_path, 'North_Sea_4m_Extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'North_Sea_4m.bin')
+                 wave_base_data_path, 'North_Sea_4m.bin')
             },
             'North Sea 10 meter resolution': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'North_Sea_10m.shp'),
+                wave_base_data_path, 'North_Sea_10m.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'North_Sea_10m_Extract.shp'),
+                 wave_base_data_path, 'North_Sea_10m_Extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'North_Sea_10m.bin')
+                 wave_base_data_path, 'North_Sea_10m.bin')
             },
             'Australia': {
              'point_shape': os.path.join(
-                wave_base_data_uri, 'Australia_4m.shp'),
+                wave_base_data_path, 'Australia_4m.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'Australia_Extract.shp'),
+                 wave_base_data_path, 'Australia_Extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'Australia_4m.bin')
+                 wave_base_data_path, 'Australia_4m.bin')
             },
            'Global': {
-             'point_shape': os.path.join(wave_base_data_uri, 'Global.shp'),
+             'point_shape': os.path.join(wave_base_data_path, 'Global.shp'),
              'extract_shape': os.path.join(
-                 wave_base_data_uri, 'Global_extract.shp'),
+                 wave_base_data_path, 'Global_extract.shp'),
              'ww3_uri': os.path.join(
-                 wave_base_data_uri, 'Global_WW3.txt.bin')
+                 wave_base_data_path, 'Global_WW3.txt.bin')
             }
        }
 
     # Get the String value for the analysis area provided from the dropdown menu
     # in the user interaface
-    analysis_area_uri = args['analysis_area_uri']
+    analysis_area_path = args['analysis_area_path']
     # Use the analysis area String to get the uri's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = load_binary_wave_data(
-            analysis_dict[analysis_area_uri]['ww3_uri'])
-    analysis_area_points_uri = analysis_dict[analysis_area_uri]['point_shape']
+            analysis_dict[analysis_area_path]['ww3_uri'])
+    analysis_area_points_uri = analysis_dict[analysis_area_path]['point_shape']
     analysis_area_extract_uri = \
-            analysis_dict[analysis_area_uri]['extract_shape']
+            analysis_dict[analysis_area_path]['extract_shape']
 
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
@@ -228,7 +228,7 @@ def execute(args):
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
-    dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dem_uri)
+    dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dem_path)
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
@@ -238,7 +238,7 @@ def execute(args):
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
     # args['analysis_area'].
-    if 'aoi_uri' not in args:
+    if 'aoi_path' not in args:
         LOGGER.debug('AOI not provided')
 
         # The uri to a polygon shapefile that specifies the broader area
@@ -261,7 +261,7 @@ def execute(args):
                 analysis_area_sr, aoi_sr)
     else:
         LOGGER.debug('AOI was provided')
-        aoi_shape_path = args['aoi_uri']
+        aoi_shape_path = args['aoi_path']
 
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
@@ -321,7 +321,7 @@ def execute(args):
         # projected wave power and wave energy capacity rasters
         pixel_xsize, pixel_ysize = pixel_size_helper(
                 clipped_wave_shape_path, coord_trans, coord_trans_opposite,
-                dem_uri)
+                dem_path)
 
         # Average the pixel sizes incase they are of different sizes
         pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
@@ -332,7 +332,7 @@ def execute(args):
     # from the raster DEM
     LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
 
-    def index_dem_uri(point_shape_uri, dataset_uri, field_name, coord_trans):
+    def index_dem_path(point_shape_uri, dataset_uri, field_name, coord_trans):
         """Index into a gdal raster and where a point from an ogr datasource
             overlays a pixel, add that pixel value to the point feature
 
@@ -400,8 +400,8 @@ def execute(args):
         dem_matrix = None
 
     # Add the depth value to the wave points by indexing into the DEM dataset
-    index_dem_uri(
-            clipped_wave_shape_path, dem_uri, 'DEPTH_M', coord_trans_opposite)
+    index_dem_path(
+            clipped_wave_shape_path, dem_path, 'DEPTH_M', coord_trans_opposite)
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
@@ -495,7 +495,7 @@ def execute(args):
 
     # Read machine economic parameters into a dictionary
     machine_econ = {}
-    machine_econ_file = open(args['machine_econ_uri'], 'rU')
+    machine_econ_file = open(args['machine_econ_path'], 'rU')
     reader = csv.DictReader(machine_econ_file)
     LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
     # Read in the field names from the column headers
@@ -510,7 +510,7 @@ def execute(args):
 
     # Read landing and power grid connection points into a dictionary
     land_grid_pts = {}
-    land_grid_pts_file = open(args['land_gridPts_uri'], 'rU')
+    land_grid_pts_file = open(args['land_gridPts_path'], 'rU')
     reader = csv.DictReader(land_grid_pts_file)
     for row in reader:
         LOGGER.debug('Land Grid Row: %s', row)
@@ -1620,11 +1620,11 @@ def validate(args, limit_to=None):
     keys_missing_value = []
     missing_keys = []
     for required_key in ('workspace_dir',
-                         'wave_base_data_uri',
-                         'analysis_area_uri',
-                         'machine_perf_uri',
-                         'machine_param_uri',
-                         'dem_uri'):
+                         'wave_base_data_path',
+                         'analysis_area_path',
+                         'machine_perf_path',
+                         'machine_param_path',
+                         'dem_path'):
         try:
             if args[required_key] in ('', None):
                 keys_missing_value.append(required_key)
@@ -1638,55 +1638,55 @@ def validate(args, limit_to=None):
         warnings.append((keys_missing_value,
                          'Parameter is required but has no value'))
 
-    if limit_to in ('wave_base_data_uri', None):
-        if not os.path.isdir(args['wave_base_data_uri']):
+    if limit_to in ('wave_base_data_path', None):
+        if not os.path.isdir(args['wave_base_data_path']):
             warnings.append((
-                ['wave_base_data_uri'],
+                ['wave_base_data_path'],
                 'Parameter not found or is not a folder.'))
 
-    if limit_to in ('analysis_area_uri', None):
-        if args['analysis_area_uri'] not in (
+    if limit_to in ('analysis_area_path', None):
+        if args['analysis_area_path'] not in (
                 "West Coast of North America and Hawaii",
                 "East Coast of North America and Puerto Rico",
                 "North Sea 4 meter resolution",
                 "North Sea 10 meter resolution",
                 "Australia",
                 "Global"):
-            warnings.append((['analysis_area_uri'],
+            warnings.append((['analysis_area_path'],
                              'Parameter must be a known analysis area.'))
 
-    if limit_to in ('aoi_uri', None):
+    if limit_to in ('aoi_path', None):
         try:
-            if args['aoi_uri'] not in ('', None):
+            if args['aoi_path'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_uri'])
+                    vector = gdal.OpenEx(args['aoi_path'])
                     layer = vector.GetLayer()
                     geometry_type = layer.GetGeomType()
                     if geometry_type != ogr.wkbPolygon:
                         warnings.append((
-                            ['aoi_uri'],
+                            ['aoi_path'],
                             'Vector must contain only polygons.'))
                     srs = layer.GetSpatialRef()
                     units = srs.GetLinearUnitsName().lower()
                     if units not in ('meter', 'metre'):
-                        warnings.append((['aoi_uri'],
+                        warnings.append((['aoi_path'],
                                          'Vector must be projected in meters'))
 
                     datum = srs.GetAttrValue('DATUM')
                     if datum != 'WGS_1984':
                         warnings.append((
-                            ['aoi_uri'],
+                            ['aoi_path'],
                             'Vector must use the WGS_1984 datum.'))
         except KeyError:
             # Parameter is not required.
             pass
 
     for csv_key, required_fields in (
-            ('machine_perf_uri', set([])),
-            ('machine_param_uri', set(['name', 'value', 'note'])),
-            ('land_gridPts_uri',
+            ('machine_perf_path', set([])),
+            ('machine_param_path', set(['name', 'value', 'note'])),
+            ('land_gridPts_path',
              set(['id', 'type', 'lat', 'long', 'location'])),
-            ('machine_econ_uri', set(['name', 'value', 'note']))):
+            ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
             reader = csv.reader(open(args[csv_key]))
             headers = set([field.lower() for field in reader.next()])
@@ -1702,12 +1702,12 @@ def validate(args, limit_to=None):
         except csv.Error:
             warnings.append(([csv_key], 'CSV could not be read.'))
 
-    if limit_to in ('dem_uri', None):
+    if limit_to in ('dem_path', None):
         with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['dem_uri'])
+            raster = gdal.OpenEx(args['dem_path'])
         if raster is None:
             warnings.append((
-                ['dem_uri'],
+                ['dem_path'],
                 ('Parameter must be a filepath to a GDAL-compatible '
                  'raster file.')))
 
@@ -1728,8 +1728,8 @@ def validate(args, limit_to=None):
         if 'valuation_container' in args:
             missing_keys = []
             keys_with_no_value = []
-            for required_key in ('land_gridPts_uri',
-                                 'machine_econ_uri',
+            for required_key in ('land_gridPts_path',
+                                 'machine_econ_path',
                                  'number_of_machines'):
                 try:
                     if args[required_key] in ('', None):

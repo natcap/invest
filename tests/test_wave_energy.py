@@ -23,7 +23,7 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
 
 
-def _make_dummy_files(workspace_dir):
+def _make_empty_files(workspace_dir):
     """Within workspace, make intermediate and output folders with dummy files.
 
     Parameters:
@@ -390,13 +390,13 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """Generate an args list that is consistent across regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'wave_base_data_uri': os.path.join(SAMPLE_DATA, 'WaveData'),
-            'analysis_area_uri': 'West Coast of North America and Hawaii',
-            'machine_perf_uri': os.path.join(
+            'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
+            'analysis_area_path': 'West Coast of North America and Hawaii',
+            'machine_perf_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
-            'machine_param_uri': os.path.join(
+            'machine_param_path': os.path.join(
                 SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
-            'dem_uri': os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif')
+            'dem_path': os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif')
         }
         return args
 
@@ -405,16 +405,16 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
-        args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA,
+        args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
                                                 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] = os.path.join(SAMPLE_DATA,
+        args['machine_econ_path'] = os.path.join(SAMPLE_DATA,
                                                 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
 
         # Testing if intermediate/output were overwritten
-        _make_dummy_files(args['workspace_dir'])
+        _make_empty_files(args['workspace_dir'])
 
         wave_energy.execute(args)
 
@@ -447,7 +447,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
 
         wave_energy.execute(args)
 
@@ -498,10 +498,10 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_uri'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
-        args['land_gridPts_uri'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
-        args['machine_econ_uri'] = os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
+        args['land_gridPts_path'] = os.path.join(SAMPLE_DATA, 'LandGridPts_WCVI.csv')
+        args['machine_econ_path'] = os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
         args['suffix'] = 'val'
 
