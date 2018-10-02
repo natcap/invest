@@ -91,19 +91,12 @@ def execute(args):
     workspace = args['workspace_dir']
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
-    for directory in [output_dir, intermediate_dir]:
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+    utils.make_directories([intermediate_dir, output_dir])
 
-    # Append a _ to the suffix if it's not empty and doens't already have one
-    try:
-        file_suffix = args['suffix']
-        if file_suffix != "" and not file_suffix.startswith('_'):
-            file_suffix = '_' + file_suffix
-    except KeyError:
-        file_suffix = ''
+    # Append a _ to the suffix if it's not empty and doesn't already have one
+    file_suffix = utils.make_suffix_string(args, 'suffix')
 
-    # Get the uri for the DEM
+    # Get the path for the DEM
     dem_path = args['dem_path']
 
     # Create a dictionary that stores the wave periods and wave heights as
@@ -144,53 +137,53 @@ def execute(args):
     # that stores the related uri paths to the needed inputs
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
-            'West Coast of North America and Hawaii': {
-             'point_shape': os.path.join(
-                wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'WCNA_extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
-            },
-            'East Coast of North America and Puerto Rico': {
-             'point_shape': os.path.join(
-                wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'ECNA_extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
-            },
-            'North Sea 4 meter resolution': {
-             'point_shape': os.path.join(
-                wave_base_data_path, 'North_Sea_4m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'North_Sea_4m_Extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'North_Sea_4m.bin')
-            },
-            'North Sea 10 meter resolution': {
-             'point_shape': os.path.join(
-                wave_base_data_path, 'North_Sea_10m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'North_Sea_10m_Extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'North_Sea_10m.bin')
-            },
-            'Australia': {
-             'point_shape': os.path.join(
-                wave_base_data_path, 'Australia_4m.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'Australia_Extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'Australia_4m.bin')
-            },
-           'Global': {
-             'point_shape': os.path.join(wave_base_data_path, 'Global.shp'),
-             'extract_shape': os.path.join(
-                 wave_base_data_path, 'Global_extract.shp'),
-             'ww3_uri': os.path.join(
-                 wave_base_data_path, 'Global_WW3.txt.bin')
-            }
+        'West Coast of North America and Hawaii': {
+         'point_shape': os.path.join(
+            wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'WCNA_extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
+        },
+        'East Coast of North America and Puerto Rico': {
+         'point_shape': os.path.join(
+            wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'ECNA_extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
+        },
+        'North Sea 4 meter resolution': {
+         'point_shape': os.path.join(
+            wave_base_data_path, 'North_Sea_4m.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'North_Sea_4m_Extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'North_Sea_4m.bin')
+        },
+        'North Sea 10 meter resolution': {
+         'point_shape': os.path.join(
+            wave_base_data_path, 'North_Sea_10m.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'North_Sea_10m_Extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'North_Sea_10m.bin')
+        },
+        'Australia': {
+         'point_shape': os.path.join(
+            wave_base_data_path, 'Australia_4m.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'Australia_Extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'Australia_4m.bin')
+        },
+       'Global': {
+         'point_shape': os.path.join(wave_base_data_path, 'Global.shp'),
+         'extract_shape': os.path.join(
+             wave_base_data_path, 'Global_extract.shp'),
+         'ww3_uri': os.path.join(
+             wave_base_data_path, 'Global_WW3.txt.bin')
+        }
        }
 
     # Get the String value for the analysis area provided from the dropdown menu
