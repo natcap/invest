@@ -9,14 +9,14 @@ import csv
 import struct
 import itertools
 
-import numpy
-from osgeo import gdal
-import osgeo.osr as osr
-from osgeo import ogr
 from bisect import bisect
+import numpy
 import scipy
+from osgeo import gdal
+from osgeo import osr
+from osgeo import ogr
 
-import pygeoprocessing.geoprocessing
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
 from .. import utils
@@ -1509,7 +1509,7 @@ def count_pixels_groups(raster_uri, group_values):
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
-    for block_info, block_matrix in pygeoprocessing.geoprocessing.iterblocks(raster_uri):
+    for block_info, block_matrix in pygeoprocessing.iterblocks(raster_uri):
         # Cumulatively add the number of pixels found for each value
         # in 'group_values'
         for index in xrange(len(group_values)):

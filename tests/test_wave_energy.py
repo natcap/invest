@@ -6,12 +6,12 @@ import os
 import csv
 import re
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
+import pygeoprocessing.testing
+from pygeoprocessing.testing import sampledata
 
 from osgeo import gdal
 from osgeo import osr, ogr
