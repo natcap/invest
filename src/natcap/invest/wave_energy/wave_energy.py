@@ -11,6 +11,7 @@ import itertools
 
 from bisect import bisect
 import numpy
+import pandas
 import scipy
 from osgeo import gdal
 from osgeo import osr
@@ -23,11 +24,13 @@ from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
+
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
         data points.
     """
     pass
+
 
 def execute(args):
     """Wave Energy.
@@ -103,24 +106,45 @@ def execute(args):
     # arrays. Also store the amount of energy the machine produces
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
-    machine_perf_file = open(args['machine_perf_path'], 'rU')
-    reader = csv.reader(machine_perf_file)
+    machine_perf_data = pandas.read_csv(args['machine_perf_path'])
     # Get the column header which is the first row in the file
     # and specifies the range of wave periods
-    periods = reader.next()
-    machine_perf_dict['periods'] = periods[1:]
-    # Set the keys for storing wave height range and the machine performance
-    # at each state
-    machine_perf_dict['heights'] = []
-    machine_perf_dict['bin_matrix'] = []
-    for row in reader:
-        # Build up the row header by taking the first element in each row
-        # This is the range of heights
-        machine_perf_dict['heights'].append(row.pop(0))
-        machine_perf_dict['bin_matrix'].append(row)
-    machine_perf_file.close()
+    machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
+    # Build up the row header by taking the first element in each row
+    # This is the range of heights
+    machine_perf_dict['heights'] = machine_perf_data.iloc[:, 0].values
+    # Set the key for storing the machine's performance
+    for i in range(len(machine_perf_dict['heights'])):
+        bin_matrix_row = machine_perf_data.iloc[i, 1:].values
+        # Expand the dimension from (N,) to (N,1)
+        bin_matrix_row = numpy.expand_dims(bin_matrix_row, axis=0)
+        # Concatenate each row along axis 0
+        if i == 0:
+            machine_perf_dict['bin_matrix'] = bin_matrix_row
+        else:
+            machine_perf_dict['bin_matrix'] = numpy.concatenate(
+                (machine_perf_dict['bin_matrix'], bin_matrix_row))
+
+    # Check if x and y dimensions of the bin_matrix array equal the size of
+    # heights and periods
+    machine_perf_format = [['Hs(m)/Tp(sec)', '0.0', '3.0', '4.0', '...'],
+                           ['0.1', '0. ', '0. ', '0. ', '...'],
+                           ['0.5', '0. ', '0. ', '0. ', '...'], ['...']]
+    if machine_perf_dict['bin_matrix'].shape != (
+            machine_perf_dict['heights'].size,
+            machine_perf_dict['periods'].size):
+        machine_perf_format = [['Hs(m)/Tp(sec)', '0.0', '3.0', '4.0', '...'],
+                               ['0.1', '0. ', '0. ', '0. ', '...'],
+                               ['0.5', '0. ', '0. ', '0. ', '...'], ['...']]
+        raise ValueError(
+            'Please make sure all values are entered in the Machine '
+            'Performance Table. The format should be:\n%s' %
+            machine_perf_format)
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
+
+    import pdb
+    pdb.set_trace()
 
     # Create a dictionary whose keys are the 'NAMES' from the machine parameter
     # table and whose values are from the corresponding 'VALUES' field.
@@ -138,53 +162,54 @@ def execute(args):
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
         'West Coast of North America and Hawaii': {
-         'point_shape': os.path.join(
-            wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'WCNA_extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
+            'point_shape':
+            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'WCNA_extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
         },
         'East Coast of North America and Puerto Rico': {
-         'point_shape': os.path.join(
-            wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'ECNA_extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
+            'point_shape':
+            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'ECNA_extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
         },
         'North Sea 4 meter resolution': {
-         'point_shape': os.path.join(
-            wave_base_data_path, 'North_Sea_4m.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'North_Sea_4m_Extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'North_Sea_4m.bin')
+            'point_shape':
+            os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'North_Sea_4m_Extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
         },
         'North Sea 10 meter resolution': {
-         'point_shape': os.path.join(
-            wave_base_data_path, 'North_Sea_10m.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'North_Sea_10m_Extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'North_Sea_10m.bin')
+            'point_shape':
+            os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'North_Sea_10m_Extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
         },
         'Australia': {
-         'point_shape': os.path.join(
-            wave_base_data_path, 'Australia_4m.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'Australia_Extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'Australia_4m.bin')
+            'point_shape':
+            os.path.join(wave_base_data_path, 'Australia_4m.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'Australia_Extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'Australia_4m.bin')
         },
-       'Global': {
-         'point_shape': os.path.join(wave_base_data_path, 'Global.shp'),
-         'extract_shape': os.path.join(
-             wave_base_data_path, 'Global_extract.shp'),
-         'ww3_uri': os.path.join(
-             wave_base_data_path, 'Global_WW3.txt.bin')
+        'Global': {
+            'point_shape':
+            os.path.join(wave_base_data_path, 'Global.shp'),
+            'extract_shape':
+            os.path.join(wave_base_data_path, 'Global_extract.shp'),
+            'ww3_uri':
+            os.path.join(wave_base_data_path, 'Global_WW3.txt.bin')
         }
-       }
+    }
 
     # Get the String value for the analysis area provided from the dropdown menu
     # in the user interaface
@@ -192,23 +217,24 @@ def execute(args):
     # Use the analysis area String to get the uri's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = load_binary_wave_data(
-            analysis_dict[analysis_area_path]['ww3_uri'])
+        analysis_dict[analysis_area_path]['ww3_uri'])
     analysis_area_points_uri = analysis_dict[analysis_area_path]['point_shape']
     analysis_area_extract_uri = \
             analysis_dict[analysis_area_path]['extract_shape']
 
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
-            intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
+        intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
     # Intermediate paths for wave energy and wave power rasters
     wave_energy_unclipped_path = os.path.join(
-            intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
+        intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
     wave_power_unclipped_path = os.path.join(
-            intermediate_dir, 'wp_kw_unclipped%s.tif' % file_suffix)
+        intermediate_dir, 'wp_kw_unclipped%s.tif' % file_suffix)
 
     # Final output paths for wave energy and wave power rasters
-    wave_energy_path = os.path.join(output_dir, 'capwe_mwh%s.tif' % file_suffix)
+    wave_energy_path = os.path.join(output_dir,
+                                    'capwe_mwh%s.tif' % file_suffix)
     wave_power_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
 
     # Paths for wave energy and wave power percentile rasters
@@ -221,12 +247,13 @@ def execute(args):
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
-    dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dem_path)
+    dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
+        dem_path)
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
     analysis_area_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            analysis_area_points_uri)
+        analysis_area_points_uri)
 
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
@@ -241,17 +268,19 @@ def execute(args):
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(
-                analysis_area_points_uri, clipped_wave_shape_path)
+            analysis_area_points_uri, clipped_wave_shape_path)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_size = (float(dem_gt[1]) + numpy.absolute(float(dem_gt[5]))) / 2.0
+        pixel_size = (
+            float(dem_gt[1]) + numpy.absolute(float(dem_gt[5]))) / 2.0
         LOGGER.debug('Pixel size in meters : %f', pixel_size)
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
+        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
+            analysis_area_extract_uri)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
-                analysis_area_sr, aoi_sr)
+            analysis_area_sr, aoi_sr)
     else:
         LOGGER.debug('AOI was provided')
         aoi_shape_path = args['aoi_path']
@@ -259,62 +288,63 @@ def execute(args):
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
         projected_wave_shape_path = os.path.join(
-                intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
+            intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
 
         # Set the wave data shapefile to the same projection as the
         # area of interest
-        temp_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
+        temp_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
+            aoi_shape_path)
         output_wkt = temp_sr.ExportToWkt()
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-                analysis_area_points_uri, output_wkt, projected_wave_shape_path)
+            analysis_area_points_uri, output_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
         clip_datasource_layer(projected_wave_shape_path, aoi_shape_path,
-                clipped_wave_shape_path)
+                              clipped_wave_shape_path)
 
-        aoi_proj_uri = os.path.join(
-                intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
+        aoi_proj_uri = os.path.join(intermediate_dir,
+                                    'aoi_proj_to_extract%s.shp' % file_suffix)
 
         # Get the spacial reference of the Extract shape and export to WKT to
         # use in reprojecting the AOI
-        extract_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(analysis_area_extract_uri)
+        extract_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
+            analysis_area_extract_uri)
         extract_wkt = extract_sr.ExportToWkt()
 
         # Project AOI to Extract shape
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-                aoi_shape_path, extract_wkt, aoi_proj_uri)
+            aoi_shape_path, extract_wkt, aoi_proj_uri)
 
         aoi_clipped_to_extract_uri = os.path.join(
-                intermediate_dir,
-                'aoi_clipped_to_extract_uri%s.shp' % file_suffix)
+            intermediate_dir, 'aoi_clipped_to_extract_uri%s.shp' % file_suffix)
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_datasource_layer(
-                aoi_proj_uri, analysis_area_extract_uri,
-                aoi_clipped_to_extract_uri)
+        clip_datasource_layer(aoi_proj_uri, analysis_area_extract_uri,
+                              aoi_clipped_to_extract_uri)
 
         aoi_clip_proj_uri = os.path.join(
-                intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
+            intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
 
         # Reproject the clipped AOI back
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-                aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
+            aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
 
         aoi_shape_path = aoi_clip_proj_uri
 
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
-        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(aoi_shape_path)
+        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
+            aoi_shape_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
-                analysis_area_sr, aoi_sr)
+            analysis_area_sr, aoi_sr)
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
         pixel_xsize, pixel_ysize = pixel_size_helper(
-                clipped_wave_shape_path, coord_trans, coord_trans_opposite,
-                dem_path)
+            clipped_wave_shape_path, coord_trans, coord_trans_opposite,
+            dem_path)
 
         # Average the pixel sizes incase they are of different sizes
         pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
@@ -341,10 +371,12 @@ def execute(args):
         # datasets / datasource by passing URI's. This function lacks memory
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
-        tmp_dem_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+        tmp_dem_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
+        )
 
         clipped_wave_shape = gdal.OpenEx(point_shape_uri, 1)
-        dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(dataset_uri)
+        dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
+            dataset_uri)
         dem_matrix = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.load_memory_mapped_array(
             dataset_uri, tmp_dem_path, array_type=None)
 
@@ -364,8 +396,7 @@ def execute(args):
             geom_x, geom_y = geom.GetX(), geom.GetY()
 
             # Transform two points into meters
-            point_decimal_degree = coord_trans.TransformPoint(
-                    geom_x, geom_y)
+            point_decimal_degree = coord_trans.TransformPoint(geom_x, geom_y)
 
             # To get proper depth value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
@@ -387,14 +418,13 @@ def execute(args):
         # It is not enough to just delete a feature from the layer. The database
         # where the information is stored must be re-packed so that feature
         # entry is properly removed
-        clipped_wave_shape.ExecuteSQL(
-                'REPACK ' + clipped_wave_layer.GetName())
+        clipped_wave_shape.ExecuteSQL('REPACK ' + clipped_wave_layer.GetName())
 
         dem_matrix = None
 
     # Add the depth value to the wave points by indexing into the DEM dataset
-    index_dem_path(
-            clipped_wave_shape_path, dem_path, 'DEPTH_M', coord_trans_opposite)
+    index_dem_path(clipped_wave_shape_path, dem_path, 'DEPTH_M',
+                   coord_trans_opposite)
 
     LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
 
@@ -419,29 +449,30 @@ def execute(args):
 
     # Create blank rasters bounded by the shape file of analyis area
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-            aoi_shape_path, pixel_size, datatype, nodata,
-            wave_energy_unclipped_path)
+        aoi_shape_path, pixel_size, datatype, nodata,
+        wave_energy_unclipped_path)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-            aoi_shape_path, pixel_size, datatype, nodata,
-            wave_power_unclipped_path)
+        aoi_shape_path, pixel_size, datatype, nodata,
+        wave_power_unclipped_path)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
-    LOGGER.debug('Interpolate wave power and wave energy capacity onto rasters')
+    LOGGER.debug(
+        'Interpolate wave power and wave energy capacity onto rasters')
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-            clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
+        clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-            clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
+        clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
 
     # Clip the wave energy and wave power rasters so that they are confined
     # to the AOI
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-            wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
+        wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-            wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
+        wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
@@ -454,13 +485,13 @@ def execute(args):
     wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
     starting_percentile_range = '1'
 
-    create_percentile_rasters(wave_energy_path, capwe_rc_path,
-            capwe_units_short, capwe_units_long, starting_percentile_range,
-            percentiles, aoi_shape_path)
+    create_percentile_rasters(
+        wave_energy_path, capwe_rc_path, capwe_units_short, capwe_units_long,
+        starting_percentile_range, percentiles, aoi_shape_path)
 
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
-            wp_units_long, starting_percentile_range, percentiles,
-            aoi_shape_path)
+                              wp_units_long, starting_percentile_range,
+                              percentiles, aoi_shape_path)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -475,14 +506,12 @@ def execute(args):
         return
 
     # Output path for landing point shapefile
-    land_pt_path = os.path.join(
-            output_dir, 'LandPts_prj%s.shp' % file_suffix)
+    land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
     # Output path for grid point shapefile
-    grid_pt_path = os.path.join(
-            output_dir, 'GridPts_prj%s.shp' % file_suffix)
+    grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
     # Output path for the projected net present value raster
-    raster_projected_path = os.path.join(
-            intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
+    raster_projected_path = os.path.join(intermediate_dir,
+                                         'npv_not_clipped%s.tif' % file_suffix)
     # Path for the net present value percentile raster
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
@@ -512,7 +541,8 @@ def execute(args):
                     [row['LAT'], row['LONG']]
         else:
             land_grid_pts[row['ID'].strip()] = {
-                    row['TYPE']:[row['LAT'], row['LONG']]}
+                row['TYPE']: [row['LAT'], row['LONG']]
+            }
 
     LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
     land_grid_pts_file.close()
@@ -550,15 +580,13 @@ def execute(args):
 
     # Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Shapefile.')
-    build_point_shapefile(
-            'ESRI Shapefile', 'landpoints', land_pt_path, land_pts,
-            aoi_sr, coord_trans)
+    build_point_shapefile('ESRI Shapefile', 'landpoints', land_pt_path,
+                          land_pts, aoi_sr, coord_trans)
 
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Shapefile.')
-    build_point_shapefile(
-            'ESRI Shapefile', 'gridpoints', grid_pt_path, grid_pts,
-            aoi_sr, coord_trans)
+    build_point_shapefile('ESRI Shapefile', 'gridpoints', grid_pt_path,
+                          grid_pts, aoi_sr, coord_trans)
 
     # Get the coordinates of points of wave_data_shape, landing_shape,
     # and grid_shape
@@ -569,12 +597,11 @@ def execute(args):
     # Calculate the distances between the relative point groups
     LOGGER.info('Calculating Distances.')
     wave_to_land_dist, wave_to_land_id = calculate_distance(
-            we_points, landing_points)
-    land_to_grid_dist, _ = calculate_distance(
-            landing_points,  grid_point)
+        we_points, landing_points)
+    land_to_grid_dist, _ = calculate_distance(landing_points, grid_point)
 
-    def add_distance_fields_uri(
-            wave_shape_uri, ocean_to_land_dist, land_to_grid_dist):
+    def add_distance_fields_uri(wave_shape_uri, ocean_to_land_dist,
+                                land_to_grid_dist):
         """A wrapper function that adds two fields to the wave point
             shapefile: the distance from ocean to land and the
             distance from land to grid.
@@ -606,11 +633,9 @@ def execute(args):
 
             land_id = int(wave_to_land_id[iterate_feat])
 
-            feature.SetField(
-                    ocean_to_land_index,
-                    ocean_to_land_dist[iterate_feat])
-            feature.SetField(
-                    land_to_grid_index, land_to_grid_dist[land_id])
+            feature.SetField(ocean_to_land_index,
+                             ocean_to_land_dist[iterate_feat])
+            feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
             feature.SetField(id_index, land_id)
 
             iterate_feat = iterate_feat + 1
@@ -619,9 +644,8 @@ def execute(args):
             feature = None
             feature = wave_data_layer.GetNextFeature()
 
-    add_distance_fields_uri(
-            clipped_wave_shape_path, wave_to_land_dist,
-            land_to_grid_dist)
+    add_distance_fields_uri(clipped_wave_shape_path, wave_to_land_dist,
+                            land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the
@@ -636,7 +660,7 @@ def execute(args):
         """
         npv = []
         for i in range(len(time)):
-            npv.append(rho ** i * (annual_revenue[i] - annual_cost[i]))
+            npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
     def compute_npv_farm_energy_uri(wave_points_uri):
@@ -666,8 +690,7 @@ def execute(args):
             depth_index = feat_npv.GetFieldIndex('DEPTH_M')
             wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
             land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
-            captured_wave_energy_index = feat_npv.GetFieldIndex(
-                    'CAPWE_MWHY')
+            captured_wave_energy_index = feat_npv.GetFieldIndex('CAPWE_MWHY')
             npv_index = feat_npv.GetFieldIndex('NPV_25Y')
             capwe_all_index = feat_npv.GetFieldIndex('CAPWE_ALL')
             units_index = feat_npv.GetFieldIndex('UNITS')
@@ -676,13 +699,13 @@ def execute(args):
             wave_to_land = feat_npv.GetFieldAsDouble(wave_to_land_index)
             land_to_grid = feat_npv.GetFieldAsDouble(land_to_grid_index)
             captured_wave_energy = feat_npv.GetFieldAsDouble(
-                    captured_wave_energy_index)
+                captured_wave_energy_index)
             capwe_all_result = captured_wave_energy * units
             # Create a numpy array of length 25, filled with the
             # captured wave energy in kW/h. Represents the
             # lifetime of this wave farm.
-            captured_we = numpy.ones(len(time)) * (
-                    int(captured_wave_energy) * 1000.0)
+            captured_we = numpy.ones(
+                len(time)) * (int(captured_wave_energy) * 1000.0)
             # It is expected that there is no revenue from the
             # first year
             captured_we[0] = 0
@@ -691,7 +714,7 @@ def execute(args):
             install_cost = units * cap_max * capital_cost
             mooring_cost = smlpm * lenml * cml * units
             trans_cost = (wave_to_land * cul / 1000.0) + (
-                    land_to_grid * col / 1000.0)
+                land_to_grid * col / 1000.0)
             initial_cost = install_cost + mooring_cost + trans_cost
             annual_revenue = price * units * captured_we
             annual_cost = omc * captured_we * units
@@ -712,8 +735,8 @@ def execute(args):
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.debug('Creating Raster From Vector Extents')
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-            clipped_wave_shape_path, pixel_size, datatype, nodata,
-            raster_projected_path)
+        clipped_wave_shape_path, pixel_size, datatype, nodata,
+        raster_projected_path)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
 
     # Interpolate the NPV values based on the dimensions and
@@ -722,26 +745,26 @@ def execute(args):
     LOGGER.info('Generating Net Present Value Raster.')
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-            clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
+        clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
 
-    npv_out_uri = os.path.join(
-            output_dir, 'npv_usd%s.tif' % file_suffix)
+    npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-            raster_projected_path, aoi_shape_path, npv_out_uri, False)
+        raster_projected_path, aoi_shape_path, npv_out_uri, False)
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
     create_percentile_rasters(npv_out_uri, npv_rc_path, ' (US$)',
-            ' thousands of US dollars (US$)', '1', percentiles,
-            aoi_shape_path)
+                              ' thousands of US dollars (US$)', '1',
+                              percentiles, aoi_shape_path)
 
     LOGGER.debug('End of wave_energy_core.valuation')
 
-def build_point_shapefile(
-        driver_name, layer_name, path, data, prj, coord_trans):
+
+def build_point_shapefile(driver_name, layer_name, path, data, prj,
+                          coord_trans):
     """This function creates and saves a point geometry shapefile to disk.
         It specifically only creates one 'Id' field and creates as many features
         as specified in 'data'
@@ -783,6 +806,7 @@ def build_point_shapefile(
         layer.SetFeature(feat)
         feat = None
 
+
 def get_points_geometries(shape_uri):
     """This function takes a shapefile and for each feature retrieves
         the X and Y value from it's geometry. The X and Y value are stored in
@@ -807,6 +831,7 @@ def get_points_geometries(shape_uri):
 
     return numpy.array(point)
 
+
 def calculate_distance(xy_1, xy_2):
     """For all points in xy_1, this function calculates the distance
         from point xy_1 to various points in xy_2,
@@ -826,9 +851,10 @@ def calculate_distance(xy_1, xy_2):
     #For all points xy_point in xy_1 calcuate the distance from xy_point to xy_2
     #and save the shortest distance found.
     for index, xy_point in enumerate(xy_1):
-        dists = numpy.sqrt(numpy.sum((xy_point - xy_2) ** 2, axis=1))
+        dists = numpy.sqrt(numpy.sum((xy_point - xy_2)**2, axis=1))
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
     return min_dist, min_id
+
 
 def load_binary_wave_data(wave_file_uri):
     """The load_binary_wave_data function converts a pickled WW3 text file
@@ -928,13 +954,14 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
     # Convert the point from meters to geom_x/long
     reference_point_latlng = coord_trans_opposite.TransformPoint(
-            reference_point_x, reference_point_y)
+        reference_point_x, reference_point_y)
 
     # Get the size of the pixels in meters, to be used for creating rasters
     pixel_size_tuple = pixel_size_based_on_coordinate_transform(
-            ds_uri, coord_trans, reference_point_latlng)
+        ds_uri, coord_trans, reference_point_latlng)
 
     return pixel_size_tuple
+
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
@@ -951,9 +978,10 @@ def get_coordinate_transformation(source_sr, target_sr):
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
     return (coord_trans, coord_trans_opposite)
 
-def create_percentile_rasters(
-        raster_path, output_path, units_short, units_long, start_value,
-        percentile_list, aoi_shape_path):
+
+def create_percentile_rasters(raster_path, output_path, units_short,
+                              units_long, start_value, percentile_list,
+                              aoi_shape_path):
     """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
         displays the ranges provided by taking the quartile of values.
@@ -993,15 +1021,15 @@ def create_percentile_rasters(
         return bisect(percentiles, band)
 
     # Get the percentile values for each percentile
-    percentiles = calculate_percentiles_from_raster(
-        raster_path, percentile_list)
+    percentiles = calculate_percentiles_from_raster(raster_path,
+                                                    percentile_list)
 
     LOGGER.debug('percentiles_list : %s', percentiles)
 
     # Get the percentile ranges as strings so that they can be added to a output
     # table
-    percentile_ranges = create_percentile_ranges(
-            percentiles, units_short, units_long, start_value)
+    percentile_ranges = create_percentile_ranges(percentiles, units_short,
+                                                 units_long, start_value)
 
     # Add the start_value to the beginning of the percentiles so that any value
     # before the start value is set to nodata
@@ -1009,14 +1037,21 @@ def create_percentile_rasters(
 
     # Set nodata to a very small negative number
     nodata = -9999919
-    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(raster_path)
+    pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
+        raster_path)
 
     # Classify the pixels of raster_dataset into groups and write
     # then to output
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-            [raster_path], raster_percentile, output_path, gdal.GDT_Int32,
-            nodata, pixel_size, 'intersection',
-            assert_datasets_projected=False, aoi_uri=aoi_shape_path)
+        [raster_path],
+        raster_percentile,
+        output_path,
+        gdal.GDT_Int32,
+        nodata,
+        pixel_size,
+        'intersection',
+        assert_datasets_projected=False,
+        aoi_uri=aoi_shape_path)
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
@@ -1049,7 +1084,9 @@ def create_percentile_rasters(
     column_names = ['id', 'Value Range', 'Pixel Count']
     create_attribute_csv_table(attribute_table_uri, column_names, table_dict)
 
-def create_percentile_ranges(percentiles, units_short, units_long, start_value):
+
+def create_percentile_ranges(percentiles, units_short, units_long,
+                             start_value):
     """Constructs the percentile ranges as Strings, with the first
         range starting at 1 and the last range being greater than the last
         percentile mark.  Each string range is stored in a list that gets
@@ -1073,13 +1110,15 @@ def create_percentile_ranges(percentiles, units_short, units_long, start_value):
     range_first = start_value + ' - ' + str(percentiles[0]) + units_long
     range_values.append(range_first)
     for index in range(length - 1):
-        range_values.append(str(percentiles[index]) + ' - ' +
-                            str(percentiles[index + 1]) + units_short)
+        range_values.append(
+            str(percentiles[index]) + ' - ' + str(percentiles[index + 1]) +
+            units_short)
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
     range_values.append(range_last)
     LOGGER.debug('range_values : %s', range_values)
     return range_values
+
 
 def create_attribute_csv_table(attribute_table_uri, fields, data):
     """Create a new csv table from a dictionary
@@ -1116,6 +1155,7 @@ def create_attribute_csv_table(attribute_table_uri, fields, data):
         csv_writer.writerow(data[index])
 
     csv_file.close()
+
 
 def wave_power(shape_uri):
     """Calculates the wave power from the fields in the shapefile
@@ -1159,8 +1199,8 @@ def wave_power(shape_uri):
         tem = (2.0 * math.pi) / (period * alfa)
         # wave number calculation (expressed as a function of
         # wave frequency and water depth)
-        k = numpy.square(tem) / (grav * numpy.sqrt(numpy.tanh((numpy.square(tem)) *
-                                                     (depth / grav))))
+        k = numpy.square(tem) / (grav * numpy.sqrt(
+            numpy.tanh((numpy.square(tem)) * (depth / grav))))
         # Setting numpy overlow error to ignore because when numpy.sinh
         # gets a really large number it pushes a warning, but Rich
         # and Doug have agreed it's nothing we need to worry about.
@@ -1168,20 +1208,21 @@ def wave_power(shape_uri):
 
         # wave group velocity calculation (expressed as a
         # function of wave energy period and water depth)
-        wave_group_velocity = (
-            ((1 + ((2 * k * depth) / numpy.sinh(2 * k * depth))) *
-             numpy.sqrt((grav / k) * numpy.tanh(k * depth))) / 2)
+        wave_group_velocity = (((1 + (
+            (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
+                (grav / k) * numpy.tanh(k * depth))) / 2)
 
         # Reset the overflow error to print future warnings
         numpy.seterr(over='print')
 
         # wave power calculation
-        wave_pow = ((((swd * grav) / 16) * (numpy.square(height)) *
-                    wave_group_velocity) / 1000)
+        wave_pow = ((((swd * grav) / 16) *
+                     (numpy.square(height)) * wave_group_velocity) / 1000)
 
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
         feat = layer.GetNextFeature()
+
 
 def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     """Clip Shapefile Layer by second Shapefile Layer.
@@ -1216,20 +1257,23 @@ def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
     driver = ogr.GetDriverByName('ESRI Shapefile')
     ds = driver.CreateDataSource(output_path)
     input_layer_defn = input_layer.GetLayerDefn()
-    out_layer = ds.CreateLayer(input_layer_defn.GetName(), input_layer.GetSpatialRef())
+    out_layer = ds.CreateLayer(input_layer_defn.GetName(),
+                               input_layer.GetSpatialRef())
 
     input_layer.Clip(binding_layer, out_layer)
 
     # Add in a check to make sure the intersection didn't come back
     # empty
-    if(out_layer.GetFeatureCount() == 0):
-        raise IntersectionError('Intersection ERROR: clip_datasource_layer '
+    if (out_layer.GetFeatureCount() == 0):
+        raise IntersectionError(
+            'Intersection ERROR: clip_datasource_layer '
             'found no intersection between: file - %s and file - %s. This '
             'could be caused by the AOI not overlapping any Wave Energy '
             'Points. '
             'Suggestions: open workspace/intermediate/projected_wave_data.shp'
             'and the AOI to make sure AOI overlaps at least on point.' %
             (shape_to_clip_path, binding_shape_path))
+
 
 def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
@@ -1356,6 +1400,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
 
     return energy_cap
 
+
 def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
     """Adds each captured wave energy value from the dictionary
         energy_cap to a field of the shapefile wave_shape. The values are
@@ -1392,6 +1437,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
         feat = None
+
 
 def calculate_percentiles_from_raster(raster_uri, percentiles):
     """Does a memory efficient sort to determine the percentiles
@@ -1442,7 +1488,8 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
         # Read in raster chunk as array
         arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
 
-        tmp_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename()
+        tmp_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
+        )
         tmp_file = open(tmp_uri, 'wb')
         # Make array one dimensional for sorting and saving
         arr = arr.flatten()
@@ -1464,7 +1511,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     rank_list = []
     # For each percentile calculate nearest rank
     for perc in percentiles:
-        rank = math.ceil(perc/100.0 * n_elements)
+        rank = math.ceil(perc / 100.0 * n_elements)
         rank_list.append(int(rank))
 
     # A variable to burn through when doing heapq merge sort over the
@@ -1486,6 +1533,7 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     band = None
     raster = None
     return results
+
 
 def count_pixels_groups(raster_uri, group_values):
     """Does a pixel count for each value in 'group_values' over the
@@ -1512,6 +1560,7 @@ def count_pixels_groups(raster_uri, group_values):
             pixel_count[index] += numpy.count_nonzero(count_mask)
 
     return pixel_count
+
 
 def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     """Get width and height of cell in meters.
@@ -1612,12 +1661,9 @@ def validate(args, limit_to=None):
     warnings = []
     keys_missing_value = []
     missing_keys = []
-    for required_key in ('workspace_dir',
-                         'wave_base_data_path',
-                         'analysis_area_path',
-                         'machine_perf_path',
-                         'machine_param_path',
-                         'dem_path'):
+    for required_key in ('workspace_dir', 'wave_base_data_path',
+                         'analysis_area_path', 'machine_perf_path',
+                         'machine_param_path', 'dem_path'):
         try:
             if args[required_key] in ('', None):
                 keys_missing_value.append(required_key)
@@ -1633,18 +1679,15 @@ def validate(args, limit_to=None):
 
     if limit_to in ('wave_base_data_path', None):
         if not os.path.isdir(args['wave_base_data_path']):
-            warnings.append((
-                ['wave_base_data_path'],
-                'Parameter not found or is not a folder.'))
+            warnings.append((['wave_base_data_path'],
+                             'Parameter not found or is not a folder.'))
 
     if limit_to in ('analysis_area_path', None):
         if args['analysis_area_path'] not in (
                 "West Coast of North America and Hawaii",
                 "East Coast of North America and Puerto Rico",
                 "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution",
-                "Australia",
-                "Global"):
+                "North Sea 10 meter resolution", "Australia", "Global"):
             warnings.append((['analysis_area_path'],
                              'Parameter must be a known analysis area.'))
 
@@ -1656,9 +1699,8 @@ def validate(args, limit_to=None):
                     layer = vector.GetLayer()
                     geometry_type = layer.GetGeomType()
                     if geometry_type != ogr.wkbPolygon:
-                        warnings.append((
-                            ['aoi_path'],
-                            'Vector must contain only polygons.'))
+                        warnings.append((['aoi_path'],
+                                         'Vector must contain only polygons.'))
                     srs = layer.GetSpatialRef()
                     units = srs.GetLinearUnitsName().lower()
                     if units not in ('meter', 'metre'):
@@ -1667,26 +1709,27 @@ def validate(args, limit_to=None):
 
                     datum = srs.GetAttrValue('DATUM')
                     if datum != 'WGS_1984':
-                        warnings.append((
-                            ['aoi_path'],
-                            'Vector must use the WGS_1984 datum.'))
+                        warnings.append(
+                            (['aoi_path'],
+                             'Vector must use the WGS_1984 datum.'))
         except KeyError:
             # Parameter is not required.
             pass
 
-    for csv_key, required_fields in (
-            ('machine_perf_path', set([])),
-            ('machine_param_path', set(['name', 'value', 'note'])),
-            ('land_gridPts_path',
-             set(['id', 'type', 'lat', 'long', 'location'])),
-            ('machine_econ_path', set(['name', 'value', 'note']))):
+    for csv_key, required_fields in (('machine_perf_path', set(
+        [])), ('machine_param_path', set(
+            ['name', 'value',
+             'note'])), ('land_gridPts_path',
+                         set(['id', 'type', 'lat', 'long', 'location'])),
+                                     ('machine_econ_path',
+                                      set(['name', 'value', 'note']))):
         try:
             reader = csv.reader(open(args[csv_key]))
             headers = set([field.lower() for field in reader.next()])
             missing_fields = required_fields - headers
             if len(missing_fields) > 0:
-                warnings.append('CSV is missing columns :%s' %
-                                ', '.join(sorted(missing_fields)))
+                warnings.append('CSV is missing columns :%s' % ', '.join(
+                    sorted(missing_fields)))
         except KeyError:
             # Not all these are required inputs.
             pass
@@ -1699,10 +1742,10 @@ def validate(args, limit_to=None):
         with utils.capture_gdal_logging():
             raster = gdal.OpenEx(args['dem_path'])
         if raster is None:
-            warnings.append((
-                ['dem_path'],
-                ('Parameter must be a filepath to a GDAL-compatible '
-                 'raster file.')))
+            warnings.append(
+                (['dem_path'],
+                 ('Parameter must be a filepath to a GDAL-compatible '
+                  'raster file.')))
 
     if limit_to in ('number_of_machines', None):
         try:
@@ -1721,8 +1764,7 @@ def validate(args, limit_to=None):
         if 'valuation_container' in args:
             missing_keys = []
             keys_with_no_value = []
-            for required_key in ('land_gridPts_path',
-                                 'machine_econ_path',
+            for required_key in ('land_gridPts_path', 'machine_econ_path',
                                  'number_of_machines'):
                 try:
                     if args[required_key] in ('', None):
