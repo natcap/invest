@@ -788,10 +788,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.execute(args)
 
         # Make sure the output files were created.
-        vector_results = ['wind_energy_points.shp']
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
+        vector_path = 'wind_energy_points.shp'
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'output', vector_path)))
 
         # Run through the model again, which should mean deleting
         # shapefiles that have already been made, but which need
@@ -800,6 +799,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         # For testing, just check to make sure the output files
         # were created again.
-        for vector_path in vector_results:
-            self.assertTrue(os.path.exists(
-                os.path.join(args['workspace_dir'], 'output', vector_path)))
+        vector_path = 'wind_energy_points.shp'
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'output', vector_path)))
