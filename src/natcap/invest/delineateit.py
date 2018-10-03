@@ -5,7 +5,10 @@ import logging
 
 from osgeo import gdal
 from osgeo import ogr
+import numpy
 import natcap.invest.pygeoprocessing_0_3_3.routing
+import pygeoprocessing
+import pygeoprocessing.routing
 
 from . import utils
 from . import validation
@@ -77,6 +80,96 @@ def execute(args):
         dem_uri, outlet_shapefile_uri, snap_distance,
         flow_threshold, watershed_out_uri,
         snapped_outlet_points_uri, stream_out_uri)
+
+
+def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
+                                  snap_distance, snapped_points_vector_path):
+
+    points_vector = gdal.OpenEx(points_vector_path, gdal.OF_VECTOR)
+    points_layer = points_vector.GetLayer()
+
+    stream_raster_info = pygeoprocessing.get_raster_info(
+        stream_raster_path_band[0])
+    geotransform = stream_raster_info['geotransform']
+    n_cols, n_rows = stream_raster_info['raster_size']
+    stream_raster = gdal.OpenEx(stream_raster_path_band[0], gdal.OF_RASTER)
+    stream_band = stream_raster.GetRasterBand(stream_raster_path_band[1])
+
+    # TODO: try doing this with GPKG instead
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
+                                   gdal.GDT_Unknown)
+    snapped_layer = snapped_vector.CreateLayer(
+        'snapped', points_layer.GetSpatialRef(), ogr.wkbPoint)
+
+    # TODO: handle snap_distance of 0
+    # TODO: handle snap_distance < 0
+
+    for point_feature in points_layer:
+        point_geometry = point_feature.GetGeometryRef()
+        point = point_geometry.GetPoint()
+        x_index = (point[0] - geotransform[0]) // geotransform[1]
+        y_index = (point[1] - geotransform[3]) // geotransform[5]
+        if (x_index < 0 or x_index >= n_cols or
+                y_index < 0 or y_index > n_rows):
+            LOGGER.warn('Encountered a point that was outside the bounds of '
+                        'the stream raster: %s', point_geometry)
+            continue
+
+        if snap_distance > 0:
+            x_center = x_index
+            y_center = y_index
+            x_left = x_index - snap_distance
+            if x_left < 0:
+                x_left = 0
+            y_top = y_index - snap_distance
+            if y_top < 0:
+                y_top = 0
+            x_right = x_index + snap_distance
+            if x_right >= n_cols:
+                x_right = n_cols - 1
+            y_bottom = y_index + snap_distance
+            if y_bottom >= n_rows:
+                y_bottom = n_rows - 1
+
+            # snap to the nearest stream pixel out to the snap distance
+            stream_window = stream_band.ReadAsArray(
+                int(x_left), int(y_top), int(x_right - x_left),
+                int(y_bottom - y_top))
+            row_indexes, col_indexes = numpy.nonzero(
+                stream_window == 1)
+            if row_indexes.size > 0:
+                # Calculate euclidean distance for sorting
+                distance_array = (
+                    (row_indexes - stream_window.shape[0] / 2) ** 2 +
+                    (col_indexes - stream_window.shape[1] / 2) ** 2) ** 0.5
+
+                # Find the closest stream pixel that meets the distance
+                # requirement.
+                min_index = numpy.argmin(distance_array)
+                min_row = row_indexes[min_index]
+                min_col = col_indexes[min_index]
+                offset_row = min_row - (y_center - y_top)
+                offset_col = min_col - (x_center - x_left)
+
+                y_index += offset_row
+                x_index += offset_col
+
+            point_geometry = ogr.Geometry(ogr.wkbPoint)
+            point_geometry.AddPoint(
+                geotransform[0] + (x_index + 0.5) * geotransform[1],
+                geotransform[3] + (y_index + 0.5) * geotransform[5])
+
+            # Get the output Layer's Feature Definition
+            snapped_point_feature = point_feature.Clone()
+            snapped_point_feature.SetGeometry(point_geometry)
+
+            snapped_layer.CreateFeature(snapped_point_feature)
+    snapped_layer = None
+    snapped_vector = None
+
+    points_layer = None
+    points_vector = None
 
 
 @validation.invest_validator
