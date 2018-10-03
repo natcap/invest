@@ -267,8 +267,12 @@ def execute(args):
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(
-            analysis_area_points_path, clipped_wave_shape_path)
+        if os.path.isfile(clipped_wave_shape_path):
+            os.remove(clipped_wave_shape_path)
+        analysis_area_vector = gdal.OpenEx(
+            analysis_area_points_path, gdal.OF_VECTOR)
+        drv = gdal.GetDriverByName('ESRI Shapefile')
+        drv.CreateCopy(clipped_wave_shape_path, analysis_area_vector)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = (
