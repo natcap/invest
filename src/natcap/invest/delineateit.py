@@ -103,6 +103,14 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     snapped_layer = snapped_vector.CreateLayer(
         'snapped', points_layer.GetSpatialRef(), ogr.wkbPoint)
 
+    for index in range(points_layer.GetLayerDefn().GetFieldCount()):
+        field_defn = points_layer.GetLayerDefn().GetFieldDefn(index)
+        field_type = field_defn.GetType()
+
+        if field_type in (ogr.OFTInteger, ogr.OFTReal):
+            field_defn.SetWidth(24)
+        snapped_layer.CreateField(field_defn)
+
     # TODO: handle snap_distance of 0
     # TODO: handle snap_distance < 0
 
@@ -114,7 +122,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         if (x_index < 0 or x_index >= n_cols or
                 y_index < 0 or y_index > n_rows):
             LOGGER.warn('Encountered a point that was outside the bounds of '
-                        'the stream raster: %s', point_geometry)
+                        'the stream raster: %s', point)
             continue
 
         if snap_distance > 0:
