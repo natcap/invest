@@ -241,10 +241,6 @@ def execute(args):
     # Set nodata value and target_pixel_type for new rasters
     nodata = float(numpy.finfo(numpy.float32).min) + 1.0
     target_pixel_type = gdal.GDT_Float32
-    # Since the global dem is the finest resolution we get as an input,
-    # use its pixel sizes as the sizes for the new rasters. We will need the
-    # geotranform to get this information later
-    dem_gt = pygeoprocessing.get_raster_info(dem_path)['geotransform']
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
@@ -272,10 +268,10 @@ def execute(args):
 
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
-        mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+        # mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
         dem_wkt = pygeoprocessing.get_raster_info(dem_path)['projection']
         LOGGER.debug('Pixel size of the DEM : %f\nProjection of the DEM : %s' %
-                     (mean_pixel_size, dem_wkt))
+                     (pixel_size, dem_wkt))
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
