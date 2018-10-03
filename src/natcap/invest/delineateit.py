@@ -84,6 +84,7 @@ def execute(args):
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):
+    # TODO: verify it's a path/band tuple.
 
     points_vector = gdal.OpenEx(points_vector_path, gdal.OF_VECTOR)
     points_layer = points_vector.GetLayer()
