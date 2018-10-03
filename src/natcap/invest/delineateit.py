@@ -128,18 +128,10 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         if snap_distance > 0:
             x_center = x_index
             y_center = y_index
-            x_left = x_index - snap_distance
-            if x_left < 0:
-                x_left = 0
-            y_top = y_index - snap_distance
-            if y_top < 0:
-                y_top = 0
-            x_right = x_index + snap_distance
-            if x_right >= n_cols:
-                x_right = n_cols - 1
-            y_bottom = y_index + snap_distance
-            if y_bottom >= n_rows:
-                y_bottom = n_rows - 1
+            x_left = max(x_index - snap_distance, 0)
+            y_top = max(y_index - snap_distance, 0)
+            x_right = min(x_index + snap_distance, n_cols)
+            y_bottom = min(y_index + snap_distance, n_rows)
 
             # snap to the nearest stream pixel out to the snap distance
             stream_window = stream_band.ReadAsArray(
