@@ -223,12 +223,6 @@ def execute(args):
     clipped_wave_vector_path = os.path.join(
         intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
-    # Intermediate paths for wave energy and wave power rasters
-    wave_energy_unclipped_path = os.path.join(
-        intermediate_dir, 'capwe_mwh_unclipped%s.tif' % file_suffix)
-    wave_power_unclipped_path = os.path.join(
-        intermediate_dir, 'wp_kw_unclipped%s.tif' % file_suffix)
-
     # Final output paths for wave energy and wave power rasters
     wave_energy_path = os.path.join(output_dir,
                                     'capwe_mwh%s.tif' % file_suffix)
@@ -463,29 +457,21 @@ def execute(args):
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_energy_unclipped_path, pixel_size,
+        aoi_vector_path, wave_energy_path, pixel_size,
         target_pixel_type, nodata)
 
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_power_unclipped_path, pixel_size,
+        aoi_vector_path, wave_power_path, pixel_size,
         target_pixel_type, nodata)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'CAPWE_MWHY',
-                                       (wave_energy_unclipped_path, 1), 'near')
+                                       (wave_energy_path, 1), 'near')
 
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'WE_kWM',
-                                       (wave_power_unclipped_path, 1), 'near')
-
-    # Clip the wave energy and wave power rasters so that they are confined
-    # to the AOI
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        wave_power_unclipped_path, aoi_vector_path, wave_power_path, False)
-
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        wave_energy_unclipped_path, aoi_vector_path, wave_energy_path, False)
+                                       (wave_power_path, 1), 'near')
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
