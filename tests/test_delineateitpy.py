@@ -4,6 +4,8 @@ import tempfile
 import shutil
 import os
 
+import shapely.wkt
+import shapely.wkb
 from shapely.geometry import Point
 import numpy
 from osgeo import osr
@@ -91,7 +93,7 @@ class DelineateItTests(unittest.TestCase):
                 {'foo': 1, 'bar': 1.1},
                 {'foo': 2, 'bar': 2.1},
                 {'foo': 3, 'bar': 3.1}],
-        filename=source_points_path)
+            filename=source_points_path)
 
         snap_distance = 10  # large enough to get multiple streams per point.
         snapped_points_path = os.path.join(self.workspace_dir,
@@ -105,8 +107,26 @@ class DelineateItTests(unittest.TestCase):
         snapped_points_layer = snapped_points_vector.GetLayer()
         self.assertEqual(3, snapped_points_layer.GetFeatureCount())
 
-        # need to assert the locations of output points, that fields are
-        # copied.
+        expected_geometries_and_fields = [
+            (Point(5, -5), {'foo': 1, 'bar': 1.1}),
+            (Point(3, -9), {'foo': 2, 'bar': 2.1}),
+            (Point(13, -11), {'foo': 3, 'bar': 3.1}),
+        ]
+        for feature, (expected_geom, expected_fields) in zip(
+                snapped_points_layer, expected_geometries_and_fields):
+            shapely_feature = shapely.wkb.loads(
+                feature.GetGeometryRef().ExportToWkb())
+
+            print(shapely.wkt.dumps(shapely_feature),
+                  shapely.wkt.dumps(expected_geom))
+            self.assertTrue(shapely_feature.equals(expected_geom))
+
+            for expected_key, expected_value in expected_fields.iteritems():
+                field_value = feature.GetField(expected_key)
+                if field_value is None:
+                    self.fail("field %s expected in output vector" %
+                              expected_key)
+                self.assertEquals(expected_value, field_value)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
