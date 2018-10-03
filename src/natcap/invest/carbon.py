@@ -198,7 +198,7 @@ def execute(args):
     # TODO: left off here for pgp 1.0 conversion
 
     # Sum the individual carbon storage pool paths per scenario
-    # sum_rasters_tasks = []
+    sum_rasters_tasks = []
     for scenario_type, storage_path_list in (
             pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
@@ -209,8 +209,9 @@ def execute(args):
         _sum_rasters,
         args=(storage_path_list, file_registry[output_key]),
         target_path_list=[file_registry[output_key]],
+        dependent_task_list=carbon_map_tasks,
         task_name='sum_rasters_for_total_c_%s' % output_key)
-        # sum_rasters_tasks.append(sum_rasters_task)
+        sum_rasters_tasks.append(sum_rasters_task)
         sum_rasters_task.join()
         # _sum_rasters(storage_path_list, file_registry[output_key])
 
@@ -223,6 +224,7 @@ def execute(args):
     # [srt.join() for srt in sum_rasters_tasks]
 
     # calculate sequestration
+    diff_rasters_tasks = []
     for fut_type in ['fut', 'redd']:
         if fut_type not in valid_scenarios:
             continue
@@ -235,8 +237,9 @@ def execute(args):
         _diff_rasters,
         args=(storage_path_list, file_registry[output_key]),
         target_path_list=[file_registry[output_key]],
+        dependent_task_list=sum_rasters_tasks,
         task_name='diff_rasters_for_%s' % output_key)
-        # sum_rasters_tasks.append(sum_rasters_task)
+        diff_rasters_tasks.append(diff_rasters_task)
         diff_rasters_task.join()
 
         # _diff_rasters(storage_path_list, file_registry[output_key])
@@ -265,6 +268,7 @@ def execute(args):
             args=(file_registry['delta_cur_%s' % scenario_type],
                 valuation_constant, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
+            dependent_task_list=diff_rasters_tasks,
             task_name='calculate_%s' % output_key)
             # sum_rasters_tasks.append(sum_rasters_task)
             calculate_npv_task.join()
