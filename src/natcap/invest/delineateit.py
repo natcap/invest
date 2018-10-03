@@ -14,7 +14,17 @@ from . import utils
 from . import validation
 
 
-LOGGER = logging.getLogger('natcap.invest.routing.delineateit')
+LOGGER = logging.getLogger(__name__)
+
+_OUTPUT_FILES = {
+    'filled_dem': 'filled_dem.tif',
+    'flow_dir_d8': 'flow_direction.tif',
+    'flow_accumulation': 'flow_accumulation.tif',
+    'streams': 'streams.tif',
+    'snapped_outlets': 'snapped_outlets.shp',
+    'watershed_fragments': 'watershed_fragments.gpkg',
+    'watersheds': 'watersheds.gpkg',
+}
 
 
 def execute(args):
@@ -60,26 +70,58 @@ def execute(args):
         None
     """
     output_directory = args['workspace_dir']
-    LOGGER.info('creating directory %s', output_directory)
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_directory])
-    file_suffix = utils.make_suffix_string(args, 'suffix')
+    utils.make_directories([output_directory])
 
-    dem_uri = args['dem_uri']
-    outlet_shapefile_uri = args['outlet_shapefile_uri']
+    file_suffix = utils.make_suffix_string(args, 'suffix')
+    file_registry = utils.build_file_registry(
+        [output_directory, _OUTPUT_FILES], file_suffix)
+
     snap_distance = int(args['snap_distance'])
     flow_threshold = int(args['flow_threshold'])
 
-    snapped_outlet_points_uri = os.path.join(
-        output_directory, 'snapped_outlets%s.shp' % file_suffix)
-    watershed_out_uri = os.path.join(
-        output_directory, 'watersheds%s.shp' % file_suffix)
-    stream_out_uri = os.path.join(
-        output_directory, 'stream%s.tif' % file_suffix)
+    pygeoprocessing.routing.fill_pits(
+        args['dem_uri'], file_registry['filled_dem'],
+        working_dir=output_directory)
 
-    natcap.invest.pygeoprocessing_0_3_3.routing.delineate_watershed(
-        dem_uri, outlet_shapefile_uri, snap_distance,
-        flow_threshold, watershed_out_uri,
-        snapped_outlet_points_uri, stream_out_uri)
+    pygeoprocessing.flow_dir_d8(
+        (file_registry['filled_dem'], 1), file_registry['flow_dir_d8'],
+        working_dir=output_directory)
+
+    pygeoprocessing.flow_accumulation_d8(
+        (file_registry['flow_dir_d8'], 1), file_registry['flow_accumulation'])
+
+    def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
+        out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.int8)
+        out_matrix[:] = out_nodata
+        valid_pixels = ~numpy.isclose(src_nodata, flow_accum)
+        over_threshold = flow_accum > threshold
+        out_matrix[valid_pixels & over_threshold] = 1
+        out_matrix[valid_pixels & ~over_threshold] = 0
+        return out_matrix
+
+    flow_accum_info = pygeoprocessing.get_raster_info(
+        file_registry['flow_accumulation_d8'])
+    out_nodata = 255
+    pygeoprocessing.raster_calculator(
+        [(file_registry['flow_accumulation_d8'], 1),
+         (flow_accum_info['nodata'], 'raw'),
+         (out_nodata, 'raw'), (flow_threshold, 'raw')],
+        _threshold_streams, file_registry['streams'],
+        gdal.GDT_Byte, out_nodata)
+
+    snap_points_to_nearest_stream(
+        args['outlet_shapefile_uri'], (file_registry['streams'], 1),
+        snap_distance, file_registry['snapped_outlets'])
+
+    pygeoprocessing.routing.delineate_watersheds(
+        (file_registry['flow_dir_d8'], 1),
+        file_registry['snapped_outlets'],
+        file_registry['watershed_fragments'],
+        working_dir=output_directory)
+
+    pygeoprocessing.routing.join_watershed_fragments(
+        file_registry['watershed_fragments'],
+        file_regsitry['watersheds'])
 
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
