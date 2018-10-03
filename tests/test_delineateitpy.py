@@ -78,7 +78,7 @@ class DelineateItTests(unittest.TestCase):
             filename=stream_raster_path)
 
         source_points_path = os.path.join(self.workspace_dir,
-                                          'source_points.shp')
+                                          'source_points.geojson')
         source_points = [
             Point(-1, -1),  # off the edge of the stream raster.
             Point(3, -5),
@@ -87,7 +87,7 @@ class DelineateItTests(unittest.TestCase):
         pygeoprocessing.testing.create_vector_on_disk(
             source_points, wkt,
             fields={'foo': 'int',
-                    'bar': 'real'},
+                    'bar': 'string'},
             attributes=[
                 {'foo': 0, 'bar': 0.1},
                 {'foo': 1, 'bar': 1.1},
@@ -108,25 +108,17 @@ class DelineateItTests(unittest.TestCase):
         self.assertEqual(3, snapped_points_layer.GetFeatureCount())
 
         expected_geometries_and_fields = [
-            (Point(5, -5), {'foo': 1, 'bar': 1.1}),
-            (Point(3, -9), {'foo': 2, 'bar': 2.1}),
-            (Point(13, -11), {'foo': 3, 'bar': 3.1}),
+            (Point(5, -5), {'foo': 1, 'bar': '1.1'}),
+            (Point(5, -9), {'foo': 2, 'bar': '2.1'}),
+            (Point(13, -11), {'foo': 3, 'bar': '3.1'}),
         ]
         for feature, (expected_geom, expected_fields) in zip(
                 snapped_points_layer, expected_geometries_and_fields):
             shapely_feature = shapely.wkb.loads(
                 feature.GetGeometryRef().ExportToWkb())
 
-            print(shapely.wkt.dumps(shapely_feature),
-                  shapely.wkt.dumps(expected_geom))
             self.assertTrue(shapely_feature.equals(expected_geom))
-
-            for expected_key, expected_value in expected_fields.iteritems():
-                field_value = feature.GetField(expected_key)
-                if field_value is None:
-                    self.fail("field %s expected in output vector" %
-                              expected_key)
-                self.assertEquals(expected_value, field_value)
+            self.assertEqual(expected_fields, feature.items())
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
