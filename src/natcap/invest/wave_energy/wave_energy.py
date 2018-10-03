@@ -248,12 +248,8 @@ def execute(args):
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_vector = gdal.OpenEx(
-        analysis_area_points_path, gdal.OF_VECTOR)
-    analysis_area_layer = analysis_area_vector.GetLayer(0)
-    analysis_area_sr = analysis_area_layer.GetSpatialRef()
-    analysis_area_layer = None
-    analysis_area_vector = None
+
+    analysis_area_sr = get_vector_spatial_ref(analysis_area_points_path)
 
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
@@ -269,20 +265,22 @@ def execute(args):
         # not corrupted
         if os.path.isfile(clipped_wave_shape_path):
             os.remove(clipped_wave_shape_path)
-        analysis_area_vector = gdal.OpenEx(
-            analysis_area_points_path, gdal.OF_VECTOR)
+        analysis_area_vector = gdal.OpenEx(analysis_area_points_path,
+                                           gdal.OF_VECTOR)
         drv = gdal.GetDriverByName('ESRI Shapefile')
         drv.CreateCopy(clipped_wave_shape_path, analysis_area_vector)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_size = (
-            float(dem_gt[1]) + numpy.absolute(float(dem_gt[5]))) / 2.0
-        LOGGER.debug('Pixel size in meters : %f', pixel_size)
+        pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
+        mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+        dem_projection = pygeoprocessing.get_raster_info(dem_path)[
+            'projection']
+        LOGGER.debug('Pixel size of the DEM : %f\nProjection of the DEM : %s' %
+                     (mean_pixel_size, dem_projection))
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            analysis_area_extract_path)
+        aoi_sr = get_vector_spatial_ref(analysis_area_extract_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
     else:
@@ -966,6 +964,22 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
     return pixel_size_tuple
 
+def get_vector_spatial_ref(base_vector_path):
+    """Get the spatial reference of an OGR vector (datasource).
+
+    Parameters:
+        base_vector_path (string): a path to an ogr vector
+
+    Returns:
+        spat_ref: a spatial reference
+
+    """
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    layer = vector.GetLayer(0)
+    spat_ref = layer.GetSpatialRef()
+    layer = None
+    vector = None
+    return spat_ref
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
