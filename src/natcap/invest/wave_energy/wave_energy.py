@@ -127,34 +127,30 @@ def execute(args):
 
     # Check if x and y dimensions of the bin_matrix array equal the size of
     # heights and periods
-    machine_perf_format = [['Hs(m)/Tp(sec)', '0.0', '3.0', '4.0', '...'],
-                           ['0.1', '0. ', '0. ', '0. ', '...'],
-                           ['0.5', '0. ', '0. ', '0. ', '...'], ['...']]
     if machine_perf_dict['bin_matrix'].shape != (
             machine_perf_dict['heights'].size,
             machine_perf_dict['periods'].size):
-        machine_perf_format = [['Hs(m)/Tp(sec)', '0.0', '3.0', '4.0', '...'],
-                               ['0.1', '0. ', '0. ', '0. ', '...'],
-                               ['0.5', '0. ', '0. ', '0. ', '...'], ['...']]
         raise ValueError(
-            'Please make sure all values are entered in the Machine '
-            'Performance Table. The format should be:\n%s' %
-            machine_perf_format)
+            'Please make sure all values are entered properly in the Machine '
+            'Performance Table.')
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    import pdb
-    pdb.set_trace()
-
-    # Create a dictionary whose keys are the 'NAMES' from the machine parameter
-    # table and whose values are from the corresponding 'VALUES' field.
+    # Create a dictionary whose keys are the 'NAME' from the machine parameter
+    # table and whose values are from the corresponding 'VALUE' field.
     machine_param_dict = {}
-    machine_param_file = open(args['machine_param_path'], 'rU')
-    reader = csv.DictReader(machine_param_file)
-    for row in reader:
-        row_name = row['NAME'].strip().lower()
-        machine_param_dict[row_name] = row['VALUE']
-    machine_param_file.close()
+    machine_param_data = pandas.read_csv(
+        args['machine_param_path'], index_col=0)
+    machine_param_data.columns = machine_param_data.columns.str.lower()
+    if 'value' not in machine_param_data.columns:
+        raise ValueError('Please make sure that the "VALUE" column is in the '
+                         'Machine Parameters Table.')
+    # remove underscore from the keys and make them lowercased
+    machine_param_data.index = machine_param_data.index.str.strip()
+    machine_param_data.index = machine_param_data.index.str.lower()
+    machine_param_dict = machine_param_data.to_dict('index')
+    for key in machine_param_dict.keys():
+        machine_param_dict[key] = machine_param_dict[key]['value']
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
