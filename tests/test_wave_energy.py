@@ -228,7 +228,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result_id, expected_result_id):
             self.assertEqual(res, exp_res)
 
-    def test_clip_datasource_layer_polygons(self):
+    def test_clip_vector_layer_polygons(self):
         """WaveEnergy: testing clipping polygons from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
@@ -237,13 +237,13 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                     'Global_extract.shp')
 
         result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
-        wave_energy.clip_datasource_layer(aoi_path, extract_path, result_path)
+        wave_energy.clip_vector_layer(aoi_path, extract_path, result_path)
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
         pygeoprocessing.testing.assert_vectors_equal(result_path,
                                                      expected_path, 1e-6)
 
-    def test_clip_datasource_layer_points(self):
+    def test_clip_vector_layer_points(self):
         """WaveEnergy: testing clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
@@ -302,7 +302,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
-        wave_energy.clip_datasource_layer(shape_to_clip_uri, binding_shape_uri,
+        wave_energy.clip_vector_layer(shape_to_clip_uri, binding_shape_uri,
                                           output_path)
 
         # Create the expected point shapefile
@@ -332,7 +332,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                                      expected_shape, 1e-6)
 
     def test_clip_datasouce_layer_no_intersection(self):
-        """WaveEnergy: testing 'clip_datasource_layer' w/ no intersection."""
+        """WaveEnergy: testing 'clip_vector_layer' w/ no intersection."""
         from natcap.invest.wave_energy import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -378,7 +378,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
-                          wave_energy.clip_datasource_layer, shape_to_clip_uri,
+                          wave_energy.clip_vector_layer, shape_to_clip_uri,
                           binding_shape_uri, output_path)
 
     def test_create_attribute_csv_table(self):

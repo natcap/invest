@@ -300,7 +300,7 @@ def execute(args):
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
-        clip_datasource_layer(projected_wave_shape_path, aoi_shape_path,
+        clip_vector_layer(projected_wave_shape_path, aoi_shape_path,
                               clipped_wave_shape_path)
 
         aoi_proj_uri = os.path.join(intermediate_dir,
@@ -323,7 +323,7 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_datasource_layer(aoi_proj_uri, analysis_area_extract_path,
+        clip_vector_layer(aoi_proj_uri, analysis_area_extract_path,
                               aoi_clipped_to_extract_uri)
 
         aoi_clip_proj_uri = os.path.join(
@@ -1251,55 +1251,54 @@ def wave_power(shape_uri):
         feat = layer.GetNextFeature()
 
 
-def clip_datasource_layer(shape_to_clip_path, binding_shape_path, output_path):
+def clip_vector_layer(base_vector_path, clip_vector_path, target_clipped_vector_path):
     """Clip Shapefile Layer by second Shapefile Layer.
 
     Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
     inherits the projection and fields from the original Shapefile.
 
     Parameters:
-        shape_to_clip_path (string): a path to a Shapefile on disk. This is
+        base_vector_path (string): a path to a Shapefile on disk. This is
             the Layer to clip. Must have same spatial reference as
-            'binding_shape_path'.
-        binding_shape_path (string): a path to a Shapefile on disk. This is
+            'clip_vector_path'.
+        clip_vector_path (string): a path to a Shapefile on disk. This is
             the Layer to clip to. Must have same spatial reference as
-            'shape_to_clip_path'
-        output_path (string): a path on disk to write the clipped Shapefile
+            'base_vector_path'
+        target_clipped_vector_path (string): a path on disk to write the clipped Shapefile
             to. Should end with a '.shp' extension.
 
     Returns:
-        Nothing
+        None
+
     """
 
-    if os.path.isfile(output_path):
+    if os.path.isfile(target_clipped_vector_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(output_path)
+        driver.DeleteDataSource(target_clipped_vector_path)
 
-    shape_to_clip = gdal.OpenEx(shape_to_clip_path)
-    binding_shape = gdal.OpenEx(binding_shape_path)
+    base_vector = gdal.OpenEx(base_vector_path)
+    clip_vector = gdal.OpenEx(clip_vector_path)
 
-    input_layer = shape_to_clip.GetLayer()
-    binding_layer = binding_shape.GetLayer()
+    base_layer = base_vector.GetLayer()
+    clip_layer = clip_vector.GetLayer()
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    ds = driver.CreateDataSource(output_path)
-    input_layer_defn = input_layer.GetLayerDefn()
-    out_layer = ds.CreateLayer(input_layer_defn.GetName(),
-                               input_layer.GetSpatialRef())
+    target_vector = driver.CreateDataSource(target_clipped_vector_path)
+    base_layer_defn = base_layer.GetLayerDefn()
+    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
+                                             base_layer.GetSpatialRef())
 
-    input_layer.Clip(binding_layer, out_layer)
+    base_layer.Clip(clip_layer, target_layer)
 
-    # Add in a check to make sure the intersection didn't come back
-    # empty
-    if (out_layer.GetFeatureCount() == 0):
+    # Add in a check to make sure the intersection didn't come back empty
+    if target_layer.GetFeatureCount() == 0:
         raise IntersectionError(
-            'Intersection ERROR: clip_datasource_layer '
-            'found no intersection between: file - %s and file - %s. This '
-            'could be caused by the AOI not overlapping any Wave Energy '
-            'Points. '
+            'Intersection ERROR: found no intersection between: file - %s and '
+            'file - %s. This could be caused by the AOI not overlapping any '
+            'Wave Energy Points.\n'
             'Suggestions: open workspace/intermediate/projected_wave_data.shp'
             'and the AOI to make sure AOI overlaps at least on point.' %
-            (shape_to_clip_path, binding_shape_path))
+            (base_vector_path, clip_vector_path))
 
 
 def wave_energy_interp(wave_data, machine_perf):
