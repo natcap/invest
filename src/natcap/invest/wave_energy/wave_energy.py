@@ -293,7 +293,8 @@ def execute(args):
 
         # Set the wave data shapefile to the same projection as the
         # area of interest
-        aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)['projection']
+        aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
+            'projection']
         pygeoprocessing.reproject_vector(analysis_area_points_path, aoi_wkt,
                                          projected_wave_shape_path)
 
@@ -315,7 +316,8 @@ def execute(args):
                                          aoi_proj_vector_path)
 
         aoi_clipped_to_extract_path = os.path.join(
-            intermediate_dir, 'aoi_clipped_to_extract_path%s.shp' % file_suffix)
+            intermediate_dir,
+            'aoi_clipped_to_extract_path%s.shp' % file_suffix)
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
@@ -326,8 +328,8 @@ def execute(args):
             intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
 
         # Reproject the clipped AOI back
-        pygeoprocessing.reproject_vector(
-            aoi_clipped_to_extract_path, aoi_wkt, aoi_clip_proj_vector_path)
+        pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
+                                         aoi_clip_proj_vector_path)
 
         aoi_vector_path = aoi_clip_proj_vector_path
 
@@ -351,15 +353,16 @@ def execute(args):
     # from the raster DEM
     LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
 
-    def index_values_to_points(
-            base_point_vector_path, base_raster_path, field_name, coord_trans):
+    def index_values_to_points(base_point_vector_path, base_raster_path,
+                               field_name, coord_trans):
         """Add the values of a raster based the point features of a vector.
 
-        Values are recorded in the attribute field of the point vector.
+        Values are recorded in the attribute field of the vector. If a value is
+        larger than or equal to 0, the feature will be deleted.
 
         Parameters:
             base_point_vector_path (string): a path to an ogr point shapefile
-            base_raster_path(string): a path to a gdal dataset
+            base_raster_path(string): a path to a GDAL dataset
             field_name (string): the name of the new field that will be
                 added to the point feature
             coord_trans (osr.CoordinateTransformation): a coordinate
@@ -371,16 +374,17 @@ def execute(args):
 
         """
         # NOTE: This function is a wrapper function so that we can handle
-        # datasets / datasource by passing paths. This function lacks memory
+        # raster / vector by passing paths. This function lacks memory
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
-        tmp_raster_path = os.path.join(
-            intermediate_dir, os.path.basename(base_raster_path).replace(
-                '.tif', '_tmp%s.tif') % file_suffix)
 
         base_vector = gdal.OpenEx(base_point_vector_path, 1)
-        dem_gt = pygeoprocessing.get_raster_info(base_raster_path)[
+        raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
             'geotransform']
+        tmp_raster_path = os.path.join(
+            intermediate_dir,
+            os.path.basename(base_raster_path).replace('.tif', '_tmp%s.tif') %
+            file_suffix)
 
         # Get the first band of the raster as a memory mapped array.
         base_raster = gdal.OpenEx(base_raster_path)
@@ -388,64 +392,66 @@ def execute(args):
         n_rows = base_raster.RasterYSize
         n_cols = base_raster.RasterXSize
         mmap_array = numpy.memmap(
-            tmp_raster_path, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+            tmp_raster_path,
+            dtype=numpy.float32,
+            mode='w+',
+            shape=(n_rows, n_cols))
         band.ReadAsArray(buf_obj=mmap_array)
 
         # Make sure the dataset is closed and cleaned up
         band = None
         base_raster = None
 
-        # Create a new field for the depth attribute
+        # Create a new field for the raster attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
 
-        clipped_wave_layer = base_vector.GetLayer()
-        clipped_wave_layer.CreateField(field_defn)
-        feature = clipped_wave_layer.GetNextFeature()
+        base_layer = base_vector.GetLayer()
+        base_layer.CreateField(field_defn)
+        feature = base_layer.GetNextFeature()
 
-        # For all the features (points) add the proper depth value from the DEM
+        # For all the features (points) add the proper raster value
         while feature is not None:
-            depth_index = feature.GetFieldIndex(field_name)
+            field_index = feature.GetFieldIndex(field_name)
             geom = feature.GetGeometryRef()
             geom_x, geom_y = geom.GetX(), geom.GetY()
 
             # Transform two points into meters
             point_decimal_degree = coord_trans.TransformPoint(geom_x, geom_y)
 
-            # To get proper depth value we must index into the dem matrix
+            # To get proper raster value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
-            i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
-            j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
-            depth = mmap_array[j][i]
+            i = int((point_decimal_degree[0] - raster_gt[0]) / raster_gt[1])
+            j = int((point_decimal_degree[1] - raster_gt[3]) / raster_gt[5])
+            raster_value = mmap_array[j][i]
             # There are cases where the DEM may be too coarse and thus a wave
-            # energy point falls on land. If the depth value taken from the DEM
-            # is greater than or equal to zero we need to delete that point as
-            # it should not be used in calculations
-            if depth >= 0.0:
-                clipped_wave_layer.DeleteFeature(feature.GetFID())
-                feature = clipped_wave_layer.GetNextFeature()
+            # energy point falls on land. If the raster value taken is greater
+            # than or equal to zero we need to delete that point as it should
+            # not be used in calculations
+            if raster_value >= 0.0:
+                base_layer.DeleteFeature(feature.GetFID())
+                feature = base_layer.GetNextFeature()
             else:
-                feature.SetField(int(depth_index), float(depth))
-                clipped_wave_layer.SetFeature(feature)
+                feature.SetField(int(field_index), float(raster_value))
+                base_layer.SetFeature(feature)
                 feature = None
-                feature = clipped_wave_layer.GetNextFeature()
+                feature = base_layer.GetNextFeature()
         # It is not enough to just delete a feature from the layer. The database
         # where the information is stored must be re-packed so that feature
         # entry is properly removed
-        base_vector.ExecuteSQL('REPACK ' + clipped_wave_layer.GetName())
+        base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
 
         mmap_array = None
 
     # Add the depth value to the wave points by indexing into the DEM dataset
     index_values_to_points(clipped_wave_vector_path, dem_path, 'DEPTH_M',
-                   coord_trans_opposite)
-
-    LOGGER.debug('Finished adding DEPTH_M field to wave shapefile from DEM raster')
+                           coord_trans_opposite)
+    LOGGER.info('Finished adding DEPTH_M field to wave shapefile from DEM '
+                'raster.')
 
     # Generate an interpolate object for wave_energy_capacity
-    LOGGER.debug('Interpolating machine performance table')
-
+    LOGGER.info('Interpolating machine performance table.')
     energy_interp = wave_energy_interp(wave_seastate_bins, machine_perf_dict)
 
     # Create a dictionary with the wave energy capacity sums from each location
@@ -951,7 +957,7 @@ def load_binary_wave_data(wave_file_path):
     wave_dict['periods'] = numpy.array(wave_periods, dtype='f')
     LOGGER.debug('WaveData row %s', wave_heights)
     wave_dict['heights'] = numpy.array(wave_heights, dtype='f')
-    LOGGER.debug('Finished extrapolating wave data to dictionary')
+    LOGGER.debug('Finished extrapolating wave data to dictionary.')
     return wave_dict
 
 
@@ -1324,7 +1330,8 @@ def wave_energy_interp(wave_data, machine_perf):
     """Generates a matrix representing the interpolation of the
         machine performance table using new ranges from wave watch data.
 
-        wave_data - A dictionary holding the new x range (period) and
+    Parameters:
+        wave_data (dict): A dictionary holding the new x range (period) and
             y range (height) values for the interpolation.  The
             dictionary has the following structure:
               {'periods': [1,2,3,4,...],
@@ -1335,13 +1342,15 @@ def wave_energy_interp(wave_data, machine_perf):
                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
                              }
               }
-        machine_perf - a dictionary that holds the machine performance
+        machine_perf (dict): a dictionary that holds the machine performance
             information with the following keys and structure:
                 machine_perf['periods'] - [1,2,3,...]
                 machine_perf['heights'] - [.5,1,1.5,...]
                 machine_perf['bin_matrix'] - [[1,2,3,...],[5,6,7,...],...].
 
-    returns - The interpolated matrix
+    Returns:
+        The interpolated matrix
+
     """
     # Get ranges and matrix for machine performance table
     x_range = numpy.array(machine_perf['periods'], dtype='f')
@@ -1358,12 +1367,13 @@ def wave_energy_interp(wave_data, machine_perf):
 
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
-    """Computes the wave energy capacity for each point and
-        generates a dictionary whos keys are the points (I,J) and whos value
-        is the wave energy capacity.
+    """Computes the wave energy capacity for each point.
 
-        wave_data - A dictionary containing wave watch data with the following
-                    structure:
+    Also generates a dictionary whose keys are the points (i,j) and whose value
+    is the wave energy capacity.
+
+    Parameters:
+        wave_data (dict): A wave watch dictionary with the following structure:
                {'periods': [1,2,3,4,...],
                 'heights': [.5,1.0,1.5,...],
                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
@@ -1372,14 +1382,15 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
                               }
                }
-        interp_z - A 2D array of the interpolated values for the machine
+        interp_z (2D-array): A 2D array of the interpolated values for the machine
             performance table
-        machine_param - A dictionary containing the restrictions for the
+        machine_param (dict): A dictionary containing the restrictions for the
             machines (CapMax, TpMax, HsMax)
 
-    returns - A dictionary representing the wave energy capacity at
-              each wave point"""
+    Returns:
+        A dictionary representing the wave energy capacity at each wave point
 
+    """
     energy_cap = {}
 
     # Get the row,col headers (ranges) for the wave watch data
@@ -1404,16 +1415,16 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     period_max_index = -1
     height_max_index = -1
 
-    # Using the restrictions find the max position (index) for period and height
-    # in the wave_periods/wave_heights ranges
+    # Using the restrictions find the max position (index) for period and
+    # height in the wave_periods/wave_heights ranges
 
     for index_pos, value in enumerate(wave_periods):
-        if (value > period_max):
+        if value > period_max:
             period_max_index = index_pos
             break
 
     for index_pos, value in enumerate(wave_heights):
-        if (value > height_max):
+        if value > height_max:
             height_max_index = index_pos
             break
 
