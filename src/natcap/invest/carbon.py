@@ -9,6 +9,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 import pygeoprocessing
+import taskgraph
 
 from . import validation
 from . import utils
@@ -103,6 +104,9 @@ def execute(args):
         args['rate_change'] (float): Annual rate of change in price of carbon
             as a percentage.  Used if `args['do_valuation']` is  present and
             True.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
     Returns:
         None.
     """
@@ -120,6 +124,17 @@ def execute(args):
 
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
+
+    ## nabbed this from scenic quality
+    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = 0  # Threaded queue management, but same process.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     cell_size_set = set()
     raster_size_set = set()
@@ -147,6 +162,7 @@ def execute(args):
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
     pool_storage_path_lookup = collections.defaultdict(list)
     summary_stats = []  # use to aggregate storage, value, and more
+    carbon_map_tasks = []
     for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
         carbon_pool_by_type = dict([
             (lucode, float(carbon_pool_table[lucode][pool_type]))
@@ -157,28 +173,54 @@ def execute(args):
             LOGGER.info(
                 "Mapping carbon from '%s' to '%s' scenario.",
                 lulc_key, storage_key)
-            _generate_carbon_map(
-                args[lulc_key], carbon_pool_by_type,
-                file_registry[storage_key])
+
+            generate_carbon_map_task = graph.add_task(
+            _generate_carbon_map,
+            args=(args[lulc_key], carbon_pool_by_type,
+                file_registry[storage_key]),
+            target_path_list=[file_registry[storage_key]],
+            task_name='generate_carbon_map_%s' % storage_key)
+
+            carbon_map_tasks.append(generate_carbon_map_task)
+
+            # _generate_carbon_map(
+            #     args[lulc_key], carbon_pool_by_type,
+            #     file_registry[storage_key])
+
             # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
 
+    ## either of these joins() work to execute the tasks
+    [cmt.join() for cmt in carbon_map_tasks]
+    # graph.join()
+
     # TODO: left off here for pgp 1.0 conversion
 
     # Sum the individual carbon storage pool paths per scenario
+    # sum_rasters_tasks = []
     for scenario_type, storage_path_list in (
             pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
-        _sum_rasters(storage_path_list, file_registry[output_key])
+
+        sum_rasters_task = graph.add_task(
+        _sum_rasters,
+        args=(storage_path_list, file_registry[output_key]),
+        target_path_list=[file_registry[output_key]],
+        task_name='sum_rasters_for_total_c_%s' % output_key)
+        # sum_rasters_tasks.append(sum_rasters_task)
+        sum_rasters_task.join()
+        # _sum_rasters(storage_path_list, file_registry[output_key])
 
         # Tuple below is (sort_priority, description, value, unit, path)
         summary_stats.append((
             0, "Total %s" % scenario_type,
             _accumulate_totals(file_registry[output_key]), 'Mg of C',
             file_registry[output_key]))
+
+    # [srt.join() for srt in sum_rasters_tasks]
 
     # calculate sequestration
     for fut_type in ['fut', 'redd']:
@@ -188,7 +230,16 @@ def execute(args):
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
         storage_path_list = [
             file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
-        _diff_rasters(storage_path_list, file_registry[output_key])
+        
+        diff_rasters_task = graph.add_task(
+        _diff_rasters,
+        args=(storage_path_list, file_registry[output_key]),
+        target_path_list=[file_registry[output_key]],
+        task_name='diff_rasters_for_%s' % output_key)
+        # sum_rasters_tasks.append(sum_rasters_task)
+        diff_rasters_task.join()
+
+        # _diff_rasters(storage_path_list, file_registry[output_key])
 
         # Tuple below is (sort_priority, description, value, unit, path)
         summary_stats.append((
@@ -208,9 +259,19 @@ def execute(args):
                 continue
             output_key = 'npv_%s' % scenario_type
             LOGGER.info("Calculating NPV for scenario '%s'", output_key)
-            _calculate_npv(
-                file_registry['delta_cur_%s' % scenario_type],
-                valuation_constant, file_registry[output_key])
+
+            calculate_npv_task = graph.add_task(
+            _calculate_npv,
+            args=(file_registry['delta_cur_%s' % scenario_type],
+                valuation_constant, file_registry[output_key]),
+            target_path_list=[file_registry[output_key]],
+            task_name='calculate_%s' % output_key)
+            # sum_rasters_tasks.append(sum_rasters_task)
+            calculate_npv_task.join()
+
+            # _calculate_npv(
+            #     file_registry['delta_cur_%s' % scenario_type],
+            #     valuation_constant, file_registry[output_key])
 
             # Tuple below is (sort_priority, description, value, unit, path)
             summary_stats.append((
