@@ -141,9 +141,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                 stream_window == 1)
             if row_indexes.size > 0:
                 # Calculate euclidean distance for sorting
-                distance_array = (
-                    (row_indexes - stream_window.shape[0] / 2) ** 2 +
-                    (col_indexes - stream_window.shape[1] / 2) ** 2) ** 0.5
+                distance_array = numpy.hypot(
+                    row_indexes - y_center - y_top,
+                    col_indexes - x_center - x_left)
 
                 # Find the closest stream pixel that meets the distance
                 # requirement.
