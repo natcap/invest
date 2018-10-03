@@ -238,9 +238,9 @@ def execute(args):
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
 
-    # Set nodata value and datatype for new rasters
+    # Set nodata value and target_pixel_type for new rasters
     nodata = float(numpy.finfo(numpy.float32).min) + 1.0
-    datatype = gdal.GDT_Float32
+    target_pixel_type = gdal.GDT_Float32
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
@@ -308,7 +308,7 @@ def execute(args):
         aoi_proj_uri = os.path.join(intermediate_dir,
                                     'aoi_proj_to_extract%s.shp' % file_suffix)
 
-        # Get the spacial reference of the Extract shape and export to WKT to
+        # Get the spatial reference of the Extract shape and export to WKT to
         # use in reprojecting the AOI
         extract_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
             analysis_area_extract_path)
@@ -344,13 +344,13 @@ def execute(args):
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        pixel_xsize, pixel_ysize = pixel_size_helper(
+        pixel_size = pixel_size_helper(
             clipped_wave_shape_path, coord_trans, coord_trans_opposite,
             dem_path)
 
-        # Average the pixel sizes incase they are of different sizes
-        pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
-        LOGGER.debug('Pixel size in meters : %f', pixel_size)
+        # Average the pixel sizes in case they are of different sizes
+        # pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
+        LOGGER.debug('Pixel size of DEM in meters : %f', pixel_size)
 
     # We do all wave power calculations by manipulating the fields in
     # the wave data shapefile, thus we need to add proper depth values
@@ -449,14 +449,18 @@ def execute(args):
     LOGGER.info('Calculating Wave Power.')
     wave_power(clipped_wave_shape_path)
 
-    # Create blank rasters bounded by the shape file of analyis area
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-        aoi_shape_path, pixel_size, datatype, nodata,
-        wave_energy_unclipped_path)
+    # Create blank rasters bounded by the shape file of analysis area
+    pygeoprocessing.create_raster_from_vector_extents(
+        aoi_shape_path, wave_energy_unclipped_path, pixel_size, target_pixel_type, nodata)
+    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
+    #     aoi_shape_path, pixel_size, target_pixel_type, nodata,
+    #     wave_energy_unclipped_path)
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-        aoi_shape_path, pixel_size, datatype, nodata,
-        wave_power_unclipped_path)
+    pygeoprocessing.create_raster_from_vector_extents(
+        aoi_shape_path, wave_power_unclipped_path, pixel_size, target_pixel_type, nodata)
+    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
+    #     aoi_shape_path, pixel_size, target_pixel_type, nodata,
+    #     wave_power_unclipped_path)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.debug(
@@ -736,9 +740,11 @@ def execute(args):
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.debug('Creating Raster From Vector Extents')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-        clipped_wave_shape_path, pixel_size, datatype, nodata,
-        raster_projected_path)
+    pygeoprocessing.create_raster_from_vector_extents(
+        clipped_wave_shape_path, raster_projected_path, pixel_size, target_pixel_type, nodata)
+    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
+    #     clipped_wave_shape_path, pixel_size, target_pixel_type, nodata,
+    #     raster_projected_path)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
 
     # Interpolate the NPV values based on the dimensions and
@@ -1622,8 +1628,8 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     # taking the absolue value because the direction doesn't matter for pixel
     # size in the case of most coordinate systems where y increases up and x
     # increases to the right (right handed coordinate system).
-    pixel_diff_x = abs(point_2[0] - point_1[0])
-    pixel_diff_y = abs(point_2[1] - point_1[1])
+    pixel_diff_x = point_2[0] - point_1[0]
+    pixel_diff_y = point_2[1] - point_1[1]
 
     # Close and clean up dataset
     gdal.Dataset.__swig_destroy__(dataset)

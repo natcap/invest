@@ -122,7 +122,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         result = wave_energy.pixel_size_based_on_coordinate_transform(
             raster_uri, coord_trans, point)
 
-        expected_res = (5553.933063, 1187.370813)
+        expected_res = (5553.933063, -1187.370813)
 
         # Compare
         for res, exp in zip(result, expected_res):
