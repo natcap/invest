@@ -162,7 +162,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'WCNA_extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_WestCoast_4m.txt.bin')
         },
         'East Coast of North America and Puerto Rico': {
@@ -170,7 +170,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'ECNA_extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'NAmerica_EastCoast_4m.txt.bin')
         },
         'North Sea 4 meter resolution': {
@@ -178,7 +178,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'North_Sea_4m.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'North_Sea_4m_Extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_4m.bin')
         },
         'North Sea 10 meter resolution': {
@@ -186,7 +186,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'North_Sea_10m.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'North_Sea_10m_Extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'North_Sea_10m.bin')
         },
         'Australia': {
@@ -194,7 +194,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'Australia_4m.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'Australia_Extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'Australia_4m.bin')
         },
         'Global': {
@@ -202,7 +202,7 @@ def execute(args):
             os.path.join(wave_base_data_path, 'Global.shp'),
             'extract_shape':
             os.path.join(wave_base_data_path, 'Global_extract.shp'),
-            'ww3_uri':
+            'ww3_path':
             os.path.join(wave_base_data_path, 'Global_WW3.txt.bin')
         }
     }
@@ -213,10 +213,11 @@ def execute(args):
     # Use the analysis area String to get the uri's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = load_binary_wave_data(
-        analysis_dict[analysis_area_path]['ww3_uri'])
-    analysis_area_points_uri = analysis_dict[analysis_area_path]['point_shape']
-    analysis_area_extract_uri = \
-            analysis_dict[analysis_area_path]['extract_shape']
+        analysis_dict[analysis_area_path]['ww3_path'])
+    analysis_area_points_path = analysis_dict[analysis_area_path][
+        'point_shape']
+    analysis_area_extract_path = analysis_dict[analysis_area_path][
+        'extract_shape']
 
     # Path for clipped wave point shapefile holding wave attribute information
     clipped_wave_shape_path = os.path.join(
@@ -243,13 +244,16 @@ def execute(args):
     # Since the global dem is the finest resolution we get as an input,
     # use its pixel sizes as the sizes for the new rasters. We will need the
     # geotranform to get this information later
-    dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
-        dem_path)
+    dem_gt = pygeoprocessing.get_raster_info(dem_path)['geotransform']
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-        analysis_area_points_uri)
+    analysis_area_vector = gdal.OpenEx(
+        analysis_area_points_path, gdal.OF_VECTOR)
+    analysis_area_layer = analysis_area_vector.GetLayer(0)
+    analysis_area_sr = analysis_area_layer.GetSpatialRef()
+    analysis_area_layer = None
+    analysis_area_vector = None
 
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
@@ -259,12 +263,12 @@ def execute(args):
 
         # The uri to a polygon shapefile that specifies the broader area
         # of interest
-        aoi_shape_path = analysis_area_extract_uri
+        aoi_shape_path = analysis_area_extract_path
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(
-            analysis_area_points_uri, clipped_wave_shape_path)
+            analysis_area_points_path, clipped_wave_shape_path)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = (
@@ -274,7 +278,7 @@ def execute(args):
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
         aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            analysis_area_extract_uri)
+            analysis_area_extract_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
     else:
@@ -292,7 +296,7 @@ def execute(args):
             aoi_shape_path)
         output_wkt = temp_sr.ExportToWkt()
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-            analysis_area_points_uri, output_wkt, projected_wave_shape_path)
+            analysis_area_points_path, output_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
@@ -305,7 +309,7 @@ def execute(args):
         # Get the spacial reference of the Extract shape and export to WKT to
         # use in reprojecting the AOI
         extract_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            analysis_area_extract_uri)
+            analysis_area_extract_path)
         extract_wkt = extract_sr.ExportToWkt()
 
         # Project AOI to Extract shape
@@ -317,7 +321,7 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_datasource_layer(aoi_proj_uri, analysis_area_extract_uri,
+        clip_datasource_layer(aoi_proj_uri, analysis_area_extract_path,
                               aoi_clipped_to_extract_uri)
 
         aoi_clip_proj_uri = os.path.join(
@@ -852,7 +856,7 @@ def calculate_distance(xy_1, xy_2):
     return min_dist, min_id
 
 
-def load_binary_wave_data(wave_file_uri):
+def load_binary_wave_data(wave_file_path):
     """The load_binary_wave_data function converts a pickled WW3 text file
         into a dictionary who's keys are the corresponding (I,J) values
         and whose value is a two-dimensional array representing a matrix
@@ -860,7 +864,7 @@ def load_binary_wave_data(wave_file_uri):
         The row and column headers are extracted once and stored in the
         dictionary as well.
 
-        wave_file_uri - The path to a pickled binary WW3 file.
+        wave_file_path - The path to a pickled binary WW3 file.
 
         returns - A dictionary of matrices representing hours of specific
               seastates, as well as the period and height ranges.
@@ -875,7 +879,7 @@ def load_binary_wave_data(wave_file_uri):
                }
     """
     LOGGER.debug('Extrapolating wave data from text to a dictionary')
-    wave_file = open(wave_file_uri, 'rb')
+    wave_file = open(wave_file_path, 'rb')
     wave_dict = {}
     # Create a key that hosts another dictionary where the matrix representation
     # of the seastate bins will be saved
@@ -964,11 +968,14 @@ def get_coordinate_transformation(source_sr, target_sr):
         a coordinate transformation from source to target, and one from target
         to source.
 
-        source_sr - A spatial reference
-        target_sr - A spatial reference
+    Parameters:
+        source_sr: A spatial reference
+        target_sr: A spatial reference
 
-        return - A tuple, coord_trans (source to target) and
-            coord_trans_opposite (target to source)
+    Returns:
+        A tuple, coord_trans (source to target) and coord_trans_opposite
+        (target to source)
+
     """
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
     coord_trans_opposite = osr.CoordinateTransformation(target_sr, source_sr)
