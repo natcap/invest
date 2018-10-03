@@ -220,7 +220,7 @@ def execute(args):
         'extract_shape']
 
     # Path for clipped wave point shapefile holding wave attribute information
-    clipped_wave_shape_path = os.path.join(
+    clipped_wave_vector_path = os.path.join(
         intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
     # Intermediate paths for wave energy and wave power rasters
@@ -259,22 +259,21 @@ def execute(args):
 
         # The uri to a polygon shapefile that specifies the broader area
         # of interest
-        aoi_shape_path = analysis_area_extract_path
+        aoi_vector_path = analysis_area_extract_path
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted
-        if os.path.isfile(clipped_wave_shape_path):
-            os.remove(clipped_wave_shape_path)
+        if os.path.isfile(clipped_wave_vector_path):
+            os.remove(clipped_wave_vector_path)
         analysis_area_vector = gdal.OpenEx(analysis_area_points_path,
                                            gdal.OF_VECTOR)
         drv = gdal.GetDriverByName('ESRI Shapefile')
-        drv.CreateCopy(clipped_wave_shape_path, analysis_area_vector)
+        drv.CreateCopy(clipped_wave_vector_path, analysis_area_vector)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
         mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
-        dem_wkt = pygeoprocessing.get_raster_info(dem_path)[
-            'projection']
+        dem_wkt = pygeoprocessing.get_raster_info(dem_path)['projection']
         LOGGER.debug('Pixel size of the DEM : %f\nProjection of the DEM : %s' %
                      (mean_pixel_size, dem_wkt))
 
@@ -285,7 +284,7 @@ def execute(args):
             analysis_area_sr, aoi_sr)
     else:
         LOGGER.debug('AOI was provided')
-        aoi_shape_path = args['aoi_path']
+        aoi_vector_path = args['aoi_path']
 
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
@@ -294,59 +293,54 @@ def execute(args):
 
         # Set the wave data shapefile to the same projection as the
         # area of interest
-        aoi_wkt = pygeoprocessing.get_vector_info(aoi_shape_path)['projection']
-        pygeoprocessing.reproject_vector(
-            analysis_area_points_path, aoi_wkt, projected_wave_shape_path)
+        aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)['projection']
+        pygeoprocessing.reproject_vector(analysis_area_points_path, aoi_wkt,
+                                         projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
-        clip_vector_layer(projected_wave_shape_path, aoi_shape_path,
-                              clipped_wave_shape_path)
+        clip_vector_layer(projected_wave_shape_path, aoi_vector_path,
+                          clipped_wave_vector_path)
 
-        aoi_proj_uri = os.path.join(intermediate_dir,
-                                    'aoi_proj_to_extract%s.shp' % file_suffix)
+        aoi_proj_vector_path = os.path.join(
+            intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
 
         # Get the spatial reference of the Extract shape and export to WKT to
         # use in reprojecting the AOI
-        extract_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            analysis_area_extract_path)
-        extract_wkt = extract_sr.ExportToWkt()
+        extract_wkt = pygeoprocessing.get_vector_info(
+            analysis_area_extract_path)['projection']
 
         # Project AOI to Extract shape
-        # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-        #     aoi_shape_path, extract_wkt, aoi_proj_uri)
-        pygeoprocessing.reproject_vector(
-            aoi_shape_path, extract_wkt, aoi_proj_uri)
+        pygeoprocessing.reproject_vector(aoi_vector_path, extract_wkt,
+                                         aoi_proj_vector_path)
 
-        aoi_clipped_to_extract_uri = os.path.join(
-            intermediate_dir, 'aoi_clipped_to_extract_uri%s.shp' % file_suffix)
+        aoi_clipped_to_extract_path = os.path.join(
+            intermediate_dir, 'aoi_clipped_to_extract_path%s.shp' % file_suffix)
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_vector_layer(aoi_proj_uri, analysis_area_extract_path,
-                              aoi_clipped_to_extract_uri)
+        clip_vector_layer(aoi_proj_vector_path, analysis_area_extract_path,
+                          aoi_clipped_to_extract_path)
 
-        aoi_clip_proj_uri = os.path.join(
-            intermediate_dir, 'aoi_clip_proj_uri%s.shp' % file_suffix)
+        aoi_clip_proj_vector_path = os.path.join(
+            intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
 
         # Reproject the clipped AOI back
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-            aoi_clipped_to_extract_uri, aoi_wkt, aoi_clip_proj_uri)
+        pygeoprocessing.reproject_vector(
+            aoi_clipped_to_extract_path, aoi_wkt, aoi_clip_proj_vector_path)
 
-        aoi_shape_path = aoi_clip_proj_uri
+        aoi_vector_path = aoi_clip_proj_vector_path
 
         # Create a coordinate transformation from the given
         # WWIII point shapefile, to the area of interest's projection
-        aoi_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            aoi_shape_path)
+        aoi_sr = get_vector_spatial_ref(aoi_vector_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        pixel_size = pixel_size_helper(
-            clipped_wave_shape_path, coord_trans, coord_trans_opposite,
-            dem_path)
+        pixel_size = pixel_size_helper(clipped_wave_vector_path, coord_trans,
+                                       coord_trans_opposite, dem_path)
 
         # Average the pixel sizes in case they are of different sizes
         # pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
@@ -357,37 +351,56 @@ def execute(args):
     # from the raster DEM
     LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
 
-    def index_dem_path(point_shape_uri, dataset_uri, field_name, coord_trans):
-        """Index into a gdal raster and where a point from an ogr datasource
-            overlays a pixel, add that pixel value to the point feature
+    def index_values_to_points(
+            base_point_vector_path, base_raster_path, field_name, coord_trans):
+        """Add the values of a raster based the point features of a vector.
 
-            point_shape_uri - a uri to an ogr point shapefile
-            dataset_uri - a uri to a gdal dataset
-            field_name - a String for the name of the new field that will be
-                added to the point feauture
-            coord_trans - a coordinate transformation used to make sure the
-                datasource and dataset are in the same units
+        Values are recorded in the attribute field of the point vector.
 
-            returns - Nothing"""
+        Parameters:
+            base_point_vector_path (string): a path to an ogr point shapefile
+            base_raster_path(string): a path to a gdal dataset
+            field_name (string): the name of the new field that will be
+                added to the point feature
+            coord_trans (osr.CoordinateTransformation): a coordinate
+                transformation used to make sure the vector and raster are
+                in the same unit
+
+        Returns:
+            None
+
+        """
         # NOTE: This function is a wrapper function so that we can handle
-        # datasets / datasource by passing URI's. This function lacks memory
+        # datasets / datasource by passing paths. This function lacks memory
         # efficiency and the global dem is being dumped into an array. This may
         # cause the global biophysical run to crash
-        tmp_dem_path = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
-        )
+        tmp_raster_path = os.path.join(
+            intermediate_dir, os.path.basename(base_raster_path).replace(
+                '.tif', '_tmp%s.tif') % file_suffix)
 
-        clipped_wave_shape = gdal.OpenEx(point_shape_uri, 1)
-        dem_gt = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_geotransform_uri(
-            dataset_uri)
-        dem_matrix = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.load_memory_mapped_array(
-            dataset_uri, tmp_dem_path, array_type=None)
+        base_vector = gdal.OpenEx(base_point_vector_path, 1)
+        dem_gt = pygeoprocessing.get_raster_info(base_raster_path)[
+            'geotransform']
+
+        # Get the first band of the raster as a memory mapped array.
+        base_raster = gdal.OpenEx(base_raster_path)
+        band = base_raster.GetRasterBand(1)
+        n_rows = base_raster.RasterYSize
+        n_cols = base_raster.RasterXSize
+        mmap_array = numpy.memmap(
+            tmp_raster_path, dtype=numpy.float32, mode='w+', shape=(n_rows, n_cols))
+        band.ReadAsArray(buf_obj=mmap_array)
+
+        # Make sure the dataset is closed and cleaned up
+        band = None
+        base_raster = None
 
         # Create a new field for the depth attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
 
-        clipped_wave_layer = clipped_wave_shape.GetLayer()
+        clipped_wave_layer = base_vector.GetLayer()
         clipped_wave_layer.CreateField(field_defn)
         feature = clipped_wave_layer.GetNextFeature()
 
@@ -404,7 +417,7 @@ def execute(args):
             # by getting where the point is located in terms of the matrix
             i = int((point_decimal_degree[0] - dem_gt[0]) / dem_gt[1])
             j = int((point_decimal_degree[1] - dem_gt[3]) / dem_gt[5])
-            depth = dem_matrix[j][i]
+            depth = mmap_array[j][i]
             # There are cases where the DEM may be too coarse and thus a wave
             # energy point falls on land. If the depth value taken from the DEM
             # is greater than or equal to zero we need to delete that point as
@@ -420,15 +433,15 @@ def execute(args):
         # It is not enough to just delete a feature from the layer. The database
         # where the information is stored must be re-packed so that feature
         # entry is properly removed
-        clipped_wave_shape.ExecuteSQL('REPACK ' + clipped_wave_layer.GetName())
+        base_vector.ExecuteSQL('REPACK ' + clipped_wave_layer.GetName())
 
-        dem_matrix = None
+        mmap_array = None
 
     # Add the depth value to the wave points by indexing into the DEM dataset
-    index_dem_path(clipped_wave_shape_path, dem_path, 'DEPTH_M',
+    index_values_to_points(clipped_wave_vector_path, dem_path, 'DEPTH_M',
                    coord_trans_opposite)
 
-    LOGGER.debug('Finished adding depth field to shapefile from DEM raster')
+    LOGGER.debug('Finished adding DEPTH_M field to wave shapefile from DEM raster')
 
     # Generate an interpolate object for wave_energy_capacity
     LOGGER.debug('Interpolating machine performance table')
@@ -442,24 +455,26 @@ def execute(args):
 
     # Add the sum as a field to the shapefile for the corresponding points
     LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
-    captured_wave_energy_to_shape(energy_cap, clipped_wave_shape_path)
+    captured_wave_energy_to_shape(energy_cap, clipped_wave_vector_path)
 
     # Calculate wave power for each wave point and add it as a field
     # to the shapefile
     LOGGER.info('Calculating Wave Power.')
-    wave_power(clipped_wave_shape_path)
+    wave_power(clipped_wave_vector_path)
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_shape_path, wave_energy_unclipped_path, pixel_size, target_pixel_type, nodata)
+        aoi_vector_path, wave_energy_unclipped_path, pixel_size,
+        target_pixel_type, nodata)
     # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     aoi_shape_path, pixel_size, target_pixel_type, nodata,
+    #     aoi_vector_path, pixel_size, target_pixel_type, nodata,
     #     wave_energy_unclipped_path)
 
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_shape_path, wave_power_unclipped_path, pixel_size, target_pixel_type, nodata)
+        aoi_vector_path, wave_power_unclipped_path, pixel_size,
+        target_pixel_type, nodata)
     # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     aoi_shape_path, pixel_size, target_pixel_type, nodata,
+    #     aoi_vector_path, pixel_size, target_pixel_type, nodata,
     #     wave_power_unclipped_path)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
@@ -467,18 +482,18 @@ def execute(args):
         'Interpolate wave power and wave energy capacity onto rasters')
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_shape_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
+        clipped_wave_vector_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_shape_path, 'WE_kWM', wave_power_unclipped_path)
+        clipped_wave_vector_path, 'WE_kWM', wave_power_unclipped_path)
 
     # Clip the wave energy and wave power rasters so that they are confined
     # to the AOI
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        wave_power_unclipped_path, aoi_shape_path, wave_power_path, False)
+        wave_power_unclipped_path, aoi_vector_path, wave_power_path, False)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        wave_energy_unclipped_path, aoi_shape_path, wave_energy_path, False)
+        wave_energy_unclipped_path, aoi_vector_path, wave_energy_path, False)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
@@ -493,11 +508,11 @@ def execute(args):
 
     create_percentile_rasters(
         wave_energy_path, capwe_rc_path, capwe_units_short, capwe_units_long,
-        starting_percentile_range, percentiles, aoi_shape_path)
+        starting_percentile_range, percentiles, aoi_vector_path)
 
     create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
                               wp_units_long, starting_percentile_range,
-                              percentiles, aoi_shape_path)
+                              percentiles, aoi_vector_path)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -596,7 +611,7 @@ def execute(args):
 
     # Get the coordinates of points of wave_data_shape, landing_shape,
     # and grid_shape
-    we_points = get_points_geometries(clipped_wave_shape_path)
+    we_points = get_points_geometries(clipped_wave_vector_path)
     landing_points = get_points_geometries(land_pt_path)
     grid_point = get_points_geometries(grid_pt_path)
 
@@ -650,7 +665,7 @@ def execute(args):
             feature = None
             feature = wave_data_layer.GetNextFeature()
 
-    add_distance_fields_uri(clipped_wave_shape_path, wave_to_land_dist,
+    add_distance_fields_uri(clipped_wave_vector_path, wave_to_land_dist,
                             land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
@@ -736,14 +751,15 @@ def execute(args):
             feat_npv = None
             feat_npv = wave_data_layer.GetNextFeature()
 
-    compute_npv_farm_energy_uri(clipped_wave_shape_path)
+    compute_npv_farm_energy_uri(clipped_wave_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.debug('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
-        clipped_wave_shape_path, raster_projected_path, pixel_size, target_pixel_type, nodata)
+        clipped_wave_vector_path, raster_projected_path, pixel_size,
+        target_pixel_type, nodata)
     # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     clipped_wave_shape_path, pixel_size, target_pixel_type, nodata,
+    #     clipped_wave_vector_path, pixel_size, target_pixel_type, nodata,
     #     raster_projected_path)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
 
@@ -753,20 +769,20 @@ def execute(args):
     LOGGER.info('Generating Net Present Value Raster.')
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_shape_path, 'NPV_25Y', raster_projected_path)
+        clipped_wave_vector_path, 'NPV_25Y', raster_projected_path)
 
     npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        raster_projected_path, aoi_shape_path, npv_out_uri, False)
+        raster_projected_path, aoi_vector_path, npv_out_uri, False)
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
     create_percentile_rasters(npv_out_uri, npv_rc_path, ' (US$)',
                               ' thousands of US dollars (US$)', '1',
-                              percentiles, aoi_shape_path)
+                              percentiles, aoi_vector_path)
 
     LOGGER.debug('End of wave_energy_core.valuation')
 
@@ -970,6 +986,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
     return pixel_size_tuple
 
+
 def get_vector_spatial_ref(base_vector_path):
     """Get the spatial reference of an OGR vector (datasource).
 
@@ -986,6 +1003,7 @@ def get_vector_spatial_ref(base_vector_path):
     layer = None
     vector = None
     return spat_ref
+
 
 def get_coordinate_transformation(source_sr, target_sr):
     """This function takes a source and target spatial reference and creates
@@ -1008,7 +1026,7 @@ def get_coordinate_transformation(source_sr, target_sr):
 
 def create_percentile_rasters(raster_path, output_path, units_short,
                               units_long, start_value, percentile_list,
-                              aoi_shape_path):
+                              aoi_vector_path):
     """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
         displays the ranges provided by taking the quartile of values.
@@ -1025,7 +1043,7 @@ def create_percentile_rasters(raster_path, output_path, units_short,
             first percentile range (start_value - percentile_one)
         percentile_list - a python list of the percentiles ranges
             ex: [25, 50, 75, 90]
-        aoi_shape_path - a uri to an OGR polygon shapefile to clip the
+        aoi_vector_path - a uri to an OGR polygon shapefile to clip the
             rasters to
 
         return - Nothing """
@@ -1078,7 +1096,7 @@ def create_percentile_rasters(raster_path, output_path, units_short,
         pixel_size,
         'intersection',
         assert_datasets_projected=False,
-        aoi_uri=aoi_shape_path)
+        aoi_uri=aoi_vector_path)
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
@@ -1251,7 +1269,8 @@ def wave_power(shape_uri):
         feat = layer.GetNextFeature()
 
 
-def clip_vector_layer(base_vector_path, clip_vector_path, target_clipped_vector_path):
+def clip_vector_layer(base_vector_path, clip_vector_path,
+                      target_clipped_vector_path):
     """Clip Shapefile Layer by second Shapefile Layer.
 
     Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
