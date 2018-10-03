@@ -244,14 +244,13 @@ def execute(args):
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-
     analysis_area_sr = get_vector_spatial_ref(analysis_area_points_path)
 
     # This try/except statement differentiates between having an AOI or doing
     # a broad run on all the wave watch points specified by
     # args['analysis_area'].
     if 'aoi_path' not in args:
-        LOGGER.debug('AOI not provided')
+        LOGGER.info('AOI not provided')
 
         # The uri to a polygon shapefile that specifies the broader area
         # of interest
@@ -268,9 +267,8 @@ def execute(args):
 
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
-        # mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
         dem_wkt = pygeoprocessing.get_raster_info(dem_path)['projection']
-        LOGGER.debug('Pixel size of the DEM : %f\nProjection of the DEM : %s' %
+        LOGGER.debug('Pixel size of the DEM : %s\nProjection of the DEM : %s' %
                      (pixel_size, dem_wkt))
 
         # Create a coordinate transformation, because it is used below when
@@ -279,7 +277,7 @@ def execute(args):
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
     else:
-        LOGGER.debug('AOI was provided')
+        LOGGER.info('AOI was provided')
         aoi_vector_path = args['aoi_path']
 
         # Temporary shapefile path needed for an intermediate step when
@@ -341,13 +339,12 @@ def execute(args):
                                        coord_trans_opposite, dem_path)
 
         # Average the pixel sizes in case they are of different sizes
-        # pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
         LOGGER.debug('Pixel size of DEM in meters : %f', pixel_size)
 
     # We do all wave power calculations by manipulating the fields in
     # the wave data shapefile, thus we need to add proper depth values
     # from the raster DEM
-    LOGGER.debug('Adding a depth field to the shapefile from the DEM raster')
+    LOGGER.info('Adding a depth field to the shapefile from the DEM raster')
 
     def index_values_to_points(base_point_vector_path, base_raster_path,
                                field_name, coord_trans):
@@ -456,7 +453,7 @@ def execute(args):
         wave_seastate_bins, energy_interp, machine_param_dict)
 
     # Add the sum as a field to the shapefile for the corresponding points
-    LOGGER.debug('Adding the wave energy sums to the WaveData shapefile')
+    LOGGER.info('Adding the wave energy sums to the WaveData shapefile')
     captured_wave_energy_to_shape(energy_cap, clipped_wave_vector_path)
 
     # Calculate wave power for each wave point and add it as a field
@@ -468,26 +465,19 @@ def execute(args):
     pygeoprocessing.create_raster_from_vector_extents(
         aoi_vector_path, wave_energy_unclipped_path, pixel_size,
         target_pixel_type, nodata)
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     aoi_vector_path, pixel_size, target_pixel_type, nodata,
-    #     wave_energy_unclipped_path)
 
     pygeoprocessing.create_raster_from_vector_extents(
         aoi_vector_path, wave_power_unclipped_path, pixel_size,
         target_pixel_type, nodata)
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     aoi_vector_path, pixel_size, target_pixel_type, nodata,
-    #     wave_power_unclipped_path)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
-    LOGGER.debug(
-        'Interpolate wave power and wave energy capacity onto rasters')
+    LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_vector_path, 'CAPWE_MWHY', wave_energy_unclipped_path)
+    pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'CAPWE_MWHY',
+                                       (wave_energy_unclipped_path, 1), 'near')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_vector_path, 'WE_kWM', wave_power_unclipped_path)
+    pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'WE_kWM',
+                                       (wave_power_unclipped_path, 1), 'near')
 
     # Clip the wave energy and wave power rasters so that they are confined
     # to the AOI
@@ -524,7 +514,7 @@ def execute(args):
         valuation_checked = False
 
     if not valuation_checked:
-        LOGGER.debug('Valuation not selected')
+        LOGGER.info('Valuation not selected')
         #The rest of the function is valuation, so we can quit now
         return
 
@@ -756,7 +746,7 @@ def execute(args):
     compute_npv_farm_energy_uri(clipped_wave_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
-    LOGGER.debug('Creating Raster From Vector Extents')
+    LOGGER.info('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
         clipped_wave_vector_path, raster_projected_path, pixel_size,
         target_pixel_type, nodata)
@@ -786,7 +776,7 @@ def execute(args):
                               ' thousands of US dollars (US$)', '1',
                               percentiles, aoi_vector_path)
 
-    LOGGER.debug('End of wave_energy_core.valuation')
+    LOGGER.info('End of wave_energy_core.valuation')
 
 
 def build_point_shapefile(driver_name, layer_name, path, data, prj,
@@ -904,7 +894,7 @@ def load_binary_wave_data(wave_file_path):
                               }
                }
     """
-    LOGGER.debug('Extrapolating wave data from text to a dictionary')
+    LOGGER.info('Extrapolating wave data from text to a dictionary')
     wave_file = open(wave_file_path, 'rb')
     wave_dict = {}
     # Create a key that hosts another dictionary where the matrix representation
@@ -953,7 +943,7 @@ def load_binary_wave_data(wave_file_path):
     wave_dict['periods'] = numpy.array(wave_periods, dtype='f')
     LOGGER.debug('WaveData row %s', wave_heights)
     wave_dict['heights'] = numpy.array(wave_heights, dtype='f')
-    LOGGER.debug('Finished extrapolating wave data to dictionary.')
+    LOGGER.info('Finished extrapolating wave data to dictionary.')
     return wave_dict
 
 
@@ -1050,7 +1040,7 @@ def create_percentile_rasters(raster_path, output_path, units_short,
 
         return - Nothing """
 
-    LOGGER.debug('Create Perctile Rasters')
+    LOGGER.info('Create Perctile Rasters')
 
     # If the output_path is already a file, delete it
     if os.path.isfile(output_path):
