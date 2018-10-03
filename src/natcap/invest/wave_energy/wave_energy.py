@@ -273,10 +273,10 @@ def execute(args):
         # Set the pixel size to that of DEM, to be used for creating rasters
         pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
         mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
-        dem_projection = pygeoprocessing.get_raster_info(dem_path)[
+        dem_wkt = pygeoprocessing.get_raster_info(dem_path)[
             'projection']
         LOGGER.debug('Pixel size of the DEM : %f\nProjection of the DEM : %s' %
-                     (mean_pixel_size, dem_projection))
+                     (mean_pixel_size, dem_wkt))
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
@@ -294,11 +294,9 @@ def execute(args):
 
         # Set the wave data shapefile to the same projection as the
         # area of interest
-        temp_sr = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_spatial_ref_uri(
-            aoi_shape_path)
-        output_wkt = temp_sr.ExportToWkt()
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-            analysis_area_points_path, output_wkt, projected_wave_shape_path)
+        aoi_wkt = pygeoprocessing.get_vector_info(aoi_shape_path)['projection']
+        pygeoprocessing.reproject_vector(
+            analysis_area_points_path, aoi_wkt, projected_wave_shape_path)
 
         # Clip the wave data shape by the bounds provided from the
         # area of interest
@@ -315,7 +313,9 @@ def execute(args):
         extract_wkt = extract_sr.ExportToWkt()
 
         # Project AOI to Extract shape
-        natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
+        # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
+        #     aoi_shape_path, extract_wkt, aoi_proj_uri)
+        pygeoprocessing.reproject_vector(
             aoi_shape_path, extract_wkt, aoi_proj_uri)
 
         aoi_clipped_to_extract_uri = os.path.join(
@@ -331,7 +331,7 @@ def execute(args):
 
         # Reproject the clipped AOI back
         natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reproject_datasource_uri(
-            aoi_clipped_to_extract_uri, output_wkt, aoi_clip_proj_uri)
+            aoi_clipped_to_extract_uri, aoi_wkt, aoi_clip_proj_uri)
 
         aoi_shape_path = aoi_clip_proj_uri
 
