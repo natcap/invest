@@ -7,8 +7,8 @@ from osgeo import gdal
 from osgeo import ogr
 import natcap.invest.pygeoprocessing_0_3_3.routing
 
-from .. import utils
-from .. import validation
+from . import utils
+from . import validation
 
 
 LOGGER = logging.getLogger('natcap.invest.routing.delineateit')

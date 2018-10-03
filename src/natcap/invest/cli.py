@@ -48,8 +48,8 @@ _MODEL_UIS = {
         gui='crop_production.CropProductionRegression',
         aliases=('cpr',)),
     'delineateit': _UIMETA(
-        pyname='natcap.invest.routing.delineateit',
-        gui='routing.Delineateit',
+        pyname='natcap.invest.delineateit',
+        gui='delineateit.Delineateit',
         aliases=()),
     'finfish_aquaculture': _UIMETA(
         pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
