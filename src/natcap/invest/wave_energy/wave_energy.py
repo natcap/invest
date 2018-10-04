@@ -1003,26 +1003,26 @@ def get_coordinate_transformation(source_sr, target_sr):
     return (coord_trans, coord_trans_opposite)
 
 
-def create_percentile_rasters(base_raster_path, target_raster_path, units_short,
-                              units_long, start_value, percentile_list,
-                              aoi_vector_path):
+def create_percentile_rasters(
+    base_raster_path, target_raster_path, units_short, units_long, start_value,
+    percentile_list, aoi_vector_path):
     """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
         displays the ranges provided by taking the quartile of values.
         The following inputs are required:
 
     Parameters:
-        base_raster_path (string): A path to a GDAL raster with data of type integer
-        target_raster_path (string): A path to the destination of the new raster.
+        base_raster_path (string): path to a GDAL raster with data of type integer
+        target_raster_path (string): path to the destination of the new raster.
         units_short (string): The shorthand for the units of the raster values,
             ex: kW/m.
         units_long (string): The description of the units of the raster values,
             ex: wave power per unit width of wave crest length (kW/m).
         start_value (string): The first value that goes to the first percentile
-            range (start_value - percentile_one)
+            range (start_value: percentile_one)
         percentile_list (list): A list of the percentiles ranges,
             ex: [25, 50, 75, 90].
-        aoi_vector_path (path): A path to an OGR polygon shapefile to clip the
+        aoi_vector_path (path): path to an OGR polygon shapefile to clip the
             rasters to
 
     Returns:
@@ -1035,19 +1035,15 @@ def create_percentile_rasters(base_raster_path, target_raster_path, units_short,
     if os.path.isfile(target_raster_path):
         os.remove(target_raster_path)
 
-    nodata = pygeoprocessing.get_raster_info(base_raster_path)
+    # nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata']
 
-    def raster_percentile(pixel):
-        """Operation to use in raster_calculator that takes the pixels of
-            band and groups them together based on their percentile ranges.
-        """
-        return np.where(pixel = bisect(percentiles, pixel)
+    # Set nodata to a very small negative number
+    nodata = -9999919
 
     # Get the percentile values for each percentile
     percentiles = calculate_percentiles_from_raster(base_raster_path,
                                                     percentile_list)
-    LOGGER.debug('percentiles_list : %s', percentiles)
-
+    LOGGER.debug('Percentiles : %s', percentiles)
     # Get the percentile ranges as strings so that they can be added to a output
     # table
     percentile_ranges = create_percentile_ranges(percentiles, units_short,
@@ -1057,8 +1053,13 @@ def create_percentile_rasters(base_raster_path, target_raster_path, units_short,
     # before the start value is set to nodata
     percentiles.insert(0, int(start_value))
 
-    # Set nodata to a very small negative number
-    nodata = -9999919
+    def raster_percentile(pixel):
+        """Operation to use in raster_calculator that takes the pixels of
+            band and groups them together based on their percentile ranges.
+        """
+        return numpy.where(nodata, nodata, bisect(percentiles, pixel))
+
+
     # pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
     #     raster_path)
 
@@ -1103,9 +1104,9 @@ def create_percentile_rasters(base_raster_path, target_raster_path, units_short,
         table_dict[index]['Value Range'] = percentile_ranges[index]
         table_dict[index]['Pixel Count'] = pixel_count[index]
 
-    attribute_table_uri = target_raster_path[:-4] + '.csv'
+    attribute_table_path = target_raster_path[:-4] + '.csv'
     column_names = ['id', 'Value Range', 'Pixel Count']
-    create_attribute_csv_table(attribute_table_uri, column_names, table_dict)
+    create_attribute_csv_table(attribute_table_path, column_names, table_dict)
 
 
 def create_percentile_ranges(percentiles, units_short, units_long,
@@ -1143,7 +1144,7 @@ def create_percentile_ranges(percentiles, units_short, units_long,
     return range_values
 
 
-def create_attribute_csv_table(attribute_table_uri, fields, data):
+def create_attribute_csv_table(attribute_table_path, fields, data):
     """Create a new csv table from a dictionary
 
         filename - a URI path for the new table to be written to disk
@@ -1160,10 +1161,10 @@ def create_attribute_csv_table(attribute_table_uri, fields, data):
 
         returns - nothing
     """
-    if os.path.isfile(attribute_table_uri):
-        os.remove(attribute_table_uri)
+    if os.path.isfile(attribute_table_path):
+        os.remove(attribute_table_path)
 
-    csv_file = open(attribute_table_uri, 'wb')
+    csv_file = open(attribute_table_path, 'wb')
 
     #  Sort the keys so that the rows are written in order
     row_keys = data.keys()
@@ -1467,19 +1468,21 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         feat = None
 
 
-def calculate_percentiles_from_raster(raster_uri, percentiles):
+def calculate_percentiles_from_raster(raster_path, percentiles):
     """Does a memory efficient sort to determine the percentiles
         of a raster. Percentile algorithm currently used is the
         nearest rank method.
 
-        raster_uri - a uri to a gdal raster on disk
-        percentiles - a list of desired percentiles to lookup
+    Parameters:
+        raster_path (string): path to a gdal raster on disk
+        percentiles (list): a list of desired percentiles to lookup,
             ex: [25,50,75,90]
 
-        returns - a list of values corresponding to the percentiles
-            from the percentiles list
+    Returns:
+            a list of values corresponding to the percentiles from the list
+
     """
-    raster = gdal.OpenEx(raster_uri, gdal.GA_ReadOnly)
+    raster = gdal.OpenEx(raster_path, gdal.GA_ReadOnly)
 
     def numbers_from_file(fle):
         """Generates an iterator from a file by loading all the numbers
@@ -1563,12 +1566,12 @@ def calculate_percentiles_from_raster(raster_uri, percentiles):
     return results
 
 
-def count_pixels_groups(raster_uri, group_values):
+def count_pixels_groups(raster_path, group_values):
     """Does a pixel count for each value in 'group_values' over the
-        raster provided by 'raster_uri'. Returns a list of pixel counts
+        raster provided by 'raster_path'. Returns a list of pixel counts
         for each value in 'group_values'
 
-        raster_uri - a uri path to a gdal raster on disk
+        raster_path - a uri path to a gdal raster on disk
         group_values - a list of unique numbers for which to get a pixel count
 
         returns - A list of integers, where each integer at an index
@@ -1578,7 +1581,7 @@ def count_pixels_groups(raster_uri, group_values):
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
-    for block_info, block_matrix in pygeoprocessing.iterblocks(raster_uri):
+    for block_info, block_matrix in pygeoprocessing.iterblocks(raster_path):
         # Cumulatively add the number of pixels found for each value
         # in 'group_values'
         for index in xrange(len(group_values)):
