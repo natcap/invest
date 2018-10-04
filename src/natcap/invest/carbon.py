@@ -175,11 +175,11 @@ def execute(args):
                 lulc_key, storage_key)
 
             generate_carbon_map_task = graph.add_task(
-            _generate_carbon_map,
-            args=(args[lulc_key], carbon_pool_by_type,
-                file_registry[storage_key]),
-            target_path_list=[file_registry[storage_key]],
-            task_name='generate_carbon_map_%s' % storage_key)
+                _generate_carbon_map,
+                args=(args[lulc_key], carbon_pool_by_type,
+                    file_registry[storage_key]),
+                target_path_list=[file_registry[storage_key]],
+                task_name='generate_carbon_map_%s' % storage_key)
 
             carbon_map_tasks.append(generate_carbon_map_task)
 
@@ -191,9 +191,7 @@ def execute(args):
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
 
-    ## either of these joins() work to execute the tasks
     [cmt.join() for cmt in carbon_map_tasks]
-    # graph.join()
 
     # TODO: left off here for pgp 1.0 conversion
 
@@ -206,11 +204,11 @@ def execute(args):
             "Calculate carbon storage for '%s'", output_key)
 
         sum_rasters_task = graph.add_task(
-        _sum_rasters,
-        args=(storage_path_list, file_registry[output_key]),
-        target_path_list=[file_registry[output_key]],
-        dependent_task_list=carbon_map_tasks,
-        task_name='sum_rasters_for_total_c_%s' % output_key)
+            _sum_rasters,
+            args=(storage_path_list, file_registry[output_key]),
+            target_path_list=[file_registry[output_key]],
+            dependent_task_list=carbon_map_tasks,
+            task_name='sum_rasters_for_total_c_%s' % output_key)
         sum_rasters_tasks.append(sum_rasters_task)
         sum_rasters_task.join()
         # _sum_rasters(storage_path_list, file_registry[output_key])
@@ -221,7 +219,6 @@ def execute(args):
             _accumulate_totals(file_registry[output_key]), 'Mg of C',
             file_registry[output_key]))
 
-    # [srt.join() for srt in sum_rasters_tasks]
 
     # calculate sequestration
     diff_rasters_tasks = []
@@ -234,11 +231,11 @@ def execute(args):
             file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
         
         diff_rasters_task = graph.add_task(
-        _diff_rasters,
-        args=(storage_path_list, file_registry[output_key]),
-        target_path_list=[file_registry[output_key]],
-        dependent_task_list=sum_rasters_tasks,
-        task_name='diff_rasters_for_%s' % output_key)
+            _diff_rasters,
+            args=(storage_path_list, file_registry[output_key]),
+            target_path_list=[file_registry[output_key]],
+            dependent_task_list=sum_rasters_tasks,
+            task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_tasks.append(diff_rasters_task)
         diff_rasters_task.join()
 
@@ -264,13 +261,12 @@ def execute(args):
             LOGGER.info("Calculating NPV for scenario '%s'", output_key)
 
             calculate_npv_task = graph.add_task(
-            _calculate_npv,
-            args=(file_registry['delta_cur_%s' % scenario_type],
-                valuation_constant, file_registry[output_key]),
-            target_path_list=[file_registry[output_key]],
-            dependent_task_list=diff_rasters_tasks,
-            task_name='calculate_%s' % output_key)
-            # sum_rasters_tasks.append(sum_rasters_task)
+                _calculate_npv,
+                args=(file_registry['delta_cur_%s' % scenario_type],
+                    valuation_constant, file_registry[output_key]),
+                target_path_list=[file_registry[output_key]],
+                dependent_task_list=diff_rasters_tasks,
+                task_name='calculate_%s' % output_key)
             calculate_npv_task.join()
 
             # _calculate_npv(
