@@ -6,9 +6,9 @@ import logging
 from osgeo import gdal
 from osgeo import ogr
 import numpy
-import natcap.invest.pygeoprocessing_0_3_3.routing
 import pygeoprocessing
 import pygeoprocessing.routing
+import taskgraph
 
 from . import utils
 from . import validation
@@ -65,6 +65,9 @@ def execute(args):
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM. (required)
         snap_distance (int):  Pixel Distance to Snap Outlet Points (required)
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing.  If omitted, computation will take place in the
+            current process.
 
     Returns:
         None
@@ -79,56 +82,106 @@ def execute(args):
     snap_distance = int(args['snap_distance'])
     flow_threshold = int(args['flow_threshold'])
 
-    LOGGER.info('Filling pits')
-    pygeoprocessing.routing.fill_pits(
-        (args['dem_uri'], 1), file_registry['filled_dem'],
-        working_dir=output_directory)
+    work_token_dir = os.path.join(output_directory, '_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = 0  # Threaded queue management, but same process.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
-    LOGGER.info('Determining flow direction')
-    pygeoprocessing.routing.flow_dir_d8(
-        (file_registry['filled_dem'], 1), file_registry['flow_dir_d8'],
-        working_dir=output_directory)
+    fill_pits_task = graph.add_task(
+        pygeoprocessing.routing.fill_pits,
+        args=((args['dem_uri'], 1),
+              file_registry['filled_dem']),
+        kwargs={'working_dir': output_directory},
+        target_path_list=[file_registry['filled_dem']],
+        task_name='fill_pits')
 
-    LOGGER.info('Determining flow accumulation')
-    pygeoprocessing.routing.flow_accumulation_d8(
-        (file_registry['flow_dir_d8'], 1), file_registry['flow_accumulation'])
+    flow_dir_task = graph.add_task(
+        pygeoprocessing.routing.flow_dir_d8,
+        args=((file_registry['filled_dem'], 1),
+              file_registry['flow_dir_d8']),
+        kwargs={'working_dir': output_directory},
+        target_path_list=[file_registry['flow_dir_d8']],
+        dependent_task_list=[fill_pits_task],
+        task_name='flow_direction')
 
-    LOGGER.info('Thresholding streams')
-    def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
-        out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.int8)
-        out_matrix[:] = out_nodata
-        valid_pixels = ~numpy.isclose(src_nodata, flow_accum)
-        over_threshold = flow_accum > threshold
-        out_matrix[valid_pixels & over_threshold] = 1
-        out_matrix[valid_pixels & ~over_threshold] = 0
-        return out_matrix
+    flow_accumulation_task = graph.add_task(
+        pygeoprocessing.routing.flow_accumulation_d8,
+        args=((file_registry['flow_dir_d8'], 1),
+              file_registry['flow_accumulation']),
+        target_path_list=[file_registry['flow_accumulation']],
+        dependent_task_list=[flow_dir_task],
+        task_name='flow_accumulation')
 
-    flow_accum_info = pygeoprocessing.get_raster_info(
-        file_registry['flow_accumulation'])
+    streams_task = graph.add_task(
+        _get_nodata_and_threshold_streams,
+        args=(file_registry['flow_accumulation'],
+              file_registry['streams'],
+              flow_threshold),
+        target_path_list=[file_registry['streams']],
+        dependent_task_list=[flow_accumulation_task],
+        task_name='threhold_streams')
+
+    snapped_outflow_points_task = graph.add_task(
+        snap_points_to_nearest_stream,
+        args=(args['outlet_shapefile_uri'],
+              (file_registry['streams'], 1),
+              snap_distance,
+              file_registry['snapped_outlets']),
+        target_path_list=[file_registry['snapped_outlets']],
+        dependent_task_list=[streams_task],
+        task_name='snapped_outflow_points')
+
+    watershed_delineation_task = graph.add_task(
+        pygeoprocessing.routing.delineate_watersheds,
+        args=((file_registry['flow_dir_d8'], 1),
+              file_registry['snapped_outlets'],
+              file_registry['watershed_fragments']),
+        kwargs={'working_dir': output_directory,
+                'remove_working_dir': False},
+        target_path_list=[file_registry['watershed_fragments']],
+        dependent_task_list=[snapped_outflow_points_task],
+        task_name='delineate_watersheds')
+
+    graph.add_task(
+        pygeoprocessing.routing.join_watershed_fragments,
+        args=(file_registry['watershed_fragments'],
+              file_registry['watersheds']),
+        target_path_list=[file_registry['watersheds']],
+        dependent_task_list=[watershed_delineation_task],
+        task_name='join_watershed_fragments')
+
+    graph.join()
+
+
+def _get_nodata_and_threshold_streams(flow_accumulation_raster_path,
+                                      target_streams_raster_path,
+                                      stream_threshold):
     out_nodata = 255
+    flow_accumulation_info = pygeoprocessing.get_raster_info(
+        flow_accumulation_raster_path)
+
     pygeoprocessing.raster_calculator(
-        [(file_registry['flow_accumulation'], 1),
-         (flow_accum_info['nodata'], 'raw'),
-         (out_nodata, 'raw'), (flow_threshold, 'raw')],
-        _threshold_streams, file_registry['streams'],
+        [(flow_accumulation_raster_path, 1),
+         (flow_accumulation_info['nodata'], 'raw'),
+         (out_nodata, 'raw'),
+         (stream_threshold, 'raw')],
+        _threshold_streams, target_streams_raster_path,
         gdal.GDT_Byte, out_nodata)
 
-    LOGGER.info('Snapping points to the nearest stream')
-    snap_points_to_nearest_stream(
-        args['outlet_shapefile_uri'], (file_registry['streams'], 1),
-        snap_distance, file_registry['snapped_outlets'])
 
-    LOGGER.info('Delineating watershed fragments')
-    pygeoprocessing.routing.delineate_watersheds(
-        (file_registry['flow_dir_d8'], 1),
-        file_registry['snapped_outlets'],
-        file_registry['watershed_fragments'],
-        working_dir=output_directory)
-
-    LOGGER.info('Joining watershed fragments into watersheds')
-    pygeoprocessing.routing.join_watershed_fragments(
-        file_registry['watershed_fragments'],
-        file_registry['watersheds'])
+def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
+    out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.int8)
+    out_matrix[:] = out_nodata
+    valid_pixels = ~numpy.isclose(src_nodata, flow_accum)
+    over_threshold = flow_accum > threshold
+    out_matrix[valid_pixels & over_threshold] = 1
+    out_matrix[valid_pixels & ~over_threshold] = 0
+    return out_matrix
 
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
