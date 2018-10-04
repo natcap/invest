@@ -117,14 +117,23 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='flow_accumulation')
 
+    flow_accumulation_task.join()
+    out_nodata = 255
+    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
+        file_registry['flow_accumulation'])['nodata']
     streams_task = graph.add_task(
-        _get_nodata_and_threshold_streams,
-        args=(file_registry['flow_accumulation'],
+        pygeoprocessing.raster_calculator,
+        args=([(file_registry['flow_accumulation'], 1),
+               (flow_accumulation_nodata, 'raw'),
+               (out_nodata, 'raw'),
+               (flow_threshold, 'raw')],
+              _threshold_streams,
               file_registry['streams'],
-              flow_threshold),
+              gdal.GDT_Byte,
+              out_nodata),
         target_path_list=[file_registry['streams']],
         dependent_task_list=[flow_accumulation_task],
-        task_name='threhold_streams')
+        task_name='threshold_streams')
 
     snapped_outflow_points_task = graph.add_task(
         snap_points_to_nearest_stream,
@@ -141,8 +150,7 @@ def execute(args):
         args=((file_registry['flow_dir_d8'], 1),
               file_registry['snapped_outlets'],
               file_registry['watershed_fragments']),
-        kwargs={'working_dir': output_directory,
-                'remove_working_dir': False},
+        kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['watershed_fragments']],
         dependent_task_list=[snapped_outflow_points_task],
         task_name='delineate_watersheds')
@@ -156,22 +164,6 @@ def execute(args):
         task_name='join_watershed_fragments')
 
     graph.join()
-
-
-def _get_nodata_and_threshold_streams(flow_accumulation_raster_path,
-                                      target_streams_raster_path,
-                                      stream_threshold):
-    out_nodata = 255
-    flow_accumulation_info = pygeoprocessing.get_raster_info(
-        flow_accumulation_raster_path)
-
-    pygeoprocessing.raster_calculator(
-        [(flow_accumulation_raster_path, 1),
-         (flow_accumulation_info['nodata'], 'raw'),
-         (out_nodata, 'raw'),
-         (stream_threshold, 'raw')],
-        _threshold_streams, target_streams_raster_path,
-        gdal.GDT_Byte, out_nodata)
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
