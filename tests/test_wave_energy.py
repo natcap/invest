@@ -494,7 +494,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace")#self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,

@@ -333,7 +333,7 @@ def execute(args):
                                        coord_trans_opposite, dem_path)
 
         # Average the pixel sizes in case they are of different sizes
-        LOGGER.debug('Pixel size of DEM in meters : %f', pixel_size)
+        LOGGER.debug('Pixel size of DEM in meters : %s', pixel_size)
 
     # We do all wave power calculations by manipulating the fields in
     # the wave data shapefile, thus we need to add proper depth values
@@ -458,12 +458,12 @@ def execute(args):
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_energy_path, pixel_size,
-        target_pixel_type, nodata)
+        aoi_vector_path, wave_energy_path, pixel_size, target_pixel_type,
+        nodata)
 
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_power_path, pixel_size,
-        target_pixel_type, nodata)
+        aoi_vector_path, wave_power_path, pixel_size, target_pixel_type,
+        nodata)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
@@ -960,8 +960,13 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
         reference_point_x, reference_point_y)
 
     # Get the size of the pixels in meters, to be used for creating rasters
-    pixel_size_tuple = pixel_size_based_on_coordinate_transform(
+    pixel_xsize, pixel_ysize = pixel_size_based_on_coordinate_transform(
         ds_uri, coord_trans, reference_point_latlng)
+
+    # Average the pixel sizes incase they are of different sizes
+    mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
+    pixel_size_tuple = (mean_pixel_size * numpy.sign(pixel_xsize),
+                        mean_pixel_size * numpy.sign(pixel_ysize))
 
     return pixel_size_tuple
 
@@ -1003,16 +1008,17 @@ def get_coordinate_transformation(source_sr, target_sr):
     return (coord_trans, coord_trans_opposite)
 
 
-def create_percentile_rasters(
-    base_raster_path, target_raster_path, units_short, units_long, start_value,
-    percentile_list, aoi_vector_path):
+def create_percentile_rasters(base_raster_path, target_raster_path,
+                              units_short, units_long, start_value,
+                              percentile_list, aoi_vector_path):
     """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
         displays the ranges provided by taking the quartile of values.
         The following inputs are required:
 
     Parameters:
-        base_raster_path (string): path to a GDAL raster with data of type integer
+        base_raster_path (string): path to a GDAL raster with data of type
+            integer
         target_raster_path (string): path to the destination of the new raster.
         units_short (string): The shorthand for the units of the raster values,
             ex: kW/m.
@@ -1035,47 +1041,35 @@ def create_percentile_rasters(
     if os.path.isfile(target_raster_path):
         os.remove(target_raster_path)
 
-    # nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata']
-
     # Set nodata to a very small negative number
     nodata = -9999919
 
     # Get the percentile values for each percentile
     percentiles = calculate_percentiles_from_raster(base_raster_path,
                                                     percentile_list)
-    LOGGER.debug('Percentiles : %s', percentiles)
-    # Get the percentile ranges as strings so that they can be added to a output
-    # table
+
+    # Get the percentile ranges as strings so that they can be added to an
+    # output table
     percentile_ranges = create_percentile_ranges(percentiles, units_short,
                                                  units_long, start_value)
 
     # Add the start_value to the beginning of the percentiles so that any value
     # before the start value is set to nodata
     percentiles.insert(0, int(start_value))
+    LOGGER.debug('Percentiles : %s', percentiles)
 
-    def raster_percentile(pixel):
+    def raster_percentile(band):
         """Operation to use in raster_calculator that takes the pixels of
             band and groups them together based on their percentile ranges.
         """
-        return numpy.where(nodata, nodata, bisect(percentiles, pixel))
-
-
-    # pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
-    #     raster_path)
+        return numpy.where(band != nodata, numpy.searchsorted(
+            percentiles, band), nodata)
 
     # Classify the pixels of raster_dataset into groups and write
     # then to output
-    pygeoprocessing.raster_calculator([(base_raster_path, 1)], raster_percentile, target_raster_path, gdal.GDT_Int32, nodata)
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-    #     [raster_path],
-    #     raster_percentile,
-    #     target_raster_path,
-    #     gdal.GDT_Int32,
-    #     nodata,
-    #     pixel_size,
-    #     'intersection',
-    #     assert_datasets_projected=False,
-    #     aoi_uri=aoi_vector_path)
+    pygeoprocessing.raster_calculator([(base_raster_path, 1)],
+                                      raster_percentile, target_raster_path,
+                                      gdal.GDT_Int32, nodata)
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
@@ -1084,7 +1078,7 @@ def create_percentile_rasters(
     # Get the pixel count for each group
     pixel_count = count_pixels_groups(target_raster_path, percentile_groups)
 
-    LOGGER.debug('number of pixels per group: : %s', pixel_count)
+    LOGGER.debug('Number of pixels per group : %s', pixel_count)
 
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
@@ -1140,7 +1134,7 @@ def create_percentile_ranges(percentiles, units_short, units_long,
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
     range_values.append(range_last)
-    LOGGER.debug('range_values : %s', range_values)
+    LOGGER.debug('Range_values : %s', range_values)
     return range_values
 
 
@@ -1557,7 +1551,7 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     for num in heapq.merge(*iters):
         # If a percentile rank has been hit, grab percentile value
         if counter in rank_list:
-            LOGGER.debug('percentile value is : %s', num)
+            LOGGER.debug('Percentile value is : %s', num)
             results[rank_list.index(counter)] = int(num)
         counter += 1
 
