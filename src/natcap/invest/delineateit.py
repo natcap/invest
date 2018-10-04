@@ -74,20 +74,20 @@ def execute(args):
 
     file_suffix = utils.make_suffix_string(args, 'suffix')
     file_registry = utils.build_file_registry(
-        [output_directory, _OUTPUT_FILES], file_suffix)
+        [(_OUTPUT_FILES, output_directory)], file_suffix)
 
     snap_distance = int(args['snap_distance'])
     flow_threshold = int(args['flow_threshold'])
 
     pygeoprocessing.routing.fill_pits(
-        args['dem_uri'], file_registry['filled_dem'],
+        (args['dem_uri'], 1), file_registry['filled_dem'],
         working_dir=output_directory)
 
-    pygeoprocessing.flow_dir_d8(
+    pygeoprocessing.routing.flow_dir_d8(
         (file_registry['filled_dem'], 1), file_registry['flow_dir_d8'],
         working_dir=output_directory)
 
-    pygeoprocessing.flow_accumulation_d8(
+    pygeoprocessing.routing.flow_accumulation_d8(
         (file_registry['flow_dir_d8'], 1), file_registry['flow_accumulation'])
 
     def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
@@ -100,10 +100,10 @@ def execute(args):
         return out_matrix
 
     flow_accum_info = pygeoprocessing.get_raster_info(
-        file_registry['flow_accumulation_d8'])
+        file_registry['flow_accumulation'])
     out_nodata = 255
     pygeoprocessing.raster_calculator(
-        [(file_registry['flow_accumulation_d8'], 1),
+        [(file_registry['flow_accumulation'], 1),
          (flow_accum_info['nodata'], 'raw'),
          (out_nodata, 'raw'), (flow_threshold, 'raw')],
         _threshold_streams, file_registry['streams'],
@@ -121,7 +121,7 @@ def execute(args):
 
     pygeoprocessing.routing.join_watershed_fragments(
         file_registry['watershed_fragments'],
-        file_regsitry['watersheds'])
+        file_registry['watersheds'])
 
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
