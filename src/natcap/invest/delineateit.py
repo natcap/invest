@@ -21,7 +21,7 @@ _OUTPUT_FILES = {
     'flow_dir_d8': 'flow_direction.tif',
     'flow_accumulation': 'flow_accumulation.tif',
     'streams': 'streams.tif',
-    'snapped_outlets': 'snapped_outlets.shp',
+    'snapped_outlets': 'snapped_outlets.gpkg',
     'watershed_fragments': 'watershed_fragments.gpkg',
     'watersheds': 'watersheds.gpkg',
 }
@@ -218,7 +218,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     stream_band = stream_raster.GetRasterBand(stream_raster_path_band[1])
 
     # TODO: try doing this with GPKG instead
-    driver = gdal.GetDriverByName('ESRI Shapefile')
+    driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
                                    gdal.GDT_Unknown)
     snapped_layer = snapped_vector.CreateLayer(
@@ -232,9 +232,6 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             field_defn.SetWidth(24)
         snapped_layer.CreateField(field_defn)
 
-    # TODO: handle snap_distance of 0
-    # TODO: handle snap_distance < 0
-
     for point_feature in points_layer:
         point_geometry = point_feature.GetGeometryRef()
         point = point_geometry.GetPoint()
@@ -246,48 +243,47 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                         'the stream raster: %s', point)
             continue
 
-        if snap_distance > 0:
-            x_center = x_index
-            y_center = y_index
-            x_left = max(x_index - snap_distance, 0)
-            y_top = max(y_index - snap_distance, 0)
-            x_right = min(x_index + snap_distance, n_cols)
-            y_bottom = min(y_index + snap_distance, n_rows)
+        x_center = x_index
+        y_center = y_index
+        x_left = max(x_index - snap_distance, 0)
+        y_top = max(y_index - snap_distance, 0)
+        x_right = min(x_index + snap_distance, n_cols)
+        y_bottom = min(y_index + snap_distance, n_rows)
 
-            # snap to the nearest stream pixel out to the snap distance
-            stream_window = stream_band.ReadAsArray(
-                int(x_left), int(y_top), int(x_right - x_left),
-                int(y_bottom - y_top))
-            row_indexes, col_indexes = numpy.nonzero(
-                stream_window == 1)
-            if row_indexes.size > 0:
-                # Calculate euclidean distance for sorting
-                distance_array = numpy.hypot(
-                    row_indexes - y_center - y_top,
-                    col_indexes - x_center - x_left,
-                    dtype=numpy.float32)
+        # snap to the nearest stream pixel out to the snap distance
+        stream_window = stream_band.ReadAsArray(
+            int(x_left), int(y_top), int(x_right - x_left),
+            int(y_bottom - y_top))
+        row_indexes, col_indexes = numpy.nonzero(
+            stream_window == 1)
+        if row_indexes.size > 0:
+            # Calculate euclidean distance for sorting
+            distance_array = numpy.hypot(
+                row_indexes - y_center - y_top,
+                col_indexes - x_center - x_left,
+                dtype=numpy.float32)
 
-                # Find the closest stream pixel that meets the distance
-                # requirement.
-                min_index = numpy.argmin(distance_array)
-                min_row = row_indexes[min_index]
-                min_col = col_indexes[min_index]
-                offset_row = min_row - (y_center - y_top)
-                offset_col = min_col - (x_center - x_left)
+            # Find the closest stream pixel that meets the distance
+            # requirement.
+            min_index = numpy.argmin(distance_array)
+            min_row = row_indexes[min_index]
+            min_col = col_indexes[min_index]
+            offset_row = min_row - (y_center - y_top)
+            offset_col = min_col - (x_center - x_left)
 
-                y_index += offset_row
-                x_index += offset_col
+            y_index += offset_row
+            x_index += offset_col
 
-            point_geometry = ogr.Geometry(ogr.wkbPoint)
-            point_geometry.AddPoint(
-                geotransform[0] + (x_index + 0.5) * geotransform[1],
-                geotransform[3] + (y_index + 0.5) * geotransform[5])
+        point_geometry = ogr.Geometry(ogr.wkbPoint)
+        point_geometry.AddPoint(
+            geotransform[0] + (x_index + 0.5) * geotransform[1],
+            geotransform[3] + (y_index + 0.5) * geotransform[5])
 
-            # Get the output Layer's Feature Definition
-            snapped_point_feature = point_feature.Clone()
-            snapped_point_feature.SetGeometry(point_geometry)
+        # Get the output Layer's Feature Definition
+        snapped_point_feature = point_feature.Clone()
+        snapped_point_feature.SetGeometry(point_geometry)
 
-            snapped_layer.CreateFeature(snapped_point_feature)
+        snapped_layer.CreateFeature(snapped_point_feature)
     snapped_layer = None
     snapped_vector = None
 
