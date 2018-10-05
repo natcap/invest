@@ -57,6 +57,7 @@ class Delineateit(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
+            self.n_workers.args_key: self.n_workers.value(),
             self.dem_uri.args_key: self.dem_uri.value(),
             self.outlet_shapefile_uri.args_key: (
                 self.outlet_shapefile_uri.value()),
