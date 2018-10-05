@@ -178,7 +178,34 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):
-    # TODO: verify it's a path/band tuple.
+    """Adjust the location of points to the nearest stream pixel.
+
+    The new point layer will have all fields and field values copied over from
+    the source vector.  Any points that are outside of the stream raster will
+    not be included in the output vector.
+
+    Parameters:
+        points_vector_path (string): A path to a vector on disk containing
+            point geometries.  Must be in the same projection as the stream
+            raster.
+        stream_raster_path_band (tuple): A tuple of (path, band index), where
+            pixel values are ``1`` (indicating a stream pixel) or ``0``
+            (indicating a non-stream pixel).
+        snap_distance (number): The maximum distance (in pixels) to search
+            for stream pixels for each point.  This must be a positive, nonzero
+            value.
+        snapped_points_vector_path (string): A path to where the output
+            points will be written.
+
+    Returns:
+        ``None``
+
+    Raises:
+        ``ValueError`` when snap_distance is less than or equal to 0.
+
+    """
+    if snap_distance <= 0:
+        raise ValueError('Snap_distance must be >= 0, not %s' % snap_distance)
 
     points_vector = gdal.OpenEx(points_vector_path, gdal.OF_VECTOR)
     points_layer = points_vector.GetLayer()
