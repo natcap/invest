@@ -344,7 +344,7 @@ def execute(args):
 
     def index_values_to_points(base_point_vector_path, base_raster_path,
                                field_name, coord_trans):
-        """Add the values of a raster based the point features of a vector.
+        """Add the values of a raster to the field of vector point features.
 
         Values are recorded in the attribute field of the vector. If a value is
         larger than or equal to 0, the feature will be deleted.
@@ -362,35 +362,9 @@ def execute(args):
             None
 
         """
-        # NOTE: This function is a wrapper function so that we can handle
-        # raster / vector by passing paths. This function lacks memory
-        # efficiency and the global dem is being dumped into an array. This may
-        # cause the global biophysical run to crash
-
         base_vector = gdal.OpenEx(base_point_vector_path, 1)
         raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
             'geotransform']
-        tmp_raster_path = os.path.join(
-            intermediate_dir,
-            os.path.basename(base_raster_path).replace('.tif', '_tmp%s.tif') %
-            file_suffix)
-
-        # CHANGE TO ITERBLOCKS!!!
-        # Get the first band of the raster as a memory mapped array.
-        base_raster = gdal.OpenEx(base_raster_path)
-        band = base_raster.GetRasterBand(1)
-        n_rows = base_raster.RasterYSize
-        n_cols = base_raster.RasterXSize
-        mmap_array = numpy.memmap(
-            tmp_raster_path,
-            dtype=numpy.float32,
-            mode='w+',
-            shape=(n_rows, n_cols))
-        band.ReadAsArray(buf_obj=mmap_array)
-
-        # Make sure the dataset is closed and cleaned up
-        band = None
-        base_raster = None
 
         # Create a new field for the raster attribute
         field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
@@ -401,38 +375,39 @@ def execute(args):
         base_layer.CreateField(field_defn)
         feature = base_layer.GetNextFeature()
 
-        # For all the features (points) add the proper raster value
-        while feature is not None:
-            field_index = feature.GetFieldIndex(field_name)
-            geom = feature.GetGeometryRef()
-            geom_x, geom_y = geom.GetX(), geom.GetY()
+        for _, block_matrix in pygeoprocessing.iterblocks(base_raster_path):
+            # For all the features (points) add the proper raster value
+            while feature is not None:
+                field_index = feature.GetFieldIndex(field_name)
+                geom = feature.GetGeometryRef()
+                geom_x, geom_y = geom.GetX(), geom.GetY()
 
-            # Transform two points into meters
-            point_decimal_degree = coord_trans.TransformPoint(geom_x, geom_y)
+                # Transform two points into meters
+                point_decimal_degree = coord_trans.TransformPoint(
+                    geom_x, geom_y)
 
-            # To get proper raster value we must index into the dem matrix
-            # by getting where the point is located in terms of the matrix
-            i = int((point_decimal_degree[0] - raster_gt[0]) / raster_gt[1])
-            j = int((point_decimal_degree[1] - raster_gt[3]) / raster_gt[5])
-            raster_value = mmap_array[j][i]
-            # There are cases where the DEM may be too coarse and thus a wave
-            # energy point falls on land. If the raster value taken is greater
-            # than or equal to zero we need to delete that point as it should
-            # not be used in calculations
-            if raster_value >= 0.0:
-                base_layer.DeleteFeature(feature.GetFID())
+                # To get proper raster value we must index into the dem matrix
+                # by getting where the point is located in terms of the matrix
+                i = int(
+                    (point_decimal_degree[0] - raster_gt[0]) / raster_gt[1])
+                j = int(
+                    (point_decimal_degree[1] - raster_gt[3]) / raster_gt[5])
+                raster_value = block_matrix[j][i]
+                # There are cases where the DEM may be too coarse and thus a wave
+                # energy point falls on land. If the raster value taken is greater
+                # than or equal to zero we need to delete that point as it should
+                # not be used in calculations
+                if raster_value >= 0.0:
+                    base_layer.DeleteFeature(feature.GetFID())
+                else:
+                    feature.SetField(int(field_index), float(raster_value))
+                    base_layer.SetFeature(feature)
                 feature = base_layer.GetNextFeature()
-            else:
-                feature.SetField(int(field_index), float(raster_value))
-                base_layer.SetFeature(feature)
-                feature = None
-                feature = base_layer.GetNextFeature()
+
         # It is not enough to just delete a feature from the layer. The database
         # where the information is stored must be re-packed so that feature
         # entry is properly removed
         base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
-
-        mmap_array = None
 
     # Add the depth value to the wave points by indexing into the DEM dataset
     index_values_to_points(clipped_wave_vector_path, dem_path, 'DEPTH_M',
@@ -491,9 +466,9 @@ def execute(args):
         wave_energy_path, capwe_rc_path, capwe_units_short, capwe_units_long,
         starting_percentile_range, percentiles, aoi_vector_path)
 
-    create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
-                              wp_units_long, starting_percentile_range,
-                              percentiles, aoi_vector_path)
+    create_percentile_rasters(
+        wave_power_path, wp_rc_path, wp_units_short, wp_units_long,
+        starting_percentile_range, percentiles, aoi_vector_path)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -1001,7 +976,7 @@ def get_coordinate_transformation(source_sr, target_sr):
         target_sr: A spatial reference
 
     Returns:
-        A tuple, coord_trans (source to target) and coord_trans_opposite
+        A tuple: coord_trans (source to target) and coord_trans_opposite
         (target to source)
 
     """
@@ -1044,7 +1019,8 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         os.remove(target_raster_path)
 
     # Set nodata to a very small negative number
-    nodata = -9999919
+    target_nodata = -99999
+    base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
 
     # Get the percentile values for each percentile
     percentiles = calculate_percentiles_from_raster(base_raster_path,
@@ -1064,14 +1040,13 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         """Operation to use in raster_calculator that takes the pixels of
             band and groups them together based on their percentile ranges.
         """
-        return numpy.where(band != nodata, numpy.searchsorted(
-            percentiles, band), nodata)
+        return numpy.where(band != base_nodata, numpy.searchsorted(
+            percentiles, band), target_nodata)
 
-    # Classify the pixels of raster_dataset into groups and write
-    # then to output
+    # Classify the pixels of raster_dataset into groups and write to output
     pygeoprocessing.raster_calculator([(base_raster_path, 1)],
                                       raster_percentile, target_raster_path,
-                                      gdal.GDT_Int32, nodata)
+                                      gdal.GDT_Int32, target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
@@ -1080,28 +1055,28 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     # Get the pixel count for each group
     pixel_count = count_pixels_groups(target_raster_path, percentile_groups)
 
-    LOGGER.debug('Number of pixels per group : %s', pixel_count)
+    LOGGER.debug('Pixel_count: %s; Percentile_groups: %s' %
+                 (pixel_count, percentile_groups))
 
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
     perc_dict = {}
     for index in xrange(len(percentile_groups)):
         perc_dict[percentile_groups[index]] = percentile_ranges[index]
-
-    col_name = "Val_Range"
-    _create_rat(target_raster_path, perc_dict, col_name)
+    _create_raster_attr_table(
+        target_raster_path, perc_dict, column_name='Val_Range')
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
     table_dict = {}
     for index in xrange(len(percentile_groups)):
         table_dict[index] = {}
-        table_dict[index]['id'] = percentile_groups[index]
+        table_dict[index]['Percentile Group'] = percentile_groups[index]
         table_dict[index]['Value Range'] = percentile_ranges[index]
         table_dict[index]['Pixel Count'] = pixel_count[index]
 
     attribute_table_path = target_raster_path[:-4] + '.csv'
-    column_names = ['id', 'Value Range', 'Pixel Count']
+    column_names = ['Percentile Group', 'Value Range', 'Pixel Count']
     create_attribute_csv_table(attribute_table_path, column_names, table_dict)
 
 
@@ -1466,7 +1441,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         feat = None
 
 
-def calculate_percentiles_from_raster(raster_path, percentile_list):
+def calculate_percentiles_from_raster(base_raster_path, percentile_list):
     """Determine the percentiles of a raster using the nearest-rank method.
 
     Iterate through the raster blocks and round the unique values for
@@ -1474,7 +1449,7 @@ def calculate_percentiles_from_raster(raster_path, percentile_list):
     Compute ordinal ranks given the percentile list.
 
     Parameters:
-        raster_path (string): path to a gdal raster on disk
+        base_raster_path (string): path to a gdal raster on disk
         percentile_list (list): a list of desired percentiles to lookup,
             ex: [25,50,75,90]
 
@@ -1482,9 +1457,9 @@ def calculate_percentiles_from_raster(raster_path, percentile_list):
             a list of values corresponding to the percentiles from the list
 
     """
-    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+    nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
     unique_value_counts = {}
-    for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
+    for _, block_matrix in pygeoprocessing.iterblocks(base_raster_path):
         # Sum the values with the same key in both dictionaries
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
         # Round the array so the unique values won't explode the dictionary
@@ -1504,7 +1479,8 @@ def calculate_percentiles_from_raster(raster_path, percentile_list):
     # Calculate the ordinal rank
     ordinal_rank = [
         numpy.ceil(percentile / 100.0 * total_count)
-        for percentile in percentile_list]
+        for percentile in percentile_list
+    ]
 
     # Get values from the ordered dictionary that correspond to the ranks
     percentile_values = []  # list for corresponding values
@@ -1534,19 +1510,20 @@ def count_pixels_groups(raster_path, group_values):
         raster provided by 'raster_path'. Returns a list of pixel counts
         for each value in 'group_values'
 
-        raster_path - a uri path to a gdal raster on disk
-        group_values - a list of unique numbers for which to get a pixel count
+    Parameters:
+        raster_path (string): path to a gdal raster on disk
+        group_values (list): unique numbers for which to get a pixel count
 
-        returns - A list of integers, where each integer at an index
-            corresponds to the pixel count of the value from 'group_values'
-            found at the same index
+    Returns:
+        A list of integers, where each integer at an index corresponds to the
+        pixel count of the value from 'group_values' found at the same index
+
     """
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
-    for block_info, block_matrix in pygeoprocessing.iterblocks(raster_path):
-        # Cumulatively add the number of pixels found for each value
-        # in 'group_values'
+    for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
+        # Cumulatively add the pixels count for each value in 'group_values'
         for index in xrange(len(group_values)):
             val = group_values[index]
             count_mask = numpy.zeros(block_matrix.shape)
@@ -1605,33 +1582,34 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     return (pixel_diff_x, pixel_diff_y)
 
 
-def _create_rat(dataset_path, attr_dict, column_name):
+def _create_raster_attr_table(dataset_path, attr_dict, column_name):
     """Create a raster attribute table.
 
-    URI wrapper for create_rat.
-
-    Args:
-        dataset_path (string): a GDAL raster dataset to create the RAT for (...)
+    Parameters:
+        dataset_path (string): a GDAL raster dataset to create the RAT for
         attr_dict (dict): a dictionary with keys that point to a primitive type
-           {integer_id_1: value_1, ... integer_id_n: value_n}
+            ex: {integer_id_1: value_1, ... integer_id_n: value_n}
         column_name (string): a string for the column name that maps the values
+
+    Returns:
+        None
     """
     dataset = gdal.OpenEx(dataset_path, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
-    rat = gdal.RasterAttributeTable()
-    rat.SetRowCount(len(attr_dict))
+    attr_table = gdal.RasterAttributeTable()
+    attr_table.SetRowCount(len(attr_dict))
 
     # create columns
-    rat.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
-    rat.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
+    attr_table.CreateColumn('Value', gdal.GFT_Integer, gdal.GFU_MinMax)
+    attr_table.CreateColumn(column_name, gdal.GFT_String, gdal.GFU_Name)
 
     row_count = 0
     for key in sorted(attr_dict.keys()):
-        rat.SetValueAsInt(row_count, 0, int(key))
-        rat.SetValueAsString(row_count, 1, attr_dict[key])
+        attr_table.SetValueAsInt(row_count, 0, int(key))
+        attr_table.SetValueAsString(row_count, 1, attr_dict[key])
         row_count += 1
 
-    band.SetDefaultRAT(rat)
+    band.SetDefaultRAT(attr_table)
 
     # Make sure the dataset is closed and cleaned up
     gdal.Dataset.__swig_destroy__(dataset)
