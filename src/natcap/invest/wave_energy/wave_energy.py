@@ -475,23 +475,7 @@ def execute(args):
     # Path for the net present value percentile raster
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
-    # # Read machine economic parameters into a dictionary
-    # machine_econ = {}
-    # machine_econ_file = open(args['machine_econ_path'], 'rU')
-    # reader = csv.DictReader(machine_econ_file)
-    # LOGGER.debug('Reader.fieldnames : %s ', reader.fieldnames)
-    # # Read in the field names from the column headers
-    # name_key = reader.fieldnames[0]
-    # value_key = reader.fieldnames[1]
-    # for row in reader:
-    #     # Convert name to lowercase
-    #     name = row[name_key].strip().lower()
-    #     LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
-    #     machine_econ[name] = row[value_key]
-    # machine_econ_file.close()
-
     machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
-    pdb.set_trace()
 
     # Read landing and power grid connection points into a dictionary
     land_grid_pts = {}
@@ -526,8 +510,7 @@ def execute(args):
     # The NPV is for a 25 year period
     year = 25
 
-    # A numpy array of length 25, representing the npv of a farm for
-    # each year
+    # A numpy array of length 25, representing the npv of a farm for each year
     time = numpy.linspace(0, year - 1, year)
 
     # The discount rate calculation for the npv equations
