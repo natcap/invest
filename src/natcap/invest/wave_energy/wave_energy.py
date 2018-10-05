@@ -22,6 +22,8 @@ import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
 from .. import utils
 
+import pdb
+
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 
@@ -1110,17 +1112,19 @@ def create_percentile_ranges(percentiles, units_short, units_long,
         percentile mark.  Each string range is stored in a list that gets
         returned
 
-        percentiles - A list of the percentile marks in ascending order
-        units_short - A String that represents the shorthand for the units of
-            the raster values (ex: kW/m)
-        units_long - A String that represents the description of the units of
-            the raster values (ex: wave power per unit width of
-            wave crest length (kW/m))
-        start_value - A String representing the first value that goes to the
-                 first percentile range (start_value - percentile_one)
+    Parameters:
+        percentiles (list): A list of the percentile marks in ascending order
+        units_short (string): The shorthand for the units of the raster values.
+            ex: kW/m.
+        units_long (string): The description of the units of the raster values,
+            ex: wave power per unit width of wave crest length (kW/m))
+        start_value (string): the first value that goes to the first percentile
+            range (start_value: percentile_one)
 
-        returns - A list of Strings representing the ranges of the percentiles
-        """
+    Returns:
+        A list of Strings representing the ranges of the percentiles
+
+    """
     length = len(percentiles)
     range_values = []
     # Add the first range with the starting value and long description of units
@@ -1476,88 +1480,45 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
             a list of values corresponding to the percentiles from the list
 
     """
-    raster = gdal.OpenEx(raster_path, gdal.GA_ReadOnly)
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
+    unique_value_counts = {}
+    for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
+        # Sum the values with the same key in both dictionaries
+        unique_values, counts = numpy.unique(block_matrix, return_counts=True)
+        block_unique_value_counts = dict(zip(unique_values, counts))
+        for value in block_unique_value_counts.keys():
+            unique_value_counts[value] = unique_value_counts.get(
+                value, 0) + block_unique_value_counts.get(value, 0)
 
-    def numbers_from_file(fle):
-        """Generates an iterator from a file by loading all the numbers
-            and yielding
+    # Sort the dictionary in ascending order
+    unique_value_counts = dict(sorted(unique_value_counts.items()))
+    # Remove the nodata key and its count from the dictionary
+    unique_value_counts.pop(nodata, None)
 
-            fle = file object
-        """
-        arr = numpy.load(fle)
-        for num in arr:
-            yield num
+    # Get the total pixel count except nodata pixels
+    total_count = sum(unique_value_counts.values())
 
-    # List to hold the generated iterators
-    iters = []
+    # Calculate the ordinal rank
+    ordinal_rank = [
+        numpy.ceil(percentile / 100.0 * total_count)
+        for percentile in percentiles]
 
-    band = raster.GetRasterBand(1)
-    nodata = band.GetNoDataValue()
+    # Get values from the ordered dictionary that correspond to the ranks
+    percentile_values = []  # list for corresponding values
+    ith_element = 0  # indexing the ith element in the percentile_values list
+    cumulative_count = 0  # for checking if the percentile value is reached
 
-    n_rows = raster.RasterYSize
-    n_cols = raster.RasterXSize
-
-    # Variable to count the total number of elements to compute percentile
-    # from. This leaves out nodata values
-    n_elements = 0
-
-    #Set the row strides to be something reasonable, like 256MB blocks
-    row_strides = max(int(2**28 / (4 * n_cols)), 1)
-
-    for row_index in xrange(0, n_rows, row_strides):
-        #It's possible we're on the last set of rows and the stride
-        #is too big, update if so
-        if row_index + row_strides >= n_rows:
-            row_strides = n_rows - row_index
-
-        # Read in raster chunk as array
-        arr = band.ReadAsArray(0, row_index, n_cols, row_strides)
-
-        tmp_uri = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.temporary_filename(
-        )
-        tmp_file = open(tmp_uri, 'wb')
-        # Make array one dimensional for sorting and saving
-        arr = arr.flatten()
-        # Remove nodata values from array and thus percentile calculation
-        arr = numpy.delete(arr, numpy.where(arr == nodata))
-        # Tally the number of values relevant for calculating percentiles
-        n_elements += len(arr)
-        # Sort array before saving
-        arr = numpy.sort(arr)
-
-        numpy.save(tmp_file, arr)
-        tmp_file.close()
-        tmp_file = open(tmp_uri, 'rb')
-        tmp_file.seek(0)
-        iters.append(numbers_from_file(tmp_file))
-        arr = None
-
-    # List to store the rank/index where each percentile will be found
-    rank_list = []
-    # For each percentile calculate nearest rank
-    for perc in percentiles:
-        rank = math.ceil(perc / 100.0 * n_elements)
-        rank_list.append(int(rank))
-
-    # A variable to burn through when doing heapq merge sort over the
-    # iterators. Variable is used to check if we've iterated to a
-    # specified rank spot, to grab percentile value
-    counter = 0
-    # Setup a list of zeros to replace with percentile results
-    results = [0] * len(rank_list)
-
-    LOGGER.debug('Percentile Rank List: %s', rank_list)
-
-    for num in heapq.merge(*iters):
-        # If a percentile rank has been hit, grab percentile value
-        if counter in rank_list:
-            LOGGER.debug('Percentile value is : %s', num)
-            results[rank_list.index(counter)] = int(num)
-        counter += 1
-
-    band = None
-    raster = None
-    return results
+    for unique_value, count in unique_value_counts.iteritems():
+        if ith_element > len(ordinal_rank) - 1:
+            break
+        if ordinal_rank[ith_element] == cumulative_count or \
+           ordinal_rank[ith_element] < cumulative_count:
+            percentile_values.append(unique_value)
+            cumulative_count += count
+            ith_element += 1
+    LOGGER.debug('Percentile_values: %s', percentile_values)
+    pdb.set_trace()
+    return percentile_values
 
 
 def count_pixels_groups(raster_path, group_values):
