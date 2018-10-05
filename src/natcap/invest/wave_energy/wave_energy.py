@@ -466,9 +466,9 @@ def execute(args):
         wave_energy_path, capwe_rc_path, capwe_units_short, capwe_units_long,
         starting_percentile_range, percentiles, aoi_vector_path)
 
-    create_percentile_rasters(
-        wave_power_path, wp_rc_path, wp_units_short, wp_units_long,
-        starting_percentile_range, percentiles, aoi_vector_path)
+    create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
+                              wp_units_long, starting_percentile_range,
+                              percentiles, aoi_vector_path)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -1020,28 +1020,26 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Set nodata to a very small negative number
     target_nodata = -99999
-    base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
+    base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][
+        0]
 
     # Get the percentile values for each percentile
-    percentiles = calculate_percentiles_from_raster(base_raster_path,
-                                                    percentile_list)
+    percentile_values = calculate_percentiles_from_raster(
+        base_raster_path, percentile_list)
 
     # Get the percentile ranges as strings so that they can be added to an
     # output table
-    percentile_ranges = create_percentile_ranges(percentiles, units_short,
-                                                 units_long, start_value)
+    value_ranges = create_value_ranges(percentile_values, start_value)
 
-    # Add the start_value to the beginning of the percentiles so that any value
-    # before the start value is set to nodata
-    percentiles.insert(0, int(start_value))
-    LOGGER.debug('Percentiles : %s', percentiles)
+    LOGGER.debug('Percentiles : %s', percentile_values)
 
     def raster_percentile(band):
         """Operation to use in raster_calculator that takes the pixels of
             band and groups them together based on their percentile ranges.
         """
-        return numpy.where(band != base_nodata, numpy.searchsorted(
-            percentiles, band), target_nodata)
+        return numpy.where(band != base_nodata,
+                           numpy.searchsorted(percentile_values, band),
+                           target_nodata)
 
     # Classify the pixels of raster_dataset into groups and write to output
     pygeoprocessing.raster_calculator([(base_raster_path, 1)],
@@ -1050,7 +1048,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Create percentile groups of how percentile ranges are classified
     # using bisect function on a raster
-    percentile_groups = numpy.arange(1, len(percentiles) + 1)
+    percentile_groups = numpy.arange(1, len(percentile_values) + 1)
 
     # Get the pixel count for each group
     pixel_count = count_pixels_groups(target_raster_path, percentile_groups)
@@ -1062,27 +1060,27 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     # of corresponding percentile ranges. Used to create RAT
     perc_dict = {}
     for index in xrange(len(percentile_groups)):
-        perc_dict[percentile_groups[index]] = percentile_ranges[index]
+        perc_dict[percentile_groups[index]] = value_ranges[index]
     _create_raster_attr_table(
         target_raster_path, perc_dict, column_name='Val_Range')
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
     table_dict = {}
+    value_range_unit_name = 'Value Range ('+units_long+', '+units_short+')'
     for index in xrange(len(percentile_groups)):
         table_dict[index] = {}
         table_dict[index]['Percentile Group'] = percentile_groups[index]
-        table_dict[index]['Value Range'] = percentile_ranges[index]
+        table_dict[index][value_range_unit_name] = value_ranges[index]
         table_dict[index]['Pixel Count'] = pixel_count[index]
 
     attribute_table_path = target_raster_path[:-4] + '.csv'
-    column_names = ['Percentile Group', 'Value Range', 'Pixel Count']
+    column_names = ['Percentile Group', value_range_unit_name, 'Pixel Count']
     create_attribute_csv_table(attribute_table_path, column_names, table_dict)
-    pdb.set_trace()
+    # pdb.set_trace()
 
 
-def create_percentile_ranges(percentiles, units_short, units_long,
-                             start_value):
+def create_value_ranges(percentiles, start_value):
     """Constructs the percentile ranges as Strings, with the first
         range starting at 1 and the last range being greater than the last
         percentile mark.  Each string range is stored in a list that gets
@@ -1090,10 +1088,6 @@ def create_percentile_ranges(percentiles, units_short, units_long,
 
     Parameters:
         percentiles (list): A list of the percentile marks in ascending order
-        units_short (string): The shorthand for the units of the raster values.
-            ex: kW/m.
-        units_long (string): The description of the units of the raster values,
-            ex: wave power per unit width of wave crest length (kW/m))
         start_value (string): the first value that goes to the first percentile
             range (start_value: percentile_one)
 
@@ -1105,14 +1099,13 @@ def create_percentile_ranges(percentiles, units_short, units_long,
     range_values = []
     # Add the first range with the starting value and long description of units
     # This function will fail and cause an error if the percentile list is empty
-    range_first = start_value + ' - ' + str(percentiles[0]) + units_long
+    range_first = start_value + ' - ' + str(percentiles[0])
     range_values.append(range_first)
     for index in range(length - 1):
         range_values.append(
-            str(percentiles[index]) + ' - ' + str(percentiles[index + 1]) +
-            units_short)
+            str(percentiles[index]) + ' - ' + str(percentiles[index + 1]))
     # Add the last range to the range of values list
-    range_last = 'Greater than ' + str(percentiles[length - 1]) + units_short
+    range_last = 'Greater than ' + str(percentiles[length - 1])
     range_values.append(range_last)
     LOGGER.debug('Range_values : %s', range_values)
     return range_values
@@ -1473,6 +1466,7 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
 
     # Remove the nodata key and its count from the dictionary
     unique_value_counts.pop(nodata, None)
+    LOGGER.debug('Unique_value_counts: %s', unique_value_counts)
 
     # Get the total pixel count except nodata pixels
     total_count = sum(unique_value_counts.values())

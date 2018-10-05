@@ -183,21 +183,17 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(results, expected_results):
             self.assertEqual(res, exp_res)
 
-    def test_create_percentile_ranges(self):
+    def test_create_value_ranges(self):
         """WaveEnergy: testing 'create_percentile_ranges' function."""
         from natcap.invest.wave_energy import wave_energy
 
         percentiles = [20, 40, 60, 80]
-        units_short = " m/s"
-        units_long = " speed of a bullet in m/s"
         start_value = "5"
 
-        result = wave_energy.create_percentile_ranges(percentiles, units_short,
-                                                      units_long, start_value)
+        result = wave_energy.create_value_ranges(percentiles, start_value)
 
         exp_result = [
-            "5 - 20 speed of a bullet in m/s", "20 - 40 m/s", "40 - 60 m/s",
-            "60 - 80 m/s", "Greater than 80 m/s"
+            "5 - 20", "20 - 40", "40 - 60", "60 - 80", "Greater than 80"
         ]
 
         for res, exp_res in zip(result, exp_result):
@@ -303,7 +299,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         wave_energy.clip_vector_layer(shape_to_clip_uri, binding_shape_uri,
-                                          output_path)
+                                      output_path)
 
         # Create the expected point shapefile
         fields_pt = {'id': 'int', 'myattr': 'string'}
@@ -494,7 +490,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace")#self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(
+            r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace"
+        )  #self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
