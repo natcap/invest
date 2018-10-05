@@ -138,21 +138,7 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    # Create a dictionary whose keys are the 'NAME' from the machine parameter
-    # table and whose values are from the corresponding 'VALUE' field.
-    machine_param_dict = {}
-    machine_param_data = pandas.read_csv(
-        args['machine_param_path'], index_col=0)
-    machine_param_data.columns = machine_param_data.columns.str.lower()
-    if 'value' not in machine_param_data.columns:
-        raise ValueError('Please make sure that the "VALUE" column is in the '
-                         'Machine Parameters Table.')
-    # remove underscore from the keys and make them lowercased
-    machine_param_data.index = machine_param_data.index.str.strip()
-    machine_param_data.index = machine_param_data.index.str.lower()
-    machine_param_dict = machine_param_data.to_dict('index')
-    for key in machine_param_dict.keys():
-        machine_param_dict[key] = machine_param_dict[key]['value']
+    machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -456,10 +442,10 @@ def execute(args):
     # the user's guide what the percentile ranges are and what the units
     # will be.
     percentiles = [25, 50, 75, 90]
-    capwe_units_short = ' (MWh/yr)'
-    capwe_units_long = ' megawatt hours per year (MWh/yr)'
-    wp_units_short = ' (kW/m)'
-    wp_units_long = ' wave power per unit width of wave crest length (kW/m)'
+    capwe_units_short = ' MWh/yr'
+    capwe_units_long = 'megawatt hours per year'
+    wp_units_short = ' kW/m'
+    wp_units_long = 'wave power per unit width of wave crest length'
     starting_percentile_range = '1'
 
     create_percentile_rasters(
@@ -472,40 +458,40 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    if 'valuation_container' in args:
-        valuation_checked = args['valuation_container']
-    else:
-        valuation_checked = False
-
-    if not valuation_checked:
+    if 'valuation_container' not in args:
         LOGGER.info('Valuation not selected')
-        #The rest of the function is valuation, so we can quit now
+        # The rest of the function is valuation, so we can quit now
         return
+    else:
+        LOGGER.info('Valuation selected')
 
     # Output path for landing point shapefile
     land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
     # Output path for grid point shapefile
     grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
     # Output path for the projected net present value raster
-    raster_projected_path = os.path.join(intermediate_dir,
-                                         'npv_not_clipped%s.tif' % file_suffix)
+    npv_proj_path = os.path.join(intermediate_dir,
+                                 'npv_not_clipped%s.tif' % file_suffix)
     # Path for the net present value percentile raster
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
-    # Read machine economic parameters into a dictionary
-    machine_econ = {}
-    machine_econ_file = open(args['machine_econ_path'], 'rU')
-    reader = csv.DictReader(machine_econ_file)
-    LOGGER.debug('reader fieldnames : %s ', reader.fieldnames)
-    # Read in the field names from the column headers
-    name_key = reader.fieldnames[0]
-    value_key = reader.fieldnames[1]
-    for row in reader:
-        # Convert name to lowercase
-        name = row[name_key].strip().lower()
-        LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
-        machine_econ[name] = row[value_key]
-    machine_econ_file.close()
+    # # Read machine economic parameters into a dictionary
+    # machine_econ = {}
+    # machine_econ_file = open(args['machine_econ_path'], 'rU')
+    # reader = csv.DictReader(machine_econ_file)
+    # LOGGER.debug('Reader.fieldnames : %s ', reader.fieldnames)
+    # # Read in the field names from the column headers
+    # name_key = reader.fieldnames[0]
+    # value_key = reader.fieldnames[1]
+    # for row in reader:
+    #     # Convert name to lowercase
+    #     name = row[name_key].strip().lower()
+    #     LOGGER.debug('Name : %s and Value : % s', name, row[value_key])
+    #     machine_econ[name] = row[value_key]
+    # machine_econ_file.close()
+
+    machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
+    pdb.set_trace()
 
     # Read landing and power grid connection points into a dictionary
     land_grid_pts = {}
@@ -527,16 +513,15 @@ def execute(args):
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
     # Extract the machine economic parameters
-    # machine_econ = args['machine_econ']
-    cap_max = float(machine_econ['capmax'])
-    capital_cost = float(machine_econ['cc'])
-    cml = float(machine_econ['cml'])
-    cul = float(machine_econ['cul'])
-    col = float(machine_econ['col'])
-    omc = float(machine_econ['omc'])
-    price = float(machine_econ['p'])
-    drate = float(machine_econ['r'])
-    smlpm = float(machine_econ['smlpm'])
+    cap_max = float(machine_econ_dict['capmax'])
+    capital_cost = float(machine_econ_dict['cc'])
+    cml = float(machine_econ_dict['cml'])
+    cul = float(machine_econ_dict['cul'])
+    col = float(machine_econ_dict['col'])
+    omc = float(machine_econ_dict['omc'])
+    price = float(machine_econ_dict['p'])
+    drate = float(machine_econ_dict['r'])
+    smlpm = float(machine_econ_dict['smlpm'])
 
     # The NPV is for a 25 year period
     year = 25
@@ -577,8 +562,8 @@ def execute(args):
         we_points, landing_points)
     land_to_grid_dist, _ = calculate_distance(landing_points, grid_point)
 
-    def add_distance_fields_uri(wave_shape_uri, ocean_to_land_dist,
-                                land_to_grid_dist):
+    def add_distance_fields_path(wave_shape_uri, ocean_to_land_dist,
+                                 land_to_grid_dist):
         """A wrapper function that adds two fields to the wave point
             shapefile: the distance from ocean to land and the
             distance from land to grid.
@@ -621,8 +606,8 @@ def execute(args):
             feature = None
             feature = wave_data_layer.GetNextFeature()
 
-    add_distance_fields_uri(clipped_wave_vector_path, wave_to_land_dist,
-                            land_to_grid_dist)
+    add_distance_fields_path(clipped_wave_vector_path, wave_to_land_dist,
+                             land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the
@@ -640,7 +625,7 @@ def execute(args):
             npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
-    def compute_npv_farm_energy_uri(wave_points_uri):
+    def compute_npv_farm_energy_path(wave_points_uri):
         """A wrapper function for passing uri's to compute the
             Net Present Value. Also computes the total captured
             wave energy for the entire farm.
@@ -707,16 +692,13 @@ def execute(args):
             feat_npv = None
             feat_npv = wave_data_layer.GetNextFeature()
 
-    compute_npv_farm_energy_uri(clipped_wave_vector_path)
+    compute_npv_farm_energy_path(clipped_wave_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
-        clipped_wave_vector_path, raster_projected_path, pixel_size,
-        target_pixel_type, nodata)
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_raster_from_vector_extents_uri(
-    #     clipped_wave_vector_path, pixel_size, target_pixel_type, nodata,
-    #     raster_projected_path)
+        clipped_wave_vector_path, npv_proj_path, pixel_size, target_pixel_type,
+        nodata)
     LOGGER.debug('Completed Creating Raster From Vector Extents')
 
     # Interpolate the NPV values based on the dimensions and
@@ -725,18 +707,18 @@ def execute(args):
     LOGGER.info('Generating Net Present Value Raster.')
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_vector_path, 'NPV_25Y', raster_projected_path)
+        clipped_wave_vector_path, 'NPV_25Y', npv_proj_path)
 
-    npv_out_uri = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
+    npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        raster_projected_path, aoi_vector_path, npv_out_uri, False)
+        npv_proj_path, aoi_vector_path, npv_out_path, False)
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
-    create_percentile_rasters(npv_out_uri, npv_rc_path, ' (US$)',
+    create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
                               ' thousands of US dollars (US$)', '1',
                               percentiles, aoi_vector_path)
 
@@ -911,6 +893,32 @@ def load_binary_wave_data(wave_file_path):
     return wave_dict
 
 
+def read_machine_csv_as_dict(machine_csv_path):
+    """Create a dictionary whose keys are the 'NAME' from the machine
+    CSV table and whose values are from the corresponding 'VALUE' field.
+
+    Parameters:
+        machine_csv_path (str): path to the input machine CSV file.
+
+    Returns:
+        None.
+
+    """
+    machine_dict = {}
+    machine_data = pandas.read_csv(machine_csv_path, index_col=0)
+    machine_data.columns = machine_data.columns.str.lower()
+    if 'value' not in machine_data.columns:
+        raise ValueError('Please make sure that the "VALUE" column is in the '
+                         'Machine Parameters Table.')
+    # remove underscore from the keys and make them lowercased
+    machine_data.index = machine_data.index.str.strip()
+    machine_data.index = machine_data.index.str.lower()
+    machine_dict = machine_data.to_dict('index')
+    for key in machine_dict.keys():
+        machine_dict[key] = machine_dict[key]['value']
+    return machine_dict
+
+
 def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
     """This function helps retrieve the pixel sizes of the global DEM
         when given an area of interest that has a certain projection.
@@ -1037,7 +1045,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         """
         return numpy.where(
             band != base_nodata,
-            numpy.searchsorted(percentile_values, band, side='right'),
+            numpy.searchsorted(percentile_values, band) + 1,  # starts from 1
             target_nodata)
 
     # Classify the pixels of raster_dataset into groups and write to output
@@ -1060,7 +1068,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_dict = {}
     for index in xrange(len(percentile_groups)):
         percentile_dict[percentile_groups[index]] = value_ranges[index]
-    value_range_header = 'Value Range (' + units_long + ', ' + units_short + ')'
+    value_range_header = 'Value Range (' + units_long + ',' + units_short + ')'
     _create_raster_attr_table(
         target_raster_path, percentile_dict, column_name=value_range_header)
 
