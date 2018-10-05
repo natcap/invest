@@ -1078,6 +1078,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     attribute_table_path = target_raster_path[:-4] + '.csv'
     column_names = ['Percentile Group', 'Value Range', 'Pixel Count']
     create_attribute_csv_table(attribute_table_path, column_names, table_dict)
+    pdb.set_trace()
 
 
 def create_percentile_ranges(percentiles, units_short, units_long,
@@ -1489,17 +1490,18 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
 
     # Get the unique_value keys in the ascending order
     for unique_value in sorted(unique_value_counts.keys()):
+        # stop iteration when all corresponding values are obtained
         if ith_element > len(ordinal_rank) - 1:
             break
+
+        # Add count from the unique value
+        count = unique_value_counts[unique_value]
+        cumulative_count += count
 
         if ordinal_rank[ith_element] == cumulative_count or \
            ordinal_rank[ith_element] < cumulative_count:
             percentile_values.append(unique_value)
             ith_element += 1
-
-        # Add count from the unique value
-        count = unique_value_counts[unique_value]
-        cumulative_count += count
 
     LOGGER.debug('Percentile_values: %s', percentile_values)
     return percentile_values

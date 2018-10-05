@@ -173,12 +173,12 @@ class WaveEnergyUnitTests(unittest.TestCase):
             datatype=gdal.GDT_Int32,
             filename=raster_uri)
 
-        percentiles = [0, 25, 50, 75]
+        percentiles = [1, 25, 50, 75]
 
         results = wave_energy.calculate_percentiles_from_raster(
             raster_uri, percentiles)
 
-        expected_results = [1, 26, 51, 76]
+        expected_results = [1, 25, 50, 75]
 
         for res, exp_res in zip(results, expected_results):
             self.assertEqual(res, exp_res)
