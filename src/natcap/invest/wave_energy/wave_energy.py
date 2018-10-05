@@ -46,29 +46,29 @@ def execute(args):
     attributes.
 
     Args:
-        workspace_dir (string): Where the intermediate and output folder/files
+        workspace_dir (str): Where the intermediate and output folder/files
             will be saved. (required)
-        wave_base_data_path (string): Directory location of wave base data
+        wave_base_data_path (str): Directory location of wave base data
             including WW3 data and analysis area shapefile. (required)
-        analysis_area_path (string): A string identifying the analysis area of
+        analysis_area_path (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
-        aoi_path (string): A polygon shapefile outlining a more detailed area
+        aoi_path (str): A polygon shapefile outlining a more detailed area
             within the analysis area. This shapefile should be projected with
             linear units being in meters. (required to run Valuation model)
-        machine_perf_path (string): The path of a CSV file that holds the
+        machine_perf_path (str): The path of a CSV file that holds the
             machine performance table. (required)
-        machine_param_path (string): The path of a CSV file that holds the
+        machine_param_path (str): The path of a CSV file that holds the
             machine parameter table. (required)
-        dem_path (string): The path of the Global Digital Elevation Model (DEM).
+        dem_path (str): The path of the Global Digital Elevation Model (DEM).
             (required)
-        suffix (string): A python string of characters to append to each output
+        suffix (str): A python string of characters to append to each output
             filename (optional)
         valuation_container (boolean): Indicates whether the model includes
             valuation
-        land_gridPts_path (string): A CSV file path containing the Landing and
+        land_gridPts_path (str): A CSV file path containing the Landing and
             Power Grid Connection Points table. (required for Valuation)
-        machine_econ_path (string): A CSV file path for the machine economic
+        machine_econ_path (str): A CSV file path for the machine economic
             parameters table. (required for Valuation)
         number_of_machines (int): An integer specifying the number of
             machines for a wave farm site. (required for Valuation)
@@ -350,9 +350,9 @@ def execute(args):
         larger than or equal to 0, the feature will be deleted.
 
         Parameters:
-            base_point_vector_path (string): a path to an ogr point shapefile
-            base_raster_path(string): a path to a GDAL dataset
-            field_name (string): the name of the new field that will be
+            base_point_vector_path (str): a path to an ogr point shapefile
+            base_raster_path(str): a path to a GDAL dataset
+            field_name (str): the name of the new field that will be
                 added to the point feature
             coord_trans (osr.CoordinateTransformation): a coordinate
                 transformation used to make sure the vector and raster are
@@ -952,7 +952,7 @@ def get_vector_spatial_ref(base_vector_path):
     """Get the spatial reference of an OGR vector (datasource).
 
     Parameters:
-        base_vector_path (string): a path to an ogr vector
+        base_vector_path (str): a path to an ogr vector
 
     Returns:
         spat_ref: a spatial reference
@@ -994,14 +994,14 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         The following inputs are required:
 
     Parameters:
-        base_raster_path (string): path to a GDAL raster with data of type
+        base_raster_path (str): path to a GDAL raster with data of type
             integer
-        target_raster_path (string): path to the destination of the new raster.
-        units_short (string): The shorthand for the units of the raster values,
+        target_raster_path (str): path to the destination of the new raster.
+        units_short (str): The shorthand for the units of the raster values,
             ex: kW/m.
-        units_long (string): The description of the units of the raster values,
+        units_long (str): The description of the units of the raster values,
             ex: wave power per unit width of wave crest length (kW/m).
-        start_value (string): The first value that goes to the first percentile
+        start_value (str): The first value that goes to the first percentile
             range (start_value: percentile_one)
         percentile_list (list): A list of the percentiles ranges,
             ex: [25, 50, 75, 90].
@@ -1031,15 +1031,14 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     # output table
     value_ranges = create_value_ranges(percentile_values, start_value)
 
-    LOGGER.debug('Percentiles : %s', percentile_values)
-
     def raster_percentile(band):
         """Operation to use in raster_calculator that takes the pixels of
             band and groups them together based on their percentile ranges.
         """
-        return numpy.where(band != base_nodata,
-                           numpy.searchsorted(percentile_values, band),
-                           target_nodata)
+        return numpy.where(
+            band != base_nodata,
+            numpy.searchsorted(percentile_values, band, side='right'),
+            target_nodata)
 
     # Classify the pixels of raster_dataset into groups and write to output
     pygeoprocessing.raster_calculator([(base_raster_path, 1)],
@@ -1047,8 +1046,8 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
                                       gdal.GDT_Int32, target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
-    # using bisect function on a raster
-    percentile_groups = numpy.arange(1, len(percentile_values) + 1)
+    # using numpy.searchsorted
+    percentile_groups = numpy.arange(1, len(percentile_values) + 2)
 
     # Get the pixel count for each group
     pixel_count = count_pixels_groups(target_raster_path, percentile_groups)
@@ -1058,41 +1057,46 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
-    perc_dict = {}
+    percentile_dict = {}
     for index in xrange(len(percentile_groups)):
-        perc_dict[percentile_groups[index]] = value_ranges[index]
+        percentile_dict[percentile_groups[index]] = value_ranges[index]
+    value_range_header = 'Value Range (' + units_long + ', ' + units_short + ')'
     _create_raster_attr_table(
-        target_raster_path, perc_dict, column_name='Val_Range')
+        target_raster_path, percentile_dict, column_name=value_range_header)
+
+    # Create a list of corresponding percentile ranges from the percentile list
+    percentile_ranges = create_percentile_ranges(percentile_list)
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
     table_dict = {}
-    value_range_unit_name = 'Value Range ('+units_long+', '+units_short+')'
     for index in xrange(len(percentile_groups)):
         table_dict[index] = {}
         table_dict[index]['Percentile Group'] = percentile_groups[index]
-        table_dict[index][value_range_unit_name] = value_ranges[index]
+        table_dict[index]['Percentile Range'] = percentile_ranges[index]
+        table_dict[index][value_range_header] = value_ranges[index]
         table_dict[index]['Pixel Count'] = pixel_count[index]
 
     attribute_table_path = target_raster_path[:-4] + '.csv'
-    column_names = ['Percentile Group', value_range_unit_name, 'Pixel Count']
+    column_names = [
+        'Percentile Group', 'Percentile Range', value_range_header,
+        'Pixel Count'
+    ]
     create_attribute_csv_table(attribute_table_path, column_names, table_dict)
-    # pdb.set_trace()
 
 
 def create_value_ranges(percentiles, start_value):
-    """Constructs the percentile ranges as Strings, with the first
-        range starting at 1 and the last range being greater than the last
-        percentile mark.  Each string range is stored in a list that gets
-        returned
+    """Constructs the value ranges as Strings, with the first range starting
+    at 1 and the last range being greater than the last percentile mark. Each
+    string range is stored in a list that gets returned.
 
     Parameters:
         percentiles (list): A list of the percentile marks in ascending order
-        start_value (string): the first value that goes to the first percentile
+        start_value (str): the first value that goes to the first percentile
             range (start_value: percentile_one)
 
     Returns:
-        A list of Strings representing the ranges of the percentiles
+        A list of Strings representing the ranges of the percentile values
 
     """
     length = len(percentiles)
@@ -1109,6 +1113,33 @@ def create_value_ranges(percentiles, start_value):
     range_values.append(range_last)
     LOGGER.debug('Range_values : %s', range_values)
     return range_values
+
+
+def create_percentile_ranges(percentile_list):
+    """Constructs the percentile ranges as Strings.
+
+    Each string range is stored in a list that gets returned.
+
+    Parameters:
+        percentile_list (list): A list of percentiles in ascending order
+
+    Returns:
+        A list of Strings representing the ranges of the percentile values
+
+    """
+    length = len(percentile_list)
+    percentile_ranges = []
+    first_range = '<' + str(percentile_list[0]) + '%'
+    percentile_ranges.append(first_range)
+    for index in range(length - 1):
+        percentile_ranges.append(
+            str(percentile_list[index]) + '-' +
+            str(percentile_list[index + 1]) + '%')
+
+    # Add the last range to the percentile ranges list
+    last_range = '>' + str(percentile_list[length - 1]) + '%'
+    percentile_ranges.append(last_range)
+    return percentile_ranges
 
 
 def create_attribute_csv_table(attribute_table_path, fields, data):
@@ -1223,13 +1254,13 @@ def clip_vector_layer(base_vector_path, clip_vector_path,
     inherits the projection and fields from the original Shapefile.
 
     Parameters:
-        base_vector_path (string): a path to a Shapefile on disk. This is
+        base_vector_path (str): a path to a Shapefile on disk. This is
             the Layer to clip. Must have same spatial reference as
             'clip_vector_path'.
-        clip_vector_path (string): a path to a Shapefile on disk. This is
+        clip_vector_path (str): a path to a Shapefile on disk. This is
             the Layer to clip to. Must have same spatial reference as
             'base_vector_path'
-        target_clipped_vector_path (string): a path on disk to write the clipped Shapefile
+        target_clipped_vector_path (str): a path on disk to write the clipped Shapefile
             to. Should end with a '.shp' extension.
 
     Returns:
@@ -1443,7 +1474,7 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
     Compute ordinal ranks given the percentile list.
 
     Parameters:
-        base_raster_path (string): path to a gdal raster on disk
+        base_raster_path (str): path to a gdal raster on disk
         percentile_list (list): a list of desired percentiles to lookup,
             ex: [25,50,75,90]
 
@@ -1457,7 +1488,7 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
         # Sum the values with the same key in both dictionaries
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
         # Round the array so the unique values won't explode the dictionary
-        numpy.round(unique_values, out=unique_values)
+        numpy.round(unique_values, decimals=1, out=unique_values)
 
         block_unique_value_counts = dict(zip(unique_values, counts))
         for value in block_unique_value_counts.keys():
@@ -1507,7 +1538,7 @@ def count_pixels_groups(raster_path, group_values):
         for each value in 'group_values'
 
     Parameters:
-        raster_path (string): path to a gdal raster on disk
+        raster_path (str): path to a gdal raster on disk
         group_values (list): unique numbers for which to get a pixel count
 
     Returns:
@@ -1539,7 +1570,7 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     dataset may be in lat/long (WGS84).
 
     Args:
-        dataset_uri (string): a String for a GDAL path on disk, projected
+        dataset_uri (str): a String for a GDAL path on disk, projected
             in the form of lat/long decimal degrees
         coord_trans (osr.CoordinateTransformation): an OSR coordinate
             transformation from dataset coordinate system to meters
@@ -1582,10 +1613,10 @@ def _create_raster_attr_table(dataset_path, attr_dict, column_name):
     """Create a raster attribute table.
 
     Parameters:
-        dataset_path (string): a GDAL raster dataset to create the RAT for
+        dataset_path (str): a GDAL raster dataset to create the RAT for
         attr_dict (dict): a dictionary with keys that point to a primitive type
             ex: {integer_id_1: value_1, ... integer_id_n: value_n}
-        column_name (string): a string for the column name that maps the values
+        column_name (str): a string for the column name that maps the values
 
     Returns:
         None
