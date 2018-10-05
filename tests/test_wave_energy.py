@@ -180,9 +180,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         expected_results = [1, 26, 51, 76]
 
-        import pdb
-        pdb.set_trace()
-
         for res, exp_res in zip(results, expected_results):
             self.assertEqual(res, exp_res)
 

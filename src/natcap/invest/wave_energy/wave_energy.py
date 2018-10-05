@@ -1466,14 +1466,16 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
         feat = None
 
 
-def calculate_percentiles_from_raster(raster_path, percentiles):
-    """Does a memory efficient sort to determine the percentiles
-        of a raster. Percentile algorithm currently used is the
-        nearest rank method.
+def calculate_percentiles_from_raster(raster_path, percentile_list):
+    """Determine the percentiles of a raster using the nearest-rank method.
+
+    Iterate through the raster blocks and round the unique values for
+    efficiency. Then add each unique value-count pair into a dictionary.
+    Compute ordinal ranks given the percentile list.
 
     Parameters:
         raster_path (string): path to a gdal raster on disk
-        percentiles (list): a list of desired percentiles to lookup,
+        percentile_list (list): a list of desired percentiles to lookup,
             ex: [25,50,75,90]
 
     Returns:
@@ -1485,13 +1487,14 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
         # Sum the values with the same key in both dictionaries
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
+        # Round the array so the unique values won't explode the dictionary
+        numpy.round(unique_values, out=unique_values)
+
         block_unique_value_counts = dict(zip(unique_values, counts))
         for value in block_unique_value_counts.keys():
             unique_value_counts[value] = unique_value_counts.get(
                 value, 0) + block_unique_value_counts.get(value, 0)
 
-    # Sort the dictionary in ascending order
-    unique_value_counts = dict(sorted(unique_value_counts.items()))
     # Remove the nodata key and its count from the dictionary
     unique_value_counts.pop(nodata, None)
 
@@ -1501,23 +1504,28 @@ def calculate_percentiles_from_raster(raster_path, percentiles):
     # Calculate the ordinal rank
     ordinal_rank = [
         numpy.ceil(percentile / 100.0 * total_count)
-        for percentile in percentiles]
+        for percentile in percentile_list]
 
     # Get values from the ordered dictionary that correspond to the ranks
     percentile_values = []  # list for corresponding values
     ith_element = 0  # indexing the ith element in the percentile_values list
     cumulative_count = 0  # for checking if the percentile value is reached
 
-    for unique_value, count in unique_value_counts.iteritems():
+    # Get the unique_value keys in the ascending order
+    for unique_value in sorted(unique_value_counts.keys()):
         if ith_element > len(ordinal_rank) - 1:
             break
+
         if ordinal_rank[ith_element] == cumulative_count or \
            ordinal_rank[ith_element] < cumulative_count:
             percentile_values.append(unique_value)
-            cumulative_count += count
             ith_element += 1
+
+        # Add count from the unique value
+        count = unique_value_counts[unique_value]
+        cumulative_count += count
+
     LOGGER.debug('Percentile_values: %s', percentile_values)
-    pdb.set_trace()
     return percentile_values
 
 
