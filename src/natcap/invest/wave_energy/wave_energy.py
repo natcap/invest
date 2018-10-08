@@ -689,14 +689,14 @@ def execute(args):
     # values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_points_uri(
-        clipped_wave_vector_path, 'NPV_25Y', npv_proj_path)
+    pygeoprocessing.interpolate_points(
+        clipped_wave_vector_path, 'NPV_25Y', (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.clip_dataset_uri(
-        npv_proj_path, aoi_vector_path, npv_out_path, False)
+    clip_to_projected_coordinate_system(
+        npv_proj_path, aoi_vector_path, npv_out_path)
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -705,7 +705,110 @@ def execute(args):
                               ' thousands of US dollars (US$)', '1',
                               percentiles, aoi_vector_path)
 
-    LOGGER.info('End of wave_energy_core.valuation')
+    LOGGER.info('End of Wave Energy Valuation.')
+
+
+def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
+                                        target_raster_path):
+    """Clip raster with vector into projected coordinate system.
+
+    If base raster is not already projected, choose a suitable UTM zone.
+
+    Parameters:
+        base_raster_path (string): path to base raster.
+        clip_vector_path (string): path to base clip vector.
+        target_raster_path (string): path to output clipped raster.
+
+    Returns:
+        None.
+
+    """
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    clip_vector_info = pygeoprocessing.get_vector_info(clip_vector_path)
+
+    base_raster_srs = osr.SpatialReference()
+    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+
+    if not base_raster_srs.IsProjected():
+        wgs84_sr = osr.SpatialReference()
+        wgs84_sr.ImportFromEPSG(4326)
+        clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+            clip_vector_info['bounding_box'], clip_vector_info['projection'],
+            wgs84_sr.ExportToWkt())
+
+        base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
+            base_raster_info['bounding_box'], base_raster_info['projection'],
+            wgs84_sr.ExportToWkt())
+
+        target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
+            clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
+
+        clip_vector_srs = osr.SpatialReference()
+        clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
+
+        centroid_x = (
+            target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
+        centroid_y = (
+            target_bounding_box_wgs84[3] + target_bounding_box_wgs84[1]) / 2
+        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
+        utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
+        lat_code = 6 if centroid_y > 0 else 7
+        epsg_code = int('32%d%02d' % (lat_code, utm_code))
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(epsg_code)
+        target_bounding_box = pygeoprocessing.transform_bounding_box(
+            target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
+            target_srs.ExportToWkt())
+
+        target_pixel_size = convert_degree_pixel_size_to_meters(
+            base_raster_info['pixel_size'], centroid_y)
+
+        pygeoprocessing.warp_raster(
+            base_raster_path,
+            target_pixel_size,
+            target_raster_path,
+            None,
+            target_bb=target_bounding_box,
+            target_sr_wkt=target_srs.ExportToWkt())
+    else:
+        pygeoprocessing.align_and_resize_raster_stack(
+            [base_raster_path], [target_raster_path], ['near'],
+            base_raster_info['pixel_size'],
+            'intersection',
+            base_vector_path_list=[clip_vector_path],
+            target_sr_wkt=base_raster_info['projection'])
+
+
+def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
+    """Calculate meter size of a wgs84 square pixel.
+
+    Adapted from: https://gis.stackexchange.com/a/127327/2397
+
+    Parameters:
+        pixel_size (tuple): [xsize, ysize] in degrees (float).
+        center_lat (float): latitude of the center of the pixel. Note this
+            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            latitude or an invalid area will be calculated.
+
+    Returns:
+        `pixel_size` in meters.
+
+    """
+    m1 = 111132.92
+    m2 = -559.82
+    m3 = 1.175
+    m4 = -0.0023
+    p1 = 111412.84
+    p2 = -93.5
+    p3 = 0.118
+
+    lat = center_lat * math.pi / 180
+    latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
+              m4 * math.cos(6 * lat))
+    longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
+                  p3 * math.cos(5 * lat))
+
+    return (longlen * pixel_size[0], latlen * pixel_size[1])
 
 
 def build_point_shapefile(driver_name, layer_name, path, data, prj,
@@ -1344,8 +1447,8 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
                               }
                }
-        interp_z (2D-array): A 2D array of the interpolated values for the machine
-            performance table
+        interp_z (2D-array): A 2D array of the interpolated values for the
+            machine performance table
         machine_param (dict): A dictionary containing the restrictions for the
             machines (CapMax, TpMax, HsMax)
 

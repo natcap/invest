@@ -559,7 +559,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing Biophysical component w/o AOI or valuation."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\noaoi")#self.workspace_dir)
 
         wave_energy.execute(args)
 
