@@ -483,9 +483,9 @@ def execute(args):
         LOGGER.info('Valuation selected')
 
     # Output path for landing point shapefile
-    land_pt_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
+    land_vector_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
     # Output path for grid point shapefile
-    grid_pt_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
+    grid_vector_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
     # Output path for the projected net present value raster
     npv_proj_path = os.path.join(intermediate_dir,
                                  'npv_not_clipped%s.tif' % file_suffix)
@@ -493,23 +493,6 @@ def execute(args):
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
     machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
-
-    # Read landing and power grid connection points into a dictionary
-    land_grid_pts = {}
-    land_grid_pts_file = open(args['land_gridPts_path'], 'rU')
-    reader = csv.DictReader(land_grid_pts_file)
-    for row in reader:
-        LOGGER.debug('Land Grid Row: %s', row)
-        if row['ID'] in land_grid_pts:
-            land_grid_pts[row['ID'].strip()][row['TYPE']] = \
-                    [row['LAT'], row['LONG']]
-        else:
-            land_grid_pts[row['ID'].strip()] = {
-                row['TYPE']: [row['LAT'], row['LONG']]
-            }
-
-    LOGGER.debug('New Land_Grid Dict : %s', land_grid_pts)
-    land_grid_pts_file.close()
 
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
@@ -533,13 +516,6 @@ def execute(args):
     # The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
 
-    # Extract the landing and grid points data
-    grid_pts = {}
-    land_pts = {}
-    for key, value in land_grid_pts.iteritems():
-        grid_pts[key] = [value['GRID'][0], value['GRID'][1]]
-        land_pts[key] = [value['LAND'][0], value['LAND'][1]]
-
     grid_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
                                    'grid']
     land_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
@@ -551,36 +527,38 @@ def execute(args):
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Shapefile.')
     dict_to_point_vector(
-        grid_dict, grid_pt_path, 'grid_points', aoi_sr, coord_trans)
+        grid_dict, grid_vector_path, 'grid_points', aoi_sr, coord_trans)
 
     # Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Shapefile.')
     dict_to_point_vector(
-        land_dict, land_pt_path, 'land_points', aoi_sr, coord_trans)
+        land_dict, land_vector_path, 'land_points', aoi_sr, coord_trans)
 
-    # Get the coordinates of points of wave_data_shape, landing_shape,
-    # and grid_shape
-    we_points = get_points_geometries(clipped_wave_vector_path)
-    landing_points = get_points_geometries(land_pt_path)
-    grid_point = get_points_geometries(grid_pt_path)
+    # Get the coordinates of points of wave, land, and grid vectors
+    wave_points = get_points_geometries(clipped_wave_vector_path)
+    land_points = get_points_geometries(land_vector_path)
+    grid_points = get_points_geometries(grid_vector_path)
 
     # Calculate the distances between the relative point groups
     LOGGER.info('Calculating Distances.')
     wave_to_land_dist, wave_to_land_id = calculate_distance(
-        we_points, landing_points)
-    land_to_grid_dist, _ = calculate_distance(landing_points, grid_point)
+        wave_points, land_points)
+    land_to_grid_dist, _ = calculate_distance(land_points, grid_points)
 
     def add_distance_fields_path(wave_shape_path, ocean_to_land_dist,
                                  land_to_grid_dist):
-        """A wrapper function that adds two fields to the wave point
-            shapefile: the distance from ocean to land and the
-            distance from land to grid.
+        """A wrapper function that adds two fields to the wave point shapefile:
+        the distance from ocean to land and the distance from land to grid.
 
-            wave_shape_path - a path to the wave points shapefile
-            ocean_to_land_dist - a numpy array of distance values
-            land_to_grid_dist - a numpy array of distance values
+        Parameters:
+            wave_shape_path (str): a path to the wave points shapefile
+            ocean_to_land_dist (numpy.array): an array of distance values
+            land_to_grid_dist (numpy.array): an array of distance values
 
-            returns - Nothing"""
+        Returns:
+            None
+
+        """
         wave_data_shape = gdal.OpenEx(wave_shape_path, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store
@@ -618,15 +596,17 @@ def execute(args):
                              land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
-        """Calculates the NPV for a wave farm site based on the
-            annual revenue and annual cost
+        """Calculates the NPV for a wave farm site based on the annual revenue
+        and annual cost
 
-            annual_revenue - A numpy array of the annual revenue for
+        Parameters:
+            annual_revenue (numpy.array): an array of the annual revenue for
                 the first 25 years
-            annual_cost - A numpy array of the annual cost for the
+            annual_cost (numpy.array): an array of the annual cost for the
                 first 25 years
 
-            returns - The Total NPV which is the sum of all 25 years
+        Returns: The Total NPV which is the sum of all 25 years
+
         """
         npv = []
         for i in range(len(time)):
@@ -634,13 +614,18 @@ def execute(args):
         return sum(npv)
 
     def compute_npv_farm_energy_path(wave_points_path):
-        """A wrapper function for passing path's to compute the
-            Net Present Value. Also computes the total captured
-            wave energy for the entire farm.
+        """A wrapper function for passing path's to compute the Net Present
+        Value.
 
-            wave_points_path - a path to the wave energy points
+        Also computes the total captured wave energy for the entire farm.
 
-            returns - Nothing"""
+        Parameters:
+            wave_points_path (str): a path to the wave energy points
+
+        Returns:
+            None
+
+        """
 
         wave_points = gdal.OpenEx(wave_points_path, 1)
         wave_data_layer = wave_points.GetLayer()
@@ -723,7 +708,7 @@ def execute(args):
     clip_to_projected_coordinate_system(npv_proj_path, aoi_vector_path,
                                         npv_out_path)
 
-    #Create the percentile raster for net present value
+    # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
     create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
@@ -936,23 +921,26 @@ def get_points_geometries(shape_path):
 
 
 def calculate_distance(xy_1, xy_2):
-    """For all points in xy_1, this function calculates the distance
-        from point xy_1 to various points in xy_2,
-        and stores the shortest distances found in a list min_dist.
-        The function also stores the index from which ever point in xy_2
-        was closest, as an id in a list that corresponds to min_dist.
+    """For all points in xy_1, this function calculates the distance from point
+    xy_1 to various points in xy_2, and stores the shortest distances found in
+    a list min_dist. The function also stores the index from which ever point
+    in xy_2 was closest, as an id in a list that corresponds to min_dist.
 
-        xy_1 - A numpy array of points in the form [x,y]
-        xy_2 - A numpy array of points in the form [x,y]
+    Parameters:
+        xy_1 (numpy.array): An array of points in the form [x,y]
+        xy_2 (numpy.array): An array of points in the form [x,y]
 
-        returns - A numpy array of shortest distances and a numpy array
-              of id's corresponding to the array of shortest distances
+    Returns:
+        A numpy array of shortest distances and a numpy array of id's
+        corresponding to the array of shortest distances
+
     """
-    #Create two numpy array of zeros with length set to as many points in xy_1
+    # Create two numpy array of zeros with length set to as many points in xy_1
     min_dist = numpy.zeros(len(xy_1))
     min_id = numpy.zeros(len(xy_1))
-    #For all points xy_point in xy_1 calcuate the distance from xy_point to xy_2
-    #and save the shortest distance found.
+
+    # For all points xy_point in xy_1 calculate the distance from xy_point to
+    # xy_2 and save the shortest distance found.
     for index, xy_point in enumerate(xy_1):
         dists = numpy.sqrt(numpy.sum((xy_point - xy_2)**2, axis=1))
         min_dist[index], min_id[index] = dists.min(), dists.argmin()
