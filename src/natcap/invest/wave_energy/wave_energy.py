@@ -142,7 +142,7 @@ def execute(args):
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
-    # that stores the related uri paths to the needed inputs
+    # that stores the related paths to the needed inputs
     wave_base_data_path = args['wave_base_data_path']
     analysis_dict = {
         'West Coast of North America and Hawaii': {
@@ -195,10 +195,10 @@ def execute(args):
         }
     }
 
-    # Get the String value for the analysis area provided from the dropdown menu
-    # in the user interaface
+    # Get the String value for the analysis area provided from the dropdown
+    # menu in the user interface
     analysis_area_path = args['analysis_area_path']
-    # Use the analysis area String to get the uri's to the wave seastate data,
+    # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
     wave_seastate_bins = load_binary_wave_data(
         analysis_dict[analysis_area_path]['ww3_path'])
@@ -234,7 +234,7 @@ def execute(args):
     if 'aoi_path' not in args:
         LOGGER.info('AOI not provided')
 
-        # The uri to a polygon shapefile that specifies the broader area
+        # The path to a polygon shapefile that specifies the broader area
         # of interest
         aoi_vector_path = analysis_area_extract_path
 
@@ -545,18 +545,18 @@ def execute(args):
         we_points, landing_points)
     land_to_grid_dist, _ = calculate_distance(landing_points, grid_point)
 
-    def add_distance_fields_path(wave_shape_uri, ocean_to_land_dist,
+    def add_distance_fields_path(wave_shape_path, ocean_to_land_dist,
                                  land_to_grid_dist):
         """A wrapper function that adds two fields to the wave point
             shapefile: the distance from ocean to land and the
             distance from land to grid.
 
-            wave_shape_uri - a uri path to the wave points shapefile
+            wave_shape_path - a path to the wave points shapefile
             ocean_to_land_dist - a numpy array of distance values
             land_to_grid_dist - a numpy array of distance values
 
             returns - Nothing"""
-        wave_data_shape = gdal.OpenEx(wave_shape_uri, 1)
+        wave_data_shape = gdal.OpenEx(wave_shape_path, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store
         # the distances
@@ -608,16 +608,16 @@ def execute(args):
             npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
-    def compute_npv_farm_energy_path(wave_points_uri):
-        """A wrapper function for passing uri's to compute the
+    def compute_npv_farm_energy_path(wave_points_path):
+        """A wrapper function for passing path's to compute the
             Net Present Value. Also computes the total captured
             wave energy for the entire farm.
 
-            wave_points_uri - a uri path to the wave energy points
+            wave_points_path - a path to the wave energy points
 
             returns - Nothing"""
 
-        wave_points = gdal.OpenEx(wave_points_uri, 1)
+        wave_points = gdal.OpenEx(wave_points_path, 1)
         wave_data_layer = wave_points.GetLayer()
         # Add Net Present Value field, Total Captured Wave Energy field,
         # and Units field to shapefile
@@ -855,19 +855,19 @@ def build_point_shapefile(driver_name, layer_name, path, data, prj,
         feat = None
 
 
-def get_points_geometries(shape_uri):
+def get_points_geometries(shape_path):
     """This function takes a shapefile and for each feature retrieves
         the X and Y value from it's geometry. The X and Y value are stored in
         a numpy array as a point [x_location,y_location], which is returned
         when all the features have been iterated through.
 
-        shape_uri - An uri to an OGR shapefile datasource
+        shape_path - A path to an OGR shapefile datasource
 
         returns - A numpy array of points, which represent the shape's feature's
               geometries.
     """
     point = []
-    shape = gdal.OpenEx(shape_uri)
+    shape = gdal.OpenEx(shape_path)
     layer = shape.GetLayer(0)
     feat = layer.GetNextFeature()
     while feat is not None:
@@ -1005,16 +1005,16 @@ def read_machine_csv_as_dict(machine_csv_path):
     return machine_dict
 
 
-def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
+def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_path):
     """This function helps retrieve the pixel sizes of the global DEM
         when given an area of interest that has a certain projection.
 
-        shape_path - A uri to a point shapefile datasource indicating where
+        shape_path - A path to a point shapefile datasource indicating where
             in the world we are interested in
         coord_trans - A coordinate transformation
         coord_trans_opposite - A coordinate transformation that transforms in
                            the opposite direction of 'coord_trans'
-        ds_uri - A uri to a gdal dataset to get the pixel size from
+        ds_path - A path to a gdal dataset to get the pixel size from
 
         returns - A tuple of the x and y pixel sizes of the global DEM
               given in the units of what 'shape' is projected in"""
@@ -1032,7 +1032,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_uri):
 
     # Get the size of the pixels in meters, to be used for creating rasters
     pixel_xsize, pixel_ysize = pixel_size_based_on_coordinate_transform(
-        ds_uri, coord_trans, reference_point_latlng)
+        ds_path, coord_trans, reference_point_latlng)
 
     # Average the pixel sizes incase they are of different sizes
     mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
@@ -1239,7 +1239,7 @@ def create_percentile_ranges(percentile_list):
 def create_attribute_csv_table(attribute_table_path, fields, data):
     """Create a new csv table from a dictionary
 
-        filename - a URI path for the new table to be written to disk
+        filename - a path for the new table to be written to disk
 
         fields - a python list of the column names. The order of the fields in
             the list will be the order in how they are written. ex:
@@ -1273,17 +1273,17 @@ def create_attribute_csv_table(attribute_table_path, fields, data):
     csv_file.close()
 
 
-def wave_power(shape_uri):
+def wave_power(shape_path):
     """Calculates the wave power from the fields in the shapefile
         and writes the wave power value to a field for the corresponding
         feature.
 
-        shape_uri - A uri to a Shapefile that has all the attributes
+        shape_path - A path to a Shapefile that has all the attributes
             represented in fields to calculate wave power at a specific
             wave farm
 
         returns - Nothing"""
-    shape = gdal.OpenEx(shape_uri, 1)
+    shape = gdal.OpenEx(shape_path, 1)
 
     # Sea water density constant (kg/m^3)
     swd = 1028
@@ -1522,7 +1522,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     return energy_cap
 
 
-def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
+def captured_wave_energy_to_shape(energy_cap, wave_shape_path):
     """Adds each captured wave energy value from the dictionary
         energy_cap to a field of the shapefile wave_shape. The values are
         set corresponding to the same I,J values which is the key of the
@@ -1530,13 +1530,13 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_uri):
 
         energy_cap - A dictionary with keys (I,J), representing the
             wave energy capacity values.
-        wave_shape_uri  - A uri to a point geometry shapefile to
+        wave_shape_path  - A path to a point geometry shapefile to
             write the new field/values to
 
         returns - Nothing"""
 
     cap_we_field = 'CAPWE_MWHY'
-    wave_shape = gdal.OpenEx(wave_shape_uri, 1)
+    wave_shape = gdal.OpenEx(wave_shape_path, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1654,7 +1654,7 @@ def count_pixels_groups(raster_path, group_values):
     return pixel_count
 
 
-def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
+def pixel_size_based_on_coordinate_transform(dataset_path, coord_trans, point):
     """Get width and height of cell in meters.
 
     Calculates the pixel width and height in meters given a coordinate
@@ -1664,7 +1664,7 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
     dataset may be in lat/long (WGS84).
 
     Args:
-        dataset_uri (str): a String for a GDAL path on disk, projected
+        dataset_path (str): a String for a GDAL path on disk, projected
             in the form of lat/long decimal degrees
         coord_trans (osr.CoordinateTransformation): an OSR coordinate
             transformation from dataset coordinate system to meters
@@ -1676,7 +1676,7 @@ def pixel_size_based_on_coordinate_transform(dataset_uri, coord_trans, point):
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
     """
-    dataset = gdal.OpenEx(dataset_uri)
+    dataset = gdal.OpenEx(dataset_path)
     # Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
