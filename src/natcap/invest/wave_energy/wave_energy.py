@@ -16,6 +16,9 @@ import scipy
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
+import shapely.wkb
+import shapely.prepared
+from shapely import speedups
 
 import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
@@ -26,6 +29,7 @@ import pdb
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
+speedups.enable()
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -229,9 +233,9 @@ def execute(args):
         intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
     # Final output paths for wave energy and wave power rasters
-    wave_energy_path = os.path.join(output_dir,
+    wave_energy_raster_path = os.path.join(output_dir,
                                     'capwe_mwh%s.tif' % file_suffix)
-    wave_power_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
+    wave_power_raster_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
 
     # Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
@@ -281,7 +285,7 @@ def execute(args):
 
         # Temporary shapefile path needed for an intermediate step when
         # changing the projection
-        projected_wave_shape_path = os.path.join(
+        proj_wave_vector_path = os.path.join(
             intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
 
         # Set the wave data shapefile to the same projection as the
@@ -289,14 +293,14 @@ def execute(args):
         aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
             'projection']
         pygeoprocessing.reproject_vector(analysis_area_points_path, aoi_wkt,
-                                         projected_wave_shape_path)
+                                         proj_wave_vector_path)
 
-        # Clip the wave data shape by the bounds provided from the
-        # area of interest
-        clip_vector_layer(projected_wave_shape_path, aoi_vector_path,
-                          clipped_wave_vector_path)
+        # Clip the wave data shapefile by the bounds provided from the AOI
+        clip_vector(
+            proj_wave_vector_path, aoi_vector_path, clipped_wave_vector_path,
+            file_suffix)
 
-        aoi_proj_vector_path = os.path.join(
+        proj_aoi_vector_path = os.path.join(
             intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
 
         # Get the spatial reference of the Extract shape and export to WKT to
@@ -306,7 +310,7 @@ def execute(args):
 
         # Project AOI to Extract shape
         pygeoprocessing.reproject_vector(aoi_vector_path, extract_wkt,
-                                         aoi_proj_vector_path)
+                                         proj_aoi_vector_path)
 
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
@@ -314,7 +318,7 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_vector_layer(aoi_proj_vector_path, analysis_area_extract_path,
+        clip_vector_layer(proj_aoi_vector_path, analysis_area_extract_path,
                           aoi_clipped_to_extract_path)
 
         aoi_clip_proj_vector_path = os.path.join(
@@ -323,6 +327,11 @@ def execute(args):
         # Reproject the clipped AOI back
         pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
                                          aoi_clip_proj_vector_path)
+
+        # # new function to be used
+        # clip_vector(
+        #     aoi_vector_path, analysis_area_extract_path,
+        #     aoi_clip_proj_vector_path, file_suffix)
 
         aoi_vector_path = aoi_clip_proj_vector_path
 
@@ -434,25 +443,25 @@ def execute(args):
     # Calculate wave power for each wave point and add it as a field
     # to the shapefile
     LOGGER.info('Calculating Wave Power.')
-    wave_power(clipped_wave_vector_path)
+    compute_wave_power(clipped_wave_vector_path)
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_energy_path, pixel_size, target_pixel_type,
-        nodata)
+        aoi_vector_path, wave_energy_raster_path, pixel_size,
+        target_pixel_type, nodata)
 
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_power_path, pixel_size, target_pixel_type,
+        aoi_vector_path, wave_power_raster_path, pixel_size, target_pixel_type,
         nodata)
 
     # Interpolate wave energy and wave power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'CAPWE_MWHY',
-                                       (wave_energy_path, 1), 'near')
+                                       (wave_energy_raster_path, 1), 'near')
 
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'WE_kWM',
-                                       (wave_power_path, 1), 'near')
+                                       (wave_power_raster_path, 1), 'near')
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
@@ -466,10 +475,10 @@ def execute(args):
     starting_percentile_range = '1'
 
     create_percentile_rasters(
-        wave_energy_path, capwe_rc_path, capwe_units_short, capwe_units_long,
+        wave_energy_raster_path, capwe_rc_path, capwe_units_short, capwe_units_long,
         starting_percentile_range, percentiles, aoi_vector_path)
 
-    create_percentile_rasters(wave_power_path, wp_rc_path, wp_units_short,
+    create_percentile_rasters(wave_power_raster_path, wp_rc_path, wp_units_short,
                               wp_units_long, starting_percentile_range,
                               percentiles, aoi_vector_path)
 
@@ -574,13 +583,13 @@ def execute(args):
         wave_data_layer.ResetReading()
         feature = wave_data_layer.GetNextFeature()
         while feature is not None:
-            ocean_to_land_index = feature.GetFieldIndex('W2L_MDIST')
+            wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
             land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
             id_index = feature.GetFieldIndex('LAND_ID')
 
             land_id = int(wave_to_land_id[iterate_feat])
 
-            feature.SetField(ocean_to_land_index,
+            feature.SetField(wave_to_land_index,
                              ocean_to_land_dist[iterate_feat])
             feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
             feature.SetField(id_index, land_id)
@@ -613,13 +622,13 @@ def execute(args):
         return sum(npv)
 
     def compute_npv_farm_energy_path(wave_points_path):
-        """A wrapper function for passing path's to compute the Net Present
-        Value.
+        """A wrapper function to compute and add the Net Present Value to vector.
 
         Also computes the total captured wave energy for the entire farm.
 
         Parameters:
-            wave_points_path (str): a path to the wave energy points
+            wave_points_path (str): a path to the wave energy points with
+                fields for calculating NPV.
 
         Returns:
             None
@@ -628,8 +637,8 @@ def execute(args):
 
         wave_points = gdal.OpenEx(wave_points_path, 1)
         wave_data_layer = wave_points.GetLayer()
-        # Add Net Present Value field, Total Captured Wave Energy field,
-        # and Units field to shapefile
+        # Add Net Present Value field, Total Captured Wave Energy field, and
+        # Units field to shapefile
         for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
             field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
             field_defn.SetWidth(24)
@@ -637,8 +646,8 @@ def execute(args):
             wave_data_layer.CreateField(field_defn)
         wave_data_layer.ResetReading()
         feat_npv = wave_data_layer.GetNextFeature()
-        # For all the wave farm sites, calculate npv and write to
-        # shapefile
+
+        # For all the wave farm sites, calculate npv and write to shapefile
         LOGGER.info('Calculating the Net Present Value.')
         while feat_npv is not None:
             depth_index = feat_npv.GetFieldIndex('DEPTH_M')
@@ -655,14 +664,14 @@ def execute(args):
             captured_wave_energy = feat_npv.GetFieldAsDouble(
                 captured_wave_energy_index)
             capwe_all_result = captured_wave_energy * units
-            # Create a numpy array of length 25, filled with the
-            # captured wave energy in kW/h. Represents the
-            # lifetime of this wave farm.
+
+            # Create a numpy array of length 25, filled with the captured wave
+            # energy in kW/h. Represents the lifetime of this wave farm.
             captured_we = numpy.ones(
                 len(time)) * (int(captured_wave_energy) * 1000.0)
-            # It is expected that there is no revenue from the
-            # first year
+            # It is expected that there is no revenue from the first year
             captured_we[0] = 0
+
             # Compute values to determine NPV
             lenml = 3.0 * numpy.absolute(depth)
             install_cost = units * cap_max * capital_cost
@@ -672,6 +681,7 @@ def execute(args):
             initial_cost = install_cost + mooring_cost + trans_cost
             annual_revenue = price * units * captured_we
             annual_cost = omc * captured_we * units
+
             # The first year's costs are the initial start up costs
             annual_cost[0] = initial_cost
 
@@ -691,13 +701,11 @@ def execute(args):
     pygeoprocessing.create_raster_from_vector_extents(
         clipped_wave_vector_path, npv_proj_path, pixel_size, target_pixel_type,
         nodata)
-    LOGGER.debug('Completed Creating Raster From Vector Extents')
+    LOGGER.info('Completed Creating Raster From Vector Extents')
 
-    # Interpolate the NPV values based on the dimensions and
-    # corresponding points of the raster, then write the interpolated
-    # values to the raster
+    # Interpolate the NPV values based on the dimensions and corresponding
+    # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'NPV_25Y',
                                        (npv_proj_path, 1), 'near')
 
@@ -1318,7 +1326,7 @@ def create_attribute_csv_table(attribute_table_path, fields, data):
     csv_file.close()
 
 
-def wave_power(shape_path):
+def compute_wave_power(shape_path):
     """Calculates the wave power from the fields in the shapefile
         and writes the wave power value to a field for the corresponding
         feature.
@@ -1387,6 +1395,122 @@ def wave_power(shape_path):
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
         feat = layer.GetNextFeature()
+
+
+def clip_vector(base_vector_path, clip_vector_path, target_vector_path, suffix):
+    """Clip a vector against an AOI and output result in AOI coordinates.
+
+    Parameters:
+        base_vector_path (str): path to a base vector
+        clip_vector_path (str): path to an AOI vector
+        target_vector_path (str): desired output path to write the
+            clipped base against AOI in AOI's coordinate system.
+        suffix (str): a string to append at the end of the output files.
+
+    Returns:
+        None.
+
+    """
+    LOGGER.info('Entering clip_vector')
+
+    if os.path.isfile(target_vector_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(target_vector_path)
+
+    # Get the spatial references as strings in Well Known Text
+    source_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
+    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
+        'projection']
+
+    # Create path for the reprojected shapefile
+    reprojected_vector_path = os.path.join(
+        os.path.dirname(base_vector_path),
+        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp')
+        % suffix)
+
+    # Reproject the shapefile to the spatial reference of AOI so that AOI
+    # can be used to clip the shapefile properly
+    if source_sr_wkt != target_sr_wkt:
+        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
+                                         reprojected_vector_path)
+        # Clip the shapefile to the AOI
+        clip_features(reprojected_vector_path, clip_vector_path,
+                      target_vector_path)
+    else:
+        # Clip the shapefile without reprojecting
+        clip_features(base_vector_path, clip_vector_path, target_vector_path)
+
+    LOGGER.info('Finished clip_vector')
+
+
+def clip_features(base_vector_path, clip_vector_path, target_vector_path):
+    """Create a new target point vector where base points are contained in the
+    single polygon in clip_vector_path. Assumes all data are in the same
+    projection.
+
+    Parameters:
+        base_vector_path (str): path to a point vector to clip
+        clip_vector_path (str): path to a single polygon vector for clipping.
+        target_vector_path (str): output path for the clipped vector.
+
+    Returns:
+        None.
+
+    """
+    LOGGER.info('Entering clip_features')
+
+    # Get layer and geometry informations from path
+    base_vector = gdal.OpenEx(base_vector_path)
+    base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+    base_layer_geom = base_layer.GetGeomType()
+
+    clip_vector = gdal.OpenEx(clip_vector_path)
+    clip_layer = clip_vector.GetLayer()
+    clip_feat = next(clip_layer)  # Assuming one feature in clip_layer
+    clip_geom = clip_feat.GetGeometryRef()
+    clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
+    clip_prep = shapely.prepared.prep(clip_shapely)
+
+    # Create a target point vector based on the properties of base point vector
+    target_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_vector = target_driver.CreateDataSource(target_vector_path)
+    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
+                                             base_layer.GetSpatialRef(),
+                                             base_layer_geom)
+    target_layer = target_vector.GetLayer()
+    target_defn = target_layer.GetLayerDefn()
+
+    # Add input Layer Fields to the output Layer
+    for i in range(0, base_layer_defn.GetFieldCount()):
+        base_field_defn = base_layer_defn.GetFieldDefn(i)
+        target_layer.CreateField(base_field_defn)
+
+    # Write any point feature that lies within the polygon to the target vector
+    for base_feat in base_layer:
+        base_geom = base_feat.GetGeometryRef()
+        base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
+
+        if clip_prep.intersects(base_shapely):
+            # Create output feature
+            target_feat = ogr.Feature(target_defn)
+            target_feat.SetGeometry(base_geom.Clone())
+
+            # Add field values from input Layer
+            for i in range(0, target_defn.GetFieldCount()):
+                target_feat.SetField(
+                    target_defn.GetFieldDefn(i).GetNameRef(),
+                    base_feat.GetField(i))
+            target_layer.CreateFeature(target_feat)
+            target_feat = None
+
+    target_layer = None
+    target_vector = None
+    clip_layer = None
+    clip_vector = None
+    base_layer = None
+    base_vector = None
 
 
 def clip_vector_layer(base_vector_path, clip_vector_path,

@@ -199,8 +199,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(result, exp_result):
             self.assertEqual(res, exp_res)
 
-    def test_calculate_distance(self):
-        """WaveEnergy: testing 'calculate_distance' function."""
+    def test_calculate_min_distances(self):
+        """WaveEnergy: testing 'calculate_min_distances' function."""
         from natcap.invest.wave_energy import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -213,7 +213,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                 pos_y], [pos_x + 100, pos_y - 100],
                                [pos_x + 100, pos_y - 200]])
 
-        result_dist, result_id = wave_energy.calculate_distance(
+        result_dist, result_id = wave_energy.calculate_min_distances(
             set_one, set_two)
 
         expected_result_dist = [100, 100, 100]
