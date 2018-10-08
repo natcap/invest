@@ -233,8 +233,8 @@ def execute(args):
         intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
     # Final output paths for wave energy and wave power rasters
-    wave_energy_raster_path = os.path.join(output_dir,
-                                    'capwe_mwh%s.tif' % file_suffix)
+    wave_energy_raster_path = os.path.join(
+        output_dir, 'capwe_mwh%s.tif' % file_suffix)
     wave_power_raster_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
 
     # Paths for wave energy and wave power percentile rasters
@@ -324,14 +324,14 @@ def execute(args):
         aoi_clip_proj_vector_path = os.path.join(
             intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
 
-        # Reproject the clipped AOI back
-        pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
-                                         aoi_clip_proj_vector_path)
-
         # # new function to be used
         # clip_vector(
         #     aoi_vector_path, analysis_area_extract_path,
-        #     aoi_clip_proj_vector_path, file_suffix)
+        #     aoi_clipped_to_extract_path, file_suffix)
+
+        # Reproject the clipped AOI back
+        pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
+                                         aoi_clip_proj_vector_path)
 
         aoi_vector_path = aoi_clip_proj_vector_path
 
