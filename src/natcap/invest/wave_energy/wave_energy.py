@@ -140,6 +140,23 @@ def execute(args):
 
     machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
 
+    # Check if required column headers are entered in the land grid csv file
+    if 'land_gridPts_path' in args:
+        # Create a grid_land_data dataframe for later use in valuation
+        grid_land_data = pandas.read_csv(args['land_gridPts_path'])
+        required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
+        grid_land_data.columns = [
+            col_name.upper() for col_name in grid_land_data.columns
+        ]
+        missing_col_names = []
+        for col_name in required_col_names:
+            if col_name not in grid_land_data.columns:
+                missing_col_names.append(col_name)
+        if missing_col_names:
+            raise ValueError(
+                'The following column headers are missing from the Grid '
+                'Connection Points File: %s' % missing_col_names)
+
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
     # that stores the related paths to the needed inputs
@@ -379,10 +396,10 @@ def execute(args):
                 j = int(
                     (point_decimal_degree[1] - raster_gt[3]) / raster_gt[5])
                 raster_value = block_matrix[j][i]
-                # There are cases where the DEM may be too coarse and thus a wave
-                # energy point falls on land. If the raster value taken is greater
-                # than or equal to zero we need to delete that point as it should
-                # not be used in calculations
+                # There are cases where the DEM may be too coarse and thus a
+                # wave energy point falls on land. If the raster value taken is
+                # greater than or equal to zero we need to delete that point as
+                # it should not be used in calculations
                 if raster_value >= 0.0:
                     base_layer.DeleteFeature(feature.GetFID())
                 else:
@@ -390,9 +407,9 @@ def execute(args):
                     base_layer.SetFeature(feature)
                 feature = base_layer.GetNextFeature()
 
-        # It is not enough to just delete a feature from the layer. The database
-        # where the information is stored must be re-packed so that feature
-        # entry is properly removed
+        # It is not enough to just delete a feature from the layer. The
+        # database where the information is stored must be re-packed so that
+        # feature entry is properly removed
         base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
 
     # Add the depth value to the wave points by indexing into the DEM dataset
@@ -523,15 +540,23 @@ def execute(args):
         grid_pts[key] = [value['GRID'][0], value['GRID'][1]]
         land_pts[key] = [value['LAND'][0], value['LAND'][1]]
 
-    # Make a point shapefile for landing points.
-    LOGGER.info('Creating Landing Points Shapefile.')
-    build_point_shapefile('ESRI Shapefile', 'landpoints', land_pt_path,
-                          land_pts, aoi_sr, coord_trans)
+    grid_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
+                                   'grid']
+    land_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
+                                   'land']
+
+    grid_dict = grid_data.to_dict('index')
+    land_dict = land_data.to_dict('index')
 
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Shapefile.')
-    build_point_shapefile('ESRI Shapefile', 'gridpoints', grid_pt_path,
-                          grid_pts, aoi_sr, coord_trans)
+    dict_to_point_vector(
+        grid_dict, grid_pt_path, 'grid_points', aoi_sr, coord_trans)
+
+    # Make a point shapefile for landing points.
+    LOGGER.info('Creating Landing Points Shapefile.')
+    dict_to_point_vector(
+        land_dict, land_pt_path, 'land_points', aoi_sr, coord_trans)
 
     # Get the coordinates of points of wave_data_shape, landing_shape,
     # and grid_shape
@@ -689,14 +714,14 @@ def execute(args):
     # values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
 
-    pygeoprocessing.interpolate_points(
-        clipped_wave_vector_path, 'NPV_25Y', (npv_proj_path, 1), 'near')
+    pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'NPV_25Y',
+                                       (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    clip_to_projected_coordinate_system(
-        npv_proj_path, aoi_vector_path, npv_out_path)
+    clip_to_projected_coordinate_system(npv_proj_path, aoi_vector_path,
+                                        npv_out_path)
 
     #Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -811,48 +836,78 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     return (longlen * pixel_size[0], latlen * pixel_size[1])
 
 
-def build_point_shapefile(driver_name, layer_name, path, data, prj,
-                          coord_trans):
-    """This function creates and saves a point geometry shapefile to disk.
-        It specifically only creates one 'Id' field and creates as many features
-        as specified in 'data'
+def dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
+                         target_sr, coord_trans):
+    """Given a dictionary of data create a point shapefile that represents it.
 
-        driver_name - A string specifying a valid ogr driver type
-        layer_name - A string representing the name of the layer
-        path - A string of the output path of the file
-        data - A dictionary who's keys are the Id's for the field
-            and who's values are arrays with two elements being
-            latitude and longitude
-        prj - A spatial reference acting as the projection/datum
-        coord_trans - A coordinate transformation
+    Parameters:
+        base_dict_data (dict): a  dictionary with the wind data, where the keys
+            are tuples of the lat/long coordinates:
+            {
+            1 : {'TYPE':'GRID', 'LAT':49, 'LONG':-126, 'LOCATION':'Ucluelet'},
+            2 : {'TYPE':'GRID', 'LAT':50, 'LONG':-127, 'LOCATION':'Tofino'},
+            }
+        layer_name (str): the name of the layer.
+        target_vector_path (str): path to the output destination of the
+            shapefile.
+        target_sr (str): target spatial reference in well-known text format
+        coord_trans (OGRCoordinateTransformation): a coordinate transformation
+            from source to target spatial reference
 
-        returns - Nothing """
-    #If the shapefile exists, remove it.
-    if os.path.isfile(path):
-        os.remove(path)
-    #Make a point shapefile for landing points.
-    driver = ogr.GetDriverByName(driver_name)
-    data_source = driver.CreateDataSource(path)
-    layer = data_source.CreateLayer(layer_name, prj, ogr.wkbPoint)
-    field_defn = ogr.FieldDefn('Id', ogr.OFTInteger)
-    layer.CreateField(field_defn)
-    #For all of the landing points create a point feature on the layer
-    for key, value in data.iteritems():
-        latitude = value[0]
-        longitude = value[1]
+    Returns:
+        None
+
+    """
+    # If the target_vector_path exists delete it
+    if os.path.isfile(target_vector_path):
+        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver.DeleteDataSource(target_vector_path)
+
+    LOGGER.info('Creating new vector')
+    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_datasource = output_driver.CreateDataSource(target_vector_path)
+    target_layer = output_datasource.CreateLayer(layer_name, target_sr,
+                                                 ogr.wkbPoint)
+
+    # Construct a dictionary of field names and their corresponding types
+    field_dict = {
+        'ID': ogr.OFTInteger,
+        'TYPE': ogr.OFTString,
+        'LAT': ogr.OFTReal,
+        'LONG': ogr.OFTReal,
+        'LOCATION': ogr.OFTString
+    }
+
+    LOGGER.info('Creating fields for the vector')
+    for field_name in ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']:
+        target_field = ogr.FieldDefn(field_name, field_dict[field_name])
+        target_layer.CreateField(target_field)
+
+    LOGGER.info('Entering iteration to create and set the features')
+    # For each inner dictionary (for each point) create a point
+    for point_dict in base_dict_data.itervalues():
+        latitude = float(point_dict['LAT'])
+        longitude = float(point_dict['LONG'])
+        # When projecting to WGS84, extents -180 to 180 are used for longitude.
+        # In case input longitude is from -360 to 0 convert
+        if longitude < -180:
+            longitude += 360
         geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(float(longitude), float(latitude))
+        geom.AddPoint_2D(longitude, latitude)
         geom.Transform(coord_trans)
-        #Create the feature, setting the id field to the corresponding id
-        #field from the csv file
-        feat = ogr.Feature(layer.GetLayerDefn())
-        layer.CreateFeature(feat)
-        index = feat.GetFieldIndex('Id')
-        feat.SetField(index, key)
-        feat.SetGeometryDirectly(geom)
-        #Save the feature modifications to the layer.
-        layer.SetFeature(feat)
-        feat = None
+
+        output_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(output_feature)
+
+        for field_name in point_dict:
+            field_index = output_feature.GetFieldIndex(field_name)
+            output_feature.SetField(field_index, point_dict[field_name])
+        output_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(output_feature)
+        output_feature = None
+
+    output_datasource = None
+    LOGGER.info('Finished dict_to_point_vector')
 
 
 def get_points_geometries(shape_path):
@@ -1278,11 +1333,15 @@ def wave_power(shape_path):
         and writes the wave power value to a field for the corresponding
         feature.
 
-        shape_path - A path to a Shapefile that has all the attributes
+    Parameters:
+        shape_path (str): A path to a shapefile that has all the attributes
             represented in fields to calculate wave power at a specific
             wave farm
 
-        returns - Nothing"""
+    Returns:
+        None
+
+    """
     shape = gdal.OpenEx(shape_path, 1)
 
     # Sea water density constant (kg/m^3)
@@ -1354,8 +1413,8 @@ def clip_vector_layer(base_vector_path, clip_vector_path,
         clip_vector_path (str): a path to a Shapefile on disk. This is
             the Layer to clip to. Must have same spatial reference as
             'base_vector_path'
-        target_clipped_vector_path (str): a path on disk to write the clipped Shapefile
-            to. Should end with a '.shp' extension.
+        target_clipped_vector_path (str): a path on disk to write the clipped
+            shapefile to. Should end with a '.shp' extension.
 
     Returns:
         None
@@ -1617,10 +1676,14 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
         count = unique_value_counts[unique_value]
         cumulative_count += count
 
-        if ordinal_rank[ith_element] == cumulative_count or \
-           ordinal_rank[ith_element] < cumulative_count:
+        while ordinal_rank[ith_element] == cumulative_count or \
+            ordinal_rank[ith_element] < cumulative_count:
             percentile_values.append(unique_value)
             ith_element += 1
+
+            # stop iteration when all corresponding values are obtained
+            if ith_element == len(ordinal_rank):
+                break
 
     LOGGER.debug('Percentile_values: %s', percentile_values)
     return percentile_values
