@@ -539,11 +539,11 @@ def execute(args):
     land_points = get_points_geometries(land_vector_path)
     grid_points = get_points_geometries(grid_vector_path)
 
-    # Calculate the distances between the relative point groups
-    LOGGER.info('Calculating Distances.')
-    wave_to_land_dist, wave_to_land_id = calculate_distance(
+    # Calculate the minimum distances between the relative point groups
+    LOGGER.info('Calculating Min Distances.')
+    wave_to_land_dist, wave_to_land_id = calculate_min_distances(
         wave_points, land_points)
-    land_to_grid_dist, _ = calculate_distance(land_points, grid_points)
+    land_to_grid_dist, _ = calculate_min_distances(land_points, grid_points)
 
     def add_distance_fields_path(wave_shape_path, ocean_to_land_dist,
                                  land_to_grid_dist):
@@ -561,16 +561,15 @@ def execute(args):
         """
         wave_data_shape = gdal.OpenEx(wave_shape_path, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
-        # Add three new fields to the shapefile that will store
-        # the distances
+        # Add three new fields to the shapefile that will store the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
             field_defn = ogr.FieldDefn(field, ogr.OFTReal)
             field_defn.SetWidth(24)
             field_defn.SetPrecision(11)
             wave_data_layer.CreateField(field_defn)
-        # For each feature in the shapefile add the corresponding
-        # distances from wave_to_land_dist and land_to_grid_dist
-        # that was calculated above
+
+        # For each feature in the shapefile add the corresponding distance
+        # from wave_to_land_dist and land_to_grid_dist calculated above
         iterate_feat = 0
         wave_data_layer.ResetReading()
         feature = wave_data_layer.GetNextFeature()
@@ -895,32 +894,35 @@ def dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Finished dict_to_point_vector')
 
 
-def get_points_geometries(shape_path):
-    """This function takes a shapefile and for each feature retrieves
-        the X and Y value from it's geometry. The X and Y value are stored in
-        a numpy array as a point [x_location,y_location], which is returned
-        when all the features have been iterated through.
+def get_points_geometries(base_vector_path):
+    """This function retrieves the XY coordinates from a point shapefile.
 
-        shape_path - A path to an OGR shapefile datasource
+    The X and Y values from each point feature in the vector are stored in pair
+    as [x_location,y_location] in a numpy array.
 
-        returns - A numpy array of points, which represent the shape's feature's
-              geometries.
+    Parameters:
+        base_vector_path (str): a path to an OGR shapefile
+
+    Returns:
+        points (numpy.array): an array of points, which represent the geometry
+            of each point in the shapefile.
+
     """
-    point = []
-    shape = gdal.OpenEx(shape_path)
-    layer = shape.GetLayer(0)
-    feat = layer.GetNextFeature()
+    points = []
+    base_vector = gdal.OpenEx(base_vector_path)
+    base_layer = base_vector.GetLayer(0)
+    feat = base_layer.GetNextFeature()
     while feat is not None:
         x_location = float(feat.GetGeometryRef().GetX())
         y_location = float(feat.GetGeometryRef().GetY())
-        point.append([x_location, y_location])
+        points.append([x_location, y_location])
         feat = None
-        feat = layer.GetNextFeature()
+        feat = base_layer.GetNextFeature()
 
-    return numpy.array(point)
+    return numpy.array(points)
 
 
-def calculate_distance(xy_1, xy_2):
+def calculate_min_distances(xy_1, xy_2):
     """For all points in xy_1, this function calculates the distance from point
     xy_1 to various points in xy_2, and stores the shortest distances found in
     a list min_dist. The function also stores the index from which ever point
@@ -931,7 +933,7 @@ def calculate_distance(xy_1, xy_2):
         xy_2 (numpy.array): An array of points in the form [x,y]
 
     Returns:
-        A numpy array of shortest distances and a numpy array of id's
+        A numpy array of shortest distances and a numpy array of indexes
         corresponding to the array of shortest distances
 
     """
