@@ -177,7 +177,7 @@ def execute(args):
             generate_carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
-                    file_registry[storage_key]),
+                      file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
                 task_name='generate_carbon_map_%s' % storage_key)
             carbon_map_tasks.append(generate_carbon_map_task)
@@ -214,7 +214,7 @@ def execute(args):
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
         storage_path_list = [
             file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
-        
+
         diff_rasters_task = graph.add_task(
             _diff_rasters,
             args=(storage_path_list, file_registry[output_key]),
@@ -242,7 +242,7 @@ def execute(args):
             calculate_npv_task = graph.add_task(
                 _calculate_npv,
                 args=(file_registry['delta_cur_%s' % scenario_type],
-                    valuation_constant, file_registry[output_key]),
+                      valuation_constant, file_registry[output_key]),
                 target_path_list=[file_registry[output_key]],
                 dependent_task_list=diff_rasters_tasks,
                 task_name='calculate_%s' % output_key)
