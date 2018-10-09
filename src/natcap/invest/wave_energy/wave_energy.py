@@ -283,22 +283,10 @@ def execute(args):
         LOGGER.info('AOI was provided')
         aoi_vector_path = args['aoi_path']
 
-        # Temporary shapefile path needed for an intermediate step when
-        # changing the projection
-        proj_wave_vector_path = os.path.join(
-            intermediate_dir, 'projected_wave_data%s.shp' % file_suffix)
-
-        # Set the wave data shapefile to the same projection as the
-        # area of interest
-        aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
-            'projection']
-        pygeoprocessing.reproject_vector(analysis_area_points_path, aoi_wkt,
-                                         proj_wave_vector_path)
-
         # Clip the wave data shapefile by the bounds provided from the AOI
-        clip_vector(
-            proj_wave_vector_path, aoi_vector_path, clipped_wave_vector_path,
-            file_suffix)
+        clip_vector_by_vector(
+            analysis_area_points_path, aoi_vector_path,
+            clipped_wave_vector_path, file_suffix)
 
         proj_aoi_vector_path = os.path.join(
             intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
@@ -308,9 +296,9 @@ def execute(args):
         extract_wkt = pygeoprocessing.get_vector_info(
             analysis_area_extract_path)['projection']
 
-        # Project AOI to Extract shape
-        pygeoprocessing.reproject_vector(aoi_vector_path, extract_wkt,
-                                         proj_aoi_vector_path)
+        # # Project AOI to Extract shape
+        # pygeoprocessing.reproject_vector(aoi_vector_path, extract_wkt,
+        #                                  proj_aoi_vector_path)
 
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
@@ -318,18 +306,20 @@ def execute(args):
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_vector_layer(proj_aoi_vector_path, analysis_area_extract_path,
-                          aoi_clipped_to_extract_path)
+        clip_vector_by_vector(aoi_vector_path, analysis_area_extract_path,
+                              aoi_clipped_to_extract_path)
 
         aoi_clip_proj_vector_path = os.path.join(
             intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
 
         # # new function to be used
-        # clip_vector(
+        # clip_point_vector(
         #     aoi_vector_path, analysis_area_extract_path,
         #     aoi_clipped_to_extract_path, file_suffix)
 
         # Reproject the clipped AOI back
+        aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
+            'projection']
         pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
                                          aoi_clip_proj_vector_path)
 
@@ -725,7 +715,7 @@ def execute(args):
     LOGGER.info('End of Wave Energy Valuation.')
 
 
-def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
+def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path,
                                         target_raster_path):
     """Clip raster with vector into projected coordinate system.
 
@@ -733,7 +723,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
     Parameters:
         base_raster_path (string): path to base raster.
-        clip_vector_path (string): path to base clip vector.
+        clip_point_vector_path (string): path to base clip vector.
         target_raster_path (string): path to output clipped raster.
 
     Returns:
@@ -741,7 +731,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
     """
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    clip_vector_info = pygeoprocessing.get_vector_info(clip_vector_path)
+    clip_point_vector_info = pygeoprocessing.get_vector_info(clip_point_vector_path)
 
     base_raster_srs = osr.SpatialReference()
     base_raster_srs.ImportFromWkt(base_raster_info['projection'])
@@ -750,7 +740,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         wgs84_sr = osr.SpatialReference()
         wgs84_sr.ImportFromEPSG(4326)
         clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            clip_vector_info['bounding_box'], clip_vector_info['projection'],
+            clip_point_vector_info['bounding_box'], clip_point_vector_info['projection'],
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
@@ -760,8 +750,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
             clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
 
-        clip_vector_srs = osr.SpatialReference()
-        clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
+        clip_point_vector_srs = osr.SpatialReference()
+        clip_point_vector_srs.ImportFromWkt(clip_point_vector_info['projection'])
 
         centroid_x = (
             target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
@@ -792,7 +782,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
             [base_raster_path], [target_raster_path], ['near'],
             base_raster_info['pixel_size'],
             'intersection',
-            base_vector_path_list=[clip_vector_path],
+            base_vector_path_list=[clip_point_vector_path],
             target_sr_wkt=base_raster_info['projection'])
 
 
@@ -1397,124 +1387,8 @@ def compute_wave_power(shape_path):
         feat = layer.GetNextFeature()
 
 
-def clip_vector(base_vector_path, clip_vector_path, target_vector_path, suffix):
-    """Clip a vector against an AOI and output result in AOI coordinates.
-
-    Parameters:
-        base_vector_path (str): path to a base vector
-        clip_vector_path (str): path to an AOI vector
-        target_vector_path (str): desired output path to write the
-            clipped base against AOI in AOI's coordinate system.
-        suffix (str): a string to append at the end of the output files.
-
-    Returns:
-        None.
-
-    """
-    LOGGER.info('Entering clip_vector')
-
-    if os.path.isfile(target_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
-        driver.DeleteDataSource(target_vector_path)
-
-    # Get the spatial references as strings in Well Known Text
-    source_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
-    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
-
-    # Create path for the reprojected shapefile
-    reprojected_vector_path = os.path.join(
-        os.path.dirname(base_vector_path),
-        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp')
-        % suffix)
-
-    # Reproject the shapefile to the spatial reference of AOI so that AOI
-    # can be used to clip the shapefile properly
-    if source_sr_wkt != target_sr_wkt:
-        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
-                                         reprojected_vector_path)
-        # Clip the shapefile to the AOI
-        clip_features(reprojected_vector_path, clip_vector_path,
-                      target_vector_path)
-    else:
-        # Clip the shapefile without reprojecting
-        clip_features(base_vector_path, clip_vector_path, target_vector_path)
-
-    LOGGER.info('Finished clip_vector')
-
-
-def clip_features(base_vector_path, clip_vector_path, target_vector_path):
-    """Create a new target point vector where base points are contained in the
-    single polygon in clip_vector_path. Assumes all data are in the same
-    projection.
-
-    Parameters:
-        base_vector_path (str): path to a point vector to clip
-        clip_vector_path (str): path to a single polygon vector for clipping.
-        target_vector_path (str): output path for the clipped vector.
-
-    Returns:
-        None.
-
-    """
-    LOGGER.info('Entering clip_features')
-
-    # Get layer and geometry informations from path
-    base_vector = gdal.OpenEx(base_vector_path)
-    base_layer = base_vector.GetLayer()
-    base_layer_defn = base_layer.GetLayerDefn()
-    base_layer_geom = base_layer.GetGeomType()
-
-    clip_vector = gdal.OpenEx(clip_vector_path)
-    clip_layer = clip_vector.GetLayer()
-    clip_feat = next(clip_layer)  # Assuming one feature in clip_layer
-    clip_geom = clip_feat.GetGeometryRef()
-    clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
-    clip_prep = shapely.prepared.prep(clip_shapely)
-
-    # Create a target point vector based on the properties of base point vector
-    target_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_vector = target_driver.CreateDataSource(target_vector_path)
-    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
-                                             base_layer.GetSpatialRef(),
-                                             base_layer_geom)
-    target_layer = target_vector.GetLayer()
-    target_defn = target_layer.GetLayerDefn()
-
-    # Add input Layer Fields to the output Layer
-    for i in range(0, base_layer_defn.GetFieldCount()):
-        base_field_defn = base_layer_defn.GetFieldDefn(i)
-        target_layer.CreateField(base_field_defn)
-
-    # Write any point feature that lies within the polygon to the target vector
-    for base_feat in base_layer:
-        base_geom = base_feat.GetGeometryRef()
-        base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
-
-        if clip_prep.intersects(base_shapely):
-            # Create output feature
-            target_feat = ogr.Feature(target_defn)
-            target_feat.SetGeometry(base_geom.Clone())
-
-            # Add field values from input Layer
-            for i in range(0, target_defn.GetFieldCount()):
-                target_feat.SetField(
-                    target_defn.GetFieldDefn(i).GetNameRef(),
-                    base_feat.GetField(i))
-            target_layer.CreateFeature(target_feat)
-            target_feat = None
-
-    target_layer = None
-    target_vector = None
-    clip_layer = None
-    clip_vector = None
-    base_layer = None
-    base_vector = None
-
-
-def clip_vector_layer(base_vector_path, clip_vector_path,
-                      target_clipped_vector_path):
+def clip_vector_by_vector(base_vector_path, clip_vector_path,
+                          target_clipped_vector_path, suffix=None):
     """Clip Shapefile Layer by second Shapefile Layer.
 
     Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
@@ -1529,15 +1403,37 @@ def clip_vector_layer(base_vector_path, clip_vector_path,
             'base_vector_path'
         target_clipped_vector_path (str): a path on disk to write the clipped
             shapefile to. Should end with a '.shp' extension.
+        suffix (str): a string to append at the end of the output files.
 
     Returns:
         None
 
     """
-
     if os.path.isfile(target_clipped_vector_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(target_clipped_vector_path)
+
+    # Get the spatial references as strings in Well Known Text
+    source_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
+    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
+        'projection']
+
+    # Reproject the shapefile to the spatial reference of AOI so that AOI
+    # can be used to clip the shapefile properly
+    if source_sr_wkt != target_sr_wkt:
+        LOGGER.info('Source and target projections are different. Reprojecting'
+                    ' the base_vector.')
+
+        # Create path for the reprojected shapefile
+        reprojected_vector_path = os.path.join(
+            os.path.dirname(target_clipped_vector_path),
+            os.path.basename(base_vector_path).replace(
+                '.shp', '_projected%s.shp') % suffix)
+        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
+                                         reprojected_vector_path)
+        # Replace the base shapefile path with the reprojected path
+        base_vector_path = reprojected_vector_path
 
     base_vector = gdal.OpenEx(base_vector_path)
     clip_vector = gdal.OpenEx(clip_vector_path)
