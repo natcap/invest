@@ -288,18 +288,6 @@ def execute(args):
             analysis_area_points_path, aoi_vector_path,
             clipped_wave_vector_path, file_suffix)
 
-        proj_aoi_vector_path = os.path.join(
-            intermediate_dir, 'aoi_proj_to_extract%s.shp' % file_suffix)
-
-        # Get the spatial reference of the Extract shape and export to WKT to
-        # use in reprojecting the AOI
-        extract_wkt = pygeoprocessing.get_vector_info(
-            analysis_area_extract_path)['projection']
-
-        # # Project AOI to Extract shape
-        # pygeoprocessing.reproject_vector(aoi_vector_path, extract_wkt,
-        #                                  proj_aoi_vector_path)
-
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
             'aoi_clipped_to_extract_path%s.shp' % file_suffix)
@@ -309,20 +297,13 @@ def execute(args):
         clip_vector_by_vector(aoi_vector_path, analysis_area_extract_path,
                               aoi_clipped_to_extract_path)
 
+        # Reproject the clipped AOI back
         aoi_clip_proj_vector_path = os.path.join(
             intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
-
-        # # new function to be used
-        # clip_point_vector(
-        #     aoi_vector_path, analysis_area_extract_path,
-        #     aoi_clipped_to_extract_path, file_suffix)
-
-        # Reproject the clipped AOI back
         aoi_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
             'projection']
         pygeoprocessing.reproject_vector(aoi_clipped_to_extract_path, aoi_wkt,
                                          aoi_clip_proj_vector_path)
-
         aoi_vector_path = aoi_clip_proj_vector_path
 
         # Create a coordinate transformation from the given
