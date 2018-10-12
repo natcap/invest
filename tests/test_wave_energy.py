@@ -377,53 +377,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
                           wave_energy.clip_vector_by_vector, shape_to_clip_uri,
                           binding_shape_uri, output_path)
 
-    def test_create_attribute_csv_table(self):
-        """WaveEnergy: testing 'create_attribute_csv_table' function."""
-        from natcap.invest.wave_energy import wave_energy
-
-        table_uri = os.path.join(self.workspace_dir, 'att_csv_file.csv')
-        fields = ['id', 'height', 'length']
-        data = {
-            1: {
-                'id': 1,
-                'height': 10,
-                'length': 15
-            },
-            0: {
-                'id': 0,
-                'height': 10,
-                'length': 15
-            },
-            2: {
-                'id': 2,
-                'height': 10,
-                'length': 15
-            }
-        }
-
-        wave_energy.create_attribute_csv_table(table_uri, fields, data)
-
-        exp_rows = [{
-            'id': '0',
-            'height': '10',
-            'length': '15'
-        }, {
-            'id': '1',
-            'height': '10',
-            'length': '15'
-        }, {
-            'id': '2',
-            'height': '10',
-            'length': '15'
-        }]
-
-        result_file = open(table_uri, 'rU')
-
-        csv_reader = csv.DictReader(result_file)
-        for row, exp_row in zip(csv_reader, exp_rows):
-            self.assertDictEqual(row, exp_row)
-
-        result_file.close()
 
     def test_load_binary_wave_data(self):
         """WaveEnergy: testing 'load_binary_wave_data' function."""
