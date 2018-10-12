@@ -136,51 +136,13 @@ def execute(args):
 
     machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
 
-    def validate_dataframe(csv_path, header_list):
-        """Raise an exception if headers are not in the csv file.
-
-        And return the dataframe with headers converted to upper case.
-
-        Parameters:
-            csv_path (str): path to the csv to be converted to a dataframe.
-            header_list (list): a list of headers in string format.
-
-        Returns:
-            the dataframe converted from the csv file with upper cased headers.
-
-        """
-        dataframe = pandas.read_csv(csv_path)
-        header_list = [header.upper() for header in header_list]
-        dataframe.columns = [
-            col_name.upper() for col_name in grid_land_data.columns]
-        missing_headers = []
-        for header in header_list:
-            if header not in dataframe.columns:
-                missing_headers.append(header)
-        if missing_headers:
-            raise ValueError(
-                'The following column headers are missing from the file at %s:'
-                ' %s' % (csv_path, missing_headers))
-        return dataframe
-
     # Check if required column headers are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = pandas.read_csv(args['land_gridPts_path'])
         required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
-        grid_land_data = validate_dataframe(
+        grid_land_data = return_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
-        # grid_land_data.columns = [
-        #     col_name.upper() for col_name in grid_land_data.columns
-        # ]
-        # missing_col_names = []
-        # for col_name in required_col_names:
-        #     if col_name not in grid_land_data.columns:
-        #         missing_col_names.append(col_name)
-        # if missing_col_names:
-        #     raise ValueError(
-        #         'The following column headers are missing from the Grid '
-        #         'Connection Points File: %s' % missing_col_names)
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -715,6 +677,34 @@ def execute(args):
                               percentiles, aoi_vector_path)
 
     LOGGER.info('End of Wave Energy Valuation.')
+
+
+def return_validated_dataframe(csv_path, header_list):
+    """Raise an exception if headers are not in the csv file.
+
+    And return the dataframe with headers converted to upper case.
+
+    Parameters:
+        csv_path (str): path to the csv to be converted to a dataframe.
+        header_list (list): a list of headers in string format.
+
+    Returns:
+        the dataframe converted from the csv file with upper cased headers.
+
+    """
+    dataframe = pandas.read_csv(csv_path)
+    header_list = [header.upper() for header in header_list]
+    dataframe.columns = [
+        col_name.upper() for col_name in dataframe.columns]
+    missing_headers = []
+    for header in header_list:
+        if header not in dataframe.columns:
+            missing_headers.append(header)
+    if missing_headers:
+        raise ValueError(
+            'The following column headers are missing from the file at %s:'
+            ' %s' % (csv_path, missing_headers))
+    return dataframe
 
 
 def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path,
@@ -1849,13 +1839,11 @@ def validate(args, limit_to=None):
             # Parameter is not required.
             pass
 
-    for csv_key, required_fields in (('machine_perf_path', set(
-        [])), ('machine_param_path', set(
-            ['name', 'value',
-             'note'])), ('land_gridPts_path',
-                         set(['id', 'type', 'lat', 'long', 'location'])),
-                                     ('machine_econ_path',
-                                      set(['name', 'value', 'note']))):
+    for csv_key, required_fields in (
+        ('machine_perf_path', set([])),
+        ('machine_param_path', set(['name', 'value', 'note'])),
+        ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
+        ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
             reader = csv.reader(open(args[csv_key]))
             headers = set([field.lower() for field in reader.next()])
