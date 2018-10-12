@@ -1,7 +1,6 @@
 """InVEST Wave Energy Model Core Code"""
 from __future__ import absolute_import
 
-import heapq
 import math
 import os
 import logging
@@ -9,27 +8,20 @@ import csv
 import struct
 import itertools
 
-from bisect import bisect
 import numpy
 import pandas
 import scipy
 from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
-import shapely.wkb
-import shapely.prepared
-from shapely import speedups
 
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 from .. import validation
 from .. import utils
 
 import pdb
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
-
-speedups.enable()
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -618,7 +610,7 @@ def execute(args):
         wave_data_layer.ResetReading()
         feat_npv = wave_data_layer.GetNextFeature()
 
-        # For all the wave farm sites, calculate npv and write to shapefile
+        # For all the wave farm sites, calculate NPV and write to shapefile
         LOGGER.info('Calculating the Net Present Value.')
         while feat_npv is not None:
             depth_index = feat_npv.GetFieldIndex('DEPTH_M')
