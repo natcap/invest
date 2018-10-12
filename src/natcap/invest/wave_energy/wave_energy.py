@@ -1179,20 +1179,22 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
-    table_dict = {}
-    for index in xrange(len(percentile_groups)):
-        table_dict[index] = {}
-        table_dict[index]['Percentile Group'] = percentile_groups[index]
-        table_dict[index]['Percentile Range'] = percentile_ranges[index]
-        table_dict[index][value_range_header] = value_ranges[index]
-        table_dict[index]['Pixel Count'] = pixel_count[index]
-
-    attribute_table_path = target_raster_path[:-4] + '.csv'
     column_names = [
         'Percentile Group', 'Percentile Range', value_range_header,
         'Pixel Count'
     ]
-    create_attribute_csv_table(attribute_table_path, column_names, table_dict)
+    table_dict = dict((col_name, []) for col_name in column_names)
+    for index in xrange(len(percentile_groups)):
+        table_dict['Percentile Group'].append(percentile_groups[index])
+        table_dict['Percentile Range'].append(percentile_ranges[index])
+        table_dict[value_range_header].append(value_ranges[index])
+        table_dict['Pixel Count'].append(pixel_count[index])
+
+    table_df = pandas.DataFrame(table_dict)
+
+    # Write dataframe to csv, with columns in designated sequence
+    attribute_table_path = target_raster_path[:-4] + '.csv'
+    table_df.to_csv(attribute_table_path, index=False, columns=column_names)
 
 
 def create_value_ranges(percentiles, start_value):
@@ -1250,43 +1252,6 @@ def create_percentile_ranges(percentile_list):
     last_range = '>' + str(percentile_list[length - 1]) + '%'
     percentile_ranges.append(last_range)
     return percentile_ranges
-
-
-def create_attribute_csv_table(attribute_table_path, fields, data):
-    """Create a new csv table from a dictionary
-
-        filename - a path for the new table to be written to disk
-
-        fields - a python list of the column names. The order of the fields in
-            the list will be the order in how they are written. ex:
-            ['id', 'precip', 'total']
-
-        data - a python dictionary representing the table. The dictionary
-            should be constructed with unique numerical keys that point to a
-            dictionary which represents a row in the table:
-            data = {0 : {'id':1, 'precip':43, 'total': 65},
-                    1 : {'id':2, 'precip':65, 'total': 94}}
-
-        returns - nothing
-    """
-    if os.path.isfile(attribute_table_path):
-        os.remove(attribute_table_path)
-
-    csv_file = open(attribute_table_path, 'wb')
-
-    #  Sort the keys so that the rows are written in order
-    row_keys = data.keys()
-    row_keys.sort()
-
-    csv_writer = csv.DictWriter(csv_file, fields)
-    #  Write the columns as the first row in the table
-    csv_writer.writerow(dict((fn, fn) for fn in fields))
-
-    # Write the rows from the dictionary
-    for index in row_keys:
-        csv_writer.writerow(data[index])
-
-    csv_file.close()
 
 
 def compute_wave_power(shape_path):
