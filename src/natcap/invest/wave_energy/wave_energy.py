@@ -4,7 +4,6 @@ from __future__ import absolute_import
 import math
 import os
 import logging
-import csv
 import struct
 import itertools
 
@@ -1859,8 +1858,6 @@ def validate(args, limit_to=None):
             pass
         except IOError:
             warnings.append(([csv_key], 'File not found.'))
-        except csv.Error:
-            warnings.append(([csv_key], 'CSV could not be read.'))
 
     if limit_to in ('dem_path', None):
         with utils.capture_gdal_logging():
@@ -1896,10 +1893,10 @@ def validate(args, limit_to=None):
                 except KeyError:
                     missing_keys.append(required_key)
 
-            if len(missing_keys) > 0:
+            if missing_keys:
                 raise KeyError('Keys are missing: %s' % missing_keys)
 
-            if len(keys_with_no_value) > 0:
+            if keys_with_no_value:
                 warnings.append((keys_with_no_value,
                                  'Parameter must have a value'))
 
