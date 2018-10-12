@@ -105,10 +105,10 @@ def execute(args):
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
     machine_perf_data = pandas.read_csv(args['machine_perf_path'])
-    # Get the column header which is the first row in the file
+    # Get the column field which is the first row in the file
     # and specifies the range of wave periods
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
-    # Build up the row header by taking the first element in each row
+    # Build up the row field by taking the first element in each row
     # This is the range of heights
     machine_perf_dict['heights'] = machine_perf_data.iloc[:, 0].values
     # Set the key for storing the machine's performance
@@ -136,7 +136,7 @@ def execute(args):
 
     machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
 
-    # Check if required column headers are entered in the land grid csv file
+    # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = pandas.read_csv(args['land_gridPts_path'])
@@ -679,35 +679,30 @@ def execute(args):
     LOGGER.info('End of Wave Energy Valuation.')
 
 
-def return_validated_dataframe(csv_path, header_list):
-    """Raise an exception if headers are not in the csv file.
-
-    And return the dataframe with headers converted to upper case.
+def return_validated_dataframe(csv_path, field_list):
+    """Return a dataframe with upper cased fields, and a list of missing fields.
 
     Parameters:
         csv_path (str): path to the csv to be converted to a dataframe.
-        header_list (list): a list of headers in string format.
+        field_list (list): a list of fields in string format.
 
     Returns:
-        the dataframe converted from the csv file with upper cased headers.
+        dataframe (pandas.DataFrame): from csv with upper-cased fields.
+        missing_fields (list): missing fields as string format in dataframe.
 
     """
     dataframe = pandas.read_csv(csv_path)
-    header_list = [header.upper() for header in header_list]
+    field_list = [field.upper() for field in field_list]
     dataframe.columns = [
         col_name.upper() for col_name in dataframe.columns]
-    missing_headers = []
-    for header in header_list:
-        if header not in dataframe.columns:
-            missing_headers.append(header)
-    if missing_headers:
-        raise ValueError(
-            'The following column headers are missing from the file at %s:'
-            ' %s' % (csv_path, missing_headers))
-    return dataframe
+    missing_fields = []
+    for field in field_list:
+        if field not in dataframe.columns:
+            missing_fields.append(field)
+    return dataframe, missing_fields
 
 
-def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path,
+def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
                                         target_raster_path):
     """Clip raster with vector into projected coordinate system.
 
@@ -715,7 +710,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path
 
     Parameters:
         base_raster_path (string): path to base raster.
-        clip_point_vector_path (string): path to base clip vector.
+        clip_vector_path (string): path to base clip vector.
         target_raster_path (string): path to output clipped raster.
 
     Returns:
@@ -723,7 +718,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path
 
     """
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    clip_point_vector_info = pygeoprocessing.get_vector_info(clip_point_vector_path)
+    clip_point_vector_info = pygeoprocessing.get_vector_info(
+        clip_vector_path)
 
     base_raster_srs = osr.SpatialReference()
     base_raster_srs.ImportFromWkt(base_raster_info['projection'])
@@ -732,7 +728,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path
         wgs84_sr = osr.SpatialReference()
         wgs84_sr.ImportFromEPSG(4326)
         clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            clip_point_vector_info['bounding_box'], clip_point_vector_info['projection'],
+            clip_point_vector_info['bounding_box'],
+            clip_point_vector_info['projection'],
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
@@ -743,7 +740,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path
             clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
 
         clip_point_vector_srs = osr.SpatialReference()
-        clip_point_vector_srs.ImportFromWkt(clip_point_vector_info['projection'])
+        clip_point_vector_srs.ImportFromWkt(
+            clip_point_vector_info['projection'])
 
         centroid_x = (
             target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
@@ -774,7 +772,7 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_point_vector_path
             [base_raster_path], [target_raster_path], ['near'],
             base_raster_info['pixel_size'],
             'intersection',
-            base_vector_path_list=[clip_point_vector_path],
+            base_vector_path_list=[clip_vector_path],
             target_sr_wkt=base_raster_info['projection'])
 
 
@@ -944,7 +942,7 @@ def load_binary_wave_data(wave_file_path):
         into a dictionary who's keys are the corresponding (I,J) values
         and whose value is a two-dimensional array representing a matrix
         of the number of hours a seastate occurs over a 5 year period.
-        The row and column headers are extracted once and stored in the
+        The row and column fields are extracted once and stored in the
         dictionary as well.
 
         wave_file_path - The path to a pickled binary WW3 file.
@@ -1005,7 +1003,7 @@ def load_binary_wave_data(wave_file_path):
             wave_array.append(array)
 
     wave_file.close()
-    # Add row/col header to dictionary
+    # Add row/col field to dictionary
     LOGGER.debug('WaveData col %s', wave_periods)
     wave_dict['periods'] = numpy.array(wave_periods, dtype='f')
     LOGGER.debug('WaveData row %s', wave_heights)
@@ -1069,7 +1067,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_path):
     pixel_xsize, pixel_ysize = pixel_size_based_on_coordinate_transform(
         ds_path, coord_trans, reference_point_latlng)
 
-    # Average the pixel sizes incase they are of different sizes
+    # Average the pixel sizes in case they are of different sizes
     mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
     pixel_size_tuple = (mean_pixel_size * numpy.sign(pixel_xsize),
                         mean_pixel_size * numpy.sign(pixel_ysize))
@@ -1096,9 +1094,10 @@ def get_vector_spatial_ref(base_vector_path):
 
 
 def get_coordinate_transformation(source_sr, target_sr):
-    """This function takes a source and target spatial reference and creates
-        a coordinate transformation from source to target, and one from target
-        to source.
+    """Create coordinate transformations between two spatial references.
+
+    One transformation is from source to target, and the other from target to
+    source.
 
     Parameters:
         source_sr: A spatial reference
@@ -1189,9 +1188,9 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_dict = {}
     for index in xrange(len(percentile_groups)):
         percentile_dict[percentile_groups[index]] = value_ranges[index]
-    value_range_header = 'Value Range (' + units_long + ',' + units_short + ')'
+    value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
     _create_raster_attr_table(
-        target_raster_path, percentile_dict, column_name=value_range_header)
+        target_raster_path, percentile_dict, column_name=value_range_field)
 
     # Create a list of corresponding percentile ranges from the percentile list
     percentile_ranges = create_percentile_ranges(percentile_list)
@@ -1199,14 +1198,14 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
     column_names = [
-        'Percentile Group', 'Percentile Range', value_range_header,
+        'Percentile Group', 'Percentile Range', value_range_field,
         'Pixel Count'
     ]
     table_dict = dict((col_name, []) for col_name in column_names)
     for index in xrange(len(percentile_groups)):
         table_dict['Percentile Group'].append(percentile_groups[index])
         table_dict['Percentile Range'].append(percentile_ranges[index])
-        table_dict[value_range_header].append(value_ranges[index])
+        table_dict[value_range_field].append(value_ranges[index])
         table_dict['Pixel Count'].append(pixel_count[index])
 
     table_df = pandas.DataFrame(table_dict)
@@ -1484,7 +1483,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     """
     energy_cap = {}
 
-    # Get the row,col headers (ranges) for the wave watch data
+    # Get the row,col fields (ranges) for the wave watch data
     # row is wave period label
     # col is wave height label
     wave_periods = wave_data['periods']
@@ -1644,7 +1643,7 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
         cumulative_count += count
 
         while ordinal_rank[ith_element] == cumulative_count or \
-            ordinal_rank[ith_element] < cumulative_count:
+                ordinal_rank[ith_element] < cumulative_count:
             percentile_values.append(unique_value)
             ith_element += 1
 
@@ -1843,12 +1842,13 @@ def validate(args, limit_to=None):
         ('machine_perf_path', set([])),
         ('machine_param_path', set(['name', 'value', 'note'])),
         ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
-        ('machine_econ_path', set(['name', 'value', 'note']))):
+            ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
+            return_validated_dataframe(args[csv_key], required_fields)
             reader = csv.reader(open(args[csv_key]))
-            headers = set([field.lower() for field in reader.next()])
-            missing_fields = required_fields - headers
-            if len(missing_fields) > 0:
+            fields = set([field.lower() for field in reader.next()])
+            missing_fields = required_fields - fields
+            if missing_fields:
                 warnings.append('CSV is missing columns :%s' % ', '.join(
                     sorted(missing_fields)))
         except KeyError:
