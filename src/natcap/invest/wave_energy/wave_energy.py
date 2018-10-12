@@ -141,8 +141,12 @@ def execute(args):
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = pandas.read_csv(args['land_gridPts_path'])
         required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
-        grid_land_data = return_validated_dataframe(
+        grid_land_data, missing_grid_land_fields = return_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
+        if missing_grid_land_fields:
+            raise ValueError(
+                'The following column fields are missing from the Grid '
+                'Connection Points File: %s' % missing_grid_land_fields)
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -1841,15 +1845,14 @@ def validate(args, limit_to=None):
     for csv_key, required_fields in (
         ('machine_perf_path', set([])),
         ('machine_param_path', set(['name', 'value', 'note'])),
-        ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
-            ('machine_econ_path', set(['name', 'value', 'note']))):
+        ('land_gridPts_path', set
+            (['id', 'type', 'lat', 'long', 'location'])),
+        ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
-            return_validated_dataframe(args[csv_key], required_fields)
-            reader = csv.reader(open(args[csv_key]))
-            fields = set([field.lower() for field in reader.next()])
-            missing_fields = required_fields - fields
+            _, missing_fields = return_validated_dataframe(
+                args[csv_key], required_fields)
             if missing_fields:
-                warnings.append('CSV is missing columns :%s' % ', '.join(
+                warnings.append('CSV is missing columns: %s' % ', '.join(
                     sorted(missing_fields)))
         except KeyError:
             # Not all these are required inputs.
