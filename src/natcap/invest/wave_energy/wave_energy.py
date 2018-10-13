@@ -411,7 +411,7 @@ def execute(args):
         aoi_vector_path, wave_power_raster_path, pixel_size, target_pixel_type,
         nodata)
 
-    # Interpolate wave energy and wave power from the shapefile over the rasters
+    # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
     pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'CAPWE_MWHY',
@@ -433,11 +433,11 @@ def execute(args):
 
     create_percentile_rasters(
         wave_energy_raster_path, capwe_rc_path, capwe_units_short, capwe_units_long,
-        starting_percentile_range, percentiles, aoi_vector_path)
+        starting_percentile_range, percentiles)
 
     create_percentile_rasters(wave_power_raster_path, wp_rc_path, wp_units_short,
                               wp_units_long, starting_percentile_range,
-                              percentiles, aoi_vector_path)
+                              percentiles)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -449,9 +449,11 @@ def execute(args):
         LOGGER.info('Valuation selected')
 
     # Output path for landing point shapefile
-    land_vector_path = os.path.join(output_dir, 'LandPts_prj%s.shp' % file_suffix)
+    land_vector_path = os.path.join(
+        output_dir, 'LandPts_prj%s.shp' % file_suffix)
     # Output path for grid point shapefile
-    grid_vector_path = os.path.join(output_dir, 'GridPts_prj%s.shp' % file_suffix)
+    grid_vector_path = os.path.join(
+        output_dir, 'GridPts_prj%s.shp' % file_suffix)
     # Output path for the projected net present value raster
     npv_proj_path = os.path.join(intermediate_dir,
                                  'npv_not_clipped%s.tif' % file_suffix)
@@ -677,7 +679,7 @@ def execute(args):
 
     create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
                               ' thousands of US dollars (US$)', '1',
-                              percentiles, aoi_vector_path)
+                              percentiles)
 
     LOGGER.info('End of Wave Energy Valuation.')
 
@@ -965,8 +967,8 @@ def load_binary_wave_data(wave_file_path):
     LOGGER.info('Extrapolating wave data from text to a dictionary')
     wave_file = open(wave_file_path, 'rb')
     wave_dict = {}
-    # Create a key that hosts another dictionary where the matrix representation
-    # of the seastate bins will be saved
+    # Create a key that hosts another dictionary where the matrix
+    # representation of the seastate bins will be saved
     wave_dict['bin_matrix'] = {}
     wave_array = None
     wave_periods = []
@@ -987,12 +989,12 @@ def load_binary_wave_data(wave_file_path):
     key = None
     while True:
         line = wave_file.read(8)
-        if len(line) == 0:
+        if not line:
             # end of file
             wave_dict['bin_matrix'][key] = numpy.array(wave_array)
             break
 
-        if key != None:
+        if key is not None:
             wave_dict['bin_matrix'][key] = numpy.array(wave_array)
 
         # Clear out array
@@ -1118,7 +1120,7 @@ def get_coordinate_transformation(source_sr, target_sr):
 
 def create_percentile_rasters(base_raster_path, target_raster_path,
                               units_short, units_long, start_value,
-                              percentile_list, aoi_vector_path):
+                              percentile_list):
     """Creates a percentile (quartile) raster based on the raster_dataset. An
         attribute table is also constructed for the raster_dataset that
         displays the ranges provided by taking the quartile of values.
@@ -1136,8 +1138,6 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
             range (start_value: percentile_one)
         percentile_list (list): A list of the percentiles ranges,
             ex: [25, 50, 75, 90].
-        aoi_vector_path (path): path to an OGR polygon shapefile to clip the
-            rasters to
 
     Returns:
         None
@@ -1235,7 +1235,7 @@ def create_value_ranges(percentiles, start_value):
     length = len(percentiles)
     range_values = []
     # Add the first range with the starting value and long description of units
-    # This function will fail and cause an error if the percentile list is empty
+    # This function will fail and cause an error if percentile list is empty
     range_first = start_value + ' - ' + str(percentiles[0])
     range_values.append(range_first)
     for index in range(length - 1):
@@ -1524,7 +1524,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     LOGGER.debug('Position of max period : %f', period_max_index)
     LOGGER.debug('Position of max height : %f', height_max_index)
 
-    # For all the wave watch points, multiply the occurence matrix by the
+    # For all the wave watch points, multiply the occurrence matrix by the
     # interpolated machine performance matrix to get the captured wave energy
     for key, val in wave_data['bin_matrix'].iteritems():
         # Convert all values to type float
@@ -1554,7 +1554,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_path):
     """Adds each captured wave energy value from the dictionary
         energy_cap to a field of the shapefile wave_shape. The values are
         set corresponding to the same I,J values which is the key of the
-        dictionary and used as the unique identier of the shape.
+        dictionary and used as the unique identifier of the shape.
 
         energy_cap - A dictionary with keys (I,J), representing the
             wave energy capacity values.
@@ -1691,7 +1691,7 @@ def pixel_size_based_on_coordinate_transform(dataset_path, coord_trans, point):
 
     Calculates the pixel width and height in meters given a coordinate
     transform and reference point on the dataset that's close to the
-    transform's projected coordinate sytem.  This is only necessary
+    transform's projected coordinate system.  This is only necessary
     if dataset is not already in a meter coordinate system, for example
     dataset may be in lat/long (WGS84).
 
@@ -1721,8 +1721,9 @@ def pixel_size_based_on_coordinate_transform(dataset_path, coord_trans, point):
     # Transform two points into meters
     point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
     point_2 = coord_trans.TransformPoint(new_x, new_y)
+
     # Calculate the x/y difference between two points
-    # taking the absolue value because the direction doesn't matter for pixel
+    # taking the absolute value because the direction doesn't matter for pixel
     # size in the case of most coordinate systems where y increases up and x
     # increases to the right (right handed coordinate system).
     pixel_diff_x = point_2[0] - point_1[0]
@@ -1746,6 +1747,7 @@ def _create_raster_attr_table(dataset_path, attr_dict, column_name):
 
     Returns:
         None
+
     """
     dataset = gdal.OpenEx(dataset_path, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
@@ -1782,6 +1784,7 @@ def validate(args, limit_to=None):
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
+
     """
     warnings = []
     keys_missing_value = []
@@ -1795,10 +1798,10 @@ def validate(args, limit_to=None):
         except KeyError:
             missing_keys.append(required_key)
 
-    if len(missing_keys) > 0:
+    if missing_keys > 0:
         raise KeyError('Keys are missing from args: %s' % str(missing_keys))
 
-    if len(keys_missing_value) > 0:
+    if keys_missing_value > 0:
         warnings.append((keys_missing_value,
                          'Parameter is required but has no value'))
 
