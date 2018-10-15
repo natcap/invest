@@ -1,7 +1,5 @@
 import unittest
 
-from osgeo import gdal
-
 
 class ValidatorTest(unittest.TestCase):
     def test_args_wrong_type(self):
@@ -116,6 +114,26 @@ class ValidatorTest(unittest.TestCase):
 
         validation_errors = validate({'a': 'foo', 'b': 'bar'})
         self.assertEqual(validation_errors, errors)
+
+    def test_n_workers(self):
+        """Validation: validation error returned on invalid n_workers."""
+        from natcap.invest import validation
+
+        @validation.invest_validator
+        def validate(args, limit_to=None):
+            return []
+
+        validation_errors = validate({'n_workers': -1})
+        self.assertEqual(len(validation_errors), 1)
+        self.assertTrue(validation_errors[0][0] == ['n_workers'])
+        self.assertTrue('must be a nonzero, positive integer'
+                        in validation_errors[0][1])
+
+        validation_errors = validate({'n_workers': 1.5})
+        self.assertEqual(len(validation_errors), 1)
+        self.assertTrue(validation_errors[0][0] == ['n_workers'])
+        self.assertTrue('must be a nonzero, positive integer'
+                        in validation_errors[0][1])
 
 
 class ValidationContextTests(unittest.TestCase):

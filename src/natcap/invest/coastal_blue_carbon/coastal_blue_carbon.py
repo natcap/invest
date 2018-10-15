@@ -1001,8 +1001,8 @@ def validate(args, limit_to=None):
             ('price_table_uri', ('year', 'price'))):
         try:
             table = pandas.read_csv(args[csv_key], sep=None, engine='python')
-            headers = list(table)
-            missing_headers = set(required_fields) - headers
+            headers = list(header.lower() for header in table)
+            missing_headers = set(required_fields) - set(headers)
             if missing_headers:
                 warnings.append((
                     [csv_key],

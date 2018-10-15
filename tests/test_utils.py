@@ -252,15 +252,15 @@ class LogToFileTests(unittest.TestCase):
     def tearDown(self):
         shutil.rmtree(self.workspace)
 
-    def test_log_to_file_no_thread(self):
-        """Utils: Verify that we can exclude messages not from this thread."""
+    def test_log_to_file_all_threads(self):
+        """Utils: Verify that we can capture messages from all threads."""
         from natcap.invest.utils import log_to_file
 
         logfile = os.path.join(self.workspace, 'logfile.txt')
 
         def _log_from_other_thread():
             thread_logger = logging.getLogger()
-            thread_logger.info('this should not be logged')
+            thread_logger.info('this is from a thread')
 
         local_logger = logging.getLogger()
 
@@ -280,7 +280,7 @@ class LogToFileTests(unittest.TestCase):
 
         messages = [msg for msg in open(logfile).read().split('\n')
                     if msg if msg]
-        self.assertEqual(len(messages), 2)
+        self.assertEqual(len(messages), 3)
 
     def test_log_to_file_from_thread(self):
         """Utils: Verify that we can filter from a threading.Thread."""
@@ -290,16 +290,16 @@ class LogToFileTests(unittest.TestCase):
 
         def _log_from_other_thread():
             thread_logger = logging.getLogger()
-            thread_logger.info('this should be logged')
+            thread_logger.info('this should not be logged')
+            thread_logger.info('neither should this message')
 
         local_logger = logging.getLogger()
 
         thread = threading.Thread(target=_log_from_other_thread)
 
-        with log_to_file(logfile, threadname=thread.name) as handler:
+        with log_to_file(logfile, exclude_threads=[thread.name]) as handler:
             thread.start()
-            local_logger.info('this should not be logged')
-            local_logger.info('neither should this message')
+            local_logger.info('this should be logged')
 
             thread.join()
             handler.flush()
@@ -326,7 +326,7 @@ class ThreadFilterTests(unittest.TestCase):
         filterer = ThreadFilter(threading.currentThread().name)
 
         # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), True)
+        self.assertEqual(filterer.filter(record), False)
 
     def test_thread_filter_different_thread(self):
         from natcap.invest.utils import ThreadFilter
@@ -344,7 +344,7 @@ class ThreadFilterTests(unittest.TestCase):
         filterer = ThreadFilter('Thread-nonexistent')
 
         # The record comes from the same thread.
-        self.assertEqual(filterer.filter(record), False)
+        self.assertEqual(filterer.filter(record), True)
 
 
 class BuildLookupFromCsvTests(unittest.TestCase):
@@ -505,8 +505,7 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         csv_file = os.path.join(self.workspace, 'csv.csv')
         with open(csv_file, 'w') as file_obj:
             file_obj.write(textwrap.dedent(
-                """
-                header1,header2,header3
+                """header1,header2,header3
                 1,2,3
                 4,FOO,bar
                 """
