@@ -502,22 +502,15 @@ def _execute(args):
         task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
+    pygeoprocessing.routing.flow_accumulation_mfd(
+        file_registry['flow_dir_path'], file_registry['l_sum_path'],
+        weight_raster_path_band=file_registry['l_path'])
+
     l_sum_task = task_graph.add_task(
-        func=_calculate_l_sum,
-        args=(
-            file_registry['dem_pit_filled_path'],
-            file_registry['flow_dir_path'],
-            file_registry['l_path'],
-            file_registry['stream_path'],
-            file_registry['zero_absorption_source_path'],
-            file_registry['loss_path'],
-            file_registry['l_sum_pre_clamp'],
-            file_registry['l_sum_path']),
-        target_path_list=[
-            file_registry['zero_absorption_source_path'],
-            file_registry['loss_path'],
-            file_registry['l_sum_pre_clamp'],
-            file_registry['l_sum_path']],
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(file_registry['flow_dir_path'], file_registry['l_sum_path']),
+        kwargs={'weight_raster_path_band': file_registry['l_path']},
+        target_path_list=[file_registry['l_sum_path']],
         dependent_task_list=vri_dependent_task_list + [
             fill_pit_task, flow_dir_task, stream_threshold_task],
         task_name='calculate l sum')
@@ -614,19 +607,14 @@ def _calculate_b(b_sum_path, l_path, l_sum_path, target_b_path):
 
 
 def _calculate_l_sum(
-        dem_pit_filled_path, flow_dir_path, l_path, stream_path,
-        zero_absorption_source_path, loss_path, l_sum_pre_clamp_path,
+        mfd_flow_dir_path, l_path, stream_path, l_sum_pre_clamp_path,
         target_l_sum_path):
-    """Calcualte L_sum.
+    """Calculate L_sum.
 
     Parameters:
-        dem_pit_filled_path (str): path to filled DEM
-        flow_dir_path (str): path to flow dir raster
+        mfd_flow_dir_path (str): path to a multiple flow direction raster.
         l_path (str): path to L raster.
         stream_path (str): path to stream mask raster.
-        zero_absorption_source_path (str): path to intermediate file
-            for zero absorption.
-        loss_path (str): path to intermediate loss raster.
         l_sum_pre_clamp_path (str): path to intermediate l_sum before
             clamping.
         target_l_sum_path (str): path to target L_sum raster.
@@ -635,18 +623,9 @@ def _calculate_l_sum(
         None.
 
     """
-    pygeoprocessing.new_raster_from_base(
-        dem_pit_filled_path,
-        zero_absorption_source_path,
-        gdal.GDT_Float32, [TARGET_NODATA], fill_value_list=[0.0])
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        flow_dir_path,
-        dem_pit_filled_path,
-        l_path,
-        zero_absorption_source_path,
-        loss_path,
-        l_sum_pre_clamp_path, 'flux_only',
-        stream_uri=stream_path)
+    pygeoprocessing.routing.flow_accumulation_mfd(
+        mfd_flow_dir_path, l_sum_pre_clamp_path,
+        weight_raster_path_band=l_path)
 
     # The result of route_flux can be slightly negative due to roundoff error
     # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
