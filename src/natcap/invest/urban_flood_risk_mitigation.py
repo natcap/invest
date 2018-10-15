@@ -3,7 +3,6 @@ from __future__ import absolute_import
 import logging
 import os
 import time
-import multiprocessing
 import pickle
 
 from osgeo import gdal
@@ -273,6 +272,7 @@ def execute(args):
             flood_vol_pickle_task, runoff_retention_ret_vol_pickle_task,
             runoff_retention_pickle_task, intermediate_affected_vector_task],
         task_name='add zonal stats')
+
     task_graph.close()
     task_graph.join()
 
@@ -446,10 +446,16 @@ def build_affected_vector(
     damage_type_map = utils.build_lookup_from_csv(
         damage_table_path, 'type', to_lower=True, warn_if_missing=True)
 
+    if os.path.exists(target_watershed_result_vector_path):
+        LOGGER.warn(
+            '%s exists, removing to make a current one',
+            target_watershed_result_vector_path)
+        os.remove(target_watershed_result_vector_path)
+
     pygeoprocessing.reproject_vector(
         base_watershed_vector_path, target_wkt,
         target_watershed_result_vector_path, layer_index=0,
-        driver_name='ESRI Shapefile')
+        driver_name='GPKG', copy_fields=False)
 
     target_srs = osr.SpatialReference()
     target_srs.ImportFromWkt(target_wkt)
