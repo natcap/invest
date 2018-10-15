@@ -255,7 +255,7 @@ def execute(args):
         task_name='pickle runoff retention volume stats')
 
     flood_vol_pickle_path = os.path.join(
-        temporary_working_dir, 'flood_vol_stats.pickle')
+        temporary_working_dir, 'flood_vol_stats%s.pickle' % file_suffix)
     flood_vol_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(

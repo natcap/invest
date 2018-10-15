@@ -18,7 +18,7 @@ def main():
     """Entry point."""
     args = {
         'workspace_dir': 'urban_invest_workspace',
-        'results_suffix': '',
+        'results_suffix': 'test_suffix',
         'aoi_watersheds_path': r"D:\Dropbox\Urban InVEST\Stormwater data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
         'rainfall_depth': 257.0,
         'lulc_path': r"D:\Dropbox\Urban InVEST\Stormwater data SF\LULC_SFBA.tif",
