@@ -42,7 +42,17 @@ def calculate_local_recharge(
         precip_path_list, et0_path_list, qfm_path_list, flow_dir_path,
         dem_path, lulc_path, alpha_month, beta_i, gamma, stream_path, li_path,
         kc_path_list, li_avail_path, l_sum_avail_path, aet_path):
-    """wrapper for local recharge so we can statically type outlet lists"""
+    """
+        # call through to a cython function that does the necessary routing
+        # between AET and L.sum.avail in equation [7], [4], and [3]
+
+target_path_list=[
+                file_registry['l_path'],
+                file_registry['l_avail_path'],
+                file_registry['l_sum_avail_path'],
+                file_registry['aet_path']],
+    """
+    wrapper for local recharge so we can statically type outlet lists"""
     LOGGER.error('implement calculate_local_recharge')
     flow_raster = natcap.invest.scenic_quality.viewshed._ManagedRaster(
         flow_dir_path, 1, 0)

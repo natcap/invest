@@ -520,6 +520,11 @@ def _execute(args):
     else:
         b_sum_dependent_task_list = [calculate_local_recharge_task]
 
+    task_graph.close()
+    task_graph.join()
+    return
+    ########### left off here
+
     b_sum_task = task_graph.add_task(
         func=seasonal_water_yield_core.route_baseflow_sum,
         args=(
