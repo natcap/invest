@@ -57,6 +57,8 @@ def execute(args):
         None.
 
     """
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+
     temporary_working_dir = os.path.join(
         args['workspace_dir'], 'temp_working_dir_not_for_humans')
     intermediate_dir = os.path.join(
@@ -69,9 +71,10 @@ def execute(args):
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
-        temporary_working_dir, 'aligned_lulc.tif')
+        temporary_working_dir, 'aligned_lulc%s.tif' % file_suffix)
     aligned_soils_path = os.path.join(
-        temporary_working_dir, 'aligned_soils_hydrological_group.tif')
+        temporary_working_dir,
+        'aligned_soils_hydrological_group%s.tif' % file_suffix)
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_path'])
@@ -117,7 +120,8 @@ def execute(args):
     lucode_nodata = lulc_raster_info['nodata'][0]
     soil_type_nodata = soil_raster_info['nodata'][0]
 
-    cn_raster_path = os.path.join(temporary_working_dir, 'cn_raster.tif')
+    cn_raster_path = os.path.join(
+        temporary_working_dir, 'cn_raster%s.tif' % file_suffix)
     align_raster_stack_task.join()
 
     cn_raster_task = task_graph.add_task(
@@ -133,7 +137,8 @@ def execute(args):
 
     # Generate S_max
     s_max_nodata = -9999
-    s_max_raster_path = os.path.join(temporary_working_dir, 's_max.tif')
+    s_max_raster_path = os.path.join(
+        temporary_working_dir, 's_max%s.tif' % file_suffix)
     s_max_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -145,7 +150,8 @@ def execute(args):
 
     # Generate Qpi
     q_pi_nodata = -9999.
-    q_pi_raster_path = os.path.join(intermediate_dir, 'Q_mm.tif')
+    q_pi_raster_path = os.path.join(
+        intermediate_dir, 'Q_mm%s.tif' % file_suffix)
     q_pi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -159,7 +165,7 @@ def execute(args):
     # Generate Runoff Retention
     runoff_retention_nodata = -9999.
     runoff_retention_raster_path = os.path.join(
-        args['workspace_dir'], 'Runoff_retention.tif')
+        args['workspace_dir'], 'Runoff_retention%s.tif' % file_suffix)
     runoff_retention_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -173,7 +179,7 @@ def execute(args):
 
     # calculate runoff retention volumne
     runoff_retention_ret_vol_raster_path = os.path.join(
-        args['workspace_dir'], 'Runoff_retention_m3.tif')
+        args['workspace_dir'], 'Runoff_retention_m3%s.tif' % file_suffix)
     runoff_retention_ret_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -189,7 +195,8 @@ def execute(args):
         task_name='calculate runoff retention vol')
 
     # calculate flood vol raster
-    flood_vol_raster_path = os.path.join(intermediate_dir, 'Q_m3.tif')
+    flood_vol_raster_path = os.path.join(
+        intermediate_dir, 'Q_m3%s.tif' % file_suffix)
     flood_vol_nodata = -1
     flood_vol_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -205,7 +212,8 @@ def execute(args):
 
     # intersect built_infrastructure_vector_path with aoi_watersheds_path
     intermediate_target_watershed_result_vector_path = os.path.join(
-        temporary_working_dir, 'intermediate_flood_risk_service.gpkg')
+        temporary_working_dir,
+        'intermediate_flood_risk_service%s.gpkg' % file_suffix)
     # this is the field name that can be used to uniquely identify a feature
     key_field_id = 'objectid_invest_natcap'
     intermediate_affected_vector_task = task_graph.add_task(
@@ -220,7 +228,8 @@ def execute(args):
 
     # do the pickle
     runoff_retention_pickle_path = os.path.join(
-        temporary_working_dir, 'runoff_retention_stats.pickle')
+        temporary_working_dir,
+        'runoff_retention_stats%s.pickle' % file_suffix)
     runoff_retention_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
@@ -232,7 +241,8 @@ def execute(args):
         task_name='pickle runoff index stats')
 
     runoff_retention_ret_vol_pickle_path = os.path.join(
-        temporary_working_dir, 'runoff_retention_ret_vol_stats.pickle')
+        temporary_working_dir,
+        'runoff_retention_ret_vol_stats%s.pickle' % file_suffix)
     runoff_retention_ret_vol_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
@@ -257,7 +267,7 @@ def execute(args):
         task_name='pickle flood volume stats')
 
     target_watershed_result_vector_path = os.path.join(
-        args['workspace_dir'], 'flood_risk_service.gpkg')
+        args['workspace_dir'], 'flood_risk_service%s.gpkg' % file_suffix)
 
     task_graph.add_task(
         func=add_zonal_stats,
@@ -362,27 +372,43 @@ def add_zonal_stats(
     with open(flood_vol_pickle_path, 'rb') as flood_vol_pickle_file:
         flood_vol_stats = pickle.load(flood_vol_pickle_file)
 
+    base_sr_wkt = pygeoprocessing.get_vector_info(
+        base_watershed_result_vector_path)['projection']
     base_watershed_vector = gdal.OpenEx(
         base_watershed_result_vector_path, gdal.OF_VECTOR)
-    gpkg_driver = gdal.GetDriverByName('GPKG')
-    gpkg_driver.CreateCopy(
-        target_watershed_result_vector_path, base_watershed_vector)
-    base_watershed_vector = None
-    target_watershed_vector = gdal.OpenEx(
-        target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_watershed_layer = target_watershed_vector.GetLayer()
+    base_watershed_layer = base_watershed_vector.GetLayer()
+    base_geom_type = base_watershed_layer.GetGeomType()
+    base_sr = osr.SpatialReference()
+    base_sr.ImportFromWkt(base_sr_wkt)
 
+    if os.path.exists(target_watershed_result_vector_path):
+        LOGGER.warn(
+            "deleting existing target result at %s",
+            target_watershed_result_vector_path)
+        os.remove(target_watershed_result_vector_path)
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    target_watershed_vector = gpkg_driver.Create(
+        target_watershed_result_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_watershed_layer = target_watershed_vector.CreateLayer(
+        os.path.splitext(os.path.basename(
+            target_watershed_result_vector_path))[0], base_sr, base_geom_type)
+
+    target_watershed_layer.CreateField(
+        ogr.FieldDefn('Affected_Build', ogr.OFTReal))
     target_watershed_layer.CreateField(
         ogr.FieldDefn('runoff_retention_index', ogr.OFTReal))
     target_watershed_layer.CreateField(
         ogr.FieldDefn('runoff_retention_m3', ogr.OFTReal))
     target_watershed_layer.CreateField(
         ogr.FieldDefn('Service_Build', ogr.OFTReal))
+    target_layer_defn = target_watershed_layer.GetLayerDefn()
 
-    target_watershed_layer = target_watershed_vector.GetLayer()
-    target_watershed_layer.ResetReading()
-    for target_index, target_feature in enumerate(target_watershed_layer):
-        feature_id = target_feature.GetField(key_field_id)
+    for target_index, base_feature in enumerate(base_watershed_layer):
+        feature_id = base_feature.GetField(key_field_id)
+        target_feature = ogr.Feature(target_layer_defn)
+        base_geom_ref = base_feature.GetGeometryRef()
+        target_feature.SetGeometry(base_geom_ref.Clone())
+        base_geom_ref = None
 
         if feature_id in runoff_retention_stats:
             pixel_count = runoff_retention_stats[feature_id]['count']
@@ -401,16 +427,15 @@ def add_zonal_stats(
         if feature_id in flood_vol_stats:
             pixel_count = flood_vol_stats[feature_id]['count']
             if pixel_count > 0:
+                affected_build = base_feature.GetField('Affected_Build')
+                target_feature.SetField('Affected_Build', affected_build)
                 target_feature.SetField(
-                    'Service_Build',
-                    target_feature.GetField('Affected_Build') * float(
+                    'Service_Build', affected_build * float(
                         runoff_retention_vol_stats[feature_id]['sum']))
 
-        target_watershed_layer.SetFeature(target_feature)
+        target_watershed_layer.CreateFeature(target_feature)
     target_watershed_layer.SyncToDisk()
-    #target_watershed_vector.ExecuteSQL(
-    #    'ALTER TABLE "%s" DROP COLUMN "%s";' % (
-    #        target_watershed_layer.GetName(), key_field_id))
+    target_watershed_layer = None
     target_watershed_vector = None
 
 
