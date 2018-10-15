@@ -480,7 +480,7 @@ def build_affected_vector(
     pygeoprocessing.reproject_vector(
         base_watershed_vector_path, target_wkt,
         target_watershed_result_vector_path, layer_index=0,
-        driver_name='GPKG', copy_fields=False)
+        driver_name='GPKG')
 
     target_srs = osr.SpatialReference()
     target_srs.ImportFromWkt(target_wkt)
