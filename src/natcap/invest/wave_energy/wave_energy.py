@@ -250,10 +250,11 @@ def execute(args):
         drv.CreateCopy(clipped_wave_vector_path, analysis_area_vector)
 
         # Set the pixel size to that of DEM, to be used for creating rasters
-        pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
+        target_pixel_size = pygeoprocessing.get_raster_info(dem_path)['pixel_size']
         dem_wkt = pygeoprocessing.get_raster_info(dem_path)['projection']
-        LOGGER.debug('Pixel size of the DEM : %s\nProjection of the DEM : %s' %
-                     (pixel_size, dem_wkt))
+        LOGGER.debug(
+            'Pixel size of the DEM : %s, Projection of the DEM : %s',
+            target_pixel_size, dem_wkt)
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
@@ -295,11 +296,12 @@ def execute(args):
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        pixel_size = pixel_size_helper(clipped_wave_vector_path, coord_trans,
-                                       coord_trans_opposite, dem_path)
+        target_pixel_size = pixel_size_helper(
+            clipped_wave_vector_path, coord_trans, coord_trans_opposite,
+            dem_path)
 
         # Average the pixel sizes in case they are of different sizes
-        LOGGER.debug('Pixel size of DEM in meters : %s', pixel_size)
+        LOGGER.debug('Pixel size of DEM in meters : %s', target_pixel_size)
 
     # We do all wave power calculations by manipulating the fields in
     # the wave data shapefile, thus we need to add proper depth values
@@ -409,11 +411,11 @@ def execute(args):
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_energy_raster_path, pixel_size,
+        aoi_vector_path, unclipped_wave_energy_raster_path, target_pixel_size,
         target_pixel_type, nodata)
 
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, wave_power_raster_path, pixel_size, target_pixel_type,
+        aoi_vector_path, unclipped_power_raster_path, target_pixel_size, target_pixel_type,
         nodata)
 
     # Interpolate wave energy and power from the shapefile over the rasters
@@ -421,18 +423,28 @@ def execute(args):
 
     pygeoprocessing.interpolate_points(
         clipped_wave_vector_path, 'CAPWE_MWHY',
-        (wave_energy_raster_path, 1), 'near')
+        (unclipped_wave_energy_raster_path, 1), 'near')
 
     pygeoprocessing.interpolate_points(
-        clipped_wave_vector_path, 'WE_kWM', (wave_power_raster_path, 1),
+        clipped_wave_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1),
         'near')
 
     # Clip wave energy and power rasters to the aoi vector
-    clip_raster_with_vector(
-        unclipped_wave_energy_raster_path, aoi_vector_path,
-        wave_energy_raster_path)
-    clip_raster_with_vector(
-        unclipped_power_raster_path, aoi_vector_path, wave_power_raster_path)
+    target_resample_method = 'near'
+    pygeoprocessing.warp_raster(
+        unclipped_wave_energy_raster_path,
+        target_pixel_size,
+        wave_energy_raster_path,
+        target_resample_method,
+        vector_mask_options={'mask_vector_path': aoi_vector_path}
+        )
+    pygeoprocessing.warp_raster(
+        unclipped_power_raster_path,
+        target_pixel_size,
+        wave_power_raster_path,
+        target_resample_method,
+        vector_mask_options={'mask_vector_path': aoi_vector_path}
+        )
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
@@ -672,7 +684,7 @@ def execute(args):
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
-        clipped_wave_vector_path, npv_proj_path, pixel_size, target_pixel_type,
+        clipped_wave_vector_path, npv_proj_path, target_pixel_size, target_pixel_type,
         nodata)
     LOGGER.info('Completed Creating Raster From Vector Extents')
 
@@ -685,7 +697,13 @@ def execute(args):
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    clip_raster_with_vector(npv_proj_path, aoi_vector_path, npv_out_path)
+    pygeoprocessing.warp_raster(
+        npv_proj_path,
+        target_pixel_size,
+        npv_out_path,
+        target_resample_method,
+        vector_mask_options={'mask_vector_path': aoi_vector_path}
+        )
 
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -720,49 +738,13 @@ def return_validated_dataframe(csv_path, field_list):
     return dataframe, missing_fields
 
 
-def clip_raster_with_vector(base_raster_path, clip_vector_path,
-                            target_raster_path):
-    """Clip raster with vector without assuming any projection.
-
-    Projection could be WGS84 (unprojected).
-
-    Parameters:
-        base_raster_path (string): path to base raster.
-        clip_vector_path (string): path to base clip vector.
-        target_raster_path (string): path to output clipped raster.
-
-    Returns:
-        None.
-
-    """
-    # burn_value = -999  # an impossible number for the input rasters
-    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    # nodata = base_raster_info['nodata'][0]
-    # rasterized_vector_path = os.path.join(
-    #     os.path.dirname(base_raster_path),
-    #     os.path.basename(clip_vector_path).replace('.shp', '.tif'))
-
-    # pygeoprocessing.rasterize(clip_vector_path, rasterized_vector_path, [burn_value], ["ALL_TOUCHED=TRUE"])
-    # def clip_raster(pixel):
-    #     return numpy.where(pixel != burn_value, pixel, nodata)
-    # pygeoprocessing.raster_calculator(
-    #     [(base_raster_path, 1)], clip_raster, target_raster_path, gdal.GDT_Float32, nodata)
-    pdb.set_trace()
-    pygeoprocessing.align_and_resize_raster_stack(
-        [base_raster_path], [target_raster_path], ['near'],
-        base_raster_info['pixel_size'],
-        'intersection',
-        base_vector_path_list=[clip_vector_path],
-        target_sr_wkt=base_raster_info['projection'])
-
-
 def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
     """Calculate meter size of a wgs84 square pixel.
 
     Adapted from: https://gis.stackexchange.com/a/127327/2397
 
     Parameters:
-        pixel_size (tuple): [xsize, ysize] in degrees (float).
+        target_pixel_size (tuple): [xsize, ysize] in degrees (float).
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the `pixel-size` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
