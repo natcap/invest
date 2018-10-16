@@ -19,7 +19,7 @@ from .. import validation
 from .. import utils
 
 import pdb
-
+import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 class IntersectionError(Exception):
@@ -218,11 +218,6 @@ def execute(args):
     clipped_wave_vector_path = os.path.join(
         intermediate_dir, 'WEM_InputOutput_Pts%s.shp' % file_suffix)
 
-    # Final output paths for wave energy and wave power rasters
-    wave_energy_raster_path = os.path.join(
-        output_dir, 'capwe_mwh%s.tif' % file_suffix)
-    wave_power_raster_path = os.path.join(output_dir, 'wp_kw%s.tif' % file_suffix)
-
     # Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
@@ -246,7 +241,7 @@ def execute(args):
         aoi_vector_path = analysis_area_extract_path
 
         # Make a copy of the wave point shapefile so that the original input is
-        # not corrupted
+        # not corrupted when we clip the vector
         if os.path.isfile(clipped_wave_vector_path):
             os.remove(clipped_wave_vector_path)
         analysis_area_vector = gdal.OpenEx(analysis_area_points_path,
@@ -281,7 +276,7 @@ def execute(args):
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
         clip_vector_by_vector(aoi_vector_path, analysis_area_extract_path,
-                              aoi_clipped_to_extract_path)
+                              aoi_clipped_to_extract_path, file_suffix)
 
         # Reproject the clipped AOI back
         aoi_clip_proj_vector_path = os.path.join(
@@ -402,6 +397,16 @@ def execute(args):
     LOGGER.info('Calculating Wave Power.')
     compute_wave_power(clipped_wave_vector_path)
 
+    # Intermediate/final output paths for wave energy and wave power rasters
+    unclipped_wave_energy_raster_path = os.path.join(
+        intermediate_dir, 'unclipped_capwe_mwh%s.tif' % file_suffix)
+    unclipped_power_raster_path = os.path.join(
+        intermediate_dir, 'unclipped_wp_kw%s.tif' % file_suffix)
+    wave_energy_raster_path = os.path.join(
+        output_dir, 'capwe_mwh%s.tif' % file_suffix)
+    wave_power_raster_path = os.path.join(
+        output_dir, 'wp_kw%s.tif' % file_suffix)
+
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
         aoi_vector_path, wave_energy_raster_path, pixel_size,
@@ -414,11 +419,20 @@ def execute(args):
     # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
-    pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'CAPWE_MWHY',
-                                       (wave_energy_raster_path, 1), 'near')
+    pygeoprocessing.interpolate_points(
+        clipped_wave_vector_path, 'CAPWE_MWHY',
+        (wave_energy_raster_path, 1), 'near')
 
-    pygeoprocessing.interpolate_points(clipped_wave_vector_path, 'WE_kWM',
-                                       (wave_power_raster_path, 1), 'near')
+    pygeoprocessing.interpolate_points(
+        clipped_wave_vector_path, 'WE_kWM', (wave_power_raster_path, 1),
+        'near')
+
+    # Clip wave energy and power rasters to the aoi vector
+    clip_raster_with_vector(
+        unclipped_wave_energy_raster_path, aoi_vector_path,
+        wave_energy_raster_path)
+    clip_raster_with_vector(
+        unclipped_power_raster_path, aoi_vector_path, wave_power_raster_path)
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in
@@ -432,12 +446,12 @@ def execute(args):
     starting_percentile_range = '1'
 
     create_percentile_rasters(
-        wave_energy_raster_path, capwe_rc_path, capwe_units_short, capwe_units_long,
-        starting_percentile_range, percentiles)
+        wave_energy_raster_path, capwe_rc_path, capwe_units_short,
+        capwe_units_long, starting_percentile_range, percentiles)
 
-    create_percentile_rasters(wave_power_raster_path, wp_rc_path, wp_units_short,
-                              wp_units_long, starting_percentile_range,
-                              percentiles)
+    create_percentile_rasters(
+        wave_power_raster_path, wp_rc_path, wp_units_short, wp_units_long,
+        starting_percentile_range, percentiles)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -671,8 +685,7 @@ def execute(args):
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    clip_to_projected_coordinate_system(npv_proj_path, aoi_vector_path,
-                                        npv_out_path)
+    clip_raster_with_vector(npv_proj_path, aoi_vector_path, npv_out_path)
 
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -707,11 +720,11 @@ def return_validated_dataframe(csv_path, field_list):
     return dataframe, missing_fields
 
 
-def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
-                                        target_raster_path):
-    """Clip raster with vector into projected coordinate system.
+def clip_raster_with_vector(base_raster_path, clip_vector_path,
+                            target_raster_path):
+    """Clip raster with vector without assuming any projection.
 
-    If base raster is not already projected, choose a suitable UTM zone.
+    Projection could be WGS84 (unprojected).
 
     Parameters:
         base_raster_path (string): path to base raster.
@@ -722,63 +735,25 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
         None.
 
     """
+    # burn_value = -999  # an impossible number for the input rasters
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    clip_point_vector_info = pygeoprocessing.get_vector_info(
-        clip_vector_path)
+    # nodata = base_raster_info['nodata'][0]
+    # rasterized_vector_path = os.path.join(
+    #     os.path.dirname(base_raster_path),
+    #     os.path.basename(clip_vector_path).replace('.shp', '.tif'))
 
-    base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
-
-    if not base_raster_srs.IsProjected():
-        wgs84_sr = osr.SpatialReference()
-        wgs84_sr.ImportFromEPSG(4326)
-        clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            clip_point_vector_info['bounding_box'],
-            clip_point_vector_info['projection'],
-            wgs84_sr.ExportToWkt())
-
-        base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
-            base_raster_info['bounding_box'], base_raster_info['projection'],
-            wgs84_sr.ExportToWkt())
-
-        target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
-            clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
-
-        clip_point_vector_srs = osr.SpatialReference()
-        clip_point_vector_srs.ImportFromWkt(
-            clip_point_vector_info['projection'])
-
-        centroid_x = (
-            target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
-        centroid_y = (
-            target_bounding_box_wgs84[3] + target_bounding_box_wgs84[1]) / 2
-        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
-        utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
-        lat_code = 6 if centroid_y > 0 else 7
-        epsg_code = int('32%d%02d' % (lat_code, utm_code))
-        target_srs = osr.SpatialReference()
-        target_srs.ImportFromEPSG(epsg_code)
-        target_bounding_box = pygeoprocessing.transform_bounding_box(
-            target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
-            target_srs.ExportToWkt())
-
-        target_pixel_size = convert_degree_pixel_size_to_meters(
-            base_raster_info['pixel_size'], centroid_y)
-
-        pygeoprocessing.warp_raster(
-            base_raster_path,
-            target_pixel_size,
-            target_raster_path,
-            None,
-            target_bb=target_bounding_box,
-            target_sr_wkt=target_srs.ExportToWkt())
-    else:
-        pygeoprocessing.align_and_resize_raster_stack(
-            [base_raster_path], [target_raster_path], ['near'],
-            base_raster_info['pixel_size'],
-            'intersection',
-            base_vector_path_list=[clip_vector_path],
-            target_sr_wkt=base_raster_info['projection'])
+    # pygeoprocessing.rasterize(clip_vector_path, rasterized_vector_path, [burn_value], ["ALL_TOUCHED=TRUE"])
+    # def clip_raster(pixel):
+    #     return numpy.where(pixel != burn_value, pixel, nodata)
+    # pygeoprocessing.raster_calculator(
+    #     [(base_raster_path, 1)], clip_raster, target_raster_path, gdal.GDT_Float32, nodata)
+    pdb.set_trace()
+    pygeoprocessing.align_and_resize_raster_stack(
+        [base_raster_path], [target_raster_path], ['near'],
+        base_raster_info['pixel_size'],
+        'intersection',
+        base_vector_path_list=[clip_vector_path],
+        target_sr_wkt=base_raster_info['projection'])
 
 
 def convert_degree_pixel_size_to_meters(pixel_size, center_lat):

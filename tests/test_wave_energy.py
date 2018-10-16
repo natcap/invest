@@ -443,9 +443,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing valuation component."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(
-            r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace"
-        )  #self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\valuation")#self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
         args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
@@ -453,6 +451,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
+        args['suffix'] = 'valuation'
 
         # Testing if intermediate/output were overwritten
         _make_empty_files(args['workspace_dir'])
@@ -487,8 +486,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing Biophysical component w AOI but w/o valuation."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\aoi")#self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
+        args['suffix'] = 'aoi'
 
         wave_energy.execute(args)
 
@@ -513,6 +513,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest.wave_energy import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\noaoi")#self.workspace_dir)
+        args['suffix'] = 'noaoi'
 
         wave_energy.execute(args)
 
@@ -536,11 +537,11 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         """WaveEnergy: testing suffix through Valuation."""
         from natcap.invest.wave_energy import wave_energy
 
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WaveEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\suffix")#self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
-        args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
-                                                 'LandGridPts_WCVI.csv')
+        args['land_gridPts_path'] = os.path.join(
+            SAMPLE_DATA, 'LandGridPts_WCVI.csv')
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
