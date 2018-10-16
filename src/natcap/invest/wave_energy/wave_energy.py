@@ -534,13 +534,13 @@ def execute(args):
         wave_points, land_points)
     land_to_grid_dist, _ = calculate_min_distances(land_points, grid_points)
 
-    def add_distance_fields_path(wave_shape_path, ocean_to_land_dist,
+    def add_distance_fielbase_raster_path(wave_base_vector_path, ocean_to_land_dist,
                                  land_to_grid_dist):
         """A wrapper function that adds two fields to the wave point shapefile:
         the distance from ocean to land and the distance from land to grid.
 
         Parameters:
-            wave_shape_path (str): a path to the wave points shapefile
+            wave_base_vector_path (str): a path to the wave points shapefile
             ocean_to_land_dist (numpy.array): an array of distance values
             land_to_grid_dist (numpy.array): an array of distance values
 
@@ -548,7 +548,7 @@ def execute(args):
             None
 
         """
-        wave_data_shape = gdal.OpenEx(wave_shape_path, 1)
+        wave_data_shape = gdal.OpenEx(wave_base_vector_path, 1)
         wave_data_layer = wave_data_shape.GetLayer(0)
         # Add three new fields to the shapefile that will store the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
@@ -580,7 +580,7 @@ def execute(args):
             feature = None
             feature = wave_data_layer.GetNextFeature()
 
-    add_distance_fields_path(wave_vector_path, wave_to_land_dist,
+    add_distance_fielbase_raster_path(wave_vector_path, wave_to_land_dist,
                              land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
@@ -995,23 +995,27 @@ def read_machine_csv_as_dict(machine_csv_path):
     return machine_dict
 
 
-def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_path):
-    """This function helps retrieve the pixel sizes of the global DEM
-        when given an area of interest that has a certain projection.
+def pixel_size_helper(
+        base_vector_path, coord_trans, coord_trans_opposite, base_raster_path):
+    """Retrieve pixel size of a raster given a vector w/ certain projection.
 
-        shape_path - A path to a point shapefile datasource indicating where
-            in the world we are interested in
-        coord_trans - A coordinate transformation
-        coord_trans_opposite - A coordinate transformation that transforms in
-                           the opposite direction of 'coord_trans'
-        ds_path - A path to a gdal dataset to get the pixel size from
+    Parameters:
+        base_vector_path (str): path to a shapefile indicating where in the
+            world we are interested in
+        coord_trans (osr.CoordinateTransformation): a coordinate transformation
+        coord_trans_opposite (osr.CoordinateTransformation): a coordinate
+            transformation in the opposite direction of 'coord_trans'
+        base_raster_path (str): path to a raster to get the pixel size from
 
-        returns - A tuple of the x and y pixel sizes of the global DEM
-              given in the units of what 'shape' is projected in"""
-    shape = gdal.OpenEx(shape_path)
+    Returns:
+        pixel_size_tuple (tuple): x and y pixel sizes of the raster given in
+            the units of what base vector is projected in
 
-    # Get a point in the clipped shape to determine output grid size
-    feat = shape.GetLayer(0).GetNextFeature()
+    """
+    vector = gdal.OpenEx(base_vector_path)
+
+    # Get a point in the clipped vector to determine output grid size
+    feat = vector.GetLayer(0).GetNextFeature()
     geom = feat.GetGeometryRef()
     reference_point_x = geom.GetX()
     reference_point_y = geom.GetY()
@@ -1022,7 +1026,7 @@ def pixel_size_helper(shape_path, coord_trans, coord_trans_opposite, ds_path):
 
     # Get the size of the pixels in meters, to be used for creating rasters
     pixel_xsize, pixel_ysize = pixel_size_based_on_coordinate_transform(
-        ds_path, coord_trans, reference_point_latlng)
+        base_raster_path, coord_trans, reference_point_latlng)
 
     # Average the pixel sizes in case they are of different sizes
     mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
@@ -1227,13 +1231,13 @@ def create_percentile_ranges(percentile_list):
     return percentile_ranges
 
 
-def compute_wave_power(shape_path):
+def compute_wave_power(base_vector_path):
     """Calculates the wave power from the fields in the shapefile
         and writes the wave power value to a field for the corresponding
         feature.
 
     Parameters:
-        shape_path (str): A path to a shapefile that has all the attributes
+        base_vector_path (str): A path to a shapefile that has all the attributes
             represented in fields to calculate wave power at a specific
             wave farm
 
@@ -1241,7 +1245,7 @@ def compute_wave_power(shape_path):
         None
 
     """
-    shape = gdal.OpenEx(shape_path, 1)
+    shape = gdal.OpenEx(base_vector_path, 1)
 
     # Sea water density constant (kg/m^3)
     swd = 1028
@@ -1502,7 +1506,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     return energy_cap
 
 
-def captured_wave_energy_to_shape(energy_cap, wave_shape_path):
+def captured_wave_energy_to_shape(energy_cap, wave_base_vector_path):
     """Adds each captured wave energy value from the dictionary
         energy_cap to a field of the shapefile wave_shape. The values are
         set corresponding to the same I,J values which is the key of the
@@ -1510,13 +1514,13 @@ def captured_wave_energy_to_shape(energy_cap, wave_shape_path):
 
         energy_cap - A dictionary with keys (I,J), representing the
             wave energy capacity values.
-        wave_shape_path  - A path to a point geometry shapefile to
+        wave_base_vector_path  - A path to a point geometry shapefile to
             write the new field/values to
 
         returns - Nothing"""
 
     cap_we_field = 'CAPWE_MWHY'
-    wave_shape = gdal.OpenEx(wave_shape_path, 1)
+    wave_shape = gdal.OpenEx(wave_base_vector_path, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1638,35 +1642,36 @@ def count_pixels_groups(raster_path, group_values):
     return pixel_count
 
 
-def pixel_size_based_on_coordinate_transform(dataset_path, coord_trans, point):
+def pixel_size_based_on_coordinate_transform(
+        base_raster_path, coord_trans, reference_point):
     """Get width and height of cell in meters.
 
     Calculates the pixel width and height in meters given a coordinate
     transform and reference point on the dataset that's close to the
     transform's projected coordinate system.  This is only necessary
-    if dataset is not already in a meter coordinate system, for example
-    dataset may be in lat/long (WGS84).
+    if raster is not already in a meter coordinate system, for example
+    raster may be in lat/long (WGS84).
 
     Args:
-        dataset_path (str): a String for a GDAL path on disk, projected
-            in the form of lat/long decimal degrees
+        base_raster_path (str): path to a GDAL raster path, projected in the
+            form of lat/long decimal degrees
         coord_trans (osr.CoordinateTransformation): an OSR coordinate
             transformation from dataset coordinate system to meters
-        point (tuple): a reference point close to the coordinate transform
-            coordinate system.  must be in the same coordinate system as
-            dataset.
+        reference_point (tuple): a reference point close to the transformed
+            coordinate system. Must be in the same coordinate system as
+            the base raster.
 
     Returns:
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
     """
-    dataset = gdal.OpenEx(dataset_path)
+    dataset = gdal.OpenEx(base_raster_path)
     # Get the first points (x, y) from geoTransform
     geo_tran = dataset.GetGeoTransform()
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
-    top_left_x = point[0]
-    top_left_y = point[1]
+    top_left_x = reference_point[0]
+    top_left_y = reference_point[1]
     # Create the second point by adding the pixel width/height
     new_x = top_left_x + pixel_size_x
     new_y = top_left_y + pixel_size_y
@@ -1688,11 +1693,11 @@ def pixel_size_based_on_coordinate_transform(dataset_path, coord_trans, point):
     return (pixel_diff_x, pixel_diff_y)
 
 
-def _create_raster_attr_table(dataset_path, attr_dict, column_name):
+def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
     """Create a raster attribute table.
 
     Parameters:
-        dataset_path (str): a GDAL raster dataset to create the RAT for
+        base_raster_path (str): a GDAL raster dataset to create the RAT for
         attr_dict (dict): a dictionary with keys that point to a primitive type
             ex: {integer_id_1: value_1, ... integer_id_n: value_n}
         column_name (str): a string for the column name that maps the values
@@ -1701,7 +1706,7 @@ def _create_raster_attr_table(dataset_path, attr_dict, column_name):
         None
 
     """
-    dataset = gdal.OpenEx(dataset_path, gdal.GA_Update)
+    dataset = gdal.OpenEx(base_raster_path, gdal.GA_Update)
     band = dataset.GetRasterBand(1)
     attr_table = gdal.RasterAttributeTable()
     attr_table.SetRowCount(len(attr_dict))
