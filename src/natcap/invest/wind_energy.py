@@ -856,7 +856,7 @@ def execute(args):
         pygeoprocessing.new_raster_from_base(
             harvested_masked_path,
             land_poly_raster_path,
-            gdal.GDT_Float32, [_OUT_NODATA],
+            gdal.GDT_Byte, band_nodata_list=[255],
             fill_value_list=[0.0])
         # Burn polygon features into raster with values of 1s to set up for
         # distance transform
@@ -867,7 +867,7 @@ def execute(args):
             option_list=["ALL_TOUCHED=TRUE"])
 
         land_poly_dist_raster_path = os.path.join(
-            os.path.dirname(land_poly_raster_path),
+            inter_dir,
             os.path.basename(land_poly_raster_path).replace(
                 '%s.tif' % suffix, '_dist%s.tif' % suffix))
         pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
