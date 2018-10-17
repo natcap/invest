@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import shutil
 import os
-import csv
 import re
 
 import numpy
@@ -33,7 +32,7 @@ def _make_empty_files(workspace_dir):
         None.
     """
     intermediate_files = [
-        'WEM_InputOutput_Pts.shp', 'aoi_clipped_to_extract_uri.shp'
+        'WEM_InputOutput_Pts.shp', 'aoi_clipped_to_extract_path.shp'
     ]
 
     raster_files = [
@@ -98,7 +97,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
         input_path = os.path.join(self.workspace_dir, 'input_raster.tif')
         # Create raster to use as testing input
-        raster_uri = pygeoprocessing.testing.create_raster_on_disk(
+        raster_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix],
             latlong_origin,
             latlong_proj,
@@ -106,7 +105,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             pixel_size(0.033333),
             filename=input_path)
 
-        raster_gt = pygeoprocessing.geoprocessing.get_raster_info(raster_uri)[
+        raster_gt = pygeoprocessing.geoprocessing.get_raster_info(raster_path)[
             'geotransform']
         point = (raster_gt[0], raster_gt[3])
         raster_wkt = latlong_proj
@@ -120,7 +119,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
         # Call the function to test
         result = wave_energy.pixel_size_based_on_coordinate_transform(
-            raster_uri, coord_trans, point)
+            raster_path, coord_trans, point)
 
         expected_res = (5553.933063, -1187.370813)
 
@@ -132,23 +131,23 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'count_pixels_groups' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        raster_uri = os.path.join(self.workspace_dir, 'pixel_groups.tif')
+        raster_path = os.path.join(self.workspace_dir, 'pixel_groups.tif')
         srs = sampledata.SRS_WILLAMETTE
 
         group_values = [1, 3, 5, 7]
         matrix = numpy.array([[1, 3, 5, 9], [3, 7, 1, 5], [2, 4, 5, 7]])
 
         # Create raster to use for testing input
-        raster_uri = pygeoprocessing.testing.create_raster_on_disk(
+        raster_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix],
             srs.origin,
             srs.projection,
             -1,
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
-            filename=raster_uri)
+            filename=raster_path)
 
-        results = wave_energy.count_pixels_groups(raster_uri, group_values)
+        results = wave_energy.count_pixels_groups(raster_path, group_values)
 
         expected_results = [2, 2, 3, 2]
 
@@ -159,24 +158,24 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """WaveEnergy: testing 'calculate_percentiles_from_raster' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        raster_uri = os.path.join(self.workspace_dir, 'percentile.tif')
+        raster_path = os.path.join(self.workspace_dir, 'percentile.tif')
         srs = sampledata.SRS_WILLAMETTE
 
         matrix = numpy.arange(1, 101)
         matrix = matrix.reshape(10, 10)
-        raster_uri = pygeoprocessing.testing.create_raster_on_disk(
+        raster_path = pygeoprocessing.testing.create_raster_on_disk(
             [matrix],
             srs.origin,
             srs.projection,
             -1,
             srs.pixel_size(100),
             datatype=gdal.GDT_Int32,
-            filename=raster_uri)
+            filename=raster_path)
 
         percentiles = [1, 25, 50, 75]
 
         results = wave_energy.calculate_percentiles_from_raster(
-            raster_uri, percentiles)
+            raster_path, percentiles)
 
         expected_results = [1, 25, 50, 75]
 
@@ -278,32 +277,32 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                                                      pos_y)])
         ]
 
-        shape_to_clip_uri = os.path.join(self.workspace_dir,
-                                         'shape_to_clip.shp')
+        shape_to_clip_path = os.path.join(self.workspace_dir,
+                                          'shape_to_clip.shp')
         # Create the point shapefile
-        shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
+        shape_to_clip_path = pygeoprocessing.testing.create_vector_on_disk(
             geom_one,
             srs.projection,
             fields_pt,
             attrs_one,
             vector_format='ESRI Shapefile',
-            filename=shape_to_clip_uri)
+            filename=shape_to_clip_path)
 
-        binding_shape_uri = os.path.join(self.workspace_dir,
-                                         'binding_shape.shp')
+        binding_shape_path = os.path.join(self.workspace_dir,
+                                          'binding_shape.shp')
         # Create the polygon shapefile
-        binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
+        binding_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geom_two,
             srs.projection,
             fields_poly,
             attrs_poly,
             vector_format='ESRI Shapefile',
-            filename=binding_shape_uri)
+            filename=binding_shape_path)
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         wave_energy.clip_vector_by_vector(
-            shape_to_clip_uri, binding_shape_uri, output_path,
+            shape_to_clip_path, binding_shape_path, output_path,
             srs.projection, self.workspace_dir)
 
         # Create the expected point shapefile
@@ -319,15 +318,15 @@ class WaveEnergyUnitTests(unittest.TestCase):
         if not os.path.isdir(os.path.join(self.workspace_dir, 'exp_vector')):
             os.mkdir(os.path.join(self.workspace_dir, 'exp_vector'))
 
-        expected_uri = os.path.join(self.workspace_dir, 'exp_vector',
-                                    'vector.shp')
+        expected_path = os.path.join(self.workspace_dir, 'exp_vector',
+                                     'vector.shp')
         expected_shape = pygeoprocessing.testing.create_vector_on_disk(
             geom_three,
             srs.projection,
             fields_pt,
             attrs_one,
             vector_format='ESRI Shapefile',
-            filename=expected_uri)
+            filename=expected_path)
 
         pygeoprocessing.testing.assert_vectors_equal(output_path,
                                                      expected_shape, 1e-6)
@@ -354,43 +353,42 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                                                      pos_y)])
         ]
 
-        shape_to_clip_uri = os.path.join(self.workspace_dir,
-                                         'shape_to_clip.shp')
+        shape_to_clip_path = os.path.join(self.workspace_dir,
+                                          'shape_to_clip.shp')
         # Create the point shapefile
-        shape_to_clip_uri = pygeoprocessing.testing.create_vector_on_disk(
+        shape_to_clip_path = pygeoprocessing.testing.create_vector_on_disk(
             geom_one,
             srs.projection,
             fields_pt,
             attrs_one,
             vector_format='ESRI Shapefile',
-            filename=shape_to_clip_uri)
+            filename=shape_to_clip_path)
 
-        binding_shape_uri = os.path.join(self.workspace_dir,
-                                         'binding_shape.shp')
+        binding_shape_path = os.path.join(self.workspace_dir,
+                                          'binding_shape.shp')
         # Create the polygon shapefile
-        binding_shape_uri = pygeoprocessing.testing.create_vector_on_disk(
+        binding_shape_path = pygeoprocessing.testing.create_vector_on_disk(
             geom_two,
             srs.projection,
             fields_poly,
             attrs_poly,
             vector_format='ESRI Shapefile',
-            filename=binding_shape_uri)
+            filename=binding_shape_path)
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
-                          wave_energy.clip_vector_by_vector, shape_to_clip_uri,
-                          binding_shape_uri, output_path, srs.projection,
+                          wave_energy.clip_vector_by_vector, shape_to_clip_path,
+                          binding_shape_path, output_path, srs.projection,
                           self.workspace_dir)
-
 
     def test_load_binary_wave_data(self):
         """WaveEnergy: testing 'load_binary_wave_data' function."""
         from natcap.invest.wave_energy import wave_energy
 
-        wave_file_uri = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')
+        wave_file_path = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')
 
-        result = wave_energy.load_binary_wave_data(wave_file_uri)
+        result = wave_energy.load_binary_wave_data(wave_file_path)
 
         exp_res = {
             'periods': numpy.array([.375, 1, 1.5, 2.0], dtype=numpy.float32),
@@ -582,12 +580,12 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                     os.path.join(args['workspace_dir'], 'output', table_path)))
 
     @staticmethod
-    def _assert_point_vectors_equal(a_uri, b_uri):
+    def _assert_point_vectors_equal(a_path, b_path):
         """Assert that two point geometries in the vectors are equal.
 
         Parameters:
-            a_uri (str): a URI to an OGR vector.
-            b_uri (str): a URI to an OGR vector.
+            a_path (str): a path to an OGR vector.
+            b_path (str): a path to an OGR vector.
 
         Returns:
             None.
@@ -596,11 +594,11 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             AssertionError when the two point geometries are not equal up to
             desired precision (default is 6).
         """
-        a_shape = ogr.Open(a_uri)
+        a_shape = ogr.Open(a_path)
         a_layer = a_shape.GetLayer(0)
         a_feat = a_layer.GetNextFeature()
 
-        b_shape = ogr.Open(b_uri)
+        b_shape = ogr.Open(b_path)
         b_layer = b_shape.GetLayer(0)
         b_feat = b_layer.GetNextFeature()
 
