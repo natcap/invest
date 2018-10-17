@@ -851,7 +851,7 @@ def execute(args):
         avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
         land_poly_raster_path = os.path.join(
-            inter_dir, 'rasterized_land_poly.tif')
+            inter_dir, 'rasterized_land_poly%s.tif' % suffix)
         # Create new raster and fill with 0s to set up for distance transform
         pygeoprocessing.new_raster_from_base(
             harvested_masked_path,
@@ -867,9 +867,7 @@ def execute(args):
             option_list=["ALL_TOUCHED=TRUE"])
 
         land_poly_dist_raster_path = os.path.join(
-            inter_dir,
-            os.path.basename(land_poly_raster_path).replace(
-                '%s.tif' % suffix, '_dist%s.tif' % suffix))
+            inter_dir, 'land_poly_dist%s.tif' % suffix)
         pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
                                                land_poly_dist_raster_path)
 
