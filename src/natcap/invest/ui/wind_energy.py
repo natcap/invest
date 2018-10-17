@@ -16,7 +16,7 @@ class WindEnergy(model.InVESTModel):
         )
 
         self.wind_data = inputs.File(
-            args_key=u'wind_data_uri',
+            args_key=u'wind_data_path',
             helptext=(
                 u"A CSV file that represents the wind input data "
                 u"(Weibull parameters). Please see the User's Guide for "
@@ -25,7 +25,7 @@ class WindEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.wind_data)
         self.aoi = inputs.File(
-            args_key=u'aoi_uri',
+            args_key=u'aoi_vector_path',
             helptext=(
                 u"Optional.  An OGR-supported vector file containing a "
                 u"single polygon defining the area of interest.  The "
@@ -42,7 +42,7 @@ class WindEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.aoi)
         self.bathymetry = inputs.File(
-            args_key=u'bathymetry_uri',
+            args_key=u'bathymetry_path',
             helptext=(
                 u"A GDAL-supported raster file containing elevation "
                 u"values represented in meters for the area of "
@@ -53,7 +53,7 @@ class WindEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.bathymetry)
         self.land_polygon = inputs.File(
-            args_key=u'land_polygon_uri',
+            args_key=u'land_polygon_vector_path',
             helptext=(
                 u"An OGR-supported polygon vector that represents the "
                 u"land and coastline that is of interest.  For this "
@@ -69,7 +69,7 @@ class WindEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.land_polygon)
         self.global_wind_parameters = inputs.File(
-            args_key=u'global_wind_parameters_uri',
+            args_key=u'global_wind_parameters_path',
             helptext=(
                 u"A CSV file that holds wind energy model parameters "
                 u"for both the biophysical and valuation modules. "
@@ -85,7 +85,7 @@ class WindEnergy(model.InVESTModel):
             label=u'Turbine Properties')
         self.add_input(self.turbine_group)
         self.turbine_parameters = inputs.File(
-            args_key=u'turbine_parameters_uri',
+            args_key=u'turbine_parameters_path',
             helptext=(
                 u"A CSV file that contains parameters corresponding to "
                 u"a specific turbine type.  The InVEST package comes "
@@ -177,7 +177,7 @@ class WindEnergy(model.InVESTModel):
             validator=self.validator)
         self.valuation_container.add_input(self.discount_rate)
         self.grid_points = inputs.File(
-            args_key=u'grid_points_uri',
+            args_key=u'grid_points_path',
             helptext=(
                 u"An optional CSV file with grid and land points to "
                 u"determine cable distances from.  An example:<br/> "
