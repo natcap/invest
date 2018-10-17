@@ -707,7 +707,7 @@ def execute(args):
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
-    if 'valuation_container' in args:
+    if 'valuation_container' in args and args['valuation_container'] is True:
         LOGGER.info('Starting Wind Energy Valuation Model')
         # Pixel size to be used in later calculations and raster creations
         pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
