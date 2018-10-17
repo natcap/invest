@@ -259,6 +259,14 @@ def execute(args):
             raise ValueError(
                 'An AOI shapefile is required to clip and reproject the grid '
                 'points.')
+        grid_points_dict = utils.build_lookup_from_csv(
+            args['grid_points_path'], 'id')  # turn all strings to lower-cased
+        missing_grid_fields = list({'long', 'lati', 'id', 'type'} - set(
+            grid_points_dict.itervalues().next().keys()))
+        if missing_grid_fields:
+            raise ValueError(
+                'The following field value(s) are missing from the Grid '
+                'Connection Points csv file: %s.', missing_grid_fields)
 
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
@@ -725,18 +733,21 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        # based on the 'TYPE' column
-        grid_land_df = pandas.read_csv(
-            args['grid_points_path'], index_col='ID')
+        grid_land_df = pandas.read_csv(args['grid_points_path'])
+        # Convert column fields to upper cased to conform to the user's guide
+        grid_land_df.columns = [
+            field.upper() for field in grid_land_df.columns]
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.lower() == 'grid')]
+            grid_land_df['TYPE'].str.upper() == 'GRID')]
         land_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.lower() == 'land')]
+            grid_land_df['TYPE'].str.upper() == 'LAND')]
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
+        grid_df.set_index('ID', inplace=True)
         grid_dict = grid_df.to_dict('index')
+        land_df.set_index('ID', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(inter_dir,
@@ -2183,8 +2194,8 @@ def validate(args, limit_to=None):
         except csv.Error:
             warnings.append((['grid_points_path'], 'Could not open CSV file.'))
 
-    if limit_to in ('wind_schedule', None) and ('price_table' in args and
-                                                args['price_table'] == True):
+    if limit_to in ('wind_schedule', None) and (
+       'price_table' in args and args['price_table'] is True):
         try:
             table_dict = utils.build_lookup_from_csv(args['wind_schedule'],
                                                      'year')
