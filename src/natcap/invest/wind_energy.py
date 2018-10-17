@@ -675,17 +675,22 @@ def execute(args):
         path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
         for path in density_mask_list
     ]
-    pygeoprocessing.align_and_resize_raster_stack(
-        density_mask_list, aligned_density_mask_list,
-        ['near'] * len(density_mask_list), pixel_size, 'intersection')
 
     aligned_harvested_mask_list = [
         path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
         for path in harvested_mask_list
     ]
+
+    # Merge the density and harvest lists, and remove duplicates
+    merged_mask_list = density_mask_list + [
+        mask for mask in harvested_mask_list if mask not in density_mask_list]
+    merged_aligned_mask_list = aligned_density_mask_list + [
+        mask for mask in aligned_harvested_mask_list if mask not in
+        aligned_density_mask_list]
+    # Align and resize rasters in the density and harvest lists
     pygeoprocessing.align_and_resize_raster_stack(
-        harvested_mask_list, aligned_harvested_mask_list,
-        ['near'] * len(harvested_mask_list), pixel_size, 'intersection')
+        merged_mask_list, merged_aligned_mask_list,
+        ['near'] * len(merged_mask_list), pixel_size, 'intersection')
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
