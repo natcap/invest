@@ -872,13 +872,14 @@ def execute(args):
                                                land_poly_dist_raster_path)
 
         def add_avg_dist_op(tmp_dist):
-            """vectorize_datasets operation to convert distances
-                to meters and add in average grid to land distances
+            """Convert distances to meters and add in avg_grid_distance
 
-                tmp_dist - a numpy array of distances
+            Parameters:
+                tmp_dist (no.array): an array of distances
 
-                returns - distance values in meters with average grid to
-                    land distance factored in
+            Returns: distance values in meters with average grid to land
+                distance factored in
+
             """
             return np.where(tmp_dist != _OUT_NODATA,
                             tmp_dist * mean_pixel_size + avg_grid_distance,
