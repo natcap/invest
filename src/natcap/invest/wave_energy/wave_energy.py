@@ -527,8 +527,8 @@ def execute(args):
         wave_points, land_points)
     land_to_grid_dist, _ = calculate_min_distances(land_points, grid_points)
 
-    def add_distance_fielbase_raster_path(wave_base_vector_path, ocean_to_land_dist,
-                                 land_to_grid_dist):
+    def add_distance_fielbase_raster_path(
+            wave_base_vector_path, ocean_to_land_dist, land_to_grid_dist):
         """A wrapper function that adds two fields to the wave point shapefile:
         the distance from ocean to land and the distance from land to grid.
 
@@ -574,7 +574,7 @@ def execute(args):
             feature = wave_data_layer.GetNextFeature()
 
     add_distance_fielbase_raster_path(wave_vector_path, wave_to_land_dist,
-                             land_to_grid_dist)
+                                      land_to_grid_dist)
 
     def npv_wave(annual_revenue, annual_cost):
         """Calculates the NPV for a wave farm site based on the annual revenue
@@ -685,13 +685,13 @@ def execute(args):
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
     # Clip the raster to the convex hull polygon
-    pygeoprocessing.warp_raster(
-        npv_proj_path,
-        target_pixel_size,
-        npv_out_path,
-        target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path}
-        )
+    # pygeoprocessing.warp_raster(
+    #     npv_proj_path,
+    #     target_pixel_size,
+    #     npv_out_path,
+    #     target_resample_method,
+    #     vector_mask_options={'mask_vector_path': aoi_vector_path}
+    #     )
 
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -738,7 +738,7 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
             latitude or an invalid area will be calculated.
 
     Returns:
-        `pixel_size` in meters.
+        `pixel_size` (tuple): float digits in meters.
 
     """
     m1 = 111132.92
@@ -842,8 +842,8 @@ def get_points_geometries(base_vector_path):
         base_vector_path (str): a path to an OGR shapefile
 
     Returns:
-        points (numpy.array): an array of points, which represent the geometry
-            of each point in the shapefile.
+        an array of points, representing the geometry of each point in the
+            shapefile.
 
     """
     points = []
@@ -888,18 +888,20 @@ def calculate_min_distances(xy_1, xy_2):
 
 
 def load_binary_wave_data(wave_file_path):
-    """The load_binary_wave_data function converts a pickled WW3 text file
-        into a dictionary who's keys are the corresponding (I,J) values
-        and whose value is a two-dimensional array representing a matrix
-        of the number of hours a seastate occurs over a 5 year period.
-        The row and column fields are extracted once and stored in the
-        dictionary as well.
+    """Convert a pickled binary WW3 text file into a dictionary.
 
-        wave_file_path - The path to a pickled binary WW3 file.
+    The dictionary's keys are the corresponding (I,J) values and the value is
+    a two-dimensional array representing a matrix of the number of hours a
+    seastate occurs over a 5 year period. The row and column fields are
+    extracted once and stored in the dictionary as well.
 
-        returns - A dictionary of matrices representing hours of specific
-              seastates, as well as the period and height ranges.
-              It has the following structure:
+    Parameters:
+        wave_file_path (str): path to a pickled binary WW3 file.
+
+    Returns:
+        wave_dict (dict): a dictionary of matrices representing hours of
+            specific seastates, as well as the period and height ranges.
+            It has the following structure:
                {'periods': [1,2,3,4,...],
                 'heights': [.5,1.0,1.5,...],
                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
@@ -908,6 +910,7 @@ def load_binary_wave_data(wave_file_path):
                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
                               }
                }
+
     """
     LOGGER.info('Extrapolating wave data from text to a dictionary')
     wave_file = open(wave_file_path, 'rb')
@@ -1168,17 +1171,19 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
 
 def create_value_ranges(percentiles, start_value):
-    """Constructs the value ranges as Strings, with the first range starting
-    at 1 and the last range being greater than the last percentile mark. Each
-    string range is stored in a list that gets returned.
+    """Constructs the value ranges as string, which is then stored in a list.
+
+    The list has the first range starting at 1 and the last range being greater
+    than the last percentile mark.
 
     Parameters:
-        percentiles (list): A list of the percentile marks in ascending order
+        percentiles (list): a list of the percentile marks in ascending order.
         start_value (str): the first value that goes to the first percentile
-            range (start_value: percentile_one)
+            range (start_value: percentile_one).
 
     Returns:
-        A list of Strings representing the ranges of the percentile values
+        range_values (list): a list of strings representing the ranges of the
+            percentile values.
 
     """
     length = len(percentiles)
@@ -1225,14 +1230,12 @@ def create_percentile_ranges(percentile_list):
 
 
 def compute_wave_power(base_vector_path):
-    """Calculates the wave power from the fields in the shapefile
-        and writes the wave power value to a field for the corresponding
-        feature.
+    """Calculate and write the wave power based on the fields in the shapefile.
 
     Parameters:
-        base_vector_path (str): A path to a shapefile that has all the attributes
-            represented in fields to calculate wave power at a specific
-            wave farm
+        base_vector_path (str): path to a shapefile that has all the attributes
+            represented in fields to calculate wave power at a specific wave
+            farm.
 
     Returns:
         None
@@ -1437,7 +1440,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
             machines (CapMax, TpMax, HsMax)
 
     Returns:
-        A dictionary representing the wave energy capacity at each wave point
+        energy_cap (dict): key - wave point, value - the wave energy capacity
 
     """
     energy_cap = {}
@@ -1506,21 +1509,24 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     return energy_cap
 
 
-def captured_wave_energy_to_shape(energy_cap, wave_base_vector_path):
-    """Adds each captured wave energy value from the dictionary
-        energy_cap to a field of the shapefile wave_shape. The values are
-        set corresponding to the same I,J values which is the key of the
-        dictionary and used as the unique identifier of the shape.
+def captured_wave_energy_to_shape(energy_cap, wave_vector_path):
+    """Add captured wave energy value from energy_cap to a field in wave_vector.
 
-        energy_cap - A dictionary with keys (I,J), representing the
+    The values are set corresponding to the same I,J values which is the key of
+    the dictionary and used as the unique identifier of the shape.
+
+    Parameters:
+        energy_cap (dict): a dictionary with keys (I,J), representing the
             wave energy capacity values.
-        wave_base_vector_path  - A path to a point geometry shapefile to
+        wave_vector_path (str): path to a point geometry shapefile to
             write the new field/values to
 
-        returns - Nothing"""
+    Returns:
+        None.
 
+    """
     cap_we_field = 'CAPWE_MWHY'
-    wave_shape = gdal.OpenEx(wave_base_vector_path, 1)
+    wave_shape = gdal.OpenEx(wave_vector_path, 1)
     wave_layer = wave_shape.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1615,17 +1621,15 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
 
 
 def count_pixels_groups(raster_path, group_values):
-    """Does a pixel count for each value in 'group_values' over the
-        raster provided by 'raster_path'. Returns a list of pixel counts
-        for each value in 'group_values'
+    """Count pixels for each value in 'group_values' over a raster.
 
     Parameters:
-        raster_path (str): path to a gdal raster on disk
+        raster_path (str): path to a GDAL raster on disk
         group_values (list): unique numbers for which to get a pixel count
 
     Returns:
-        A list of integers, where each integer at an index corresponds to the
-        pixel count of the value from 'group_values' found at the same index
+        pixel_count (list): a list of integers, where each integer at an index
+            corresponds to the pixel count of the value from 'group_values'
 
     """
     # Initialize a list that will hold pixel counts for each group
@@ -1664,6 +1668,7 @@ def pixel_size_based_on_coordinate_transform(
     Returns:
         pixel_diff (tuple): a 2-tuple containing (pixel width in meters, pixel
             height in meters)
+
     """
     dataset = gdal.OpenEx(base_raster_path)
     # Get the first points (x, y) from geoTransform
@@ -1739,8 +1744,9 @@ def validate(args, limit_to=None):
             validated.
 
     Returns:
-        A list of tuples where tuple[0] is an iterable of keys that the error
-        message applies to and tuple[1] is the string validation warning.
+        warnings (list): A list of tuples where tuple[0] is an iterable of keys
+            that the error message applies to and tuple[1] is the string
+            validation warning.
 
     """
     warnings = []
