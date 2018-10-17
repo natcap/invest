@@ -233,7 +233,11 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                     'Global_extract.shp')
 
         result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
-        wave_energy.clip_vector_by_vector(aoi_path, extract_path, result_path)
+        target_projection = pygeoprocessing.get_vector_info(
+            extract_path)['projection']
+        wave_energy.clip_vector_by_vector(
+            aoi_path, extract_path, result_path, target_projection,
+            self.workspace_dir)
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
         pygeoprocessing.testing.assert_vectors_equal(result_path,
@@ -298,8 +302,9 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
-        wave_energy.clip_vector_by_vector(shape_to_clip_uri, binding_shape_uri,
-                                      output_path)
+        wave_energy.clip_vector_by_vector(
+            shape_to_clip_uri, binding_shape_uri, output_path,
+            srs.projection, self.workspace_dir)
 
         # Create the expected point shapefile
         fields_pt = {'id': 'int', 'myattr': 'string'}
@@ -375,7 +380,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
                           wave_energy.clip_vector_by_vector, shape_to_clip_uri,
-                          binding_shape_uri, output_path)
+                          binding_shape_uri, output_path, srs.projection,
+                          self.workspace_dir)
 
 
     def test_load_binary_wave_data(self):

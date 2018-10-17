@@ -6,6 +6,8 @@ import os
 import logging
 import struct
 import itertools
+import shutil
+import tempfile
 
 import numpy
 import pandas
@@ -20,6 +22,12 @@ from .. import utils
 
 import pdb
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
+
+
+# Set nodata value and target_pixel_type for new rasters
+_NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
+_TARGET_PIXEL_TYPE = gdal.GDT_Float32
+
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -224,17 +232,12 @@ def execute(args):
     drv = gdal.GetDriverByName('ESRI Shapefile')
     drv.CreateCopy(wave_vector_path, analysis_area_vector)
 
-    # Set nodata value and target_pixel_type for new rasters
-    nodata = float(numpy.finfo(numpy.float32).min) + 1.0 # maybe set it to dem's nodata value???
-    target_pixel_type = gdal.GDT_Float32 # same question as above
-
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
     analysis_area_sr = get_vector_spatial_ref(analysis_area_points_path)
 
     # This if/else statement differentiates between having an AOI or doing
-    # a broad run on all the wave watch points specified by
-    # args['analysis_area'].
+    # a broad run on all the wave points specified by args['analysis_area'].
     if 'aoi_path' not in args:
         LOGGER.info('AOI not provided')
 
@@ -254,33 +257,27 @@ def execute(args):
     else:
         LOGGER.info('AOI was provided')
         aoi_vector_path = args['aoi_path']
+        # Create a coordinate transformation from the projection of the given
+        # wave energy point shapefile, to the AOI's projection
+        aoi_sr = get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr_wkt = aoi_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
         clip_vector_by_vector(
             analysis_area_points_path, aoi_vector_path,
-            wave_vector_path, file_suffix)
-
-        aoi_clipped_to_extract_path = os.path.join(
-            intermediate_dir,
-            'aoi_clipped_to_extract_path%s.shp' % file_suffix)
+            wave_vector_path, aoi_sr_wkt, intermediate_dir)
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
-        clip_vector_by_vector(aoi_vector_path, analysis_area_extract_path,
-                              aoi_clipped_to_extract_path, file_suffix)
+        aoi_clipped_to_extract_path = os.path.join(
+            intermediate_dir,
+            'aoi_clipped_to_extract_path%s.shp' % file_suffix)
+        clip_vector_by_vector(
+            aoi_vector_path, analysis_area_extract_path,
+            aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir)
+        # Replace the AOI path with the clipped AOI path
+        aoi_vector_path = aoi_clipped_to_extract_path
 
-        # Reproject the clipped AOI back
-        aoi_clip_proj_vector_path = os.path.join(
-            intermediate_dir, 'aoi_clip_proj%s.shp' % file_suffix)
-        aoi_sr_wkt = pygeoprocessing.get_vector_info(aoi_vector_path)[
-            'projection']
-        pygeoprocessing.reproject_vector(
-            aoi_clipped_to_extract_path, aoi_sr_wkt, aoi_clip_proj_vector_path)
-        aoi_vector_path = aoi_clip_proj_vector_path
-
-        # Create a coordinate transformation from the projection of the given
-        # wave energy point shapefile, to the AOI's projection
-        aoi_sr = get_vector_spatial_ref(aoi_vector_path)
         coord_trans, coord_trans_opposite = get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
 
@@ -290,14 +287,8 @@ def execute(args):
             wave_vector_path, coord_trans, coord_trans_opposite,
             dem_path)
 
-    # Average the pixel sizes in case they are of different sizes
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
-
-    # We do all wave power calculations by manipulating the fields in
-    # the wave data shapefile, thus we need to add proper depth values
-    # from the raster DEM
-    LOGGER.info('Adding a depth field to the shapefile from the DEM raster')
 
     def index_values_to_points(base_point_vector_path, base_raster_path,
                                field_name, coord_trans):
@@ -366,11 +357,13 @@ def execute(args):
         # feature entry is properly removed
         base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
 
+    # We do all wave power calculations by manipulating the fields in
+    # the wave data shapefile, thus we need to add proper depth values
+    # from the raster DEM
+    LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
     index_values_to_points(wave_vector_path, dem_path, 'DEPTH_M',
                            coord_trans_opposite)
-    LOGGER.info('Finished adding DEPTH_M field to wave shapefile from DEM '
-                'raster.')
 
     # Generate an interpolate object for wave_energy_capacity
     LOGGER.info('Interpolating machine performance table.')
@@ -391,30 +384,30 @@ def execute(args):
     compute_wave_power(wave_vector_path)
 
     # Intermediate/final output paths for wave energy and wave power rasters
-    unclipped_wave_energy_raster_path = os.path.join(
+    unclipped_energy_raster_path = os.path.join(
         intermediate_dir, 'unclipped_capwe_mwh%s.tif' % file_suffix)
     unclipped_power_raster_path = os.path.join(
         intermediate_dir, 'unclipped_wp_kw%s.tif' % file_suffix)
-    wave_energy_raster_path = os.path.join(
+    energy_raster_path = os.path.join(
         output_dir, 'capwe_mwh%s.tif' % file_suffix)
     wave_power_raster_path = os.path.join(
         output_dir, 'wp_kw%s.tif' % file_suffix)
 
     # Create blank rasters bounded by the shape file of analysis area
     pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, unclipped_wave_energy_raster_path, target_pixel_size,
-        target_pixel_type, nodata)
+        aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
+        _TARGET_PIXEL_TYPE, _NODATA)
 
     pygeoprocessing.create_raster_from_vector_extents(
         aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
-        target_pixel_type, nodata)
+        _TARGET_PIXEL_TYPE, _NODATA)
 
     # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
     pygeoprocessing.interpolate_points(
         wave_vector_path, 'CAPWE_MWHY',
-        (unclipped_wave_energy_raster_path, 1), 'near')
+        (unclipped_energy_raster_path, 1), 'near')
 
     pygeoprocessing.interpolate_points(
         wave_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1),
@@ -423,9 +416,9 @@ def execute(args):
     # # Clip wave energy and power rasters to the aoi vector
     # target_resample_method = 'near'
     # pygeoprocessing.warp_raster(
-    #     unclipped_wave_energy_raster_path,
+    #     unclipped_energy_raster_path,
     #     target_pixel_size,
-    #     wave_energy_raster_path,
+    #     energy_raster_path,
     #     target_resample_method,
     #     vector_mask_options={'mask_vector_path': aoi_vector_path}
     #     )
@@ -453,7 +446,7 @@ def execute(args):
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
 
     create_percentile_rasters(
-        wave_energy_raster_path, capwe_rc_path, capwe_units_short,
+        energy_raster_path, capwe_rc_path, capwe_units_short,
         capwe_units_long, starting_percentile_range, percentiles)
 
     create_percentile_rasters(
@@ -679,8 +672,8 @@ def execute(args):
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
-        wave_vector_path, npv_proj_path, target_pixel_size, target_pixel_type,
-        nodata)
+        wave_vector_path, npv_proj_path, target_pixel_size, _TARGET_PIXEL_TYPE,
+        _NODATA)
     LOGGER.info('Completed Creating Raster From Vector Extents')
 
     # Interpolate the NPV values based on the dimensions and corresponding
@@ -1302,8 +1295,9 @@ def compute_wave_power(base_vector_path):
         feat = layer.GetNextFeature()
 
 
-def clip_vector_by_vector(base_vector_path, clip_vector_path,
-                          target_clipped_vector_path, suffix=None):
+def clip_vector_by_vector(
+        base_vector_path, clip_vector_path, target_clipped_vector_path,
+        target_sr_wkt, work_dir):
     """Clip Shapefile Layer by second Shapefile Layer.
 
     Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
@@ -1318,7 +1312,8 @@ def clip_vector_by_vector(base_vector_path, clip_vector_path,
             'base_vector_path'
         target_clipped_vector_path (str): a path on disk to write the clipped
             shapefile to. Should end with a '.shp' extension.
-        suffix (str): a string to append at the end of the output files.
+        target_sr_wkt (str): projection for the target_clipped_vector.
+        work_dir (str): path to directory for saving temporary output files.
 
     Returns:
         None
@@ -1328,51 +1323,56 @@ def clip_vector_by_vector(base_vector_path, clip_vector_path,
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(target_clipped_vector_path)
 
-    # Get the spatial references as strings in Well Known Text
-    source_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
-    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
-        'projection']
+    # Create a temporary folder within work_dir for saving reprojected files
+    temp_work_dir = tempfile.mkdtemp(dir=work_dir, prefix='reproject')
 
-    # Reproject the shapefile to the spatial reference of AOI so that AOI
-    # can be used to clip the shapefile properly
-    if source_sr_wkt != target_sr_wkt:
-        LOGGER.info('Source and target projections are different. Reprojecting'
-                    ' the base_vector.')
+    def reproject_vector(base_vector_path, target_sr_wkt, temp_work_dir):
+        """Reproject the vector to target projection."""
+        base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+            'projection']
 
-        # Create path for the reprojected shapefile
-        reprojected_vector_path = os.path.join(
-            os.path.dirname(target_clipped_vector_path),
-            os.path.basename(base_vector_path).replace(
-                '.shp', '_projected%s.shp') % suffix)
-        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
-                                         reprojected_vector_path)
-        # Replace the base shapefile path with the reprojected path
-        base_vector_path = reprojected_vector_path
+        if base_sr_wkt != target_sr_wkt:
+            LOGGER.info('Base and target projections are different. '
+                        'Reprojecting %s to %s.', base_vector_path,
+                        target_sr_wkt)
 
-    base_vector = gdal.OpenEx(base_vector_path)
-    clip_vector = gdal.OpenEx(clip_vector_path)
+            # Create path for the reprojected shapefile
+            reproject_base_vector_path = os.path.join(
+                temp_work_dir,
+                os.path.basename(base_vector_path).replace(
+                    '.shp', '_projected.shp'))
+            pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
+                                             reproject_base_vector_path)
+            # Replace the base shapefile path with the reprojected path
+            base_vector_path = reproject_base_vector_path
 
+        return base_vector_path
+
+    reproject_base_vector_path = reproject_vector(
+        base_vector_path, target_sr_wkt, temp_work_dir)
+    reproject_clip_vector_path = reproject_vector(
+        clip_vector_path, target_sr_wkt, temp_work_dir)
+
+    base_vector = gdal.OpenEx(reproject_base_vector_path)
     base_layer = base_vector.GetLayer()
+    base_layer_defn = base_layer.GetLayerDefn()
+
+    clip_vector = gdal.OpenEx(reproject_clip_vector_path)
     clip_layer = clip_vector.GetLayer()
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateDataSource(target_clipped_vector_path)
-    base_layer_defn = base_layer.GetLayerDefn()
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef())
-
     base_layer.Clip(clip_layer, target_layer)
+
+    shutil.rmtree(temp_work_dir, ignore_errors=True)
 
     # Add in a check to make sure the intersection didn't come back empty
     if target_layer.GetFeatureCount() == 0:
         raise IntersectionError(
-            'Intersection ERROR: found no intersection between: file - %s and '
-            'file - %s. This could be caused by the AOI not overlapping any '
-            'Wave Energy Points.\n'
-            'Suggestions: open workspace/intermediate/projected_wave_data.shp'
-            'and the AOI to make sure AOI overlaps at least on point.' %
-            (base_vector_path, clip_vector_path))
+            "Intersection ERROR: found no intersection between base vector %s "
+            "and clip vector %s." % (base_vector_path, clip_vector_path))
 
 
 def wave_energy_interp(wave_data, machine_perf):
