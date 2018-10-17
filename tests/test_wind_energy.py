@@ -147,38 +147,8 @@ class WindEnergyUnitTests(unittest.TestCase):
         point_layer = point_vector.GetLayer()
         field_index = point_layer.GetFeature(0).GetFieldIndex(field_name)
         for i, point_feat in enumerate(point_layer):
-            # import pdb
-            # pdb.set_trace()
             result_val = point_feat.GetField(field_index)
             pygeoprocessing.testing.assert_close(result_val, exp_results[i])
-
-    def test_combine_dictionaries(self):
-        """WindEnergy: testing 'combine_dictionaries' function."""
-        from natcap.invest import wind_energy
-
-        dict_1 = {"name": "bob", "age": 3, "sex": "female"}
-        dict_2 = {"hobby": "crawling", "food": "milk"}
-
-        result = wind_energy.combine_dictionaries(dict_1, dict_2)
-
-        expected_result = {"name": "bob", "age": 3, "sex": "female",
-                           "hobby": "crawling", "food": "milk"}
-
-        self.assertDictEqual(expected_result, result)
-
-    def test_combine_dictionaries_duplicates(self):
-        """WindEnergy: testing 'combine_dictionaries' function w/ duplicates."""
-        from natcap.invest import wind_energy
-
-        dict_1 = {"name": "bob", "age": 3, "sex": "female"}
-        dict_2 = {"hobby": "crawling", "food": "milk", "age": 4}
-
-        result = wind_energy.combine_dictionaries(dict_1, dict_2)
-
-        expected_result = {"name": "bob", "age": 3, "sex": "female",
-                           "hobby": "crawling", "food": "milk"}
-
-        self.assertDictEqual(expected_result, result)
 
     def test_read_csv_wind_parameters(self):
         """WindEnergy: testing 'read_csv_wind_parameter' function."""
@@ -455,16 +425,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'density_W_per_m2.tif',	'harvested_energy_MWhr_per_yr.tif']
 
         for raster_path in raster_results:
-            ds = gdal.Open(os.path.join(args['workspace_dir'], 'output', raster_path))
-            outarray = numpy.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'output array'
-            print outarray
-            ds = gdal.Open(os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))
-            testarray = numpy.array(ds.GetRasterBand(1).ReadAsArray())
-            print
-            print 'test array'
-            print testarray
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
                 os.path.join(REGRESSION_DATA, 'nolandpoly', raster_path))

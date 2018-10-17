@@ -182,12 +182,12 @@ def execute(args):
         args['turbine_parameters_path'], biophysical_params)
 
     # Read the biophysical global parameters into a dictionary
-    bio_global_param_dict = read_csv_wind_parameters(
+    bio_global_params_dict = read_csv_wind_parameters(
         args['global_wind_parameters_path'], biophysical_params)
 
     # Combine the turbine and global parameters into one dictionary
-    bio_parameters_dict = combine_dictionaries(bio_turbine_dict,
-                                               bio_global_param_dict)
+    bio_parameters_dict = bio_global_params_dict.copy()
+    bio_parameters_dict.update(bio_turbine_dict)
 
     LOGGER.debug('Biophysical Turbine Parameters: %s', bio_parameters_dict)
 
@@ -229,7 +229,7 @@ def execute(args):
         # Read the biophysical global parameters into a dictionary
         val_global_param_dict = read_csv_wind_parameters(
             args['global_wind_parameters_path'], valuation_global_params)
-        # Check that all the necessary input fields from the CSV file
+        # Check all the necessary input fields from the CSV file
         missing_global_params = list(
             set(valuation_global_params) - set(val_global_param_dict.keys()))
 
@@ -241,8 +241,8 @@ def execute(args):
                 'correctly.' % (missing_turbine_params, missing_global_params))
 
         # Combine the turbine and global parameters into one dictionary
-        val_parameters_dict = combine_dictionaries(val_turbine_dict,
-                                                   val_global_param_dict)
+        val_parameters_dict = val_global_param_dict.copy()
+        val_parameters_dict.update(val_turbine_dict)
 
     # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
@@ -1245,33 +1245,6 @@ def read_csv_wind_parameters(csv_path, parameter_list):
     wind_dict = wind_param_df.to_dict()[1]
 
     return wind_dict
-
-
-def combine_dictionaries(dict_1, dict_2):
-    """Add dict_2 to dict_1 and return in a new dictionary.
-
-    Both dictionaries should be single level with a key that points to a value.
-    If there is a key in 'dict_2' that already exists in 'dict_1' it will be
-    ignored.
-
-    Parameters:
-        dict_1 (dict): a dictionary. ex: {'ws_id':1, 'vol':65}
-        dict_2 (dict): a dictionary. ex: {'size':11, 'area':5}
-
-    Returns: a python dictionary that is the combination of 'dict_1' and
-        'dict_2'. ex: {'ws_id':1, 'vol':65, 'area':5, 'size':11}
-
-    """
-    # Make a copy of dict_1 the dictionary we want to add on to
-    dict_3 = dict_1.copy()
-    # Iterate through dict_2, the dictionary we want to get new fields/values
-    # from
-    for key, value in dict_2.iteritems():
-        # Ignore fields that already exist in dictionary we are adding to
-        if key not in dict_3.keys():
-            dict_3[key] = value
-
-    return dict_3
 
 
 def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
