@@ -203,7 +203,8 @@ def execute(args):
             'Please make sure all the necessary fields are present and '
             'spelled correctly.' % missing_biophysical_params)
 
-    if 'valuation_container' not in args:
+    if 'valuation_container' not in args or args[
+       'valuation_container'] is False:
         LOGGER.debug('Valuation Not Selected')
     else:
         LOGGER.info(
