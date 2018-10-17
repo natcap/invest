@@ -1272,9 +1272,8 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         None.
 
     """
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
+    mean_pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
+        'mean_pixel_size']
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
 
@@ -1740,9 +1739,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     land_point_dist_raster_path_list = []
 
     # Get pixel size
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
+    mean_pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
+        'mean_pixel_size']
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
