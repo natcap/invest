@@ -407,15 +407,13 @@ def execute(args):
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
 
-            dist_meters_path = os.path.join(inter_dir,
-                                            'distance_meters%s.tif' % suffix)
-
             LOGGER.info('Generate Distance Mask')
             # Create a distance mask
             pygeoprocessing.distance_transform_edt((aoi_raster_path, 1),
                                                    dist_trans_path)
+
             mask_by_distance(dist_trans_path, min_distance, max_distance,
-                             _OUT_NODATA, dist_meters_path, dist_mask_path)
+                             _OUT_NODATA, dist_mask_path)
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -1281,18 +1279,15 @@ def read_csv_wind_parameters(csv_path, parameter_list):
 
 
 def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
-                     target_dist_raster_path, target_mask_raster_path):
-    """Bound a raster whose pixels are distances by a min and max distance.
+                     target_raster_path):
+    """Create a raster whose pixel values are bound by min and max distances.
 
     Parameters:
         base_raster_path (string): path to a raster with distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
-        target_dist_raster_path (string): path output to the raster
-            converted from distance transform ranks to distance values in
-            meters.
-        target_mask_raster_path (string): path output to the raster masked
-            by distance values.
+        target_raster_path (string): path output to the raster masked by
+            distance values.
         out_nodata (float): the nodata value of the raster.
 
     Returns:
@@ -1304,24 +1299,18 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
 
-    def dist_op(dist_pix):
-        """Raster_calculator operation that multiplies distance transform
-            values by a cell size, to get distances in meters"""
-        return np.where(dist_pix == raster_nodata, out_nodata,
-                        dist_pix * mean_pixel_size)
+    def dist_mask_op(dist_arr):
+        """Mask & multiply distance values by min/max values & cell size."""
+        out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
+        valid_pixels_mask = ((dist_arr != raster_nodata) &
+                             (dist_arr >= min_dist) &
+                             (dist_arr <= max_dist))
+        out_array[
+            valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
+        return out_array
 
-    def mask_op(dist_pix):
-        """Raster_calculator operation to bound dist_pix values between
-            two integer values"""
-        return np.where(((dist_pix >= max_dist) | (dist_pix <= min_dist)),
-                        out_nodata, dist_pix)
-
-    pygeoprocessing.raster_calculator([(base_raster_path, 1)], dist_op,
-                                      target_dist_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
-
-    pygeoprocessing.raster_calculator([(target_dist_raster_path, 1)], mask_op,
-                                      target_mask_raster_path,
+    pygeoprocessing.raster_calculator([(base_raster_path, 1)], dist_mask_op,
+                                      target_raster_path,
                                       gdal.GDT_Float32, out_nodata)
 
 
