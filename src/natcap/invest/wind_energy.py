@@ -1368,19 +1368,17 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
     """
     # If the target_vector_path exists delete it
-    if os.path.isfile(target_vector_path):
-        os.remove(target_vector_path)
-    elif os.path.isdir(target_vector_path):
-        shutil.rmtree(target_vector_path)
-
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
+    if os.path.exists(target_vector_path):
+        output_driver.Delete(target_vector_path)
+
+    target_vector = output_driver.CreateDataSource(target_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    output_layer = output_datasource.CreateLayer(layer_name, source_sr,
+    output_layer = target_vector.CreateLayer(layer_name, source_sr,
                                                  ogr.wkbPoint)
 
     # Outer unique keys
@@ -1569,14 +1567,14 @@ def wind_data_to_point_vector(dict_data,
         driver.DeleteDataSource(target_vector_path)
 
     LOGGER.debug('Creating new datasource')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
+    target_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_datasource = target_driver.CreateDataSource(target_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
+    target_layer = target_datasource.CreateLayer(layer_name, source_sr,
                                                  ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
@@ -1600,19 +1598,19 @@ def wind_data_to_point_vector(dict_data,
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
 
-        output_feature = ogr.Feature(target_layer.GetLayerDefn())
-        target_layer.CreateFeature(output_feature)
+        target_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(target_feature)
 
         for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
+            field_index = target_feature.GetFieldIndex(field_name)
+            target_feature.SetField(field_index, point_dict[field_name])
 
-        output_feature.SetGeometryDirectly(geom)
-        target_layer.SetFeature(output_feature)
-        output_feature = None
+        target_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(target_feature)
+        target_feature = None
 
     LOGGER.debug('Leaving wind_data_to_point_vector')
-    output_datasource = None
+    target_datasource = None
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
