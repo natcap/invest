@@ -5,6 +5,7 @@ import logging
 import os
 import csv
 import shutil
+import tempfile
 import math
 
 import numpy as np
@@ -34,7 +35,7 @@ speedups.enable()
 # dependent on the hub height.
 _SCALE_KEY = 'LAM'
 
-# The String name for the shape field. So far this is a default from the
+# The str name for the shape field. So far this is a default from the
 # text file given by CK. I guess we could search for the 'K' if needed.
 _SHAPE_KEY = 'K'
 
@@ -59,32 +60,32 @@ def execute(args):
     given the following dictionary:
 
     Args:
-        workspace_dir (string): a path to the output workspace folder (required)
-        wind_data_path (string): path to a CSV file with the following header:
+        workspace_dir (str): a path to the output workspace folder (required)
+        wind_data_path (str): path to a CSV file with the following header:
             ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
             with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
             collected (required)
-        aoi_vector_path (string): a path to an OGR polygon vector that is
+        aoi_vector_path (str): a path to an OGR polygon vector that is
             projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
             of the land polygon that is of interest (optional for biophysical
             and no distance masking, required for biophysical and distance
             masking, required for valuation)
-        bathymetry_path (string): a path to a GDAL raster that has the depth
+        bathymetry_path (str): a path to a GDAL raster that has the depth
             values of the area of interest (required)
-        land_polygon_vector_path (string): a path to an OGR polygon vector that
+        land_polygon_vector_path (str): a path to an OGR polygon vector that
             provides a coastline for determining distances from wind farm bins.
             Enabled by AOI and required if wanting to mask by distances or run
             valuation
-        global_wind_parameters_path (string): a float for the average distance
+        global_wind_parameters_path (str): a float for the average distance
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
             provided)
-        suffix (string): a String to append to the end of the output files
+        suffix (str): a str to append to the end of the output files
             (optional)
-        turbine_parameters_path (string): a path to a CSV file that holds the
+        turbine_parameters_path (str): a path to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters
             (required)
         number_of_turbines (int): an integer value for the number of machines
@@ -107,14 +108,14 @@ def execute(args):
             will cost for the specific type of turbine (required for valuation)
         discount_rate (float): a float value for the discount rate (required
             for valuation)
-        grid_points_path (string): a path to a CSV file that specifies the
+        grid_points_path (str): a path to a CSV file that specifies the
             landing and grid point locations (optional)
         avg_grid_distance (float): a float for the average distance in
             kilometers from a grid connection point to a land connection point
             (required for valuation if grid connection points are not provided)
         price_table (boolean): a bool indicating whether to use the wind energy
             price table or not (required)
-        wind_schedule (string): a path to a CSV file for the yearly prices of
+        wind_schedule (str): a path to a CSV file for the yearly prices of
             wind energy for the lifespan of the farm (required if 'price_table'
             is true)
         wind_price (float): a float for the wind energy price at year 0
@@ -306,7 +307,7 @@ def execute(args):
                 'An AOI shapefile is required to clip and reproject the grid '
                 'points.')
         grid_points_dict = utils.build_lookup_from_csv(
-            args['grid_points_path'], 'id')  # turn all strings to lower-cased
+            args['grid_points_path'], 'id')  # turn all strs to lower-cased
         missing_grid_fields = list({'long', 'lati', 'id', 'type'} - set(
             grid_points_dict.itervalues().next().keys()))
         if missing_grid_fields:
@@ -562,7 +563,7 @@ def execute(args):
         This is to help not open and pass around datasets / datasources.
 
         Parameters:
-            wind_point_vector_path (string): path to a point shapefile to write
+            wind_point_vector_path (str): path to a point shapefile to write
                 the results to
 
         Returns:
@@ -856,7 +857,7 @@ def execute(args):
                     # Calculate distance raster
                     calculate_distances_land_grid(
                         land_projected_vector_path, harvested_masked_path,
-                        final_dist_raster_path, suffix)
+                        final_dist_raster_path, inter_dir)
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -1190,11 +1191,11 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     projected in meters
 
     Parameters:
-        base_point_vector_path (string): a path to an OGR point geometry
+        base_point_vector_path (str): a path to an OGR point geometry
             shapefile projected in meters
-        base_polygon_vector_path (string): a path to an OGR polygon shapefile
+        base_polygon_vector_path (str): a path to an OGR polygon shapefile
             projected in meters
-        dist_field_name (string): the name of the new distance field to be
+        dist_field_name (str): the name of the new distance field to be
             added to the attribute table of base_point_vector
 
     Returns:
@@ -1257,14 +1258,14 @@ def read_csv_wind_parameters(csv_path, parameter_list):
     are represented in the first column of the file.
 
     Parameters:
-        csv_path (string): a path to a CSV file where every row is a parameter
+        csv_path (str): a path to a CSV file where every row is a parameter
             with the parameter name in the first column followed by the value
             in the second column
-        parameter_list (list) : a List of Strings that represent the parameter
-            names to be found in 'csv_path'. These Strings will be the keys in
+        parameter_list (list) : a List of strs that represent the parameter
+            names to be found in 'csv_path'. These strs will be the keys in
             the returned dictionary
 
-    Returns: a Dictionary where the 'parameter_list' Strings are the
+    Returns: a Dictionary where the 'parameter_list' strs are the
             keys that have values pulled from 'csv_path'
 
     """
@@ -1283,10 +1284,10 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
     """Create a raster whose pixel values are bound by min and max distances.
 
     Parameters:
-        base_raster_path (string): path to a raster with distance values.
+        base_raster_path (str): path to a raster with distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
-        target_raster_path (string): path output to the raster masked by
+        target_raster_path (str): path output to the raster masked by
             distance values.
         out_nodata (float): the nodata value of the raster.
 
@@ -1318,7 +1319,7 @@ def read_csv_wind_data(wind_data_path, hub_height):
     """Unpack the csv wind data into a dictionary.
 
     Parameters:
-        wind_data_path (string): a path for the csv wind data file with header
+        wind_data_path (str): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
         hub_height (int): the hub height to use for calculating Weibull
             parameters and wind energy values
@@ -1359,8 +1360,8 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
             0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
             1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
             2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
-        layer_name (string): a python string for the name of the layer
-        target_vector_path (string): a path to the output path of the point
+        layer_name (str): a python str for the name of the layer
+        target_vector_path (str): a path to the output path of the point
             vector.
 
     Returns:
@@ -1392,7 +1393,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     for field in field_list:
         # Get a value from the field
         val = base_dict_data[outer_keys[0]][field]
-        # Check to see if the value is a String of characters or a number. This
+        # Check to see if the value is a str of characters or a number. This
         # will determine the type of field created in the shapefile
         if isinstance(val, str):
             type_dict[field] = 'str'
@@ -1401,7 +1402,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
     for field in field_list:
         field_type = None
-        # Distinguish if the field type is of type String or other. If Other,
+        # Distinguish if the field type is of type str or other. If Other,
         # we are assuming it to be a float
         if type_dict[field] == 'str':
             field_type = ogr.OFTString
@@ -1440,9 +1441,9 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
     If base raster is not already projected, choose a suitable UTM zone.
 
     Parameters:
-        base_raster_path (string): path to base raster.
-        clip_vector_path (string): path to base clip vector.
-        target_raster_path (string): path to output clipped raster.
+        base_raster_path (str): path to base raster.
+        clip_vector_path (str): path to base clip vector.
+        target_raster_path (str): path to output clipped raster.
 
     Returns:
         None.
@@ -1551,8 +1552,8 @@ def wind_data_to_point_vector(dict_data,
             2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
             3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
-        layer_name (string): the name of the layer.
-        target_vector_path (string): path to the output destination of the
+        layer_name (str): the name of the layer.
+        target_vector_path (str): path to the output destination of the
             shapefile.
 
     Returns:
@@ -1618,19 +1619,19 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
-        base_vector_path (string): path to a base vector
-        clip_vector_path (string): path to an AOI vector
-        target_vector_path (string): desired output path to write the
+        base_vector_path (str): path to a base vector
+        clip_vector_path (str): path to an AOI vector
+        target_vector_path (str): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-        temp_dir (string): path to save the intermediate projected file.
-        suffix (string): a string to append at the end of the output files.
+        temp_dir (str): path to save the intermediate projected file.
+        suffix (str): a str to append at the end of the output files.
 
     Returns:
         None.
     """
     LOGGER.info('Entering clip_and_reproject_vector')
 
-    # Get the AOIs spatial reference as strings in Well Known Text
+    # Get the AOIs spatial reference as strs in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection']
 
@@ -1657,10 +1658,10 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
         projection.
 
         Parameters:
-            base_vector_path (string): path to a point vector to clip
-            clip_vector_path (string): path to a single polygon vector for
+            base_vector_path (str): path to a point vector to clip
+            clip_vector_path (str): path to a single polygon vector for
                 clipping.
-            target_vector_path (string): output path for the clipped vector.
+            target_vector_path (str): output path for the clipped vector.
 
         Returns:
             None.
@@ -1723,26 +1724,28 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
-                                  target_dist_raster_path, suffix):
+                                  target_dist_raster_path, work_dir):
     """Creates a distance transform raster.
 
     The distances are calculated based on the shortest distances of each point
     feature in 'base_point_vector_path' and each feature's 'L2G' field.
 
     Parameters:
-        base_point_vector_path (string): a path to an OGR shapefile that has
+        base_point_vector_path (str): path to an OGR shapefile that has
             the desired features to get the distance from.
-        base_raster_path (string): a path to a GDAL raster that is used to
+        base_raster_path (str): path to a GDAL raster that is used to
             get the proper extents and configuration for the new raster
-        target_dist_raster_path (string) a path to a GDAL raster for the final
+        target_dist_raster_path (str): path to a GDAL raster for the final
             distance transform raster output
-        suffix (string): a string to append at the end of the output files.
+        work_dir (str): path to create a working folder to save temporary files
 
     Returns:
         None.
 
     """
     LOGGER.info('Starting calculate_distances_land_grid.')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-')
+
     # Open the point shapefile and get the layer
     base_point_vector = gdal.OpenEx(base_point_vector_path)
     base_point_layer = base_point_vector.GetLayer()
@@ -1760,9 +1763,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     base_layer_defn = base_point_layer.GetLayerDefn()
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     single_feature_vector_path = os.path.join(
-        os.path.dirname(base_point_vector_path),
-        os.path.basename(base_point_vector_path).replace(
-            '.shp', '_single_feature.shp'))
+        temp_dir,
+        'single_feature.shp')
     target_vector = output_driver.CreateDataSource(single_feature_vector_path)
 
     # Create the new layer for target_vector using same name and
@@ -1803,9 +1805,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         target_vector.SyncToDisk()
 
         base_point_raster_path = os.path.join(
-            os.path.dirname(base_point_vector_path),
-            os.path.basename(base_point_vector_path).replace(
-                '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
+            temp_dir,
+            'rasterized_points.tif')
         # Create a new raster based on a biophysical output and fill with 0's
         # to set up for distance transform
         pygeoprocessing.new_raster_from_base(
@@ -1862,6 +1863,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
          for path in land_point_dist_raster_path_list], _min_land_ocean_dist,
         target_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
     LOGGER.info('Finished calculate_distances_land_grid.')
 
 
@@ -1875,13 +1878,13 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     to distance in meters.
 
     Parameters:
-        grid_vector_path (string) a path to an OGR shapefile that has the
+        grid_vector_path (str) a path to an OGR shapefile that has the
             desired features to get the distance from
-        harvested_masked_path (string): a path to a GDAL raster that is used to
+        harvested_masked_path (str): a path to a GDAL raster that is used to
             get the proper extents and configuration for new rasters
-        final_dist_raster_path (string) a path to a GDAL raster for the final
+        final_dist_raster_path (str) a path to a GDAL raster for the final
             distance transform raster output
-        suffix (string): a string to append at the end of output filenames.
+        suffix (str): a str to append at the end of output filenames.
 
     Returns:
         None
@@ -1947,7 +1950,7 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
     path as an input and opens it before sending it along.
 
     Parameters:
-        dataset_path (string): a path to a gdal dataset
+        dataset_path (str): a path to a gdal dataset
         All other parameters pass along
 
     Returns:
@@ -1986,13 +1989,13 @@ def validate(args, limit_to=None):
     Parameters:
         args (dict): The args dictionary.
 
-        limit_to=None (str or None): If a string key, only this args parameter
+        limit_to=None (str or None): If a str key, only this args parameter
             will be validated.  If ``None``, all args parameters will be
             validated.
 
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
-        message applies to and tuple[1] is the string validation warning.
+        message applies to and tuple[1] is the str validation warning.
 
     """
     warnings = []
