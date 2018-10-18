@@ -875,7 +875,7 @@ def execute(args):
             """Convert distances to meters and add in avg_grid_distance
 
             Parameters:
-                tmp_dist (no.array): an array of distances
+                tmp_dist (np.array): an array of distances
 
             Returns: distance values in meters with average grid to land
                 distance factored in
