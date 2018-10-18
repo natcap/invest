@@ -762,3 +762,25 @@ class WindEnergyRegressionTests(unittest.TestCase):
         vector_path = 'wind_energy_points.shp'
         self.assertTrue(os.path.exists(
             os.path.join(args['workspace_dir'], 'output', vector_path)))
+
+    def test_validate(self):
+        """WindEnergy: testing validation with valuation checked."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_grid_land_pts.csv')
+        args['price_table'] = False
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
+
+        wind_energy.validate(args)

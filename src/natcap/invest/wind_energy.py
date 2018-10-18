@@ -245,6 +245,52 @@ def execute(args):
         val_parameters_dict = val_global_param_dict.copy()
         val_parameters_dict.update(val_turbine_dict)
 
+        # If Price Table provided use that for price of energy, validate inputs
+        time = int(val_parameters_dict['time_period'])
+        if args["price_table"]:
+            wind_price_df = pandas.read_csv(args["wind_schedule"])
+            wind_price_df.columns = wind_price_df.columns.str.lower()
+
+            if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
+                raise ValueError(
+                    "Please make sure that the Year column in the Wind Energy "
+                    "Price Table is integer.")
+
+            if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
+                raise ValueError(
+                    "Please make sure that the Price column in the Wind Energy"
+                    " Price Table is numeric.")
+
+            year_list = wind_price_df['year'].tolist()
+            duplicate_years = set(
+                [year for year in year_list if year_list.count(year) > 1])
+            if duplicate_years:
+                raise ValueError(
+                    "The following year(s) showed up more than once in the "
+                    "Wind Energy Price Table: %s. Please remove the duplicated"
+                    " years from the table.", list(duplicate_years))
+
+            year_count = len(wind_price_df['year'])
+            if year_count != time + 1:
+                raise ValueError(
+                    "The 'time' argument in the Global Wind Energy Parameters "
+                    "file must equal the number of years provided in the price"
+                    " table.")
+
+            # Save the price values into a list where the indices of the list
+            # indicate the time steps for the lifespan of the wind farm
+            wind_price_df.sort_values('year', inplace=True)
+            price_list = wind_price_df['price'].tolist()
+        else:
+            change_rate = float(args["rate_change"])
+            wind_price = float(args["wind_price"])
+            # Build up a list of price values where the indices of the list
+            # are the time steps for the lifespan of the farm and values
+            # are adjusted based on the rate of change
+            price_list = []
+            for time_step in xrange(time + 1):
+                price_list.append(wind_price * (1 + change_rate)**(time_step))
+
     # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
 
@@ -266,7 +312,7 @@ def execute(args):
         if missing_grid_fields:
             raise ValueError(
                 'The following field value(s) are missing from the Grid '
-                'Connection Points csv file: %s.', missing_grid_fields)
+                'Connection Points csv file: %s.' % missing_grid_fields)
 
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
@@ -918,33 +964,6 @@ def execute(args):
     mw_coef_dc = float(val_parameters_dict['mw_coef_dc'])
     cable_coef_ac = float(val_parameters_dict['cable_coef_ac'])
     cable_coef_dc = float(val_parameters_dict['cable_coef_dc'])
-
-    time = int(val_parameters_dict['time_period'])
-
-    # If Price Table provided use that for price of energy
-    if args["price_table"]:
-        wind_price_df = pandas.read_csv(args["wind_schedule"])
-        wind_price_df.columns = wind_price_df.columns.str.lower()
-        year_count = len(wind_price_df['year'])
-
-        if year_count != time + 1:
-            raise ValueError(
-                "The 'time' argument in the Global Wind Energy Parameters file"
-                " must equal the number years provided in the price table.")
-
-        # Save the price values into a list where the indices of the list
-        # indicate the time steps for the lifespan of the wind farm
-        wind_price_df.sort_values('year', inplace=True)
-        price_list = wind_price_df['price'].tolist()
-    else:
-        change_rate = float(args["rate_change"])
-        wind_price = float(args["wind_price"])
-        # Build up a list of price values where the indices of the list
-        # are the time steps for the lifespan of the farm and values
-        # are adjusted based on the rate of change
-        price_list = []
-        for time_step in xrange(time + 1):
-            price_list.append(wind_price * (1 + change_rate)**(time_step))
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
@@ -2014,8 +2033,8 @@ def validate(args, limit_to=None):
         required_keys.extend([
             'discount_rate',
             'foundation_cost',
-            'avg_grid_distance',
         ])
+
         if limit_to in ('price_table', None):
             if 'price_table' in args and args['price_table'] not in (True,
                                                                      False):
@@ -2025,6 +2044,21 @@ def validate(args, limit_to=None):
                 required_keys.append('wind_schedule')
             else:
                 required_keys.extend(['wind_price', 'rate_change'])
+
+        missing_distance_key = 2
+        try:
+            if args['avg_grid_distance'] in ('', None):
+                missing_distance_key -= 1
+        except KeyError:
+            missing_distance_key -= 1
+            try:
+                if args['grid_points_path'] in ('', None):
+                    missing_distance_key -= 1
+            except KeyError:
+                missing_distance_key -= 1
+        if missing_distance_key > 1:
+            return ['Either avg_grid_distance or grid_points_path must be '
+                    'provided.']
 
     for required_key in required_keys:
         try:
@@ -2205,6 +2239,7 @@ def validate(args, limit_to=None):
                                   (', '.join(missing_fields)))))
 
             try:
+                year_list = []
                 for year_key, record in table_dict.iteritems():
                     try:
                         if float(year_key) != int(float(year_key)):
@@ -2213,6 +2248,8 @@ def validate(args, limit_to=None):
                         warnings.append(
                             (['wind_schedule'],
                              ('Year %s must be an integer.' % year_key)))
+                    else:
+                        year_list.append(year_key)
 
                     try:
                         float(record['price'])
@@ -2220,6 +2257,13 @@ def validate(args, limit_to=None):
                         warnings.append(
                             (['wind_schedule'],
                              ('Price %s must be a number' % record['price'])))
+
+                duplicate_years = set(
+                    [year for year in year_list if year_list.count(year) > 1])
+                if duplicate_years:
+                    warnings.append(
+                        (['wind_schedule'], "The following year(s) showed up "
+                         "more than once: %s." % list(duplicate_years)))
 
             except KeyError:
                 # missing keys are reported earlier.
