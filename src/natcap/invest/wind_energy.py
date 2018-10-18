@@ -1909,9 +1909,8 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
         'nodata'][0]
     # Get pixel size from biophysical output
-    pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+    mean_pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
+        'mean_pixel_size']
 
     # Create a new raster based on harvested_masked_path and fill with 0's
     # to set up for distance transform
