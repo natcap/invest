@@ -389,11 +389,11 @@ def add_zonal_stats(
     gpkg_driver = gdal.GetDriverByName('GPKG')
     target_watershed_vector = gpkg_driver.Create(
         target_watershed_result_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    layer_name = os.path.splitext(os.path.basename(
-            target_watershed_result_vector_path))[0]
+    layer_name = str(os.path.splitext(os.path.basename(
+            target_watershed_result_vector_path))[0])
     LOGGER.debug("creating layer %s", layer_name)
     target_watershed_layer = target_watershed_vector.CreateLayer(
-        layer_name, base_sr, base_geom_type)
+        str(layer_name), base_sr, base_geom_type)
 
     target_watershed_layer.CreateField(
         ogr.FieldDefn('Affected_Build', ogr.OFTReal))
