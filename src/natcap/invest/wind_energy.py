@@ -1609,7 +1609,7 @@ def wind_data_to_point_vector(dict_data,
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
-                              target_vector_path, temp_dir, suffix):
+                              target_vector_path, temp_dir, work_dir):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
@@ -1618,12 +1618,13 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
         target_vector_path (str): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
         temp_dir (str): path to save the intermediate projected file.
-        suffix (str): a str to append at the end of the output files.
+        work_dir (str): path to create a working folder to save temporary files.
 
     Returns:
         None.
     """
     LOGGER.info('Entering clip_and_reproject_vector')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
 
     # Get the AOIs spatial reference as strs in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
@@ -1631,9 +1632,7 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Create path for the reprojected shapefile
     reprojected_vector_path = os.path.join(
-        temp_dir,
-        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp')
-        % suffix)
+        temp_dir, 'reprojected_vector.tif')
 
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
@@ -1643,6 +1642,7 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     # Clip the shapefile to the AOI
     clip_features(reprojected_vector_path, clip_vector_path,
                   target_vector_path)
+    shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
 
