@@ -336,8 +336,7 @@ def execute(args):
         wind_point_proj_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
         clip_and_reproject_vector(wind_point_vector_path, aoi_vector_path,
-                                  wind_point_proj_vector_path, inter_dir,
-                                  suffix)
+                                  wind_point_proj_vector_path, inter_dir)
 
         # Clip and project the bathymetry shapefile to AOI
         LOGGER.debug('Clip and project bathymetry to AOI')
@@ -369,7 +368,7 @@ def execute(args):
                     '.shp', '_projected_clipped%s.shp' % suffix))
             clip_and_reproject_vector(
                 land_polygon_vector_path, aoi_vector_path,
-                land_poly_proj_vector_path, inter_dir, suffix)
+                land_poly_proj_vector_path, inter_dir)
 
             # Get the cell size to use in new raster outputs from the DEM
             pixel_size = pygeoprocessing.get_raster_info(
@@ -809,8 +808,7 @@ def execute(args):
         grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
         clip_and_reproject_vector(grid_vector_path, aoi_vector_path,
-                                  grid_projected_vector_path, inter_dir,
-                                  suffix)
+                                  grid_projected_vector_path, inter_dir)
 
         # It is possible that NO grid points lie within the AOI, so we need to
         # handle both cases
@@ -836,7 +834,7 @@ def execute(args):
                     inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
                 clip_and_reproject_vector(
                     land_point_vector_path, aoi_vector_path,
-                    land_projected_vector_path, inter_dir, suffix)
+                    land_projected_vector_path, inter_dir)
 
                 # It is possible that NO land point lie within the AOI, so we
                 # need to handle both cases
@@ -866,7 +864,7 @@ def execute(args):
                     # Calculate distance raster
                     calculate_distances_grid(grid_projected_vector_path,
                                              harvested_masked_path,
-                                             final_dist_raster_path, suffix)
+                                             final_dist_raster_path, inter_dir)
                 land_layer = None
                 land_vector = None
 
@@ -879,7 +877,7 @@ def execute(args):
                 # Calculate distance raster
                 calculate_distances_grid(grid_projected_vector_path,
                                          harvested_masked_path,
-                                         final_dist_raster_path, suffix)
+                                         final_dist_raster_path, inter_dir)
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
@@ -1609,7 +1607,7 @@ def wind_data_to_point_vector(dict_data,
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
-                              target_vector_path, temp_dir, work_dir):
+                              target_vector_path, work_dir):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
@@ -1617,7 +1615,6 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
         clip_vector_path (str): path to an AOI vector
         target_vector_path (str): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-        temp_dir (str): path to save the intermediate projected file.
         work_dir (str): path to create a working folder to save temporary files.
 
     Returns:
