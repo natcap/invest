@@ -1745,7 +1745,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
     """
     LOGGER.info('Starting calculate_distances_land_grid.')
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-land')
 
     # Open the point shapefile and get the layer
     base_point_vector = gdal.OpenEx(base_point_vector_path)
@@ -1870,7 +1870,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
 
 def calculate_distances_grid(grid_vector_path, harvested_masked_path,
-                             final_dist_raster_path, suffix):
+                             final_dist_raster_path, work_dir):
     """Creates a distance transform raster from an OGR shapefile.
 
     The function first burns the features from 'grid_vector_path' onto a raster
@@ -1885,16 +1885,16 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
             get the proper extents and configuration for new rasters
         final_dist_raster_path (str) a path to a GDAL raster for the final
             distance transform raster output
-        suffix (str): a str to append at the end of output filenames.
+        work_dir (str): path to create a working folder to save temporary files
 
     Returns:
         None
 
     """
+    LOGGER.info('Starting calculate_distances_land_grid.')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-grid-')
     grid_point_raster_path = os.path.join(
-        os.path.dirname(grid_vector_path),
-        os.path.basename(grid_vector_path).replace(
-            '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
+        temp_dir, 'rasterized_grid_point.tif')
 
     # Get nodata value to use in raster creation and masking
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
@@ -1918,10 +1918,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
         burn_values=[1.0],
         option_list=["ALL_TOUCHED=TRUE"])
 
-    grid_poly_dist_raster_path = os.path.join(
-        os.path.dirname(grid_point_raster_path),
-        os.path.basename(grid_point_raster_path).replace(
-            '%s.tif' % suffix, '_dist%s.tif' % suffix))
+    grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
     # Run distance transform
     pygeoprocessing.distance_transform_edt((grid_point_raster_path, 1),
                                            grid_poly_dist_raster_path)
@@ -1941,6 +1938,8 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
                                       dist_meters_op, final_dist_raster_path,
                                       gdal.GDT_Float32, out_nodata)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
