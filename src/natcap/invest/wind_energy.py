@@ -765,7 +765,8 @@ def execute(args):
         # Pixel size to be used in later calculations and raster creations
         pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
             'pixel_size']
-        mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+        mean_pixel_size = pygeoprocessing.get_raster_info(
+            harvested_masked_path)['mean_pixel_size']
         # path for final distance transform used in valuation calculations
         final_dist_raster_path = os.path.join(
             inter_dir, 'val_distance_trans%s.tif' % suffix)
