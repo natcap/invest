@@ -4,7 +4,6 @@ import collections
 import logging
 import os
 import time
-import pdb
 
 from osgeo import gdal
 from osgeo import ogr
@@ -183,20 +182,16 @@ def execute(args):
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
                 task_name='carbon_map_%s' % storage_key)
-            #carbon_map_tasks.append(carbon_map_task)
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
             # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
 
-    # TODO: left off here for pgp 1.0 conversion
     # Sum the individual carbon storage pool paths per scenario
-    # sum_rasters_tasks []
     sum_rasters_task_lookup = {}
     for scenario_type, storage_path_list in (
             pool_storage_path_lookup.iteritems()):
-        # sum_rasters_task_lookup[scenario_type] = []
         output_key = 'tot_c_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
@@ -207,17 +202,14 @@ def execute(args):
             target_path_list=[file_registry[output_key]],
             dependent_task_list=carbon_map_task_lookup[scenario_type],
             task_name='sum_rasters_for_total_c_%s' % output_key)
-        # sum_rasters_tasks.append(sum_rasters_task)
         sum_rasters_task_lookup[scenario_type] = sum_rasters_task
         tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
-    # diff_rasters_tasks = []
     for scenario_type in ['fut', 'redd']:
         if scenario_type not in valid_scenarios:
             continue
-        # diff_rasters_task_lookup[scenario_type] = []
         output_key = 'delta_cur_' + scenario_type
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
         storage_path_list = [
@@ -230,7 +222,6 @@ def execute(args):
             dependent_task_list=[sum_rasters_task_lookup['cur']] + \
                 [sum_rasters_task_lookup[scenario_type]],
             task_name='diff_rasters_for_%s' % output_key)
-        # diff_rasters_tasks.append(diff_rasters_task)
         diff_rasters_task_lookup[scenario_type] = diff_rasters_task
         tifs_to_summarize.add(file_registry[output_key])
 
@@ -259,7 +250,6 @@ def execute(args):
             calculate_npv_tasks.append(calculate_npv_task)
             tifs_to_summarize.add(file_registry[output_key])
     
-    pdb.set_trace()
     # Report aggregate results
     tasks_to_report = sum_rasters_task_lookup.values() \
                           + diff_rasters_task_lookup.values() \
@@ -470,22 +460,6 @@ def _generate_report(raster_file_set, model_args, file_registry):
                     '<td>%s</td></tr>' % (
                         description, summary_stat, units, raster_uri))
         report_doc.write('</body></html>')
-
-        # # re-structuring the report dict to the list expected below
-        # summary_stats = []
-        # for k, v in report.iteritems():
-        #     if not v[2]:
-        #         continue
-        #     v.append(k)
-        #     summary_stats.append(v)
-
-        # for _, result_description, units, value, raw_file_path in sorted(
-        #         summary_stats):
-        #     report_doc.write(
-        #         '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-        #         '<td>%s</td></tr>' % (
-        #             result_description, units, value, raw_file_path))
-        # report_doc.write('</body></html>')
 
 
 @validation.invest_validator
