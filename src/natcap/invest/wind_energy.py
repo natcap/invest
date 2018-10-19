@@ -1381,7 +1381,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     source_sr.SetWellKnownGeogCS("WGS84")
 
     output_layer = target_vector.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
+                                             ogr.wkbPoint)
 
     # Outer unique keys
     outer_keys = base_dict_data.keys()
@@ -1392,24 +1392,17 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # Create a dictionary to store what variable types the fields are
     type_dict = {}
     for field in field_list:
+        field_type = None
         # Get a value from the field
         val = base_dict_data[outer_keys[0]][field]
         # Check to see if the value is a str of characters or a number. This
         # will determine the type of field created in the shapefile
         if isinstance(val, str):
             type_dict[field] = 'str'
-        else:
-            type_dict[field] = 'number'
-
-    for field in field_list:
-        field_type = None
-        # Distinguish if the field type is of type str or other. If Other,
-        # we are assuming it to be a float
-        if type_dict[field] == 'str':
             field_type = ogr.OFTString
         else:
+            type_dict[field] = 'number'
             field_type = ogr.OFTReal
-
         output_field = ogr.FieldDefn(field, field_type)
         output_layer.CreateField(output_field)
 
