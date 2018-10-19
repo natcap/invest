@@ -162,10 +162,10 @@ def execute(args):
 
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
     pool_storage_path_lookup = collections.defaultdict(list)
-    carbon_map_tasks = []
+    carbon_map_task_lookup = collections.defaultdict(list)
     for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
         carbon_pool_by_type = dict([
-            (lucode, float(carbon_pool_table[lucode][pool_type]))
+            (lucode, float(carbon_pool_table[lucode][pool_type])) 
             for lucode in carbon_pool_table])
         for scenario_type in valid_scenarios:
             lulc_key = 'lulc_%s_path' % scenario_type
@@ -174,22 +174,23 @@ def execute(args):
                 "Mapping carbon from '%s' to '%s' scenario.",
                 lulc_key, storage_key)
 
-            generate_carbon_map_task = graph.add_task(
+            carbon_map_task = graph.add_task(
                 _generate_carbon_map,
                 args=(args[lulc_key], carbon_pool_by_type,
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
-                task_name='generate_carbon_map_%s' % storage_key)
-            carbon_map_tasks.append(generate_carbon_map_task)
+                task_name='carbon_map_%s' % storage_key)
+            #carbon_map_tasks.append(carbon_map_task)
+            carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
             # store the pool storage path so they can be easily added later
             pool_storage_path_lookup[scenario_type].append(
                 file_registry[storage_key])
 
     # TODO: left off here for pgp 1.0 conversion
-
     # Sum the individual carbon storage pool paths per scenario
-    sum_rasters_tasks = []
+    # sum_rasters_tasks []
+    sum_rasters_task_lookup = collections.defaultdict(list)
     for scenario_type, storage_path_list in (
             pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
@@ -200,13 +201,15 @@ def execute(args):
             _sum_rasters,
             args=(storage_path_list, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
-            dependent_task_list=carbon_map_tasks,
+            dependent_task_list=carbon_map_task_lookup[scenario_type],
             task_name='sum_rasters_for_total_c_%s' % output_key)
-        sum_rasters_tasks.append(sum_rasters_task)
+        # sum_rasters_tasks.append(sum_rasters_task)
+        sum_rasters_task_lookup[scenario_type].append(sum_rasters_task)
         tifs_to_summarize.append(file_registry[output_key])
 
     # calculate sequestration
-    diff_rasters_tasks = []
+    diff_rasters_task_lookup = collections.defaultdict(list)
+    # diff_rasters_tasks = []
     for fut_type in ['fut', 'redd']:
         if fut_type not in valid_scenarios:
             continue
@@ -219,9 +222,10 @@ def execute(args):
             _diff_rasters,
             args=(storage_path_list, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
-            dependent_task_list=sum_rasters_tasks,
+            dependent_task_list=sum_rasters_task_lookup['cur'] + sum_rasters_task_lookup[fut_type],
             task_name='diff_rasters_for_%s' % output_key)
-        diff_rasters_tasks.append(diff_rasters_task)
+        # diff_rasters_tasks.append(diff_rasters_task)
+        diff_rasters_task_lookup[fut_type].append(diff_rasters_task)
         tifs_to_summarize.append(file_registry[output_key])
 
     # calculate net present value
@@ -244,17 +248,20 @@ def execute(args):
                 args=(file_registry['delta_cur_%s' % scenario_type],
                       valuation_constant, file_registry[output_key]),
                 target_path_list=[file_registry[output_key]],
-                dependent_task_list=diff_rasters_tasks,
+                dependent_task_list=diff_rasters_task_lookup[scenario_type],
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
             tifs_to_summarize.append(file_registry[output_key])
     
     # Report aggregate results
+    all_scheduled_tasks = [t for tl in sum_rasters_task_lookup.values() for t in tl] + \
+                          [t for tl in diff_rasters_task_lookup.values() for t in tl] + \
+                          calculate_npv_tasks
     generate_report_task = graph.add_task(
         _generate_report,
         args=(tifs_to_summarize, args, file_registry),
         target_path_list=[file_registry['html_report']],
-        dependent_task_list=sum_rasters_tasks + diff_rasters_tasks + calculate_npv_tasks,
+        dependent_task_list=all_scheduled_tasks,
         task_name='generate_report')
     graph.join()
 
