@@ -1816,9 +1816,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         target_layer.DeleteFeature(point_feature.GetFID())
 
         dist_raster_path = os.path.join(
-            os.path.dirname(base_point_raster_path), 'distance_rasters',
-            os.path.basename(base_point_raster_path).replace(
-                '.tif', '_dist_%s.tif' % feature_index))
+            temp_dir, 'dist_%s.tif' % feature_index)
         pygeoprocessing.distance_transform_edt((base_point_raster_path, 1),
                                                dist_raster_path)
         # Add each features distance transform result to list
