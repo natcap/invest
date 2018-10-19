@@ -140,7 +140,7 @@ def execute(args):
     raster_size_set = set()
     valid_lulc_keys = []
     valid_scenarios = []
-    tifs_to_summarize = []  # passed to _generate_report()
+    tifs_to_summarize = set()  # passed to _generate_report()
 
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
@@ -209,7 +209,7 @@ def execute(args):
             task_name='sum_rasters_for_total_c_%s' % output_key)
         # sum_rasters_tasks.append(sum_rasters_task)
         sum_rasters_task_lookup[scenario_type] = sum_rasters_task
-        tifs_to_summarize.append(file_registry[output_key])
+        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
@@ -232,7 +232,7 @@ def execute(args):
             task_name='diff_rasters_for_%s' % output_key)
         # diff_rasters_tasks.append(diff_rasters_task)
         diff_rasters_task_lookup[scenario_type] = diff_rasters_task
-        tifs_to_summarize.append(file_registry[output_key])
+        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate net present value
     calculate_npv_tasks = []
@@ -257,9 +257,9 @@ def execute(args):
                 dependent_task_list=[diff_rasters_task_lookup[scenario_type]],
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
-            tifs_to_summarize.append(file_registry[output_key])
+            tifs_to_summarize.add(file_registry[output_key])
     
-    # pdb.set_trace()
+    pdb.set_trace()
     # Report aggregate results
     tasks_to_report = sum_rasters_task_lookup.values() \
                           + diff_rasters_task_lookup.values() \
@@ -408,11 +408,11 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         gdal.GDT_Float32, _VALUE_NODATA)
 
 
-def _generate_report(raster_file_list, model_args, file_registry):
+def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
     Paramters:
-        raster_file_list (list): paths to rasters that need summary stats.
+        raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
     Returns:
@@ -452,35 +452,40 @@ def _generate_report(raster_file_list, model_args, file_registry):
             'aw File</th></tr>')
 
         # value lists are [sort priority, description, statistic, units]
-        report = {
-            file_registry['tot_c_cur']: [0, 'Total cur', None, 'Mg of C'],
-            file_registry['tot_c_fut']: [1, 'Total fut', None, 'Mg of C'],
-            file_registry['tot_c_redd']: [2, 'Total redd', None, 'Mg of C'],
-            file_registry['delta_cur_fut']: [3, 'Change in C for fut', None, 'Mg of C'],
-            file_registry['delta_cur_redd']: [4, 'Change in C for redd', None, 'Mg of C'],
-            file_registry['npv_fut']: [5, 'Net present value from cur to fut', None, 'currency units'],
-            file_registry['npv_redd']: [6, 'Net present value from cur to redd', None, 'currency units'],
-        }
+        report = [
+            (file_registry['tot_c_cur'], 'Total cur', 'Mg of C'),
+            (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
+            (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
+            (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
+            (file_registry['delta_cur_redd'], 'Change in C for redd', 'Mg of C'),
+            (file_registry['npv_fut'], 'Net present value from cur to fut', 'currency units'),
+            (file_registry['npv_redd'], 'Net present value from cur to redd', 'currency units'),
+        ]
 
-        for raster in raster_file_list:
-            summary_stat = _accumulate_totals(raster)
-            report[raster][2] = summary_stat
-
-        # re-structuring the report dict to the list expected below
-        summary_stats = []
-        for k, v in report.iteritems():
-            if not v[2]:
-                continue
-            v.append(k)
-            summary_stats.append(v)
-
-        for _, result_description, units, value, raw_file_path in sorted(
-                summary_stats):
-            report_doc.write(
-                '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                '<td>%s</td></tr>' % (
-                    result_description, units, value, raw_file_path))
+        for raster_uri, description, units in report:
+            if raster_uri in raster_file_set:
+                summary_stat = _accumulate_totals(raster_uri)
+                report_doc.write(
+                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
+                    '<td>%s</td></tr>' % (
+                        description, summary_stat, units, raster_uri))
         report_doc.write('</body></html>')
+
+        # # re-structuring the report dict to the list expected below
+        # summary_stats = []
+        # for k, v in report.iteritems():
+        #     if not v[2]:
+        #         continue
+        #     v.append(k)
+        #     summary_stats.append(v)
+
+        # for _, result_description, units, value, raw_file_path in sorted(
+        #         summary_stats):
+        #     report_doc.write(
+        #         '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
+        #         '<td>%s</td></tr>' % (
+        #             result_description, units, value, raw_file_path))
+        # report_doc.write('</body></html>')
 
 
 @validation.invest_validator
