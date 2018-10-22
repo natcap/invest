@@ -161,8 +161,9 @@ def execute(args):
                 valid_lulc_keys, raster_size_set))
 
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
-    pool_storage_path_lookup = collections.defaultdict(list)
+    # pool_storage_path_lookup = collections.defaultdict(list)
     carbon_map_task_lookup = {}
+    sum_rasters_task_lookup = {}
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
@@ -185,13 +186,9 @@ def execute(args):
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
             # store the pool storage path so they can be easily added later
-            pool_storage_path_lookup[scenario_type].append(
-                file_registry[storage_key])
+            # pool_storage_path_lookup[scenario_type].append(
+            #     file_registry[storage_key])
 
-    # Sum the individual carbon storage pool paths per scenario
-    sum_rasters_task_lookup = {}
-    for scenario_type, storage_path_list in (
-            pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
@@ -204,6 +201,23 @@ def execute(args):
             task_name='sum_rasters_for_total_c_%s' % output_key)
         sum_rasters_task_lookup[scenario_type] = sum_rasters_task
         tifs_to_summarize.add(file_registry[output_key])
+
+    # # Sum the individual carbon storage pool paths per scenario
+    # sum_rasters_task_lookup = {}
+    # for scenario_type, storage_path_list in (
+    #         pool_storage_path_lookup.iteritems()):
+    #     output_key = 'tot_c_' + scenario_type
+    #     LOGGER.info(
+    #         "Calculate carbon storage for '%s'", output_key)
+
+    #     sum_rasters_task = graph.add_task(
+    #         _sum_rasters,
+    #         args=(storage_path_list, file_registry[output_key]),
+    #         target_path_list=[file_registry[output_key]],
+    #         dependent_task_list=carbon_map_task_lookup[scenario_type],
+    #         task_name='sum_rasters_for_total_c_%s' % output_key)
+    #     sum_rasters_task_lookup[scenario_type] = sum_rasters_task
+    #     tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
     diff_rasters_task_lookup = {}
