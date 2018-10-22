@@ -383,35 +383,17 @@ def execute(args):
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
             pygeoprocessing.create_raster_from_vector_extents(
-                aoi_vector_path, aoi_raster_path, pixel_size, _TARGET_DATA_TYPE,
-                _OUT_NODATA)
+                aoi_vector_path, aoi_raster_path, pixel_size,
+                _TARGET_DATA_TYPE, _OUT_NODATA)
 
-            LOGGER.debug('Rasterize AOI onto raster')
-            # Burn the area of interest onto the raster
-            pygeoprocessing.rasterize(
-                aoi_vector_path,
-                aoi_raster_path, [0],
-                option_list=["ALL_TOUCHED=TRUE"])
+            dist_trans_path = os.path.join(
+                inter_dir, 'distance_trans%s.tif' % suffix)
+            create_distance_raster(
+                aoi_raster_path, land_poly_proj_vector_path, dist_trans_path,
+                inter_dir)
 
-            LOGGER.debug('Rasterize Land Polygon onto raster')
-            # Burn the land polygon onto the raster, covering up the AOI values
-            # where they overlap
-            pygeoprocessing.rasterize(
-                land_poly_proj_vector_path,
-                aoi_raster_path, [1],
-                option_list=["ALL_TOUCHED=TRUE"])
-
-            dist_mask_path = os.path.join(inter_dir,
-                                          'distance_mask%s.tif' % suffix)
-
-            dist_trans_path = os.path.join(inter_dir,
-                                           'distance_trans%s.tif' % suffix)
-
-            LOGGER.info('Generate Distance Mask')
-            # Create a distance mask
-            pygeoprocessing.distance_transform_edt((aoi_raster_path, 1),
-                                                   dist_trans_path)
-
+            dist_mask_path = os.path.join(
+                inter_dir, 'distance_mask%s.tif' % suffix)
             mask_by_distance(dist_trans_path, min_distance, max_distance,
                              _OUT_NODATA, dist_mask_path)
 
@@ -894,26 +876,12 @@ def execute(args):
         # The average land cable distance in km converted to meters
         avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
-        land_poly_raster_path = os.path.join(
-            inter_dir, 'rasterized_land_poly%s.tif' % suffix)
-        # Create new raster and fill with 0s to set up for distance transform
-        pygeoprocessing.new_raster_from_base(
-            harvested_masked_path,
-            land_poly_raster_path,
-            gdal.GDT_Byte, band_nodata_list=[255],
-            fill_value_list=[0.0])
-        # Burn polygon features into raster with values of 1s to set up for
-        # distance transform
-        pygeoprocessing.rasterize(
-            land_poly_proj_vector_path,
-            land_poly_raster_path,
-            burn_values=[1.0],
-            option_list=["ALL_TOUCHED=TRUE"])
-
         land_poly_dist_raster_path = os.path.join(
             inter_dir, 'land_poly_dist%s.tif' % suffix)
-        pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
-                                               land_poly_dist_raster_path)
+
+        create_distance_raster(
+            harvested_masked_path, land_poly_proj_vector_path,
+            land_poly_dist_raster_path, inter_dir)
 
         def add_avg_dist_op(tmp_dist):
             """Convert distances to meters and add in avg_grid_distance
@@ -1314,6 +1282,51 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
                                       _TARGET_DATA_TYPE, out_nodata)
 
 
+def create_distance_raster(
+        base_raster_path, base_vector_path, target_dist_raster_path, work_dir):
+    """Create and rasterize vector onto a raster, and calculate dist transform.
+
+    Create a raster where the pixel values represent the euclidean distance to
+    the vector.
+
+    Parameters:
+        base_raster_path (str): path to raster to create a new raster from.
+        base_vector_path (str): path to vector to be rasterized.
+        target_dist_raster_path (str): path to raster with distance transform.
+        work_dir (str): path to create a temp folder for saving files.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info("Starting create_distance_raster at %s.",
+                target_dist_raster_path)
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
+
+    rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
+
+    # Create a new raster based on the given base raster and fill with 0's
+    # to set up for distance transform
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path,
+        rasterized_raster_path,
+        gdal.GDT_Byte, band_nodata_list=[255],
+        fill_value_list=[0])
+
+    # Burn vector onto the raster to set up for distance transform
+    pygeoprocessing.rasterize(
+        base_vector_path, rasterized_raster_path, burn_values=[1],
+        option_list=["ALL_TOUCHED=TRUE"])
+
+    # Calculate euclidean distance transform
+    pygeoprocessing.distance_transform_edt((rasterized_raster_path, 1),
+                                           target_dist_raster_path)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    LOGGER.info("Finished create_distance_raster at %s.",
+                target_dist_raster_path)
+
+
 def read_csv_wind_data(wind_data_path, hub_height):
     """Unpack the csv wind data into a dictionary.
 
@@ -1615,7 +1628,7 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
         clip_vector_path (str): path to an AOI vector
         target_vector_path (str): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-        work_dir (str): path to create a working folder to save temporary files.
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None.
@@ -1725,10 +1738,10 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         base_point_vector_path (str): path to an OGR shapefile that has
             the desired features to get the distance from.
         base_raster_path (str): path to a GDAL raster that is used to
-            get the proper extents and configuration for the new raster
+            get the proper extents and configuration for the new raster.
         target_dist_raster_path (str): path to a GDAL raster for the final
-            distance transform raster output
-        work_dir (str): path to create a working folder to save temporary files
+            distance transform raster output.
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None.
@@ -1795,30 +1808,14 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         target_layer.CreateFeature(output_feature)
         target_vector.SyncToDisk()
 
-        base_point_raster_path = os.path.join(
-            temp_dir,
-            'rasterized_points.tif')
-        # Create a new raster based on a biophysical output and fill with 0's
-        # to set up for distance transform
-        pygeoprocessing.new_raster_from_base(
-            base_raster_path,
-            base_point_raster_path,
-            _TARGET_DATA_TYPE, [_OUT_NODATA],
-            fill_value_list=[0.0])
-        # Burn single feature onto the raster with value of 1 to set up for
-        # distance transform
-        pygeoprocessing.rasterize(
-            single_feature_vector_path,
-            base_point_raster_path,
-            burn_values=[1.0],
-            option_list=["ALL_TOUCHED=TRUE"])
-
         target_layer.DeleteFeature(point_feature.GetFID())
 
         dist_raster_path = os.path.join(
             temp_dir, 'dist_%s.tif' % feature_index)
-        pygeoprocessing.distance_transform_edt((base_point_raster_path, 1),
-                                               dist_raster_path)
+
+        create_distance_raster(
+            base_raster_path, single_feature_vector_path, dist_raster_path,
+            work_dir)
         # Add each features distance transform result to list
         land_point_dist_raster_path_list.append(dist_raster_path)
 
@@ -1873,7 +1870,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
             get the proper extents and configuration for new rasters
         final_dist_raster_path (str) a path to a GDAL raster for the final
             distance transform raster output
-        work_dir (str): path to create a working folder to save temporary files
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None
@@ -1881,8 +1878,6 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     """
     LOGGER.info('Starting calculate_distances_land_grid.')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-grid-')
-    grid_point_raster_path = os.path.join(
-        temp_dir, 'rasterized_grid_point.tif')
 
     # Get nodata value to use in raster creation and masking
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
@@ -1891,25 +1886,11 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     mean_pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
         'mean_pixel_size']
 
-    # Create a new raster based on harvested_masked_path and fill with 0's
-    # to set up for distance transform
-    pygeoprocessing.new_raster_from_base(
-        harvested_masked_path,
-        grid_point_raster_path,
-        _TARGET_DATA_TYPE, [out_nodata],
-        fill_value_list=[0.0])
-    # Burn features from grid_vector_path onto raster with values of 1 to
-    # set up for distance transform
-    pygeoprocessing.rasterize(
-        grid_vector_path,
-        grid_point_raster_path,
-        burn_values=[1.0],
-        option_list=["ALL_TOUCHED=TRUE"])
-
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
-    # Run distance transform
-    pygeoprocessing.distance_transform_edt((grid_point_raster_path, 1),
-                                           grid_poly_dist_raster_path)
+
+    create_distance_raster(
+        harvested_masked_path, grid_vector_path,
+        grid_poly_dist_raster_path, work_dir)
 
     def dist_meters_op(tmp_dist):
         """vectorize_dataset operation that multiplies by the pixel size
