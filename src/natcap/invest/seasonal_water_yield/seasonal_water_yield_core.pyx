@@ -374,20 +374,46 @@ cdef class _ManagedRaster:
 
 
 def calculate_local_recharge(
-        precip_path_list, et0_path_list, qfm_path_list, flow_dir_path,
-        dem_path, lulc_path, alpha_month, beta_i, gamma, stream_path, li_path,
-        kc_path_list, li_avail_path, l_sum_avail_path, aet_path):
+        precip_path_list, et0_path_list, qfm_path_list, flow_dir_mfd_path,
+        kc_path_list, alpha_month, beta_i, gamma, stream_path, target_li_path,
+        target_li_avail_path, target_l_sum_avail_path, target_aet_path):
     """
-        # call through to a cython function that does the necessary routing
-        # between AET and L.sum.avail in equation [7], [4], and [3]
+    Calculate the rasters defined by equations [3]-[7].
 
-target_path_list=[
-                file_registry['l_path'],
-                file_registry['l_avail_path'],
-                file_registry['l_sum_avail_path'],
-                file_registry['aet_path']],
+    Note all input rasters must be in the same coordinate system and
+    have the same dimensions.
+
+    Parameters:
+        precip_path_list (list): list of paths to monthly precipitation
+            rasters. (model input)
+        et0_path_list (list): path to monthly ET0 rasters. (model input)
+        qfm_path_list (list): path to monthly quickflow rasters calculated by
+            Equation [1].
+        flow_dir_mfd_path (str): path to PyGeoprocessing Multiple Flow
+            Direction raster.
+        alpha_month (list): fraction of upslope annual available recharge that
+            is available in month m.
+        beta_i (float):  fraction of the upgradient subsidy that is available
+            for downgradient evapotranspiration.
+        gamma (float): the fraction of pixel recharge that is available to
+            downgradient pixels.
+        stream_path (str): path to the stream raster where 1 is a stream,
+            0 is not, and nodata is outside of the DEM.
+        kc_path_list (str): list of rasters of the monthly crop factor for the
+            pixel.
+        target_li_path (str): created by this call, path to local recharge
+            derived from the annual water budget. (Equation 3).
+        target_li_avail_path (str): created by this call, path to raster
+            indicating available recharge to a pixel.
+        target_l_sum_avail_path (str): created by this call, the recursive
+            upstream accumulation of target_li_avail_path.
+        target_aet_path (str): created by this call, the annual actual
+            evapotranspiration.
+
+        Returns:
+            None.
+
     """
-
     # used for time-delayed logging
     cdef time_t last_log_time
     last_log_time = ctime(NULL)
@@ -396,19 +422,17 @@ target_path_list=[
 
     # determine dem nodata in the working type, or set an improbable value
     # if one can't be determined
-    dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-    base_nodata = dem_raster_info['nodata'][0]
+    flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
+    base_nodata = flow_dir_raster_info['nodata'][0]
     if base_nodata is not None:
         # cast to a float64 since that's our operating array type
-        dem_nodata = numpy.float64(base_nodata)
+        flow_dir_nodata = numpy.float64(base_nodata)
     else:
         # pick some very improbable value since it's hard to deal with NaNs
-        dem_nodata = IMPROBABLE_FLOAT_NOATA
-    raster_x_size, raster_y_size = dem_raster_info['raster_size']
+        flow_dir_nodata = IMPROBABLE_FLOAT_NOATA
+    raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
 
-    cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_path, 1, 0)
-    cdef _ManagedRaster dem_raster = _ManagedRaster(dem_path, 1, 0)
-    cdef _ManagedRaster li_raster = _ManagedRaster(li_path, 1, 1)
+    cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
 
     cdef numpy.ndarray alpha_month_array = numpy.array(
         [x[1] for x in sorted(alpha_month.iteritems())])
@@ -463,10 +487,9 @@ target_path_list=[
                 outlet_cell_deque.push(yi_root*raster_x_size+xi_root)
 
     route_local_recharge(
-        precip_path_list, et0_path_list, kc_path_list, li_path,
-        li_avail_path, l_sum_avail_path, aet_path, alpha_month_array, beta_i,
+        precip_path_list, et0_path_list, kc_path_list, target_li_path,
+        target_li_avail_path, target_l_sum_avail_path, target_aet_path, alpha_month_array, beta_i,
         gamma, qfm_path_list, stream_path, outlet_cell_deque)
-
 
 def route_baseflow_sum(
         dem_path, l_path, l_avail_path, l_sum_path,
@@ -536,6 +559,11 @@ cdef route_local_recharge(
     cdef int n_cols = outflow_direction_raster.RasterXSize
     cdef int n_rows = outflow_direction_raster.RasterYSize
     outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
+
+    cdef int raster_x_size, raster_y_size
+
+
+    raster_x_size, raster_y_size = dem_raster_info['raster_size']
 
     cdef int block_col_size, block_row_size
     block_col_size, block_row_size = outflow_direction_band.GetBlockSize()

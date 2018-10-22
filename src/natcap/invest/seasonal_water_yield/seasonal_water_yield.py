@@ -47,7 +47,7 @@ _OUTPUT_BASE_FILES = {
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
     'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
-    'flow_dir_path': 'flow_dir.tif',
+    'flow_dir_mfd_path': 'flow_dir_mfd.tif',
     'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
 }
@@ -304,16 +304,16 @@ def _execute(args):
         func=pygeoprocessing.routing.flow_dir_mfd,
         args=(
             (file_registry['dem_pit_filled_path'], 1),
-            file_registry['flow_dir_path']),
+            file_registry['flow_dir_mfd_path']),
         kwargs={'working_dir': cache_dir},
-        target_path_list=[file_registry['flow_dir_path']],
+        target_path_list=[file_registry['flow_dir_mfd_path']],
         dependent_task_list=[fill_pit_task],
         task_name='flow dir mfd')
 
     flow_accum_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
         args=(
-            (file_registry['flow_dir_path'], 1),
+            (file_registry['flow_dir_mfd_path'], 1),
             file_registry['flow_accum_path']),
         target_path_list=[file_registry['flow_accum_path']],
         dependent_task_list=[flow_dir_task],
@@ -458,12 +458,11 @@ def _execute(args):
                 file_registry['precip_path_aligned_list'],
                 file_registry['et0_path_aligned_list'],
                 file_registry['qfm_path_list'],
-                file_registry['flow_dir_path'],
-                file_registry['dem_pit_filled_path'],
-                file_registry['lulc_aligned_path'], alpha_month,
+                file_registry['flow_dir_mfd_path'],
+                file_registry['kc_path_list'],
+                alpha_month,
                 beta_i, gamma, file_registry['stream_path'],
                 file_registry['l_path'],
-                file_registry['kc_path_list'],
                 file_registry['l_avail_path'],
                 file_registry['l_sum_avail_path'],
                 file_registry['aet_path']),
@@ -474,7 +473,7 @@ def _execute(args):
                 file_registry['aet_path']],
             dependent_task_list=[
                 align_task, flow_dir_task, stream_threshold_task,
-                fill_pit_task] + quick_flow_task_list,
+                fill_pit_task, qf_task] + quick_flow_task_list,
             task_name='calculate local recharge')
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
@@ -503,12 +502,12 @@ def _execute(args):
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
     pygeoprocessing.routing.flow_accumulation_mfd(
-        file_registry['flow_dir_path'], file_registry['l_sum_path'],
+        file_registry['flow_dir_mfd_path'], file_registry['l_sum_path'],
         weight_raster_path_band=file_registry['l_path'])
 
     l_sum_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=(file_registry['flow_dir_path'], file_registry['l_sum_path']),
+        args=(file_registry['flow_dir_mfd_path'], file_registry['l_sum_path']),
         kwargs={'weight_raster_path_band': file_registry['l_path']},
         target_path_list=[file_registry['l_sum_path']],
         dependent_task_list=vri_dependent_task_list + [
