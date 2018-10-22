@@ -17,17 +17,38 @@ from cython.operator cimport dereference as deref
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as inc
-from libc.time cimport time_t
-from libc.time cimport time as ctime
 from libcpp.list cimport list as clist
 from libcpp.set cimport set as cset
 from libcpp.pair cimport pair
 
 from libc.time cimport time as ctime
-
 cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
+
+cdef extern from "LRUCache.h":
+    cdef cppclass LRUCache[KEY_T, VAL_T]:
+        LRUCache(int)
+        void put(KEY_T&, VAL_T&, clist[pair[KEY_T,VAL_T]]&)
+        clist[pair[KEY_T,VAL_T]].iterator begin()
+        clist[pair[KEY_T,VAL_T]].iterator end()
+        bint exist(KEY_T &)
+        VAL_T get(KEY_T &)
+
+
+# exposing stl::priority_queue so we can have all 3 template arguments so
+# we can pass a different Compare functor
+cdef extern from "<queue>" namespace "std":
+    cdef cppclass priority_queue[T, Container, Compare]:
+        priority_queue() except +
+        priority_queue(priority_queue&) except +
+        priority_queue(Container&)
+        bint empty()
+        void pop()
+        void push(T&)
+        size_t size()
+        T& top()
+
 
 LOGGER = logging.getLogger(__name__)
 
@@ -52,6 +73,12 @@ cdef int* NEIGHBOR_OFFSET_ARRAY = [
     1, 1  # 7
     ]
 
+# this ctype is used to store the block ID and the block buffer as one object
+# inside Managed Raster
+ctypedef pair[int, double*] BlockBufferPair
+
+# Number of raster blocks to hold in memory at once per Managed Raster
+cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
@@ -384,7 +411,11 @@ target_path_list=[
     cdef _ManagedRaster dem_raster = _ManagedRaster(
         dem_path, 1, 0)
 
-    LOGGER.debug(flow_raster)
+    cdef _ManagedRaster li_raster = _ManagedRaster(
+        li_path, 1, 1)
+
+    cdef numpy.ndarray alpha_month_array = numpy.array(
+        [x[1] for x in sorted(alpha_month.iteritems())])
 
     for offset_dict in pygeoprocessing.iterblocks(
             dem_path, offset_only=True, largest_block=0):
@@ -402,15 +433,11 @@ target_path_list=[
         # search block for locally undrained pixels
         for yi in xrange(1, win_ysize+1):
             for xi in xrange(1, win_xsize+1):
+                xi_root = xi-1+xoff
+                yi_root = yi-1+yoff
                 center_val = dem_raster.get(yi_root+yi, xi_root+xi)
                 if center_val == dem_nodata:
                     continue
-
-                # this value is set in case it turns out to be the root of a
-                # pit, we'll start the fill from this pixel in the last phase
-                # of the algorithm
-                xi_root = xi-1+xoff
-                yi_root = yi-1+yoff
 
                 # search neighbors for downhill or nodata
                 downhill_neighbor = 0
@@ -433,7 +460,10 @@ target_path_list=[
                         # it'll drain downhill
                         downhill_neighbor = 1
                         break
-
+                if not nodata_neighbor or downhill_neighbor:
+                    # this can't be a drain
+                    continue
+                LOGGER.debug('found a drain at %s %s', xi_root, yi_root)
 
     """
     cdef deque[int] outlet_cell_deque
@@ -441,8 +471,7 @@ target_path_list=[
         dem_path, flow_dir_path, outlet_cell_deque)
     # convert a dictionary of month -> alpha to an array of alphas in sorted
     # order by month
-    cdef numpy.ndarray alpha_month_array = numpy.array(
-        [x[1] for x in sorted(alpha_month.iteritems())])
+
     route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, li_path,
         li_avail_path, l_sum_avail_path, aet_path, alpha_month_array, beta_i,
