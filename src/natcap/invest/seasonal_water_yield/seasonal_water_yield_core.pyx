@@ -488,8 +488,9 @@ def calculate_local_recharge(
 
     route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, target_li_path,
-        target_li_avail_path, target_l_sum_avail_path, target_aet_path, alpha_month_array, beta_i,
-        gamma, qfm_path_list, stream_path, outlet_cell_deque)
+        target_li_avail_path, target_l_sum_avail_path, target_aet_path,
+        alpha_month_array, beta_i, gamma, qfm_path_list, stream_path,
+        outlet_cell_deque)
 
 def route_baseflow_sum(
         dem_path, l_path, l_avail_path, l_sum_path,
