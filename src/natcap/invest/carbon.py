@@ -166,6 +166,7 @@ def execute(args):
     sum_rasters_task_lookup = {}
     for scenario_type in valid_scenarios:
         carbon_map_task_lookup[scenario_type] = []
+        storage_path_list = []
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
             carbon_pool_by_type = dict([
                 (lucode, float(carbon_pool_table[lucode][pool_type])) 
@@ -183,6 +184,7 @@ def execute(args):
                       file_registry[storage_key]),
                 target_path_list=[file_registry[storage_key]],
                 task_name='carbon_map_%s' % storage_key)
+            storage_path_list.append(file_registry[storage_key])
             carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
         output_key = 'tot_c_' + scenario_type
