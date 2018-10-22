@@ -219,8 +219,8 @@ def execute(args):
             _diff_rasters,
             args=(storage_path_list, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
-            dependent_task_list=[sum_rasters_task_lookup['cur']] + \
-                [sum_rasters_task_lookup[scenario_type]],
+            dependent_task_list=[sum_rasters_task_lookup['cur'], 
+                sum_rasters_task_lookup[scenario_type]],
             task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_task_lookup[scenario_type] = diff_rasters_task
         tifs_to_summarize.add(file_registry[output_key])
@@ -251,9 +251,9 @@ def execute(args):
             tifs_to_summarize.add(file_registry[output_key])
     
     # Report aggregate results
-    tasks_to_report = sum_rasters_task_lookup.values() \
-                          + diff_rasters_task_lookup.values() \
-                          + calculate_npv_tasks
+    tasks_to_report = (sum_rasters_task_lookup.values() 
+                       + diff_rasters_task_lookup.values() 
+                       + calculate_npv_tasks)
     generate_report_task = graph.add_task(
         _generate_report,
         args=(tifs_to_summarize, args, file_registry),
