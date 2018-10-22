@@ -956,11 +956,11 @@ def execute(args):
     disc_time = disc_const**time
     LOGGER.debug('disc_time : %s', disc_time)
 
-    def calculate_npv_op(harvested_row, distance_row):
+    def calculate_npv_op(harvested_arr, distance_row):
         """Compute the net present value in Raster Calculator
 
         Parameters:
-            harvested_row (np.ndarray): an nd numpy array for wind harvested
+            harvested_arr (np.ndarray): an nd numpy array for wind harvested
             distance_row (np.ndarray): an nd numpy array for distances
 
         Returns:
@@ -973,7 +973,7 @@ def execute(args):
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr for the
         # valuation model
-        energy_val = harvested_row * 1000.0
+        energy_val = harvested_arr * 1000.0
 
         # Initialize cable cost variable
         cable_cost = 0.0
@@ -985,7 +985,7 @@ def execute(args):
             (cable_coef_ac * total_cable_dist), (mw_coef_dc * total_mega_watt)
             + (cable_coef_dc * total_cable_dist))
         # Mask out nodata values
-        cable_cost = np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
+        cable_cost = np.where(harvested_arr == _OUT_NODATA, _OUT_NODATA,
                               cable_cost)
 
         # Compute the total CAP
@@ -1024,14 +1024,14 @@ def execute(args):
                 comp_one_sum + (rev - ongoing_capex) / disc_const**year)
 
         return np.where(
-            (harvested_row != _OUT_NODATA) & (distance_row != _OUT_NODATA),
+            (harvested_arr != _OUT_NODATA) & (distance_row != _OUT_NODATA),
             comp_one_sum - decommish_capex - capex, _OUT_NODATA)
 
-    def calculate_levelized_op(harvested_row, distance_row):
+    def calculate_levelized_op(harvested_arr, distance_row):
         """Raster Calculator operation that computes the levelized cost.
 
         Parameters:
-            harvested_row (numpy.ndarray): an nd numpy array for wind harvested
+            harvested_arr (numpy.ndarray): an nd numpy array for wind harvested
             distance_row (numpy.ndarray): an nd numpy array for distances
 
         Returns:
@@ -1044,7 +1044,7 @@ def execute(args):
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr for the
         # valuation model
-        energy_val = harvested_row * 1000.0
+        energy_val = harvested_arr * 1000.0
 
         # Initialize cable cost variable
         cable_cost = 0.0
@@ -1056,7 +1056,7 @@ def execute(args):
             (cable_coef_ac * total_cable_dist), (mw_coef_dc * total_mega_watt)
             + (cable_coef_dc * total_cable_dist))
         # Mask out nodata values
-        cable_cost = np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
+        cable_cost = np.where(harvested_arr == _OUT_NODATA, _OUT_NODATA,
                               cable_cost)
 
         # Compute the total CAP
@@ -1102,7 +1102,7 @@ def execute(args):
 
         # Levelized cost of energy converted from millions of dollars to
         # dollars
-        return np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
+        return np.where(harvested_arr == _OUT_NODATA, _OUT_NODATA,
                         levelized_cost * 1000000.0)
 
     # The amount of CO2 not released into the atmosphere, with the
@@ -1110,23 +1110,25 @@ def execute(args):
     # Rob Griffin
     carbon_coef = float(val_parameters_dict['carbon_coefficient'])
 
-    def calculate_carbon_op(harvested_row):
-        """vectorize_dataset operation to calculate the carbon offset.
+    def calculate_carbon_op(harvested_arr):
+        """Calculate the carbon offset from harvested array.
 
         Parameters:
-            harvested_row (np.ndarray) an nd numpy array
+            harvested_arr: (np.ndarray) an nd numpy array
 
         Returns:
             an nd numpy array of carbon offset values
 
         """
+        out_array = np.full(harvested_arr.shape, _OUT_NODATA, dtype=np.float32)
+        valid_pixels_mask = (harvested_arr != _OUT_NODATA)
+
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr for the
         # valuation model
-        energy_val = harvested_row * 1000.0
-
-        return np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
-                        carbon_coef * energy_val)
+        out_array[valid_pixels_mask] = harvested_arr[
+            valid_pixels_mask] * carbon_coef * 1000.0
+        return out_array
 
     # paths for output rasters
     npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)

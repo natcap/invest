@@ -491,7 +491,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
         for raster_path in raster_results:
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(args['workspace_dir'], 'output', raster_path),
-                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path))
+                os.path.join(REGRESSION_DATA, 'pricevalgrid', raster_path),
+                1E-6)
 
         vector_path = 'wind_energy_points.shp'
 
