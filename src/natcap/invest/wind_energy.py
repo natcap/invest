@@ -39,8 +39,9 @@ _SCALE_KEY = 'LAM'
 # text file given by CK. I guess we could search for the 'K' if needed.
 _SHAPE_KEY = 'K'
 
-# Set the output nodata value to use throughout the model
+# Set the raster nodata value and data type to use throughout the model
 _OUT_NODATA = -64329.0
+_TARGET_DATA_TYPE = gdal.GDT_Float32
 
 # The harvested energy is on a per year basis
 _NUM_DAYS = 365
@@ -148,7 +149,6 @@ def execute(args):
             'wind_schedule': 'path/to/csv',
             'wind_price': 0.4,
             'rate_change': 0.0,
-
         }
 
     Returns:
@@ -383,7 +383,7 @@ def execute(args):
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
             pygeoprocessing.create_raster_from_vector_extents(
-                aoi_vector_path, aoi_raster_path, pixel_size, gdal.GDT_Float32,
+                aoi_vector_path, aoi_raster_path, pixel_size, _TARGET_DATA_TYPE,
                 _OUT_NODATA)
 
             LOGGER.debug('Rasterize AOI onto raster')
@@ -472,7 +472,7 @@ def execute(args):
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
-                                      depth_mask_path, gdal.GDT_Float32,
+                                      depth_mask_path, _TARGET_DATA_TYPE,
                                       _OUT_NODATA)
 
     # Weibull probability function to integrate over
@@ -659,12 +659,12 @@ def execute(args):
     LOGGER.info('Create Density Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
-        gdal.GDT_Float32, _OUT_NODATA)
+        _TARGET_DATA_TYPE, _OUT_NODATA)
 
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
-        gdal.GDT_Float32, _OUT_NODATA)
+        _TARGET_DATA_TYPE, _OUT_NODATA)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Calculate Density Points')
@@ -749,13 +749,13 @@ def execute(args):
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in aligned_density_mask_list], mask_out_depth_dist,
-        density_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+        density_masked_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     pygeoprocessing.raster_calculator(
         [(path, 1)
          for path in aligned_harvested_mask_list], mask_out_depth_dist,
-        harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+        harvested_masked_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
@@ -931,7 +931,7 @@ def execute(args):
 
         pygeoprocessing.raster_calculator(
             [(land_poly_dist_raster_path, 1)], add_avg_dist_op,
-            final_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+            final_dist_raster_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -1168,16 +1168,16 @@ def execute(args):
 
     pygeoprocessing.raster_calculator(
         [(harvested_masked_path, 1), (final_dist_raster_path, 1)],
-        calculate_npv_op, npv_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+        calculate_npv_op, npv_raster_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     pygeoprocessing.raster_calculator(
         [(harvested_masked_path, 1),
          (final_dist_raster_path, 1)], calculate_levelized_op,
-        levelized_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+        levelized_raster_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     pygeoprocessing.raster_calculator([(harvested_masked_path, 1)],
                                       calculate_carbon_op, carbon_path,
-                                      gdal.GDT_Float32, _OUT_NODATA)
+                                      _TARGET_DATA_TYPE, _OUT_NODATA)
     LOGGER.info('Wind Energy Valuation Model Completed')
 
 
@@ -1311,7 +1311,7 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     pygeoprocessing.raster_calculator([(base_raster_path, 1)], dist_mask_op,
                                       target_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
+                                      _TARGET_DATA_TYPE, out_nodata)
 
 
 def read_csv_wind_data(wind_data_path, hub_height):
@@ -1803,7 +1803,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         pygeoprocessing.new_raster_from_base(
             base_raster_path,
             base_point_raster_path,
-            gdal.GDT_Float32, [_OUT_NODATA],
+            _TARGET_DATA_TYPE, [_OUT_NODATA],
             fill_value_list=[0.0])
         # Burn single feature onto the raster with value of 1 to set up for
         # distance transform
@@ -1850,7 +1850,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     pygeoprocessing.raster_calculator(
         [(path, 1)
          for path in land_point_dist_raster_path_list], _min_land_ocean_dist,
-        target_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+        target_dist_raster_path, _TARGET_DATA_TYPE, _OUT_NODATA)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -1896,7 +1896,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     pygeoprocessing.new_raster_from_base(
         harvested_masked_path,
         grid_point_raster_path,
-        gdal.GDT_Float32, [out_nodata],
+        _TARGET_DATA_TYPE, [out_nodata],
         fill_value_list=[0.0])
     # Burn features from grid_vector_path onto raster with values of 1 to
     # set up for distance transform
@@ -1925,7 +1925,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
 
     pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
                                       dist_meters_op, final_dist_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
+                                      _TARGET_DATA_TYPE, out_nodata)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
