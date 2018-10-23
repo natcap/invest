@@ -435,12 +435,17 @@ def execute(args):
             _TARGET_NODATA (int or float): a nodata value set above
 
         Returns:
-            a numpy array where values are _TARGET_NODATA if 'bath' does not fall
-                within the range, or 'bath' if it does.
+            out_array (np.array): an array where values are _TARGET_NODATA
+                if 'bath' does not fall within the range, or 'bath' if it does.
 
         """
-        return np.where(((bath >= max_depth) & (bath <= min_depth)), bath,
-                        _TARGET_NODATA)
+        out_array = np.full(
+            bath.shape, _TARGET_NODATA, dtype=np.float32)
+        valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
+                             (bath != _TARGET_NODATA))
+        out_array[
+            valid_pixels_mask] = bath[valid_pixels_mask]
+        return out_array
 
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
@@ -675,17 +680,17 @@ def execute(args):
             a float of either _TARGET_NODATA or rasters[0]
 
         """
-        nodata_mask = np.empty(rasters[0].shape, dtype=np.int8)
-        nodata_mask[:] = 0
+        out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
+        nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
         for array in rasters:
             nodata_mask = nodata_mask | (array == _TARGET_NODATA)
-
-        return np.where(nodata_mask, _TARGET_NODATA, rasters[0])
+        out_array[~nodata_mask] = rasters[0][~nodata_mask]
+        return out_array
 
     # Output paths for final Density and Harvested rasters after they've been
     # masked by depth and distance
-    density_masked_path = os.path.join(out_dir,
-                                       'density_W_per_m2%s.tif' % suffix)
+    density_masked_path = os.path.join(
+        out_dir, 'density_W_per_m2%s.tif' % suffix)
     harvested_masked_path = os.path.join(
         out_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
 
@@ -735,9 +740,9 @@ def execute(args):
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     pygeoprocessing.raster_calculator(
-        [(path, 1)
-         for path in aligned_harvested_mask_list], mask_out_depth_dist,
-        harvested_masked_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
+        [(path, 1) for path in aligned_harvested_mask_list],
+        mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
+        _TARGET_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
@@ -890,13 +895,16 @@ def execute(args):
             Parameters:
                 tmp_dist (np.array): an array of distances
 
-            Returns: distance values in meters with average grid to land
-                distance factored in
+            Returns:
+                out_array (np.array): distance values in meters with average
+                    grid to land distance factored in
 
             """
-            return np.where(tmp_dist != _TARGET_NODATA,
-                            tmp_dist * mean_pixel_size + avg_grid_distance,
-                            _TARGET_NODATA)
+            out_array = np.full(tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
+            valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
+            out_array[valid_pixels_mask] = tmp_dist[
+                valid_pixels_mask] * mean_pixel_size + avg_grid_distance
+            return out_array
 
         pygeoprocessing.raster_calculator(
             [(land_poly_dist_raster_path, 1)], add_avg_dist_op,
@@ -1877,10 +1885,13 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
             tmp_dist (np.ndarray): an nd numpy array
 
         Returns:
-            an nd numpy array multiplied by a pixel size
+            out_array (np.array): an array multiplied by a pixel size
         """
-        return np.where(tmp_dist != out_nodata, tmp_dist * mean_pixel_size,
-                        out_nodata)
+        out_array = np.full(tmp_dist.shape, out_nodata, dtype=np.float32)
+        valid_pixels_mask = (tmp_dist != out_nodata)
+        out_array[
+            valid_pixels_mask] = tmp_dist[valid_pixels_mask] * mean_pixel_size
+        return out_array
 
     pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
                                       dist_meters_op, final_dist_raster_path,
