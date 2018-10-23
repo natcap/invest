@@ -195,15 +195,34 @@ def execute(args):
         target_path_list=[f_reg['slope_path']],
         task_name='calculate slope')
 
+    threshold_slope_task = task_graph.add_task(
+        func=_threshold_slope,
+        args=(f_reg['slope_path'], f_reg['thresholded_slope_path']),
+        target_path_list=[f_reg['thresholded_slope_path']],
+        dependent_task_list=[slope_task],
+        task_name='threshold slope')
+
+    flow_dir_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_dir_mfd,
+        args=(
+            (f_reg['pit_filled_dem_path'], 1),
+            f_reg['flow_direction_path']),
+        target_path_list=[f_reg['flow_direction_path']],
+        dependent_task_list=[pit_fill_task],
+        task_name='flow direction calculation')
+
+    flow_accumulation_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            f_reg['flow_accumulation_path']),
+        target_path_list=[f_reg['flow_accumulation_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='flow accumulation calculation')
+
     task_graph.close()
     task_graph.join()
     return
-
-    _threshold_slope(f_reg['slope_path'], f_reg['thresholded_slope_path'])
-
-    LOGGER.info("calculating flow direction")
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
 
     LOGGER.info("calculating flow accumulation")
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
