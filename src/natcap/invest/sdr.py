@@ -262,23 +262,44 @@ def execute(args):
         dependent_task_list=[align_task],
         task_name='calculate W')
 
+    cp_task = task_graph.add_task(
+        func=_calculate_cp,
+        args=(
+            biophysical_table, f_reg['aligned_lulc_path'],
+            f_reg['cp_factor_path']),
+        target_path_list=[f_reg['cp_factor_path']],
+        dependent_task_list=[align_task],
+        task_name='calculate CP')
+
+    rkls_task = task_graph.add_task(
+        func=_calculate_rkls,
+        args=(
+            f_reg['ls_path'],
+            f_reg['aligned_erosivity_path'],
+            f_reg['aligned_erodibility_path'],
+            drainage_raster_path_task[0],
+            f_reg['rkls_path']),
+        target_path_list=[f_reg['rkls_path']],
+        dependent_task_list=[
+            align_task, ls_factor_task, drainage_raster_path_task[1]],
+        task_name='calculate RKLS')
+
+    LOGGER.info('calculating USLE')
+    usle_task = task_graph.add_task(
+        func=_calculate_usle,
+        args=(
+            f_reg['rkls_path'],
+            f_reg['cp_factor_path'],
+            drainage_raster_path_task[0],
+            f_reg['usle_path']),
+        target_path_list=[f_reg['usle_path']],
+        dependent_task_list=[
+            rkls_task, cp_task, drainage_raster_path_task[1]],
+        task_name='calculate USLE')
+
     task_graph.close()
     task_graph.join()
     return
-
-    LOGGER.info('calculate CP raster')
-    _calculate_cp(
-        biophysical_table, f_reg['aligned_lulc_path'],
-        f_reg['cp_factor_path'])
-
-    LOGGER.info('calculating RKLS')
-    _calculate_rkls(*[f_reg[key] for key in [
-        'ls_path', 'aligned_erosivity_path', 'aligned_erodibility_path',
-        'drainage_raster_path', 'rkls_path']])
-
-    LOGGER.info('calculating USLE')
-    _calculate_usle(*[f_reg[key] for key in [
-        'rkls_path', 'cp_factor_path', 'drainage_raster_path', 'usle_path']])
 
     LOGGER.info('calculating w_bar')
     for factor_path, accumulation_path, out_bar_path in [
