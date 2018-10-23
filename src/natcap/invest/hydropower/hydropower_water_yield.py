@@ -11,6 +11,7 @@ import numpy
 from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
+import taskgraph
 
 from .. import validation
 from .. import utils
@@ -147,6 +148,17 @@ def execute(args):
 
     sheds_uri = args['watersheds_uri']
     seasonality_constant = float(args['seasonality_constant'])
+
+    # Initialize a TaskGraph
+    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = 0  # Threaded queue management, but same process.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     base_raster_path_list = [
         args['eto_uri'], args['precipitation_uri'],

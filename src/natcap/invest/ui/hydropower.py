@@ -147,6 +147,7 @@ class HydropowerWaterYield(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
+            self.n_workers.args_key: self.n_workers.value(),
             self.precipitation.args_key: self.precipitation.value(),
             self.potential_evapotranspiration.args_key:
                 self.potential_evapotranspiration.value(),
