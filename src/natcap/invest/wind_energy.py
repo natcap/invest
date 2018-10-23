@@ -900,7 +900,8 @@ def execute(args):
                     grid to land distance factored in
 
             """
-            out_array = np.full(tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
+            out_array = np.full(
+                tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
             valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
             out_array[valid_pixels_mask] = tmp_dist[
                 valid_pixels_mask] * mean_pixel_size + avg_grid_distance
@@ -988,7 +989,8 @@ def execute(args):
         # from CK's biophysical model equations) to kWhr for the
         # valuation model
         out_array[
-            valid_pixels_mask] = harvested_arr[valid_pixels_mask] * carbon_coef * 1000.0
+            valid_pixels_mask] = harvested_arr[valid_pixels_mask] * \
+            carbon_coef * 1000.0
         return out_array
 
     # paths for output rasters
