@@ -5,6 +5,7 @@ import logging
 import os
 import csv
 import shutil
+import tempfile
 import math
 
 import numpy as np
@@ -34,12 +35,13 @@ speedups.enable()
 # dependent on the hub height.
 _SCALE_KEY = 'LAM'
 
-# The String name for the shape field. So far this is a default from the
+# The str name for the shape field. So far this is a default from the
 # text file given by CK. I guess we could search for the 'K' if needed.
 _SHAPE_KEY = 'K'
 
-# Set the output nodata value to use throughout the model
-_OUT_NODATA = -64329.0
+# Set the raster nodata value and data type to use throughout the model
+_TARGET_NODATA = -64329.0
+_TARGET_DATA_TYPE = gdal.GDT_Float32
 
 # The harvested energy is on a per year basis
 _NUM_DAYS = 365
@@ -59,32 +61,32 @@ def execute(args):
     given the following dictionary:
 
     Args:
-        workspace_dir (string): a path to the output workspace folder (required)
-        wind_data_path (string): path to a CSV file with the following header:
+        workspace_dir (str): a path to the output workspace folder (required)
+        wind_data_path (str): path to a CSV file with the following header:
             ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
             with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
             collected (required)
-        aoi_vector_path (string): a path to an OGR polygon vector that is
+        aoi_vector_path (str): a path to an OGR polygon vector that is
             projected in linear units of meters. The polygon specifies the
             area of interest for the wind data points. If limiting the wind
             farm bins by distance, then the aoi should also cover a portion
             of the land polygon that is of interest (optional for biophysical
             and no distance masking, required for biophysical and distance
             masking, required for valuation)
-        bathymetry_path (string): a path to a GDAL raster that has the depth
+        bathymetry_path (str): a path to a GDAL raster that has the depth
             values of the area of interest (required)
-        land_polygon_vector_path (string): a path to an OGR polygon vector that
+        land_polygon_vector_path (str): a path to an OGR polygon vector that
             provides a coastline for determining distances from wind farm bins.
             Enabled by AOI and required if wanting to mask by distances or run
             valuation
-        global_wind_parameters_path (string): a float for the average distance
+        global_wind_parameters_path (str): a float for the average distance
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
             provided)
-        suffix (string): a String to append to the end of the output files
+        suffix (str): a str to append to the end of the output files
             (optional)
-        turbine_parameters_path (string): a path to a CSV file that holds the
+        turbine_parameters_path (str): a path to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters
             (required)
         number_of_turbines (int): an integer value for the number of machines
@@ -107,14 +109,14 @@ def execute(args):
             will cost for the specific type of turbine (required for valuation)
         discount_rate (float): a float value for the discount rate (required
             for valuation)
-        grid_points_path (string): a path to a CSV file that specifies the
+        grid_points_path (str): a path to a CSV file that specifies the
             landing and grid point locations (optional)
         avg_grid_distance (float): a float for the average distance in
             kilometers from a grid connection point to a land connection point
             (required for valuation if grid connection points are not provided)
         price_table (boolean): a bool indicating whether to use the wind energy
             price table or not (required)
-        wind_schedule (string): a path to a CSV file for the yearly prices of
+        wind_schedule (str): a path to a CSV file for the yearly prices of
             wind energy for the lifespan of the farm (required if 'price_table'
             is true)
         wind_price (float): a float for the wind energy price at year 0
@@ -147,7 +149,6 @@ def execute(args):
             'wind_schedule': 'path/to/csv',
             'wind_price': 0.4,
             'rate_change': 0.0,
-
         }
 
     Returns:
@@ -182,12 +183,12 @@ def execute(args):
         args['turbine_parameters_path'], biophysical_params)
 
     # Read the biophysical global parameters into a dictionary
-    bio_global_param_dict = read_csv_wind_parameters(
+    bio_global_params_dict = read_csv_wind_parameters(
         args['global_wind_parameters_path'], biophysical_params)
 
     # Combine the turbine and global parameters into one dictionary
-    bio_parameters_dict = combine_dictionaries(bio_turbine_dict,
-                                               bio_global_param_dict)
+    bio_parameters_dict = bio_global_params_dict.copy()
+    bio_parameters_dict.update(bio_turbine_dict)
 
     LOGGER.debug('Biophysical Turbine Parameters: %s', bio_parameters_dict)
 
@@ -203,7 +204,7 @@ def execute(args):
             'Please make sure all the necessary fields are present and '
             'spelled correctly.' % missing_biophysical_params)
 
-    if 'valuation_container' not in args:
+    if 'valuation_container' not in args or args['valuation_container'] is False:
         LOGGER.debug('Valuation Not Selected')
     else:
         LOGGER.info(
@@ -229,7 +230,7 @@ def execute(args):
         # Read the biophysical global parameters into a dictionary
         val_global_param_dict = read_csv_wind_parameters(
             args['global_wind_parameters_path'], valuation_global_params)
-        # Check that all the necessary input fields from the CSV file
+        # Check all the necessary input fields from the CSV file
         missing_global_params = list(
             set(valuation_global_params) - set(val_global_param_dict.keys()))
 
@@ -241,8 +242,54 @@ def execute(args):
                 'correctly.' % (missing_turbine_params, missing_global_params))
 
         # Combine the turbine and global parameters into one dictionary
-        val_parameters_dict = combine_dictionaries(val_turbine_dict,
-                                                   val_global_param_dict)
+        val_parameters_dict = val_global_param_dict.copy()
+        val_parameters_dict.update(val_turbine_dict)
+
+        # If Price Table provided use that for price of energy, validate inputs
+        time = int(val_parameters_dict['time_period'])
+        if args["price_table"]:
+            wind_price_df = pandas.read_csv(args["wind_schedule"])
+            wind_price_df.columns = wind_price_df.columns.str.lower()
+
+            if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
+                raise ValueError(
+                    "Please make sure that the Year column in the Wind Energy "
+                    "Price Table is integer.")
+
+            if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
+                raise ValueError(
+                    "Please make sure that the Price column in the Wind Energy"
+                    " Price Table is numeric.")
+
+            year_list = wind_price_df['year'].tolist()
+            duplicate_years = set(
+                [year for year in year_list if year_list.count(year) > 1])
+            if duplicate_years:
+                raise ValueError(
+                    "The following year(s) showed up more than once in the "
+                    "Wind Energy Price Table: %s. Please remove the duplicated"
+                    " years from the table.", list(duplicate_years))
+
+            year_count = len(wind_price_df['year'])
+            if year_count != time + 1:
+                raise ValueError(
+                    "The 'time' argument in the Global Wind Energy Parameters "
+                    "file must equal the number of years provided in the price"
+                    " table.")
+
+            # Save the price values into a list where the indices of the list
+            # indicate the time steps for the lifespan of the wind farm
+            wind_price_df.sort_values('year', inplace=True)
+            price_list = wind_price_df['price'].tolist()
+        else:
+            change_rate = float(args["rate_change"])
+            wind_price = float(args["wind_price"])
+            # Build up a list of price values where the indices of the list
+            # are the time steps for the lifespan of the farm and values
+            # are adjusted based on the rate of change
+            price_list = []
+            for time_step in xrange(time + 1):
+                price_list.append(wind_price * (1 + change_rate)**(time_step))
 
     # Hub Height to use for setting Weibull parameters
     hub_height = int(bio_parameters_dict['hub_height'])
@@ -258,6 +305,14 @@ def execute(args):
             raise ValueError(
                 'An AOI shapefile is required to clip and reproject the grid '
                 'points.')
+        grid_points_dict = utils.build_lookup_from_csv(
+            args['grid_points_path'], 'id')  # turn all strs to lower-cased
+        missing_grid_fields = list({'long', 'lati', 'id', 'type'} - set(
+            grid_points_dict.itervalues().next().keys()))
+        if missing_grid_fields:
+            raise ValueError(
+                'The following field value(s) are missing from the Grid '
+                'Connection Points csv file: %s.' % missing_grid_fields)
 
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
@@ -280,8 +335,7 @@ def execute(args):
         wind_point_proj_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
         clip_and_reproject_vector(wind_point_vector_path, aoi_vector_path,
-                                  wind_point_proj_vector_path, inter_dir,
-                                  suffix)
+                                  wind_point_proj_vector_path, inter_dir)
 
         # Clip and project the bathymetry shapefile to AOI
         LOGGER.debug('Clip and project bathymetry to AOI')
@@ -311,9 +365,9 @@ def execute(args):
                 inter_dir,
                 os.path.basename(land_polygon_vector_path).replace(
                     '.shp', '_projected_clipped%s.shp' % suffix))
-            clip_and_reproject_vector(
-                land_polygon_vector_path, aoi_vector_path,
-                land_poly_proj_vector_path, inter_dir, suffix)
+            clip_and_reproject_vector(land_polygon_vector_path,
+                                      aoi_vector_path,
+                                      land_poly_proj_vector_path, inter_dir)
 
             # Get the cell size to use in new raster outputs from the DEM
             pixel_size = pygeoprocessing.get_raster_info(
@@ -328,39 +382,18 @@ def execute(args):
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
             pygeoprocessing.create_raster_from_vector_extents(
-                aoi_vector_path, aoi_raster_path, pixel_size, gdal.GDT_Float32,
-                _OUT_NODATA)
-
-            LOGGER.debug('Rasterize AOI onto raster')
-            # Burn the area of interest onto the raster
-            pygeoprocessing.rasterize(
-                aoi_vector_path,
-                aoi_raster_path, [0],
-                option_list=["ALL_TOUCHED=TRUE"])
-
-            LOGGER.debug('Rasterize Land Polygon onto raster')
-            # Burn the land polygon onto the raster, covering up the AOI values
-            # where they overlap
-            pygeoprocessing.rasterize(
-                land_poly_proj_vector_path,
-                aoi_raster_path, [1],
-                option_list=["ALL_TOUCHED=TRUE"])
-
-            dist_mask_path = os.path.join(inter_dir,
-                                          'distance_mask%s.tif' % suffix)
+                aoi_vector_path, aoi_raster_path, pixel_size,
+                _TARGET_DATA_TYPE, _TARGET_NODATA)
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
+            create_distance_raster(aoi_raster_path, land_poly_proj_vector_path,
+                                   dist_trans_path, inter_dir)
 
-            dist_meters_path = os.path.join(inter_dir,
-                                            'distance_meters%s.tif' % suffix)
-
-            LOGGER.info('Generate Distance Mask')
-            # Create a distance mask
-            pygeoprocessing.distance_transform_edt((aoi_raster_path, 1),
-                                                   dist_trans_path)
+            dist_mask_path = os.path.join(inter_dir,
+                                          'distance_mask%s.tif' % suffix)
             mask_by_distance(dist_trans_path, min_distance, max_distance,
-                             _OUT_NODATA, dist_meters_path, dist_mask_path)
+                             _TARGET_NODATA, dist_mask_path)
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -399,15 +432,20 @@ def execute(args):
                 range. This value is set above
             max_depth (float): a value specifying the upper limit of the
                 range. This value is set above
-            _OUT_NODATA (int or float): a nodata value set above
+            _TARGET_NODATA (int or float): a nodata value set above
 
         Returns:
-            a numpy array where values are _OUT_NODATA if 'bath' does not fall
-                within the range, or 'bath' if it does.
+            out_array (np.array): an array where values are _TARGET_NODATA
+                if 'bath' does not fall within the range, or 'bath' if it does.
 
         """
-        return np.where(((bath >= max_depth) & (bath <= min_depth)), bath,
-                        _OUT_NODATA)
+        out_array = np.full(
+            bath.shape, _TARGET_NODATA, dtype=np.float32)
+        valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
+                             (bath != _TARGET_NODATA))
+        out_array[
+            valid_pixels_mask] = bath[valid_pixels_mask]
+        return out_array
 
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
@@ -419,8 +457,8 @@ def execute(args):
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
     pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], depth_op,
-                                      depth_mask_path, gdal.GDT_Float32,
-                                      _OUT_NODATA)
+                                      depth_mask_path, _TARGET_DATA_TYPE,
+                                      _TARGET_NODATA)
 
     # Weibull probability function to integrate over
     def weibull_probability(v_speed, k_shape, l_scale):
@@ -435,7 +473,7 @@ def execute(args):
             a float
 
         """
-        return ((k_shape / l_scale) * (v_speed / l_scale) **
+        return ((k_shape / l_scale) * (v_speed / l_scale)**
                 (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
 
     # Density wind energy function to integrate over
@@ -509,7 +547,7 @@ def execute(args):
         This is to help not open and pass around datasets / datasources.
 
         Parameters:
-            wind_point_vector_path (string): path to a point shapefile to write
+            wind_point_vector_path (str): path to a point shapefile to write
                 the results to
 
         Returns:
@@ -606,12 +644,12 @@ def execute(args):
     LOGGER.info('Create Density Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_density_raster_path, pixel_size,
-        gdal.GDT_Float32, _OUT_NODATA)
+        _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
         final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
-        gdal.GDT_Float32, _OUT_NODATA)
+        _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Calculate Density Points')
@@ -634,25 +672,26 @@ def execute(args):
 
         Parameters:
             *rasters (list): a list of values as follows:
-                rasters[0] - the desired output value (required)
+                rasters[0] - the density value (required)
                 rasters[1] - the depth mask value (required)
                 rasters[2] - the distance mask value (optional)
 
         Returns:
-            a float of either _OUT_NODATA or rasters[0]
+            out_array (np.array): an array of either _TARGET_NODATA or density
+                values from rasters[0]
 
         """
-        nodata_mask = np.empty(rasters[0].shape, dtype=np.int8)
-        nodata_mask[:] = 0
+        out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
+        nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
         for array in rasters:
-            nodata_mask = nodata_mask | (array == _OUT_NODATA)
-
-        return np.where(nodata_mask, _OUT_NODATA, rasters[0])
+            nodata_mask = nodata_mask | (array == _TARGET_NODATA)
+        out_array[~nodata_mask] = rasters[0][~nodata_mask]
+        return out_array
 
     # Output paths for final Density and Harvested rasters after they've been
     # masked by depth and distance
-    density_masked_path = os.path.join(out_dir,
-                                       'density_W_per_m2%s.tif' % suffix)
+    density_masked_path = os.path.join(
+        out_dir, 'density_W_per_m2%s.tif' % suffix)
     harvested_masked_path = os.path.join(
         out_dir, 'harvested_energy_MWhr_per_yr%s.tif' % suffix)
 
@@ -674,39 +713,47 @@ def execute(args):
         path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
         for path in density_mask_list
     ]
-    pygeoprocessing.align_and_resize_raster_stack(
-        density_mask_list, aligned_density_mask_list,
-        ['near'] * len(density_mask_list), pixel_size, 'intersection')
 
     aligned_harvested_mask_list = [
         path.replace('%s.tif' % suffix, '_aligned%s.tif' % suffix)
         for path in harvested_mask_list
     ]
+
+    # Merge the density and harvest lists, and remove duplicates
+    merged_mask_list = density_mask_list + [
+        mask for mask in harvested_mask_list if mask not in density_mask_list
+    ]
+    merged_aligned_mask_list = aligned_density_mask_list + [
+        mask for mask in aligned_harvested_mask_list
+        if mask not in aligned_density_mask_list
+    ]
+    # Align and resize rasters in the density and harvest lists
     pygeoprocessing.align_and_resize_raster_stack(
-        harvested_mask_list, aligned_harvested_mask_list,
-        ['near'] * len(harvested_mask_list), pixel_size, 'intersection')
+        merged_mask_list, merged_aligned_mask_list,
+        ['near'] * len(merged_mask_list), pixel_size, 'intersection')
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in aligned_density_mask_list], mask_out_depth_dist,
-        density_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+        density_masked_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     pygeoprocessing.raster_calculator(
-        [(path, 1)
-         for path in aligned_harvested_mask_list], mask_out_depth_dist,
-        harvested_masked_path, gdal.GDT_Float32, _OUT_NODATA)
+        [(path, 1) for path in aligned_harvested_mask_list],
+        mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
+        _TARGET_NODATA)
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
-    if 'valuation_container' in args:
+    if 'valuation_container' in args and args['valuation_container'] is True:
         LOGGER.info('Starting Wind Energy Valuation Model')
         # Pixel size to be used in later calculations and raster creations
         pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
             'pixel_size']
-        mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+        mean_pixel_size = pygeoprocessing.get_raster_info(
+            harvested_masked_path)['mean_pixel_size']
         # path for final distance transform used in valuation calculations
         final_dist_raster_path = os.path.join(
             inter_dir, 'val_distance_trans%s.tif' % suffix)
@@ -719,18 +766,22 @@ def execute(args):
         LOGGER.info('Grid Points Provided. Reading in the grid points')
 
         # Read the grid points csv, and convert it to land and grid dictionary
-        # based on the 'TYPE' column
-        grid_land_df = pandas.read_csv(
-            args['grid_points_path'], index_col='ID')
+        grid_land_df = pandas.read_csv(args['grid_points_path'])
+        # Convert column fields to upper cased to conform to the user's guide
+        grid_land_df.columns = [
+            field.upper() for field in grid_land_df.columns
+        ]
 
         # Make separate dataframes based on 'TYPE'
         grid_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.lower() == 'grid')]
+            grid_land_df['TYPE'].str.upper() == 'GRID')]
         land_df = grid_land_df.loc[(
-            grid_land_df['TYPE'].str.lower() == 'land')]
+            grid_land_df['TYPE'].str.upper() == 'LAND')]
 
         # Convert the dataframes to dictionaries, using 'ID' (the index) as key
+        grid_df.set_index('ID', inplace=True)
         grid_dict = grid_df.to_dict('index')
+        land_df.set_index('ID', inplace=True)
         land_dict = land_df.to_dict('index')
 
         grid_vector_path = os.path.join(inter_dir,
@@ -746,8 +797,7 @@ def execute(args):
         grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
         clip_and_reproject_vector(grid_vector_path, aoi_vector_path,
-                                  grid_projected_vector_path, inter_dir,
-                                  suffix)
+                                  grid_projected_vector_path, inter_dir)
 
         # It is possible that NO grid points lie within the AOI, so we need to
         # handle both cases
@@ -773,7 +823,7 @@ def execute(args):
                     inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
                 clip_and_reproject_vector(
                     land_point_vector_path, aoi_vector_path,
-                    land_projected_vector_path, inter_dir, suffix)
+                    land_projected_vector_path, inter_dir)
 
                 # It is possible that NO land point lie within the AOI, so we
                 # need to handle both cases
@@ -795,7 +845,7 @@ def execute(args):
                     # Calculate distance raster
                     calculate_distances_land_grid(
                         land_projected_vector_path, harvested_masked_path,
-                        final_dist_raster_path, suffix)
+                        final_dist_raster_path, inter_dir)
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -803,7 +853,7 @@ def execute(args):
                     # Calculate distance raster
                     calculate_distances_grid(grid_projected_vector_path,
                                              harvested_masked_path,
-                                             final_dist_raster_path, suffix)
+                                             final_dist_raster_path, inter_dir)
                 land_layer = None
                 land_vector = None
 
@@ -816,7 +866,7 @@ def execute(args):
                 # Calculate distance raster
                 calculate_distances_grid(grid_projected_vector_path,
                                          harvested_masked_path,
-                                         final_dist_raster_path, suffix)
+                                         final_dist_raster_path, inter_dir)
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
@@ -833,47 +883,34 @@ def execute(args):
         # The average land cable distance in km converted to meters
         avg_grid_distance = float(args['avg_grid_distance']) * 1000.0
 
-        land_poly_raster_path = os.path.join(
-            os.path.dirname(land_poly_proj_vector_path),
-            os.path.basename(land_poly_proj_vector_path).replace(
-                '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
-        # Create new raster and fill with 0s to set up for distance transform
-        pygeoprocessing.new_raster_from_base(
-            harvested_masked_path,
-            land_poly_raster_path,
-            gdal.GDT_Float32, [_OUT_NODATA],
-            fill_value_list=[0.0])
-        # Burn polygon features into raster with values of 1s to set up for
-        # distance transform
-        pygeoprocessing.rasterize(
-            land_poly_proj_vector_path,
-            land_poly_raster_path,
-            burn_values=[1.0],
-            option_list=["ALL_TOUCHED=TRUE"])
-
         land_poly_dist_raster_path = os.path.join(
-            os.path.dirname(land_poly_raster_path),
-            os.path.basename(land_poly_raster_path).replace(
-                '%s.tif' % suffix, '_dist%s.tif' % suffix))
-        pygeoprocessing.distance_transform_edt((land_poly_raster_path, 1),
-                                               land_poly_dist_raster_path)
+            inter_dir, 'land_poly_dist%s.tif' % suffix)
+
+        create_distance_raster(harvested_masked_path,
+                               land_poly_proj_vector_path,
+                               land_poly_dist_raster_path, inter_dir)
 
         def add_avg_dist_op(tmp_dist):
-            """vectorize_datasets operation to convert distances
-                to meters and add in average grid to land distances
+            """Convert distances to meters and add in avg_grid_distance
 
-                tmp_dist - a numpy array of distances
+            Parameters:
+                tmp_dist (np.array): an array of distances
 
-                returns - distance values in meters with average grid to
-                    land distance factored in
+            Returns:
+                out_array (np.array): distance values in meters with average
+                    grid to land distance factored in
+
             """
-            return np.where(tmp_dist != _OUT_NODATA,
-                            tmp_dist * mean_pixel_size + avg_grid_distance,
-                            _OUT_NODATA)
+            out_array = np.full(
+                tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
+            valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
+            out_array[valid_pixels_mask] = tmp_dist[
+                valid_pixels_mask] * mean_pixel_size + avg_grid_distance
+            return out_array
 
         pygeoprocessing.raster_calculator(
             [(land_poly_dist_raster_path, 1)], add_avg_dist_op,
-            final_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+            final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -886,13 +923,13 @@ def execute(args):
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
-    # The miscellaneous costs as a decimal factore of CAPEX
+    # The miscellaneous costs as a decimal factor of capex_arr
     misc_capex_cost = float(val_parameters_dict['miscellaneous_capex_cost'])
-    # The operations and maintenance costs as a decimal factor of CAPEX
+    # The operations and maintenance costs as a decimal factor of capex_arr
     op_maint_cost = float(val_parameters_dict['operation_maintenance_cost'])
     # The discount rate as a decimal
     discount_rate = float(args['discount_rate'])
-    # The cost to decommission the farm as a decimal factor of CAPEX
+    # The cost to decommission the farm as a decimal factor of capex_arr
     decom = float(val_parameters_dict['decommission_cost'])
     # The mega watt value for the turbines in MW
     mega_watt = float(val_parameters_dict['turbine_rated_pwr'])
@@ -904,33 +941,6 @@ def execute(args):
     mw_coef_dc = float(val_parameters_dict['mw_coef_dc'])
     cable_coef_ac = float(val_parameters_dict['cable_coef_ac'])
     cable_coef_dc = float(val_parameters_dict['cable_coef_dc'])
-
-    time = int(val_parameters_dict['time_period'])
-
-    # If Price Table provided use that for price of energy
-    if args["price_table"]:
-        wind_price_df = pandas.read_csv(args["wind_schedule"])
-        wind_price_df.columns = wind_price_df.columns.str.lower()
-        year_count = len(wind_price_df['year'])
-
-        if year_count != time + 1:
-            raise ValueError(
-                "The 'time' argument in the Global Wind Energy Parameters file"
-                " must equal the number years provided in the price table.")
-
-        # Save the price values into a list where the indices of the list
-        # indicate the time steps for the lifespan of the wind farm
-        wind_price_df.sort_values('year', inplace=True)
-        price_list = wind_price_df['price'].tolist()
-    else:
-        change_rate = float(args["rate_change"])
-        wind_price = float(args["wind_price"])
-        # Build up a list of price values where the indices of the list
-        # are the time steps for the lifespan of the farm and values
-        # are adjusted based on the rate of change
-        price_list = []
-        for time_step in xrange(time + 1):
-            price_list.append(wind_price * (1 + change_rate)**(time_step))
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
@@ -957,177 +967,32 @@ def execute(args):
     disc_time = disc_const**time
     LOGGER.debug('disc_time : %s', disc_time)
 
-    def calculate_npv_op(harvested_row, distance_row):
-        """Compute the net present value in Raster Calculator
-
-        Parameters:
-            harvested_row (np.ndarray): an nd numpy array for wind harvested
-            distance_row (np.ndarray): an nd numpy array for distances
-
-        Returns:
-            an nd numpy array of net present values
-
-        """
-        # Total cable distance converted to kilometers
-        total_cable_dist = distance_row / 1000.0
-
-        # The energy value converted from MWhr/yr (Mega Watt hours as output
-        # from CK's biophysical model equations) to kWhr for the
-        # valuation model
-        energy_val = harvested_row * 1000.0
-
-        # Initialize cable cost variable
-        cable_cost = 0.0
-
-        # The break at 'circuit_break' indicates the difference in using AC
-        # and DC current systems
-        cable_cost = np.where(
-            total_cable_dist <= circuit_break, (mw_coef_ac * total_mega_watt) +
-            (cable_coef_ac * total_cable_dist), (mw_coef_dc * total_mega_watt)
-            + (cable_coef_dc * total_cable_dist))
-        # Mask out nodata values
-        cable_cost = np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
-                              cable_cost)
-
-        # Compute the total CAP
-        cap = cap_less_dist + cable_cost
-
-        # Nominal total capital costs including installation and
-        # miscellaneous costs (capex)
-        capex = cap / (1.0 - install_cost - misc_capex_cost)
-
-        # The ongoing cost of the farm
-        ongoing_capex = op_maint_cost * capex
-
-        # The cost to decommission the farm
-        decommish_capex = decom * capex / disc_time
-
-        # Variable to store the summation of the revenue less the
-        # ongoing costs, adjusted for discount rate
-        comp_one_sum = 0.0
-
-        # Calculate the total NPV summation over the lifespan of the wind
-        # farm. Starting at year 1, because year 0 yields no revenue
-        for year in xrange(1, len(price_list)):
-            # Dollar per kiloWatt hour
-            dollar_per_kwh = float(price_list[year])
-
-            # The price per kWh for energy converted to units of millions of
-            #  dollars to correspond to the units for valuation costs
-            mill_dollar_per_kwh = dollar_per_kwh / 1000000.0
-
-            # The revenue in millions of dollars for the wind farm. The
-            # energy_val is in kWh the farm.
-            rev = energy_val * mill_dollar_per_kwh
-
-            # Calculate the first component summation of the NPV equation
-            comp_one_sum = (
-                comp_one_sum + (rev - ongoing_capex) / disc_const**year)
-
-        return np.where(
-            (harvested_row != _OUT_NODATA) & (distance_row != _OUT_NODATA),
-            comp_one_sum - decommish_capex - capex, _OUT_NODATA)
-
-    def calculate_levelized_op(harvested_row, distance_row):
-        """Raster Calculator operation that computes the levelized cost.
-
-        Parameters:
-            harvested_row (numpy.ndarray): an nd numpy array for wind harvested
-            distance_row (numpy.ndarray): an nd numpy array for distances
-
-        Returns:
-            the levelized cost (numpy.ndarray)
-
-        """
-        # Total cable distance converted to kilometers
-        total_cable_dist = distance_row / 1000.0
-
-        # The energy value converted from MWhr/yr (Mega Watt hours as output
-        # from CK's biophysical model equations) to kWhr for the
-        # valuation model
-        energy_val = harvested_row * 1000.0
-
-        # Initialize cable cost variable
-        cable_cost = 0.0
-
-        # The break at 'circuit_break' indicates the difference in using AC
-        # and DC current systems
-        cable_cost = np.where(
-            total_cable_dist <= circuit_break, (mw_coef_ac * total_mega_watt) +
-            (cable_coef_ac * total_cable_dist), (mw_coef_dc * total_mega_watt)
-            + (cable_coef_dc * total_cable_dist))
-        # Mask out nodata values
-        cable_cost = np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
-                              cable_cost)
-
-        # Compute the total CAP
-        cap = cap_less_dist + cable_cost
-
-        # Nominal total capital costs including installation and
-        # miscellaneous costs (capex)
-        capex = cap / (1.0 - install_cost - misc_capex_cost)
-
-        # The ongoing cost of the farm
-        ongoing_capex = op_maint_cost * capex
-
-        # The cost to decommission the farm
-        decommish_capex = decom * capex / disc_time
-
-        # Variable to store the numerator summation part of the
-        # levelized cost
-        levelized_cost_sum = 0.0
-        # Variable to store the denominator summation part of the
-        # levelized cost
-        levelized_cost_denom = 0.0
-
-        # Calculate the denominator summation value for levelized
-        # cost of energy at year 0
-        levelized_cost_denom = levelized_cost_denom + (
-            energy_val / disc_const**0)
-
-        # Calculate the levelized cost over the lifespan of the farm
-        for year in xrange(1, len(price_list)):
-            # Calculate the numerator summation value for levelized
-            # cost of energy
-            levelized_cost_sum = levelized_cost_sum + (
-                (ongoing_capex / disc_const**year))
-
-            # Calculate the denominator summation value for levelized
-            # cost of energy
-            levelized_cost_denom = levelized_cost_denom + (
-                energy_val / disc_const**year)
-
-        # Calculate the levelized cost of energy
-        levelized_cost = ((levelized_cost_sum + decommish_capex + capex) /
-                          levelized_cost_denom)
-
-        # Levelized cost of energy converted from millions of dollars to
-        # dollars
-        return np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
-                        levelized_cost * 1000000.0)
-
     # The amount of CO2 not released into the atmosphere, with the
     # constant conversion factor provided in the users guide by
     # Rob Griffin
     carbon_coef = float(val_parameters_dict['carbon_coefficient'])
 
-    def calculate_carbon_op(harvested_row):
-        """vectorize_dataset operation to calculate the carbon offset.
+    def calculate_carbon_op(harvested_arr):
+        """Calculate the carbon offset from harvested array.
 
         Parameters:
-            harvested_row (np.ndarray) an nd numpy array
+            harvested_arr (np.array): an array of harvested energy values
 
         Returns:
-            an nd numpy array of carbon offset values
+            out_array (np.array): an array of carbon offset values
 
         """
+        out_array = np.full(
+            harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
+        valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
+
         # The energy value converted from MWhr/yr (Mega Watt hours as output
         # from CK's biophysical model equations) to kWhr for the
         # valuation model
-        energy_val = harvested_row * 1000.0
-
-        return np.where(harvested_row == _OUT_NODATA, _OUT_NODATA,
-                        carbon_coef * energy_val)
+        out_array[
+            valid_pixels_mask] = harvested_arr[valid_pixels_mask] * \
+            carbon_coef * 1000.0
+        return out_array
 
     # paths for output rasters
     npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
@@ -1135,18 +1000,136 @@ def execute(args):
         out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
     carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    pygeoprocessing.raster_calculator(
-        [(harvested_masked_path, 1), (final_dist_raster_path, 1)],
-        calculate_npv_op, npv_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+    # create NPV and levelized cost rasters
+    pygeoprocessing.new_raster_from_base(
+        harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
+        [_TARGET_NODATA])
+    pygeoprocessing.new_raster_from_base(
+        harvested_masked_path, levelized_raster_path, _TARGET_DATA_TYPE,
+        [_TARGET_NODATA])
 
-    pygeoprocessing.raster_calculator(
-        [(harvested_masked_path, 1),
-         (final_dist_raster_path, 1)], calculate_levelized_op,
-        levelized_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+    # Open raster bands for writing
+    npv_raster = gdal.Open(npv_raster_path, gdal.GA_Update)
+    npv_band = npv_raster.GetRasterBand(1)
+    levelized_raster = gdal.Open(levelized_raster_path, gdal.GA_Update)
+    levelized_band = levelized_raster.GetRasterBand(1)
+
+    for (harvest_block_info,
+         harvest_block_data), (_, dist_block_data) in zip(
+             pygeoprocessing.iterblocks(harvested_masked_path),
+             pygeoprocessing.iterblocks(final_dist_raster_path)):
+
+        target_arr_shape = harvest_block_data.shape
+        target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
+
+        # Total cable distance converted to kilometers
+        cable_dist_arr = dist_block_data / 1000.0
+
+        # The energy value converted from MWhr/yr (Mega Watt hours as output
+        # from CK's biophysical model equations) to kWhr/yr for the
+        # valuation model
+        energy_val_arr = harvest_block_data * 1000.0
+
+        # Calculate cable cost. The break at 'circuit_break' indicates the
+        # difference in using AC and DC current systems
+        circuit_mask = (cable_dist_arr <= circuit_break)
+        cable_cost_arr = np.full(
+            target_arr_shape, 0.0, dtype=np.float32)
+        cable_cost_arr[circuit_mask] = cable_dist_arr[
+            circuit_mask] * cable_coef_ac + (mw_coef_ac * total_mega_watt)
+        cable_cost_arr[~circuit_mask] = cable_dist_arr[
+            ~circuit_mask] * cable_coef_dc + (mw_coef_dc * total_mega_watt)
+        # Mask out nodata values
+        cable_cost_arr[target_nodata_mask] = _TARGET_NODATA
+
+        # Compute the total CAP
+        cap_arr = cap_less_dist + cable_cost_arr
+
+        # Nominal total capital costs including installation and
+        # miscellaneous costs (capex_arr)
+        capex_arr = cap_arr / (1.0 - install_cost - misc_capex_cost)
+
+        # The ongoing cost of the farm
+        ongoing_capex_arr = op_maint_cost * capex_arr
+
+        # The cost to decommission the farm
+        decommish_capex_arr = decom * capex_arr / disc_time
+
+        # Initialize the summation of the revenue less the ongoing costs,
+        # adjusted for discount rate
+        npv_arr = np.full(
+            target_arr_shape, 0.0, dtype=np.float32)
+
+        # Initialize the numerator summation part of the levelized cost
+        levelized_num_arr = np.full(
+            target_arr_shape, 0.0, dtype=np.float32)
+
+        # Initialize and calculate the denominator summation value for
+        # levelized cost of energy at year 0
+        levelized_denom_arr = np.full(
+            target_arr_shape, 0.0, dtype=np.float32)
+        levelized_denom_arr = energy_val_arr / disc_const**0
+        # Calculate the total NPV and the levelized cost over the lifespan of
+        # the wind farm. Starting at year 1, because year 0 yields no revenue
+        for year in xrange(1, len(price_list)):
+            # Dollar per kiloWatt hour of that year
+            dollar_per_kwh = float(price_list[year])
+
+            # The price per kWh for energy converted to units of millions of
+            # dollars to correspond to the units for valuation costs
+            mill_dollar_per_kwh = dollar_per_kwh / 1000000.0
+
+            # The revenue in millions of dollars for the wind farm. The
+            # energy_val_arr is in kWh/yr
+            rev_arr = energy_val_arr * mill_dollar_per_kwh
+
+            # Calculate the net present value (NPV), the summation of the net
+            # revenue from power generation, adjusted for discount rate
+            npv_arr = (
+                npv_arr + (rev_arr - ongoing_capex_arr) / disc_const**year)
+
+            # Calculate the cumulative numerator summation value
+            levelized_num_arr = levelized_num_arr + (
+                (ongoing_capex_arr / disc_const**year))
+
+            # Calculate the cumulative denominator summation value
+            levelized_denom_arr = levelized_denom_arr + (
+                energy_val_arr / disc_const**year)
+
+        # Calculate the final NPV by subtracting other costs from the NPV
+        npv_arr[target_nodata_mask] = _TARGET_NODATA
+        npv_arr[~target_nodata_mask] = npv_arr[~target_nodata_mask] - \
+            decommish_capex_arr[~target_nodata_mask] - \
+            capex_arr[~target_nodata_mask]
+
+        # Calculate the levelized cost of energy, converting from millions of
+        # dollars to dollars
+        levelized_arr = (
+            (levelized_num_arr + decommish_capex_arr + capex_arr) /
+            levelized_denom_arr) * 1000000.0
+        levelized_arr[target_nodata_mask] = _TARGET_NODATA
+
+        npv_band.WriteArray(npv_arr,
+                            xoff=harvest_block_info['xoff'],
+                            yoff=harvest_block_info['yoff'])
+        npv_band.FlushCache()
+
+        levelized_band.WriteArray(levelized_arr,
+                                  xoff=harvest_block_info['xoff'],
+                                  yoff=harvest_block_info['yoff'])
+        levelized_band.FlushCache()
+
+    npv_band = None
+    npv_raster.FlushCache()
+    npv_raster = None
+
+    levelized_band = None
+    levelized_raster.FlushCache()
+    levelized_raster = None
 
     pygeoprocessing.raster_calculator([(harvested_masked_path, 1)],
                                       calculate_carbon_op, carbon_path,
-                                      gdal.GDT_Float32, _OUT_NODATA)
+                                      _TARGET_DATA_TYPE, _TARGET_NODATA)
     LOGGER.info('Wind Energy Valuation Model Completed')
 
 
@@ -1159,11 +1142,11 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     projected in meters
 
     Parameters:
-        base_point_vector_path (string): a path to an OGR point geometry
+        base_point_vector_path (str): a path to an OGR point geometry
             shapefile projected in meters
-        base_polygon_vector_path (string): a path to an OGR polygon shapefile
+        base_polygon_vector_path (str): a path to an OGR polygon shapefile
             projected in meters
-        dist_field_name (string): the name of the new distance field to be
+        dist_field_name (str): the name of the new distance field to be
             added to the attribute table of base_point_vector
 
     Returns:
@@ -1226,14 +1209,14 @@ def read_csv_wind_parameters(csv_path, parameter_list):
     are represented in the first column of the file.
 
     Parameters:
-        csv_path (string): a path to a CSV file where every row is a parameter
+        csv_path (str): a path to a CSV file where every row is a parameter
             with the parameter name in the first column followed by the value
             in the second column
-        parameter_list (list) : a List of Strings that represent the parameter
-            names to be found in 'csv_path'. These Strings will be the keys in
+        parameter_list (list) : a List of strs that represent the parameter
+            names to be found in 'csv_path'. These strs will be the keys in
             the returned dictionary
 
-    Returns: a Dictionary where the 'parameter_list' Strings are the
+    Returns: a Dictionary where the 'parameter_list' strs are the
             keys that have values pulled from 'csv_path'
 
     """
@@ -1247,84 +1230,104 @@ def read_csv_wind_parameters(csv_path, parameter_list):
     return wind_dict
 
 
-def combine_dictionaries(dict_1, dict_2):
-    """Add dict_2 to dict_1 and return in a new dictionary.
-
-    Both dictionaries should be single level with a key that points to a value.
-    If there is a key in 'dict_2' that already exists in 'dict_1' it will be
-    ignored.
-
-    Parameters:
-        dict_1 (dict): a dictionary. ex: {'ws_id':1, 'vol':65}
-        dict_2 (dict): a dictionary. ex: {'size':11, 'area':5}
-
-    Returns: a python dictionary that is the combination of 'dict_1' and
-        'dict_2'. ex: {'ws_id':1, 'vol':65, 'area':5, 'size':11}
-
-    """
-    # Make a copy of dict_1 the dictionary we want to add on to
-    dict_3 = dict_1.copy()
-    # Iterate through dict_2, the dictionary we want to get new fields/values
-    # from
-    for key, value in dict_2.iteritems():
-        # Ignore fields that already exist in dictionary we are adding to
-        if key not in dict_3.keys():
-            dict_3[key] = value
-
-    return dict_3
-
-
 def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
-                     target_dist_raster_path, target_mask_raster_path):
-    """Bound a raster whose pixels are distances by a min and max distance.
+                     target_raster_path):
+    """Create a raster whose pixel values are bound by min and max distances.
 
     Parameters:
-        base_raster_path (string): path to a raster with distance values.
+        base_raster_path (str): path to a raster with distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
-        target_dist_raster_path (string): path output to the raster
-            converted from distance transform ranks to distance values in
-            meters.
-        target_mask_raster_path (string): path output to the raster masked
-            by distance values.
+        target_raster_path (str): path output to the raster masked by
+            distance values.
         out_nodata (float): the nodata value of the raster.
 
     Returns:
         None.
 
     """
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
+    mean_pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
+        'mean_pixel_size']
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
 
-    def dist_op(dist_pix):
-        """Raster_calculator operation that multiplies distance transform
-            values by a cell size, to get distances in meters"""
-        return np.where(dist_pix == raster_nodata, out_nodata,
-                        dist_pix * mean_pixel_size)
+    def dist_mask_op(dist_arr):
+        """Mask & multiply distance values by min/max values & cell size."""
+        out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
+        valid_pixels_mask = ((dist_arr != raster_nodata) &
+                             (dist_arr >= min_dist) & (dist_arr <= max_dist))
+        out_array[
+            valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
+        return out_array
 
-    def mask_op(dist_pix):
-        """Raster_calculator operation to bound dist_pix values between
-            two integer values"""
-        return np.where(((dist_pix >= max_dist) | (dist_pix <= min_dist)),
-                        out_nodata, dist_pix)
+    pygeoprocessing.raster_calculator([(base_raster_path, 1)], dist_mask_op,
+                                      target_raster_path, _TARGET_DATA_TYPE,
+                                      out_nodata)
 
-    pygeoprocessing.raster_calculator([(base_raster_path, 1)], dist_op,
-                                      target_dist_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
 
-    pygeoprocessing.raster_calculator([(target_dist_raster_path, 1)], mask_op,
-                                      target_mask_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
+def create_distance_raster(base_raster_path, base_vector_path,
+                           target_dist_raster_path, work_dir):
+    """Create and rasterize vector onto a raster, and calculate dist transform.
+
+    Create a raster where the pixel values represent the euclidean distance to
+    the vector.
+
+    Parameters:
+        base_raster_path (str): path to raster to create a new raster from.
+        base_vector_path (str): path to vector to be rasterized.
+        target_dist_raster_path (str): path to raster with distance transform.
+        work_dir (str): path to create a temp folder for saving files.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info("Starting create_distance_raster at %s.",
+                target_dist_raster_path)
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
+
+    rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
+
+    # Create a new raster based on the given base raster and fill with 0's
+    # to set up for distance transform
+    pygeoprocessing.new_raster_from_base(
+        base_raster_path,
+        rasterized_raster_path,
+        gdal.GDT_Byte,
+        band_nodata_list=[255],
+        fill_value_list=[0])
+
+    # Burn vector onto the raster to set up for distance transform
+    pygeoprocessing.rasterize(
+        base_vector_path,
+        rasterized_raster_path,
+        burn_values=[1],
+        option_list=["ALL_TOUCHED=TRUE"])
+
+    # Calculate euclidean distance transform
+    pygeoprocessing.distance_transform_edt((rasterized_raster_path, 1),
+                                           target_dist_raster_path)
+
+    # Set the nodata value of output raster to _TARGET_NODATA
+    target_dist_raster = gdal.Open(target_dist_raster_path, gdal.GA_Update)
+    for band in range(1, target_dist_raster.RasterCount+1):
+        target_band = target_dist_raster.GetRasterBand(band)
+        target_band.SetNoDataValue(_TARGET_NODATA)
+        target_band.FlushCache()
+        target_band = None
+    target_dist_raster.FlushCache()
+    target_dist_raster = None
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+    LOGGER.info("Finished create_distance_raster at %s.",
+                target_dist_raster_path)
 
 
 def read_csv_wind_data(wind_data_path, hub_height):
     """Unpack the csv wind data into a dictionary.
 
     Parameters:
-        wind_data_path (string): a path for the csv wind data file with header
+        wind_data_path (str): a path for the csv wind data file with header
             of: "LONG","LATI","LAM","K","REF"
         hub_height (int): the hub height to use for calculating Weibull
             parameters and wind energy values
@@ -1365,8 +1368,8 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
             0 : {'TYPE':GRID, 'LATI':41, 'LONG':-73, ...},
             1 : {'TYPE':GRID, 'LATI':42, 'LONG':-72, ...},
             2 : {'TYPE':GRID, 'LATI':43, 'LONG':-72, ...},
-        layer_name (string): a python string for the name of the layer
-        target_vector_path (string): a path to the output path of the point
+        layer_name (str): a python str for the name of the layer
+        target_vector_path (str): a path to the output path of the point
             vector.
 
     Returns:
@@ -1374,20 +1377,18 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
     """
     # If the target_vector_path exists delete it
-    if os.path.isfile(target_vector_path):
-        os.remove(target_vector_path)
-    elif os.path.isdir(target_vector_path):
-        shutil.rmtree(target_vector_path)
-
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
+    if os.path.exists(target_vector_path):
+        output_driver.Delete(target_vector_path)
+
+    target_vector = output_driver.CreateDataSource(target_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    output_layer = output_datasource.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
+    output_layer = target_vector.CreateLayer(layer_name, source_sr,
+                                             ogr.wkbPoint)
 
     # Outer unique keys
     outer_keys = base_dict_data.keys()
@@ -1398,24 +1399,17 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # Create a dictionary to store what variable types the fields are
     type_dict = {}
     for field in field_list:
+        field_type = None
         # Get a value from the field
         val = base_dict_data[outer_keys[0]][field]
-        # Check to see if the value is a String of characters or a number. This
+        # Check to see if the value is a str of characters or a number. This
         # will determine the type of field created in the shapefile
         if isinstance(val, str):
             type_dict[field] = 'str'
-        else:
-            type_dict[field] = 'number'
-
-    for field in field_list:
-        field_type = None
-        # Distinguish if the field type is of type String or other. If Other,
-        # we are assuming it to be a float
-        if type_dict[field] == 'str':
             field_type = ogr.OFTString
         else:
+            type_dict[field] = 'number'
             field_type = ogr.OFTReal
-
         output_field = ogr.FieldDefn(field, field_type)
         output_layer.CreateField(output_field)
 
@@ -1448,9 +1442,9 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
     If base raster is not already projected, choose a suitable UTM zone.
 
     Parameters:
-        base_raster_path (string): path to base raster.
-        clip_vector_path (string): path to base clip vector.
-        target_raster_path (string): path to output clipped raster.
+        base_raster_path (str): path to base raster.
+        clip_vector_path (str): path to base clip vector.
+        target_raster_path (str): path to output clipped raster.
 
     Returns:
         None.
@@ -1559,8 +1553,8 @@ def wind_data_to_point_vector(dict_data,
             2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
             3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
             }
-        layer_name (string): the name of the layer.
-        target_vector_path (string): path to the output destination of the
+        layer_name (str): the name of the layer.
+        target_vector_path (str): path to the output destination of the
             shapefile.
 
     Returns:
@@ -1575,14 +1569,14 @@ def wind_data_to_point_vector(dict_data,
         driver.DeleteDataSource(target_vector_path)
 
     LOGGER.debug('Creating new datasource')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    output_datasource = output_driver.CreateDataSource(target_vector_path)
+    target_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_datasource = target_driver.CreateDataSource(target_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    target_layer = output_datasource.CreateLayer(layer_name, source_sr,
+    target_layer = target_datasource.CreateLayer(layer_name, source_sr,
                                                  ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
@@ -1606,47 +1600,44 @@ def wind_data_to_point_vector(dict_data,
         geom = ogr.Geometry(ogr.wkbPoint)
         geom.AddPoint_2D(longitude, latitude)
 
-        output_feature = ogr.Feature(target_layer.GetLayerDefn())
-        target_layer.CreateFeature(output_feature)
+        target_feature = ogr.Feature(target_layer.GetLayerDefn())
+        target_layer.CreateFeature(target_feature)
 
         for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
+            field_index = target_feature.GetFieldIndex(field_name)
+            target_feature.SetField(field_index, point_dict[field_name])
 
-        output_feature.SetGeometryDirectly(geom)
-        target_layer.SetFeature(output_feature)
-        output_feature = None
+        target_feature.SetGeometryDirectly(geom)
+        target_layer.SetFeature(target_feature)
+        target_feature = None
 
     LOGGER.debug('Leaving wind_data_to_point_vector')
-    output_datasource = None
+    target_datasource = None
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
-                              target_vector_path, temp_dir, suffix):
+                              target_vector_path, work_dir):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
-        base_vector_path (string): path to a base vector
-        clip_vector_path (string): path to an AOI vector
-        target_vector_path (string): desired output path to write the
+        base_vector_path (str): path to a base vector
+        clip_vector_path (str): path to an AOI vector
+        target_vector_path (str): desired output path to write the
             clipped base against AOI in AOI's coordinate system.
-        temp_dir (string): path to save the intermediate projected file.
-        suffix (string): a string to append at the end of the output files.
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None.
     """
     LOGGER.info('Entering clip_and_reproject_vector')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
 
-    # Get the AOIs spatial reference as strings in Well Known Text
+    # Get the AOIs spatial reference as strs in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection']
 
     # Create path for the reprojected shapefile
-    reprojected_vector_path = os.path.join(
-        temp_dir,
-        os.path.basename(base_vector_path).replace('.shp', '_projected%s.shp')
-        % suffix)
+    reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.tif')
 
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
@@ -1656,6 +1647,7 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     # Clip the shapefile to the AOI
     clip_features(reprojected_vector_path, clip_vector_path,
                   target_vector_path)
+    shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
 
@@ -1665,10 +1657,10 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
         projection.
 
         Parameters:
-            base_vector_path (string): path to a point vector to clip
-            clip_vector_path (string): path to a single polygon vector for
+            base_vector_path (str): path to a point vector to clip
+            clip_vector_path (str): path to a single polygon vector for
                 clipping.
-            target_vector_path (string): output path for the clipped vector.
+            target_vector_path (str): output path for the clipped vector.
 
         Returns:
             None.
@@ -1731,26 +1723,28 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
-                                  target_dist_raster_path, suffix):
+                                  target_dist_raster_path, work_dir):
     """Creates a distance transform raster.
 
     The distances are calculated based on the shortest distances of each point
     feature in 'base_point_vector_path' and each feature's 'L2G' field.
 
     Parameters:
-        base_point_vector_path (string): a path to an OGR shapefile that has
+        base_point_vector_path (str): path to an OGR shapefile that has
             the desired features to get the distance from.
-        base_raster_path (string): a path to a GDAL raster that is used to
-            get the proper extents and configuration for the new raster
-        target_dist_raster_path (string) a path to a GDAL raster for the final
-            distance transform raster output
-        suffix (string): a string to append at the end of the output files.
+        base_raster_path (str): path to a GDAL raster that is used to
+            get the proper extents and configuration for the new raster.
+        target_dist_raster_path (str): path to a GDAL raster for the final
+            distance transform raster output.
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None.
 
     """
     LOGGER.info('Starting calculate_distances_land_grid.')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-land')
+
     # Open the point shapefile and get the layer
     base_point_vector = gdal.OpenEx(base_point_vector_path)
     base_point_layer = base_point_vector.GetLayer()
@@ -1761,17 +1755,13 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     land_point_dist_raster_path_list = []
 
     # Get pixel size
-    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2
+    mean_pixel_size = pygeoprocessing.get_raster_info(base_raster_path)[
+        'mean_pixel_size']
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    single_feature_vector_path = os.path.join(
-        os.path.dirname(base_point_vector_path),
-        os.path.basename(base_point_vector_path).replace(
-            '.shp', '_single_feature.shp'))
+    single_feature_vector_path = os.path.join(temp_dir, 'single_feature.shp')
     target_vector = output_driver.CreateDataSource(single_feature_vector_path)
 
     # Create the new layer for target_vector using same name and
@@ -1810,34 +1800,12 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         output_feature.SetFrom(point_feature, False)
         target_layer.CreateFeature(output_feature)
         target_vector.SyncToDisk()
-
-        base_point_raster_path = os.path.join(
-            os.path.dirname(base_point_vector_path),
-            os.path.basename(base_point_vector_path).replace(
-                '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
-        # Create a new raster based on a biophysical output and fill with 0's
-        # to set up for distance transform
-        pygeoprocessing.new_raster_from_base(
-            base_raster_path,
-            base_point_raster_path,
-            gdal.GDT_Float32, [_OUT_NODATA],
-            fill_value_list=[0.0])
-        # Burn single feature onto the raster with value of 1 to set up for
-        # distance transform
-        pygeoprocessing.rasterize(
-            single_feature_vector_path,
-            base_point_raster_path,
-            burn_values=[1.0],
-            option_list=["ALL_TOUCHED=TRUE"])
-
         target_layer.DeleteFeature(point_feature.GetFID())
 
-        dist_raster_path = os.path.join(
-            os.path.dirname(base_point_raster_path), 'distance_rasters',
-            os.path.basename(base_point_raster_path).replace(
-                '.tif', '_dist_%s.tif' % feature_index))
-        pygeoprocessing.distance_transform_edt((base_point_raster_path, 1),
-                                               dist_raster_path)
+        dist_raster_path = os.path.join(temp_dir,
+                                        'dist_%s.tif' % feature_index)
+        create_distance_raster(base_raster_path, single_feature_vector_path,
+                               dist_raster_path, work_dir)
         # Add each features distance transform result to list
         land_point_dist_raster_path_list.append(dist_raster_path)
 
@@ -1869,13 +1837,15 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     pygeoprocessing.raster_calculator(
         [(path, 1)
          for path in land_point_dist_raster_path_list], _min_land_ocean_dist,
-        target_dist_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+        target_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
     LOGGER.info('Finished calculate_distances_land_grid.')
 
 
 def calculate_distances_grid(grid_vector_path, harvested_masked_path,
-                             final_dist_raster_path, suffix):
+                             final_dist_raster_path, work_dir):
     """Creates a distance transform raster from an OGR shapefile.
 
     The function first burns the features from 'grid_vector_path' onto a raster
@@ -1884,69 +1854,53 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     to distance in meters.
 
     Parameters:
-        grid_vector_path (string) a path to an OGR shapefile that has the
+        grid_vector_path (str) a path to an OGR shapefile that has the
             desired features to get the distance from
-        harvested_masked_path (string): a path to a GDAL raster that is used to
+        harvested_masked_path (str): a path to a GDAL raster that is used to
             get the proper extents and configuration for new rasters
-        final_dist_raster_path (string) a path to a GDAL raster for the final
+        final_dist_raster_path (str) a path to a GDAL raster for the final
             distance transform raster output
-        suffix (string): a string to append at the end of output filenames.
+        work_dir (str): path to create a temp folder for saving files.
 
     Returns:
         None
 
     """
-    grid_point_raster_path = os.path.join(
-        os.path.dirname(grid_vector_path),
-        os.path.basename(grid_vector_path).replace(
-            '%s.shp' % suffix, '_rasterized%s.tif' % suffix))
+    LOGGER.info('Starting calculate_distances_land_grid.')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-grid-')
 
     # Get nodata value to use in raster creation and masking
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
         'nodata'][0]
     # Get pixel size from biophysical output
-    pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
-        'pixel_size']
-    mean_pixel_size = (abs(pixel_size[0]) + abs(pixel_size[1])) / 2.0
+    mean_pixel_size = pygeoprocessing.get_raster_info(harvested_masked_path)[
+        'mean_pixel_size']
 
-    # Create a new raster based on harvested_masked_path and fill with 0's
-    # to set up for distance transform
-    pygeoprocessing.new_raster_from_base(
-        harvested_masked_path,
-        grid_point_raster_path,
-        gdal.GDT_Float32, [out_nodata],
-        fill_value_list=[0.0])
-    # Burn features from grid_vector_path onto raster with values of 1 to
-    # set up for distance transform
-    pygeoprocessing.rasterize(
-        grid_vector_path,
-        grid_point_raster_path,
-        burn_values=[1.0],
-        option_list=["ALL_TOUCHED=TRUE"])
+    grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
 
-    grid_poly_dist_raster_path = os.path.join(
-        os.path.dirname(grid_point_raster_path),
-        os.path.basename(grid_point_raster_path).replace(
-            '%s.tif' % suffix, '_dist%s.tif' % suffix))
-    # Run distance transform
-    pygeoprocessing.distance_transform_edt((grid_point_raster_path, 1),
-                                           grid_poly_dist_raster_path)
+    create_distance_raster(harvested_masked_path, grid_vector_path,
+                           grid_poly_dist_raster_path, work_dir)
 
     def dist_meters_op(tmp_dist):
         """vectorize_dataset operation that multiplies by the pixel size
 
         Parameters:
-            tmp_dist (np.ndarray): an nd numpy array
+            tmp_dist (np.array): an nd numpy array
 
         Returns:
-            an nd numpy array multiplied by a pixel size
+            out_array (np.array): an array multiplied by a pixel size
         """
-        return np.where(tmp_dist != out_nodata, tmp_dist * mean_pixel_size,
-                        out_nodata)
+        out_array = np.full(tmp_dist.shape, out_nodata, dtype=np.float32)
+        valid_pixels_mask = (tmp_dist != out_nodata)
+        out_array[
+            valid_pixels_mask] = tmp_dist[valid_pixels_mask] * mean_pixel_size
+        return out_array
 
     pygeoprocessing.raster_calculator([(grid_poly_dist_raster_path, 1)],
                                       dist_meters_op, final_dist_raster_path,
-                                      gdal.GDT_Float32, out_nodata)
+                                      _TARGET_DATA_TYPE, out_nodata)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
@@ -1957,7 +1911,7 @@ def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
     path as an input and opens it before sending it along.
 
     Parameters:
-        dataset_path (string): a path to a gdal dataset
+        dataset_path (str): a path to a gdal dataset
         All other parameters pass along
 
     Returns:
@@ -1996,13 +1950,13 @@ def validate(args, limit_to=None):
     Parameters:
         args (dict): The args dictionary.
 
-        limit_to=None (str or None): If a string key, only this args parameter
+        limit_to=None (str or None): If a str key, only this args parameter
             will be validated.  If ``None``, all args parameters will be
             validated.
 
     Returns:
         A list of tuples where tuple[0] is an iterable of keys that the error
-        message applies to and tuple[1] is the string validation warning.
+        message applies to and tuple[1] is the str validation warning.
 
     """
     warnings = []
@@ -2029,8 +1983,8 @@ def validate(args, limit_to=None):
         required_keys.extend([
             'discount_rate',
             'foundation_cost',
-            'avg_grid_distance',
         ])
+
         if limit_to in ('price_table', None):
             if 'price_table' in args and args['price_table'] not in (True,
                                                                      False):
@@ -2040,6 +1994,23 @@ def validate(args, limit_to=None):
                 required_keys.append('wind_schedule')
             else:
                 required_keys.extend(['wind_price', 'rate_change'])
+
+        missing_distance_key = 2
+        try:
+            if args['avg_grid_distance'] in ('', None):
+                missing_distance_key -= 1
+        except KeyError:
+            missing_distance_key -= 1
+            try:
+                if args['grid_points_path'] in ('', None):
+                    missing_distance_key -= 1
+            except KeyError:
+                missing_distance_key -= 1
+        if missing_distance_key > 1:
+            return [
+                'Either avg_grid_distance or grid_points_path must be '
+                'provided.'
+            ]
 
     for required_key in required_keys:
         try:
@@ -2207,7 +2178,7 @@ def validate(args, limit_to=None):
             warnings.append((['grid_points_path'], 'Could not open CSV file.'))
 
     if limit_to in ('wind_schedule', None) and ('price_table' in args and
-                                                args['price_table'] == True):
+                                                args['price_table'] is True):
         try:
             table_dict = utils.build_lookup_from_csv(args['wind_schedule'],
                                                      'year')
@@ -2220,6 +2191,7 @@ def validate(args, limit_to=None):
                                   (', '.join(missing_fields)))))
 
             try:
+                year_list = []
                 for year_key, record in table_dict.iteritems():
                     try:
                         if float(year_key) != int(float(year_key)):
@@ -2228,6 +2200,8 @@ def validate(args, limit_to=None):
                         warnings.append(
                             (['wind_schedule'],
                              ('Year %s must be an integer.' % year_key)))
+                    else:
+                        year_list.append(year_key)
 
                     try:
                         float(record['price'])
@@ -2235,6 +2209,13 @@ def validate(args, limit_to=None):
                         warnings.append(
                             (['wind_schedule'],
                              ('Price %s must be a number' % record['price'])))
+
+                duplicate_years = set(
+                    [year for year in year_list if year_list.count(year) > 1])
+                if duplicate_years:
+                    warnings.append(
+                        (['wind_schedule'], "The following year(s) showed up "
+                         "more than once: %s." % list(duplicate_years)))
 
             except KeyError:
                 # missing keys are reported earlier.
