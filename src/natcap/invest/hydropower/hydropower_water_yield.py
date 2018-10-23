@@ -101,10 +101,10 @@ def execute(args):
         None
 
     """
-    LOGGER.info('Validating arguments')
-    invalid_parameters = validate(args)
-    if invalid_parameters:
-        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+    # LOGGER.info('Validating arguments')
+    # invalid_parameters = validate(args)
+    # if invalid_parameters:
+    #     raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     if 'valuation_table_path' in args and args['valuation_table_path'] != '':
         LOGGER.info(
@@ -150,7 +150,7 @@ def execute(args):
     seasonality_constant = float(args['seasonality_constant'])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(output_dir, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -171,11 +171,20 @@ def execute(args):
 
     target_pixel_size = pygeoprocessing.get_raster_info(
         args['lulc_path'])['pixel_size']
-    pygeoprocessing.align_and_resize_raster_stack(
-        base_raster_path_list, aligned_raster_path_list,
+    align_raster_stack_task = graph.add_task(
+        pygeoprocessing.align_and_resize_raster_stack,
+        args=(base_raster_path_list, aligned_raster_path_list,
         ['near'] * len(base_raster_path_list), target_pixel_size,
-        'intersection', raster_align_index=4,
-        base_vector_path_list=[sheds_path])
+        'intersection'),
+        kwargs={'raster_align_index':4, 'base_vector_path_list':[sheds_path]},
+        target_path_list=aligned_raster_path_list,
+        task_name='align_raster_stack')
+    graph.join()
+    # pygeoprocessing.align_and_resize_raster_stack(
+    #     base_raster_path_list, aligned_raster_path_list,
+    #     ['near'] * len(base_raster_path_list), target_pixel_size,
+    #     'intersection', raster_align_index=4,
+    #     base_vector_path_list=[sheds_path])
 
     lulc_info = pygeoprocessing.get_raster_info(clipped_lulc_path)
 
