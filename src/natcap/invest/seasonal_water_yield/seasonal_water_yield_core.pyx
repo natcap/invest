@@ -10,8 +10,9 @@ import pygeoprocessing
 import numpy
 cimport numpy
 cimport cython
-import osgeo
 from osgeo import gdal
+from osgeo import ogr
+from osgeo import osr
 from cython.operator cimport dereference as deref
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
@@ -20,6 +21,7 @@ from cython.operator cimport preincrement as inc
 from libcpp.list cimport list as clist
 from libcpp.set cimport set as cset
 from libcpp.pair cimport pair
+from libcpp.stack cimport stack
 
 from libc.time cimport time as ctime
 cdef extern from "time.h" nogil:
@@ -72,6 +74,11 @@ cdef int* NEIGHBOR_OFFSET_ARRAY = [
     0, 1,  # 6
     1, 1  # 7
     ]
+
+# index into this array with a direction and get the index for the reverse
+# direction. Useful for determining the direction a neighbor flows into a
+# cell.
+cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
 
 # this ctype is used to store the block ID and the block buffer as one object
 # inside Managed Raster
@@ -389,8 +396,8 @@ def calculate_local_recharge(
         et0_path_list (list): path to monthly ET0 rasters. (model input)
         qfm_path_list (list): path to monthly quickflow rasters calculated by
             Equation [1].
-        flow_dir_mfd_path (str): path to PyGeoprocessing Multiple Flow
-            Direction raster.
+        flow_dir_mfd_path (str): path to a PyGeoprocessing Multiple Flow
+            Direction raster indicating flow directions for this analysis.
         alpha_month (list): fraction of upslope annual available recharge that
             is available in month m.
         beta_i (float):  fraction of the upgradient subsidy that is available
@@ -414,31 +421,54 @@ def calculate_local_recharge(
             None.
 
     """
+    cdef int flow_dir_nodata
+    cdef int peak_pixel
+    cdef int center_val
+    cdef int xi, yi, xoff, yoff, xi_root, yi_root, xi_n, yi_n, n_flow_dir
+    cdef int win_xsize, win_ysize, n_dir
+    cdef int raster_x_size, raster_y_size
+    cdef stack[pair[int, int]] peak_cell_stack
+
     # used for time-delayed logging
     cdef time_t last_log_time
     last_log_time = ctime(NULL)
 
-    LOGGER.debug('calculate_local_recharge')
-
-    # determine dem nodata in the working type, or set an improbable value
-    # if one can't be determined
+    # we know the PyGeoprocessing MFD raster flow dir type is a 32 bit int.
     flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
-    base_nodata = flow_dir_raster_info['nodata'][0]
-    if base_nodata is not None:
-        # cast to a float64 since that's our operating array type
-        flow_dir_nodata = numpy.float64(base_nodata)
-    else:
-        # pick some very improbable value since it's hard to deal with NaNs
-        flow_dir_nodata = IMPROBABLE_FLOAT_NOATA
+    flow_dir_nodata = flow_dir_raster_info['nodata'][0]
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
-
     cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
 
-    cdef numpy.ndarray alpha_month_array = numpy.array(
-        [x[1] for x in sorted(alpha_month.iteritems())])
+    target_nodata = -1e32
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_li_path, gdal.GDT_Float32, [target_nodata],
+        fill_value_list=[target_nodata])
+    cdef _ManagedRaster target_li_raster = _ManagedRaster(
+        target_li_path, 1, 1)
+
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_li_avail_path, gdal.GDT_Float32,
+        [target_nodata], fill_value_list=[target_nodata])
+    cdef _ManagedRaster target_li_avail_raster = _ManagedRaster(
+        target_li_avail_path, 1, 1)
+
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_l_sum_avail_path, gdal.GDT_Float32,
+        [target_nodata], fill_value_list=[target_nodata])
+    cdef _ManagedRaster target_l_sum_avail_raster = _ManagedRaster(
+        target_l_sum_avail_path, 1, 1)
+
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_aet_path, gdal.GDT_Float32, [target_nodata],
+        fill_value_list=[target_nodata])
+    cdef _ManagedRaster target_aet_raster = _ManagedRaster(
+        target_aet_path, 1, 1)
+
+    #cdef numpy.ndarray alpha_month_array = numpy.array([x[1] for x in sorted(alpha_month.iteritems())])
+
 
     for offset_dict in pygeoprocessing.iterblocks(
-            dem_path, offset_only=True, largest_block=0):
+            flow_dir_mfd_path, offset_only=True, largest_block=0):
         win_xsize = offset_dict['win_xsize']
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
@@ -447,51 +477,54 @@ def calculate_local_recharge(
         if ctime(NULL) - last_log_time > 5.0:
             last_log_time = ctime(NULL)
             current_pixel = xoff + yoff * raster_x_size
-            LOGGER.info('%.2f%% complete', 100.0 * current_pixel / <float>(
-                raster_x_size * raster_y_size))
+            LOGGER.info(
+                'peak point detection %.2f%% complete',
+                100.0 * current_pixel / <float>(
+                    raster_x_size * raster_y_size))
 
-        # search block for locally undrained pixels
-        for yi in xrange(1, win_ysize+1):
-            for xi in xrange(1, win_xsize+1):
-                xi_root = xi-1+xoff
-                yi_root = yi-1+yoff
-                center_val = dem_raster.get(yi_root+yi, xi_root+xi)
-                if center_val == dem_nodata:
+        # search block for a peak pixel where no other pixel drains to it.
+        for yi in xrange(win_ysize):
+            yi_root = yoff+yi
+            for xi in xrange(win_xsize):
+                xi_root = xoff+xi
+                center_val = <int>flow_raster.get(xi_root, yi_root)
+                if center_val == flow_dir_nodata:
                     continue
-
                 # search neighbors for downhill or nodata
-                downhill_neighbor = 0
-                nodata_neighbor = 0
-
-                for i_n in xrange(8):
-                    xi_n = xi_root+NEIGHBOR_OFFSET_ARRAY[2*i_n]
-                    yi_n = yi_root+NEIGHBOR_OFFSET_ARRAY[2*i_n+1]
+                peak_pixel = 1
+                for n_dir in xrange(8):
+                    # searching around the pattern:
+                    # 321
+                    # 4x0
+                    # 567
+                    xi_n = xi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                    yi_n = yi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
                     if (xi_n < 0 or xi_n >= raster_x_size or
                             yi_n < 0 or yi_n >= raster_y_size):
-                        # it'll drain off the edge of the raster
-                        nodata_neighbor = 1
+                        continue
+                    n_flow_dir = <int>flow_raster.get(xi_n, yi_n)
+                    if (0xF & (n_flow_dir >> (
+                            4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
+                        # pixel flows inward, not a peak
+                        peak_pixel = 0
                         break
-                    n_height = dem_raster.get(xi_n, yi_n)
-                    if n_height == dem_nodata:
-                        # it'll drain to nodata
-                        nodata_neighbor = 1
-                        break
-                    if n_height < center_val:
-                        # it'll drain downhill
-                        downhill_neighbor = 1
-                        break
-                if not nodata_neighbor or downhill_neighbor:
-                    # this can't be a drain
-                    continue
-                LOGGER.debug('found a drain at %s %s', xi_root, yi_root)
-                outlet_cell_deque.push(yi_root*raster_x_size+xi_root)
+                if peak_pixel:
+                    peak_cell_stack.push(
+                        pair[int, int](xi_root, yi_root))
+                    target_l_sum_avail_raster.set(
+                        xi_root, yi_root, 0.0)
 
+    while peak_cell_stack.size() > 0:
+        LOGGER.debug(peak_cell_stack.top())
+        peak_cell_stack.pop()
+    """
     route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, target_li_path,
         target_li_avail_path, target_l_sum_avail_path, target_aet_path,
         alpha_month_array, beta_i, gamma, qfm_path_list, stream_path,
         outlet_cell_deque)
-
+    """
+"""
 def route_baseflow_sum(
         dem_path, l_path, l_avail_path, l_sum_path,
         stream_path, b_sum_path):
@@ -500,7 +533,7 @@ def route_baseflow_sum(
 
     cdef time_t start
     time(&start)
-
+"""
 
 def _generate_read_bounds(offset_dict, raster_x_size, raster_y_size):
     """Helper function to expand GDAL memory block read bound by 1 pixel.
@@ -546,6 +579,7 @@ def _generate_read_bounds(offset_dict, raster_x_size, raster_y_size):
     return (xa, xb, ya, yb), target_offset_dict
 
 
+"""
 cdef route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, li_path,
         li_avail_path, l_sum_avail_path, aet_path, numpy.ndarray alpha_month,
@@ -892,3 +926,4 @@ cdef route_local_recharge(
         cache_dirty[row_index, col_index] = 1
 
     block_cache.flush_cache()
+"""
