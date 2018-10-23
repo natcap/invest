@@ -179,7 +179,6 @@ def execute(args):
         kwargs={'raster_align_index':4, 'base_vector_path_list':[sheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
-    graph.join()
     # pygeoprocessing.align_and_resize_raster_stack(
     #     base_raster_path_list, aligned_raster_path_list,
     #     ['near'] * len(base_raster_path_list), target_pixel_size,
@@ -208,40 +207,52 @@ def execute(args):
         demand_lucodes = set(demand_dict.keys())
         demand_lucodes.add(lulc_nodata)
         LOGGER.debug('demand_lucodes %s', demand_lucodes)
-        missing_demand_lucodes = set()
+        # missing_demand_lucodes = set()
     else:
-        missing_demand_lucodes = None
+        # missing_demand_lucodes = None
+        demand_lucodes = None
 
     bio_lucodes = set(bio_dict.keys())
     bio_lucodes.add(lulc_nodata)
     LOGGER.debug('bio_lucodes %s', bio_lucodes)
-    missing_bio_lucodes = set()
-    # these are such common errors we'll explicitly check before runtime
-    for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_path):
-        unique_codes = set(numpy.unique(lulc_block))
-        missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
-        if missing_demand_lucodes is not None:
-            missing_demand_lucodes.update(
-                unique_codes.difference(demand_lucodes))
+    # missing_bio_lucodes = set()
 
-    missing_message = ''
-    if missing_bio_lucodes:
-        missing_message += (
-            'The following landcover codes were found in the landcover '
-            'raster but they did not have corresponding entries in the '
-            'biophysical table. Check your biophysical table to see if they '
-            'are missing. %s.\n\n' % ', '.join([str(x) for x in sorted(
-                missing_bio_lucodes)]))
-    if missing_demand_lucodes:
-        missing_message += (
-            'The following landcover codes were found in the landcover '
-            'raster but they did not have corresponding entries in the water '
-            'demand table. Check your demand table to see if they are '
-            'missing. "%s".\n\n' % ', '.join([str(x) for x in sorted(
-                missing_demand_lucodes)]))
+    def _check_missing_lucodes(clipped_lulc_path, demand_lucodes, bio_lucodes):
+        # these are such common errors we'll explicitly check before runtime
+        missing_bio_lucodes = set()
+        missing_demand_lucodes = set()
+        for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_path):
+            unique_codes = set(numpy.unique(lulc_block))
+            missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
+            if demand_lucodes is not None:
+                missing_demand_lucodes.update(
+                    unique_codes.difference(demand_lucodes))
 
-    if missing_message:
-        raise ValueError(missing_message)
+        missing_message = ''
+        if missing_bio_lucodes:
+            missing_message += (
+                'The following landcover codes were found in the landcover '
+                'raster but they did not have corresponding entries in the '
+                'biophysical table. Check your biophysical table to see if they '
+                'are missing. %s.\n\n' % ', '.join([str(x) for x in sorted(
+                    missing_bio_lucodes)]))
+        if missing_demand_lucodes:
+            missing_message += (
+                'The following landcover codes were found in the landcover '
+                'raster but they did not have corresponding entries in the water '
+                'demand table. Check your demand table to see if they are '
+                'missing. "%s".\n\n' % ', '.join([str(x) for x in sorted(
+                    missing_demand_lucodes)]))
+
+        if missing_message:
+            raise ValueError(missing_message)
+
+    check_missing_lucodes_task = graph.add_task(
+        _check_missing_lucodes,
+        args=(clipped_lulc_path, demand_lucodes, bio_lucodes),
+        dependent_task_list=[align_raster_stack_task],
+        task_name='check_missing_lucodes_task')
+    graph.join()
 
     sub_sheds_path = None
     # If subwatersheds was input get the path
