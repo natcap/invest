@@ -672,12 +672,13 @@ def execute(args):
 
         Parameters:
             *rasters (list): a list of values as follows:
-                rasters[0] - the desired output value (required)
+                rasters[0] - the density value (required)
                 rasters[1] - the depth mask value (required)
                 rasters[2] - the distance mask value (optional)
 
         Returns:
-            a float of either _TARGET_NODATA or rasters[0]
+            out_array (np.array): an array of either _TARGET_NODATA or density
+                values from rasters[0]
 
         """
         out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
@@ -975,10 +976,10 @@ def execute(args):
         """Calculate the carbon offset from harvested array.
 
         Parameters:
-            harvested_arr: (np.ndarray) an nd numpy array
+            harvested_arr (np.array): an array of harvested energy values
 
         Returns:
-            an nd numpy array of carbon offset values
+            out_array (np.array): an array of carbon offset values
 
         """
         out_array = np.full(
@@ -1884,7 +1885,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
         """vectorize_dataset operation that multiplies by the pixel size
 
         Parameters:
-            tmp_dist (np.ndarray): an nd numpy array
+            tmp_dist (np.array): an nd numpy array
 
         Returns:
             out_array (np.array): an array multiplied by a pixel size
