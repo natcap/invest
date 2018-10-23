@@ -297,21 +297,32 @@ def execute(args):
             rkls_task, cp_task, drainage_raster_path_task[1]],
         task_name='calculate USLE')
 
+    bar_path_task_map = {}
+    for factor_path, factor_task, accumulation_path, out_bar_path, bar_id in [
+            (f_reg['thresholded_w_path'], w_task,
+             f_reg['w_accumulation_path'],
+             f_reg['w_bar_path'],
+             'w_bar'),
+            (f_reg['thresholded_slope_path'], threshold_slope_task,
+             f_reg['s_accumulation_path'],
+             f_reg['s_bar_path'],
+             's_bar')]:
+        bar_task = task_graph.add_task(
+            func=_calculate_bar_factor,
+            args=(
+                f_reg['flow_direction_path'], factor_path,
+                f_reg['flow_accumulation_path'],
+                accumulation_path, out_bar_path),
+            target_path_list=[out_bar_path],
+            dependent_task_list=[
+                align_task, factor_task, flow_accumulation_task,
+                flow_dir_task],
+            task_name='calculate %s' % bar_id)
+        bar_path_task_map[bar_id] = (out_bar_path, bar_task)
+
     task_graph.close()
     task_graph.join()
     return
-
-    LOGGER.info('calculating w_bar')
-    for factor_path, accumulation_path, out_bar_path in [
-            (f_reg['thresholded_w_path'], f_reg['w_accumulation_path'],
-             f_reg['w_bar_path']),
-            (f_reg['thresholded_slope_path'], f_reg['s_accumulation_path'],
-             f_reg['s_bar_path'])]:
-        _calculate_bar_factor(
-            f_reg['aligned_dem_path'], factor_path,
-            f_reg['flow_accumulation_path'], f_reg['flow_direction_path'],
-            f_reg['zero_absorption_source_path'], f_reg['loss_path'],
-            accumulation_path, out_bar_path)
 
     LOGGER.info('calculating d_up')
     _calculate_d_up(
@@ -687,9 +698,8 @@ def _calculate_usle(
 
 
 def _calculate_bar_factor(
-        dem_path, factor_path, flow_accumulation_path, flow_direction_path,
-        zero_absorption_source_path, loss_path, accumulation_path,
-        out_bar_path):
+        flow_direction_path, factor_path, flow_accumulation_path,
+        accumulation_path, out_bar_path):
     """Route user defined source across DEM.
 
     Used for calcualting S and W bar in the SDR operation.
@@ -712,24 +722,20 @@ def _calculate_bar_factor(
     Returns:
         None.
     """
-    pygeoprocessing.new_raster_from_base(
-        dem_path, zero_absorption_source_path, gdal.GDT_Float32,
-        [_TARGET_NODATA], fill_value_list=[0.0])
-
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        flow_direction_path, dem_path, factor_path,
-        zero_absorption_source_path, loss_path, accumulation_path,
-        'flux_only')
+    LOGGER.debug("doing flow accumulation mfd on %s", out_bar_path)
+    pygeoprocessing.routing.flow_accumulation_mfd(
+        (flow_direction_path, 1), accumulation_path,
+        weight_raster_path_band=(factor_path, 1))
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape)
         valid_mask = (
-            (base_accumulation != _TARGET_NODATA) &
-            (flow_accumulation != flow_accumulation_nodata))
+            ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
+            ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
