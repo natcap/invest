@@ -913,7 +913,7 @@ def execute(args):
     unit_cost = float(val_parameters_dict['turbine_cost'])
     # The installation cost as a decimal
     install_cost = float(val_parameters_dict['installation_cost'])
-    # The miscellaneous costs as a decimal factore of capex_arr
+    # The miscellaneous costs as a decimal factor of capex_arr
     misc_capex_cost = float(val_parameters_dict['miscellaneous_capex_cost'])
     # The operations and maintenance costs as a decimal factor of capex_arr
     op_maint_cost = float(val_parameters_dict['operation_maintenance_cost'])
@@ -957,155 +957,6 @@ def execute(args):
     disc_time = disc_const**time
     LOGGER.debug('disc_time : %s', disc_time)
 
-    def calculate_npv_op(harvested_arr, distance_arr):
-        """Compute the net present value in Raster Calculator
-
-        Parameters:
-            harvested_arr (np.ndarray): an nd numpy array for wind harvested
-            distance_arr (np.ndarray): an nd numpy array for distances
-
-        Returns:
-            an nd numpy array of net present values
-
-        """
-        # Total cable distance converted to kilometers
-        cable_dist_arr = distance_arr / 1000.0
-
-        # The energy value converted from MWhr/yr (Mega Watt hours as output
-        # from CK's biophysical model equations) to kWhr for the
-        # valuation model
-        energy_val_arr = harvested_arr * 1000.0
-
-        # Initialize cable cost variable
-        cable_cost_arr = 0.0
-
-        # The break at 'circuit_break' indicates the difference in using AC
-        # and DC current systems
-        cable_cost_arr = np.where(
-            cable_dist_arr <= circuit_break, (mw_coef_ac * total_mega_watt) +
-            (cable_coef_ac * cable_dist_arr), (mw_coef_dc * total_mega_watt)
-            + (cable_coef_dc * cable_dist_arr))
-        # Mask out nodata values
-        cable_cost_arr = np.where(harvested_arr == _TARGET_NODATA, _TARGET_NODATA,
-                              cable_cost_arr)
-
-        # Compute the total CAP
-        cap_arr = cap_less_dist + cable_cost_arr
-
-        # Nominal total capital costs including installation and
-        # miscellaneous costs (capex_arr)
-        capex_arr = cap_arr / (1.0 - install_cost - misc_capex_cost)
-
-        # The ongoing cost of the farm
-        ongoing_capex_arr = op_maint_cost * capex_arr
-
-        # The cost to decommission the farm
-        decommish_capex_arr = decom * capex_arr / disc_time
-
-        # Variable to store the summation of the revenue less the
-        # ongoing costs, adjusted for discount rate
-        npv_arr = 0.0
-
-        # Calculate the total NPV summation over the lifespan of the wind
-        # farm. Starting at year 1, because year 0 yields no revenue
-        for year in xrange(1, len(price_list)):
-            # Dollar per kiloWatt hour
-            dollar_per_kwh = float(price_list[year])
-
-            # The price per kWh for energy converted to units of millions of
-            # dollars to correspond to the units for valuation costs
-            mill_dollar_per_kwh = dollar_per_kwh / 1000000.0
-
-            # The revenue in millions of dollars for the wind farm. The
-            # energy_val_arr is in kWh the farm.
-            rev = energy_val_arr * mill_dollar_per_kwh
-
-            # Calculate the first component summation of the NPV equation
-            npv_arr = (
-                npv_arr + (rev - ongoing_capex_arr) / disc_const**year)
-
-        return np.where(
-            (harvested_arr != _TARGET_NODATA) & (distance_arr != _TARGET_NODATA),
-            npv_arr - decommish_capex_arr - capex_arr, _TARGET_NODATA)
-
-    def calculate_levelized_op(harvested_arr, distance_arr):
-        """Raster Calculator operation that computes the levelized cost.
-
-        Parameters:
-            harvested_arr (numpy.ndarray): an nd numpy array for wind harvested
-            distance_arr (numpy.ndarray): an nd numpy array for distances
-
-        Returns:
-            the levelized cost (numpy.ndarray)
-
-        """
-        # Total cable distance converted to kilometers
-        cable_dist_arr = distance_arr / 1000.0
-
-        # The energy value converted from MWhr/yr (Mega Watt hours as output
-        # from CK's biophysical model equations) to kWhr for the
-        # valuation model
-        energy_val_arr = harvested_arr * 1000.0
-
-        # Initialize cable cost variable
-        cable_cost_arr = 0.0
-
-        # The break at 'circuit_break' indicates the difference in using AC
-        # and DC current systems
-        cable_cost_arr = np.where(
-            cable_dist_arr <= circuit_break, (mw_coef_ac * total_mega_watt) +
-            (cable_coef_ac * cable_dist_arr), (mw_coef_dc * total_mega_watt)
-            + (cable_coef_dc * cable_dist_arr))
-        # Mask out nodata values
-        cable_cost_arr = np.where(harvested_arr == _TARGET_NODATA, _TARGET_NODATA,
-                              cable_cost_arr)
-
-        # Compute the total CAP
-        cap_arr = cap_less_dist + cable_cost_arr
-
-        # Nominal total capital costs including installation and
-        # miscellaneous costs (capex_arr)
-        capex_arr = cap_arr / (1.0 - install_cost - misc_capex_cost)
-
-        # The ongoing cost of the farm
-        ongoing_capex_arr = op_maint_cost * capex_arr
-
-        # The cost to decommission the farm
-        decommish_capex_arr = decom * capex_arr / disc_time
-
-        # Variable to store the numerator summation part of the
-        # levelized cost
-        levelized_sum = 0.0
-        # Variable to store the denominator summation part of the
-        # levelized cost
-        levelized_denom = 0.0
-
-        # Calculate the denominator summation value for levelized
-        # cost of energy at year 0
-        levelized_denom = levelized_denom + (
-            energy_val_arr / disc_const**0)
-
-        # Calculate the levelized cost over the lifespan of the farm
-        for year in xrange(1, len(price_list)):
-            # Calculate the numerator summation value for levelized
-            # cost of energy
-            levelized_sum = levelized_sum + (
-                (ongoing_capex_arr / disc_const**year))
-
-            # Calculate the denominator summation value for levelized
-            # cost of energy
-            levelized_denom = levelized_denom + (
-                energy_val_arr / disc_const**year)
-
-        # Calculate the levelized cost of energy
-        levelized_cost = ((levelized_sum + decommish_capex_arr + capex_arr) /
-                          levelized_denom)
-
-        # Levelized cost of energy converted from millions of dollars to
-        # dollars
-        return np.where(harvested_arr == _TARGET_NODATA, _TARGET_NODATA,
-                        levelized_cost * 1000000.0)
-
     # The amount of CO2 not released into the atmosphere, with the
     # constant conversion factor provided in the users guide by
     # Rob Griffin
@@ -1121,7 +972,8 @@ def execute(args):
             an nd numpy array of carbon offset values
 
         """
-        out_array = np.full(harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
+        out_array = np.full(
+            harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
         valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
 
         # The energy value converted from MWhr/yr (Mega Watt hours as output
@@ -1169,10 +1021,6 @@ def execute(args):
 
         # Calculate cable cost. The break at 'circuit_break' indicates the
         # difference in using AC and DC current systems
-        cable_cost_arr = np.where(
-            cable_dist_arr <= circuit_break, (mw_coef_ac * total_mega_watt) +
-            (cable_coef_ac * cable_dist_arr), (mw_coef_dc * total_mega_watt)
-            + (cable_coef_dc * cable_dist_arr))
         circuit_mask = (cable_dist_arr <= circuit_break)
         cable_cost_arr = np.full(
             target_arr_shape, 0.0, dtype=np.float32)
