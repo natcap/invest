@@ -17,8 +17,8 @@ from osgeo import ogr
 import numpy
 
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+import pygeoprocessing.routing
+import taskgraph
 from . import utils
 from . import validation
 
@@ -59,6 +59,7 @@ _INTERMEDIATE_BASE_FILES = {
 _TMP_BASE_FILES = {
     'cp_factor_path': 'cp.tif',
     'aligned_dem_path': 'aligned_dem.tif',
+    'pit_filled_dem_path': 'pit_filled_dem.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_erosivity_path': 'aligned_erosivity.tif',
     'aligned_erodibility_path': 'aligned_erodibility.tif',
@@ -135,12 +136,16 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories([output_dir, intermediate_output_dir])
+    churn_dir = os.path.join(
+        intermediate_output_dir, 'churn_dir_not_for_humans')
+    utils.make_directories([output_dir, intermediate_output_dir, churn_dir])
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_TMP_BASE_FILES, churn_dir)], file_suffix)
+
+    task_graph = taskgraph.TaskGraph(churn_dir, -1, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []
@@ -154,17 +159,46 @@ def execute(args):
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
 
-    dem_pixel_size = pygeoprocessing.get_raster_info(
-        args['dem_path'])['pixel_size']
-    pygeoprocessing.align_and_resize_raster_stack(
-        base_list, aligned_list, ['near'] * len(base_list),
-        dem_pixel_size, 'intersection',
-        base_vector_path_list=[args['watersheds_path']],
-        raster_align_index=0)
+    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    dem_pixel_size = dem_raster_info['pixel_size']
 
-    LOGGER.info("calculating slope")
-    natcap.invest.pygeoprocessing_0_3_3.calculate_slope(
-        f_reg['aligned_dem_path'], f_reg['slope_path'])
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            base_list, aligned_list, ['near'] * len(base_list),
+            dem_pixel_size, 'intersection'),
+        kwargs={
+            'target_sr_wkt': dem_raster_info['projection'],
+            'base_vector_path_list': [args['watersheds_path']],
+            'raster_align_index': 0,
+            'vector_mask_options': {
+                'mask_vector_path': args['watersheds_path'],
+            }},
+        target_path_list=aligned_list,
+        task_name='align input rasters')
+
+    pit_fill_task = task_graph.add_task(
+        func=pygeoprocessing.routing.fill_pits,
+        args=(
+            (f_reg['aligned_dem_path'], 1),
+            f_reg['pit_filled_dem_path']),
+        target_path_list=[f_reg['pit_filled_dem_path']],
+        dependent_task_list=[align_task],
+        task_name='fill pits')
+
+    slope_task = task_graph.add_task(
+        func=pygeoprocessing.calculate_slope,
+        args=(
+            (f_reg['pit_filled_dem_path'], 1),
+            f_reg['slope_path']),
+        dependent_task_list=[pit_fill_task],
+        target_path_list=[f_reg['slope_path']],
+        task_name='calculate slope')
+
+    task_graph.close()
+    task_graph.join()
+    return
+
     _threshold_slope(f_reg['slope_path'], f_reg['thresholded_slope_path'])
 
     LOGGER.info("calculating flow direction")
@@ -300,10 +334,6 @@ def execute(args):
         args['watersheds_path'], f_reg['usle_path'],
         f_reg['sed_export_path'], f_reg['sed_retention_path'],
         f_reg['watershed_results_sdr_path'])
-
-    for tmp_filename_key in _TMP_BASE_FILES:
-        if os.path.exists(f_reg[tmp_filename_key]):
-            os.remove(f_reg[tmp_filename_key])
 
 
 def _calculate_ls_factor(
