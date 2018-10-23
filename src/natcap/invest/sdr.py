@@ -220,42 +220,51 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='flow accumulation calculation')
 
+    ls_factor_task = task_graph.add_task(
+        func=_calculate_ls_factor,
+        args=(
+            f_reg['flow_accumulation_path'], f_reg['slope_path'],
+            f_reg['flow_direction_path'], f_reg['ls_path']),
+        target_path_list=[f_reg['ls_path']],
+        dependent_task_list=[flow_accumulation_task, slope_task],
+        task_name='ls factor calculation')
+
+    stream_task = task_graph.add_task(
+        func=_threshold_flow_accumulation,
+        args=(
+            f_reg['flow_accumulation_path'],
+            float(args['threshold_flow_accumulation']),
+            f_reg['stream_path']),
+        target_path_list=[f_reg['stream_path']],
+        dependent_task_list=[flow_accumulation_task],
+        task_name='flow threshold to streams')
+
+    if drainage_present:
+        drainage_task = task_graph.add_task(
+            func=_add_drainage(
+                f_reg['stream_path'],
+                f_reg['aligned_drainage_path'],
+                f_reg['stream_and_drainage_path']),
+            target_path_list=[f_reg['stream_and_drainage_path']],
+            dependent_task_list=[stream_task, align_task],
+            task_name='add drainage')
+        drainage_raster_path_task = (
+            f_reg['stream_and_drainage_path'], drainage_task)
+    else:
+        drainage_raster_path_task = (f_reg['stream_path'], stream_task)
+
+    w_task = task_graph.add_task(
+        func=_calculate_w,
+        args=(
+            biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
+            f_reg['thresholded_w_path']),
+        target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
+        dependent_task_list=[align_task],
+        task_name='calculate W')
+
     task_graph.close()
     task_graph.join()
     return
-
-    LOGGER.info("calculating flow accumulation")
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
-        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
-        f_reg['flow_accumulation_path'])
-
-    LOGGER.info('calculate ls term')
-
-    _calculate_ls_factor(
-        f_reg['flow_accumulation_path'], f_reg['slope_path'],
-        f_reg['flow_direction_path'], f_reg['ls_path'])
-
-    LOGGER.info("classifying streams from flow accumulation raster")
-    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
-        f_reg['flow_accumulation_path'],
-        float(args['threshold_flow_accumulation']),
-        f_reg['stream_path'])
-
-    if drainage_present:
-        _add_drainage(
-            f_reg['stream_path'],
-            f_reg['aligned_drainage_path'],
-            f_reg['stream_and_drainage_path'])
-        f_reg['drainage_raster_path'] = (
-            f_reg['stream_and_drainage_path'])
-    else:
-        f_reg['drainage_raster_path'] = (
-            f_reg['stream_path'])
-
-    LOGGER.info('calculate per pixel W')
-    _calculate_w(
-        biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
-        f_reg['thresholded_w_path'])
 
     LOGGER.info('calculate CP raster')
     _calculate_cp(
@@ -974,6 +983,37 @@ def _generate_report(
             feature.SetField(
                 field_name, float(field_summaries[field_name][ws_id]['sum']))
         layer.SetFeature(feature)
+
+
+def _threshold_flow_accumulation(
+        flow_accum_path, flow_threshold, target_channel_path):
+    """Calculate channel raster by thresholding flow accumulation.
+
+    Parameters:
+        flow_accum_path (str): path to a single band flow accumulation raster.
+        flow_threshold (float): if the value in `flow_accum_path` is less
+            than or equal to this value, the pixel will be classified as a
+            channel.
+        target_channel_path (str): path to target raster that will contain
+            pixels set to 1 if they are a channel, 0 if not, and possibly
+            between 0 and 1 if a partial channel. (to be defined).
+
+    Returns:
+        None.
+    """
+    nodata = pygeoprocessing.get_raster_info(flow_accum_path)['nodata'][0]
+    channel_nodata = -1.0
+
+    def threshold_op(flow_val):
+        valid_mask = ~numpy.isclose(flow_val, nodata)
+        result = numpy.empty(flow_val.shape, dtype=numpy.float32)
+        result[:] = channel_nodata
+        result[valid_mask] = flow_val[valid_mask] >= flow_threshold
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(flow_accum_path, 1)], threshold_op, target_channel_path,
+        gdal.GDT_Float32, channel_nodata)
 
 
 @validation.invest_validator
