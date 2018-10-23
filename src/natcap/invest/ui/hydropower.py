@@ -14,7 +14,7 @@ class HydropowerWaterYield(model.InVESTModel):
             localdoc=u'../documentation/reservoirhydropowerproduction.html')
 
         self.precipitation = inputs.File(
-            args_key=u'precipitation_uri',
+            args_key=u'precipitation_path',
             helptext=(
                 u"A GDAL-supported raster file containing non-zero, "
                 u"average annual precipitation values for each cell. "
@@ -24,7 +24,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.precipitation)
         self.potential_evapotranspiration = inputs.File(
-            args_key=u'eto_uri',
+            args_key=u'eto_path',
             helptext=(
                 u"A GDAL-supported raster file containing annual "
                 u"average reference evapotranspiration values for each "
@@ -34,7 +34,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.potential_evapotranspiration)
         self.depth_to_root_rest_layer = inputs.File(
-            args_key=u'depth_to_root_rest_layer_uri',
+            args_key=u'depth_to_root_rest_layer_path',
             helptext=(
                 u"A GDAL-supported raster file containing an average "
                 u"root restricting layer depth value for each cell. "
@@ -44,7 +44,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.depth_to_root_rest_layer)
         self.plant_available_water_fraction = inputs.File(
-            args_key=u'pawc_uri',
+            args_key=u'pawc_path',
             helptext=(
                 u"A GDAL-supported raster file containing plant "
                 u"available water content values for each cell.  The "
@@ -54,7 +54,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.plant_available_water_fraction)
         self.land_use = inputs.File(
-            args_key=u'lulc_uri',
+            args_key=u'lulc_path',
             helptext=(
                 u"A GDAL-supported raster file containing LULC code "
                 u"(expressed as integers) for each cell."),
@@ -62,7 +62,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.land_use)
         self.watersheds = inputs.File(
-            args_key=u'watersheds_uri',
+            args_key=u'watersheds_path',
             helptext=(
                 u"An OGR-supported vector file containing one polygon "
                 u"per watershed.  Each polygon that represents a "
@@ -72,7 +72,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.watersheds)
         self.sub_watersheds = inputs.File(
-            args_key=u'sub_watersheds_uri',
+            args_key=u'sub_watersheds_path',
             helptext=(
                 u"An OGR-supported vector file with one polygon per "
                 u"sub-watershed within the main watersheds specified in "
@@ -84,7 +84,7 @@ class HydropowerWaterYield(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.sub_watersheds)
         self.biophysical_table = inputs.File(
-            args_key=u'biophysical_table_uri',
+            args_key=u'biophysical_table_path',
             helptext=(
                 u"A CSV table of land use/land cover (LULC) classes, "
                 u"containing data on biophysical coefficients used in "
@@ -110,7 +110,7 @@ class HydropowerWaterYield(model.InVESTModel):
             label=u'Water Scarcity')
         self.add_input(self.water_scarcity_container)
         self.demand_table = inputs.File(
-            args_key=u'demand_table_uri',
+            args_key=u'demand_table_path',
             helptext=(
                 u"A CSV table of LULC classes, showing consumptive "
                 u"water use for each land-use/land-cover type.  The "
@@ -132,7 +132,7 @@ class HydropowerWaterYield(model.InVESTModel):
             label=u'Valuation')
         self.add_input(self.valuation_container)
         self.hydropower_valuation_table = inputs.File(
-            args_key=u'valuation_table_uri',
+            args_key=u'valuation_table_path',
             helptext=(
                 u"A CSV table of hydropower stations with associated "
                 u"model values.  The table should have the following "
