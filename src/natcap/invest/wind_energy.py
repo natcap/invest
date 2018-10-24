@@ -15,6 +15,7 @@ from scipy import integrate
 from scipy.sparse.csgraph import _validation
 
 import shapely.wkb
+import shapely.wkt
 import shapely.ops
 import shapely.prepared
 from shapely import speedups
@@ -383,7 +384,7 @@ def execute(args):
             LOGGER.debug('Create Raster From AOI')
             pygeoprocessing.create_raster_from_vector_extents(
                 aoi_vector_path, aoi_raster_path, pixel_size,
-                _TARGET_DATA_TYPE, _TARGET_NODATA)
+                gdal.GDT_Byte, _TARGET_NODATA)
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
@@ -1155,8 +1156,8 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     """
     LOGGER.info('Starting point_to_polygon_distance.')
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    point_vector = driver.Open(base_point_vector_path, 1)  # for writing field
-    poly_vector = gdal.OpenEx(base_polygon_vector_path)
+    point_vector = driver.Open(base_point_vector_path, 1)  # 1 for writing field
+    poly_vector = driver.Open(base_polygon_vector_path, 0)
 
     poly_layer = poly_vector.GetLayer()
     # List to store the polygons geometries as shapely objects
@@ -1467,8 +1468,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
             base_raster_info['bounding_box'], base_raster_info['projection'],
             wgs84_sr.ExportToWkt())
 
-        target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
-            clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
+        target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
+            [clip_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
 
         clip_vector_srs = osr.SpatialReference()
         clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
@@ -1489,21 +1490,22 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
         target_pixel_size = convert_degree_pixel_size_to_meters(
             base_raster_info['pixel_size'], centroid_y)
-
         pygeoprocessing.warp_raster(
             base_raster_path,
             target_pixel_size,
             target_raster_path,
             None,
             target_bb=target_bounding_box,
-            target_sr_wkt=target_srs.ExportToWkt())
+            target_sr_wkt=target_srs.ExportToWkt(),
+            vector_mask_options={'mask_vector_path': clip_vector_path})
     else:
         pygeoprocessing.align_and_resize_raster_stack(
             [base_raster_path], [target_raster_path], ['near'],
             base_raster_info['pixel_size'],
             'intersection',
             base_vector_path_list=[clip_vector_path],
-            target_sr_wkt=base_raster_info['projection'])
+            target_sr_wkt=base_raster_info['projection'],
+            vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
 def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
@@ -1652,13 +1654,13 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", orig_proj_option)
 
     # Clip the shapefile to the AOI
-    clip_vector_with_vector(
+    clip_vector_by_vector(
         reprojected_vector_path, clip_vector_path, target_vector_path)
     shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
 
-def clip_vector_with_vector(
+def clip_vector_by_vector(
         base_vector_path, clip_vector_path, target_vector_path):
     """Create a new target vector where base features are contained in the
         polygon in clip_vector_path. Assumes all data are in the same
@@ -1673,7 +1675,7 @@ def clip_vector_with_vector(
         None.
 
     """
-    LOGGER.info('Entering clip_vector_with_vector')
+    LOGGER.info('Entering clip_vector_by_vector')
 
     # Get layer and geometry informations from path
     base_vector = gdal.OpenEx(base_vector_path)
@@ -1682,7 +1684,7 @@ def clip_vector_with_vector(
     base_layer_geom = base_layer.GetGeomType()
 
     clip_vector = gdal.OpenEx(clip_vector_path)
-    clip_vector = clip_vector.GetLayer()
+    clip_layer = clip_vector.GetLayer()
 
     # Create a target vector based on the properties of base vector
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -1692,14 +1694,14 @@ def clip_vector_with_vector(
                                              base_layer_geom)
     target_layer = target_vector.GetLayer()
 
-    base_layer.Clip(clip_vector, target_layer)
+    base_layer.Clip(clip_layer, target_layer, options=["SKIP_FAILURES=YES"])
     target_layer = None
     target_vector = None
     clip_vector = None
     clip_vector = None
     base_layer = None
     base_vector = None
-    LOGGER.info('Finished clip_vector_with_vector')
+    LOGGER.info('Finished clip_vector_by_vector')
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,

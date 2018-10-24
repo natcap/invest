@@ -4,7 +4,8 @@ import tempfile
 import shutil
 import os
 import csv
-
+import faulthandler
+faulthandler.enable()
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 import numpy
@@ -503,7 +504,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgridland_cutline")#self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -792,7 +793,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
         SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
         args = {
-            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\origdata",
+            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\origdata_cutline",#self.workspace_dir,
             'wind_data_path': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
