@@ -406,7 +406,7 @@ def execute(args):
             out_dir, 'wind_energy_points%s.shp' % suffix)
 
         # Create point shapefile from wind data dictionary
-        LOGGER.debug('Create point shapefile from wind data')
+        LOGGER.info('Create point shapefile from wind data')
         wind_data_to_point_vector(wind_data, 'wind_data',
                                   wind_point_vector_path)
 
@@ -1563,34 +1563,34 @@ def wind_data_to_point_vector(dict_data,
         None
 
     """
-    LOGGER.debug('Entering wind_data_to_point_vector')
+    LOGGER.info('Entering wind_data_to_point_vector')
 
     # If the target_vector_path exists delete it
     if os.path.isfile(target_vector_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(target_vector_path)
 
-    LOGGER.debug('Creating new datasource')
+    LOGGER.info('Creating new datasource')
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_datasource = target_driver.CreateDataSource(target_vector_path)
+    target_vector = target_driver.CreateDataSource(target_vector_path)
 
     # Set the spatial reference to WGS84 (lat/long)
     source_sr = osr.SpatialReference()
     source_sr.SetWellKnownGeogCS("WGS84")
 
-    target_layer = target_datasource.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
+    target_layer = target_vector.CreateLayer(layer_name, source_sr,
+                                             ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
     LOGGER.debug('field_list : %s', field_list)
 
-    LOGGER.debug('Creating fields for the datasource')
+    LOGGER.info('Creating fields for the target vector')
     for field in field_list:
         target_field = ogr.FieldDefn(field, ogr.OFTReal)
         target_layer.CreateField(target_field)
 
-    LOGGER.debug('Entering iteration to create and set the features')
+    LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
         latitude = float(point_dict['LATI'])
@@ -1613,8 +1613,8 @@ def wind_data_to_point_vector(dict_data,
         target_layer.SetFeature(target_feature)
         target_feature = None
 
-    LOGGER.debug('Leaving wind_data_to_point_vector')
-    target_datasource = None
+    LOGGER.info('Leaving wind_data_to_point_vector')
+    target_vector = None
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
@@ -1883,46 +1883,6 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
                                       _TARGET_DATA_TYPE, out_nodata)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
-                                                  point):
-    """Get width and height of cell in meters.
-
-    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
-    path as an input and opens it before sending it along.
-
-    Parameters:
-        dataset_path (str): a path to a gdal dataset
-        All other parameters pass along
-
-    Returns:
-        result (tuple): (pixel_width_meters, pixel_height_meters)
-
-    """
-    dataset = gdal.OpenEx(dataset_path, gdal.OF_RASTER)
-    geo_tran = dataset.GetGeoTransform()
-    pixel_size_x = geo_tran[1]
-    pixel_size_y = geo_tran[5]
-    top_left_x = point[0]
-    top_left_y = point[1]
-    # Create the second point by adding the pixel width/height
-    new_x = top_left_x + pixel_size_x
-    new_y = top_left_y + pixel_size_y
-    # Transform two points into meters
-    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
-    point_2 = coord_trans.TransformPoint(new_x, new_y)
-    # Calculate the x/y difference between two points
-    # taking the absolue value because the direction doesn't matter for pixel
-    # size in the case of most coordinate systems where y increases up and x
-    # increases to the right (right handed coordinate system).
-    pixel_diff_x = abs(point_2[0] - point_1[0])
-    pixel_diff_y = abs(point_2[1] - point_1[1])
-
-    # Close and clean up dataset
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
-    return (pixel_diff_x, pixel_diff_y)
 
 
 @validation.invest_validator

@@ -172,62 +172,6 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         self.assertDictEqual(expected_result, result)
 
-    def test_pixel_size_transform(self):
-        """WindEnergy: testing pixel size transform helper function.
-
-        Function name is : 'pixel_size_based_on_coordinate_transform_path'.
-        """
-        from natcap.invest import wind_energy
-
-        srs = sampledata.SRS_WILLAMETTE
-        srs_wkt = srs.projection
-        spat_ref = osr.SpatialReference()
-        spat_ref.ImportFromWkt(srs_wkt)
-
-        # Define a Lat/Long WGS84 projection
-        epsg_id = 4326
-        reference = osr.SpatialReference()
-        proj_result = reference.ImportFromEPSG(epsg_id)
-        if proj_result != 0:
-            raise RuntimeError('EPSG code %s not recognized' % epsg_id)
-        # Get projection as WKT
-        latlong_proj = reference.ExportToWkt()
-        # Set origin to use for setting up geometries / geotransforms
-        latlong_origin = (-70.5, 42.5)
-        # Pixel size helper for defining lat/long pixel size
-        pixel_size = lambda x: (x, -1. * x)
-
-        # Get a point from the clipped data object to use later in helping
-        # determine proper pixel size
-        matrix = numpy.array([[1, 1, 1, 1], [1, 1, 1, 1]])
-        input_path = os.path.join(self.workspace_dir, 'input_raster.tif')
-        # Create raster to use as testing input
-        raster_path = pygeoprocessing.testing.create_raster_on_disk(
-            [matrix], latlong_origin, latlong_proj, -1.0,
-            pixel_size(0.033333), filename=input_path)
-
-        raster_gt = pygeoprocessing.geoprocessing.get_raster_info(
-            raster_path)['geotransform']
-        point = (raster_gt[0], raster_gt[3])
-        raster_wkt = latlong_proj
-
-        # Create a Spatial Reference from the rasters WKT
-        raster_sr = osr.SpatialReference()
-        raster_sr.ImportFromWkt(raster_wkt)
-
-        # A coordinate transformation to help get the proper pixel size of
-        # the reprojected raster
-        coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
-        # Call the function to test
-        result = wind_energy.pixel_size_based_on_coordinate_transform_path(
-            raster_path, coord_trans, point)
-
-        expected_res = (5553.93306384, 1187.37081348)
-
-        # Compare
-        for res, exp in zip(result, expected_res):
-            pygeoprocessing.testing.assert_close(res, exp)
-
     def test_calculate_distances_grid(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
         from natcap.invest import wind_energy
@@ -504,7 +448,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgridland_cutline")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -793,7 +737,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
         SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
         args = {
-            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\origdata_cutline",#self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
             'wind_data_path': os.path.join(
                 SAMPLE_DATA, 'WindEnergy', 'input',
                 'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
