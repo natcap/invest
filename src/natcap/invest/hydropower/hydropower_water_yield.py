@@ -7,6 +7,8 @@ import os
 import math
 import tempfile
 
+import pdb
+
 import numpy
 from osgeo import gdal
 from osgeo import ogr
@@ -181,13 +183,17 @@ def execute(args):
         kwargs={'raster_align_index':4, 'base_vector_path_list':[sheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
-    # pygeoprocessing.align_and_resize_raster_stack(
-    #     base_raster_path_list, aligned_raster_path_list,
-    #     ['near'] * len(base_raster_path_list), target_pixel_size,
-    #     'intersection', raster_align_index=4,
-    #     base_vector_path_list=[sheds_path])
+    # joining now since this task will always be the root node
+    # and it's useful to have the raster info available
+    align_raster_stack_task.join()
 
     lulc_info = pygeoprocessing.get_raster_info(clipped_lulc_path)
+    precip_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
+    eto_nodata = pygeoprocessing.get_raster_info(eto_path)['nodata'][0]
+    root_rest_layer_nodata = pygeoprocessing.get_raster_info(
+        depth_to_root_rest_layer_path)['nodata'][0]
+    pawc_nodata = pygeoprocessing.get_raster_info(pawc_path)['nodata'][0]
+
 
     # Open/read in the csv file into a dictionary and add to arguments
     LOGGER.info(
@@ -344,19 +350,6 @@ def execute(args):
     #     gdal.GDT_Float64, out_nodata)
     graph.join()
 
-    # Get out_nodata values so that we can avoid any issues when running
-    # operations
-    Kc_nodata = pygeoprocessing.get_raster_info(tmp_Kc_raster_path)['nodata'][0]
-    root_nodata = pygeoprocessing.get_raster_info(
-        tmp_root_raster_path)['nodata'][0]
-    veg_nodata = pygeoprocessing.get_raster_info(
-        tmp_veg_raster_path)['nodata'][0]
-    precip_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
-    eto_nodata = pygeoprocessing.get_raster_info(eto_path)['nodata'][0]
-    root_rest_layer_nodata = pygeoprocessing.get_raster_info(
-        depth_to_root_rest_layer_path)['nodata'][0]
-    pawc_nodata = pygeoprocessing.get_raster_info(pawc_path)['nodata'][0]
-
     def pet_op(eto_pix, Kc_pix):
         """Calculate the plant potential evapotranspiration.
 
@@ -369,7 +362,7 @@ def execute(args):
 
         """
         return numpy.where(
-            (eto_pix == eto_nodata) | (Kc_pix == Kc_nodata),
+            (eto_pix == eto_nodata) | (Kc_pix == out_nodata),
             out_nodata, eto_pix * Kc_pix)
 
     # Get pixel size from tmp_Kc_raster_path which should be the same resolution
@@ -404,11 +397,15 @@ def execute(args):
             fractp.
 
         """
+        # Kc, root, & veg were created by reclassify_raster, 
+        # which set nodata to out_nodata.
+        # All others are products of align_and_resize, 
+        # retaining original nodata vals
         valid_mask = (
-            (Kc != Kc_nodata) & (eto != eto_nodata) &
-            (precip != precip_nodata) & (root != root_nodata) &
+            (Kc != out_nodata) & (eto != eto_nodata) &
+            (precip != precip_nodata) & (root != out_nodata) &
             (soil != root_rest_layer_nodata) & (pawc != pawc_nodata) &
-            (veg != veg_nodata) & (precip != 0.0))
+            (veg != out_nodata) & (precip != 0.0))
 
         # Compute Budyko Dryness index
         # Use the original AET equation if the land cover type is vegetation
