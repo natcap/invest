@@ -1379,7 +1379,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # If the target_vector_path exists delete it
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     if os.path.exists(target_vector_path):
-        output_driver.Delete(target_vector_path)
+        output_driver.DeleteDataSource(target_vector_path)
 
     target_vector = output_driver.CreateDataSource(target_vector_path)
 
@@ -1632,40 +1632,48 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     LOGGER.info('Entering clip_and_reproject_vector')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
 
-    # Get the AOIs spatial reference as strs in Well Known Text
+    # Get the AOIs spatial reference in Well Known Text
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection']
 
     # Create path for the reprojected shapefile
-    reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.tif')
+    reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.shp')
+
+    # Get the original projection option and set it to yes to remove points
+    # that can't be reprojected. Set it back after reproject_vector.
+    orig_proj_option = gdal.GetConfigOption(
+        "OGR_ENABLE_PARTIAL_REPROJECTION")
+    gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", "YES")
 
     # Reproject the shapefile to the spatial reference of AOI so that AOI
     # can be used to clip the shapefile properly
     pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
                                      reprojected_vector_path)
+    gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", orig_proj_option)
 
     # Clip the shapefile to the AOI
-    clip_features(reprojected_vector_path, clip_vector_path,
-                  target_vector_path)
+    clip_vector_with_vector(
+        reprojected_vector_path, clip_vector_path, target_vector_path)
     shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
 
-def clip_features(base_vector_path, clip_vector_path, target_vector_path):
-    """Create a new target point vector where base points are contained in the
-        single polygon in clip_vector_path. Assumes all data are in the same
+def clip_vector_with_vector(
+        base_vector_path, clip_vector_path, target_vector_path):
+    """Create a new target vector where base features are contained in the
+        polygon in clip_vector_path. Assumes all data are in the same
         projection.
 
-        Parameters:
-            base_vector_path (str): path to a point vector to clip
-            clip_vector_path (str): path to a single polygon vector for
-                clipping.
-            target_vector_path (str): output path for the clipped vector.
+    Parameters:
+        base_vector_path (str): path to a vector to clip.
+        clip_vector_path (str): path to a polygon vector for clipping.
+        target_vector_path (str): output path for the clipped vector.
 
-        Returns:
-            None.
+    Returns:
+        None.
+
     """
-    LOGGER.info('Entering clip_features')
+    LOGGER.info('Entering clip_vector_with_vector')
 
     # Get layer and geometry informations from path
     base_vector = gdal.OpenEx(base_vector_path)
@@ -1674,52 +1682,24 @@ def clip_features(base_vector_path, clip_vector_path, target_vector_path):
     base_layer_geom = base_layer.GetGeomType()
 
     clip_vector = gdal.OpenEx(clip_vector_path)
-    clip_layer = clip_vector.GetLayer()
-    clip_feat = next(clip_layer)  # Assuming one feature in clip_layer
-    clip_geom = clip_feat.GetGeometryRef()
-    clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
-    clip_prep = shapely.prepared.prep(clip_shapely)
+    clip_vector = clip_vector.GetLayer()
 
-    # Create a target point vector based on the properties of base point vector
+    # Create a target vector based on the properties of base vector
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
     target_vector = target_driver.CreateDataSource(target_vector_path)
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef(),
                                              base_layer_geom)
     target_layer = target_vector.GetLayer()
-    target_defn = target_layer.GetLayerDefn()
 
-    # Add input Layer Fields to the output Layer
-    for i in range(0, base_layer_defn.GetFieldCount()):
-        base_field_defn = base_layer_defn.GetFieldDefn(i)
-        target_layer.CreateField(base_field_defn)
-
-    # Write any point feature that lies within the polygon to the target vector
-    for base_feat in base_layer:
-        base_geom = base_feat.GetGeometryRef()
-        base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
-
-        if clip_prep.intersects(base_shapely):
-            # Create output feature
-            target_feat = ogr.Feature(target_defn)
-            target_feat.SetGeometry(base_geom.Clone())
-
-            # Add field values from input Layer
-            for i in range(0, target_defn.GetFieldCount()):
-                target_feat.SetField(
-                    target_defn.GetFieldDefn(i).GetNameRef(),
-                    base_feat.GetField(i))
-            target_layer.CreateFeature(target_feat)
-            target_feat = None
-
+    base_layer.Clip(clip_vector, target_layer)
     target_layer = None
     target_vector = None
-    clip_layer = None
+    clip_vector = None
     clip_vector = None
     base_layer = None
     base_vector = None
-
-    LOGGER.info('Finished clip_features')
+    LOGGER.info('Finished clip_vector_with_vector')
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,

@@ -787,46 +787,46 @@ class WindEnergyRegressionTests(unittest.TestCase):
         wind_energy.validate(args)
 
 
-    # def test_orig_data(self):
-    #     """WindEnergy: testing with large datasets"""
-    #     from natcap.invest import wind_energy
-    #     SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-    #     args = {
-    #         'workspace_dir': self.workspace_dir,
-    #         'wind_data_path': os.path.join(
-    #             SAMPLE_DATA, 'WindEnergy', 'input',
-    #             'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
-    #         'bathymetry_path': os.path.join(
-    #             SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-    #             'global_dem'),
-    #         'global_wind_parameters_path': os.path.join(
-    #             SAMPLE_DATA, 'WindEnergy', 'input',
-    #             'global_wind_energy_parameters.csv'),
-    #         'turbine_parameters_path': os.path.join(
-    #             SAMPLE_DATA, 'WindEnergy', 'input',
-    #             '3_6_turbine.csv'),
-    #         'number_of_turbines': 80,
-    #         'min_depth': 3,
-    #         'max_depth': 60
-    #         }
+    def test_orig_data(self):
+        """WindEnergy: testing with large datasets"""
+        from natcap.invest import wind_energy
+        SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
+        args = {
+            'workspace_dir': r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\origdata",
+            'wind_data_path': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
+            'bathymetry_path': os.path.join(
+                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
+                'global_dem'),
+            'global_wind_parameters_path': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                'global_wind_energy_parameters.csv'),
+            'turbine_parameters_path': os.path.join(
+                SAMPLE_DATA, 'WindEnergy', 'input',
+                '3_6_turbine.csv'),
+            'number_of_turbines': 80,
+            'min_depth': 3,
+            'max_depth': 60
+            }
 
-    #     args['aoi_vector_path'] = os.path.join(
-    #         SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-    #     args['land_polygon_vector_path'] = os.path.join(
-    #         SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
-    #     args['min_distance'] = 0
-    #     args['max_distance'] = 200000
-    #     args['valuation_container'] = True
-    #     args['foundation_cost'] = 2
-    #     args['discount_rate'] = 0.07
-    #     # there was no sample data that provided landing points, thus for
-    #     # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
-    #     # marked as land points. So the distances will be zero, keeping the
-    #     # result the same but testing that section of code
-    #     args['grid_points_path'] = os.path.join(
-    #         SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
-    #     args['price_table'] = False
-    #     args['wind_price'] = 0.187
-    #     args['rate_change'] = 0.2
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
+        args['land_polygon_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        # there was no sample data that provided landing points, thus for
+        # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
+        # marked as land points. So the distances will be zero, keeping the
+        # result the same but testing that section of code
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
+        args['price_table'] = False
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
 
-    #     wind_energy.execute(args)
+        wind_energy.execute(args)
