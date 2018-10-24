@@ -135,22 +135,24 @@ def execute(args):
     workspace_dir = args['workspace_dir']
     output_dir = os.path.join(workspace_dir, 'output')
     per_pixel_output_dir = os.path.join(output_dir, 'per_pixel')
-    utils.make_directories([workspace_dir, output_dir, per_pixel_output_dir])
+    intermediate_dir = os.path.join(workspace_dir, 'intermediate')
+    utils.make_directories(
+        [workspace_dir, output_dir, per_pixel_output_dir, intermediate_dir])
 
-    temp_dir = tempfile.mkdtemp(dir=workspace_dir)
+    # temp_dir = tempfile.mkdtemp(dir=workspace_dir)
 
-    clipped_lulc_path = os.path.join(temp_dir, 'clipped_lulc.tif')
-    eto_path = os.path.join(temp_dir, 'eto.tif')
-    precip_path = os.path.join(temp_dir, 'precip.tif')
+    clipped_lulc_path = os.path.join(intermediate_dir, 'clipped_lulc.tif')
+    eto_path = os.path.join(intermediate_dir, 'eto.tif')
+    precip_path = os.path.join(intermediate_dir, 'precip.tif')
     depth_to_root_rest_layer_path = os.path.join(
-        temp_dir, 'depth_to_root_rest_layer.tif')
-    pawc_path = os.path.join(temp_dir, 'pawc.tif')
+        intermediate_dir, 'depth_to_root_rest_layer.tif')
+    pawc_path = os.path.join(intermediate_dir, 'pawc.tif')
 
     sheds_path = args['watersheds_path']
     seasonality_constant = float(args['seasonality_constant'])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(output_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -300,7 +302,7 @@ def execute(args):
 
     # Create Kc raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_Kc raster")
-    tmp_Kc_raster_path = os.path.join(temp_dir, 'kc_raster.tif')
+    tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
     pygeoprocessing.reclassify_raster(
         (clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, gdal.GDT_Float64,
         out_nodata)
@@ -308,7 +310,7 @@ def execute(args):
     # Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster_path = os.path.join(
-        temp_dir, 'root_depth.tif')
+        intermediate_dir, 'root_depth.tif')
 
     pygeoprocessing.reclassify_raster(
         (clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
@@ -317,7 +319,7 @@ def execute(args):
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
     LOGGER.info("Reclassifying tmp_veg raster")
-    tmp_veg_raster_path = os.path.join(temp_dir, 'veg.tif')
+    tmp_veg_raster_path = os.path.join(intermediate_dir, 'veg.tif')
     pygeoprocessing.reclassify_raster(
         (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
         gdal.GDT_Float64, out_nodata)
@@ -352,7 +354,7 @@ def execute(args):
 
     # Get pixel size from tmp_Kc_raster_path which should be the same resolution
     # as LULC raster
-    tmp_pet_path = os.path.join(temp_dir, 'pet.tif')
+    tmp_pet_path = os.path.join(intermediate_dir, 'pet.tif')
     LOGGER.info('Calculate PET from Ref Evap times Kc')
     pygeoprocessing.raster_calculator(
         [(eto_path, 1), (tmp_Kc_raster_path, 1)], pet_op, tmp_pet_path,
@@ -614,17 +616,17 @@ def execute(args):
         _write_table(watershed_results_csv_path, wyield_value_dict_ws)
         # The rest of the function is water scarcity and valuation, so we can
         # quit now
-        try:
-            shutil.rmtree(temp_dir)
-        except OSError:
-            LOGGER.warn("could not delete temporary directory %s", temp_dir)
+        # try:
+        #     shutil.rmtree(temp_dir)
+        # except OSError:
+        #     LOGGER.warn("could not delete temporary directory %s", temp_dir)
         return
 
     LOGGER.info('Starting Water Scarcity')
 
     # Create demand raster from table values to use in future calculations
     LOGGER.info("Reclassifying demand raster")
-    tmp_demand_path = os.path.join(temp_dir, 'demand.tif')
+    tmp_demand_path = os.path.join(intermediate_dir, 'demand.tif')
     pygeoprocessing.reclassify_raster(
         (clipped_lulc_path, 1), demand_reclassify_dict, tmp_demand_path,
         gdal.GDT_Float64, out_nodata)
@@ -666,10 +668,10 @@ def execute(args):
 
     watershed_dict = filter_dictionary(watershed_values, field_list_ws)
 
-    try:
-        shutil.rmtree(temp_dir)
-    except OSError:
-        LOGGER.warn("Could not remove temporary directory %s", temp_dir)
+    # try:
+    #     shutil.rmtree(temp_dir)
+    # except OSError:
+    #     LOGGER.warn("Could not remove temporary directory %s", temp_dir)
 
     # Check to see if Valuation was selected to run
     try:
