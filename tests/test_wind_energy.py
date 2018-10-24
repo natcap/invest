@@ -4,8 +4,7 @@ import tempfile
 import shutil
 import os
 import csv
-import faulthandler
-faulthandler.enable()
+
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 import numpy
