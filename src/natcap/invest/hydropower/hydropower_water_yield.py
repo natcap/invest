@@ -101,10 +101,10 @@ def execute(args):
         None
 
     """
-    # LOGGER.info('Validating arguments')
-    # invalid_parameters = validate(args)
-    # if invalid_parameters:
-    #     raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
+    LOGGER.info('Validating arguments')
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     if 'valuation_table_path' in args and args['valuation_table_path'] != '':
         LOGGER.info(
@@ -253,8 +253,7 @@ def execute(args):
         _check_missing_lucodes,
         args=(clipped_lulc_path, demand_lucodes, bio_lucodes),
         dependent_task_list=[align_raster_stack_task],
-        task_name='check_missing_lucodes_task')
-    graph.join()
+        task_name='check_missing_lucodes')
 
     sub_sheds_path = None
     # If subwatersheds was input get the path
@@ -303,26 +302,47 @@ def execute(args):
     # Create Kc raster from table values to use in future calculations
     LOGGER.info("Reclassifying temp_Kc raster")
     tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
-    pygeoprocessing.reclassify_raster(
-        (clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, gdal.GDT_Float64,
-        out_nodata)
+    create_Kc_raster_task = graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, 
+            gdal.GDT_Float64, out_nodata),
+        target_path_list=[tmp_Kc_raster_path],
+        dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
+        task_name='create_Kc_raster')
+    # pygeoprocessing.reclassify_raster(
+    #     (clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, gdal.GDT_Float64,
+    #     out_nodata)
 
     # Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
     tmp_root_raster_path = os.path.join(
         intermediate_dir, 'root_depth.tif')
-
-    pygeoprocessing.reclassify_raster(
-        (clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
-        gdal.GDT_Float64, out_nodata)
+    create_root_raster_task = graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=((clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
+            gdal.GDT_Float64, out_nodata),
+        target_path_list=[tmp_root_raster_path],
+        dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
+        task_name='create_root_raster')
+    # pygeoprocessing.reclassify_raster(
+    #     (clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
+    #     gdal.GDT_Float64, out_nodata)
 
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
     LOGGER.info("Reclassifying tmp_veg raster")
     tmp_veg_raster_path = os.path.join(intermediate_dir, 'veg.tif')
-    pygeoprocessing.reclassify_raster(
-        (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
-        gdal.GDT_Float64, out_nodata)
+    create_veg_raster_task = graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=((clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
+            gdal.GDT_Float64, out_nodata),
+        target_path_list=[tmp_veg_raster_path],
+        dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
+        task_name='create_veg_raster')
+    # pygeoprocessing.reclassify_raster(
+    #     (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
+    #     gdal.GDT_Float64, out_nodata)
+    graph.join()
 
     # Get out_nodata values so that we can avoid any issues when running
     # operations
