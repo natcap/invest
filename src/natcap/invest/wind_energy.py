@@ -1660,25 +1660,25 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
         'projection']
 
     # Create path for the reprojected shapefile
-    reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.shp')
+    clipped_vector_path = os.path.join(
+        temp_dir, 'clipped_vector.shp')
+    reprojected_clip_path = os.path.join(
+        temp_dir, 'reprojected_clip_vector.shp')
 
     if base_sr_wkt != target_sr_wkt:
-        # Get the original projection option and set it to yes to remove points
-        # that can't be reprojected. Set it back after reproject_vector.
-        orig_proj_option = gdal.GetConfigOption(
-            "OGR_ENABLE_PARTIAL_REPROJECTION")
-        gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", "YES")
-
-        # Reproject the shapefile to the spatial reference of AOI so that AOI
-        # can be used to clip the shapefile properly
-        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
-                                         reprojected_vector_path)
-        gdal.SetConfigOption(
-            "OGR_ENABLE_PARTIAL_REPROJECTION", orig_proj_option)
+        # Reproject clip vector to the spatial reference of the base vector.
+        # Note: reproject_vector can be expensive if vector has many features.
+        pygeoprocessing.reproject_vector(
+            clip_vector_path, base_sr_wkt, reprojected_clip_path)
 
     # Clip the shapefile to the AOI
     clip_vector_by_vector(
-        reprojected_vector_path, clip_vector_path, target_vector_path)
+        base_vector_path, reprojected_clip_path, clipped_vector_path)
+
+    # Reproject the clipped base vector to the spatial reference of clip vector
+    pygeoprocessing.reproject_vector(
+        clipped_vector_path, target_sr_wkt, target_vector_path)
+
     shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
