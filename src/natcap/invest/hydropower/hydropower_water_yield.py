@@ -149,6 +149,7 @@ def execute(args):
     depth_to_root_rest_layer_path = os.path.join(
         intermediate_dir, 'depth_to_root_rest_layer.tif')
     pawc_path = os.path.join(intermediate_dir, 'pawc.tif')
+    tmp_pet_path = os.path.join(intermediate_dir, 'pet.tif')
 
     sheds_path = args['watersheds_path']
     seasonality_constant = float(args['seasonality_constant'])
@@ -311,7 +312,7 @@ def execute(args):
     create_Kc_raster_task = graph.add_task(
         func=pygeoprocessing.reclassify_raster,
         args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, 
-            gdal.GDT_Float64, out_nodata),
+              gdal.GDT_Float64, out_nodata),
         target_path_list=[tmp_Kc_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_Kc_raster')
@@ -326,7 +327,7 @@ def execute(args):
     create_root_raster_task = graph.add_task(
         func=pygeoprocessing.reclassify_raster,
         args=((clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
-            gdal.GDT_Float64, out_nodata),
+              gdal.GDT_Float64, out_nodata),
         target_path_list=[tmp_root_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_root_raster')
@@ -341,14 +342,13 @@ def execute(args):
     create_veg_raster_task = graph.add_task(
         func=pygeoprocessing.reclassify_raster,
         args=((clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
-            gdal.GDT_Float64, out_nodata),
+              gdal.GDT_Float64, out_nodata),
         target_path_list=[tmp_veg_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_veg_raster')
     # pygeoprocessing.reclassify_raster(
     #     (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
     #     gdal.GDT_Float64, out_nodata)
-    graph.join()
 
     def pet_op(eto_pix, Kc_pix):
         """Calculate the plant potential evapotranspiration.
@@ -365,13 +365,14 @@ def execute(args):
             (eto_pix == eto_nodata) | (Kc_pix == out_nodata),
             out_nodata, eto_pix * Kc_pix)
 
-    # Get pixel size from tmp_Kc_raster_path which should be the same resolution
-    # as LULC raster
-    tmp_pet_path = os.path.join(intermediate_dir, 'pet.tif')
     LOGGER.info('Calculate PET from Ref Evap times Kc')
-    pygeoprocessing.raster_calculator(
-        [(eto_path, 1), (tmp_Kc_raster_path, 1)], pet_op, tmp_pet_path,
-        gdal.GDT_Float64, out_nodata)
+    calculate_pet_task = graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(eto_path, 1), (tmp_Kc_raster_path, 1)], pet_op, tmp_pet_path,
+              gdal.GDT_Float64, out_nodata),
+        target_path_list=[tmp_pet_path],
+        dependent_task_list=[create_Kc_raster_task],
+        task_name='calculate_pet')
 
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
         """Calculate actual evapotranspiration fraction of precipitation.
@@ -457,9 +458,15 @@ def execute(args):
 
     LOGGER.debug('Performing fractp operation')
     # Create clipped fractp_clipped raster
-    pygeoprocessing.raster_calculator(
-        [(x, 1) for x in raster_list], fractp_op, fractp_clipped_path,
-        gdal.GDT_Float64, out_nodata)
+    calculate_fractp_task = graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(x, 1) for x in raster_list], fractp_op, fractp_clipped_path,
+              gdal.GDT_Float64, out_nodata),
+        target_path_list=[fractp_clipped_path],
+        dependent_task_list=[
+            create_Kc_raster_task, create_veg_raster_task, 
+            create_root_raster_task, align_raster_stack_task],
+        task_name='calculate_fractp')
 
     def wyield_op(fractp, precip):
         """Calculate water yield.
@@ -478,26 +485,13 @@ def execute(args):
 
     LOGGER.info('Performing wyield operation')
     # Create clipped wyield_clipped raster
-    pygeoprocessing.raster_calculator(
-        [(fractp_clipped_path, 1), (precip_path, 1)], wyield_op,
-        wyield_clipped_path, gdal.GDT_Float64, out_nodata)
-
-    # Making a copy of watershed and sub-watershed to add water yield outputs
-    # to
-    watershed_results_path = os.path.join(
-        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
-    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    watershed_vector = gdal.OpenEx(sheds_path, gdal.OF_VECTOR)
-    esri_shapefile_driver.CreateCopy(watershed_results_path, watershed_vector)
-    watershed_vector = None
-
-    if sub_sheds_path is not None:
-        subwatershed_results_path = os.path.join(
-            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
-        subwatershed_vector = gdal.OpenEx(sub_sheds_path, gdal.OF_VECTOR)
-        esri_shapefile_driver.CreateCopy(
-            subwatershed_results_path, subwatershed_vector)
-        subwatershed_vector = None
+    calculate_wyield_task = graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(fractp_clipped_path, 1), (precip_path, 1)], wyield_op,
+              wyield_clipped_path, gdal.GDT_Float64, out_nodata),
+        target_path_list=[wyield_clipped_path],
+        dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
+        task_name='calculate_wyield')
 
     def aet_op(fractp, precip, veg):
         """Compute actual evapotranspiration values.
@@ -522,10 +516,33 @@ def execute(args):
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
-    pygeoprocessing.raster_calculator(
-        [(x, 1) for x in [
-            fractp_clipped_path, precip_path, tmp_veg_raster_path]],
-        aet_op, aet_path, gdal.GDT_Float64, out_nodata)
+    calculate_aet_task = graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(x, 1) for x in [
+              fractp_clipped_path, precip_path, tmp_veg_raster_path]],
+              aet_op, aet_path, gdal.GDT_Float64, out_nodata),
+        target_path_list=[aet_path],
+        dependent_task_list=[
+            calculate_fractp_task, create_veg_raster_task, align_raster_stack_task],
+        task_name='calculate_aet')
+
+    graph.join()    
+    # Making a copy of watershed and sub-watershed to add water yield outputs
+    # to
+    watershed_results_path = os.path.join(
+        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
+    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+    watershed_vector = gdal.OpenEx(sheds_path, gdal.OF_VECTOR)
+    esri_shapefile_driver.CreateCopy(watershed_results_path, watershed_vector)
+    watershed_vector = None
+
+    if sub_sheds_path is not None:
+        subwatershed_results_path = os.path.join(
+            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
+        subwatershed_vector = gdal.OpenEx(sub_sheds_path, gdal.OF_VECTOR)
+        esri_shapefile_driver.CreateCopy(
+            subwatershed_results_path, subwatershed_vector)
+        subwatershed_vector = None
 
     if sub_sheds_path is not None:
         # Create a list of tuples that pair up field names and raster paths so
