@@ -184,8 +184,8 @@ def execute(args):
         kwargs={'raster_align_index':4, 'base_vector_path_list':[sheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
-    # joining now since this task will always be the root node
-    # and it's useful to have the raster info available
+    # Joining now since this task will always be the root node
+    # and it's useful to have the raster info available. 
     align_raster_stack_task.join()
 
     lulc_info = pygeoprocessing.get_raster_info(clipped_lulc_path)
@@ -194,7 +194,6 @@ def execute(args):
     root_rest_layer_nodata = pygeoprocessing.get_raster_info(
         depth_to_root_rest_layer_path)['nodata'][0]
     pawc_nodata = pygeoprocessing.get_raster_info(pawc_path)['nodata'][0]
-
 
     # Open/read in the csv file into a dictionary and add to arguments
     LOGGER.info(
@@ -216,18 +215,34 @@ def execute(args):
         demand_lucodes = set(demand_dict.keys())
         demand_lucodes.add(lulc_nodata)
         LOGGER.debug('demand_lucodes %s', demand_lucodes)
-        # missing_demand_lucodes = set()
     else:
-        # missing_demand_lucodes = None
         demand_lucodes = None
 
     bio_lucodes = set(bio_dict.keys())
     bio_lucodes.add(lulc_nodata)
+    valid_lulc_txt_path = os.path.join(intermediate_dir, 'valid_lulc_values.txt')
     LOGGER.debug('bio_lucodes %s', bio_lucodes)
-    # missing_bio_lucodes = set()
 
-    def _check_missing_lucodes(clipped_lulc_path, demand_lucodes, bio_lucodes):
-        # these are such common errors we'll explicitly check before runtime
+    def _check_missing_lucodes(
+        clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path):
+        '''Check for lulc raster values that don't appear in the biophysical 
+        or demand tables, since that is a very common error.
+
+        Parameters:
+            clipped_lulc_path (string): file path to lulc raster
+            demand_lucodes (set): values found in args['demand_table_path']
+            bio_lucodes (set): values found in args['biophysical_table_path']
+            valid_lulc_txt_path (string): path to a file that gets created if
+                there are no missing values. serves as target_path_list for 
+                taskgraph.
+
+        Returns:
+            None
+
+        Raises:
+            ValueError if any landcover codes are present in the raster but
+                not in both of the tables.
+        '''
         missing_bio_lucodes = set()
         missing_demand_lucodes = set()
         for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_path):
@@ -255,10 +270,13 @@ def execute(args):
 
         if missing_message:
             raise ValueError(missing_message)
+        with open(valid_lulc_txt_path, 'w') as file:
+            file.write('')
 
     check_missing_lucodes_task = graph.add_task(
         _check_missing_lucodes,
-        args=(clipped_lulc_path, demand_lucodes, bio_lucodes),
+        args=(clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path),
+        target_path_list=[valid_lulc_txt_path],
         dependent_task_list=[align_raster_stack_task],
         task_name='check_missing_lucodes')
 
