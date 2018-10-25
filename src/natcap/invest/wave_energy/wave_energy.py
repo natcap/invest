@@ -23,7 +23,6 @@ from .. import utils
 import pdb
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
-
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
 _TARGET_PIXEL_TYPE = gdal.GDT_Float32
@@ -1327,7 +1326,7 @@ def clip_vector_by_vector(
         driver.DeleteDataSource(target_clipped_vector_path)
 
     # Create a temporary folder within work_dir for saving reprojected files
-    temp_work_dir = tempfile.mkdtemp(dir=work_dir, prefix='reproject')
+    temp_work_dir = tempfile.mkdtemp(dir=work_dir, prefix='reproject-')
 
     def reproject_vector(base_vector_path, target_sr_wkt, temp_work_dir):
         """Reproject the vector to target projection."""
