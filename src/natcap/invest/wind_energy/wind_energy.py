@@ -15,6 +15,7 @@ from scipy import integrate
 from scipy.sparse.csgraph import _validation
 
 import shapely.wkb
+import shapely.wkt
 import shapely.ops
 import shapely.prepared
 from shapely import speedups
@@ -318,6 +319,13 @@ def execute(args):
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
+        # Clip and project the bathymetry shapefile to AOI
+        LOGGER.info('Clip and project bathymetry to AOI')
+        bathymetry_proj_raster_path = os.path.join(
+            inter_dir, 'bathymetry_projected%s.tif' % suffix)
+        clip_to_projected_coordinate_system(bathymetry_path, aoi_vector_path,
+                                            bathymetry_proj_raster_path)
+
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
         # shapefile from dictionary in the intermediate directory. The final
@@ -327,22 +335,18 @@ def execute(args):
 
         # Create point shapefile from wind data
         LOGGER.info('Create point shapefile from wind data')
+        # Use the projection from the projected bathymetry as reference
+        bathy_projection_wkt = pygeoprocessing.get_raster_info(
+            bathymetry_proj_raster_path)['projection']
         wind_data_to_point_vector(wind_data, 'wind_data',
-                                  wind_point_vector_path)
+                                  wind_point_vector_path, bathy_projection_wkt)
 
-        # Clip and project the wind energy point shapefile to AOI
-        LOGGER.debug('Clip and project wind points to AOI')
+        # Clip the wind energy point shapefile to AOI
+        LOGGER.info('Clip and project wind points to AOI')
         wind_point_proj_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
-        clip_and_reproject_vector(wind_point_vector_path, aoi_vector_path,
-                                  wind_point_proj_vector_path, inter_dir)
-
-        # Clip and project the bathymetry shapefile to AOI
-        LOGGER.debug('Clip and project bathymetry to AOI')
-        bathymetry_proj_raster_path = os.path.join(
-            inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        clip_to_projected_coordinate_system(bathymetry_path, aoi_vector_path,
-                                            bathymetry_proj_raster_path)
+        clip_vector_by_vector(wind_point_vector_path, aoi_vector_path,
+                              wind_point_proj_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
@@ -383,7 +387,7 @@ def execute(args):
             LOGGER.debug('Create Raster From AOI')
             pygeoprocessing.create_raster_from_vector_extents(
                 aoi_vector_path, aoi_raster_path, pixel_size,
-                _TARGET_DATA_TYPE, _TARGET_NODATA)
+                gdal.GDT_Byte, _TARGET_NODATA)
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
@@ -405,7 +409,7 @@ def execute(args):
             out_dir, 'wind_energy_points%s.shp' % suffix)
 
         # Create point shapefile from wind data dictionary
-        LOGGER.debug('Create point shapefile from wind data')
+        LOGGER.info('Create point shapefile from wind data')
         wind_data_to_point_vector(wind_data, 'wind_data',
                                   wind_point_vector_path)
 
@@ -1155,8 +1159,8 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
     """
     LOGGER.info('Starting point_to_polygon_distance.')
     driver = ogr.GetDriverByName('ESRI Shapefile')
-    point_vector = driver.Open(base_point_vector_path, 1)  # for writing field
-    poly_vector = gdal.OpenEx(base_polygon_vector_path)
+    point_vector = driver.Open(base_point_vector_path, 1)  # 1 for writing field
+    poly_vector = driver.Open(base_polygon_vector_path, 0)
 
     poly_layer = poly_vector.GetLayer()
     # List to store the polygons geometries as shapely objects
@@ -1282,8 +1286,7 @@ def create_distance_raster(base_raster_path, base_vector_path,
         None
 
     """
-    LOGGER.info("Starting create_distance_raster at %s.",
-                target_dist_raster_path)
+    LOGGER.info("Starting create_distance_raster")
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
 
     rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
@@ -1319,8 +1322,7 @@ def create_distance_raster(base_raster_path, base_vector_path,
     target_dist_raster = None
 
     shutil.rmtree(temp_dir, ignore_errors=True)
-    LOGGER.info("Finished create_distance_raster at %s.",
-                target_dist_raster_path)
+    LOGGER.info("Finished create_distance_raster")
 
 
 def read_csv_wind_data(wind_data_path, hub_height):
@@ -1379,7 +1381,7 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     # If the target_vector_path exists delete it
     output_driver = ogr.GetDriverByName('ESRI Shapefile')
     if os.path.exists(target_vector_path):
-        output_driver.Delete(target_vector_path)
+        output_driver.DeleteDataSource(target_vector_path)
 
     target_vector = output_driver.CreateDataSource(target_vector_path)
 
@@ -1467,8 +1469,8 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
             base_raster_info['bounding_box'], base_raster_info['projection'],
             wgs84_sr.ExportToWkt())
 
-        target_bounding_box_wgs84 = pygeoprocessing._merge_bounding_boxes(
-            clip_wgs84_bounding_box, base_raster_bounding_box, 'intersection')
+        target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
+            [clip_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
 
         clip_vector_srs = osr.SpatialReference()
         clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
@@ -1489,21 +1491,22 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
 
         target_pixel_size = convert_degree_pixel_size_to_meters(
             base_raster_info['pixel_size'], centroid_y)
-
         pygeoprocessing.warp_raster(
             base_raster_path,
             target_pixel_size,
             target_raster_path,
             None,
             target_bb=target_bounding_box,
-            target_sr_wkt=target_srs.ExportToWkt())
+            target_sr_wkt=target_srs.ExportToWkt(),
+            vector_mask_options={'mask_vector_path': clip_vector_path})
     else:
         pygeoprocessing.align_and_resize_raster_stack(
             [base_raster_path], [target_raster_path], ['near'],
             base_raster_info['pixel_size'],
             'intersection',
             base_vector_path_list=[clip_vector_path],
-            target_sr_wkt=base_raster_info['projection'])
+            target_sr_wkt=base_raster_info['projection'],
+            vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
 def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
@@ -1541,12 +1544,11 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 def wind_data_to_point_vector(dict_data,
                               layer_name,
                               target_vector_path,
-                              aoi_vector_path=None):
-    """Given a dictionary of the wind data create a point shapefile that
-        represents this data.
+                              ref_projection_wkt=None):
+    """Create a point shapefile given a dictionary of the wind data fields.
 
     Parameters:
-        dict_data (dict): a  dictionary with the wind data, where the keys
+        dict_data (dict): a dictionary with the wind data, where the keys
             are tuples of the lat/long coordinates:
             {
             1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
@@ -1556,49 +1558,68 @@ def wind_data_to_point_vector(dict_data,
         layer_name (str): the name of the layer.
         target_vector_path (str): path to the output destination of the
             shapefile.
+        ref_projection_wkt (str): reference projection of in Well Known Text.
 
     Returns:
         None
 
     """
-    LOGGER.debug('Entering wind_data_to_point_vector')
+    LOGGER.info('Entering wind_data_to_point_vector')
 
     # If the target_vector_path exists delete it
     if os.path.isfile(target_vector_path):
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(target_vector_path)
 
-    LOGGER.debug('Creating new datasource')
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_datasource = target_driver.CreateDataSource(target_vector_path)
+    target_vector = target_driver.CreateDataSource(target_vector_path)
+    target_sr = osr.SpatialReference()
+    target_sr.SetWellKnownGeogCS("WGS84")
 
-    # Set the spatial reference to WGS84 (lat/long)
-    source_sr = osr.SpatialReference()
-    source_sr.SetWellKnownGeogCS("WGS84")
+    if ref_projection_wkt:
+        ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
+        if ref_sr.IsProjected:
+            # Get coordinate transformation between two projections
+            coord_trans = osr.CoordinateTransformation(
+                target_sr, ref_sr)
+            need_geotranform = True
+        else:
+            need_geotranform = False
+    else:
+        need_geotranform = False
 
-    target_layer = target_datasource.CreateLayer(layer_name, source_sr,
-                                                 ogr.wkbPoint)
+    if need_geotranform:
+        target_layer = target_vector.CreateLayer(
+            layer_name, ref_sr, ogr.wkbPoint)
+    else:
+        target_layer = target_vector.CreateLayer(
+            layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
     LOGGER.debug('field_list : %s', field_list)
 
-    LOGGER.debug('Creating fields for the datasource')
+    LOGGER.info('Creating fields for the target vector')
     for field in field_list:
         target_field = ogr.FieldDefn(field, ogr.OFTReal)
         target_layer.CreateField(target_field)
 
-    LOGGER.debug('Entering iteration to create and set the features')
+    LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
+        geom = ogr.Geometry(ogr.wkbPoint)
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
         # When projecting to WGS84, extents -180 to 180 are used for
         # longitude. In case input longitude is from -360 to 0 convert
         if longitude < -180:
             longitude += 360
-        geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(longitude, latitude)
+        if need_geotranform:
+            point_x, point_y, point_z = coord_trans.TransformPoint(
+                longitude, latitude)
+            geom.AddPoint(point_x, point_y)
+        else:
+            geom.AddPoint_2D(longitude, latitude)
 
         target_feature = ogr.Feature(target_layer.GetLayerDefn())
         target_layer.CreateFeature(target_feature)
@@ -1611,8 +1632,8 @@ def wind_data_to_point_vector(dict_data,
         target_layer.SetFeature(target_feature)
         target_feature = None
 
-    LOGGER.debug('Leaving wind_data_to_point_vector')
-    target_datasource = None
+    LOGGER.info('Finished wind_data_to_point_vector')
+    target_vector = None
 
 
 def clip_and_reproject_vector(base_vector_path, clip_vector_path,
@@ -1632,94 +1653,77 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     LOGGER.info('Entering clip_and_reproject_vector')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
 
-    # Get the AOIs spatial reference as strs in Well Known Text
+    # Get the base and target spatial reference in Well Known Text
+    base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection']
 
     # Create path for the reprojected shapefile
-    reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.tif')
+    clipped_vector_path = os.path.join(
+        temp_dir, 'clipped_vector.shp')
+    reprojected_clip_path = os.path.join(
+        temp_dir, 'reprojected_clip_vector.shp')
 
-    # Reproject the shapefile to the spatial reference of AOI so that AOI
-    # can be used to clip the shapefile properly
-    pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
-                                     reprojected_vector_path)
+    if base_sr_wkt != target_sr_wkt:
+        # Reproject clip vector to the spatial reference of the base vector.
+        # Note: reproject_vector can be expensive if vector has many features.
+        pygeoprocessing.reproject_vector(
+            clip_vector_path, base_sr_wkt, reprojected_clip_path)
 
     # Clip the shapefile to the AOI
-    clip_features(reprojected_vector_path, clip_vector_path,
-                  target_vector_path)
+    clip_vector_by_vector(
+        base_vector_path, reprojected_clip_path, clipped_vector_path)
+
+    # Reproject the clipped base vector to the spatial reference of clip vector
+    pygeoprocessing.reproject_vector(
+        clipped_vector_path, target_sr_wkt, target_vector_path)
+
     shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished clip_and_reproject_vector')
 
 
-def clip_features(base_vector_path, clip_vector_path, target_vector_path):
-    """Create a new target point vector where base points are contained in the
-        single polygon in clip_vector_path. Assumes all data are in the same
+def clip_vector_by_vector(
+        base_vector_path, clip_vector_path, target_vector_path):
+    """Create a new target vector where base features are contained in the
+        polygon in clip_vector_path. Assumes all data are in the same
         projection.
 
-        Parameters:
-            base_vector_path (str): path to a point vector to clip
-            clip_vector_path (str): path to a single polygon vector for
-                clipping.
-            target_vector_path (str): output path for the clipped vector.
+    Parameters:
+        base_vector_path (str): path to a vector to clip.
+        clip_vector_path (str): path to a polygon vector for clipping.
+        target_vector_path (str): output path for the clipped vector.
 
-        Returns:
-            None.
+    Returns:
+        None.
+
     """
-    LOGGER.info('Entering clip_features')
+    LOGGER.info('Entering clip_vector_by_vector')
 
     # Get layer and geometry informations from path
     base_vector = gdal.OpenEx(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_layer_defn = base_layer.GetLayerDefn()
-    base_layer_geom = base_layer.GetGeomType()
+    base_geom_type = base_layer.GetGeomType()
 
     clip_vector = gdal.OpenEx(clip_vector_path)
     clip_layer = clip_vector.GetLayer()
-    clip_feat = next(clip_layer)  # Assuming one feature in clip_layer
-    clip_geom = clip_feat.GetGeometryRef()
-    clip_shapely = shapely.wkb.loads(clip_geom.ExportToWkb())
-    clip_prep = shapely.prepared.prep(clip_shapely)
 
-    # Create a target point vector based on the properties of base point vector
+    # Create a target vector based on the properties of base vector
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
     target_vector = target_driver.CreateDataSource(target_vector_path)
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef(),
-                                             base_layer_geom)
-    target_layer = target_vector.GetLayer()
-    target_defn = target_layer.GetLayerDefn()
-
-    # Add input Layer Fields to the output Layer
-    for i in range(0, base_layer_defn.GetFieldCount()):
-        base_field_defn = base_layer_defn.GetFieldDefn(i)
-        target_layer.CreateField(base_field_defn)
-
-    # Write any point feature that lies within the polygon to the target vector
-    for base_feat in base_layer:
-        base_geom = base_feat.GetGeometryRef()
-        base_shapely = shapely.wkb.loads(base_geom.ExportToWkb())
-
-        if clip_prep.intersects(base_shapely):
-            # Create output feature
-            target_feat = ogr.Feature(target_defn)
-            target_feat.SetGeometry(base_geom.Clone())
-
-            # Add field values from input Layer
-            for i in range(0, target_defn.GetFieldCount()):
-                target_feat.SetField(
-                    target_defn.GetFieldDefn(i).GetNameRef(),
-                    base_feat.GetField(i))
-            target_layer.CreateFeature(target_feat)
-            target_feat = None
+                                             base_geom_type)
+    base_layer.Clip(clip_layer, target_layer)
 
     target_layer = None
     target_vector = None
-    clip_layer = None
+    clip_vector = None
     clip_vector = None
     base_layer = None
     base_vector = None
-
-    LOGGER.info('Finished clip_features')
+    LOGGER.info('Finished clip_vector_by_vector')
 
 
 def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
@@ -1901,46 +1905,6 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
                                       _TARGET_DATA_TYPE, out_nodata)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
-
-
-def pixel_size_based_on_coordinate_transform_path(dataset_path, coord_trans,
-                                                  point):
-    """Get width and height of cell in meters.
-
-    A wrapper for pixel_size_based_on_coordinate_transform that takes a dataset
-    path as an input and opens it before sending it along.
-
-    Parameters:
-        dataset_path (str): a path to a gdal dataset
-        All other parameters pass along
-
-    Returns:
-        result (tuple): (pixel_width_meters, pixel_height_meters)
-
-    """
-    dataset = gdal.OpenEx(dataset_path, gdal.OF_RASTER)
-    geo_tran = dataset.GetGeoTransform()
-    pixel_size_x = geo_tran[1]
-    pixel_size_y = geo_tran[5]
-    top_left_x = point[0]
-    top_left_y = point[1]
-    # Create the second point by adding the pixel width/height
-    new_x = top_left_x + pixel_size_x
-    new_y = top_left_y + pixel_size_y
-    # Transform two points into meters
-    point_1 = coord_trans.TransformPoint(top_left_x, top_left_y)
-    point_2 = coord_trans.TransformPoint(new_x, new_y)
-    # Calculate the x/y difference between two points
-    # taking the absolue value because the direction doesn't matter for pixel
-    # size in the case of most coordinate systems where y increases up and x
-    # increases to the right (right handed coordinate system).
-    pixel_diff_x = abs(point_2[0] - point_1[0])
-    pixel_diff_y = abs(point_2[1] - point_1[1])
-
-    # Close and clean up dataset
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
-    return (pixel_diff_x, pixel_diff_y)
 
 
 @validation.invest_validator
