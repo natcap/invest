@@ -358,7 +358,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\nolandpoly")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
 
@@ -382,7 +382,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
         from natcap.invest import wind_energy
 
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\nodistances")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_vector_path'] = os.path.join(
@@ -407,8 +407,8 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgrid")#self.workspace_dir)
 
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
         args['land_polygon_vector_path'] = os.path.join(
@@ -446,7 +446,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgridland")
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -728,44 +728,3 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['rate_change'] = 0.2
 
         wind_energy.validate(args)
-
-
-    def test_orig_data(self):
-        """WindEnergy: testing with large datasets"""
-        from natcap.invest import wind_energy
-        SAMPLE_DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'invest-data')
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_path': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'ECNA_EEZ_WEBPAR_Aug27_2012.csv'),
-            'bathymetry_path': os.path.join(
-                SAMPLE_DATA, 'Base_Data', 'Marine', 'DEMs',
-                'global_dem'),
-            'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                'global_wind_energy_parameters.csv'),
-            'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA, 'WindEnergy', 'input',
-                '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 60
-            }
-
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'New_England_US_Aoi.shp')
-        args['land_polygon_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'Base_Data', 'Marine', 'Land', 'global_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
-        args['price_table'] = False
-        args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
-
-        wind_energy.execute(args)
