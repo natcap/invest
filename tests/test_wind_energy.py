@@ -5,16 +5,15 @@ import shutil
 import os
 import csv
 
-import pygeoprocessing.testing
-from pygeoprocessing.testing import sampledata
 import numpy
 import numpy.testing
 from shapely.geometry import Polygon
 from shapely.geometry import Point
-from shapely.geometry.polygon import LinearRing
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
+
+import pygeoprocessing.testing
+from pygeoprocessing.testing import sampledata
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wind_energy',

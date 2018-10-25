@@ -1715,8 +1715,7 @@ def clip_vector_by_vector(
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef(),
                                              base_geom_type)
-    base_layer.Clip(
-        clip_layer, target_layer, options=["SKIP_FAILURES=YES"])
+    base_layer.Clip(clip_layer, target_layer)
 
     target_layer = None
     target_vector = None
