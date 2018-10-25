@@ -319,6 +319,13 @@ def execute(args):
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
+        # Clip and project the bathymetry shapefile to AOI
+        LOGGER.info('Clip and project bathymetry to AOI')
+        bathymetry_proj_raster_path = os.path.join(
+            inter_dir, 'bathymetry_projected%s.tif' % suffix)
+        clip_to_projected_coordinate_system(bathymetry_path, aoi_vector_path,
+                                            bathymetry_proj_raster_path)
+
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
         # shapefile from dictionary in the intermediate directory. The final
@@ -328,22 +335,18 @@ def execute(args):
 
         # Create point shapefile from wind data
         LOGGER.info('Create point shapefile from wind data')
+        # Use the projection from the projected bathymetry as reference
+        bathy_projection_wkt = pygeoprocessing.get_raster_info(
+            bathymetry_proj_raster_path)['projection']
         wind_data_to_point_vector(wind_data, 'wind_data',
-                                  wind_point_vector_path)
+                                  wind_point_vector_path, bathy_projection_wkt)
 
-        # Clip and project the wind energy point shapefile to AOI
-        LOGGER.debug('Clip and project wind points to AOI')
+        # Clip the wind energy point shapefile to AOI
+        LOGGER.info('Clip and project wind points to AOI')
         wind_point_proj_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
-        clip_and_reproject_vector(wind_point_vector_path, aoi_vector_path,
-                                  wind_point_proj_vector_path, inter_dir)
-
-        # Clip and project the bathymetry shapefile to AOI
-        LOGGER.debug('Clip and project bathymetry to AOI')
-        bathymetry_proj_raster_path = os.path.join(
-            inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        clip_to_projected_coordinate_system(bathymetry_path, aoi_vector_path,
-                                            bathymetry_proj_raster_path)
+        clip_vector_by_vector(wind_point_vector_path, aoi_vector_path,
+                              wind_point_proj_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
@@ -1283,8 +1286,7 @@ def create_distance_raster(base_raster_path, base_vector_path,
         None
 
     """
-    LOGGER.info("Starting create_distance_raster at %s.",
-                target_dist_raster_path)
+    LOGGER.info("Starting create_distance_raster")
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='dist-raster-')
 
     rasterized_raster_path = os.path.join(temp_dir, 'rasterized_raster.tif')
@@ -1320,8 +1322,7 @@ def create_distance_raster(base_raster_path, base_vector_path,
     target_dist_raster = None
 
     shutil.rmtree(temp_dir, ignore_errors=True)
-    LOGGER.info("Finished create_distance_raster at %s.",
-                target_dist_raster_path)
+    LOGGER.info("Finished create_distance_raster")
 
 
 def read_csv_wind_data(wind_data_path, hub_height):
@@ -1543,12 +1544,11 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
 def wind_data_to_point_vector(dict_data,
                               layer_name,
                               target_vector_path,
-                              aoi_vector_path=None):
-    """Given a dictionary of the wind data create a point shapefile that
-        represents this data.
+                              ref_projection_wkt=None):
+    """Create a point shapefile given a dictionary of the wind data fields.
 
     Parameters:
-        dict_data (dict): a  dictionary with the wind data, where the keys
+        dict_data (dict): a dictionary with the wind data, where the keys
             are tuples of the lat/long coordinates:
             {
             1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
@@ -1558,6 +1558,7 @@ def wind_data_to_point_vector(dict_data,
         layer_name (str): the name of the layer.
         target_vector_path (str): path to the output destination of the
             shapefile.
+        ref_projection_wkt (str): reference projection of in Well Known Text.
 
     Returns:
         None
@@ -1570,16 +1571,29 @@ def wind_data_to_point_vector(dict_data,
         driver = ogr.GetDriverByName('ESRI Shapefile')
         driver.DeleteDataSource(target_vector_path)
 
-    LOGGER.info('Creating new datasource')
     target_driver = ogr.GetDriverByName('ESRI Shapefile')
     target_vector = target_driver.CreateDataSource(target_vector_path)
+    target_sr = osr.SpatialReference()
+    target_sr.SetWellKnownGeogCS("WGS84")
 
-    # Set the spatial reference to WGS84 (lat/long)
-    source_sr = osr.SpatialReference()
-    source_sr.SetWellKnownGeogCS("WGS84")
+    if ref_projection_wkt:
+        ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
+        if ref_sr.IsProjected:
+            # Get coordinate transformation between two projections
+            coord_trans = osr.CoordinateTransformation(
+                target_sr, ref_sr)
+            need_geotranform = True
+        else:
+            need_geotranform = False
+    else:
+        need_geotranform = False
 
-    target_layer = target_vector.CreateLayer(layer_name, source_sr,
-                                             ogr.wkbPoint)
+    if need_geotranform:
+        target_layer = target_vector.CreateLayer(
+            layer_name, ref_sr, ogr.wkbPoint)
+    else:
+        target_layer = target_vector.CreateLayer(
+            layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
@@ -1593,14 +1607,19 @@ def wind_data_to_point_vector(dict_data,
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
     for point_dict in dict_data.itervalues():
+        geom = ogr.Geometry(ogr.wkbPoint)
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
         # When projecting to WGS84, extents -180 to 180 are used for
         # longitude. In case input longitude is from -360 to 0 convert
         if longitude < -180:
             longitude += 360
-        geom = ogr.Geometry(ogr.wkbPoint)
-        geom.AddPoint_2D(longitude, latitude)
+        if need_geotranform:
+            point_x, point_y, point_z = coord_trans.TransformPoint(
+                longitude, latitude)
+            geom.AddPoint(point_x, point_y)
+        else:
+            geom.AddPoint_2D(longitude, latitude)
 
         target_feature = ogr.Feature(target_layer.GetLayerDefn())
         target_layer.CreateFeature(target_feature)
@@ -1613,7 +1632,7 @@ def wind_data_to_point_vector(dict_data,
         target_layer.SetFeature(target_feature)
         target_feature = None
 
-    LOGGER.info('Leaving wind_data_to_point_vector')
+    LOGGER.info('Finished wind_data_to_point_vector')
     target_vector = None
 
 
@@ -1634,24 +1653,28 @@ def clip_and_reproject_vector(base_vector_path, clip_vector_path,
     LOGGER.info('Entering clip_and_reproject_vector')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
 
-    # Get the AOIs spatial reference in Well Known Text
+    # Get the base and target spatial reference in Well Known Text
+    base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
     target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
         'projection']
 
     # Create path for the reprojected shapefile
     reprojected_vector_path = os.path.join(temp_dir, 'reprojected_vector.shp')
 
-    # Get the original projection option and set it to yes to remove points
-    # that can't be reprojected. Set it back after reproject_vector.
-    orig_proj_option = gdal.GetConfigOption(
-        "OGR_ENABLE_PARTIAL_REPROJECTION")
-    gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", "YES")
+    if base_sr_wkt != target_sr_wkt:
+        # Get the original projection option and set it to yes to remove points
+        # that can't be reprojected. Set it back after reproject_vector.
+        orig_proj_option = gdal.GetConfigOption(
+            "OGR_ENABLE_PARTIAL_REPROJECTION")
+        gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", "YES")
 
-    # Reproject the shapefile to the spatial reference of AOI so that AOI
-    # can be used to clip the shapefile properly
-    pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
-                                     reprojected_vector_path)
-    gdal.SetConfigOption("OGR_ENABLE_PARTIAL_REPROJECTION", orig_proj_option)
+        # Reproject the shapefile to the spatial reference of AOI so that AOI
+        # can be used to clip the shapefile properly
+        pygeoprocessing.reproject_vector(base_vector_path, target_sr_wkt,
+                                         reprojected_vector_path)
+        gdal.SetConfigOption(
+            "OGR_ENABLE_PARTIAL_REPROJECTION", orig_proj_option)
 
     # Clip the shapefile to the AOI
     clip_vector_by_vector(
@@ -1681,7 +1704,7 @@ def clip_vector_by_vector(
     base_vector = gdal.OpenEx(base_vector_path)
     base_layer = base_vector.GetLayer()
     base_layer_defn = base_layer.GetLayerDefn()
-    base_layer_geom = base_layer.GetGeomType()
+    base_geom_type = base_layer.GetGeomType()
 
     clip_vector = gdal.OpenEx(clip_vector_path)
     clip_layer = clip_vector.GetLayer()
@@ -1691,10 +1714,10 @@ def clip_vector_by_vector(
     target_vector = target_driver.CreateDataSource(target_vector_path)
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef(),
-                                             base_layer_geom)
-    target_layer = target_vector.GetLayer()
+                                             base_geom_type)
+    base_layer.Clip(
+        clip_layer, target_layer, options=["SKIP_FAILURES=YES"])
 
-    base_layer.Clip(clip_layer, target_layer, options=["SKIP_FAILURES=YES"])
     target_layer = None
     target_vector = None
     clip_vector = None

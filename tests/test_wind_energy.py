@@ -447,7 +447,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Desktop\test_folder\wind_energy_workspace\pricevalgridland_cutline")
 
         args['aoi_vector_path'] = os.path.join(
             SAMPLE_DATA, 'New_England_US_Aoi.shp')
@@ -763,10 +763,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['valuation_container'] = True
         args['foundation_cost'] = 2
         args['discount_rate'] = 0.07
-        # there was no sample data that provided landing points, thus for
-        # testing, grid points in 'resampled_grid_pts.csv' were duplicated and
-        # marked as land points. So the distances will be zero, keeping the
-        # result the same but testing that section of code
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'WindEnergy', 'input', 'NE_sub_pts.csv')
         args['price_table'] = False
