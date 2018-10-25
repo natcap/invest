@@ -9,6 +9,7 @@ from osgeo import gdal
 from osgeo import ogr
 import numpy
 import pygeoprocessing
+import taskgraph
 
 from . import validation
 from . import utils
@@ -103,6 +104,9 @@ def execute(args):
         args['rate_change'] (float): Annual rate of change in price of carbon
             as a percentage.  Used if `args['do_valuation']` is  present and
             True.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
     Returns:
         None.
     """
@@ -121,10 +125,22 @@ def execute(args):
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
+    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = 0  # Threaded queue management, but same process.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
     cell_size_set = set()
     raster_size_set = set()
     valid_lulc_keys = []
     valid_scenarios = []
+    tifs_to_summarize = set()  # passed to _generate_report()
+
     for scenario_type in ['cur', 'fut', 'redd']:
         lulc_key = "lulc_%s_path" % (scenario_type)
         if lulc_key in args and args[lulc_key]:
@@ -144,58 +160,68 @@ def execute(args):
             "different sizes that were found in processing: %s" % (
                 valid_lulc_keys, raster_size_set))
 
+    # calculate total carbon storage
     LOGGER.info('Map all carbon pools to carbon storage rasters.')
-    pool_storage_path_lookup = collections.defaultdict(list)
-    summary_stats = []  # use to aggregate storage, value, and more
-    for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
-        carbon_pool_by_type = dict([
-            (lucode, float(carbon_pool_table[lucode][pool_type]))
-            for lucode in carbon_pool_table])
-        for scenario_type in valid_scenarios:
+    carbon_map_task_lookup = {}
+    sum_rasters_task_lookup = {}
+    for scenario_type in valid_scenarios:
+        carbon_map_task_lookup[scenario_type] = []
+        storage_path_list = []
+        for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
+            carbon_pool_by_type = dict([
+                (lucode, float(carbon_pool_table[lucode][pool_type])) 
+                for lucode in carbon_pool_table])
+            
             lulc_key = 'lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)
             LOGGER.info(
                 "Mapping carbon from '%s' to '%s' scenario.",
                 lulc_key, storage_key)
-            _generate_carbon_map(
-                args[lulc_key], carbon_pool_by_type,
-                file_registry[storage_key])
-            # store the pool storage path so they can be easily added later
-            pool_storage_path_lookup[scenario_type].append(
-                file_registry[storage_key])
 
-    # TODO: left off here for pgp 1.0 conversion
+            carbon_map_task = graph.add_task(
+                _generate_carbon_map,
+                args=(args[lulc_key], carbon_pool_by_type,
+                      file_registry[storage_key]),
+                target_path_list=[file_registry[storage_key]],
+                task_name='carbon_map_%s' % storage_key)
+            storage_path_list.append(file_registry[storage_key])
+            carbon_map_task_lookup[scenario_type].append(carbon_map_task)
 
-    # Sum the individual carbon storage pool paths per scenario
-    for scenario_type, storage_path_list in (
-            pool_storage_path_lookup.iteritems()):
         output_key = 'tot_c_' + scenario_type
         LOGGER.info(
             "Calculate carbon storage for '%s'", output_key)
-        _sum_rasters(storage_path_list, file_registry[output_key])
 
-        # Tuple below is (sort_priority, description, value, unit, path)
-        summary_stats.append((
-            0, "Total %s" % scenario_type,
-            _accumulate_totals(file_registry[output_key]), 'Mg of C',
-            file_registry[output_key]))
+        sum_rasters_task = graph.add_task(
+            _sum_rasters,
+            args=(storage_path_list, file_registry[output_key]),
+            target_path_list=[file_registry[output_key]],
+            dependent_task_list=carbon_map_task_lookup[scenario_type],
+            task_name='sum_rasters_for_total_c_%s' % output_key)
+        sum_rasters_task_lookup[scenario_type] = sum_rasters_task
+        tifs_to_summarize.add(file_registry[output_key])
 
     # calculate sequestration
-    for fut_type in ['fut', 'redd']:
-        if fut_type not in valid_scenarios:
+    diff_rasters_task_lookup = {}
+    for scenario_type in ['fut', 'redd']:
+        if scenario_type not in valid_scenarios:
             continue
-        output_key = 'delta_cur_' + fut_type
+        output_key = 'delta_cur_' + scenario_type
         LOGGER.info("Calculate sequestration scenario '%s'", output_key)
         storage_path_list = [
-            file_registry['tot_c_cur'], file_registry['tot_c_' + fut_type]]
-        _diff_rasters(storage_path_list, file_registry[output_key])
+            file_registry['tot_c_cur'], file_registry['tot_c_' + scenario_type]]
 
-        # Tuple below is (sort_priority, description, value, unit, path)
-        summary_stats.append((
-            1, "Change in C for %s" % fut_type,
-            _accumulate_totals(file_registry[output_key]), 'Mg of C',
-            file_registry[output_key]))
+        diff_rasters_task = graph.add_task(
+            _diff_rasters,
+            args=(storage_path_list, file_registry[output_key]),
+            target_path_list=[file_registry[output_key]],
+            dependent_task_list=[sum_rasters_task_lookup['cur'], 
+                sum_rasters_task_lookup[scenario_type]],
+            task_name='diff_rasters_for_%s' % output_key)
+        diff_rasters_task_lookup[scenario_type] = diff_rasters_task
+        tifs_to_summarize.add(file_registry[output_key])
 
+    # calculate net present value
+    calculate_npv_tasks = []
     if 'do_valuation' in args and args['do_valuation']:
         LOGGER.info('Constructing valuation formula.')
         valuation_constant = _calculate_valuation_constant(
@@ -208,17 +234,28 @@ def execute(args):
                 continue
             output_key = 'npv_%s' % scenario_type
             LOGGER.info("Calculating NPV for scenario '%s'", output_key)
-            _calculate_npv(
-                file_registry['delta_cur_%s' % scenario_type],
-                valuation_constant, file_registry[output_key])
 
-            # Tuple below is (sort_priority, description, value, unit, path)
-            summary_stats.append((
-                2, "Net present value from cur to %s" % scenario_type,
-                _accumulate_totals(file_registry[output_key]),
-                "currency units", file_registry[output_key]))
-
-    _generate_report(summary_stats, args, file_registry['html_report'])
+            calculate_npv_task = graph.add_task(
+                _calculate_npv,
+                args=(file_registry['delta_cur_%s' % scenario_type],
+                      valuation_constant, file_registry[output_key]),
+                target_path_list=[file_registry[output_key]],
+                dependent_task_list=[diff_rasters_task_lookup[scenario_type]],
+                task_name='calculate_%s' % output_key)
+            calculate_npv_tasks.append(calculate_npv_task)
+            tifs_to_summarize.add(file_registry[output_key])
+    
+    # Report aggregate results
+    tasks_to_report = (sum_rasters_task_lookup.values() 
+                       + diff_rasters_task_lookup.values() 
+                       + calculate_npv_tasks)
+    generate_report_task = graph.add_task(
+        _generate_report,
+        args=(tifs_to_summarize, args, file_registry),
+        target_path_list=[file_registry['html_report']],
+        dependent_task_list=tasks_to_report,
+        task_name='generate_report')
+    graph.join()
 
     for tmp_filename_key in _TMP_BASE_FILES:
         try:
@@ -356,17 +393,17 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
         gdal.GDT_Float32, _VALUE_NODATA)
 
 
-def _generate_report(summary_stats, model_args, html_report_path):
+def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
     Paramters:
-        summary_stats (list of tuple): a list of tuples of the form
-            (display_sort_priority, description, value, unit, file_path)
+        raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
-        html_report_path (string): path to output report file.
+        file_registry (dict): file path dictionary for InVEST workspace.
     Returns:
         None.
     """
+    html_report_path = file_registry['html_report']
     with open(html_report_path, 'w') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
@@ -398,12 +435,25 @@ def _generate_report(summary_stats, model_args, html_report_path):
         report_doc.write(
             '<table><tr><th>Description</th><th>Value</th><th>Units</th><th>R'
             'aw File</th></tr>')
-        for _, result_description, units, value, raw_file_path in sorted(
-                summary_stats):
-            report_doc.write(
-                '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
-                '<td>%s</td></tr>' % (
-                    result_description, units, value, raw_file_path))
+
+        # value lists are [sort priority, description, statistic, units]
+        report = [
+            (file_registry['tot_c_cur'], 'Total cur', 'Mg of C'),
+            (file_registry['tot_c_fut'], 'Total fut', 'Mg of C'),
+            (file_registry['tot_c_redd'], 'Total redd', 'Mg of C'),
+            (file_registry['delta_cur_fut'], 'Change in C for fut', 'Mg of C'),
+            (file_registry['delta_cur_redd'], 'Change in C for redd', 'Mg of C'),
+            (file_registry['npv_fut'], 'Net present value from cur to fut', 'currency units'),
+            (file_registry['npv_redd'], 'Net present value from cur to redd', 'currency units'),
+        ]
+
+        for raster_uri, description, units in report:
+            if raster_uri in raster_file_set:
+                summary_stat = _accumulate_totals(raster_uri)
+                report_doc.write(
+                    '<tr><td>%s</td><td class="number">%.2f</td><td>%s</td>'
+                    '<td>%s</td></tr>' % (
+                        description, summary_stat, units, raster_uri))
         report_doc.write('</body></html>')
 
 
