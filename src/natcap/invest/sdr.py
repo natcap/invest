@@ -702,7 +702,7 @@ def _calculate_bar_factor(
         accumulation_path, out_bar_path):
     """Route user defined source across DEM.
 
-    Used for calcualting S and W bar in the SDR operation.
+    Used for calculating S and W bar in the SDR operation.
 
     Parameters:
         dem_path (string): path to DEM raster
