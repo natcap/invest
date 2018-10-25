@@ -73,7 +73,7 @@ def execute(args):
             attributes of individual cells in the raster map (required)
 
         args['seasonality_constant'] (float): floating point value between
-            1 and 10 corresponding to the seasonal distribution of
+            1 and 30 corresponding to the seasonal distribution of
             precipitation (required)
 
         args['results_suffix'] (string): a string that will be concatenated
