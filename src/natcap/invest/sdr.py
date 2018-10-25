@@ -253,7 +253,7 @@ def execute(args):
     else:
         drainage_raster_path_task = (f_reg['stream_path'], stream_task)
 
-    w_task = task_graph.add_task(
+    threshold_w_task = task_graph.add_task(
         func=_calculate_w,
         args=(
             biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
@@ -284,7 +284,6 @@ def execute(args):
             align_task, ls_factor_task, drainage_raster_path_task[1]],
         task_name='calculate RKLS')
 
-    LOGGER.info('calculating USLE')
     usle_task = task_graph.add_task(
         func=_calculate_usle,
         args=(
@@ -297,9 +296,9 @@ def execute(args):
             rkls_task, cp_task, drainage_raster_path_task[1]],
         task_name='calculate USLE')
 
-    bar_path_task_map = {}
+    bar_task_map = {}
     for factor_path, factor_task, accumulation_path, out_bar_path, bar_id in [
-            (f_reg['thresholded_w_path'], w_task,
+            (f_reg['thresholded_w_path'], threshold_w_task,
              f_reg['w_accumulation_path'],
              f_reg['w_bar_path'],
              'w_bar'),
@@ -318,82 +317,149 @@ def execute(args):
                 align_task, factor_task, flow_accumulation_task,
                 flow_dir_task],
             task_name='calculate %s' % bar_id)
-        bar_path_task_map[bar_id] = (out_bar_path, bar_task)
+        bar_task_map[bar_id] = bar_task
+
+    d_up_task = task_graph.add_task(
+        func=_calculate_d_up,
+        args=(
+            f_reg['w_bar_path'], f_reg['s_bar_path'],
+            f_reg['flow_accumulation_path'], f_reg['d_up_path']),
+        target_path_list=[f_reg['d_up_path']],
+        dependent_task_list=[
+            bar_task_map['s_bar'], bar_task_map['w_bar'],
+            flow_accumulation_task],
+        task_name='calculate Dup')
+
+    inverse_ws_factor_task = task_graph.add_task(
+        func=_calculate_inverse_ws_factor,
+        args=(
+            f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
+            f_reg['ws_inverse_path']),
+        target_path_list=[f_reg['ws_inverse_path']],
+        dependent_task_list=[threshold_slope_task, threshold_w_task],
+        task_name='calculate inverse ws factor')
+
+    d_dn_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            (drainage_raster_path_task[0], 1),
+            f_reg['d_dn_path']),
+        kwargs={'weight_raster_path_band': (f_reg['ws_inverse_path'], 1)},
+        target_path_list=[f_reg['d_dn_path']],
+        dependent_task_list=[
+            flow_dir_task, drainage_raster_path_task[1],
+            inverse_ws_factor_task],
+        task_name='calculating d_dn')
+
+    ic_task = task_graph.add_task(
+        func=_calculate_ic,
+        args=(
+            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path']),
+        target_path_list=[f_reg['ic_path']],
+        dependent_task_list=[d_up_task, d_dn_task],
+        task_name='calculate ic')
+
+    sdr_task = task_graph.add_task(
+        func=_calculate_sdr,
+        args=(
+            float(args['k_param']), float(args['ic_0_param']),
+            float(args['sdr_max']), f_reg['ic_path'],
+            drainage_raster_path_task[0], f_reg['sdr_path']),
+        target_path_list=[f_reg['sdr_path']],
+        dependent_task_list=[ic_task],
+        task_name='calculate sdr')
+
+    sed_export_task = task_graph.add_task(
+        func=_calculate_sed_export,
+        args=(
+            f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path']),
+        target_path_list=[f_reg['sed_export_path']],
+        dependent_task_list=[usle_task, sdr_task],
+        task_name='calculate sed export')
+
+    _ = task_graph.add_task(
+        func=_calculate_sed_retention_index,
+        args=(
+            f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
+            float(args['sdr_max']), f_reg['sed_retention_index_path']),
+        target_path_list=[f_reg['sed_retention_index_path']],
+        dependent_task_list=[rkls_task, usle_task, sdr_task],
+        task_name='calculate sediment retention index')
+
+    # This next section is for calculating the bare soil part.
+    s_inverse_task = task_graph.add_task(
+        func=_calculate_inverse_s_factor,
+        args=(f_reg['thresholded_slope_path'], f_reg['s_inverse_path']),
+        target_path_list=[f_reg['s_inverse_path']],
+        dependent_task_list=[threshold_slope_task],
+        task_name='calculate S factor')
+
+    d_dn_bare_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            (drainage_raster_path_task[0], 1),
+            f_reg['d_dn_bare_soil_path']),
+        kwargs={'weight_raster_path_band': (f_reg['s_inverse_path'], 1)},
+        target_path_list=[f_reg['d_dn_bare_soil_path']],
+        dependent_task_list=[
+            flow_dir_task, drainage_raster_path_task[1], s_inverse_task],
+        task_name='calculating d_dn soil')
+
+    d_up_bare_task = task_graph.add_task(
+        func=_calculate_d_up_bare,
+        args=(
+            f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
+            f_reg['d_up_bare_soil_path']),
+        target_path_list=[f_reg['d_up_bare_soil_path']],
+        dependent_task_list=[bar_task_map['s_bar'], flow_accumulation_task],
+        task_name='calculating d_up bare soil')
+
+    ic_bare_task = task_graph.add_task(
+        func=_calculate_ic,
+        args=(
+            f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
+            f_reg['ic_bare_soil_path']),
+        target_path_list=[f_reg['ic_bare_soil_path']],
+        dependent_task_list=[d_up_bare_task, d_dn_bare_task],
+        task_name='calculate bare soil ic')
+
+    sdr_bare_task = task_graph.add_task(
+        func=_calculate_sdr,
+        args=(
+            float(args['k_param']), float(args['ic_0_param']),
+            float(args['sdr_max']), f_reg['ic_bare_soil_path'],
+            drainage_raster_path_task[0], f_reg['sdr_bare_soil_path']),
+        target_path_list=[f_reg['sdr_bare_soil_path']],
+        dependent_task_list=[ic_bare_task, drainage_raster_path_task[1]],
+        task_name='calculate bare SDR')
+
+    sed_retention_task = task_graph.add_task(
+        func=_calculate_sed_retention,
+        args=(
+            f_reg['rkls_path'], f_reg['usle_path'],
+            drainage_raster_path_task[0], f_reg['sdr_path'],
+            f_reg['sdr_bare_soil_path'], f_reg['sed_retention_path']),
+        target_path_list=[f_reg['sed_retention_path']],
+        dependent_task_list=[
+            rkls_task, usle_task, drainage_raster_path_task[1], sdr_task,
+            sdr_bare_task],
+        task_name='calculate sediment retention')
+
+    _ = task_graph.add_task(
+        func=_generate_report,
+        args=(
+            args['watersheds_path'], f_reg['usle_path'],
+            f_reg['sed_export_path'], f_reg['sed_retention_path'],
+            f_reg['watershed_results_sdr_path']),
+        target_path_list=[f_reg['watershed_results_sdr_path']],
+        dependent_task_list=[
+            usle_task, sed_export_task, sed_retention_task],
+        task_name='generate report')
 
     task_graph.close()
     task_graph.join()
-    return
-
-    LOGGER.info('calculating d_up')
-    _calculate_d_up(
-        *[f_reg[key] for key in [
-            'w_bar_path', 's_bar_path', 'flow_accumulation_path',
-            'd_up_path']])
-
-    LOGGER.info('calculate WS factor')
-    _calculate_inverse_ws_factor(
-        f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
-        f_reg['ws_inverse_path'])
-
-    LOGGER.info('calculating d_dn')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
-        f_reg['d_dn_path'], factor_uri=f_reg['ws_inverse_path'])
-
-    LOGGER.info('calculate ic')
-    _calculate_ic(
-        f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path'])
-
-    LOGGER.info('calculate sdr')
-    _calculate_sdr(
-        float(args['k_param']), float(args['ic_0_param']),
-        float(args['sdr_max']), f_reg['ic_path'],
-        f_reg['drainage_raster_path'], f_reg['sdr_path'])
-
-    LOGGER.info('calculate sed export')
-    _calculate_sed_export(
-        f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path'])
-
-    LOGGER.info('calculate sediment retention index')
-    _calculate_sed_retention_index(
-        f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
-        float(args['sdr_max']), f_reg['sed_retention_index_path'])
-
-    LOGGER.info('calculate sediment retention')
-    LOGGER.info('calculate S factor')
-    _calculate_inverse_s_factor(
-        f_reg['thresholded_slope_path'], f_reg['s_inverse_path'])
-
-    LOGGER.info('calculating d_dn bare soil')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
-        f_reg['d_dn_bare_soil_path'], factor_uri=f_reg['s_inverse_path'])
-
-    LOGGER.info('calculating d_up bare soil')
-    _calculate_d_up_bare(
-        f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-        f_reg['d_up_bare_soil_path'])
-
-    LOGGER.info('calculate ic')
-    _calculate_ic(
-        f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
-        f_reg['ic_bare_soil_path'])
-
-    _calculate_sdr(
-        float(args['k_param']), float(args['ic_0_param']),
-        float(args['sdr_max']), f_reg['ic_bare_soil_path'],
-        f_reg['drainage_raster_path'], f_reg['sdr_bare_soil_path'])
-
-    _calculate_sed_retention(
-        f_reg['rkls_path'], f_reg['usle_path'], f_reg['drainage_raster_path'],
-        f_reg['sdr_path'], f_reg['sdr_bare_soil_path'],
-        f_reg['sed_retention_path'])
-
-    LOGGER.info('generating report')
-    _generate_report(
-        args['watersheds_path'], f_reg['usle_path'],
-        f_reg['sed_export_path'], f_reg['sed_retention_path'],
-        f_reg['watershed_results_sdr_path'])
 
 
 def _calculate_ls_factor(
