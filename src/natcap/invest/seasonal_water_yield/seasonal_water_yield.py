@@ -783,25 +783,12 @@ def _aggregate_recharge(
     aggregate_vector = gdal.OpenEx(aggregate_vector_path, 1)
     aggregate_layer = aggregate_vector.GetLayer()
 
-    # make an identifying id per polygon that can be used for aggregation
-    while True:
-        serviceshed_defn = aggregate_layer.GetLayerDefn()
-        poly_id_field = str(uuid.uuid4())[-8:]
-        if serviceshed_defn.GetFieldIndex(poly_id_field) == -1:
-            break
-    layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
-    aggregate_layer.CreateField(layer_id_field)
-    for poly_index, poly_feat in enumerate(aggregate_layer):
-        poly_feat.SetField(poly_id_field, poly_index)
-        aggregate_layer.SetFeature(poly_feat)
-    aggregate_layer.SyncToDisk()
-
     for raster_path, aggregate_field_id, op_type in [
             (l_path, 'qb', 'mean'), (vri_path, 'vri_sum', 'sum')]:
 
         # aggregate carbon stocks by the new ID field
         aggregate_stats = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), aggregate_vector_path, poly_id_field)
+            (raster_path, 1), aggregate_vector_path)
 
         aggregate_field = ogr.FieldDefn(aggregate_field_id, ogr.OFTReal)
         aggregate_field.SetWidth(24)
@@ -817,7 +804,7 @@ def _aggregate_recharge(
                 else:
                     LOGGER.warn(
                         "no coverage for polygon %s", ', '.join(
-                            [str(poly_feat.GetField(_)) for _ in xrange(
+                            [str(poly_feat.GetField(_)) for _ in range(
                                 poly_feat.GetFieldCount())]))
                     value = 0.0
             elif op_type == 'sum':
@@ -825,9 +812,6 @@ def _aggregate_recharge(
             poly_feat.SetField(aggregate_field_id, value)
             aggregate_layer.SetFeature(poly_feat)
 
-    # don't need a random poly id anymore
-    aggregate_layer.DeleteField(
-        serviceshed_defn.GetFieldIndex(poly_id_field))
     aggregate_layer.SyncToDisk()
     aggregate_layer = None
     gdal.Dataset.__swig_destroy__(aggregate_vector)
