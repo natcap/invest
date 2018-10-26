@@ -525,11 +525,11 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                                   xoff=block_info['xoff'],
                                   yoff=block_info['yoff'])
 
+    # the 0 means approximate stats are not okay
+    valuation_band.ComputeStatistics(0)
     valuation_band = None
     valuation_raster.FlushCache()
     valuation_raster = None
-
-    pygeoprocessing.calculate_raster_stats(valuation_raster_path)
 
 
 def _viewpoint_within_raster(viewpoint, dem_path):
