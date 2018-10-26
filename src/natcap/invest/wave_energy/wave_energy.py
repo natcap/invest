@@ -139,6 +139,8 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
+    machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
+
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
@@ -150,6 +152,19 @@ def execute(args):
             raise ValueError(
                 'The following column fields are missing from the Grid '
                 'Connection Points File: %s' % missing_grid_land_fields)
+
+    if 'valuation_container' in args:
+        machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
+        # Extract the machine economic parameters
+        cap_max = float(machine_econ_dict['capmax'])
+        capital_cost = float(machine_econ_dict['cc'])
+        cml = float(machine_econ_dict['cml'])
+        cul = float(machine_econ_dict['cul'])
+        col = float(machine_econ_dict['col'])
+        omc = float(machine_econ_dict['omc'])
+        price = float(machine_econ_dict['p'])
+        drate = float(machine_econ_dict['r'])
+        smlpm = float(machine_econ_dict['smlpm'])
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -474,21 +489,8 @@ def execute(args):
     # Path for the net present value percentile raster
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
-    machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
-    machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
-
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
-    # Extract the machine economic parameters
-    cap_max = float(machine_econ_dict['capmax'])
-    capital_cost = float(machine_econ_dict['cc'])
-    cml = float(machine_econ_dict['cml'])
-    cul = float(machine_econ_dict['cul'])
-    col = float(machine_econ_dict['col'])
-    omc = float(machine_econ_dict['omc'])
-    price = float(machine_econ_dict['p'])
-    drate = float(machine_econ_dict['r'])
-    smlpm = float(machine_econ_dict['smlpm'])
 
     # The NPV is for a 25 year period
     year = 25
