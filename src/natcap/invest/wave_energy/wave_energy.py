@@ -139,14 +139,14 @@ def execute(args):
     LOGGER.debug('Machine Performance Rows : %s', machine_perf_dict['periods'])
     LOGGER.debug('Machine Performance Cols : %s', machine_perf_dict['heights'])
 
-    machine_param_dict = read_machine_csv_as_dict(args['machine_param_path'])
+    machine_param_dict = _machine_csv_to_dict(args['machine_param_path'])
 
     # Check if required column fields are entered in the land grid csv file
     if 'land_gridPts_path' in args:
         # Create a grid_land_data dataframe for later use in valuation
         grid_land_data = pandas.read_csv(args['land_gridPts_path'])
         required_col_names = ['ID', 'TYPE', 'LAT', 'LONG', 'LOCATION']
-        grid_land_data, missing_grid_land_fields = return_validated_dataframe(
+        grid_land_data, missing_grid_land_fields = _get_validated_dataframe(
             args['land_gridPts_path'], required_col_names)
         if missing_grid_land_fields:
             raise ValueError(
@@ -154,7 +154,7 @@ def execute(args):
                 'Connection Points File: %s' % missing_grid_land_fields)
 
     if 'valuation_container' in args:
-        machine_econ_dict = read_machine_csv_as_dict(args['machine_econ_path'])
+        machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
         # Extract the machine economic parameters
         cap_max = float(machine_econ_dict['capmax'])
         capital_cost = float(machine_econ_dict['cc'])
@@ -226,7 +226,7 @@ def execute(args):
     analysis_area_path = args['analysis_area_path']
     # Use the analysis area String to get the path's to the wave seastate data,
     # the wave point shapefile, and the polygon extract shapefile
-    wave_seastate_bins = load_binary_wave_data(
+    wave_seastate_bins = _binary_wave_data_to_dict(
         analysis_dict[analysis_area_path]['ww3_path'])
     analysis_area_points_path = analysis_dict[analysis_area_path][
         'point_vector']
@@ -247,12 +247,12 @@ def execute(args):
 
     # Set the source projection for a coordinate transformation
     # to the input projection from the wave watch point shapefile
-    analysis_area_sr = get_vector_spatial_ref(analysis_area_points_path)
+    analysis_area_sr = _get_vector_spatial_ref(analysis_area_points_path)
 
     # This if/else statement differentiates between having an AOI or doing
     # a broad run on all the wave points specified by args['analysis_area'].
     if 'aoi_path' not in args:
-        LOGGER.info('AOI not provided')
+        LOGGER.info('AOI not provided.')
 
         # The path to a polygon shapefile that specifies the broader AOI
         aoi_vector_path = analysis_area_extract_path
@@ -263,20 +263,20 @@ def execute(args):
 
         # Create a coordinate transformation, because it is used below when
         # indexing the DEM
-        aoi_sr = get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
         aoi_sr_wkt = aoi_sr.ExportToWkt()
-        coord_trans, coord_trans_opposite = get_coordinate_transformation(
+        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
     else:
-        LOGGER.info('AOI was provided')
+        LOGGER.info('AOI provided.')
         aoi_vector_path = args['aoi_path']
         # Create a coordinate transformation from the projection of the given
         # wave energy point shapefile, to the AOI's projection
-        aoi_sr = get_vector_spatial_ref(aoi_vector_path)
+        aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
         aoi_sr_wkt = aoi_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
-        clip_vector_by_vector(
+        _clip_vector_by_vector(
             analysis_area_points_path, aoi_vector_path,
             wave_vector_path, aoi_sr_wkt, intermediate_dir)
 
@@ -285,26 +285,27 @@ def execute(args):
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
             'aoi_clipped_to_extract_path%s.shp' % file_suffix)
-        clip_vector_by_vector(
+        _clip_vector_by_vector(
             aoi_vector_path, analysis_area_extract_path,
             aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir)
         # Replace the AOI path with the clipped AOI path
         aoi_vector_path = aoi_clipped_to_extract_path
 
-        coord_trans, coord_trans_opposite = get_coordinate_transformation(
+        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
-        target_pixel_size = pixel_size_helper(
-            wave_vector_path, coord_trans, coord_trans_opposite,
-            dem_path)
+        target_pixel_size = _pixel_size_helper(
+            wave_vector_path, coord_trans, coord_trans_opposite, dem_path)
+        # new_px_size = _convert_degree_pixel_size_to_meters(dem_path, wave_vector_path)
+        # pdb.set_trace()
 
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
 
-    def index_values_to_points(base_point_vector_path, base_raster_path,
-                               field_name, coord_trans):
+    def _index_raster_value_to_point_vector(
+            base_point_vector_path, base_raster_path, field_name, coord_trans):
         """Add the values of a raster to the field of vector point features.
 
         Values are recorded in the attribute field of the vector. If a value is
@@ -377,26 +378,26 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    index_values_to_points(wave_vector_path, dem_path, 'DEPTH_M',
-                           coord_trans_opposite)
+    _index_raster_value_to_point_vector(
+        wave_vector_path, dem_path, 'DEPTH_M', coord_trans_opposite)
 
     # Generate an interpolate object for wave_energy_capacity
     LOGGER.info('Interpolating machine performance table.')
-    energy_interp = wave_energy_interp(wave_seastate_bins, machine_perf_dict)
+    energy_interp = _wave_energy_interp(wave_seastate_bins, machine_perf_dict)
 
     # Create a dictionary with the wave energy capacity sums from each location
     LOGGER.info('Calculating Captured Wave Energy.')
-    energy_cap = compute_wave_energy_capacity(
+    energy_cap = _wave_energy_capacity_to_dict(
         wave_seastate_bins, energy_interp, machine_param_dict)
 
     # Add the sum as a field to the shapefile for the corresponding points
     LOGGER.info('Adding the wave energy sums to the WaveData shapefile')
-    captured_wave_energy_to_shape(energy_cap, wave_vector_path)
+    _captured_wave_energy_to_vector(energy_cap, wave_vector_path)
 
     # Calculate wave power for each wave point and add it as a field
     # to the shapefile
     LOGGER.info('Calculating Wave Power.')
-    compute_wave_power(wave_vector_path)
+    _compute_wave_power(wave_vector_path)
 
     # Intermediate/final output paths for wave energy and wave power rasters
     unclipped_energy_raster_path = os.path.join(
@@ -460,11 +461,11 @@ def execute(args):
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
 
-    create_percentile_rasters(
+    _create_percentile_rasters(
         energy_raster_path, capwe_rc_path, capwe_units_short,
         capwe_units_long, starting_percentile_range, percentiles)
 
-    create_percentile_rasters(
+    _create_percentile_rasters(
         wave_power_raster_path, wp_rc_path, wp_units_short, wp_units_long,
         starting_percentile_range, percentiles)
 
@@ -511,34 +512,36 @@ def execute(args):
 
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Shapefile.')
-    dict_to_point_vector(
+    _dict_to_point_vector(
         grid_dict, grid_vector_path, 'grid_points', aoi_sr, coord_trans)
 
     # Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Shapefile.')
-    dict_to_point_vector(
+    _dict_to_point_vector(
         land_dict, land_vector_path, 'land_points', aoi_sr, coord_trans)
 
     # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = get_points_geometries(wave_vector_path)
-    land_points = get_points_geometries(land_vector_path)
-    grid_points = get_points_geometries(grid_vector_path)
+    wave_points = _get_points_geometries(wave_vector_path)
+    land_points = _get_points_geometries(land_vector_path)
+    grid_points = _get_points_geometries(grid_vector_path)
 
     # Calculate the minimum distances between the relative point groups
     LOGGER.info('Calculating Min Distances.')
-    wave_to_land_dist, wave_to_land_id = calculate_min_distances(
+    wave_to_land_dist, wave_to_land_id = _calculate_min_distances(
         wave_points, land_points)
-    land_to_grid_dist, _ = calculate_min_distances(land_points, grid_points)
+    land_to_grid_dist, _ = _calculate_min_distances(land_points, grid_points)
 
-    def add_distance_fielbase_raster_path(
+    def _add_distance_fields_to_vector(
             wave_base_vector_path, ocean_to_land_dist, land_to_grid_dist):
-        """A wrapper function that adds two fields to the wave point shapefile:
-        the distance from ocean to land and the distance from land to grid.
+        """Add two fields to the wave point shapefile.
+
+        The two fields are the distance from ocean to land, and the distance
+        from land to grid.
 
         Parameters:
             wave_base_vector_path (str): a path to the wave points shapefile
-            ocean_to_land_dist (numpy.array): an array of distance values
-            land_to_grid_dist (numpy.array): an array of distance values
+            ocean_to_land_dist (np.array): an array of distance values
+            land_to_grid_dist (np.array): an array of distance values
 
         Returns:
             None
@@ -579,12 +582,11 @@ def execute(args):
         wave_data_layer = None
         wave_data_vector = None
 
-    add_distance_fielbase_raster_path(wave_vector_path, wave_to_land_dist,
-                                      land_to_grid_dist)
+    _add_distance_fields_to_vector(wave_vector_path, wave_to_land_dist,
+                                   land_to_grid_dist)
 
-    def npv_wave(annual_revenue, annual_cost):
-        """Calculates the NPV for a wave farm site based on the annual revenue
-        and annual cost
+    def _calc_npv_wave(annual_revenue, annual_cost):
+        """Calculate NPV for a wave farm based on the annual revenue and cost.
 
         Parameters:
             annual_revenue (numpy.array): an array of the annual revenue for
@@ -600,10 +602,10 @@ def execute(args):
             npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
-    def compute_npv_farm_energy_path(wave_points_path):
-        """A wrapper function to compute and add the Net Present Value to vector.
+    def _add_npv_field_to_vector(wave_points_path):
+        """Compute and add NPV to the vector.
 
-        Also computes the total captured wave energy for the entire farm.
+        Also compute the total captured wave energy for the entire farm.
 
         Parameters:
             wave_points_path (str): a path to the wave energy points with
@@ -663,7 +665,7 @@ def execute(args):
             # The first year's costs are the initial start up costs
             annual_cost[0] = initial_cost
 
-            npv_result = npv_wave(annual_revenue, annual_cost) / 1000.0
+            npv_result = _calc_npv_wave(annual_revenue, annual_cost) / 1000.0
             feat_npv.SetField(npv_index, npv_result)
             feat_npv.SetField(capwe_all_index, capwe_all_result)
             feat_npv.SetField(units_index, units)
@@ -675,7 +677,7 @@ def execute(args):
         wave_point_layer = None
         wave_point_vector = None
 
-    compute_npv_farm_energy_path(wave_vector_path)
+    _add_npv_field_to_vector(wave_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -704,14 +706,14 @@ def execute(args):
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
-    create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
-                              ' thousands of US dollars (US$)', '1',
-                              percentiles)
+    _create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
+                               ' thousands of US dollars (US$)', '1',
+                               percentiles)
 
     LOGGER.info('End of Wave Energy Valuation.')
 
 
-def return_validated_dataframe(csv_path, field_list):
+def _get_validated_dataframe(csv_path, field_list):
     """Return a dataframe with upper cased fields, and a list of missing fields.
 
     Parameters:
@@ -734,40 +736,8 @@ def return_validated_dataframe(csv_path, field_list):
     return dataframe, missing_fields
 
 
-def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
-    """Calculate meter size of a wgs84 square pixel.
-
-    Adapted from: https://gis.stackexchange.com/a/127327/2397
-
-    Parameters:
-        target_pixel_size (tuple): [xsize, ysize] in degrees (float).
-        center_lat (float): latitude of the center of the pixel. Note this
-            value +/- half the `pixel-size` must not exceed 90/-90 degrees
-            latitude or an invalid area will be calculated.
-
-    Returns:
-        `pixel_size` (tuple): float digits in meters.
-
-    """
-    m1 = 111132.92
-    m2 = -559.82
-    m3 = 1.175
-    m4 = -0.0023
-    p1 = 111412.84
-    p2 = -93.5
-    p3 = 0.118
-
-    lat = center_lat * math.pi / 180
-    latlen = (m1 + m2 * math.cos(2 * lat) + m3 * math.cos(4 * lat) +
-              m4 * math.cos(6 * lat))
-    longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
-                  p3 * math.cos(5 * lat))
-
-    return (longlen * pixel_size[0], latlen * pixel_size[1])
-
-
-def dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
-                         target_sr, coord_trans):
+def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
+                          target_sr, coord_trans):
     """Given a dictionary of data create a point shapefile that represents it.
 
     Parameters:
@@ -837,11 +807,11 @@ def dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
         output_feature = None
 
     output_vector = None
-    LOGGER.info('Finished dict_to_point_vector')
+    LOGGER.info('Finished _dict_to_point_vector')
 
 
-def get_points_geometries(base_vector_path):
-    """This function retrieves the XY coordinates from a point shapefile.
+def _get_points_geometries(base_vector_path):
+    """Retrieve the XY coordinates from a point shapefile.
 
     The X and Y values from each point feature in the vector are stored in pair
     as [x_location,y_location] in a numpy array.
@@ -870,7 +840,7 @@ def get_points_geometries(base_vector_path):
     return numpy.array(points)
 
 
-def calculate_min_distances(xy_1, xy_2):
+def _calculate_min_distances(xy_1, xy_2):
     """For all points in xy_1, this function calculates the distance from point
     xy_1 to various points in xy_2, and stores the shortest distances found in
     a list min_dist. The function also stores the index from which ever point
@@ -897,7 +867,7 @@ def calculate_min_distances(xy_1, xy_2):
     return min_dist, min_id
 
 
-def load_binary_wave_data(wave_file_path):
+def _binary_wave_data_to_dict(wave_file_path):
     """Convert a pickled binary WW3 text file into a dictionary.
 
     The dictionary's keys are the corresponding (I,J) values and the value is
@@ -975,7 +945,7 @@ def load_binary_wave_data(wave_file_path):
     return wave_dict
 
 
-def read_machine_csv_as_dict(machine_csv_path):
+def _machine_csv_to_dict(machine_csv_path):
     """Create a dictionary from the table in machine csv file.
 
     The dictionary's keys are the 'NAME' from the machine table and its values
@@ -1003,53 +973,7 @@ def read_machine_csv_as_dict(machine_csv_path):
     return machine_dict
 
 
-def pixel_size_helper(
-        base_vector_path, coord_trans, coord_trans_opposite, base_raster_path):
-    """Retrieve pixel size of a raster given a vector w/ certain projection.
-
-    Parameters:
-        base_vector_path (str): path to a shapefile indicating where in the
-            world we are interested in
-        coord_trans (osr.CoordinateTransformation): a coordinate transformation
-        coord_trans_opposite (osr.CoordinateTransformation): a coordinate
-            transformation in the opposite direction of 'coord_trans'
-        base_raster_path (str): path to a raster to get the pixel size from
-
-    Returns:
-        pixel_size_tuple (tuple): x and y pixel sizes of the raster given in
-            the units of what base vector is projected in
-
-    """
-    vector = gdal.OpenEx(base_vector_path)
-    layer = vector.GetLayer(0)
-
-    # Get a point in the clipped vector to determine output grid size
-    feat = layer.GetNextFeature()
-    geom = feat.GetGeometryRef()
-    reference_point_x = geom.GetX()
-    reference_point_y = geom.GetY()
-
-    # Convert the point from meters to geom_x/long
-    reference_point_latlng = coord_trans_opposite.TransformPoint(
-        reference_point_x, reference_point_y)
-
-    # Get the size of the pixels in meters, to be used for creating rasters
-    pixel_xsize, pixel_ysize = pixel_size_based_on_coordinate_transform(
-        base_raster_path, coord_trans, reference_point_latlng)
-
-    # Average the pixel sizes in case they are of different sizes
-    mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
-    pixel_size_tuple = (mean_pixel_size * numpy.sign(pixel_xsize),
-                        mean_pixel_size * numpy.sign(pixel_ysize))
-
-    feat = None
-    layer = None
-    vector = None
-
-    return pixel_size_tuple
-
-
-def get_vector_spatial_ref(base_vector_path):
+def _get_vector_spatial_ref(base_vector_path):
     """Get the spatial reference of an OGR vector (datasource).
 
     Parameters:
@@ -1067,7 +991,7 @@ def get_vector_spatial_ref(base_vector_path):
     return spat_ref
 
 
-def get_coordinate_transformation(source_sr, target_sr):
+def _get_coordinate_transformation(source_sr, target_sr):
     """Create coordinate transformations between two spatial references.
 
     One transformation is from source to target, and the other from target to
@@ -1087,9 +1011,9 @@ def get_coordinate_transformation(source_sr, target_sr):
     return (coord_trans, coord_trans_opposite)
 
 
-def create_percentile_rasters(base_raster_path, target_raster_path,
-                              units_short, units_long, start_value,
-                              percentile_list):
+def _create_percentile_rasters(base_raster_path, target_raster_path,
+                               units_short, units_long, start_value,
+                               percentile_list):
     """Creates a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
@@ -1124,12 +1048,12 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         0]
 
     # Get the percentile values for each percentile
-    percentile_values = calculate_percentiles_from_raster(
+    percentile_values = _calculate_percentiles_from_raster(
         base_raster_path, percentile_list)
 
     # Get the percentile ranges as strings so that they can be added to an
     # output table
-    value_ranges = create_value_ranges(percentile_values, start_value)
+    value_ranges = _create_value_ranges(percentile_values, start_value)
 
     def raster_percentile(band):
         """Take the pixels of band and group them together based on percentiles.
@@ -1149,7 +1073,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_groups = numpy.arange(1, len(percentile_values) + 2)
 
     # Get the pixel count for each group
-    pixel_count = count_pixels_groups(target_raster_path, percentile_groups)
+    pixel_count = _count_pixels_groups(target_raster_path, percentile_groups)
 
     LOGGER.debug('Pixel_count: %s; Percentile_groups: %s' %
                  (pixel_count, percentile_groups))
@@ -1164,7 +1088,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
         target_raster_path, percentile_dict, column_name=value_range_field)
 
     # Create a list of corresponding percentile ranges from the percentile list
-    percentile_ranges = create_percentile_ranges(percentile_list)
+    percentile_ranges = _create_percentile_ranges(percentile_list)
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
@@ -1186,7 +1110,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     table_df.to_csv(attribute_table_path, index=False, columns=column_names)
 
 
-def create_value_ranges(percentiles, start_value):
+def _create_value_ranges(percentiles, start_value):
     """Construct the value ranges as string, which is then stored in a list.
 
     The list has the first range starting at 1 and the last range being greater
@@ -1218,7 +1142,7 @@ def create_value_ranges(percentiles, start_value):
     return range_values
 
 
-def create_percentile_ranges(percentile_list):
+def _create_percentile_ranges(percentile_list):
     """Construct the percentile ranges as Strings.
 
     Each string range is stored in a list that gets returned.
@@ -1245,7 +1169,7 @@ def create_percentile_ranges(percentile_list):
     return percentile_ranges
 
 
-def compute_wave_power(base_vector_path):
+def _compute_wave_power(base_vector_path):
     """Calculate and write the wave power based on the fields in the shapefile.
 
     Parameters:
@@ -1318,7 +1242,7 @@ def compute_wave_power(base_vector_path):
     vector = None
 
 
-def clip_vector_by_vector(
+def _clip_vector_by_vector(
         base_vector_path, clip_vector_path, target_clipped_vector_path,
         target_sr_wkt, work_dir):
     """Clip Shapefile Layer by second Shapefile Layer.
@@ -1405,7 +1329,7 @@ def clip_vector_by_vector(
     shutil.rmtree(temp_work_dir, ignore_errors=True)
 
 
-def wave_energy_interp(wave_data, machine_perf):
+def _wave_energy_interp(wave_data, machine_perf):
     """Generate an interpolation matrix representing the machine perf table.
 
     The matrix is generated using new ranges from wave watch data.
@@ -1446,10 +1370,10 @@ def wave_energy_interp(wave_data, machine_perf):
     return interp_z_spl(new_x, new_y).transpose()
 
 
-def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
-    """Compute the wave energy capacity for each point.
+def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
+    """Compute and save the wave energy capacity for each point to a dict.
 
-    Also generates a dictionary whose keys are the points (i,j) and whose value
+    The dictionary keys are the points (i,j) and their corresponding value
     is the wave energy capacity.
 
     Parameters:
@@ -1537,7 +1461,7 @@ def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
     return energy_cap
 
 
-def captured_wave_energy_to_shape(energy_cap, wave_vector_path):
+def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
     """Add captured wave energy value from energy_cap to a field in wave_vector.
 
     The values are set corresponding to the same I,J values which is the key of
@@ -1580,7 +1504,7 @@ def captured_wave_energy_to_shape(energy_cap, wave_vector_path):
     wave_vector = None
 
 
-def calculate_percentiles_from_raster(base_raster_path, percentile_list):
+def _calculate_percentiles_from_raster(base_raster_path, percentile_list):
     """Determine the percentiles of a raster using the nearest-rank method.
 
     Iterate through the raster blocks and round the unique values for
@@ -1650,7 +1574,7 @@ def calculate_percentiles_from_raster(base_raster_path, percentile_list):
     return percentile_values
 
 
-def count_pixels_groups(raster_path, group_values):
+def _count_pixels_groups(raster_path, group_values):
     """Count pixels for each value in 'group_values' over a raster.
 
     Parameters:
@@ -1676,7 +1600,53 @@ def count_pixels_groups(raster_path, group_values):
     return pixel_count
 
 
-def pixel_size_based_on_coordinate_transform(
+def _pixel_size_helper(
+        base_vector_path, coord_trans, coord_trans_opposite, base_raster_path):
+    """Retrieve pixel size of a raster given a vector w/ certain projection.
+
+    Parameters:
+        base_vector_path (str): path to a shapefile indicating where in the
+            world we are interested in
+        coord_trans (osr.CoordinateTransformation): a coordinate transformation
+        coord_trans_opposite (osr.CoordinateTransformation): a coordinate
+            transformation in the opposite direction of 'coord_trans'
+        base_raster_path (str): path to a raster to get the pixel size from
+
+    Returns:
+        pixel_size_tuple (tuple): x and y pixel sizes of the raster given in
+            the units of what base vector is projected in
+
+    """
+    vector = gdal.OpenEx(base_vector_path)
+    layer = vector.GetLayer(0)
+
+    # Get a point in the clipped vector to determine output grid size
+    feat = layer.GetNextFeature()
+    geom = feat.GetGeometryRef()
+    reference_point_x = geom.GetX()
+    reference_point_y = geom.GetY()
+
+    # Convert the point from meters to geom_x/long
+    reference_point_latlng = coord_trans_opposite.TransformPoint(
+        reference_point_x, reference_point_y)
+
+    # Get the size of the pixels in meters, to be used for creating rasters
+    pixel_xsize, pixel_ysize = _pixel_size_based_on_coordinate_transform(
+        base_raster_path, coord_trans, reference_point_latlng)
+
+    # # Average the pixel sizes in case they are of different sizes
+    # mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
+    # pixel_size_tuple = (mean_pixel_size * numpy.sign(pixel_xsize),
+    #                     mean_pixel_size * numpy.sign(pixel_ysize))
+
+    feat = None
+    layer = None
+    vector = None
+
+    return (pixel_xsize, pixel_ysize)
+
+
+def _pixel_size_based_on_coordinate_transform(
         base_raster_path, coord_trans, reference_point):
     """Get width and height of cell in meters.
 
@@ -1700,9 +1670,9 @@ def pixel_size_based_on_coordinate_transform(
             height in meters)
 
     """
-    dataset = gdal.OpenEx(base_raster_path)
+    raster = gdal.OpenEx(base_raster_path)
     # Get the first points (x, y) from geoTransform
-    geo_tran = dataset.GetGeoTransform()
+    geo_tran = raster.GetGeoTransform()
     pixel_size_x = geo_tran[1]
     pixel_size_y = geo_tran[5]
     top_left_x = reference_point[0]
@@ -1721,9 +1691,9 @@ def pixel_size_based_on_coordinate_transform(
     pixel_diff_x = point_2[0] - point_1[0]
     pixel_diff_y = point_2[1] - point_1[1]
 
-    # Close and clean up dataset
-    gdal.Dataset.__swig_destroy__(dataset)
-    dataset = None
+    # Close and clean up raster
+    # gdal.Dataset.__swig_destroy__(raster)
+    raster = None
 
     return (pixel_diff_x, pixel_diff_y)
 
@@ -1759,7 +1729,7 @@ def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
     band.SetDefaultRAT(attr_table)
 
     # Make sure the dataset is closed and cleaned up
-    gdal.Dataset.__swig_destroy__(raster)
+    # gdal.Dataset.__swig_destroy__(raster)
     raster = None
 
 
@@ -1846,7 +1816,7 @@ def validate(args, limit_to=None):
             (['id', 'type', 'lat', 'long', 'location'])),
         ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
-            _, missing_fields = return_validated_dataframe(
+            _, missing_fields = _get_validated_dataframe(
                 args[csv_key], required_fields)
             if missing_fields:
                 warnings.append('CSV is missing columns: %s' % ', '.join(

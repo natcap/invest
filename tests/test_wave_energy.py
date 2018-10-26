@@ -70,7 +70,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
     def test_pixel_size_transform(self):
         """WaveEnergy: testing pixel size transform helper function.
 
-        Function name is : 'pixel_size_based_on_coordinate_transform'.
+        Function name is : '_pixel_size_based_on_coordinate_transform'.
         """
         from natcap.invest.wave_energy import wave_energy
 
@@ -118,7 +118,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # the reprojected raster
         coord_trans = osr.CoordinateTransformation(raster_sr, spat_ref)
         # Call the function to test
-        result = wave_energy.pixel_size_based_on_coordinate_transform(
+        result = wave_energy._pixel_size_based_on_coordinate_transform(
             raster_path, coord_trans, point)
 
         expected_res = (5553.933063, -1187.370813)
@@ -128,7 +128,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             pygeoprocessing.testing.assert_close(res, exp)
 
     def test_count_pixels_groups(self):
-        """WaveEnergy: testing 'count_pixels_groups' function."""
+        """WaveEnergy: testing '_count_pixels_groups' function."""
         from natcap.invest.wave_energy import wave_energy
 
         raster_path = os.path.join(self.workspace_dir, 'pixel_groups.tif')
@@ -147,7 +147,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             datatype=gdal.GDT_Int32,
             filename=raster_path)
 
-        results = wave_energy.count_pixels_groups(raster_path, group_values)
+        results = wave_energy._count_pixels_groups(raster_path, group_values)
 
         expected_results = [2, 2, 3, 2]
 
@@ -155,7 +155,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             pygeoprocessing.testing.assert_close(res, exp_res, 1e-6)
 
     def test_calculate_percentiles_from_raster(self):
-        """WaveEnergy: testing 'calculate_percentiles_from_raster' function."""
+        """WaveEnergy: testing '_calculate_percentiles_from_raster' function."""
         from natcap.invest.wave_energy import wave_energy
 
         raster_path = os.path.join(self.workspace_dir, 'percentile.tif')
@@ -174,7 +174,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         percentiles = [1, 25, 50, 75]
 
-        results = wave_energy.calculate_percentiles_from_raster(
+        results = wave_energy._calculate_percentiles_from_raster(
             raster_path, percentiles)
 
         expected_results = [1, 25, 50, 75]
@@ -189,7 +189,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         percentiles = [20, 40, 60, 80]
         start_value = "5"
 
-        result = wave_energy.create_value_ranges(percentiles, start_value)
+        result = wave_energy._create_value_ranges(percentiles, start_value)
 
         exp_result = [
             "5 - 20", "20 - 40", "40 - 60", "60 - 80", "Greater than 80"
@@ -199,7 +199,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
             self.assertEqual(res, exp_res)
 
     def test_calculate_min_distances(self):
-        """WaveEnergy: testing 'calculate_min_distances' function."""
+        """WaveEnergy: testing '_calculate_min_distances' function."""
         from natcap.invest.wave_energy import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -212,7 +212,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
                                 pos_y], [pos_x + 100, pos_y - 100],
                                [pos_x + 100, pos_y - 200]])
 
-        result_dist, result_id = wave_energy.calculate_min_distances(
+        result_dist, result_id = wave_energy._calculate_min_distances(
             set_one, set_two)
 
         expected_result_dist = [100, 100, 100]
@@ -234,7 +234,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
         target_projection = pygeoprocessing.get_vector_info(
             extract_path)['projection']
-        wave_energy.clip_vector_by_vector(
+        wave_energy._clip_vector_by_vector(
             aoi_path, extract_path, result_path, target_projection,
             self.workspace_dir)
 
@@ -242,7 +242,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(result_path,
                                                      expected_path, 1e-6)
 
-    def test_clip_vector_by_vector_points(self):
+    def test__clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
@@ -301,7 +301,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
 
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
-        wave_energy.clip_vector_by_vector(
+        wave_energy._clip_vector_by_vector(
             shape_to_clip_path, binding_shape_path, output_path,
             srs.projection, self.workspace_dir)
 
@@ -331,8 +331,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(output_path,
                                                      expected_shape, 1e-6)
 
-    def test_clip_datasouce_layer_no_intersection(self):
-        """WaveEnergy: testing 'clip_vector_by_vector' w/ no intersection."""
+    def test_clip_vector_by_vector_no_intersection(self):
+        """WaveEnergy: testing '_clip_vector_by_vector' w/ no intersection."""
         from natcap.invest.wave_energy import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -378,17 +378,17 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
-                          wave_energy.clip_vector_by_vector, shape_to_clip_path,
+                          wave_energy._clip_vector_by_vector, shape_to_clip_path,
                           binding_shape_path, output_path, srs.projection,
                           self.workspace_dir)
 
-    def test_load_binary_wave_data(self):
-        """WaveEnergy: testing 'load_binary_wave_data' function."""
+    def test_binary_wave_data_to_dict(self):
+        """WaveEnergy: testing 'load_binary_wave_data_to_dict' function."""
         from natcap.invest.wave_energy import wave_energy
 
         wave_file_path = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')
 
-        result = wave_energy.load_binary_wave_data(wave_file_path)
+        result = wave_energy._binary_wave_data_to_dict(wave_file_path)
 
         exp_res = {
             'periods': numpy.array([.375, 1, 1.5, 2.0], dtype=numpy.float32),
