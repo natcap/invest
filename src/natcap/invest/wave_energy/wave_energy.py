@@ -579,7 +579,6 @@ def execute(args):
         wave_data_layer = None
         wave_data_vector = None
 
-
     add_distance_fielbase_raster_path(wave_vector_path, wave_to_land_dist,
                                       land_to_grid_dist)
 
@@ -675,7 +674,6 @@ def execute(args):
 
         wave_point_layer = None
         wave_point_vector = None
-
 
     compute_npv_farm_energy_path(wave_vector_path)
 
@@ -978,8 +976,10 @@ def load_binary_wave_data(wave_file_path):
 
 
 def read_machine_csv_as_dict(machine_csv_path):
-    """Create a dictionary whose keys are the 'NAME' from the machine
-    CSV table and whose values are from the corresponding 'VALUE' field.
+    """Create a dictionary from the table in machine csv file.
+
+    The dictionary's keys are the 'NAME' from the machine table and its values
+    are from the corresponding 'VALUE' field.
 
     Parameters:
         machine_csv_path (str): path to the input machine CSV file.
@@ -1074,8 +1074,8 @@ def get_coordinate_transformation(source_sr, target_sr):
     source.
 
     Parameters:
-        source_sr: A spatial reference
-        target_sr: A spatial reference
+        source_sr (osr.SpatialReference): A spatial reference
+        target_sr (osr.SpatialReference): A spatial reference
 
     Returns:
         A tuple: coord_trans (source to target) and coord_trans_opposite
@@ -1090,10 +1090,10 @@ def get_coordinate_transformation(source_sr, target_sr):
 def create_percentile_rasters(base_raster_path, target_raster_path,
                               units_short, units_long, start_value,
                               percentile_list):
-    """Creates a percentile (quartile) raster based on the raster_dataset. An
-        attribute table is also constructed for the raster_dataset that
-        displays the ranges provided by taking the quartile of values.
-        The following inputs are required:
+    """Creates a percentile (quartile) raster based on the raster_dataset.
+
+    An attribute table is also constructed for the raster_dataset that displays
+    the ranges provided by taking the quartile of values.
 
     Parameters:
         base_raster_path (str): path to a GDAL raster with data of type
@@ -1132,8 +1132,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
     value_ranges = create_value_ranges(percentile_values, start_value)
 
     def raster_percentile(band):
-        """Operation to use in raster_calculator that takes the pixels of
-            band and groups them together based on their percentile ranges.
+        """Take the pixels of band and group them together based on percentiles.
         """
         return numpy.where(
             band != base_nodata,
@@ -1188,7 +1187,7 @@ def create_percentile_rasters(base_raster_path, target_raster_path,
 
 
 def create_value_ranges(percentiles, start_value):
-    """Constructs the value ranges as string, which is then stored in a list.
+    """Construct the value ranges as string, which is then stored in a list.
 
     The list has the first range starting at 1 and the last range being greater
     than the last percentile mark.
@@ -1220,7 +1219,7 @@ def create_value_ranges(percentiles, start_value):
 
 
 def create_percentile_ranges(percentile_list):
-    """Constructs the percentile ranges as Strings.
+    """Construct the percentile ranges as Strings.
 
     Each string range is stored in a list that gets returned.
 
@@ -1324,8 +1323,8 @@ def clip_vector_by_vector(
         target_sr_wkt, work_dir):
     """Clip Shapefile Layer by second Shapefile Layer.
 
-    Uses ogr.Layer.Clip() to clip a Shapefile, where the output Layer
-    inherits the projection and fields from the original Shapefile.
+    Clip a shapefile layer where the output Layer inherits the projection and
+    fields from the original Shapefile.
 
     Parameters:
         base_vector_path (str): a path to a Shapefile on disk. This is
@@ -1407,21 +1406,22 @@ def clip_vector_by_vector(
 
 
 def wave_energy_interp(wave_data, machine_perf):
-    """Generates a matrix representing the interpolation of the
-        machine performance table using new ranges from wave watch data.
+    """Generate an interpolation matrix representing the machine perf table.
+
+    The matrix is generated using new ranges from wave watch data.
 
     Parameters:
         wave_data (dict): A dictionary holding the new x range (period) and
-            y range (height) values for the interpolation.  The
-            dictionary has the following structure:
-              {'periods': [1,2,3,4,...],
-               'heights': [.5,1.0,1.5,...],
-               'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
-                               (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
-                                ...
-                               (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
-                             }
-              }
+            y range (height) values for the interpolation. The dictionary has
+            the following structure:
+                {'periods': [1,2,3,4,...],
+                 'heights': [.5,1.0,1.5,...],
+                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                  ...
+                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                               }
+                }
         machine_perf (dict): a dictionary that holds the machine performance
             information with the following keys and structure:
                 machine_perf['periods'] - [1,2,3,...]
@@ -1447,22 +1447,22 @@ def wave_energy_interp(wave_data, machine_perf):
 
 
 def compute_wave_energy_capacity(wave_data, interp_z, machine_param):
-    """Computes the wave energy capacity for each point.
+    """Compute the wave energy capacity for each point.
 
     Also generates a dictionary whose keys are the points (i,j) and whose value
     is the wave energy capacity.
 
     Parameters:
         wave_data (dict): A wave watch dictionary with the following structure:
-               {'periods': [1,2,3,4,...],
-                'heights': [.5,1.0,1.5,...],
-                'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
-                                (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
-                                 ...
-                                (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
-                              }
-               }
-        interp_z (2D-array): A 2D array of the interpolated values for the
+                {'periods': [1,2,3,4,...],
+                 'heights': [.5,1.0,1.5,...],
+                 'bin_matrix': { (i0,j0): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                 (i1,j1): [[2,5,3,2,...], [6,3,4,1,...],...],
+                                  ...
+                                 (in, jn): [[2,5,3,2,...], [6,3,4,1,...],...]
+                               }
+                }
+        interp_z (np.array): A 2D array of the interpolated values for the
             machine performance table
         machine_param (dict): A dictionary containing the restrictions for the
             machines (CapMax, TpMax, HsMax)
@@ -1682,9 +1682,9 @@ def pixel_size_based_on_coordinate_transform(
 
     Calculates the pixel width and height in meters given a coordinate
     transform and reference point on the dataset that's close to the
-    transform's projected coordinate system.  This is only necessary
-    if raster is not already in a meter coordinate system, for example
-    raster may be in lat/long (WGS84).
+    transformed projected coordinate system. This is only necessary if raster
+    is not already in a meter coordinate system, for example raster may be in
+    lat/long (WGS84).
 
     Args:
         base_raster_path (str): path to a GDAL raster path, projected in the
