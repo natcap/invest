@@ -27,6 +27,9 @@ LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
 _TARGET_PIXEL_TYPE = gdal.GDT_Float32
 
+# The life span (25 years) of a wave energy conversion facility.
+_LIFE_SPAN = 25
+
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -493,11 +496,9 @@ def execute(args):
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
 
-    # The NPV is for a 25 year period
-    year = 25
-
-    # A numpy array of length 25, representing the npv of a farm for each year
-    time = numpy.linspace(0, year - 1, year)
+    # A numpy array of length = life span, representing the npv of a farm for each year
+    # time = numpy.linspace(0, _LIFE_SPAN - 1, _LIFE_SPAN)
+    # pdb.set_trace()
 
     # The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
@@ -598,7 +599,7 @@ def execute(args):
 
         """
         npv = []
-        for i in range(len(time)):
+        for i in range(_LIFE_SPAN):
             npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
@@ -648,7 +649,7 @@ def execute(args):
             # Create a numpy array of length 25, filled with the captured wave
             # energy in kW/h. Represents the lifetime of this wave farm.
             captured_we = numpy.ones(
-                len(time)) * (int(captured_wave_energy) * 1000.0)
+                _LIFE_SPAN) * (int(captured_wave_energy) * 1000.0)
             # It is expected that there is no revenue from the first year
             captured_we[0] = 0
 
