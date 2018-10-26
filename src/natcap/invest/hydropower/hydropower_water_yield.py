@@ -179,8 +179,8 @@ def execute(args):
     align_raster_stack_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_path_list, aligned_raster_path_list,
-        ['near'] * len(base_raster_path_list), target_pixel_size,
-        'intersection'),
+              ['near'] * len(base_raster_path_list), target_pixel_size,
+              'intersection'),
         kwargs={'raster_align_index':4, 'base_vector_path_list':[sheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
@@ -297,12 +297,6 @@ def execute(args):
     # Paths for the actual evapotranspiration rasters
     aet_path = os.path.join(per_pixel_output_dir, 'aet%s.tif' % file_suffix)
 
-    # Paths for the watershed and subwatershed tables
-    watershed_results_csv_path = os.path.join(
-        output_dir, 'watershed_results_wyield%s.csv' % file_suffix)
-    subwatershed_results_csv_path = os.path.join(
-        output_dir, 'subwatershed_results_wyield%s.csv' % file_suffix)
-
     # The nodata value that will be used for created output rasters
     out_nodata = - 1.0
 
@@ -368,6 +362,7 @@ def execute(args):
     #     (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
     #     gdal.GDT_Float64, out_nodata)
 
+    dependent_tasks_for_watersheds_list = []
     def pet_op(eto_pix, Kc_pix):
         """Calculate the plant potential evapotranspiration.
 
@@ -391,6 +386,7 @@ def execute(args):
         target_path_list=[tmp_pet_path],
         dependent_task_list=[create_Kc_raster_task],
         task_name='calculate_pet')
+    dependent_tasks_for_watersheds_list.append(calculate_pet_task)
 
     def fractp_op(Kc, eto, precip, root, soil, pawc, veg):
         """Calculate actual evapotranspiration fraction of precipitation.
@@ -510,6 +506,7 @@ def execute(args):
         target_path_list=[wyield_clipped_path],
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
         task_name='calculate_wyield')
+    dependent_tasks_for_watersheds_list.append(calculate_wyield_task)
 
     def aet_op(fractp, precip, veg):
         """Compute actual evapotranspiration values.
@@ -543,222 +540,187 @@ def execute(args):
         dependent_task_list=[
             calculate_fractp_task, create_veg_raster_task, align_raster_stack_task],
         task_name='calculate_aet')
+    dependent_tasks_for_watersheds_list.append(calculate_aet_task)
 
-    graph.join()    
-    # Making a copy of watershed and sub-watershed to add water yield outputs
-    # to
-    watershed_results_path = os.path.join(
-        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
-    esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    watershed_vector = gdal.OpenEx(sheds_path, gdal.OF_VECTOR)
-    esri_shapefile_driver.CreateCopy(watershed_results_path, watershed_vector)
-    watershed_vector = None
+    if 'demand_table_path' in args and args['demand_table_path'] != '':
+        # Create demand raster from table values to use in future calculations
+        tmp_demand_path = os.path.join(intermediate_dir, 'demand.tif')
+        create_demand_raster_task = graph.add_task(
+            func=pygeoprocessing.reclassify_raster,
+            args=((clipped_lulc_path, 1), demand_reclassify_dict, tmp_demand_path,
+                  gdal.GDT_Float64, out_nodata),
+            target_path_list=[tmp_demand_path],
+            dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
+            task_name='create_demand_raster')
+        dependent_tasks_for_watersheds_list.append(create_demand_raster_task)
+        
+    # Aggregate results to watersheds, and do the optional 
+    # scarcity and valuation calculations.
+    def aggregate_results_to_watersheds(
+        base_vector_path, ws_id_name, raster_names_paths_tuple, 
+        target_vector_path, target_table_path):
 
-    if sub_sheds_path is not None:
-        subwatershed_results_path = os.path.join(
-            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
-        subwatershed_vector = gdal.OpenEx(sub_sheds_path, gdal.OF_VECTOR)
-        esri_shapefile_driver.CreateCopy(
-            subwatershed_results_path, subwatershed_vector)
-        subwatershed_vector = None
+        esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+        watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+        esri_shapefile_driver.CreateCopy(target_vector_path, watershed_vector)
+        watershed_vector = None
 
-    if sub_sheds_path is not None:
-        # Create a list of tuples that pair up field names and raster paths so
-        # that we can nicely do operations below
-        sws_tuple_names_paths = [
-            ('precip_mn', precip_path),
-            ('PET_mn', tmp_pet_path),
-            ('AET_mn', aet_path)]
-
-        for key_name, rast_path in sws_tuple_names_paths:
-            # Aggregrate mean over the sub-watersheds for each path listed in
-            # 'sws_tuple_names_path'
-            sub_ws_stat_dict = pygeoprocessing.zonal_statistics(
-                (rast_path, 1), sub_sheds_path, 'subws_id',
+        for key_name, rast_path in raster_names_paths_tuple:
+            # Aggregrate mean over the watersheds for each raster
+            ws_stat_dict = pygeoprocessing.zonal_statistics(
+                (rast_path, 1), base_vector_path, ws_id_name,
                 ignore_nodata=False)
 
             # Add aggregated values to sub-watershed shapefile under new field
             # 'key_name'
             _add_zonal_stats_dict_to_shape(
-                subwatershed_results_path, sub_ws_stat_dict, key_name,
-                'subws_id', 'mean')
-
-        # Aggregate values for the water yield raster under the sub-watershed
-        agg_wyield_stat_dict = pygeoprocessing.zonal_statistics(
-            (wyield_clipped_path, 1), sub_sheds_path, 'subws_id',
-            ignore_nodata=False)
-        # Add the wyield mean and number of pixels to the shapefile
-        _add_zonal_stats_dict_to_shape(
-            subwatershed_results_path, agg_wyield_stat_dict, 'wyield_mn',
-            'subws_id', 'mean')
+                target_vector_path, ws_stat_dict, key_name,
+                ws_id_name, 'mean')
 
         # Compute the water yield volume and water yield volume per hectare.
-        # The values per sub-watershed will be added as fields in the
-        # sub-watersheds shapefile.
-        compute_water_yield_volume(subwatershed_results_path)
+        # The values per watershed will be added as fields in the
+        # watersheds shapefile.
+        compute_water_yield_volume(target_vector_path)
 
-        # List of wanted fields to output in the subwatershed CSV table
-        field_list_sws = [
-            'subws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
+        # List of wanted fields to output in the watershed CSV table
+        field_list_ws = [
+            ws_id_name, 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
             'wyield_mn', 'wyield_vol']
 
-        # Get a dictionary from the sub-watershed shapefiles attributes based
-        # on the fields to be outputted to the CSV table
-        wyield_values_sws = _extract_vector_table_by_key(
-            subwatershed_results_path, 'subws_id')
+        # Get a dictionary from the watershed shapefiles attributes based on the
+        # fields to be outputted to the CSV table
+        wyield_values_ws = _extract_vector_table_by_key(
+            target_vector_path, ws_id_name)
 
-        wyield_value_dict_sws = filter_dictionary(
-            wyield_values_sws, field_list_sws)
+        wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
 
-        # Write sub-watershed CSV table
-        _write_table(subwatershed_results_csv_path, wyield_value_dict_sws)
+        # Check to see if Water Scarcity was selected to run
+        if ('calculate_water_scarcity' not in args or
+                not args['calculate_water_scarcity']):
+            # Since Scarcity and Valuation are not selected write out
+            # the CSV table
+            _write_table(target_table_path, wyield_value_dict_ws)
+            # The rest of the function is water scarcity and valuation, so we can
+            # quit now
+            return
 
-    # Create a list of tuples that pair up field names and raster paths so that
-    # we can nicely do operations below
-    ws_tuple_names_paths = [
-        ('precip_mn', precip_path), ('PET_mn', tmp_pet_path),
-        ('AET_mn', aet_path)]
+        LOGGER.info('Starting Water Scarcity')
+        # Aggregate the consumption volume over sheds using the
+        # reclassfied demand raster
+        LOGGER.info('Aggregating Consumption Volume and Mean')
 
-    for key_name, rast_path in ws_tuple_names_paths:
-        # Aggregrate mean over the watersheds for each path listed in
-        # 'ws_tuple_names_path'
-        ws_stats_dict = pygeoprocessing.zonal_statistics(
-            (rast_path, 1), sheds_path, 'ws_id', ignore_nodata=False)
-        # Add aggregated values to watershed shapefile under new field
-        # 'key_name'
+        consump_ws_stats_dict = pygeoprocessing.zonal_statistics(
+            (tmp_demand_path, 1), base_vector_path, ws_id_name, ignore_nodata=False)
+
+        # Add aggregated consumption to sheds shapefiles
         _add_zonal_stats_dict_to_shape(
-            watershed_results_path, ws_stats_dict, key_name, 'ws_id', 'mean')
+            target_vector_path, consump_ws_stats_dict, 'consum_vol', ws_id_name,
+            'sum')
 
-    # Aggregate values for the water yield raster under the watershed
-    wyield_stats_dict = pygeoprocessing.zonal_statistics(
-        (wyield_clipped_path, 1), sheds_path, 'ws_id', ignore_nodata=False)
-    # Add the wyield mean and number of pixels to the shapefile
-    _add_zonal_stats_dict_to_shape(
-        watershed_results_path, wyield_stats_dict, 'wyield_mn', 'ws_id',
-        'mean')
+        # Add aggregated consumption means to sheds shapefiles
+        _add_zonal_stats_dict_to_shape(
+            target_vector_path, consump_ws_stats_dict, 'consum_mn', ws_id_name,
+            'mean')
 
-    compute_water_yield_volume(watershed_results_path)
+        # Calculate the realised water supply after consumption
+        LOGGER.info('Calculating RSUPPLY')
+        compute_rsupply_volume(target_vector_path)
 
-    # List of wanted fields to output in the watershed CSV table
-    field_list_ws = [
-        'ws_id', 'num_pixels', 'precip_mn', 'PET_mn', 'AET_mn',
-        'wyield_mn', 'wyield_vol']
+        # List of wanted fields to output in the watershed CSV table
+        scarcity_field_list_ws = [
+            ws_id_name, 'consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
 
-    # Get a dictionary from the watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    wyield_values_ws = _extract_vector_table_by_key(
-        watershed_results_path, 'ws_id')
+        # Aggregate water yield and water scarcity fields, where we exclude the
+        # first field in the scarcity list because they are duplicates already
+        # in the water yield list
+        field_list_ws = field_list_ws + scarcity_field_list_ws[1:]
 
-    wyield_value_dict_ws = filter_dictionary(wyield_values_ws, field_list_ws)
+        # Get a dictionary from the watershed shapefiles attributes based on the
+        # fields to be outputted to the CSV table
+        watershed_values = _extract_vector_table_by_key(
+            target_vector_path, ws_id_name)
 
-    # removing temporary files
-    for temp_path in [
-            tmp_Kc_raster_path, tmp_root_raster_path, tmp_pet_path,
-            tmp_veg_raster_path]:
+        watershed_dict = filter_dictionary(watershed_values, field_list_ws)
+
+        # Only thing left is Valuation. Valuation parameters are 
+        # provided by watershed, not subwatershed, so, check if 
+        # we're processing the watersheds.
+        if ws_id_name != 'ws_id':
+            _write_table(target_table_path, watershed_dict)
+            # The rest of the function is valuation, so we can quit now
+            return
+        # Check to see if Valuation was selected to run
         try:
-            os.remove(temp_path)
-        except OSError:
-            LOGGER.warn("could not delete temporary files in %s", temp_path)
+            if not args['calculate_valuation']:
+                raise KeyError('Valuation not selected')
+        except KeyError:
+            LOGGER.debug('Valuation Not Selected')
+            # Since Valuation are not selected write out
+            # the CSV table
+            _write_table(target_table_path, watershed_dict)
+            # The rest of the function is valuation, so we can quit now
+            return
 
-    # Check to see if Water Scarcity was selected to run
-    if ('calculate_water_scarcity' not in args or
-            not args['calculate_water_scarcity']):
-        # Since Scarcity and Valuation are not selected write out
-        # the CSV table
-        _write_table(watershed_results_csv_path, wyield_value_dict_ws)
-        # The rest of the function is water scarcity and valuation, so we can
-        # quit now
-        # try:
-        #     shutil.rmtree(temp_dir)
-        # except OSError:
-        #     LOGGER.warn("could not delete temporary directory %s", temp_dir)
-        return
+        LOGGER.info('Starting Valuation Calculation')
 
-    LOGGER.info('Starting Water Scarcity')
+        # Compute NPV and Energy for the watersheds
+        LOGGER.info('Calculating NPV/ENERGY for Sheds')
+        compute_watershed_valuation(target_vector_path, valuation_params)
 
-    # Create demand raster from table values to use in future calculations
-    LOGGER.info("Reclassifying demand raster")
-    tmp_demand_path = os.path.join(intermediate_dir, 'demand.tif')
-    pygeoprocessing.reclassify_raster(
-        (clipped_lulc_path, 1), demand_reclassify_dict, tmp_demand_path,
-        gdal.GDT_Float64, out_nodata)
+        # List of fields for the valuation run
+        val_field_list_ws = [ws_id_name, 'hp_energy', 'hp_val']
 
-    # Aggregate the consumption volume over sheds using the
-    # reclassfied demand raster
-    LOGGER.info('Aggregating Consumption Volume and Mean')
+        # Aggregate water yield, water scarcity, and valuation fields, where we
+        # exclude the first field in the list because they are duplicates
+        field_list_ws = field_list_ws + val_field_list_ws[1:]
 
-    consump_ws_stats_dict = pygeoprocessing.zonal_statistics(
-        (tmp_demand_path, 1), sheds_path, 'ws_id', ignore_nodata=False)
+        # Get a dictionary from the watershed shapefiles attributes based on the
+        # fields to be outputted to the CSV table
+        watershed_values_ws = _extract_vector_table_by_key(
+            target_vector_path, 'ws_id')
 
-    # Add aggregated consumption to sheds shapefiles
-    _add_zonal_stats_dict_to_shape(
-        watershed_results_path, consump_ws_stats_dict, 'consum_vol', 'ws_id',
-        'sum')
+        watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
 
-    # Add aggregated consumption means to sheds shapefiles
-    _add_zonal_stats_dict_to_shape(
-        watershed_results_path, consump_ws_stats_dict, 'consum_mn', 'ws_id',
-        'mean')
+        # Write out the CSV Table
+        _write_table(target_table_path, watershed_dict_ws)
 
-    # Calculate the realised water supply after consumption
-    LOGGER.info('Calculating RSUPPLY')
-    compute_rsupply_volume(watershed_results_path)
 
-    # List of wanted fields to output in the watershed CSV table
-    scarcity_field_list_ws = [
-        'ws_id', 'consum_vol', 'consum_mn', 'rsupply_vl', 'rsupply_mn']
+    raster_names_paths_tuple = [
+        ('precip_mn', precip_path),
+        ('PET_mn', tmp_pet_path),
+        ('AET_mn', aet_path),
+        ('wyield_mn', wyield_clipped_path)]
 
-    # Aggregate water yield and water scarcity fields, where we exclude the
-    # first field in the scarcity list because they are duplicates already
-    # in the water yield list
-    field_list_ws = field_list_ws + scarcity_field_list_ws[1:]
+    watershed_results_vector_path = os.path.join(
+        output_dir, 'watershed_results_wyield%s.shp' % file_suffix)
+    watershed_results_table_path = os.path.join(
+            output_dir, 'watershed_results_wyield%s.csv' % file_suffix)
 
-    # Get a dictionary from the watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    watershed_values = _extract_vector_table_by_key(
-        watershed_results_path, 'ws_id')
+    aggregate_to_watersheds_task = graph.add_task(
+        func=aggregate_results_to_watersheds,
+        args=(sheds_path, 'ws_id', raster_names_paths_tuple, 
+              watershed_results_vector_path, watershed_results_table_path),
+        target_path_list=[
+            watershed_results_vector_path, watershed_results_table_path],
+        dependent_task_list=dependent_tasks_for_watersheds_list,
+        task_name='aggregate_to_watersheds')
 
-    watershed_dict = filter_dictionary(watershed_values, field_list_ws)
+    if sub_sheds_path is not None:
+        subwatershed_results_vector_path = os.path.join(
+            output_dir, 'subwatershed_results_wyield%s.shp' % file_suffix)
+        subwatershed_results_table_path = os.path.join(
+            output_dir, 'subwatershed_results_wyield%s.csv' % file_suffix)
 
-    # try:
-    #     shutil.rmtree(temp_dir)
-    # except OSError:
-    #     LOGGER.warn("Could not remove temporary directory %s", temp_dir)
+        aggregate_to_watersheds_task = graph.add_task(
+            func=aggregate_results_to_watersheds,
+            args=(sub_sheds_path, 'subws_id', raster_names_paths_tuple, 
+                  subwatershed_results_vector_path, subwatershed_results_table_path),
+            target_path_list=[
+                subwatershed_results_vector_path, subwatershed_results_table_path],
+            dependent_task_list=dependent_tasks_for_watersheds_list,
+            task_name='aggregate_to_watersheds')
 
-    # Check to see if Valuation was selected to run
-    try:
-        if not args['calculate_valuation']:
-            raise KeyError('Valuation not selected')
-    except KeyError:
-        LOGGER.debug('Valuation Not Selected')
-        # Since Valuation are not selected write out
-        # the CSV table
-        _write_table(watershed_results_csv_path, watershed_dict)
-        # The rest of the function is valuation, so we can quit now
-        return
-
-    LOGGER.info('Starting Valuation Calculation')
-
-    # Compute NPV and Energy for the watersheds
-    LOGGER.info('Calculating NPV/ENERGY for Sheds')
-    compute_watershed_valuation(watershed_results_path, valuation_params)
-
-    # List of fields for the valuation run
-    val_field_list_ws = ['ws_id', 'hp_energy', 'hp_val']
-
-    # Aggregate water yield, water scarcity, and valuation fields, where we
-    # exclude the first field in the list because they are duplicates
-    field_list_ws = field_list_ws + val_field_list_ws[1:]
-
-    # Get a dictionary from the watershed shapefiles attributes based on the
-    # fields to be outputted to the CSV table
-    watershed_values_ws = _extract_vector_table_by_key(
-        watershed_results_path, 'ws_id')
-
-    watershed_dict_ws = filter_dictionary(watershed_values_ws, field_list_ws)
-
-    # Write out the CSV Table
-    _write_table(watershed_results_csv_path, watershed_dict_ws)
+    graph.join()    
 
 
 def compute_watershed_valuation(watersheds_path, val_dict):
