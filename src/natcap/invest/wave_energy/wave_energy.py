@@ -1670,11 +1670,11 @@ def _pixel_size_based_on_coordinate_transform(
             height in meters)
 
     """
-    raster = gdal.OpenEx(base_raster_path)
     # Get the first points (x, y) from geoTransform
-    geo_tran = raster.GetGeoTransform()
-    pixel_size_x = geo_tran[1]
-    pixel_size_y = geo_tran[5]
+    geotransform = pygeoprocessing.get_raster_info(
+        base_raster_path)['geotransform']
+    pixel_size_x = geotransform[1]
+    pixel_size_y = geotransform[5]
     top_left_x = reference_point[0]
     top_left_y = reference_point[1]
     # Create the second point by adding the pixel width/height
@@ -1690,10 +1690,6 @@ def _pixel_size_based_on_coordinate_transform(
     # increases to the right (right handed coordinate system).
     pixel_diff_x = point_2[0] - point_1[0]
     pixel_diff_y = point_2[1] - point_1[1]
-
-    # Close and clean up raster
-    # gdal.Dataset.__swig_destroy__(raster)
-    raster = None
 
     return (pixel_diff_x, pixel_diff_y)
 
