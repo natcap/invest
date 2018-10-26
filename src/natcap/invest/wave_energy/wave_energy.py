@@ -159,15 +159,15 @@ def execute(args):
     if 'valuation_container' in args:
         machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
         # Extract the machine economic parameters
-        cap_max = float(machine_econ_dict['capmax'])
-        capital_cost = float(machine_econ_dict['cc'])
-        cml = float(machine_econ_dict['cml'])
-        cul = float(machine_econ_dict['cul'])
-        col = float(machine_econ_dict['col'])
-        omc = float(machine_econ_dict['omc'])
-        price = float(machine_econ_dict['p'])
-        drate = float(machine_econ_dict['r'])
-        smlpm = float(machine_econ_dict['smlpm'])
+        cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
+        capital_cost = float(machine_econ_dict['cc'])  # capital cost
+        cml = float(machine_econ_dict['cml'])  # cost of mooring lines
+        cul = float(machine_econ_dict['cul'])  # cost of underwater cable
+        col = float(machine_econ_dict['col'])  # cost of overland cable
+        omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
+        price = float(machine_econ_dict['p'])  # price of electricity
+        drate = float(machine_econ_dict['r'])  # discount rate
+        smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -496,9 +496,6 @@ def execute(args):
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
 
-    # The discount rate calculation for the npv equations
-    rho = 1.0 / (1.0 + drate)
-
     grid_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
                                    'grid']
     land_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
@@ -594,9 +591,12 @@ def execute(args):
         Returns: The Total NPV which is the sum of all 25 years
 
         """
+        # The discount rate calculation for the npv equations
+        rho = 1.0 / (1.0 + drate)
+
         npv = []
-        for i in range(_LIFE_SPAN):
-            npv.append(rho**i * (annual_revenue[i] - annual_cost[i]))
+        for t in range(_LIFE_SPAN):
+            npv.append(rho**t * (annual_revenue[i] - annual_cost[i]))
         return sum(npv)
 
     def _add_npv_field_to_vector(wave_points_path):
@@ -663,6 +663,7 @@ def execute(args):
             annual_cost[0] = initial_cost
 
             npv_result = _calc_npv_wave(annual_revenue, annual_cost) / 1000.0
+            pdb.set_trace()
             feat_npv.SetField(npv_index, npv_result)
             feat_npv.SetField(capwe_all_index, capwe_all_result)
             feat_npv.SetField(units_index, units)
