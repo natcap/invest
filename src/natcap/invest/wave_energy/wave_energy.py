@@ -158,16 +158,6 @@ def execute(args):
 
     if 'valuation_container' in args:
         machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
-        # Extract the machine economic parameters
-        cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
-        capital_cost = float(machine_econ_dict['cc'])  # capital cost
-        cml = float(machine_econ_dict['cml'])  # cost of mooring lines
-        cul = float(machine_econ_dict['cul'])  # cost of underwater cable
-        col = float(machine_econ_dict['col'])  # cost of overland cable
-        omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
-        price = float(machine_econ_dict['p'])  # price of electricity
-        drate = float(machine_econ_dict['r'])  # discount rate
-        smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
 
     # Build up a dictionary of possible analysis areas where the key
     # is the analysis area selected and the value is a dictionary
@@ -301,8 +291,6 @@ def execute(args):
         # projected wave power and wave energy capacity rasters
         target_pixel_size = _pixel_size_helper(
             wave_vector_path, coord_trans, coord_trans_opposite, dem_path)
-        # new_px_size = _convert_degree_pixel_size_to_meters(dem_path, wave_vector_path)
-        # pdb.set_trace()
 
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
@@ -592,7 +580,8 @@ def execute(args):
 
         """
         # The discount rate calculation for the npv equations
-        rho = 1.0 / (1.0 + drate)
+        d_rate = float(machine_econ_dict['r'])  # discount rate
+        rho = 1.0 / (1.0 + d_rate)
 
         npv = []
         for t in range(_LIFE_SPAN):
@@ -614,6 +603,17 @@ def execute(args):
         """
         wave_point_vector = gdal.OpenEx(wave_points_path, 1)
         wave_point_layer = wave_point_vector.GetLayer()
+
+        # Extract the machine economic parameters
+        cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
+        capital_cost = float(machine_econ_dict['cc'])  # capital cost
+        cml = float(machine_econ_dict['cml'])  # cost of mooring lines
+        cul = float(machine_econ_dict['cul'])  # cost of underwater cable
+        col = float(machine_econ_dict['col'])  # cost of overland cable
+        omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
+        price = float(machine_econ_dict['p'])  # price of electricity
+        smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
+
         # Add Net Present Value field, Total Captured Wave Energy field, and
         # Units field to shapefile
         for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
@@ -626,6 +626,7 @@ def execute(args):
 
         # For all the wave farm sites, calculate NPV and write to shapefile
         LOGGER.info('Calculating the Net Present Value.')
+
         while feat_npv is not None:
             depth_index = feat_npv.GetFieldIndex('DEPTH_M')
             wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
@@ -663,7 +664,6 @@ def execute(args):
             annual_cost[0] = initial_cost
 
             npv_result = _calc_npv_wave(annual_revenue, annual_cost) / 1000.0
-            pdb.set_trace()
             feat_npv.SetField(npv_index, npv_result)
             feat_npv.SetField(capwe_all_index, capwe_all_result)
             feat_npv.SetField(units_index, units)
