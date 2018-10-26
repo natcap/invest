@@ -496,10 +496,6 @@ def execute(args):
     # Number of machines for a given wave farm
     units = int(args['number_of_machines'])
 
-    # A numpy array of length = life span, representing the npv of a farm for each year
-    # time = numpy.linspace(0, _LIFE_SPAN - 1, _LIFE_SPAN)
-    # pdb.set_trace()
-
     # The discount rate calculation for the npv equations
     rho = 1.0 / (1.0 + drate)
 
@@ -548,20 +544,20 @@ def execute(args):
             None
 
         """
-        wave_data_vector = gdal.OpenEx(wave_base_vector_path, 1)
-        wave_data_layer = wave_data_vector.GetLayer(0)
+        wave_vector = gdal.OpenEx(wave_base_vector_path, 1)
+        wave_layer = wave_vector.GetLayer(0)
         # Add three new fields to the shapefile that will store the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
             field_defn = ogr.FieldDefn(field, ogr.OFTReal)
             field_defn.SetWidth(24)
             field_defn.SetPrecision(11)
-            wave_data_layer.CreateField(field_defn)
+            wave_layer.CreateField(field_defn)
 
         # For each feature in the shapefile add the corresponding distance
         # from wave_to_land_dist and land_to_grid_dist calculated above
         iterate_feat = 0
-        wave_data_layer.ResetReading()
-        feature = wave_data_layer.GetNextFeature()
+        wave_layer.ResetReading()
+        feature = wave_layer.GetNextFeature()
         while feature is not None:
             wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
             land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
@@ -576,12 +572,12 @@ def execute(args):
 
             iterate_feat = iterate_feat + 1
 
-            wave_data_layer.SetFeature(feature)
+            wave_layer.SetFeature(feature)
             feature = None
-            feature = wave_data_layer.GetNextFeature()
+            feature = wave_layer.GetNextFeature()
 
-        wave_data_layer = None
-        wave_data_vector = None
+        wave_layer = None
+        wave_vector = None
 
     _add_distance_fields_to_vector(wave_vector_path, wave_to_land_dist,
                                    land_to_grid_dist)
