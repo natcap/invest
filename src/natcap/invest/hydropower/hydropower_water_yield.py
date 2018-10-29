@@ -108,7 +108,7 @@ def execute(args):
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
-    # need to pass this to aggregate_results_to_watersheds()
+    # need to pass this dict to aggregate_results_to_watersheds()
     # which gets called whether or not valuation is conducted
     valuation_params = {} 
     if 'valuation_table_path' in args and args['valuation_table_path'] != '':
@@ -143,8 +143,6 @@ def execute(args):
     intermediate_dir = os.path.join(workspace_dir, 'intermediate')
     utils.make_directories(
         [workspace_dir, output_dir, per_pixel_output_dir, intermediate_dir])
-
-    # temp_dir = tempfile.mkdtemp(dir=workspace_dir)
 
     clipped_lulc_path = os.path.join(intermediate_dir, 'clipped_lulc.tif')
     eto_path = os.path.join(intermediate_dir, 'eto.tif')
@@ -198,14 +196,7 @@ def execute(args):
         'root': pygeoprocessing.get_raster_info(
             depth_to_root_rest_layer_path)['nodata'][0],
         'pawc': pygeoprocessing.get_raster_info(pawc_path)['nodata'][0],
-        'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]
-    }
-    # lulc_info = pygeoprocessing.get_raster_info(clipped_lulc_path)
-    # precip_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
-    # eto_nodata = pygeoprocessing.get_raster_info(eto_path)['nodata'][0]
-    # root_rest_layer_nodata = pygeoprocessing.get_raster_info(
-    #     depth_to_root_rest_layer_path)['nodata'][0]
-    # pawc_nodata = pygeoprocessing.get_raster_info(pawc_path)['nodata'][0]
+        'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
 
     # Open/read in the csv file into a dictionary and add to arguments
     LOGGER.info(
@@ -214,7 +205,6 @@ def execute(args):
     bio_dict = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=True)
 
-    # lulc_nodata = lulc_info['nodata'][0]
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         LOGGER.info(
             'Checking that demand table has landcover codes for every value '
@@ -287,9 +277,6 @@ def execute(args):
         target_path_list=[tmp_Kc_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_Kc_raster')
-    # pygeoprocessing.reclassify_raster(
-    #     (clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, gdal.GDT_Float64,
-    #     out_nodata)
 
     # Create root raster from table values to use in future calculations
     LOGGER.info("Reclassifying tmp_root raster")
@@ -302,9 +289,6 @@ def execute(args):
         target_path_list=[tmp_root_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_root_raster')
-    # pygeoprocessing.reclassify_raster(
-    #     (clipped_lulc_path, 1), root_dict, tmp_root_raster_path,
-    #     gdal.GDT_Float64, out_nodata)
 
     # Create veg raster from table values to use in future calculations
     # of determining which AET equation to use
@@ -317,9 +301,6 @@ def execute(args):
         target_path_list=[tmp_veg_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
         task_name='create_veg_raster')
-    # pygeoprocessing.reclassify_raster(
-    #     (clipped_lulc_path, 1), vegetated_dict, tmp_veg_raster_path,
-    #     gdal.GDT_Float64, out_nodata)
 
     dependent_tasks_for_watersheds_list = []
     
@@ -334,7 +315,6 @@ def execute(args):
     dependent_tasks_for_watersheds_list.append(calculate_pet_task)
 
     
-
     # List of rasters to pass into the vectorized fractp operation
     raster_list = [
         tmp_Kc_raster_path, eto_path, precip_path, tmp_root_raster_path,
@@ -353,8 +333,6 @@ def execute(args):
             create_root_raster_task, align_raster_stack_task],
         task_name='calculate_fractp')
 
-    
-
     LOGGER.info('Performing wyield operation')
     # Create clipped wyield_clipped raster
     calculate_wyield_task = graph.add_task(
@@ -365,8 +343,6 @@ def execute(args):
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
         task_name='calculate_wyield')
     dependent_tasks_for_watersheds_list.append(calculate_wyield_task)
-
-    
 
     LOGGER.debug('Performing aet operation')
     # Create clipped aet raster
@@ -387,6 +363,8 @@ def execute(args):
         ('AET_mn', aet_path),
         ('wyield_mn', wyield_clipped_path)]
 
+    # need to pass this demand path to aggregate_results_to_watersheds()
+    # which gets called whether or not water scarcity is conducted
     tmp_demand_path = os.path.join(intermediate_dir, 'demand.tif')
     if 'demand_table_path' in args and args['demand_table_path'] != '':
         # Create demand raster from table values to use in future calculations
@@ -438,6 +416,31 @@ def execute(args):
 def aggregate_results_to_watersheds(
     base_vector_path, ws_id_name, raster_names_paths_list, tmp_demand_path,
     valuation_params, target_vector_path, target_table_path, args):
+    '''
+    A function to aggregate raster results to watershed polygons and write out to 
+    a shapefile and CSV.
+
+    Parameters:
+        base_vector_path (string): one of the watershed vector input paths
+        ws_id_name (string): the field name for the unique id of base_vector_path
+            Will be either 'ws_id' or 'subws_id'
+        raster_names_paths_list (list): list of tuples that are pairs of strings. 
+            First string will be used as field name in target_vector_path. Second 
+            string is path to a raster to aggregate.
+        tmp_demand_path (string): file path to the demand raster. This variable is only 
+            used if Scarcity option is selected.
+        valuation_params (dict): dict created from an input CSV. This variable is only 
+            used if Valuation option is selected.
+        target_vector_path (string): path to the output vector where aggregation results
+            are written.
+        target_table_path (string): path to the output CSV that is created from attributes 
+            in target_vector_path
+        args (dict): the args dictionary that is passed to execute(). Used to check which 
+            options were selected by the user.
+
+    Returns:
+        None
+    '''
 
     esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -567,6 +570,7 @@ def aet_op(fractp, precip, nodata_dict):
     Parameters:
         fractp (numpy.ndarray): fractp raster values
         precip (numpy.ndarray): precipitation raster values (mm)
+        nodata_dict (dict): stores nodata values keyed by raster names
 
     Returns:
         numpy.ndarray of actual evapotranspiration values (mm).
@@ -584,6 +588,7 @@ def wyield_op(fractp, precip, nodata_dict):
     Parameters:
        fractp (numpy.ndarray): fractp raster values
        precip (numpy.ndarray): precipitation raster values (mm)
+       nodata_dict (dict): stores nodata values keyed by raster names
 
     Returns:
         numpy.ndarray of water yield value (mm).
@@ -612,15 +617,16 @@ def fractp_op(Kc, eto, precip, root, soil, pawc, veg, nodata_dict, seasonality_c
             vegetation and 0 depicts the land type as non
             vegetation (wetlands, urban, water, etc...). If 1 use
             regular AET equation if 0 use: AET = Kc * ETo
+        nodata_dict (dict): stores nodata values keyed by raster names
+        seasonality_constant (int): see args['seasonality_constant']
 
     Returns:
         fractp.
 
     """
-    # Kc, root, & veg were created by reclassify_raster, 
-    # which set nodata to out_nodata.
-    # All others are products of align_and_resize, 
-    # retaining original nodata vals
+    # Kc, root, & veg were created by reclassify_raster, which set nodata
+    # to out_nodata. All others are products of align_and_resize and retain 
+    # their original nodata values.
     valid_mask = (
         (Kc != nodata_dict['out_nodata']) & (eto != nodata_dict['eto']) &
         (precip != nodata_dict['precip']) & (root != nodata_dict['out_nodata']) &
@@ -676,6 +682,7 @@ def pet_op(eto_pix, Kc_pix, nodata_dict):
     Parameters:
         eto_pix (numpy.ndarray): a numpy array of ETo
         Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
+        nodata_dict (dict): stores nodata values keyed by raster names
 
     Returns:
         PET.
