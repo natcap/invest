@@ -606,8 +606,9 @@ def _calculate_rkls(
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
             (ls_factor != _TARGET_NODATA) &
-            (erosivity != erosivity_nodata) &
-            (erodibility != erodibility_nodata) & (stream != stream_nodata))
+            ~numpy.isclose(erosivity, erosivity_nodata) &
+            ~numpy.isclose(erodibility, erodibility_nodata) &
+            (stream != stream_nodata))
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
@@ -1021,7 +1022,8 @@ def _calculate_sed_retention(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
         """Subtract bare soil export from real landcover."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
+            (rkls != _TARGET_NODATA) &
+            (usle != _TARGET_NODATA) &
             (stream_factor != stream_nodata) &
             (sdr_factor != _TARGET_NODATA) &
             (sdr_factor_bare_soil != _TARGET_NODATA))
