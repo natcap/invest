@@ -27,50 +27,48 @@ LOGGER = logging.getLogger('natcap.invest.sdr')
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
     'sed_export_path': 'sed_export.tif',
-    'stream_path': 'stream.tif',
-    'usle_path': 'usle.tif',
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
-    'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
+    'stream_path': 'stream.tif',
+    'usle_path': 'usle.tif',
+    'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     }
 
 _INTERMEDIATE_BASE_FILES = {
-    'dem_offset_path': 'dem_offset.tif',
-    'slope_path': 'slope.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'ls_path': 'ls.tif',
-    'w_bar_path': 'w_bar.tif',
-    's_bar_path': 's_bar.tif',
-    'd_up_path': 'd_up.tif',
-    'd_dn_path': 'd_dn.tif',
+    'cp_factor_path': 'cp.tif',
     'd_dn_bare_soil_path': 'd_dn_bare_soil.tif',
+    'd_dn_path': 'd_dn.tif',
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
+    'd_up_path': 'd_up.tif',
+    'dem_offset_path': 'dem_offset.tif',
+    'flow_accumulation_path': 'flow_accumulation.tif',
+    'flow_direction_path': 'flow_direction.tif',
     'ic_bare_soil_path': 'ic_bare_soil.tif',
-    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
-    'ws_factor_path': 'ws_factor.tif',
     'ic_path': 'ic.tif',
+    'ls_path': 'ls.tif',
+    'pit_filled_dem_path': 'pit_filled_dem.tif',
+    's_accumulation_path': 's_accumulation.tif',
+    's_bar_path': 's_bar.tif',
+    's_inverse_path': 's_inverse.tif',
+    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
+    'slope_path': 'slope.tif',
+    'thresholded_slope_path': 'slope_threshold.tif',
+    'thresholded_w_path': 'w_threshold.tif',
+    'w_accumulation_path': 'w_accumulation.tif',
+    'w_bar_path': 'w_bar.tif',
     'w_path': 'w.tif',
+    'ws_factor_path': 'ws_factor.tif',
+    'ws_inverse_path': 'ws_inverse.tif',
     }
 
 _TMP_BASE_FILES = {
-    'cp_factor_path': 'cp.tif',
     'aligned_dem_path': 'aligned_dem.tif',
-    'pit_filled_dem_path': 'pit_filled_dem.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'aligned_erosivity_path': 'aligned_erosivity.tif',
-    'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
-    'zero_absorption_source_path': 'zero_absorption_source.tif',
-    'loss_path': 'loss.tif',
-    'w_accumulation_path': 'w_accumulation.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    'thresholded_w_path': 'w_threshold.tif',
-    'ws_inverse_path': 'ws_inverse.tif',
-    's_inverse_path': 's_inverse.tif',
+    'aligned_erodibility_path': 'aligned_erodibility.tif',
+    'aligned_erosivity_path': 'aligned_erosivity.tif',
+    'aligned_lulc_path': 'aligned_lulc.tif',
     }
 
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
@@ -776,10 +774,6 @@ def _calculate_bar_factor(
         factor_path (string): path to arbitrary factor raster
         flow_accumulation_path (string): path to flow accumulation raster
         flow_direction_path (string): path to flow direction path (in radians)
-        zero_absorption_source_path (string): path to a raster that is all
-            0s and same size as `dem_path`.  Temporary file.
-        loss_path (string): path to a raster that can save the loss raster
-            from routing.  Temporary file.
         accumulation_path (string): path to a raster that can be used to
             save the accumulation of the factor.  Temporary file.
         out_bar_path (string): path to output raster that is the result of
@@ -792,10 +786,13 @@ def _calculate_bar_factor(
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
-    LOGGER.debug("doing flow accumulation mfd on %s", out_bar_path)
+    LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
     pygeoprocessing.routing.flow_accumulation_mfd(
         (flow_direction_path, 1), accumulation_path,
-        weight_raster_path_band=(factor_path, 1))
+        weight_raster_path_band=(factor_path, 1),
+        gtiff_creation_options=[
+            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+            'PREDICTOR=3'])
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
