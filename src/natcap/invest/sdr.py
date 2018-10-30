@@ -312,7 +312,7 @@ def execute(args):
                 f_reg['flow_direction_path'], factor_path,
                 f_reg['flow_accumulation_path'],
                 accumulation_path, out_bar_path),
-            target_path_list=[out_bar_path],
+            target_path_list=[accumulation_path, out_bar_path],
             dependent_task_list=[
                 align_task, factor_task, flow_accumulation_task,
                 flow_dir_task],
