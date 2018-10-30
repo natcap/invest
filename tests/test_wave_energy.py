@@ -604,6 +604,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
         args['suffix'] = 'full'
+        import pdb
+        pdb.set_trace()
 
         wave_energy.execute(args)
 
@@ -661,3 +663,32 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
         a_shape = None
         b_shape = None
+
+    def test_full_dataset(self):
+        """WaveEnergy: testing full dataset."""
+        from natcap.invest.wave_energy import wave_energy
+        SAMPLE_DATA = r"C:\Users\Joanna Lin\Documents\invest_fork\data\invest-data\WaveEnergy\input"
+        args = {
+            'workspace_dir':
+            r"C:\Users\Joanna Lin\Desktop\test_folder\wave_energy_workspace\full_test",
+            'wave_base_data_path':
+            os.path.join(SAMPLE_DATA, 'WaveData'),
+            'analysis_area_path':
+            'West Coast of North America and Hawaii',
+            'machine_perf_path':
+            os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
+            'machine_param_path':
+            os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
+            'dem_path':
+            os.path.join(r"C:\Users\Joanna Lin\Documents\invest_fork\data\invest-data\Base_Data\Marine\DEMs\global_dem")
+        }
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
+        args['valuation_container'] = True
+        args['land_gridPts_path'] = os.path.join(
+            SAMPLE_DATA, 'LandGridPts_WCVI.csv')
+        args['machine_econ_path'] = os.path.join(
+            SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
+        args['number_of_machines'] = 28
+        args['suffix'] = 'new'
+
+        wave_energy.execute(args)

@@ -484,11 +484,11 @@ def execute(args):
 
     _create_percentile_rasters(energy_raster_path, capwe_rc_path,
                                capwe_units_short, capwe_units_long,
-                               starting_percentile_range, percentiles)
+                               percentiles, starting_percentile_range)
 
     _create_percentile_rasters(wave_power_raster_path, wp_rc_path,
                                wp_units_short, wp_units_long,
-                               starting_percentile_range, percentiles)
+                               percentiles, starting_percentile_range)
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -734,8 +734,7 @@ def execute(args):
     percentiles = [25, 50, 75, 90]
 
     _create_percentile_rasters(npv_out_path, npv_rc_path, ' US$',
-                               'thousands of US dollars', '1',
-                               percentiles)
+                               'thousands of US dollars', percentiles)
 
     LOGGER.info('End of Wave Energy Valuation.')
 
@@ -1038,8 +1037,8 @@ def _get_coordinate_transformation(source_sr, target_sr):
 
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
-                               units_short, units_long, start_value,
-                               percentile_list):
+                               units_short, units_long, percentile_list,
+                               start_value=None):
     """Creates a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
@@ -1053,10 +1052,10 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
             ex: kW/m.
         units_long (str): The description of the units of the raster values,
             ex: wave power per unit width of wave crest length (kW/m).
-        start_value (str): The first value that goes to the first percentile
-            range (start_value: percentile_one)
         percentile_list (list): A list of the percentiles ranges,
             ex: [25, 50, 75, 90].
+        start_value (str): The first value that goes to the first percentile
+            range (start_value: percentile_one) (optional)
 
     Returns:
         None
@@ -1075,7 +1074,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Get the percentile values for each percentile
     percentile_values = _calculate_percentiles_from_raster(
-        base_raster_path, percentile_list)
+        base_raster_path, percentile_list, start_value)
 
     # Get the percentile ranges as strings so that they can be added to an
     # output table
@@ -1095,7 +1094,6 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
                                       gdal.GDT_Int32, target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
-    # using numpy.searchsorted
     percentile_groups = numpy.arange(1, len(percentile_values) + 2)
 
     # Get the pixel count for each group
@@ -1136,7 +1134,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     table_df.to_csv(attribute_table_path, index=False, columns=column_names)
 
 
-def _create_value_ranges(percentiles, start_value):
+def _create_value_ranges(percentiles, start_value=None):
     """Construct the value ranges as string, which is then stored in a list.
 
     The list has the first range starting at 1 and the last range being greater
@@ -1145,7 +1143,7 @@ def _create_value_ranges(percentiles, start_value):
     Parameters:
         percentiles (list): a list of the percentile marks in ascending order.
         start_value (str): the first value that goes to the first percentile
-            range (start_value: percentile_one).
+            range (start_value: percentile_one). (optional)
 
     Returns:
         range_values (list): a list of strings representing the ranges of the
@@ -1156,11 +1154,15 @@ def _create_value_ranges(percentiles, start_value):
     range_values = []
     # Add the first range with the starting value and long description of units
     # This function will fail and cause an error if percentile list is empty
-    range_first = start_value + ' - ' + str(percentiles[0])
+    if start_value:
+        range_first = start_value + ' to ' + str(percentiles[0])
+    else:
+        range_first = 'Less than ' + str(percentiles[0])
     range_values.append(range_first)
+
     for idx in range(length - 1):
         range_values.append(
-            str(percentiles[idx]) + ' - ' + str(percentiles[idx + 1]))
+            str(percentiles[idx]) + ' to ' + str(percentiles[idx + 1]))
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1])
     range_values.append(range_last)
@@ -1530,7 +1532,8 @@ def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
     wave_vector = None
 
 
-def _calculate_percentiles_from_raster(base_raster_path, percentile_list):
+def _calculate_percentiles_from_raster(
+        base_raster_path, percentile_list, start_value=None):
     """Determine the percentiles of a raster using the nearest-rank method.
 
     Iterate through the raster blocks and round the unique values for
@@ -1541,18 +1544,26 @@ def _calculate_percentiles_from_raster(base_raster_path, percentile_list):
         base_raster_path (str): path to a gdal raster on disk
         percentile_list (list): a list of desired percentiles to lookup,
             ex: [25,50,75,90]
+        start_value (str): the first value that goes to the first percentile
+            range (start_value: percentile_one). (optional)
 
     Returns:
             a list of values corresponding to the percentiles from the list
 
     """
     nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
+    if start_value:
+        start_value = float(start_value)
     unique_value_counts = {}
     for _, block_matrix in pygeoprocessing.iterblocks(base_raster_path):
         # Sum the values with the same key in both dictionaries
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
         # Remove the nodata value from the array
-        unique_values = unique_values[unique_values != nodata]
+        if start_value:
+            unique_values = unique_values[
+                (unique_values != nodata) & (unique_values >= start_value)]
+        else:
+            unique_values = unique_values[unique_values != nodata]
         # Round the array so the unique values won't explode the dictionary
         numpy.round(unique_values, decimals=1, out=unique_values)
 
