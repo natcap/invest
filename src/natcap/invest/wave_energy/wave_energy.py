@@ -1081,12 +1081,12 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     value_ranges = _create_value_ranges(percentile_values, start_value)
 
     def raster_percentile(band):
-        """Take the pixels of band and group them together based on percentiles.
+        """Group the band pixels together based on percentiles, starting from 1.
         """
-        return numpy.where(
-            band != base_nodata,
-            numpy.searchsorted(percentile_values, band) + 1,  # starts from 1
-            target_nodata)
+        valid_data_mask = (band != base_nodata)
+        band[valid_data_mask] = numpy.searchsorted(
+            percentile_values, band[valid_data_mask]) + 1
+        return band
 
     # Classify the pixels of raster_dataset into groups and write to output
     pygeoprocessing.raster_calculator([(base_raster_path, 1)],
@@ -1598,8 +1598,8 @@ def _calculate_percentiles_from_raster(
         count = unique_value_counts[unique_value]
         cumulative_count += count
 
-        while ordinal_rank[ith_element] == cumulative_count or \
-                ordinal_rank[ith_element] < cumulative_count:
+        while cumulative_count == ordinal_rank[ith_element] or \
+                cumulative_count > ordinal_rank[ith_element]:
             percentile_values.append(unique_value)
             ith_element += 1
 
