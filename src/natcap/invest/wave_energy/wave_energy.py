@@ -403,7 +403,6 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    # pdb.set_trace()
     _index_raster_value_to_point_vector(wave_vector_path, dem_path, 'DEPTH_M')
 
     # Generate an interpolate object for wave_energy_capacity
@@ -612,8 +611,8 @@ def execute(args):
         rho = 1.0 / (1.0 + d_rate)
 
         npv = []
-        for t in range(_LIFE_SPAN):
-            npv.append(rho**t * (annual_revenue[i] - annual_cost[i]))
+        for time in range(_LIFE_SPAN):
+            npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
         return sum(npv)
 
     def _add_npv_field_to_vector(wave_points_path):
@@ -734,8 +733,8 @@ def execute(args):
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
 
-    _create_percentile_rasters(npv_out_path, npv_rc_path, ' (US$)',
-                               ' thousands of US dollars (US$)', '1',
+    _create_percentile_rasters(npv_out_path, npv_rc_path, ' US$',
+                               'thousands of US dollars', '1',
                                percentiles)
 
     LOGGER.info('End of Wave Energy Valuation.')
@@ -888,9 +887,9 @@ def _calculate_min_distances(xy_1, xy_2):
 
     # For all points xy_point in xy_1 calculate the distance from xy_point to
     # xy_2 and save the shortest distance found.
-    for index, xy_point in enumerate(xy_1):
+    for idx, xy_point in enumerate(xy_1):
         dists = numpy.sqrt(numpy.sum((xy_point - xy_2)**2, axis=1))
-        min_dist[index], min_id[index] = dists.min(), dists.argmin()
+        min_dist[idx], min_id[idx] = dists.min(), dists.argmin()
     return min_dist, min_id
 
 
@@ -1108,8 +1107,8 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
     percentile_dict = {}
-    for index in xrange(len(percentile_groups)):
-        percentile_dict[percentile_groups[index]] = value_ranges[index]
+    for idx in xrange(len(percentile_groups)):
+        percentile_dict[percentile_groups[idx]] = value_ranges[idx]
     value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
     _create_raster_attr_table(
         target_raster_path, percentile_dict, column_name=value_range_field)
@@ -1124,11 +1123,11 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         'Pixel Count'
     ]
     table_dict = dict((col_name, []) for col_name in column_names)
-    for index in xrange(len(percentile_groups)):
-        table_dict['Percentile Group'].append(percentile_groups[index])
-        table_dict['Percentile Range'].append(percentile_ranges[index])
-        table_dict[value_range_field].append(value_ranges[index])
-        table_dict['Pixel Count'].append(pixel_count[index])
+    for idx in xrange(len(percentile_groups)):
+        table_dict['Percentile Group'].append(percentile_groups[idx])
+        table_dict['Percentile Range'].append(percentile_ranges[idx])
+        table_dict[value_range_field].append(value_ranges[idx])
+        table_dict['Pixel Count'].append(pixel_count[idx])
 
     table_df = pandas.DataFrame(table_dict)
 
@@ -1159,9 +1158,9 @@ def _create_value_ranges(percentiles, start_value):
     # This function will fail and cause an error if percentile list is empty
     range_first = start_value + ' - ' + str(percentiles[0])
     range_values.append(range_first)
-    for index in range(length - 1):
+    for idx in range(length - 1):
         range_values.append(
-            str(percentiles[index]) + ' - ' + str(percentiles[index + 1]))
+            str(percentiles[idx]) + ' - ' + str(percentiles[idx + 1]))
     # Add the last range to the range of values list
     range_last = 'Greater than ' + str(percentiles[length - 1])
     range_values.append(range_last)
@@ -1185,10 +1184,10 @@ def _create_percentile_ranges(percentile_list):
     percentile_ranges = []
     first_range = '<' + str(percentile_list[0]) + '%'
     percentile_ranges.append(first_range)
-    for index in range(length - 1):
+    for idx in range(length - 1):
         percentile_ranges.append(
-            str(percentile_list[index]) + '-' +
-            str(percentile_list[index + 1]) + '%')
+            str(percentile_list[idx]) + '-' +
+            str(percentile_list[idx + 1]) + '%')
 
     # Add the last range to the percentile ranges list
     last_range = '>' + str(percentile_list[length - 1]) + '%'
@@ -1522,8 +1521,8 @@ def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
         value_j = feat.GetField(index_j)
         we_value = energy_cap[(value_i, value_j)]
 
-        index = feat.GetFieldIndex(cap_we_field)
-        feat.SetField(index, we_value)
+        idx = feat.GetFieldIndex(cap_we_field)
+        feat.SetField(idx, we_value)
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
         feat = None
@@ -1618,11 +1617,11 @@ def _count_pixels_groups(raster_path, group_values):
 
     for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
         # Cumulatively add the pixels count for each value in 'group_values'
-        for index in xrange(len(group_values)):
-            val = group_values[index]
+        for idx in xrange(len(group_values)):
+            val = group_values[idx]
             count_mask = numpy.zeros(block_matrix.shape)
             numpy.equal(block_matrix, val, count_mask)
-            pixel_count[index] += numpy.count_nonzero(count_mask)
+            pixel_count[idx] += numpy.count_nonzero(count_mask)
 
     return pixel_count
 
