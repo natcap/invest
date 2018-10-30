@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
 * Updating core carbon forest edge regression data coefficient to drop
@@ -16,6 +17,11 @@ Unreleased Changes
 * Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
   valuation would never be triggered when running the model through the User
   Interface.
+* Fixing an issue with how logging is captured when a model is run through the
+  InVEST User Interface.  Now, logging from any thread started by the executor
+  thread will be written to the log file, which we expect to aid in debugging.
+* Fixing an issue with Scenic Quality where viewpoints outside of the AOI
+  were not being properly excluded.  Viewpoints are now excluded correctly.
 
 3.5.0 (2018-08-14)
 ------------------
