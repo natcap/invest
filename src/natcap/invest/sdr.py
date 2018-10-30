@@ -787,6 +787,8 @@ def _calculate_bar_factor(
         flow_accumulation_path)['nodata'][0]
 
     LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
+    # manually setting compression to DEFLATE because we got some LZW
+    # errors when testing with large data.
     pygeoprocessing.routing.flow_accumulation_mfd(
         (flow_direction_path, 1), accumulation_path,
         weight_raster_path_band=(factor_path, 1),
