@@ -1040,8 +1040,10 @@ def execute(args):
         circuit_mask = (cable_dist_arr <= circuit_break)
         cable_cost_arr = np.full(
             target_arr_shape, 0.0, dtype=np.float32)
+        # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
             circuit_mask] * cable_coef_ac + (mw_coef_ac * total_mega_watt)
+        # Calculate DC cable cost
         cable_cost_arr[~circuit_mask] = cable_dist_arr[
             ~circuit_mask] * cable_coef_dc + (mw_coef_dc * total_mega_watt)
         # Mask out nodata values
