@@ -1013,9 +1013,10 @@ def execute(args):
         [_TARGET_NODATA])
 
     # Open raster bands for writing
-    npv_raster = gdal.Open(npv_raster_path, gdal.GA_Update)
+    npv_raster = gdal.OpenEx(npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     npv_band = npv_raster.GetRasterBand(1)
-    levelized_raster = gdal.Open(levelized_raster_path, gdal.GA_Update)
+    levelized_raster = gdal.OpenEx(
+        levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     levelized_band = levelized_raster.GetRasterBand(1)
 
     for (harvest_block_info,
@@ -1039,8 +1040,10 @@ def execute(args):
         circuit_mask = (cable_dist_arr <= circuit_break)
         cable_cost_arr = np.full(
             target_arr_shape, 0.0, dtype=np.float32)
+        # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
             circuit_mask] * cable_coef_ac + (mw_coef_ac * total_mega_watt)
+        # Calculate DC cable cost
         cable_cost_arr[~circuit_mask] = cable_dist_arr[
             ~circuit_mask] * cable_coef_dc + (mw_coef_dc * total_mega_watt)
         # Mask out nodata values
@@ -1158,9 +1161,10 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
 
     """
     LOGGER.info('Starting point_to_polygon_distance.')
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    point_vector = driver.Open(base_point_vector_path, 1)  # 1 for writing field
-    poly_vector = driver.Open(base_polygon_vector_path, 0)
+    point_vector = gdal.OpenEx(
+        base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    poly_vector = gdal.OpenEx(
+        base_polygon_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
 
     poly_layer = poly_vector.GetLayer()
     # List to store the polygons geometries as shapely objects
@@ -1312,7 +1316,8 @@ def create_distance_raster(base_raster_path, base_vector_path,
                                            target_dist_raster_path)
 
     # Set the nodata value of output raster to _TARGET_NODATA
-    target_dist_raster = gdal.Open(target_dist_raster_path, gdal.GA_Update)
+    target_dist_raster = gdal.OpenEx(
+        target_dist_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     for band in range(1, target_dist_raster.RasterCount+1):
         target_band = target_dist_raster.GetRasterBand(band)
         target_band.SetNoDataValue(_TARGET_NODATA)
