@@ -1674,11 +1674,6 @@ def _pixel_size_helper(base_vector_path, coord_trans, coord_trans_opposite,
     pixel_xsize, pixel_ysize = _pixel_size_based_on_coordinate_transform(
         base_raster_path, coord_trans, reference_point_latlng)
 
-    # # Average the pixel sizes in case they are of different sizes
-    # mean_pixel_size = (abs(pixel_xsize) + abs(pixel_ysize)) / 2.0
-    # pixel_size_tuple = (mean_pixel_size * numpy.sign(pixel_xsize),
-    #                     mean_pixel_size * numpy.sign(pixel_ysize))
-
     feat = None
     layer = None
     vector = None
