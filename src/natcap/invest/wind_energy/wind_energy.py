@@ -1013,9 +1013,10 @@ def execute(args):
         [_TARGET_NODATA])
 
     # Open raster bands for writing
-    npv_raster = gdal.Open(npv_raster_path, gdal.GA_Update)
+    npv_raster = gdal.OpenEx(npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     npv_band = npv_raster.GetRasterBand(1)
-    levelized_raster = gdal.Open(levelized_raster_path, gdal.GA_Update)
+    levelized_raster = gdal.OpenEx(
+        levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     levelized_band = levelized_raster.GetRasterBand(1)
 
     for (harvest_block_info,
@@ -1312,7 +1313,8 @@ def create_distance_raster(base_raster_path, base_vector_path,
                                            target_dist_raster_path)
 
     # Set the nodata value of output raster to _TARGET_NODATA
-    target_dist_raster = gdal.Open(target_dist_raster_path, gdal.GA_Update)
+    target_dist_raster = gdal.OpenEx(
+        target_dist_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     for band in range(1, target_dist_raster.RasterCount+1):
         target_band = target_dist_raster.GetRasterBand(band)
         target_band.SetNoDataValue(_TARGET_NODATA)
