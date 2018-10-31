@@ -1758,9 +1758,6 @@ def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
         row_count += 1
 
     band.SetDefaultRAT(attr_table)
-
-    # Make sure the dataset is closed and cleaned up
-    # gdal.Dataset.__swig_destroy__(raster)
     raster = None
 
 
