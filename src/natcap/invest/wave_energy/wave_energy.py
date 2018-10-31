@@ -1067,8 +1067,8 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     if os.path.isfile(target_raster_path):
         os.remove(target_raster_path)
 
-    # Set nodata to a very small negative number
-    target_nodata = -99999
+    # Set nodata to a negative number
+    target_nodata = -1
     base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][
         0]
 
@@ -1086,6 +1086,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         valid_data_mask = (band != base_nodata)
         band[valid_data_mask] = numpy.searchsorted(
             percentile_values, band[valid_data_mask]) + 1
+        band[~valid_data_mask] = target_nodata
         return band
 
     # Classify the pixels of raster_dataset into groups and write to output
@@ -1560,10 +1561,12 @@ def _calculate_percentiles_from_raster(
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
         # Remove the nodata value from the array
         if start_value:
-            unique_values = unique_values[
-                (unique_values != nodata) & (unique_values >= start_value)]
+            valid_pixel_mask = (unique_values != nodata) & (
+                unique_values >= start_value)
         else:
-            unique_values = unique_values[unique_values != nodata]
+            valid_pixel_mask = (unique_values != nodata)
+        unique_values = unique_values[valid_pixel_mask]
+        counts = counts[valid_pixel_mask]
         # Round the array so the unique values won't explode the dictionary
         numpy.round(unique_values, decimals=1, out=unique_values)
 

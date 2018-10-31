@@ -192,7 +192,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         result = wave_energy._create_value_ranges(percentiles, start_value)
 
         exp_result = [
-            "5 - 20", "20 - 40", "40 - 60", "60 - 80", "Greater than 80"
+            "5 to 20", "20 to 40", "40 to 60", "60 to 80", "Greater than 80"
         ]
 
         for res, exp_res in zip(result, exp_result):
