@@ -1159,9 +1159,10 @@ def point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
 
     """
     LOGGER.info('Starting point_to_polygon_distance.')
-    driver = ogr.GetDriverByName('ESRI Shapefile')
-    point_vector = driver.Open(base_point_vector_path, 1)  # 1 for writing field
-    poly_vector = driver.Open(base_polygon_vector_path, 0)
+    point_vector = gdal.OpenEx(
+        base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    poly_vector = gdal.OpenEx(
+        base_polygon_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
 
     poly_layer = poly_vector.GetLayer()
     # List to store the polygons geometries as shapely objects
