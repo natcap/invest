@@ -459,13 +459,15 @@ def execute(args):
         target_pixel_size,
         energy_raster_path,
         target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path})
+        vector_mask_options={'mask_vector_path': aoi_vector_path},
+        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
     pygeoprocessing.warp_raster(
         unclipped_power_raster_path,
         target_pixel_size,
         wave_power_raster_path,
         target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path})
+        vector_mask_options={'mask_vector_path': aoi_vector_path},
+        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
 
     # Create the percentile rasters for wave energy and wave power
     # These values are hard coded in because it's specified explicitly in

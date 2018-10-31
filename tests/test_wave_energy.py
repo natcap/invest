@@ -242,7 +242,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(result_path,
                                                      expected_path, 1e-6)
 
-    def test__clip_vector_by_vector_points(self):
+    def test_clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""
         from natcap.invest.wave_energy import wave_energy
 
