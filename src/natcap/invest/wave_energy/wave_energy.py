@@ -712,7 +712,7 @@ def execute(args):
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
     pygeoprocessing.create_raster_from_vector_extents(
-        wave_vector_path, npv_proj_path, target_pixel_size, _TARGET_PIXEL_TYPE,
+        aoi_vector_path, npv_proj_path, target_pixel_size, _TARGET_PIXEL_TYPE,
         _NODATA)
     LOGGER.info('Completed Creating Raster From Vector Extents')
 
@@ -730,7 +730,8 @@ def execute(args):
         target_pixel_size,
         npv_out_path,
         target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path})
+        vector_mask_options={'mask_vector_path': aoi_vector_path},
+        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
 
     # Create the percentile raster for net present value
     percentiles = [25, 50, 75, 90]
@@ -1160,7 +1161,7 @@ def _create_value_ranges(percentiles, start_value=None):
     if start_value:
         range_first = start_value + ' to ' + str(percentiles[0])
     else:
-        range_first = 'Less than ' + str(percentiles[0])
+        range_first = 'Less than or equal to' + str(percentiles[0])
     range_values.append(range_first)
 
     for idx in range(length - 1):
