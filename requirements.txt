@@ -21,7 +21,7 @@ scipy>=0.16.1
 Shapely>=1.6.4
 six
 # pygeoprocessing>=1.3.0
-hg+https://bitbucket.org/natcap/pygeoprocessing@8f13fb7a6742#egg=pygeoprocessing
+-I hg+https://bitbucket.org/natcap/pygeoprocessing@8f13fb7a6742#egg=pygeoprocessing
 taskgraph[niced_processes]>=0.6.1
 chardet>=3.0.4
 matplotlib
