@@ -21,7 +21,6 @@ import pygeoprocessing
 from .. import validation
 from .. import utils
 
-import pdb
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
 # Set nodata value and target_pixel_type for new rasters
@@ -1161,7 +1160,7 @@ def _create_value_ranges(percentiles, start_value=None):
     if start_value:
         range_first = start_value + ' to ' + str(percentiles[0])
     else:
-        range_first = 'Less than or equal to' + str(percentiles[0])
+        range_first = 'Less than or equal to ' + str(percentiles[0])
     range_values.append(range_first)
 
     for idx in range(length - 1):
@@ -1570,7 +1569,7 @@ def _calculate_percentiles_from_raster(
             valid_pixel_mask = (unique_values != nodata)
         unique_values = unique_values[valid_pixel_mask]
         counts = counts[valid_pixel_mask]
-        # Round the array so the unique values won't explode the dictionary
+        # # Round the array so the unique values won't explode the dictionary
         numpy.round(unique_values, decimals=1, out=unique_values)
 
         block_unique_value_counts = dict(zip(unique_values, counts))
