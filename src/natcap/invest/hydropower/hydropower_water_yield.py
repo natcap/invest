@@ -1,14 +1,10 @@
 """InVEST Hydropower Water Yield model."""
 from __future__ import absolute_import
 
-import shutil
 import logging
 import os
 import math
 import pickle
-import tempfile
-
-import pdb
 
 import numpy
 from osgeo import gdal
@@ -148,8 +144,8 @@ def execute(args):
     intermediate_dir = os.path.join(workspace_dir, 'intermediate')
     pickle_dir = os.path.join(intermediate_dir, '_tmp_zonal_stats')
     utils.make_directories(
-        [workspace_dir, output_dir, per_pixel_output_dir, 
-        intermediate_dir, pickle_dir])
+        [workspace_dir, output_dir, per_pixel_output_dir,
+         intermediate_dir, pickle_dir])
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
@@ -201,16 +197,16 @@ def execute(args):
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     base_raster_path_list = [
-        args['eto_path'], 
-        args['precipitation_path'], 
-        args['depth_to_root_rest_layer_path'], 
+        args['eto_path'],
+        args['precipitation_path'],
+        args['depth_to_root_rest_layer_path'],
         args['pawc_path'],
         args['lulc_path']]
 
     aligned_raster_path_list = [
-        eto_path, 
-        precip_path, 
-        depth_to_root_rest_layer_path, 
+        eto_path,
+        precip_path,
+        depth_to_root_rest_layer_path,
         pawc_path,
         clipped_lulc_path]
 
@@ -219,17 +215,17 @@ def execute(args):
     align_raster_stack_task = graph.add_task(
         pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_path_list, aligned_raster_path_list,
-              ['near'] * len(base_raster_path_list), 
+              ['near'] * len(base_raster_path_list),
               target_pixel_size, 'intersection'),
         kwargs={'raster_align_index':4, 'base_vector_path_list':[watersheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
     # Joining now since this task will always be the root node
-    # and it's useful to have the raster info available. 
+    # and it's useful to have the raster info available.
     align_raster_stack_task.join()
 
     nodata_dict = {
-        'out_nodata': -1.0, 
+        'out_nodata': -1.0,
         'precip': pygeoprocessing.get_raster_info(precip_path)['nodata'][0],
         'eto': pygeoprocessing.get_raster_info(eto_path)['nodata'][0],
         'root': pygeoprocessing.get_raster_info(
@@ -287,7 +283,7 @@ def execute(args):
     tmp_Kc_raster_path = os.path.join(intermediate_dir, 'kc_raster.tif')
     create_Kc_raster_task = graph.add_task(
         func=pygeoprocessing.reclassify_raster,
-        args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path, 
+        args=((clipped_lulc_path, 1), Kc_dict, tmp_Kc_raster_path,
               gdal.GDT_Float64, nodata_dict['out_nodata']),
         target_path_list=[tmp_Kc_raster_path],
         dependent_task_list=[align_raster_stack_task, check_missing_lucodes_task],
@@ -322,7 +318,7 @@ def execute(args):
     LOGGER.info('Calculate PET from Ref Evap times Kc')
     calculate_pet_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(eto_path, 1), (tmp_Kc_raster_path, 1)] + [(nodata_dict, 'raw')], 
+        args=([(eto_path, 1), (tmp_Kc_raster_path, 1)] + [(nodata_dict, 'raw')],
               pet_op, tmp_pet_path, gdal.GDT_Float64, nodata_dict['out_nodata']),
         target_path_list=[tmp_pet_path],
         dependent_task_list=[create_Kc_raster_task],
@@ -337,19 +333,19 @@ def execute(args):
     LOGGER.debug('Performing fractp operation')
     calculate_fractp_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(x, 1) for x in raster_list] + [(nodata_dict, 'raw')] 
-              + [(seasonality_constant, 'raw')], 
+        args=([(x, 1) for x in raster_list] + [(nodata_dict, 'raw')]
+              + [(seasonality_constant, 'raw')],
               fractp_op, fractp_path, gdal.GDT_Float64, nodata_dict['out_nodata']),
         target_path_list=[fractp_path],
         dependent_task_list=[
-            create_Kc_raster_task, create_veg_raster_task, 
+            create_Kc_raster_task, create_veg_raster_task,
             create_root_raster_task, align_raster_stack_task],
         task_name='calculate_fractp')
 
     LOGGER.info('Performing wyield operation')
     calculate_wyield_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(fractp_path, 1), (precip_path, 1)] + [(nodata_dict, 'raw')], 
+        args=([(fractp_path, 1), (precip_path, 1)] + [(nodata_dict, 'raw')],
               wyield_op, wyield_path, gdal.GDT_Float64, nodata_dict['out_nodata']),
         target_path_list=[wyield_path],
         dependent_task_list=[calculate_fractp_task, align_raster_stack_task],
@@ -359,8 +355,7 @@ def execute(args):
     LOGGER.debug('Performing aet operation')
     calculate_aet_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(x, 1) for x in [
-              fractp_path, precip_path]] + [(nodata_dict, 'raw')],
+        args=([(fractp_path, 1), (precip_path, 1)] + [(nodata_dict, 'raw')],
               aet_op, aet_path, gdal.GDT_Float64, nodata_dict['out_nodata']),
         target_path_list=[aet_path],
         dependent_task_list=[
@@ -387,7 +382,7 @@ def execute(args):
         dependent_tasks_for_watersheds_list.append(create_demand_raster_task)
         raster_names_paths_list.append(('demand', demand_path))
         
-    # Aggregate results to watershed polygons, and do the optional 
+    # Aggregate results to watershed polygons, and do the optional
     # scarcity and valuation calculations.
     for base_ws_path, ws_id_name, target_ws_path in watershed_paths_list:
 
@@ -412,7 +407,7 @@ def execute(args):
         # Compute optional scarcity and valuation
         create_output_vector_task = graph.add_task(
             func=create_vector_output,
-            args=(base_ws_path, target_ws_path, ws_id_name, 
+            args=(base_ws_path, target_ws_path, ws_id_name,
                   zonal_stats_pickle_list, valuation_params),
             target_path_list=[target_ws_path],
             dependent_task_list=zonal_stats_task_list,
@@ -428,12 +423,13 @@ def execute(args):
             dependent_task_list=[create_output_vector_task],
             task_name='create_%s_table_output' % ws_id_name)
 
-    graph.join()    
+    graph.join()
 
 
-def create_vector_output(base_vector_path, target_vector_path, ws_id_name, 
-    stats_path_list, valuation_params):
-    '''Join results of zonal stats to copies of the watershed shapefiles.  
+def create_vector_output(
+        base_vector_path, target_vector_path, ws_id_name,
+        stats_path_list, valuation_params):
+    '''Join results of zonal stats to copies of the watershed shapefiles. 
     Also do optional scarcity and valuation calculations.
 
     Parameters:
@@ -496,7 +492,7 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
     '''Create a CSV output with all the fields present in vector attribute table.
 
     Parameters:
-        base_vector_path (string): 
+        base_vector_path (string):
             Path to the watershed shapefile in the output workspace.
         target_csv_path (string):
             Path to a CSV to create in the output workspace.
@@ -515,7 +511,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     '''Calculate zonal statistics for watersheds and write results to a file.
 
     Parameters:
-        base_vector_path (string): 
+        base_vector_path (string):
             Path to the watershed shapefile in the output workspace.
         raster_path (string):
             Path to raster to aggregate.
@@ -524,7 +520,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
 
     Returns:
         None
-    '''    
+    '''
     ws_stats_dict = pygeoprocessing.zonal_statistics(
         (raster_path, 1), base_vector_path, ignore_nodata=False)
     with open(target_stats_pickle, 'w') as picklefile:
@@ -664,8 +660,8 @@ def pet_op(eto_pix, Kc_pix, nodata_dict):
 
 
 def _check_missing_lucodes(
-    clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path):
-    '''Check for lulc raster values that don't appear in the biophysical 
+        clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path):
+    '''Check for lulc raster values that don't appear in the biophysical
     or demand tables, since that is a very common error.
 
     Parameters:
@@ -673,7 +669,7 @@ def _check_missing_lucodes(
         demand_lucodes (set): codes found in args['demand_table_path']
         bio_lucodes (set): codes found in args['biophysical_table_path']
         valid_lulc_txt_path (string): path to a file that gets created if
-            there are no missing values. serves as target_path_list for 
+            there are no missing values. serves as target_path_list for
             taskgraph.
 
     Returns:
@@ -714,8 +710,8 @@ def _check_missing_lucodes(
 
     if missing_message:
         raise ValueError(missing_message)
-    with open(valid_lulc_txt_path, 'w') as file:
-        file.write('')
+    with open(valid_lulc_txt_path, 'w') as txt_file:
+        txt_file.write('')
 
 
 def compute_watershed_valuation(watersheds_path, val_dict):
@@ -750,7 +746,7 @@ def compute_watershed_valuation(watersheds_path, val_dict):
     # Iterate over the number of features (polygons)
     for ws_feat in ws_layer:
         # Get the watershed ID to index into the valuation parameter dictionary
-        # Since we only allow valuation on watersheds (not subwatersheds) 
+        # Since we only allow valuation on watersheds (not subwatersheds)
         # it's okay to hardcode 'ws_id' here.
         ws_id = ws_feat.GetField('ws_id')
         # Get the rsupply volume for the watershed
@@ -820,7 +816,7 @@ def compute_rsupply_volume(watershed_results_path):
         # Get mean and volume water yield values
         wyield_mn = ws_feat.GetField('wyield_mn')
         wyield = ws_feat.GetField('wyield_vol')
-        
+
         # Get water demand/consumption values
         consump_vol = ws_feat.GetField('consum_vol')
         consump_mn = ws_feat.GetField('consum_mn')
