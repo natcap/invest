@@ -433,6 +433,25 @@ def execute(args):
 
 def create_vector_output(base_vector_path, target_vector_path, ws_id_name, 
     stats_path_list, valuation_params):
+    '''Join results of zonal stats to copies of the watershed shapefiles.  
+    Also do optional scarcity and valuation calculations.
+
+    Parameters:
+        base_vector_path (string): Path to a watershed shapefile provided in 
+            the args dictionary.
+        target_vector_path (string): Path where base_vector_path will be copied
+            to in the output workspace.
+        ws_id_name (string): Either 'ws_id' or 'subws_id', which are required 
+            names of a unique ID field in the watershed and subwatershed shapefiles, 
+            respectively. Used to determine if the polygons represent watersheds or
+            subwatersheds.
+        stats_path_list (list): List of file paths to pickles storing zonal stats results
+        valuation_params (dict): The dictionary built from args['valuation_table_path'].
+            Or None if valuation table was not provided.
+
+    Returns:
+        None
+    '''
 
     esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -474,6 +493,17 @@ def create_vector_output(base_vector_path, target_vector_path, ws_id_name,
 
 
 def convert_vector_to_csv(base_vector_path, target_csv_path):
+    '''Create a CSV output with all the fields present in vector attribute table.
+
+    Parameters:
+        base_vector_path (string): 
+            Path to the watershed shapefile in the output workspace.
+        target_csv_path (string):
+            Path to a CSV to create in the output workspace.
+
+    Returns:
+        None
+    '''
     esri_shapefile_driver = ogr.GetDriverByName('ESRI Shapefile')
     watershed_vector = esri_shapefile_driver.Open(base_vector_path)
     csv_driver = ogr.GetDriverByName('CSV')
@@ -482,12 +512,23 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
 
 
 def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
+    '''Calculate zonal statistics for watersheds and write results to a file.
 
-        # Aggregrate mean over the watersheds for each raster
-        ws_stats_dict = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), base_vector_path, ignore_nodata=False)
-        with open(target_stats_pickle, 'w') as picklefile:
-            picklefile.write(pickle.dumps(ws_stats_dict))
+    Parameters:
+        base_vector_path (string): 
+            Path to the watershed shapefile in the output workspace.
+        raster_path (string):
+            Path to raster to aggregate.
+        target_stats_pickle (string)
+            Path to pickle file to store dictionary returned by zonal stats.
+
+    Returns:
+        None
+    '''    
+    ws_stats_dict = pygeoprocessing.zonal_statistics(
+        (raster_path, 1), base_vector_path, ignore_nodata=False)
+    with open(target_stats_pickle, 'w') as picklefile:
+        picklefile.write(pickle.dumps(ws_stats_dict))
 
 
 def aet_op(fractp, precip, nodata_dict):
@@ -553,8 +594,8 @@ def fractp_op(Kc, eto, precip, root, soil, pawc, veg, nodata_dict, seasonality_c
 
     """
     # Kc, root, & veg were created by reclassify_raster, which set nodata
-    # to out_nodata. All others are products of align_and_resize and retain 
-    # their original nodata values.
+    # to out_nodata. All others are products of align_and_resize_raster_stack
+    # and retain their original nodata values.
     valid_mask = (
         (Kc != nodata_dict['out_nodata']) & (eto != nodata_dict['eto']) &
         (precip != nodata_dict['precip']) & (root != nodata_dict['out_nodata']) &
