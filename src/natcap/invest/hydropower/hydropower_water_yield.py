@@ -412,7 +412,7 @@ def execute(args):
             zonal_stats_pickle_list.append((target_stats_pickle, key_name))
             zonal_stats_task_list.append(graph.add_task(
                 func=zonal_stats_tofile,
-                args=(base_ws_path, ws_id_name, rast_path, target_stats_pickle),
+                args=(base_ws_path, rast_path, target_stats_pickle),
                 target_path_list=[target_stats_pickle],
                 dependent_task_list=dependent_tasks_for_watersheds_list,
                 task_name='%s_%s_zonalstats' % (ws_id_name, key_name)))
@@ -453,8 +453,7 @@ def create_vector_output(base_vector_path, target_vector_path, ws_id_name,
 
             if key_name == 'wyield_mn':
                 _add_zonal_stats_dict_to_shape(
-                    target_vector_path, ws_stats_dict, key_name,
-                    ws_id_name, 'mean')
+                    target_vector_path, ws_stats_dict, key_name, 'mean')
                 # Also create and populate 'wyield_vol' field, which
                 # relies on 'wyield_mn' already present in attribute table
                 compute_water_yield_volume(target_vector_path)
@@ -465,19 +464,16 @@ def create_vector_output(base_vector_path, target_vector_path, ws_id_name,
             elif key_name == 'demand':
                  # Add aggregated consumption to sheds shapefiles
                 _add_zonal_stats_dict_to_shape(
-                    target_vector_path, ws_stats_dict, 'consum_vol', ws_id_name,
-                    'sum')
+                    target_vector_path, ws_stats_dict, 'consum_vol', 'sum')
 
                 # Add aggregated consumption means to sheds shapefiles
                 _add_zonal_stats_dict_to_shape(
-                    target_vector_path, ws_stats_dict, 'consum_mn', ws_id_name,
-                    'mean')
+                    target_vector_path, ws_stats_dict, 'consum_mn', 'mean')
                 compute_rsupply_volume(target_vector_path)
 
             else:
                 _add_zonal_stats_dict_to_shape(
-                    target_vector_path, ws_stats_dict, key_name,
-                    ws_id_name, 'mean')
+                    target_vector_path, ws_stats_dict, key_name, 'mean')
 
     if valuation_params:
         # only do valuation for watersheds, not subwatersheds
@@ -493,12 +489,11 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
 
 
 
-def zonal_stats_tofile(base_vector_path, ws_id_name, raster_path, target_stats_pickle):
+def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
 
         # Aggregrate mean over the watersheds for each raster
         ws_stats_dict = pygeoprocessing.zonal_statistics(
-            (raster_path, 1), base_vector_path, ws_id_name,
-            ignore_nodata=False)
+            (raster_path, 1), base_vector_path, ignore_nodata=False)
         with open(target_stats_pickle, 'w') as picklefile:
             picklefile.write(pickle.dumps(ws_stats_dict))
 
@@ -700,7 +695,6 @@ def compute_watershed_valuation(watersheds_path, val_dict):
         None.
 
     """
-    LOGGER.debug(val_dict)
     ws_ds = gdal.OpenEx(watersheds_path, 1)
     ws_layer = ws_ds.GetLayer()
 
@@ -715,20 +709,15 @@ def compute_watershed_valuation(watersheds_path, val_dict):
         field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
-    num_features = ws_layer.GetFeatureCount()
+    ws_layer.ResetReading()
     # Iterate over the number of features (polygons)
-    for feat_id in xrange(num_features):
-        ws_feat = ws_layer.GetFeature(feat_id)
-        # Get the indices for the output fields
-        energy_id = ws_feat.GetFieldIndex(energy_field)
-        npv_id = ws_feat.GetFieldIndex(npv_field)
-
+    for ws_feat in ws_layer:
         # Get the watershed ID to index into the valuation parameter dictionary
-        ws_index = ws_feat.GetFieldIndex('ws_id')
-        ws_id = ws_feat.GetField(ws_index)
+        # Since we only allow valuation on watersheds (not subwatersheds) 
+        # it's okay to hardcode 'ws_id' here.
+        ws_id = ws_feat.GetField('ws_id')
         # Get the rsupply volume for the watershed
-        rsupply_vl_id = ws_feat.GetFieldIndex('rsupply_vl')
-        rsupply_vl = ws_feat.GetField(rsupply_vl_id)
+        rsupply_vl = ws_feat.GetField('rsupply_vl')
 
         # Get the valuation parameters for watershed 'ws_id'
         val_row = val_dict[ws_id]
@@ -752,8 +741,8 @@ def compute_watershed_valuation(watersheds_path, val_dict):
         npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
         # Get the volume field index and add value
-        ws_feat.SetField(energy_id, energy)
-        ws_feat.SetField(npv_id, npv)
+        ws_feat.SetField(energy_field, energy)
+        ws_feat.SetField(npv_field, npv)
 
         ws_layer.SetFeature(ws_feat)
 
@@ -788,32 +777,24 @@ def compute_rsupply_volume(watershed_results_path):
         field_defn.SetPrecision(11)
         ws_layer.CreateField(field_defn)
 
-    num_features = ws_layer.GetFeatureCount()
+    ws_layer.ResetReading()
     # Iterate over the number of features (polygons)
-    for feat_id in xrange(num_features):
-        ws_feat = ws_layer.GetFeature(feat_id)
-        # Get mean water yield value
-        wyield_mn_id = ws_feat.GetFieldIndex('wyield_mn')
-        wyield_mn = ws_feat.GetField(wyield_mn_id)
-
+    for ws_feat in ws_layer:
+        # Get mean and volume water yield values
+        wyield_mn = ws_feat.GetField('wyield_mn')
+        wyield = ws_feat.GetField('wyield_vol')
+        
         # Get water demand/consumption values
-        wyield_id = ws_feat.GetFieldIndex('wyield_vol')
-        wyield = ws_feat.GetField(wyield_id)
-
-        consump_vol_id = ws_feat.GetFieldIndex('consum_vol')
-        consump_vol = ws_feat.GetField(consump_vol_id)
-        consump_mn_id = ws_feat.GetFieldIndex('consum_mn')
-        consump_mn = ws_feat.GetField(consump_mn_id)
+        consump_vol = ws_feat.GetField('consum_vol')
+        consump_mn = ws_feat.GetField('consum_mn')
 
         # Calculate realized supply
         rsupply_vol = wyield - consump_vol
         rsupply_mn = wyield_mn - consump_mn
 
-        # Get the indices for the output fields and set their values
-        rsupply_vol_index = ws_feat.GetFieldIndex(rsupply_vol_name)
-        ws_feat.SetField(rsupply_vol_index, rsupply_vol)
-        rsupply_mn_index = ws_feat.GetFieldIndex(rsupply_mn_name)
-        ws_feat.SetField(rsupply_mn_index, rsupply_mn)
+        # Set values for the new rsupply fields
+        ws_feat.SetField(rsupply_vol_name, rsupply_vol)
+        ws_feat.SetField(rsupply_mn_mean, rsupply_mn)
 
         ws_layer.SetFeature(ws_feat)
 
@@ -842,33 +823,29 @@ def compute_water_yield_volume(shape_path):
     field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
 
-    num_features = layer.GetFeatureCount()
+    layer.ResetReading()
     # Iterate over the number of features (polygons) and compute volume
-    for feat_id in xrange(num_features):
-        feat = layer.GetFeature(feat_id)
-        wyield_mn_id = feat.GetFieldIndex('wyield_mn')
-        wyield_mn = feat.GetField(wyield_mn_id)
+    for feat in layer:
+        wyield_mn = feat.GetField('wyield_mn')
         geom = feat.GetGeometryRef()
         # Calculate water yield volume,
         # 1000 is for converting the mm of wyield to meters
         vol = wyield_mn * geom.Area() / 1000.0
         # Get the volume field index and add value
-        vol_index = feat.GetFieldIndex(vol_name)
-        feat.SetField(vol_index, vol)
+        feat.SetField(vol_name, vol)
 
         layer.SetFeature(feat)
 
 
 def _add_zonal_stats_dict_to_shape(
-        shape_path, stats_map, field_name, key, aggregate_field_id):
+        shape_path, stats_map, field_name, aggregate_field_id):
     """Add a new field to a shapefile with values from a dictionary.
 
         The dictionaries keys should match to the values of a unique fields
         values in the shapefile
 
-        shape_path (string): a path to a vector with a unique field
-            `key`. The field `key` should have values that map to the keys
-            of  `stats_map`.
+        shape_path (string): a path to a vector whose FIDs correspond
+            with the keys in `stats_map`.
 
         stats_map (dict): a dictionary in the format generated by
             pygeoprocessing.zonal_statistics that contains at least the key
@@ -876,9 +853,6 @@ def _add_zonal_stats_dict_to_shape(
 
         field_name (str): a string for the name of the new field to add to
             the target vector.
-
-        key (str): a string for the field name in the `shape_path` vector
-            a unique features per record.
 
         aggregate_field_id (string): one of 'min' 'max' 'sum' 'mean' 'count'
             or 'nodata_count' as defined by pygeoprocessing.zonal_statistics.
@@ -897,29 +871,22 @@ def _add_zonal_stats_dict_to_shape(
     layer.CreateField(field_defn)
 
     # Get the number of features (polygons) and iterate through each
-    num_features = layer.GetFeatureCount()
-    for feat_id in xrange(num_features):
-        feat = layer.GetFeature(feat_id)
+    layer.ResetReading()
+    for feature in layer:
+        feature_fid = feature.GetFID()
 
-        # Get the index for the unique field
-        ws_id = feat.GetFieldIndex(key)
-
-        # Get the unique value that will index into the dictionary as a key
-        ws_val = feat.GetField(ws_id)
-
-        # Using the unique value from the field of the feature, index into the
+        # Using the unique feature ID, index into the
         # dictionary to get the corresponding value
         if aggregate_field_id == 'mean':
             field_val = float(
-                stats_map[ws_val]['sum']) / stats_map[ws_val]['count']
+                stats_map[feature_fid]['sum']) / stats_map[feature_fid]['count']
         else:
-            field_val = float(stats_map[ws_val][aggregate_field_id])
+            field_val = float(stats_map[feature_fid][aggregate_field_id])
 
-        # Get the new fields index and set the new value for the field
-        field_index = feat.GetFieldIndex(field_name)
-        feat.SetField(field_index, field_val)
+        # Set the value for the new field
+        feature.SetField(field_name, field_val)
 
-        layer.SetFeature(feat)
+        layer.SetFeature(feature)
 
 
 def _extract_vector_table_by_key(vector_path, key_field):
