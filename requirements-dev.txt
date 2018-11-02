@@ -25,7 +25,6 @@ PyInstaller==3.3.1  # pip-only
 setuptools_scm
 requests
 coverage
-hg+https://bitbucket.org/natcap/pygeoprocessing@8f13fb7a6742#egg=pygeoprocessing
 
 # Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
 # with some other package versions, but I haven't had time to try to get
