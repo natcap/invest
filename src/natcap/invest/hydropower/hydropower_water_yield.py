@@ -794,7 +794,7 @@ def compute_rsupply_volume(watershed_results_path):
 
         # Set values for the new rsupply fields
         ws_feat.SetField(rsupply_vol_name, rsupply_vol)
-        ws_feat.SetField(rsupply_mn_mean, rsupply_mn)
+        ws_feat.SetField(rsupply_mn_name, rsupply_mn)
 
         ws_layer.SetFeature(ws_feat)
 
