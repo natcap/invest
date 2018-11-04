@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
 * Updating core carbon forest edge regression data coefficient to drop
