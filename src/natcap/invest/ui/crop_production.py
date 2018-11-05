@@ -86,21 +86,6 @@ class CropProductionPercentile(model.InVESTModel):
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
-        self.aggregate_polygon_id = inputs.Text(
-            args_key=u'aggregate_polygon_id',
-            helptext=(
-                u"If an aggregate polygon is provided, this field is "
-                u"used to indicate the key field of that polygon for "
-                u"aggregation.  The aggregate table produced by this "
-                u"model will index the results by this field value."),
-            interactive=False,
-            label=u'Aggregate polygon ID field',
-            validator=self.validator)
-        self.add_input(self.aggregate_polygon_id)
-
-        # Set interactivity, requirement as input sufficiency changes
-        self.aggregate_polygon_path.sufficiency_changed.connect(
-            self.aggregate_polygon_id.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -113,8 +98,6 @@ class CropProductionPercentile(model.InVESTModel):
                 self.landcover_to_crop_table_path.value(),
             self.aggregate_polygon_path.args_key:
                 self.aggregate_polygon_path.value(),
-            self.aggregate_polygon_id.args_key:
-                self.aggregate_polygon_id.value(),
         }
         return args
 
@@ -180,21 +163,6 @@ class CropProductionRegression(model.InVESTModel):
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
-        self.aggregate_polygon_id = inputs.Text(
-            args_key=u'aggregate_polygon_id',
-            helptext=(
-                u"If an aggregate polygon is provided, this field is "
-                u"used to indicate the key field of that polygon for "
-                u"aggregation.  The aggregate table produced by this "
-                u"model will index the results by this field value."),
-            interactive=False,
-            label=u'Aggregate polygon ID field',
-            validator=self.validator)
-        self.add_input(self.aggregate_polygon_id)
-
-        # Set interactivity, requirement as input sufficiency changes
-        self.aggregate_polygon_path.sufficiency_changed.connect(
-            self.aggregate_polygon_id.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -209,7 +177,5 @@ class CropProductionRegression(model.InVESTModel):
                 self.fertilization_rate_table_path.value(),
             self.aggregate_polygon_path.args_key:
                 self.aggregate_polygon_path.value(),
-            self.aggregate_polygon_id.args_key:
-                self.aggregate_polygon_id.value(),
         }
         return args
