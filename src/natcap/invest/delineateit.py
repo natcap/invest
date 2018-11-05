@@ -175,7 +175,7 @@ def _vector_may_contain_points(vector_path):
         return False
 
     layer = vector.GetLayer()
-    if layer.GetGeomType in (ogr.wkbPoint, ogr.wkbUnknown):
+    if layer.GetGeomType() in (ogr.wkbPoint, ogr.wkbUnknown):
         return True
     return False
 
@@ -336,8 +336,8 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
-        'dem_uri',
-        'outlet_shapefile_uri',
+        'dem_path',
+        'outlet_vector_path',
         'flow_threshold',
         'snap_distance']
 
@@ -359,8 +359,8 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     file_type_list = [
-        ('dem_uri', 'raster'),
-        ('outlet_shapefile_uri', 'vector')]
+        ('dem_path', 'raster'),
+        ('outlet_vector_path', 'vector')]
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
@@ -371,13 +371,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

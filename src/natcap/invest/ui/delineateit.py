@@ -8,32 +8,37 @@ class Delineateit(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'DelineateIT: Watershed Delineation',
+            label=u'DelineateIt: Watershed Delineation',
             target=delineateit.execute,
             validator=delineateit.validate,
             localdoc=u'../documentation/delineateit.html')
 
-        self.dem_uri = inputs.File(
-            args_key=u'dem_uri',
+        self.dem_path = inputs.File(
+            label='Digital Elevation Model (Raster)',
+            args_key=u'dem_path',
             helptext=(
                 u"A GDAL-supported raster file with an elevation value "
-                u"for each cell.  Make sure the DEM is corrected by "
-                u"filling in sinks, and if necessary burning "
-                u"hydrographic features into the elevation model "
-                u"(recommended when unusual streams are observed.) See "
-                u"the 'Working with the DEM' section of the InVEST "
-                u"User's Guide for more information."),
-            label=u'Digital Elevation Model (Raster)',
+                u"for each cell."),
             validator=self.validator)
-        self.add_input(self.dem_uri)
-        self.outlet_shapefile_uri = inputs.File(
-            args_key=u'outlet_shapefile_uri',
+        self.add_input(self.dem_path)
+        self.outlet_vector_path = inputs.File(
+            args_key=u'outlet_vector_path',
             helptext=(
-                u"This is a layer of points representing outlet points "
-                u"that the watersheds should be built around."),
+                u"This is a layer of geometries representing watershed "
+                u"outlets such as municipal water intakes or lakes."),
             label=u'Outlet Points (Vector)',
             validator=self.validator)
-        self.add_input(self.outlet_shapefile_uri)
+        self.add_input(self.outlet_vector_path)
+        self.outlet_vector_path.validity_changed.connect(
+            self._enable_point_snapping_container)
+
+        self.snap_points_container = inputs.Container(
+            label='Snap points to the nearest stream',
+            expandable=True,
+            expanded=False,
+            interactive=False,
+            args_key='snap_points')
+        self.add_input(self.snap_points_container)
         self.flow_threshold = inputs.Text(
             args_key=u'flow_threshold',
             helptext=(
@@ -44,23 +49,36 @@ class Delineateit(model.InVESTModel):
                 u"the DEM."),
             label=u'Threshold Flow Accumulation',
             validator=self.validator)
-        self.add_input(self.flow_threshold)
+        self.snap_points_container.add_input(self.flow_threshold)
         self.snap_distance = inputs.Text(
             args_key=u'snap_distance',
             label=u'Pixel Distance to Snap Outlet Points',
+            helptext=(
+                u"If provided, the maximum search radius in pixels to look "
+                u"for stream pixels.  If a stream pixel is found within the "
+                u"snap distance, the outflow point will be snapped to the "
+                u"center of the nearest stream pixel."),
             validator=self.validator)
-        self.add_input(self.snap_distance)
+        self.snap_points_container.add_input(self.snap_distance)
 
-        # Set interactivity, requirement as input sufficiency changes
+    def _enable_point_snapping_container(self, input_valid):
+        outlet_vector_path = self.outlet_vector_path.value()
+        if delineateit._vector_may_contain_points(outlet_vector_path):
+            self.snap_points_container.set_interactive(True)
+        else:
+            self.snap_points_container.set_interactive(False)
+            self.snap_points_container.expanded = False
 
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.n_workers.args_key: self.n_workers.value(),
-            self.dem_uri.args_key: self.dem_uri.value(),
-            self.outlet_shapefile_uri.args_key: (
-                self.outlet_shapefile_uri.value()),
+            self.dem_path.args_key: self.dem_path.value(),
+            self.outlet_vector_path.args_key: (
+                self.outlet_vector_path.value()),
+            self.snap_points_container.args_key: (
+                self.snap_points_container.value()),
             self.flow_threshold.args_key: self.flow_threshold.value(),
             self.snap_distance.args_key: self.snap_distance.value(),
         }
