@@ -28,7 +28,7 @@ _OUTPUT_FILES = {
 
 
 def execute(args):
-    """Delineateit: Watershed Delineation.
+    """DelineateIt: Watershed Delineation.
 
     This 'model' provides an InVEST-based wrapper around the pygeoprocessing
     routing API for watershed delineation.
@@ -45,32 +45,32 @@ def execute(args):
           streams, values of 0 are not.
 
     Parameters:
-        workspace_dir (string):  The selected folder is used as the workspace
-            all intermediate and output files will be written.If the
-            selected folder does not exist, it will be created. If
-            datasets already exist in the selected folder, they will be
-            overwritten. (required)
-        suffix (string):  This text will be appended to the end of
+        args['workspace_dir'] (string):  The selected folder is used as the
+            workspace all intermediate and output files will be written.If the
+            selected folder does not exist, it will be created. If datasets
+            already exist in the selected folder, they will be overwritten.
+            (required)
+        args['suffix'] (string):  This text will be appended to the end of
             output files to help separate multiple runs. (optional)
-        dem_uri (string):  A GDAL-supported raster file with an elevation
+        args['dem_path'] (string):  A GDAL-supported raster file with an elevation
             for each cell. Make sure the DEM is corrected by filling in sinks,
             and if necessary burning hydrographic features into the elevation
             model (recommended when unusual streams are observed.) See the
             'Working with the DEM' section of the InVEST User's Guide for more
             information. (required)
-        outlet_shapefile_uri (string):  This is a vector of points representing
-            points that the watersheds should be built around. (required)
-        flow_threshold (int):  The number of upstream cells that must
+        args['outlet_vector_path'] (string):  This is a vector representing
+            geometries that the watersheds should be built around. (required)
+        args['flow_threshold'] (int):  The number of upstream cells that must
             into a cell before it's considered part of a stream such that
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM. (required)
-        snap_distance (int):  Pixel Distance to Snap Outlet Points (required)
+        args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points (required)
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing.  If omitted, computation will take place in the
             current process.
 
     Returns:
-        None
+        ``None``
     """
     output_directory = args['workspace_dir']
     utils.make_directories([output_directory])
@@ -94,7 +94,7 @@ def execute(args):
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
-        args=((args['dem_uri'], 1),
+        args=((args['dem_path'], 1),
               file_registry['filled_dem']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['filled_dem']],
@@ -118,32 +118,35 @@ def execute(args):
         task_name='flow_accumulation')
 
     flow_accumulation_task.join()
-    out_nodata = 255
-    flow_accumulation_nodata = pygeoprocessing.get_raster_info(
-        file_registry['flow_accumulation'])['nodata']
-    streams_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
-        args=([(file_registry['flow_accumulation'], 1),
-               (flow_accumulation_nodata, 'raw'),
-               (out_nodata, 'raw'),
-               (flow_threshold, 'raw')],
-              _threshold_streams,
-              file_registry['streams'],
-              gdal.GDT_Byte,
-              out_nodata),
-        target_path_list=[file_registry['streams']],
-        dependent_task_list=[flow_accumulation_task],
-        task_name='threshold_streams')
+    delineation_dependent_tasks = [flow_accumulation_task]
+    if _vector_may_contain_points(args['outlet_vector_path']):
+        out_nodata = 255
+        flow_accumulation_nodata = pygeoprocessing.get_raster_info(
+            file_registry['flow_accumulation'])['nodata']
+        streams_task = graph.add_task(
+            pygeoprocessing.raster_calculator,
+            args=([(file_registry['flow_accumulation'], 1),
+                   (flow_accumulation_nodata, 'raw'),
+                   (out_nodata, 'raw'),
+                   (flow_threshold, 'raw')],
+                  _threshold_streams,
+                  file_registry['streams'],
+                  gdal.GDT_Byte,
+                  out_nodata),
+            target_path_list=[file_registry['streams']],
+            dependent_task_list=[flow_accumulation_task],
+            task_name='threshold_streams')
 
-    snapped_outflow_points_task = graph.add_task(
-        snap_points_to_nearest_stream,
-        args=(args['outlet_shapefile_uri'],
-              (file_registry['streams'], 1),
-              snap_distance,
-              file_registry['snapped_outlets']),
-        target_path_list=[file_registry['snapped_outlets']],
-        dependent_task_list=[streams_task],
-        task_name='snapped_outflow_points')
+        snapped_outflow_points_task = graph.add_task(
+            snap_points_to_nearest_stream,
+            args=(args['outlet_vector_path'],
+                  (file_registry['streams'], 1),
+                  snap_distance,
+                  file_registry['snapped_outlets']),
+            target_path_list=[file_registry['snapped_outlets']],
+            dependent_task_list=[streams_task],
+            task_name='snapped_outflow_points')
+        delineation_dependent_tasks.append(snapped_outflow_points_task)
 
     watershed_delineation_task = graph.add_task(
         pygeoprocessing.routing.delineate_watersheds,
@@ -152,7 +155,7 @@ def execute(args):
               file_registry['watershed_fragments']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['watershed_fragments']],
-        dependent_task_list=[snapped_outflow_points_task],
+        dependent_task_list=delineation_dependent_tasks,
         task_name='delineate_watersheds')
 
     graph.add_task(
@@ -164,6 +167,17 @@ def execute(args):
         task_name='join_watershed_fragments')
 
     graph.join()
+
+
+def _vector_may_contain_points(vector_path):
+    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
+    if vector is None:
+        return False
+
+    layer = vector.GetLayer()
+    if layer.GetGeomType in (ogr.wkbPoint, ogr.wkbUnknown):
+        return True
+    return False
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
