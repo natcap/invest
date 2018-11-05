@@ -670,26 +670,23 @@ def execute(args):
         target_path_list=[wild_pollinator_yield_path])
 
     # aggregate yields across farms
-    fid_field_id = str(uuid.uuid4())[-10::]
     target_farm_result_path = os.path.join(
         output_dir, _FARM_VECTOR_RESULT_FILE_PATTERN % file_suffix)
     if os.path.exists(target_farm_result_path):
         os.remove(target_farm_result_path)
     reproject_farm_task.join()
     _create_farm_result_vector(
-        farm_vector_path, fid_field_id, target_farm_result_path)
+        farm_vector_path, target_farm_result_path)
 
     # aggregate wild pollinator yield over farm
     wild_pollinator_task.join()
     wild_pollinator_yield_aggregate = pygeoprocessing.zonal_statistics(
-        (wild_pollinator_yield_path, 1), target_farm_result_path,
-        fid_field_id)
+        (wild_pollinator_yield_path, 1), target_farm_result_path)
 
     # aggregate yield over a farm
     pyt_task.join()
     total_farm_results = pygeoprocessing.zonal_statistics(
-        (total_pollinator_yield_path, 1), target_farm_result_path,
-        fid_field_id)
+        (total_pollinator_yield_path, 1), target_farm_result_path)
 
     # aggregate the pollinator abundance results over the farms
     pollinator_abundance_results = {}
@@ -701,7 +698,7 @@ def execute(args):
         pollinator_abundance_results[season] = (
             pygeoprocessing.zonal_statistics(
                 (total_pollinator_abundance_index_path, 1),
-                target_farm_result_path, fid_field_id))
+                target_farm_result_path))
 
     target_farm_vector = gdal.OpenEx(target_farm_result_path, 1)
     target_farm_layer = target_farm_vector.GetLayer()
@@ -709,7 +706,7 @@ def execute(args):
     # aggregate results per farm
     for farm_feature in target_farm_layer:
         nu = float(farm_feature.GetField(_CROP_POLLINATOR_DEPENDENCE_FIELD))
-        fid = int(farm_feature.GetField(fid_field_id))
+        fid = farm_feature.GetFID()
         if total_farm_results[fid]['count'] > 0:
             # total pollinator farm yield is 1-*nu(1-tot_pollination_coverage)
             # this is YT from the user's guide (y_tot)
@@ -739,8 +736,6 @@ def execute(args):
                 pollinator_abundance_results[farm_season][fid]['count'])
 
         target_farm_layer.SetFeature(farm_feature)
-    target_farm_layer.DeleteField(
-        target_farm_layer.FindFieldIndex(fid_field_id, 1))
     target_farm_layer.SyncToDisk()
     target_farm_layer = None
     target_farm_vector = None
@@ -784,13 +779,11 @@ def _rasterize_vector_onto_base(
 
 
 def _create_farm_result_vector(
-        base_vector_path, fid_field_id, target_vector_path):
+        base_vector_path, target_vector_path):
     """Create a copy of `base_vector_path` and add FID field to it.
 
     Parameters:
         base_vector_path (string): path to vector to copy
-        fid_field_id (string): FID field name to add to target that shouldn't
-            already exist in `base_vector_path`.
         target_vector_path (string): path to target vector that is a copy
             of the base, except for the new `fid_field_id` field that has
             unique integer IDs for each feature.  This path must not already
@@ -798,21 +791,16 @@ def _create_farm_result_vector(
                 _TOTAL_FARM_YIELD_FIELD_ID
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID
 
-
     Returns:
         None.
+
     """
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    base_layer = base_vector.GetLayer()
 
     driver = gdal.GetDriverByName('ESRI Shapefile')
     target_vector = driver.CreateCopy(
         target_vector_path, base_vector)
     target_layer = target_vector.GetLayer()
-    target_layer.CreateField(ogr.FieldDefn(fid_field_id, ogr.OFTInteger))
-    for feature in target_layer:
-        feature.SetField(fid_field_id, feature.GetFID())
-        target_layer.SetFeature(feature)
 
     farm_pollinator_abundance_defn = ogr.FieldDefn(
         _POLLINATOR_ABUDNANCE_FARM_FIELD_ID, ogr.OFTReal)

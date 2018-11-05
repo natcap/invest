@@ -124,7 +124,7 @@ _MODEL_UIS = {
         gui='seasonal_water_yield.SeasonalWaterYield',
         aliases=('swy',)),
     'wind_energy': _UIMETA(
-        pyname='natcap.invest.wind_energy.wind_energy',
+        pyname='natcap.invest.wind_energy',
         gui='wind_energy.WindEnergy',
         aliases=()),
     'wave_energy': _UIMETA(
