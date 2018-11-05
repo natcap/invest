@@ -65,9 +65,6 @@ def execute(args):
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM. (required)
         args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points (required)
-        args['n_workers'] (int): (optional) The number of worker processes to
-            use for processing.  If omitted, computation will take place in the
-            current process.
 
     Returns:
         ``None``
@@ -83,14 +80,12 @@ def execute(args):
     flow_threshold = int(args['flow_threshold'])
 
     work_token_dir = os.path.join(output_directory, '_work_tokens')
-    try:
-        n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+    # Manually setting n_workers to be -1 so that everything happens in the
+    # same thread.  In the current implementation of delineateit, all
+    # operations happen synchronously ... there's no opportunity to parallelize
+    # computational work.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers=-1)
 
     fill_pits_task = graph.add_task(
         pygeoprocessing.routing.fill_pits,
