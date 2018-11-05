@@ -1,4 +1,4 @@
-"""DelineateIt wrapper for natcap.invest.pygeoprocessing_0_3_3's watershed delineation routine."""
+"""DelineateIt wrapper for pygeoprocessing's watershed delineation routine."""
 from __future__ import absolute_import
 import os
 import logging
@@ -30,7 +30,7 @@ _OUTPUT_FILES = {
 def execute(args):
     """Delineateit: Watershed Delineation.
 
-    This 'model' provides an InVEST-based wrapper around the natcap.invest.pygeoprocessing_0_3_3
+    This 'model' provides an InVEST-based wrapper around the pygeoprocessing
     routing API for watershed delineation.
 
     Upon successful completion, the following files are written to the
@@ -39,7 +39,7 @@ def execute(args):
         * ``snapped_outlets.shp`` - an ESRI shapefile with the points snapped
           to a nearby stream.
         * ``watersheds.shp`` - an ESRI shapefile of watersheds determined
-          by the d-infinity routing algorithm.
+          by the D8 routing algorithm.
         * ``stream.tif`` - a GeoTiff representing detected streams based on
           the provided ``flow_threshold`` parameter.  Values of 1 are
           streams, values of 0 are not.
@@ -240,7 +240,8 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         if (x_index < 0 or x_index >= n_cols or
                 y_index < 0 or y_index > n_rows):
             LOGGER.warn('Encountered a point that was outside the bounds of '
-                        'the stream raster: %s', point)
+                        'the stream raster.  FID:%s at %s',
+                        point_feature.GetFID(), point)
             continue
 
         x_center = x_index
