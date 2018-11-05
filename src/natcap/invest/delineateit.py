@@ -231,7 +231,6 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     stream_raster = gdal.OpenEx(stream_raster_path_band[0], gdal.OF_RASTER)
     stream_band = stream_raster.GetRasterBand(stream_raster_path_band[1])
 
-    # TODO: try doing this with GPKG instead
     driver = gdal.GetDriverByName('GPKG')
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
                                    gdal.GDT_Unknown)
@@ -248,6 +247,13 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
 
     for point_feature in points_layer:
         point_geometry = point_feature.GetGeometryRef()
+
+        # If the geometry is not a primitive point, just create the new feature
+        # as it is now in the new vector.
+        if point_geometry.GetGeometryName() != 'POINT':
+            snapped_layer.CreateFeature(point_feature)
+            continue
+
         point = point_geometry.GetPoint()
         x_index = (point[0] - geotransform[0]) // geotransform[1]
         y_index = (point[1] - geotransform[3]) // geotransform[5]
