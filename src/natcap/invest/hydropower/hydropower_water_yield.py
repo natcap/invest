@@ -437,26 +437,30 @@ def execute(args):
 def create_vector_output(
         base_vector_path, target_vector_path, ws_id_name,
         stats_path_list, valuation_params):
-    '''Join results of zonal stats to copies of the watershed shapefiles. 
+    """Create the main vector outputs of this model.
+
+    Join results of zonal stats to copies of the watershed shapefiles.
     Also do optional scarcity and valuation calculations.
 
     Parameters:
-        base_vector_path (string): Path to a watershed shapefile provided in 
+        base_vector_path (string): Path to a watershed shapefile provided in
             the args dictionary.
         target_vector_path (string): Path where base_vector_path will be copied
             to in the output workspace.
-        ws_id_name (string): Either 'ws_id' or 'subws_id', which are required 
-            names of a unique ID field in the watershed and subwatershed shapefiles, 
-            respectively. Used to determine if the polygons represent watersheds or
-            subwatersheds.
-        stats_path_list (list): List of file paths to pickles storing zonal stats results
-        valuation_params (dict): The dictionary built from args['valuation_table_path'].
-            Or None if valuation table was not provided.
+        ws_id_name (string): Either 'ws_id' or 'subws_id', which are required
+            names of a unique ID field in the watershed and subwatershed
+            shapefiles, respectively. Used to determine if the polygons
+            represent watersheds or subwatersheds.
+        stats_path_list (list): List of file paths to pickles storing the zonal
+            stats results.
+        valuation_params (dict): The dictionary built from
+            args['valuation_table_path']. Or None if valuation table was not
+            provided.
 
     Returns:
         None
-    '''
 
+    """
     esri_shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     esri_shapefile_driver.CreateCopy(target_vector_path, watershed_vector)
@@ -473,11 +477,11 @@ def create_vector_output(
                 # relies on 'wyield_mn' already present in attribute table
                 compute_water_yield_volume(target_vector_path)
 
-            # consum_* variables rely on 'wyield_*' fields present, 
+            # consum_* variables rely on 'wyield_*' fields present,
             # so this would fail if somehow 'demand' comes before 'wyield_mn'
             # in key_names. The order is hardcoded in raster_names_paths_list.
             elif key_name == 'demand':
-                 # Add aggregated consumption to sheds shapefiles
+                # Add aggregated consumption to sheds shapefiles
                 _add_zonal_stats_dict_to_shape(
                     target_vector_path, ws_stats_dict, 'consum_vol', 'sum')
 
@@ -497,7 +501,7 @@ def create_vector_output(
 
 
 def convert_vector_to_csv(base_vector_path, target_csv_path):
-    '''Create a CSV output with all the fields present in vector attribute table.
+    """Create a CSV with all the fields present in vector attribute table.
 
     Parameters:
         base_vector_path (string):
@@ -507,16 +511,16 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
 
     Returns:
         None
-    '''
+
+    """
     esri_shapefile_driver = ogr.GetDriverByName('ESRI Shapefile')
     watershed_vector = esri_shapefile_driver.Open(base_vector_path)
     csv_driver = ogr.GetDriverByName('CSV')
     _ = csv_driver.CopyDataSource(watershed_vector, target_csv_path)
 
 
-
 def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
-    '''Calculate zonal statistics for watersheds and write results to a file.
+    """Calculate zonal statistics for watersheds and write results to a file.
 
     Parameters:
         base_vector_path (string):
@@ -528,7 +532,8 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
 
     Returns:
         None
-    '''
+
+    """
     ws_stats_dict = pygeoprocessing.zonal_statistics(
         (raster_path, 1), base_vector_path, ignore_nodata=False)
     with open(target_stats_pickle, 'w') as picklefile:
@@ -571,7 +576,9 @@ def wyield_op(fractp, precip, nodata_dict):
         nodata_dict['out_nodata'], (1.0 - fractp) * precip)
 
 
-def fractp_op(Kc, eto, precip, root, soil, pawc, veg, nodata_dict, seasonality_constant):
+def fractp_op(
+        Kc, eto, precip, root, soil, pawc, veg,
+        nodata_dict, seasonality_constant):
     """Calculate actual evapotranspiration fraction of precipitation.
 
     Parameters:
@@ -591,10 +598,13 @@ def fractp_op(Kc, eto, precip, root, soil, pawc, veg, nodata_dict, seasonality_c
             vegetation (wetlands, urban, water, etc...). If 1 use
             regular AET equation if 0 use: AET = Kc * ETo
         nodata_dict (dict): stores nodata values keyed by raster names
-        seasonality_constant (int): see args['seasonality_constant']
+        seasonality_constant (float): floating point value between
+            1 and 30 corresponding to the seasonal distribution of
+            precipitation.
 
     Returns:
-        fractp.
+        numpy.ndarray of actual evapotranspiration as fraction
+            of precipitation.
 
     """
     # Kc, root, & veg were created by reclassify_raster, which set nodata
@@ -659,7 +669,7 @@ def pet_op(eto_pix, Kc_pix, nodata_dict):
         nodata_dict (dict): stores nodata values keyed by raster names
 
     Returns:
-        PET.
+        numpy.ndarray of potential evapotranspiration (mm)
 
     """
     return numpy.where(
@@ -669,8 +679,10 @@ def pet_op(eto_pix, Kc_pix, nodata_dict):
 
 def _check_missing_lucodes(
         clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path):
-    '''Check for lulc raster values that don't appear in the biophysical
-    or demand tables, since that is a very common error.
+    """Check for raster values that don't appear in lookup tables.
+
+    LULC raster values that are missing from the biophysical or demand tables
+    is a very common error.
 
     Parameters:
         clipped_lulc_path (string): file path to lulc raster
@@ -686,7 +698,8 @@ def _check_missing_lucodes(
     Raises:
         ValueError if any landcover codes are present in the raster but
             not in both of the tables.
-    '''
+
+    """
     LOGGER.info(
         'Checking that input tables have landcover codes for every value '
         'in the landcover map.')
