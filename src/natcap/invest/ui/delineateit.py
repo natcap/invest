@@ -73,7 +73,6 @@ class Delineateit(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.n_workers.args_key: self.n_workers.value(),
             self.dem_path.args_key: self.dem_path.value(),
             self.outlet_vector_path.args_key: (
                 self.outlet_vector_path.value()),
