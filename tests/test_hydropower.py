@@ -62,7 +62,8 @@ class HydropowerTests(unittest.TestCase):
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
                 os.path.join(
-                    REGRESSION_DATA, raster_path.replace('_test', '')))
+                    REGRESSION_DATA, raster_path.replace('_test', '')),
+                1e-6)
 
         vector_results = ['watershed_results_wyield_test.shp',
                           'subwatershed_results_wyield_test.shp']
@@ -102,7 +103,8 @@ class HydropowerTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path))
+                os.path.join(REGRESSION_DATA, raster_path),
+                1e-6)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
@@ -142,7 +144,8 @@ class HydropowerTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel',
-                    raster_path), os.path.join(REGRESSION_DATA, raster_path))
+                    raster_path), os.path.join(REGRESSION_DATA, raster_path),
+                1e-6)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
