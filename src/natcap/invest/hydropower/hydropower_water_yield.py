@@ -228,7 +228,7 @@ def execute(args):
         'out_nodata': -1.0,
         'precip': pygeoprocessing.get_raster_info(precip_path)['nodata'][0],
         'eto': pygeoprocessing.get_raster_info(eto_path)['nodata'][0],
-        'root': pygeoprocessing.get_raster_info(
+        'depth_root': pygeoprocessing.get_raster_info(
             depth_to_root_rest_layer_path)['nodata'][0],
         'pawc': pygeoprocessing.get_raster_info(pawc_path)['nodata'][0],
         'lulc': pygeoprocessing.get_raster_info(clipped_lulc_path)['nodata'][0]}
@@ -321,7 +321,9 @@ def execute(args):
     LOGGER.info('Calculate PET from Ref Evap times Kc')
     calculate_pet_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(eto_path, 1), (tmp_Kc_raster_path, 1), (nodata_dict, 'raw')],
+        args=([(eto_path, 1), (tmp_Kc_raster_path, 1),
+               (nodata_dict['eto'], 'raw'),
+               (nodata_dict['out_nodata'], 'raw')],
               pet_op, tmp_pet_path, gdal.GDT_Float32,
               nodata_dict['out_nodata']),
         target_path_list=[tmp_pet_path],
@@ -350,7 +352,9 @@ def execute(args):
     LOGGER.info('Performing wyield operation')
     calculate_wyield_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(fractp_path, 1), (precip_path, 1), (nodata_dict, 'raw')],
+        args=([(fractp_path, 1), (precip_path, 1),
+               (nodata_dict['precip'], 'raw'),
+               (nodata_dict['out_nodata'], 'raw')],
               wyield_op, wyield_path, gdal.GDT_Float32,
               nodata_dict['out_nodata']),
         target_path_list=[wyield_path],
@@ -361,7 +365,9 @@ def execute(args):
     LOGGER.debug('Performing aet operation')
     calculate_aet_task = graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(fractp_path, 1), (precip_path, 1), (nodata_dict, 'raw')],
+        args=([(fractp_path, 1), (precip_path, 1),
+               (nodata_dict['precip'], 'raw'),
+               (nodata_dict['out_nodata'], 'raw')],
               aet_op, aet_path, gdal.GDT_Float32, nodata_dict['out_nodata']),
         target_path_list=[aet_path],
         dependent_task_list=[
@@ -540,13 +546,15 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
         picklefile.write(pickle.dumps(ws_stats_dict))
 
 
-def aet_op(fractp, precip, nodata_dict):
+def aet_op(fractp, precip, precip_nodata, output_nodata):
     """Compute actual evapotranspiration values.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values
-        precip (numpy.ndarray): precipitation raster values (mm)
-        nodata_dict (dict): stores nodata values keyed by raster names
+        fractp (numpy.ndarray): fractp raster values.
+        precip (numpy.ndarray): precipitation raster values (mm).
+        precip_nodata (float): nodata value from the precip raster.
+        output_nodata (float): nodata value assigned to output of
+            raster_calculator.
 
     Returns:
         numpy.ndarray of actual evapotranspiration values (mm).
@@ -555,25 +563,28 @@ def aet_op(fractp, precip, nodata_dict):
     # checking if fractp >= 0 because it's a value that's between 0 and 1
     # and the nodata value is a large negative number.
     return numpy.where(
-        (fractp >= 0) & (precip != nodata_dict['precip']),
-        fractp * precip, nodata_dict['out_nodata'])
+        (fractp >= 0) & ~numpy.isclose(precip, precip_nodata),
+        fractp * precip, output_nodata)
 
 
-def wyield_op(fractp, precip, nodata_dict):
+def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """Calculate water yield.
 
     Parameters:
-       fractp (numpy.ndarray): fractp raster values
-       precip (numpy.ndarray): precipitation raster values (mm)
-       nodata_dict (dict): stores nodata values keyed by raster names
+        fractp (numpy.ndarray): fractp raster values.
+        precip (numpy.ndarray): precipitation raster values (mm).
+        precip_nodata (float): nodata value from the precip raster.
+        output_nodata (float): nodata value assigned to output of
+            raster_calculator.
 
     Returns:
         numpy.ndarray of water yield value (mm).
 
     """
     return numpy.where(
-        (fractp == nodata_dict['out_nodata']) | (precip == nodata_dict['precip']),
-        nodata_dict['out_nodata'], (1.0 - fractp) * precip)
+        numpy.isclose(fractp, output_nodata) |
+        numpy.isclose(precip, precip_nodata),
+        output_nodata, (1.0 - fractp) * precip)
 
 
 def fractp_op(
@@ -611,10 +622,14 @@ def fractp_op(
     # to out_nodata. All others are products of align_and_resize_raster_stack
     # and retain their original nodata values.
     valid_mask = (
-        (Kc != nodata_dict['out_nodata']) & (eto != nodata_dict['eto']) &
-        (precip != nodata_dict['precip']) & (root != nodata_dict['out_nodata']) &
-        (soil != nodata_dict['root']) & (pawc != nodata_dict['pawc']) &
-        (veg != nodata_dict['out_nodata']) & (precip != 0.0))
+        ~numpy.isclose(Kc, nodata_dict['out_nodata']) &
+        ~numpy.isclose(eto, nodata_dict['eto']) &
+        ~numpy.isclose(precip, nodata_dict['precip']) &
+        ~numpy.isclose(root, nodata_dict['out_nodata']) &
+        ~numpy.isclose(soil, nodata_dict['depth_root']) &
+        ~numpy.isclose(pawc, nodata_dict['pawc']) &
+        ~numpy.isclose(veg, nodata_dict['out_nodata']) &
+        ~numpy.isclose(precip, 0.0))
 
     # Compute Budyko Dryness index
     # Use the original AET equation if the land cover type is vegetation
@@ -660,21 +675,23 @@ def fractp_op(
     return fractp
 
 
-def pet_op(eto_pix, Kc_pix, nodata_dict):
+def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
     """Calculate the plant potential evapotranspiration.
 
     Parameters:
         eto_pix (numpy.ndarray): a numpy array of ETo
         Kc_pix (numpy.ndarray): a numpy array of  Kc coefficient
-        nodata_dict (dict): stores nodata values keyed by raster names
+        precip_nodata (float): nodata value from the precip raster
+        output_nodata (float): nodata value assigned to output of
+            raster_calculator
 
     Returns:
         numpy.ndarray of potential evapotranspiration (mm)
 
     """
     return numpy.where(
-        (eto_pix == nodata_dict['eto']) | (Kc_pix == nodata_dict['out_nodata']),
-        nodata_dict['out_nodata'], eto_pix * Kc_pix)
+        numpy.isclose(eto_pix, eto_nodata) | numpy.isclose(Kc_pix, output_nodata),
+        output_nodata, eto_pix * Kc_pix)
 
 
 def _check_missing_lucodes(
