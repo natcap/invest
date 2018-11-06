@@ -79,14 +79,11 @@ def execute(args):
     file_registry = utils.build_file_registry(
         [(_OUTPUT_FILES, output_directory)], file_suffix)
 
-    snap_distance = int(args['snap_distance'])
-    flow_threshold = int(args['flow_threshold'])
-
     work_token_dir = os.path.join(output_directory, '_work_tokens')
 
     # Manually setting n_workers to be -1 so that everything happens in the
     # same thread.  In the current implementation of delineateit, all
-    # operations happen synchronously ... there's no opportunity to parallelize
+    # tasks are perfectly sequential ... there's no opportunity to parallelize
     # computational work.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers=-1)
 
@@ -117,7 +114,11 @@ def execute(args):
 
     flow_accumulation_task.join()
     delineation_dependent_tasks = [flow_accumulation_task]
-    if _vector_may_contain_points(args['outlet_vector_path']):
+    outflow_vector = args['outlet_vector_path']
+    if 'snap_points' in args and args['snap_points']:
+        snap_distance = int(args['snap_distance'])
+        flow_threshold = int(args['flow_threshold'])
+
         out_nodata = 255
         flow_accumulation_nodata = pygeoprocessing.get_raster_info(
             file_registry['flow_accumulation'])['nodata']
@@ -145,11 +146,12 @@ def execute(args):
             dependent_task_list=[streams_task],
             task_name='snapped_outflow_points')
         delineation_dependent_tasks.append(snapped_outflow_points_task)
+        outflow_vector = file_registry['snapped_outlets']
 
     watershed_delineation_task = graph.add_task(
         pygeoprocessing.routing.delineate_watersheds,
         args=((file_registry['flow_dir_d8'], 1),
-              file_registry['snapped_outlets'],
+              outflow_vector,
               file_registry['watershed_fragments']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['watershed_fragments']],
@@ -233,23 +235,19 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     snapped_vector = driver.Create(snapped_points_vector_path, 0, 0, 0,
                                    gdal.GDT_Unknown)
     snapped_layer = snapped_vector.CreateLayer(
-        'snapped', points_layer.GetSpatialRef(), ogr.wkbPoint)
+        'snapped', points_layer.GetSpatialRef(), points_layer.GetGeomType())
+    snapped_layer.CreateFields(points_layer.schema)
+    snapped_layer_defn = snapped_layer.GetLayerDefn()
 
-    for index in range(points_layer.GetLayerDefn().GetFieldCount()):
-        field_defn = points_layer.GetLayerDefn().GetFieldDefn(index)
-        field_type = field_defn.GetType()
-
-        if field_type in (ogr.OFTInteger, ogr.OFTReal):
-            field_defn.SetWidth(24)
-        snapped_layer.CreateField(field_defn)
-
+    snapped_layer.StartTransaction()
+    # TODO: add time-based logging
     for point_feature in points_layer:
         point_geometry = point_feature.GetGeometryRef()
 
         # If the geometry is not a primitive point, just create the new feature
         # as it is now in the new vector.
         if point_geometry.GetGeometryName() != 'POINT':
-            snapped_layer.CreateFeature(point_feature)
+            snapped_layer.CreateFeature(point_feature.Clone())
             continue
 
         point = point_geometry.GetPoint()
@@ -299,10 +297,13 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             geotransform[3] + (y_index + 0.5) * geotransform[5])
 
         # Get the output Layer's Feature Definition
-        snapped_point_feature = point_feature.Clone()
+        snapped_point_feature = ogr.Feature(snapped_layer_defn)
+        for field_name, field_value in point_feature.items().items():
+            snapped_point_feature.SetField(field_name, field_value)
         snapped_point_feature.SetGeometry(point_geometry)
 
         snapped_layer.CreateFeature(snapped_point_feature)
+    snapped_layer.CommitTransaction()
     snapped_layer = None
     snapped_vector = None
 
