@@ -29,7 +29,7 @@ class Delineateit(model.InVESTModel):
             label=u'Outlet Points (Vector)',
             validator=self.validator)
         self.add_input(self.outlet_vector_path)
-        self.outlet_vector_path.validity_changed.connect(
+        self.outlet_vector_path.value_changed.connect(
             self._enable_point_snapping_container)
 
         self.snap_points_container = inputs.Container(

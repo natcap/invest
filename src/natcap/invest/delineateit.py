@@ -60,11 +60,14 @@ def execute(args):
             information. (required)
         args['outlet_vector_path'] (string):  This is a vector representing
             geometries that the watersheds should be built around. (required)
+        args['snap_points'] (bool): Whether to snap point geometries to the
+            nearest stream pixel.  If ``True``, ``args['flow_threshold']``
+            and ``args['snap_distance']`` must also be defined.
         args['flow_threshold'] (int):  The number of upstream cells that must
             into a cell before it's considered part of a stream such that
             retention stops and the remaining export is exported to the stream.
-            Used to define streams from the DEM. (required)
-        args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points (required)
+            Used to define streams from the DEM.
+        args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points
 
     Returns:
         ``None``
@@ -333,8 +336,10 @@ def validate(args, limit_to=None):
         'workspace_dir',
         'dem_path',
         'outlet_vector_path',
-        'flow_threshold',
-        'snap_distance']
+        'snap_points',
+    ]
+    if 'snap_points' in args and args['snap_points']:
+        required_keys += ['flow_threshold', 'snap_distance']
 
     for key in required_keys:
         if limit_to is None or limit_to == key:
@@ -377,5 +382,17 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a vector'))
                     del vector
+
+    if 'snap_points' in args and args['snap_points']:
+        for key in ('flow_threshold', 'snap_distance'):
+            if limit_to in (None, key):
+                try:
+                    value = int(args[key])
+                    if value < 0:
+                        validation_error_list.append(
+                            ([key], 'must be a positive integer'))
+                except (TypeError, ValueError):
+                    validation_error_list.append(
+                        ([key], 'must be an integer'))
 
     return validation_error_list
