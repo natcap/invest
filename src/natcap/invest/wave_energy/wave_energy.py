@@ -967,7 +967,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         os.remove(target_raster_path)
 
     # Set nodata to a negative number
-    target_nodata = -1
+    target_nodata = 255
     base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][
         0]
 
@@ -991,7 +991,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     # Classify the pixels of raster_dataset into groups and write to output
     pygeoprocessing.raster_calculator([(base_raster_path, 1)],
                                       raster_percentile, target_raster_path,
-                                      gdal.GDT_Int32, target_nodata)
+                                      gdal.GDT_Byte, target_nodata)
 
     # Create percentile groups of how percentile ranges are classified
     percentile_groups = numpy.arange(1, len(percentile_values) + 2)
