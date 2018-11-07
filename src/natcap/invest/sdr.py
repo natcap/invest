@@ -895,11 +895,11 @@ def _generate_report(
     """Create shapefile with USLE, sed export, and sed retention fields."""
     field_summaries = {
         'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watersheds_path, 'ws_id'),
+            (usle_path, 1), watersheds_path),
         'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watersheds_path, 'ws_id'),
+            (sed_export_path, 1), watersheds_path),
         'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watersheds_path, 'ws_id'),
+            (sed_retention_path, 1), watersheds_path),
         }
 
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
@@ -918,12 +918,12 @@ def _generate_report(
         layer.CreateField(field_def)
 
     # initialize each feature field to 0.0
-    for feature_id in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_id)
+    layer.ResetReading()
+    for feature in layer:
+        fid = feature.GetFID()
         for field_name in field_summaries:
-            ws_id = feature.GetFieldAsInteger('ws_id')
             feature.SetField(
-                field_name, float(field_summaries[field_name][ws_id]['sum']))
+                field_name, float(field_summaries[field_name][fid]['sum']))
         layer.SetFeature(feature)
 
 

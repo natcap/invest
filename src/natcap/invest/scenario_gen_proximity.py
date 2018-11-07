@@ -153,9 +153,9 @@ def _mask_raster_by_vector(
     nodata = base_raster_info['nodata'][base_raster_path_band[1]-1]
     target_pixel_size = base_raster_info['pixel_size']
     vector_info = pygeoprocessing.get_vector_info(vector_path)
-    target_bounding_box = pygeoprocessing._merge_bounding_boxes(
-        base_raster_info['bounding_box'],
-        vector_info['bounding_box'], 'intersection')
+    target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+        [base_raster_info['bounding_box'],
+         vector_info['bounding_box']], 'intersection')
     pygeoprocessing.warp_raster(
         base_raster_path_band[0], target_pixel_size, target_raster_path,
         'near', target_bb=target_bounding_box)

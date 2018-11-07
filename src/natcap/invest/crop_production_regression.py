@@ -152,10 +152,6 @@ def execute(args):
         args['aggregate_polygon_path'] (string): path to polygon shapefile
             that will be used to aggregate crop yields and total nutrient
             value. (optional, if value is None, then skipped)
-        args['aggregate_polygon_id'] (string): This is the id field in
-            args['aggregate_polygon_path'] to be used to index the final
-            aggregate results.  If args['aggregate_polygon_path'] is not
-            provided, this value is ignored.
         args['model_data_path'] (string): path to the InVEST Crop Production
             global data directory.  This model expects that the following
             directories are subdirectories of this path
@@ -570,16 +566,15 @@ def execute(args):
             total_yield_lookup['%s_modeled' % crop_name] = (
                 pygeoprocessing.zonal_statistics(
                     (crop_production_raster_path, 1),
-                    target_aggregate_vector_path,
-                    str(args['aggregate_polygon_id'])))
+                    target_aggregate_vector_path))
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                for id_index in total_yield_lookup['%s_modeled' % crop_name]:
+                for fid_index in total_yield_lookup['%s_modeled' % crop_name]:
                     total_nutrient_table[nutrient_id][
-                        'modeled'][id_index] += (
+                        'modeled'][fid_index] += (
                             nutrient_factor *
                             total_yield_lookup['%s_modeled' % crop_name][
-                                id_index]['sum'] *
+                                fid_index]['sum'] *
                             nutrient_table[crop_name][nutrient_id])
 
             # process observed
@@ -589,15 +584,15 @@ def execute(args):
             total_yield_lookup['%s_observed' % crop_name] = (
                 pygeoprocessing.zonal_statistics(
                     (observed_yield_path, 1),
-                    target_aggregate_vector_path,
-                    str(args['aggregate_polygon_id'])))
+                    target_aggregate_vector_path))
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                for id_index in total_yield_lookup['%s_observed' % crop_name]:
+                for fid_index in total_yield_lookup[
+                        '%s_observed' % crop_name]:
                     total_nutrient_table[
-                        nutrient_id]['observed'][id_index] += (
+                        nutrient_id]['observed'][fid_index] += (
                             nutrient_factor *
                             total_yield_lookup[
-                                '%s_observed' % crop_name][id_index]['sum'] *
+                                '%s_observed' % crop_name][fid_index]['sum'] *
                             nutrient_table[crop_name][nutrient_id])
 
         # use that result to calculate nutrient totals
@@ -607,7 +602,7 @@ def execute(args):
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
         with open(aggregate_table_path, 'wb') as aggregate_table:
             # write header
-            aggregate_table.write('%s,' % args['aggregate_polygon_id'])
+            aggregate_table.write('FID,')
             aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
             aggregate_table.write(
                 ','.join([
@@ -663,10 +658,9 @@ def validate(args, limit_to=None):
         'fertilization_rate_table_path'
         ]
 
-    if limit_to in [None, 'aggregate_polygon_id', 'aggregate_polygon_path']:
+    if limit_to in [None, 'aggregate_polygon_path']:
         if ('aggregate_polygon_path' in args and
                 args['aggregate_polygon_path'] not in ['', None]):
-            required_keys.append('aggregate_polygon_id')
             required_keys.append('aggregate_polygon_path')
 
     for key in required_keys:
@@ -733,10 +727,6 @@ def validate(args, limit_to=None):
 
     if context.is_arg_complete('aggregate_polygon_path', require=False):
         # Implement validation for aggregate_polygon_path here
-        pass
-
-    if context.is_arg_complete('aggregate_polygon_id', require=True):
-        # Implement validation for aggregate_polygon_id here
         pass
 
     if limit_to is None:

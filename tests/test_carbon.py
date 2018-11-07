@@ -98,6 +98,7 @@ class CarbonTests(unittest.TestCase):
             u'lulc_cur_year': 2016,
             u'lulc_fut_year': 2030,
             u'discount_rate': -7.1,
+            u'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
@@ -131,6 +132,7 @@ class CarbonTests(unittest.TestCase):
             u'lulc_cur_year': 2016,
             u'lulc_fut_year': 2030,
             u'discount_rate': -7.1,
+            u'n_workers': -1,
         }
 
         lulc_names = ['lulc_cur_path', 'lulc_fut_path']
@@ -155,6 +157,7 @@ class CarbonTests(unittest.TestCase):
         args = {
             u'workspace_dir': self.workspace_dir,
             u'do_valuation': False,
+            u'n_workers': -1,
         }
 
         lulc_names = ['lulc_cur_path', 'lulc_fut_path']
