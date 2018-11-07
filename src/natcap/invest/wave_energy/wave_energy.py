@@ -1443,8 +1443,7 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
-        for i in range(base_layer.GetFeatureCount()):
-            feat = base_layer.GetFeature(i)
+        for feat in base_layer:
             fid = feat.GetFID()
             geom = feat.GetGeometryRef()
             geom_x, geom_y = geom.GetX(), geom.GetY()
