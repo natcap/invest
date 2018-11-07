@@ -13,7 +13,6 @@ import numpy
 import shapely.wkb
 import shapely.prepared
 import rtree
-import pandas
 
 from . import validation
 from . import utils
@@ -444,7 +443,7 @@ def calculate_energy_savings(
         raise ValueError(
             "Could not find field 'Type' in %s", target_building_vector_path)
 
-    energy_consumption_table_path = utils.build_lookup_from_csv(
+    energy_consumption_table = utils.build_lookup_from_csv(
         energy_consumption_table_path, 'type', to_lower=True,
         warn_if_missing=True)
 
@@ -476,8 +475,19 @@ def calculate_energy_savings(
                     float(pixel_count))
                 target_feature.SetField('mean_t_ref', float(t_ref_mean))
 
-        consumption_increase = float(energy_consumption_table_path[
-            target_feature.GetField(type_field_index)]['consumption'])
+        print(energy_consumption_table)
+        target_type = target_feature.GetField(int(type_field_index))
+        if target_type not in energy_consumption_table:
+            raise ValueError(
+                "Encountered a building 'type' of: '%s' in "
+                "FID: %d in the building vector layer that has no "
+                "corresponding entry in the energy consumption table "
+                "at %s" % (
+                    target_type, target_feature.GetFID(),
+                    energy_consumption_table_path))
+        print('"%s: %s"' % (type_field_index, target_type))
+        consumption_increase = float(
+            energy_consumption_table[target_type]['consumption'])
         if t_air_mean and t_ref_mean:
             target_feature.SetField(
                 'energy_savings', consumption_increase * (
@@ -645,7 +655,8 @@ def validate(args, limit_to=None):
             for column_id in ['shade', 'kc', 'albedo']:
                 if column_id not in table_columns:
                     validation_error_list(
-                        [key], '"%s" expected but not a header this table')
+                        [key], '"%s" expected but not a header this table' % (
+                            column_id))
         if limit_to in ['energy_consumption_table_path', None]:
             try:
                 energy_consumption_table = (
@@ -664,23 +675,24 @@ def validate(args, limit_to=None):
                 args['building_vector_path'], gdal.OF_VECTOR)
             building_layer = building_vector.GetLayer()
             building_layer_defn = building_layer.GetLayerDefn()
-            type_index = building_layer_defn.GetFieldIndex('type')
-            if type_index < 0:
-                validation_error_list(
-                    [key], '"type" field expected in %s but not defined' % (
-                        args['building_vector_path']))
-            else:
-                for feature in building_layer:
-                    raw_val = feature.GetField(type_index)
-                    try:
-                        _ = float(raw_val)
-                    except TypeError:
-                        validation_error_list(
-                            [key],
-                            'feature "type" fields of %s should be floating '
-                            'point numbers, but at least one is not. '
-                            '(raw val: %s)' % (
-                                args['building_vector_path'], raw_val))
+            for field_id in ['type', 'consumption']:
+                type_index = building_layer_defn.GetFieldIndex('type')
+                if type_index < 0:
+                    validation_error_list(
+                        [key], '"type" field expected in %s '
+                        'but not defined' % (args['building_vector_path']))
+                else:
+                    for feature in building_layer:
+                        raw_val = feature.GetField(type_index)
+                        try:
+                            _ = float(raw_val)
+                        except TypeError:
+                            validation_error_list(
+                                [key],
+                                'feature "type" fields of %s should be floating '
+                                'point numbers, but at least one is not. '
+                                '(raw val: %s)' % (
+                                    args['building_vector_path'], raw_val))
 
     return validation_error_list
 
