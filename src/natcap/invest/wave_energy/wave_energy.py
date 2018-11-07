@@ -527,7 +527,8 @@ def execute(args):
             None
 
         """
-        wave_point_vector = gdal.OpenEx(wave_points_path, 1)
+        wave_point_vector = gdal.OpenEx(
+            wave_points_path, gdal.OF_VECTOR | gdal.GA_Update)
         wave_point_layer = wave_point_vector.GetLayer()
 
         # Extract the machine economic parameters
@@ -748,7 +749,7 @@ def _get_points_geometries(base_vector_path):
 
     """
     points = []
-    base_vector = gdal.OpenEx(base_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer(0)
     feat = base_layer.GetNextFeature()
     while feat is not None:
@@ -1108,7 +1109,7 @@ def _compute_wave_power(base_vector_path):
         None
 
     """
-    vector = gdal.OpenEx(base_vector_path, 1)
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
 
     # Sea water density constant (kg/m^3)
     swd = 1028
@@ -1227,11 +1228,11 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
     reproject_clip_vector_path = reproject_vector(clip_vector_path,
                                                   target_sr_wkt, temp_work_dir)
 
-    base_vector = gdal.OpenEx(reproject_base_vector_path)
+    base_vector = gdal.OpenEx(reproject_base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
     base_layer_defn = base_layer.GetLayerDefn()
 
-    clip_vector = gdal.OpenEx(reproject_clip_vector_path)
+    clip_vector = gdal.OpenEx(reproject_clip_vector_path, gdal.OF_VECTOR)
     clip_layer = clip_vector.GetLayer()
 
     driver = ogr.GetDriverByName('ESRI Shapefile')
@@ -1407,7 +1408,8 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
         None
 
     """
-    base_vector = gdal.OpenEx(base_point_vector_path, 1)
+    base_vector = gdal.OpenEx(
+        base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     base_layer = base_vector.GetLayer()
     raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
         'geotransform']
@@ -1519,7 +1521,8 @@ def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
 
     """
     cap_we_field = 'CAPWE_MWHY'
-    wave_vector = gdal.OpenEx(wave_vector_path, 1)
+    wave_vector = gdal.OpenEx(
+        wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     wave_layer = wave_vector.GetLayer()
     # Create a new field for the shapefile
     field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
@@ -1669,7 +1672,7 @@ def _pixel_size_helper(base_vector_path, coord_trans, coord_trans_opposite,
             the units of what base vector is projected in
 
     """
-    vector = gdal.OpenEx(base_vector_path)
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     layer = vector.GetLayer(0)
 
     # Get a point in the clipped vector to determine output grid size
@@ -1754,7 +1757,7 @@ def _create_raster_attr_table(base_raster_path, attr_dict, column_name):
         None
 
     """
-    raster = gdal.OpenEx(base_raster_path, gdal.GA_Update)
+    raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     band = raster.GetRasterBand(1)
     attr_table = gdal.RasterAttributeTable()
     attr_table.SetRowCount(len(attr_dict))
@@ -1826,7 +1829,7 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_path'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_path'])
+                    vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
                     layer = vector.GetLayer()
                     geometry_type = layer.GetGeomType()
                     if geometry_type != ogr.wkbPolygon:
@@ -1870,7 +1873,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('dem_path', None):
         with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['dem_path'])
+            raster = gdal.OpenEx(args['dem_path'], gdal.OF_RASTER)
         if raster is None:
             warnings.append(
                 (['dem_path'],
