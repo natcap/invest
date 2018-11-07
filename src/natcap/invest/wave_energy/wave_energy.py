@@ -1539,7 +1539,7 @@ def _calculate_percentiles_from_raster(
             valid_pixel_mask = (unique_values != nodata)
         unique_values = unique_values[valid_pixel_mask]
         counts = counts[valid_pixel_mask]
-        # # Round the array so the unique values won't explode the dictionary
+        # Round the array so the unique values won't explode the dictionary
         numpy.round(unique_values, decimals=1, out=unique_values)
 
         block_unique_value_counts = dict(zip(unique_values, counts))
