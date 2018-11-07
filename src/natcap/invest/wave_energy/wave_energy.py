@@ -454,7 +454,8 @@ def execute(args):
             None
 
         """
-        wave_vector = gdal.OpenEx(wave_base_vector_path, 1)
+        wave_vector = gdal.OpenEx(
+            wave_base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
         wave_layer = wave_vector.GetLayer(0)
         # Add three new fields to the shapefile that will store the distances
         for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
