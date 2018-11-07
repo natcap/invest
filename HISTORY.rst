@@ -2,6 +2,35 @@
 
 Unreleased Changes
 ------------------
+* Reimplementing the Carbon model using taskgraph.
+* Fixing an issue with Coastal Blue Carbon validation to allow column names to
+  ignore case.
+* Updating core carbon forest edge regression data coefficient to drop
+  impossible negative coefficients.
+* Fixing an issue with the Scenario Generator: Proximity model that would
+  raise an exception if no AOI were passed in even though the AOI is optional.
+* Removing Overlap Analysis and Overlap Analysis: Management Zones.
+* Removing Habitat Suitability.
+* Added comprehensive error checking to hydropower model to test for the VERY
+  common errors of missing biophysical, demand, and valuation coefficients in
+  their respective tables.
+* Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
+  valuation would never be triggered when running the model through the User
+  Interface.
+* Fixing an issue with how logging is captured when a model is run through the
+  InVEST User Interface.  Now, logging from any thread started by the executor
+  thread will be written to the log file, which we expect to aid in debugging.
+* Fixing an issue with Scenic Quality where viewpoints outside of the AOI
+  were not being properly excluded.  Viewpoints are now excluded correctly.
+
+3.5.0 (2018-08-14)
+------------------
+* Bumped pygeoprocessing requirement to ``pygeoprocessing>=1.2.3``.
+* Bumped taskgraph requirement to ``taskgraph>=0.6.1``.
+* Reimplemented the InVEST Scenic Quality model.  This new version removes the
+  'population' and 'overlap' postprocessing steps, updates the available
+  valuation functions and greatly improves the runtime and memory-efficiency of
+  the model.  See the InVEST User's Guide chapter for more information.
 * Updated Recreation server's database to include metadata from photos taken
   from 2005-2017 (previous range was 2005-2014). The new range is reflected
   in the UI.

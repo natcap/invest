@@ -4,15 +4,26 @@ import tempfile
 import shutil
 import os
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
 from osgeo import ogr
 import numpy
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'globio')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio',
+    'Input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio')
+
+
+def _make_dummy_file(workspace_dir, file_name):
+    """Within workspace, create a dummy output file to be overwritten.
+
+    Parameters:
+        workspace_dir: path to workspace for making the file
+    """
+    output_path = os.path.join(workspace_dir, file_name)
+    output = open(output_path, 'wb')
+    output.close()
 
 
 class GLOBIOTests(unittest.TestCase):
@@ -28,16 +39,14 @@ class GLOBIOTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_predefined_lulc(self):
-        """GLOBIO: regression testing predefined LULC."""
+        """GLOBIO: regression testing predefined LULC (mode b)."""
         from natcap.invest import globio
 
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'infrastructure_dir'),
             'intensification_fraction': '0.46',
@@ -51,38 +60,10 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(self.workspace_dir, 'msa.tif'),
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_lulc_regression.tif'), 1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_globio_duplicate_output(self):
-        """GLOBIO: testing that overwriting output does not crash."""
-        from natcap.invest import globio
-
-        args = {
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
-            'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc_small.tif'),
-            'infrastructure_dir':  os.path.join(
-                SAMPLE_DATA, 'infrastructure_dir'),
-            'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
-                SAMPLE_DATA, 'msa_parameters.csv'),
-            'predefined_globio': True,
-            'workspace_dir': self.workspace_dir,
-        }
-
-        # invoke twice to ensure no error is raised
-        globio.execute(args)
-        globio.execute(args)
-
-        # inferring an explicit 'pass'
-        self.assertTrue(True)
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_empty_infra(self):
         """GLOBIO: testing that empty infra directory raises exception."""
         from natcap.invest import globio
@@ -90,9 +71,9 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc_small.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
-                REGRESSION_DATA, 'empty_dir'),
+                SAMPLE_DATA, 'empty_dir'),
             'intensification_fraction': '0.46',
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
@@ -103,8 +84,6 @@ class GLOBIOTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             globio.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_shape_infra(self):
         """GLOBIO: regression testing with shapefile infrastructure."""
         from natcap.invest import globio
@@ -112,9 +91,9 @@ class GLOBIOTests(unittest.TestCase):
         args = {
             'aoi_uri': '',
             'globio_lulc_uri': os.path.join(
-                REGRESSION_DATA, 'globio_lulc.tif'),
+                SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
-                REGRESSION_DATA, 'small_infrastructure'),
+                SAMPLE_DATA, 'shape_infrastructure'),
             'intensification_fraction': '0.46',
             'msa_parameters_uri': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
@@ -126,15 +105,13 @@ class GLOBIOTests(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'expected_file_list_lulc.txt'),
             args['workspace_dir'])
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_rasters_equal(
-            os.path.join(self.workspace_dir, 'msa.tif'),
+        pygeoprocessing.testing.assert_rasters_equal(
+            os.path.join(args['workspace_dir'], 'msa.tif'),
             os.path.join(REGRESSION_DATA, 'msa_shape_infra_regression.tif'),
             1e-6)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_globio_full(self):
-        """GLOBIO: regression testing all functionality."""
+        """GLOBIO: regression testing all functionality (mode a)."""
         from natcap.invest import globio
 
         args = {
@@ -157,16 +134,21 @@ class GLOBIOTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
         }
 
+        # Test that overwriting output does not crash.
+        _make_dummy_file(args['workspace_dir'], 'aoi_summary.shp')
         globio.execute(args)
+
         GLOBIOTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
 
         GLOBIOTests._assert_regression_results_eq(
-            args['workspace_dir'],
             os.path.join(
                 args['workspace_dir'], 'aoi_summary.shp'),
-            os.path.join(REGRESSION_DATA, 'globio_agg_results.csv'))
+            os.path.join(REGRESSION_DATA, 'agg_results.csv'))
+
+        # Infer an explicit 'pass'
+        self.assertTrue(True)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):
@@ -199,12 +181,10 @@ class GLOBIOTests(unittest.TestCase):
                 '\n'.join(missing_files))
 
     @staticmethod
-    def _assert_regression_results_eq(
-            workspace_dir, result_vector_path, agg_results_path):
-        """Test workspace state against expected aggregate results.
+    def _assert_regression_results_eq(result_vector_path, agg_results_path):
+        """Test output vector against expected aggregate results.
 
         Parameters:
-            workspace_dir (string): path to the completed model workspace
             result_vector_path (string): path to the summary shapefile
                 produced by the Forest Carbon Edge model.
             agg_results_path (string): path to a csv file that has the

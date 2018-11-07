@@ -5,14 +5,12 @@ import shutil
 import os
 
 import numpy
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Fisheries')
-HST_INPUTS = os.path.join(SAMPLE_DATA, 'input', 'Habitat_Scenario_Tool')
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'fisheries')
+SAMPLE_DATA = os.path.join(TEST_DATA, 'input')
+HST_INPUTS = os.path.join(SAMPLE_DATA, 'Habitat_Scenario_Tool')
 
 
 class FisheriesSampleDataTests(unittest.TestCase):
@@ -56,20 +54,19 @@ class FisheriesSampleDataTests(unittest.TestCase):
                 'harvest': float(harvest),
             }
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_shrimp(self):
         """Fisheries: Verify run on Shrimp sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6050000.0,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
             u'beta': 4.14e-08,
             u'do_batch': False,
             u'harvest_units': 'Weight',
             u'migr_cont': False,
-            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'population_csv_uri': os.path.join(SAMPLE_DATA,
                                                 'input_shrimp',
                                                 'population_params.csv'),
             u'population_type': 'Stage-Based',
@@ -90,22 +87,21 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_lobster(self):
         """Fisheries: Verify run on Lobster sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 5.77e6,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_belize',
                                      'Lob_Belize_Subregions.shp'),
             u'beta': 2.885e6,
             u'do_batch': False,
             u'harvest_units': 'Weight',
             u'migr_cont': True,
-            u'migration_dir': os.path.join(SAMPLE_DATA, 'input',
+            u'migration_dir': os.path.join(SAMPLE_DATA,
                                            'input_lobster', 'Migrations'),
-            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'population_csv_uri': os.path.join(SAMPLE_DATA,
                                                 'input_lobster',
                                                 'population_params.csv'),
             u'population_type': 'Age-Based',
@@ -122,25 +118,24 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
 
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 2846715.12)
         self.assertEqual(final_timestep_data['harvest'], 963108.36)
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab(self):
         """Fisheries: Verify run on Blue Crab sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6.05e6,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
             u'beta': 4.14e-08,
             u'do_batch': False,
             u'harvest_units': 'Individuals',
             u'migr_cont': False,
-            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'population_csv_uri': os.path.join(SAMPLE_DATA,
                                                 'input_blue_crab',
                                                 'population_params.csv'),
             u'population_type': 'Age-Based',
@@ -155,24 +150,24 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
 
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 42649419.32)
         self.assertEqual(final_timestep_data['harvest'], 24789383.34)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_blue_crab_batch(self):
         """Fisheries: Verify run on (batched) Blue Crab sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 6.05e6,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
             u'beta': 4.14e-08,
             u'do_batch': True,
             u'harvest_units': 'Individuals',
             u'migr_cont': False,
-            u'population_csv_dir': os.path.join(SAMPLE_DATA, 'input',
+            u'population_csv_dir': os.path.join(SAMPLE_DATA,
                                                 'input_blue_crab'),
             u'population_type': 'Age-Based',
             u'recruitment_type': 'Ricker',
@@ -191,20 +186,19 @@ class FisheriesSampleDataTests(unittest.TestCase):
         self.assertEqual(final_timestep_data['spawners'], 42649419.32)
         self.assertEqual(final_timestep_data['harvest'], 24789383.34)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_dungeness_crab(self):
         """Fisheries: Verify run on Dungeness Crab sample data."""
         from natcap.invest.fisheries import fisheries
         args = {
             u'alpha': 2e6,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_hood_canal',
                                      'DC_HoodCanal_Subregions.shp'),
             u'beta': 3.09e-7,
             u'do_batch': False,
             u'harvest_units': 'Individuals',
             u'migr_cont': False,
-            u'population_csv_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'population_csv_uri': os.path.join(SAMPLE_DATA,
                                                 'input_dungeness_crab',
                                                 'population_params.csv'),
             u'population_type': 'Age-Based',
@@ -219,7 +213,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
 
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 4053119.08)
         self.assertEqual(final_timestep_data['harvest'], 527192.41)
 
@@ -238,7 +233,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         """
         args = {
             u'alpha': 5.77e6,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_belize',
                                      'Lob_Belize_Subregions.shp'),
             u'beta': 2.885e6,
@@ -273,7 +268,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         args = FisheriesSampleDataTests.fecundity_args(workspace)
         args.update({
             u'alpha': 6050000.0,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
             u'beta': 4.14e-08,
@@ -283,8 +278,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         })
         return args
 
-
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_fecundity(self):
         """Fisheries: Verify run with fecundity recruitment."""
         # Based on the lobster inputs, but need coverage for fecundity.
@@ -292,11 +285,11 @@ class FisheriesSampleDataTests(unittest.TestCase):
         args = FisheriesSampleDataTests.fecundity_args(self.workspace_dir)
         fisheries.execute(args)
 
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 594922.52)
         self.assertEqual(final_timestep_data['harvest'], 205666.3)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_custom_function(self):
         """Fisheries: Verify results with custom function."""
         from natcap.invest.fisheries import fisheries
@@ -307,15 +300,15 @@ class FisheriesSampleDataTests(unittest.TestCase):
             # This doesn't model anything real, but it will produce outputs as
             # expected.
             u'recruitment_func': lambda x: (numpy.ones((9,)),
-                                             numpy.float64(100))
+                                            numpy.float64(100))
         })
 
         fisheries.execute(args)
-        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(self.workspace_dir)
+        final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
+            self.workspace_dir)
         self.assertEqual(final_timestep_data['spawners'], 100.0)
         self.assertEqual(final_timestep_data['harvest'], 1.83)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_custom_function(self):
         """Fisheries: Verify exception with invalid custom function."""
         from natcap.invest.fisheries import fisheries
@@ -330,7 +323,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_recruitment(self):
         """Fisheries: Verify exception with invalid recruitment type."""
         from natcap.invest.fisheries import fisheries
@@ -343,7 +335,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_sampledata_invalid_population_type(self):
         """Fisheries: Verify exception with invalid population type."""
         from natcap.invest.fisheries import fisheries
@@ -356,7 +347,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             fisheries.execute(args)
 
-    @scm.skip_if_data_missing(TEST_DATA)
     def test_sampledata_shrimp_multiple_regions(self):
         """Fisheries: Verify shrimp run on multiple identical regions."""
         from natcap.invest.fisheries import fisheries
@@ -364,14 +354,14 @@ class FisheriesSampleDataTests(unittest.TestCase):
         args = {
             u'alpha': 6050000.0,
             u'beta': 4.14e-08,
-            u'aoi_uri': os.path.join(SAMPLE_DATA, 'input',
+            u'aoi_uri': os.path.join(SAMPLE_DATA,
                                      'shapefile_galveston',
                                      'Galveston_Subregion.shp'),
             u'do_batch': False,
             u'harvest_units': 'Weight',
             u'migr_cont': False,
-            u'population_csv_uri': os.path.join(TEST_DATA,
-                                                'shrimp_multiregion_pop_params.csv'),
+            u'population_csv_uri': os.path.join(
+                TEST_DATA, 'shrimp_multiregion_pop_params.csv'),
             u'population_type': 'Stage-Based',
             u'recruitment_type': 'Fixed',
             u'sexsp': 'No',
@@ -389,7 +379,6 @@ class FisheriesSampleDataTests(unittest.TestCase):
             self.workspace_dir, 'results_table_foo.csv')
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
-
 
         # verify that two identical subregions were found.
         in_subregion = False
@@ -424,7 +413,6 @@ class FisheriesHSTTest(unittest.TestCase):
         """Clean up the test environment by removing the workspace."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_neutral(self):
         """Fisheries-HST: Verify outputs of sex-neutral run."""
         from natcap.invest.fisheries import fisheries_hst
@@ -442,11 +430,11 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
+        pygeoprocessing.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'pop_params_modified.csv'),
-            os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
+            os.path.join(args['workspace_dir'], 'output',
+                         'pop_params_modified.csv'))
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
     def test_regression_sex_specific(self):
         """Fisheries-HST: Verify outputs of sex-specific run."""
         from natcap.invest.fisheries import fisheries_hst
@@ -465,7 +453,7 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_csv_equal(
+        pygeoprocessing.testing.assert_csv_equal(
             os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'),
             os.path.join(args['workspace_dir'], 'output',
                          'hst_pop_params_sexsp_modified.csv'))

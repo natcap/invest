@@ -42,7 +42,6 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
-        'natcap.invest.overlap_analysis',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
@@ -87,10 +86,11 @@ setup(
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(
-            name="natcap.invest.scenic_quality.scenic_quality_cython_core",
+            name="natcap.invest.scenic_quality.viewshed",
             sources=[
-                'src/natcap/invest/scenic_quality/scenic_quality_cython_core.pyx'],
-            include_dirs=[numpy.get_include()],
+                'src/natcap/invest/scenic_quality/viewshed.pyx'],
+            include_dirs=[numpy.get_include(),
+                          'src/natcap/invest/scenic_quality'],
             language="c++"),
         Extension(
             name="natcap.invest.ndr.ndr_core",

@@ -297,7 +297,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     CreateDirectory "${SMPATH}"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Percentile)" "crop_production_percentile"
     !insertmacro StartMenuLink "${SMPATH}\Crop Production (Regression)" "crop_production_regression"
-    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality (unstable)" "scenic_quality"
+    !insertmacro StartMenuLink "${SMPATH}\Scenic Quality" "scenic_quality"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Quality" "habitat_quality"
     !insertmacro StartMenuLink "${SMPATH}\Carbon" "carbon"
     !insertmacro StartMenuLink "${SMPATH}\Forest Carbon Edge Effect" "forest_carbon_edge_effect"
@@ -318,11 +318,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
     !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
     !insertmacro StartMenuLink "${SMPATH}\Urban Heat Island Mitigation" "uhim"
-
-    !define OVERLAP "${SMPATH}\Overlap Analysis"
-    CreateDirectory "${OVERLAP}"
-    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis (Management Zones)" "oa_mz"
-    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis" "oa"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
@@ -363,6 +358,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     ; Copy over all the sample parameter files
     File ..\..\data\invest-data\*.invs.json
+    File ..\..\data\invest-data\*.invest.json
 
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
@@ -478,7 +474,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 191156
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
-    !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3680
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831616
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 8056

@@ -21,10 +21,6 @@ from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.pollination')
 
-# We're hardcoding this to -1 now which makes taskgraph run in serial mode
-# we'll do that until we're comfortable with taskgraph in the wild.
-_N_WORKERS = 0
-
 _INDEX_NODATA = -1.0
 
 # These patterns are expected in the biophysical table
@@ -200,6 +196,9 @@ def execute(args):
                 substrate headers in the biophysical and guild table.  Any
                 areas that overlap the landcover map will replace nesting
                 substrate suitability with this value.  Ranges from 0..1.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
 
     Returns:
         None
@@ -230,7 +229,11 @@ def execute(args):
     landcover_raster_info = pygeoprocessing.get_raster_info(
         args['landcover_raster_path'])
 
-    task_graph = taskgraph.TaskGraph(work_token_dir, _N_WORKERS)
+    try:
+        n_workers = int(args['n_workers'])
+    except KeyError:
+        n_workers = 0  # Threaded queue management, but same process.
+    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     if farm_vector_path is not None:
         # ensure farm vector is in the same projection as the landcover map
