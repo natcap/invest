@@ -1030,7 +1030,8 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     table_df = pandas.DataFrame(table_dict)
 
     # Write dataframe to csv, with columns in designated sequence
-    attribute_table_path = target_raster_path[:-4] + '.csv'
+    base_attribute_table_path = os.path.splitext(target_raster_path)[0]
+    attribute_table_path = base_attribute_table_path + '.csv'
     table_df.to_csv(attribute_table_path, index=False, columns=column_names)
 
 
