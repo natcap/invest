@@ -2,19 +2,18 @@
 from __future__ import absolute_import
 import logging
 import os
-import multiprocessing
 import pickle
 import time
 
 from osgeo import gdal
 from osgeo import ogr
-from osgeo import osr
 import pygeoprocessing
 import taskgraph
 import numpy
 import shapely.wkb
 import shapely.prepared
 import rtree
+import pandas
 
 from . import validation
 from . import utils
@@ -575,6 +574,16 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
+        't_air_ref_raster_path',
+        'lulc_raster_path',
+        'ref_eto_raster_path',
+        'et_max',
+        'aoi_vector_path',
+        'biophysical_table_path',
+        'urban_park_cooling_distance',
+        'uhi_max',
+        'building_vector_path',
+        'energy_consumption_table_path',
         ]
 
     for key in required_keys:
@@ -595,6 +604,13 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     file_type_list = [
+        ('t_air_ref_raster_path', 'raster'),
+        ('lulc_raster_path', 'raster'),
+        ('ref_eto_raster_path', 'raster'),
+        ('aoi_vector_path', 'vector'),
+        ('building_vector_path', 'vector'),
+        ('biophysical_table_path', 'table'),
+        ('energy_consumption_table_path', 'table'),
         ]
 
     # check that existing/optional files are the correct types
@@ -618,6 +634,30 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a vector'))
                     del vector
+        if limit_to in ['biophysical_table_path', None]:
+            try:
+                biophysical_table = pygeoprocessing.build_lookup_from_csv(
+                    args['biophysical_table_path'], 'lucode')
+            except ValueError as e:
+                validation_error_list(
+                    [key], 'lucode might not be defined (%s)' % e)
+            table_columns = next(biophysical_table.keys())
+            for column_id in ['shade', 'kc', 'albedo']:
+                if column_id not in table_columns:
+                    validation_error_list(
+                        [key], '"%s" expected but not a header this table')
+
+        """
+        args['biophysical_table_path'] (str): table to map landcover codes to
+            Shade, Kc, and Albedo values. Must contain the fields 'lucode',
+            'shade', 'kc', and 'albedo'.
+        args['building_vector_path']: path to a vector of building footprints
+            that contains at least the field 'type'.
+        args['energy_consumption_table_path'] (str): path to a table that
+            maps building types to energy consumption. Must contain at least
+            the fields 'type' and 'consumption'.
+        """
+
 
     return validation_error_list
 
