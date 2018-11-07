@@ -560,11 +560,13 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
         numpy.ndarray of actual evapotranspiration values (mm).
 
     """
+    result = numpy.empty_like(fractp)
+    result[:] = output_nodata
     # checking if fractp >= 0 because it's a value that's between 0 and 1
     # and the nodata value is a large negative number.
-    return numpy.where(
-        (fractp >= 0) & ~numpy.isclose(precip, precip_nodata),
-        fractp * precip, output_nodata)
+    valid_mask = (fractp >= 0) & ~numpy.isclose(precip, precip_nodata)
+    result[valid_mask] = fractp[valid_mask] * precip[valid_mask]
+    return result
 
 
 def wyield_op(fractp, precip, precip_nodata, output_nodata):
@@ -581,10 +583,12 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
         numpy.ndarray of water yield value (mm).
 
     """
-    return numpy.where(
-        numpy.isclose(fractp, output_nodata) |
-        numpy.isclose(precip, precip_nodata),
-        output_nodata, (1.0 - fractp) * precip)
+    result = numpy.empty_like(fractp)
+    result[:] = output_nodata
+    valid_mask = (~numpy.isclose(fractp, output_nodata) &
+                  ~numpy.isclose(precip, precip_nodata))
+    result[valid_mask] = (1.0 - fractp[valid_mask]) * precip[valid_mask]
+    return result
 
 
 def fractp_op(
@@ -659,17 +663,18 @@ def fractp_op(
     # water balance (see users guide)
     veg_result = numpy.where(phi < aet_p, phi, aet_p)
     # Take the minimum of precip and Kc * ETo to avoid x / p > 1.0
-    nonveg_result = numpy.where(
-        precip[valid_mask] < Kc[valid_mask] * eto[valid_mask],
-        precip[valid_mask],
-        Kc[valid_mask] * eto[valid_mask]) / precip[valid_mask]
+    nonveg_result = Kc[valid_mask] * eto[valid_mask]
+    nonveg_mask = precip[valid_mask] < Kc[valid_mask] * eto[valid_mask]
+    nonveg_result[nonveg_mask] = precip[valid_mask][nonveg_mask]
+    nonveg_result_fract = nonveg_result / precip[valid_mask]
+
     # If veg is 1.0 use the result for vegetated areas else use result
     # for non veg areas
     result = numpy.where(
         veg[valid_mask] == 1.0,
-        veg_result, nonveg_result)
+        veg_result, nonveg_result_fract)
 
-    fractp = numpy.empty(valid_mask.shape)
+    fractp = numpy.empty_like(precip)
     fractp[:] = nodata_dict['out_nodata']
     fractp[valid_mask] = result
     return fractp
@@ -689,9 +694,12 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
         numpy.ndarray of potential evapotranspiration (mm)
 
     """
-    return numpy.where(
-        numpy.isclose(eto_pix, eto_nodata) | numpy.isclose(Kc_pix, output_nodata),
-        output_nodata, eto_pix * Kc_pix)
+    result = numpy.empty_like(eto_pix)
+    result[:] = output_nodata
+    valid_mask = (~numpy.isclose(eto_pix, eto_nodata) &
+                  ~numpy.isclose(Kc_pix, output_nodata))
+    result[valid_mask] = eto_pix[valid_mask] * Kc_pix[valid_mask]
+    return result
 
 
 def _check_missing_lucodes(
