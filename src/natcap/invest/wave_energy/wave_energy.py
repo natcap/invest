@@ -1497,8 +1497,7 @@ def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
         value_j = feat.GetField(index_j)
         we_value = energy_cap[(value_i, value_j)]
 
-        idx = feat.GetFieldIndex(cap_we_field)
-        feat.SetField(idx, we_value)
+        feat.SetField(cap_we_field, we_value)
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
         feat = None
