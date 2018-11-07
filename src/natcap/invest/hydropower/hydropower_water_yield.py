@@ -217,7 +217,8 @@ def execute(args):
         args=(base_raster_path_list, aligned_raster_path_list,
               ['near'] * len(base_raster_path_list),
               target_pixel_size, 'intersection'),
-        kwargs={'raster_align_index':4, 'base_vector_path_list':[watersheds_path]},
+        kwargs={'raster_align_index': 4,
+                'base_vector_path_list': [watersheds_path]},
         target_path_list=aligned_raster_path_list,
         task_name='align_raster_stack')
     # Joining now since this task will always be the root node
@@ -255,7 +256,8 @@ def execute(args):
     valid_lulc_txt_path = os.path.join(intermediate_dir, 'valid_lulc_values.txt')
     check_missing_lucodes_task = graph.add_task(
         _check_missing_lucodes,
-        args=(clipped_lulc_path, demand_lucodes, bio_lucodes, valid_lulc_txt_path),
+        args=(clipped_lulc_path, demand_lucodes,
+              bio_lucodes, valid_lulc_txt_path),
         target_path_list=[valid_lulc_txt_path],
         dependent_task_list=[align_raster_stack_task],
         task_name='check_missing_lucodes')
@@ -519,22 +521,20 @@ def convert_vector_to_csv(base_vector_path, target_csv_path):
         None
 
     """
-    esri_shapefile_driver = ogr.GetDriverByName('ESRI Shapefile')
-    watershed_vector = esri_shapefile_driver.Open(base_vector_path)
-    csv_driver = ogr.GetDriverByName('CSV')
-    _ = csv_driver.CopyDataSource(watershed_vector, target_csv_path)
+    watershed_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    csv_driver = gdal.GetDriverByName('CSV')
+    _ = csv_driver.CreateCopy(target_csv_path, watershed_vector)
 
 
 def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     """Calculate zonal statistics for watersheds and write results to a file.
 
     Parameters:
-        base_vector_path (string):
-            Path to the watershed shapefile in the output workspace.
-        raster_path (string):
-            Path to raster to aggregate.
-        target_stats_pickle (string)
-            Path to pickle file to store dictionary returned by zonal stats.
+        base_vector_path (string): Path to the watershed shapefile in the
+            output workspace.
+        raster_path (string): Path to raster to aggregate.
+        target_stats_pickle (string): Path to pickle file to store dictionary
+            returned by zonal stats.
 
     Returns:
         None
@@ -760,21 +760,21 @@ def _check_missing_lucodes(
         txt_file.write('')
 
 
-def compute_watershed_valuation(watersheds_path, val_dict):
+def compute_watershed_valuation(watershed_results_vector_path, val_dict):
     """Compute net present value and energy for the watersheds.
 
     Parameters:
-        watersheds_path (string): - a path path to an OGR shapefile for the
-            watershed results. Where the results will be added.
-
-        val_dict (dict): - a python dictionary that has all the valuation
-            parameters for each watershed
+        watershed_results_vector_path (string):
+            Path to an OGR shapefile for the watershed results.
+            Where the results will be added.
+        val_dict (dict): a python dictionary that has all the valuation
+            parameters for each watershed.
 
     Returns:
         None.
 
     """
-    ws_ds = gdal.OpenEx(watersheds_path, 1)
+    ws_ds = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -826,23 +826,21 @@ def compute_watershed_valuation(watersheds_path, val_dict):
         ws_layer.SetFeature(ws_feat)
 
 
-def compute_rsupply_volume(watershed_results_path):
+def compute_rsupply_volume(watershed_results_vector_path):
     """Calculate the total realized water supply volume.
 
-     and the mean realized
-        water supply volume per hectare for the given sheds. Output units in
-        cubic meters and cubic meters per hectare respectively.
+    And the mean realized water supply volume per hectare for the given sheds.
+    Output units in cubic meters and cubic meters per hectare respectively.
 
     Parameters:
-        watershed_results_path (string): a path to a vector that contains
-            fields 'rsupply_vl' and 'rsupply_mn' to caluclate water supply
-            volumne per hectare and cubic meters.
+        watershed_results_vector_path (string): a path to a vector that
+            contains fields 'wyield_vol' and 'wyield_mn'.
 
     Returns:
         None.
 
     """
-    ws_ds = gdal.OpenEx(watershed_results_path, 1)
+    ws_ds = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -878,19 +876,22 @@ def compute_rsupply_volume(watershed_results_path):
         ws_layer.SetFeature(ws_feat)
 
 
-def compute_water_yield_volume(shape_path):
+def compute_water_yield_volume(watershed_results_vector_path):
     """Calculate the water yield volume per sub-watershed or watershed.
 
-        shape_path - a path path a vector for the sub-watershed
-            or watershed shapefile. This shapefiles features should have a
-            'wyield_mn' attribute. Results are added to a 'wyield_vol' field
-            in `shape_path` whose units are in cubic meters.
+    Results are added to a 'wyield_vol' field in
+    `watershed_results_vector_path`. Units are cubic meters.
+
+    Parameters:
+        watershed_results_vector_path (str): Path to a sub-watershed
+            or watershed vector. This vector's features should have a
+            'wyield_mn' attribute.
 
     Returns:
         None.
 
     """
-    shape = gdal.OpenEx(shape_path, 1)
+    shape = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
     layer = shape.GetLayer()
 
     # The field names for the new attributes
@@ -917,22 +918,18 @@ def compute_water_yield_volume(shape_path):
 
 
 def _add_zonal_stats_dict_to_shape(
-        shape_path, stats_map, field_name, aggregate_field_id):
+        watershed_results_vector_path,
+        stats_map, field_name, aggregate_field_id):
     """Add a new field to a shapefile with values from a dictionary.
 
-        The dictionaries keys should match to the values of a unique fields
-        values in the shapefile
-
-        shape_path (string): a path to a vector whose FIDs correspond
-            with the keys in `stats_map`.
-
+    Parameters:
+        watershed_results_vector_path (string): a path to a vector whose FIDs
+            correspond with the keys in `stats_map`.
         stats_map (dict): a dictionary in the format generated by
             pygeoprocessing.zonal_statistics that contains at least the key
             value of `aggregate_field_id` per feature id.
-
         field_name (str): a string for the name of the new field to add to
             the target vector.
-
         aggregate_field_id (string): one of 'min' 'max' 'sum' 'mean' 'count'
             or 'nodata_count' as defined by pygeoprocessing.zonal_statistics.
 
@@ -940,7 +937,7 @@ def _add_zonal_stats_dict_to_shape(
         None
 
     """
-    vector = gdal.OpenEx(shape_path, gdal.OF_VECTOR | gdal.GA_Update)
+    vector = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
     layer = vector.GetLayer()
 
     # Create the new field
