@@ -113,11 +113,9 @@ def execute(args):
     # in a certain wave period/height state as a 2D array
     machine_perf_dict = {}
     machine_perf_data = pandas.read_csv(args['machine_perf_path'])
-    # Get the column field which is the first row in the file
-    # and specifies the range of wave periods
+    # Get the wave period fields, starting from the second column of the table
     machine_perf_dict['periods'] = machine_perf_data.columns.values[1:]
-    # Build up the row field by taking the first element in each row
-    # This is the range of heights
+    # Build up the height field by taking the first column of the table
     machine_perf_dict['heights'] = machine_perf_data.iloc[:, 0].values
     # Set the key for storing the machine's performance
     for i in range(len(machine_perf_dict['heights'])):
