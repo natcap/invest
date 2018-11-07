@@ -631,8 +631,6 @@ def execute(args):
         gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
 
     # Create the percentile raster for net present value
-    percentiles = [25, 50, 75, 90]
-
     _create_percentile_rasters(npv_out_path, npv_rc_path, ' US$',
                                'thousands of US dollars', percentiles)
 
