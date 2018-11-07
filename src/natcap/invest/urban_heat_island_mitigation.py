@@ -475,7 +475,6 @@ def calculate_energy_savings(
                     float(pixel_count))
                 target_feature.SetField('mean_t_ref', float(t_ref_mean))
 
-        print(energy_consumption_table)
         target_type = target_feature.GetField(int(type_field_index))
         if target_type not in energy_consumption_table:
             raise ValueError(
@@ -485,7 +484,6 @@ def calculate_energy_savings(
                 "at %s" % (
                     target_type, target_feature.GetFID(),
                     energy_consumption_table_path))
-        print('"%s: %s"' % (type_field_index, target_type))
         consumption_increase = float(
             energy_consumption_table[target_type]['consumption'])
         if t_air_mean and t_ref_mean:
