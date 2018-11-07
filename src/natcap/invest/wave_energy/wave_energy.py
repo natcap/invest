@@ -1393,8 +1393,9 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
                                         base_raster_path, field_name):
     """Add the values of a raster to the field of vector point features.
 
-    Values are recorded in the attribute field of the vector. If a value is
-    larger than or equal to 0, the feature will be deleted.
+    Values are recorded in the attribute field of the vector. Note: If a value
+    is larger than or equal to 0, the feature will be deleted, since a wave
+    energy point on land should not be used in calculations.
 
     Parameters:
         base_point_vector_path (str): a path to an ogr point shapefile
