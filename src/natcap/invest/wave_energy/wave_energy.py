@@ -1410,10 +1410,10 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     base_vector = gdal.OpenEx(base_point_vector_path, 1)
     raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
         'geotransform']
-    pixel_xsize, pixel_ysize, raster_minx, raster_maxy = \
+    pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
         abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
 
-    # Create a new field for the raster attribute
+    # Create a new field for the VECTOR attribute
     field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
     field_defn.SetWidth(24)
     field_defn.SetPrecision(11)
@@ -1437,9 +1437,10 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
             fid = feat.GetFID()
             geom = feat.GetGeometryRef()
             geom_x, geom_y = geom.GetX(), geom.GetY()
-            geom_lon, geom_lat, _ = vector_coord_trans.TransformPoint(
+            geom_trans_x, geom_trans_y, _ = vector_coord_trans.TransformPoint(
                 geom_x, geom_y)
-            yield (fid, (geom_lon, geom_lon, geom_lat, geom_lat), None)
+            yield (fid, (
+                geom_trans_x, geom_trans_x, geom_trans_y, geom_trans_y), None)
 
     vector_idx = index.Index(generator_function(), interleaved=False)
 
@@ -1447,28 +1448,28 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     for block_info, block_matrix in pygeoprocessing.iterblocks(
             base_raster_path):
         # Calculate block bounding box in decimal degrees
-        block_min_lon = raster_minx + block_info['xoff'] * pixel_xsize
-        block_max_lon = raster_minx + (
-            block_info['win_xsize'] + block_info['xoff']) * pixel_xsize
+        block_min_x = raster_min_x + block_info['xoff'] * pixel_size_x
+        block_max_x = raster_min_x + (
+            block_info['win_xsize'] + block_info['xoff']) * pixel_size_x
 
-        block_max_lat = raster_maxy - block_info['yoff'] * pixel_ysize
-        block_min_lat = raster_maxy - (
-            block_info['win_ysize'] + block_info['yoff']) * pixel_ysize
+        block_max_y = raster_max_y - block_info['yoff'] * pixel_size_y
+        block_min_y = raster_max_y - (
+            block_info['win_ysize'] + block_info['yoff']) * pixel_size_y
 
         # Obtain a list of vector points that fall within the block
         intersect_vectors = list(
             vector_idx.intersection(
-                (block_min_lon, block_max_lon, block_min_lat, block_max_lat),
+                (block_min_x, block_max_x, block_min_y, block_max_y),
                 objects=True))
 
         for vector in intersect_vectors:
             vector_fid = vector.id
-            vector_lon, vector_lat = vector.bbox[0], vector.bbox[1]
+            vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
 
             # To get proper raster value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
-            i = int((vector_lon - block_min_lon) / pixel_xsize)
-            j = int((block_max_lat - vector_lat) / pixel_ysize)
+            i = int((vector_trans_x - block_min_x) / pixel_size_x)
+            j = int((block_max_y - vector_trans_y) / pixel_size_y)
             block_value = block_matrix[j][i]
 
             # There are cases where the DEM may be too coarse and thus a
@@ -1673,14 +1674,14 @@ def _pixel_size_helper(base_vector_path, coord_trans, coord_trans_opposite,
         reference_point_x, reference_point_y)
 
     # Get the size of the pixels in meters, to be used for creating rasters
-    pixel_xsize, pixel_ysize = _pixel_size_based_on_coordinate_transform(
+    pixel_size_x, pixel_size_y = _pixel_size_based_on_coordinate_transform(
         base_raster_path, coord_trans, reference_point_latlng)
 
     feat = None
     layer = None
     vector = None
 
-    return (pixel_xsize, pixel_ysize)
+    return (pixel_size_x, pixel_size_y)
 
 
 def _pixel_size_based_on_coordinate_transform(base_raster_path, coord_trans,
