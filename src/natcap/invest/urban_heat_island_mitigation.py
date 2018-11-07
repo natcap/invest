@@ -57,8 +57,7 @@ def execute(args):
         args['biophysical_table_path'], 'lucode', to_lower=True,
         warn_if_missing=True)
 
-    task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, max(1, multiprocessing.cpu_count()))
+    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(
@@ -153,14 +152,14 @@ def execute(args):
     intermediate_building_vector_path = os.path.join(
         temporary_working_dir, 'intermediate_building_vector.gpkg')
     # this is the field name that can be used to uniquely identify a feature
-    key_field_id = 'objectid_invest_natcap'
     intermediate_building_vector_task = task_graph.add_task(
-        func=reproject_and_label_vector,
+        func=pygeoprocessing.reproject_vector,
         args=(
             args['building_vector_path'], lulc_raster_info['projection'],
-            key_field_id, intermediate_building_vector_path),
+            intermediate_building_vector_path),
+        kwargs={'driver_name': 'GPKG'},
         target_path_list=[intermediate_building_vector_path],
-        task_name='reproject and label building vector')
+        task_name='reproject building vector')
 
     # zonal stats over buildings for t_air
     t_air_stats_pickle_path = os.path.join(
@@ -168,7 +167,7 @@ def execute(args):
     pickle_t_air_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_building_vector_path, key_field_id,
+            intermediate_building_vector_path,
             t_air_raster_path, t_air_stats_pickle_path),
         target_path_list=[t_air_stats_pickle_path],
         dependent_task_list=[t_air_task, intermediate_building_vector_task],
@@ -179,7 +178,7 @@ def execute(args):
     pickle_t_ref_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_building_vector_path, key_field_id,
+            intermediate_building_vector_path,
             aligned_t_air_ref_raster_path, t_ref_stats_pickle_path),
         target_path_list=[t_ref_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_building_vector_task],
@@ -203,10 +202,11 @@ def execute(args):
     intermediate_aoi_vector_path = os.path.join(
         temporary_working_dir, 'intermediate_aoi.gpkg')
     intermediate_uhi_result_vector_task = task_graph.add_task(
-        func=reproject_and_label_vector,
+        func=pygeoprocessing.reproject_vector,
         args=(
             args['aoi_vector_path'], lulc_raster_info['projection'],
-            key_field_id, intermediate_aoi_vector_path),
+            intermediate_aoi_vector_path),
+        kwargs={'driver_name': 'GPKG'},
         target_path_list=[intermediate_aoi_vector_path],
         task_name='reproject and label aoi')
 
@@ -215,7 +215,7 @@ def execute(args):
     pickle_cc_aoi_stats_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_aoi_vector_path, key_field_id,
+            intermediate_aoi_vector_path,
             cc_raster_path, cc_aoi_stats_pickle_path),
         target_path_list=[cc_aoi_stats_pickle_path],
         dependent_task_list=[cc_task, intermediate_uhi_result_vector_task],
@@ -226,7 +226,7 @@ def execute(args):
     pickle_t_air_ref_aoi_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_aoi_vector_path, key_field_id,
+            intermediate_aoi_vector_path,
             aligned_t_air_ref_raster_path, t_air_ref_aoi_stats_pickle_path),
         target_path_list=[t_air_ref_aoi_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_uhi_result_vector_task],
@@ -237,7 +237,7 @@ def execute(args):
     pickle_t_air_aoi_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_aoi_vector_path, key_field_id,
+            intermediate_aoi_vector_path,
             t_air_raster_path, t_air_aoi_stats_pickle_path),
         target_path_list=[t_air_aoi_stats_pickle_path],
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
@@ -248,7 +248,7 @@ def execute(args):
     calculate_uhi_result_task = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
-            intermediate_aoi_vector_path, key_field_id,
+            intermediate_aoi_vector_path,
             t_air_aoi_stats_pickle_path, t_air_ref_aoi_stats_pickle_path,
             cc_aoi_stats_pickle_path,
             energy_consumption_vector_path,
@@ -265,7 +265,7 @@ def execute(args):
 
 
 def calculate_uhi_result_vector(
-        base_aoi_path, target_key_field_id, t_air_stats_pickle_path,
+        base_aoi_path, t_air_stats_pickle_path,
         t_air_ref_stats_pickle_path, cc_stats_pickle_path,
         energy_consumption_vector_path, target_uhi_vector_path):
     """Summarize UHI results.
@@ -278,8 +278,6 @@ def calculate_uhi_result_vector(
 
     Parameters:
         base_aoi_path (str): path to AOI vector.
-        target_key_field_id (str): field to identify the vector associated
-            with the stats field for each polygon.
         energy_consumption_vector_path (str): path to vector that contains
             building footprints with the field 'energy_savings'.
         target_uhi_vector_path (str): path to UHI vector created for result.
@@ -340,7 +338,7 @@ def calculate_uhi_result_vector(
 
     target_uhi_layer.StartTransaction()
     for feature in target_uhi_layer:
-        feature_id = feature.GetField(target_key_field_id)
+        feature_id = feature.GetFID()
         if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
@@ -395,9 +393,9 @@ def calculate_energy_savings(
 
     Parameters:
         t_air_stats_pickle_path (str): path to t_air zonal stats indexed by
-            'objectid_invest_natcap'.
+            FID.
         t_ref_stats_pickle_path (str): path to t_ref zonal stats indexed by
-            'objectid_invest_natcap'.
+            FID.
         uhi_max (float): UHI max parameter from documentation.
         base_building_vector_path (str): path to existing vector to copy for
             the target vector that contains at least the field 'type'.
@@ -460,7 +458,7 @@ def calculate_energy_savings(
                 100.0 * float(target_index+1) /
                 target_building_layer.GetFeatureCount()),
             _LOGGING_PERIOD)
-        feature_id = target_feature.GetField('objectid_invest_natcap')
+        feature_id = target_feature.GetFID()
         t_air_mean = None
         if feature_id in t_air_stats:
             pixel_count = t_air_stats[feature_id]['count']
@@ -491,45 +489,12 @@ def calculate_energy_savings(
     target_building_layer.SyncToDisk()
 
 
-def reproject_and_label_vector(
-        base_vector_path, target_projection_wkt, target_key_field_id,
-        target_vector_path):
-    """Reproject to wkt and label features for unique ID.
-
-    Parameters:
-        base_vector_path (path): path to vector file.
-        target_projection_wkt (str): desired target projection in WKT.
-        target_key_field_id (str): field to add to target vector that will
-            have a unique feature integer id for each feature.
-        target_vector_path (str): path to desired output target vector.
-
-    Return:
-        None.
-
-    """
-    LOGGER.debug('reprojecting %s', base_vector_path)
-    pygeoprocessing.reproject_vector(
-        base_vector_path, target_projection_wkt,
-        target_vector_path, layer_index=0, driver_name='GPKG')
-    target_vector = gdal.OpenEx(
-        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    target_layer = target_vector.GetLayer()
-    target_layer.CreateField(
-        ogr.FieldDefn(target_key_field_id, ogr.OFTInteger))
-    target_layer.SyncToDisk()
-    target_vector.ExecuteSQL(
-        'UPDATE %s SET %s = rowid' %
-        (target_layer.GetName(), target_key_field_id))
-
-
 def pickle_zonal_stats(
-        base_vector_path, key_field, base_raster_path, target_pickle_path):
+        base_vector_path, base_raster_path, target_pickle_path):
     """Calculate Zonal Stats for a vector/raster pair and pickle result.
 
     Parameters:
         base_vector_path (str): path to vector file
-        key_field (str): field in `base_vector_path` file that uniquely
-            identifies each feature.
         base_raster_path (str): path to raster file to aggregate over.
         target_pickle_path (str): path to desired target pickle file that will
             be a pickle of the pygeoprocessing.zonal_stats function.
@@ -539,8 +504,8 @@ def pickle_zonal_stats(
 
     """
     zonal_stats = pygeoprocessing.zonal_statistics(
-        (base_raster_path, 1), base_vector_path, key_field,
-        polygons_might_overlap=True, all_touched=True)
+        (base_raster_path, 1), base_vector_path,
+        polygons_might_overlap=True)
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(zonal_stats, pickle_file)
 
