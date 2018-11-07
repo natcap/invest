@@ -1398,16 +1398,18 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     energy point on land should not be used in calculations.
 
     Parameters:
-        base_point_vector_path (str): a path to an ogr point shapefile
-        base_raster_path(str): a path to a GDAL dataset
-        field_name (str): the name of the new field that will be
-            added to the point feature
+        base_point_vector_path (str): a path to an ogr point shapefile.
+        base_raster_path(str): a path to a GDAL dataset.
+        field_name (str): the name of the new field that will be added to the
+            point feature. An exception will be raised if this field has
+            existed in the base point vector.
 
     Returns:
         None
 
     """
     base_vector = gdal.OpenEx(base_point_vector_path, 1)
+    base_layer = base_vector.GetLayer()
     raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
         'geotransform']
     pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
@@ -1418,8 +1420,18 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     field_defn.SetWidth(24)
     field_defn.SetPrecision(11)
 
-    base_layer = base_vector.GetLayer()
-    base_layer.CreateField(field_defn)
+    # Raise an exception if the field name already exists in the vector
+    exact_match = True
+    if base_layer.FindFieldIndex(field_name, exact_match) == -1:
+        base_layer.CreateField(field_defn)
+    else:
+        raise ValueError(
+            "'%s' field should not have existed in the wave data shapefiles. "
+            "Please make sure it's renamed or removed from the attribute table."
+            % field_name)
+
+    # Create coordinate transformation from vector to raster, to make sure the
+    # vector points are in the same projection as raster
     raster_sr = osr.SpatialReference()
     raster_sr.ImportFromWkt(
         pygeoprocessing.get_raster_info(base_raster_path)['projection'])
@@ -1427,7 +1439,6 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(base_point_vector_path)[
             'projection'])
-    # To make sure the vector points are in the same unit as raster
     vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
