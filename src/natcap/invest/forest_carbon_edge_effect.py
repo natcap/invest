@@ -125,8 +125,8 @@ def execute(args):
                 args['lulc_raster_path'])['bounding_box']
             aoi_vector_bb = pygeoprocessing.get_vector_info(
                 args['aoi_vector_path'])['bounding_box']
-            merged_bb = pygeoprocessing._merge_bounding_boxes(
-                lulc_raster_bb, aoi_vector_bb, 'intersection')
+            merged_bb = pygeoprocessing.merge_bounding_box_list(
+                [lulc_raster_bb, aoi_vector_bb], 'intersection')
             if merged_bb[0] > merged_bb[2] or merged_bb[1] > merged_bb[3]:
                 raise ValueError(
                     "The landcover raster %s and AOI %s do not touch each "
@@ -292,7 +292,7 @@ def _aggregate_carbon_map(
 
     # aggregate carbon stocks by the new ID field
     serviceshed_stats = pygeoprocessing.zonal_statistics(
-        (carbon_map_path, 1), target_aggregate_vector_path, poly_id_field)
+        (carbon_map_path, 1), target_aggregate_vector_path)
 
     # don't need a random poly id anymore
     target_aggregate_layer.DeleteField(
@@ -311,15 +311,16 @@ def _aggregate_carbon_map(
     target_aggregate_layer.ResetReading()
     target_aggregate_layer.StartTransaction()
 
-    for poly_index, poly_feat in enumerate(target_aggregate_layer):
+    for poly_feat in target_aggregate_layer:
+        poly_fid = poly_feat.GetFID()
         poly_feat.SetField(
-            'c_sum', serviceshed_stats[poly_index]['sum'])
+            'c_sum', serviceshed_stats[poly_fid]['sum'])
         # calculates mean pixel value per ha in for each feature in AOI
         poly_geom = poly_feat.GetGeometryRef()
         poly_area_ha = poly_geom.GetArea() / 1e4  # converts m^2 to hectare
         poly_geom = None
         poly_feat.SetField(
-            'c_ha_mean', serviceshed_stats[poly_index]['sum']/poly_area_ha)
+            'c_ha_mean', serviceshed_stats[poly_fid]['sum']/poly_area_ha)
 
         target_aggregate_layer.SetFeature(poly_feat)
     target_aggregate_layer.CommitTransaction()
