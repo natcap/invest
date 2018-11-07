@@ -182,22 +182,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(results, expected_results):
             self.assertEqual(res, exp_res)
 
-    def test_create_value_ranges(self):
-        """WaveEnergy: testing 'create_percentile_ranges' function."""
-        from natcap.invest.wave_energy import wave_energy
-
-        percentiles = [20, 40, 60, 80]
-        start_value = "5"
-
-        result = wave_energy._create_value_ranges(percentiles, start_value)
-
-        exp_result = [
-            "5 to 20", "20 to 40", "40 to 60", "60 to 80", "Greater than 80"
-        ]
-
-        for res, exp_res in zip(result, exp_result):
-            self.assertEqual(res, exp_res)
-
     def test_calculate_min_distances(self):
         """WaveEnergy: testing '_calculate_min_distances' function."""
         from natcap.invest.wave_energy import wave_energy

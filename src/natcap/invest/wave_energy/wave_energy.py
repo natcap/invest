@@ -975,9 +975,21 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     percentile_values = _calculate_percentiles_from_raster(
         base_raster_path, percentile_list, start_value)
 
-    # Get the percentile ranges as strings so that they can be added to an
+    # Get the percentile ranges as strings so that they can be added to the
     # output table
-    value_ranges = _create_value_ranges(percentile_values, start_value)
+    value_ranges = []
+
+    # Add the first range with the starting value if it exists
+    if start_value:
+        value_ranges.append('%s to %s' % (start_value, percentile_values[0]))
+    else:
+        value_ranges.append('Less than or equal to %s' % percentile_values[0])
+    value_ranges += ['%s to %s' % (p, q) for (p, q) in
+                     zip(percentile_values[:-1], percentile_values[1:])]
+    # Add the last range to the range of values list
+    value_ranges.append('Greater than %s' % percentile_values[-1])
+
+    LOGGER.debug('Range_values : %s', value_ranges)
 
     def raster_percentile(band):
         """Group the band pixels together based on percentiles, starting from 1.
@@ -1033,43 +1045,6 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     base_attribute_table_path = os.path.splitext(target_raster_path)[0]
     attribute_table_path = base_attribute_table_path + '.csv'
     table_df.to_csv(attribute_table_path, index=False, columns=column_names)
-
-
-def _create_value_ranges(percentiles, start_value=None):
-    """Construct the value ranges as string, which is then stored in a list.
-
-    The list has the first range starting at 1 and the last range being greater
-    than the last percentile mark.
-
-    Parameters:
-        percentiles (list): a list of the percentile marks in ascending order.
-        start_value (str): the first value that goes to the first percentile
-            range (start_value: percentile_one). (optional)
-
-    Returns:
-        range_values (list): a list of strings representing the ranges of the
-            percentile values.
-
-    """
-    length = len(percentiles)
-    range_values = []
-    # Add the first range with the starting value and long description of units
-    # This function will fail and cause an error if percentile list is empty
-    if start_value:
-        range_first = start_value + ' to ' + str(percentiles[0])
-    else:
-        range_first = 'Less than or equal to ' + str(percentiles[0])
-    range_values.append(range_first)
-
-    for idx in range(length - 1):
-        range_values.append(
-            str(percentiles[idx]) + ' to ' + str(percentiles[idx + 1]))
-    # Add the last range to the range of values list
-    range_last = 'Greater than ' + str(percentiles[length - 1])
-    range_values.append(range_last)
-    LOGGER.debug('Range_values : %s', range_values)
-    return range_values
-
 
 def _create_percentile_ranges(percentile_list):
     """Construct the percentile ranges as Strings.
