@@ -646,18 +646,41 @@ def validate(args, limit_to=None):
                 if column_id not in table_columns:
                     validation_error_list(
                         [key], '"%s" expected but not a header this table')
-
-        """
-        args['biophysical_table_path'] (str): table to map landcover codes to
-            Shade, Kc, and Albedo values. Must contain the fields 'lucode',
-            'shade', 'kc', and 'albedo'.
-        args['building_vector_path']: path to a vector of building footprints
-            that contains at least the field 'type'.
-        args['energy_consumption_table_path'] (str): path to a table that
-            maps building types to energy consumption. Must contain at least
-            the fields 'type' and 'consumption'.
-        """
-
+        if limit_to in ['energy_consumption_table_path', None]:
+            try:
+                energy_consumption_table = (
+                    pygeoprocessing.build_lookup_from_csv(
+                        args['energy_consumption_table_path'], 'type'))
+            except ValueError as e:
+                validation_error_list(
+                    [key], 'type might not be defined (%s)' % e)
+            table_columns = next(energy_consumption_table.keys())
+            for column_id in ['consumption']:
+                if column_id not in table_columns:
+                    validation_error_list(
+                        [key], '"%s" expected but not a header this table')
+        if limit_to in ['energy_consumption_table_path', None]:
+            building_vector = gdal.OpenEx(
+                args['building_vector_path'], gdal.OF_VECTOR)
+            building_layer = building_vector.GetLayer()
+            building_layer_defn = building_layer.GetLayerDefn()
+            type_index = building_layer_defn.GetFieldIndex('type')
+            if type_index < 0:
+                validation_error_list(
+                    [key], '"type" field expected in %s but not defined' % (
+                        args['building_vector_path']))
+            else:
+                for feature in building_layer:
+                    raw_val = feature.GetField(type_index)
+                    try:
+                        _ = float(raw_val)
+                    except TypeError:
+                        validation_error_list(
+                            [key],
+                            'feature "type" fields of %s should be floating '
+                            'point numbers, but at least one is not. '
+                            '(raw val: %s)' % (
+                                args['building_vector_path'], raw_val))
 
     return validation_error_list
 
