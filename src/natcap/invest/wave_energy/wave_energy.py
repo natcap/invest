@@ -294,107 +294,6 @@ def execute(args):
     LOGGER.debug('target_pixel_size: %s, target_projection: %s',
                  target_pixel_size, aoi_sr_wkt)
 
-    def _index_raster_value_to_point_vector(base_point_vector_path,
-                                            base_raster_path, field_name):
-        """Add the values of a raster to the field of vector point features.
-
-        Values are recorded in the attribute field of the vector. If a value is
-        larger than or equal to 0, the feature will be deleted.
-
-        Parameters:
-            base_point_vector_path (str): a path to an ogr point shapefile
-            base_raster_path(str): a path to a GDAL dataset
-            field_name (str): the name of the new field that will be
-                added to the point feature
-
-        Returns:
-            None
-
-        """
-        base_vector = gdal.OpenEx(base_point_vector_path, 1)
-        raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
-            'geotransform']
-        pixel_xsize, pixel_ysize, raster_minx, raster_maxy = \
-            abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
-
-        # Create a new field for the raster attribute
-        field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
-        field_defn.SetWidth(24)
-        field_defn.SetPrecision(11)
-
-        base_layer = base_vector.GetLayer()
-        base_layer.CreateField(field_defn)
-        raster_sr = osr.SpatialReference()
-        raster_sr.ImportFromWkt(
-            pygeoprocessing.get_raster_info(base_raster_path)['projection'])
-        vector_sr = osr.SpatialReference()
-        vector_sr.ImportFromWkt(
-            pygeoprocessing.get_vector_info(base_point_vector_path)[
-                'projection'])
-        # To make sure the vector points are in the same unit as raster
-        vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
-
-        # Initialize an R-Tree indexing object with point geom from base_vector
-        def generator_function():
-            for i in range(base_layer.GetFeatureCount()):
-                feat = base_layer.GetFeature(i)
-                fid = feat.GetFID()
-                geom = feat.GetGeometryRef()
-                geom_x, geom_y = geom.GetX(), geom.GetY()
-                geom_lon, geom_lat, _ = vector_coord_trans.TransformPoint(
-                    geom_x, geom_y)
-                yield (fid, (geom_lon, geom_lon, geom_lat, geom_lat), None)
-
-        vector_idx = index.Index(generator_function(), interleaved=False)
-
-        # For all the features (points) add the proper raster value
-        for block_info, block_matrix in pygeoprocessing.iterblocks(
-                base_raster_path):
-            # Calculate block bounding box in decimal degrees
-            block_min_lon = raster_minx + block_info['xoff'] * pixel_xsize
-            block_max_lon = raster_minx + (
-                block_info['win_xsize'] + block_info['xoff']) * pixel_xsize
-
-            block_max_lat = raster_maxy - block_info['yoff'] * pixel_ysize
-            block_min_lat = raster_maxy - (
-                block_info['win_ysize'] + block_info['yoff']) * pixel_ysize
-
-            # Obtain a list of vector points that fall within the block
-            intersect_vectors = list(
-                vector_idx.intersection(
-                    (block_min_lon, block_max_lon, block_min_lat, block_max_lat),
-                    objects=True))
-
-            for vector in intersect_vectors:
-                vector_fid = vector.id
-                vector_lon, vector_lat = vector.bbox[0], vector.bbox[1]
-
-                # To get proper raster value we must index into the dem matrix
-                # by getting where the point is located in terms of the matrix
-                i = int((vector_lon - block_min_lon) / pixel_xsize)
-                j = int((block_max_lat - vector_lat) / pixel_ysize)
-                block_value = block_matrix[j][i]
-
-                # There are cases where the DEM may be too coarse and thus a
-                # wave energy point falls on land. If the raster value taken is
-                # greater than or equal to zero we need to delete that point as
-                # it should not be used in calculations
-                if block_value >= 0.0:
-                    base_layer.DeleteFeature(vector_fid)
-                else:
-                    feat = base_layer.GetFeature(vector_fid)
-                    field_index = feat.GetFieldIndex(field_name)
-                    feat.SetField(int(field_index), float(block_value))
-                    base_layer.SetFeature(feat)
-                    feat = None
-
-        # It is not enough to just delete a feature from the layer. The
-        # database where the information is stored must be re-packed so that
-        # feature entry is properly removed
-        base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
-        base_layer = None
-        base_vector = None
-
     # We do all wave power calculations by manipulating the fields in
     # the wave data shapefile, thus we need to add proper depth values
     # from the raster DEM
@@ -1488,6 +1387,108 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
         energy_cap[key] = sum_we
 
     return energy_cap
+
+
+def _index_raster_value_to_point_vector(base_point_vector_path,
+                                        base_raster_path, field_name):
+    """Add the values of a raster to the field of vector point features.
+
+    Values are recorded in the attribute field of the vector. If a value is
+    larger than or equal to 0, the feature will be deleted.
+
+    Parameters:
+        base_point_vector_path (str): a path to an ogr point shapefile
+        base_raster_path(str): a path to a GDAL dataset
+        field_name (str): the name of the new field that will be
+            added to the point feature
+
+    Returns:
+        None
+
+    """
+    base_vector = gdal.OpenEx(base_point_vector_path, 1)
+    raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
+        'geotransform']
+    pixel_xsize, pixel_ysize, raster_minx, raster_maxy = \
+        abs(raster_gt[1]), abs(raster_gt[5]), raster_gt[0], raster_gt[3]
+
+    # Create a new field for the raster attribute
+    field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+    field_defn.SetWidth(24)
+    field_defn.SetPrecision(11)
+
+    base_layer = base_vector.GetLayer()
+    base_layer.CreateField(field_defn)
+    raster_sr = osr.SpatialReference()
+    raster_sr.ImportFromWkt(
+        pygeoprocessing.get_raster_info(base_raster_path)['projection'])
+    vector_sr = osr.SpatialReference()
+    vector_sr.ImportFromWkt(
+        pygeoprocessing.get_vector_info(base_point_vector_path)[
+            'projection'])
+    # To make sure the vector points are in the same unit as raster
+    vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
+
+    # Initialize an R-Tree indexing object with point geom from base_vector
+    def generator_function():
+        for i in range(base_layer.GetFeatureCount()):
+            feat = base_layer.GetFeature(i)
+            fid = feat.GetFID()
+            geom = feat.GetGeometryRef()
+            geom_x, geom_y = geom.GetX(), geom.GetY()
+            geom_lon, geom_lat, _ = vector_coord_trans.TransformPoint(
+                geom_x, geom_y)
+            yield (fid, (geom_lon, geom_lon, geom_lat, geom_lat), None)
+
+    vector_idx = index.Index(generator_function(), interleaved=False)
+
+    # For all the features (points) add the proper raster value
+    for block_info, block_matrix in pygeoprocessing.iterblocks(
+            base_raster_path):
+        # Calculate block bounding box in decimal degrees
+        block_min_lon = raster_minx + block_info['xoff'] * pixel_xsize
+        block_max_lon = raster_minx + (
+            block_info['win_xsize'] + block_info['xoff']) * pixel_xsize
+
+        block_max_lat = raster_maxy - block_info['yoff'] * pixel_ysize
+        block_min_lat = raster_maxy - (
+            block_info['win_ysize'] + block_info['yoff']) * pixel_ysize
+
+        # Obtain a list of vector points that fall within the block
+        intersect_vectors = list(
+            vector_idx.intersection(
+                (block_min_lon, block_max_lon, block_min_lat, block_max_lat),
+                objects=True))
+
+        for vector in intersect_vectors:
+            vector_fid = vector.id
+            vector_lon, vector_lat = vector.bbox[0], vector.bbox[1]
+
+            # To get proper raster value we must index into the dem matrix
+            # by getting where the point is located in terms of the matrix
+            i = int((vector_lon - block_min_lon) / pixel_xsize)
+            j = int((block_max_lat - vector_lat) / pixel_ysize)
+            block_value = block_matrix[j][i]
+
+            # There are cases where the DEM may be too coarse and thus a
+            # wave energy point falls on land. If the raster value taken is
+            # greater than or equal to zero we need to delete that point as
+            # it should not be used in calculations
+            if block_value >= 0.0:
+                base_layer.DeleteFeature(vector_fid)
+            else:
+                feat = base_layer.GetFeature(vector_fid)
+                field_index = feat.GetFieldIndex(field_name)
+                feat.SetField(int(field_index), float(block_value))
+                base_layer.SetFeature(feat)
+                feat = None
+
+    # It is not enough to just delete a feature from the layer. The
+    # database where the information is stored must be re-packed so that
+    # feature entry is properly removed
+    base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
+    base_layer = None
+    base_vector = None
 
 
 def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
