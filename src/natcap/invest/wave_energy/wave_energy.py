@@ -978,7 +978,6 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     # Get the percentile ranges as strings so that they can be added to the
     # output table
     value_ranges = []
-
     # Add the first range with the starting value if it exists
     if start_value:
         value_ranges.append('%s to %s' % (start_value, percentile_values[0]))
@@ -988,7 +987,6 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
                      zip(percentile_values[:-1], percentile_values[1:])]
     # Add the last range to the range of values list
     value_ranges.append('Greater than %s' % percentile_values[-1])
-
     LOGGER.debug('Range_values : %s', value_ranges)
 
     def raster_percentile(band):
@@ -1024,7 +1022,17 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         target_raster_path, percentile_dict, column_name=value_range_field)
 
     # Create a list of corresponding percentile ranges from the percentile list
-    percentile_ranges = _create_percentile_ranges(percentile_list)
+    length = len(percentile_list)
+    percentile_ranges = []
+    first_range = '<' + str(percentile_list[0]) + '%'
+    percentile_ranges.append(first_range)
+    for idx in range(length - 1):
+        percentile_ranges.append(
+            str(percentile_list[idx]) + '-' +
+            str(percentile_list[idx + 1]) + '%')
+    # Add the last range to the percentile ranges list
+    last_range = '>' + str(percentile_list[length - 1]) + '%'
+    percentile_ranges.append(last_range)
 
     # Initialize a dictionary to map percentile groups to percentile range
     # string and pixel count. Used for creating CSV table
@@ -1045,32 +1053,6 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     base_attribute_table_path = os.path.splitext(target_raster_path)[0]
     attribute_table_path = base_attribute_table_path + '.csv'
     table_df.to_csv(attribute_table_path, index=False, columns=column_names)
-
-def _create_percentile_ranges(percentile_list):
-    """Construct the percentile ranges as Strings.
-
-    Each string range is stored in a list that gets returned.
-
-    Parameters:
-        percentile_list (list): A list of percentiles in ascending order
-
-    Returns:
-        A list of Strings representing the ranges of the percentile values
-
-    """
-    length = len(percentile_list)
-    percentile_ranges = []
-    first_range = '<' + str(percentile_list[0]) + '%'
-    percentile_ranges.append(first_range)
-    for idx in range(length - 1):
-        percentile_ranges.append(
-            str(percentile_list[idx]) + '-' +
-            str(percentile_list[idx + 1]) + '%')
-
-    # Add the last range to the percentile ranges list
-    last_range = '>' + str(percentile_list[length - 1]) + '%'
-    percentile_ranges.append(last_range)
-    return percentile_ranges
 
 
 def _compute_wave_power(base_vector_path):
