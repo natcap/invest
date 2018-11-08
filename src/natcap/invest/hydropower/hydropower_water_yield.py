@@ -650,7 +650,8 @@ def fractp_op(
     climate_w = (
         (awc / precip[valid_mask]) * seasonality_constant) + 1.25
     # Capping to 5.0 to set to upper limit if exceeded
-    climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
+    climate_w[climate_w > 5.0] = 5.0
+    # climate_w = numpy.where(climate_w > 5.0, 5.0, climate_w)
 
     # Compute evapotranspiration partition of the water balance
     aet_p = (
@@ -774,7 +775,8 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
         None.
 
     """
-    ws_ds = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
+    ws_ds = gdal.OpenEx(
+        watershed_results_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -840,7 +842,8 @@ def compute_rsupply_volume(watershed_results_vector_path):
         None.
 
     """
-    ws_ds = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
+    ws_ds = gdal.OpenEx(
+        watershed_results_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     ws_layer = ws_ds.GetLayer()
 
     # The field names for the new attributes
@@ -891,7 +894,8 @@ def compute_water_yield_volume(watershed_results_vector_path):
         None.
 
     """
-    shape = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
+    shape = gdal.OpenEx(
+        watershed_results_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     layer = shape.GetLayer()
 
     # The field names for the new attributes
@@ -937,7 +941,8 @@ def _add_zonal_stats_dict_to_shape(
         None
 
     """
-    vector = gdal.OpenEx(watershed_results_vector_path, gdal.GA_Update)
+    vector = gdal.OpenEx(
+        watershed_results_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     layer = vector.GetLayer()
 
     # Create the new field
@@ -954,8 +959,11 @@ def _add_zonal_stats_dict_to_shape(
         # Using the unique feature ID, index into the
         # dictionary to get the corresponding value
         if aggregate_field_id == 'mean':
-            field_val = float(
-                stats_map[feature_fid]['sum']) / stats_map[feature_fid]['count']
+            if stats_map[feature_fid]['count'] == 0:
+                field_val = 0.0
+            else:
+                field_val = float(
+                    stats_map[feature_fid]['sum']) / stats_map[feature_fid]['count']
         else:
             field_val = float(stats_map[feature_fid][aggregate_field_id])
 
