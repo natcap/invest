@@ -44,7 +44,8 @@ class CropProductionTests(unittest.TestCase):
             'aggregate_polygon_path': os.path.join(
                 SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
             'aggregate_polygon_id': 'id',
-            'model_data_path': MODEL_DATA_PATH
+            'model_data_path': MODEL_DATA_PATH,
+            'n_workers': '-1'
         }
         crop_production_percentile.execute(args)
 
