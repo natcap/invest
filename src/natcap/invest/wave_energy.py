@@ -18,8 +18,8 @@ from osgeo import osr
 from osgeo import ogr
 
 import pygeoprocessing
-from .. import validation
-from .. import utils
+from . import validation
+from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
 
