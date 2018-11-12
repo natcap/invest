@@ -163,7 +163,6 @@ def execute(args):
 
     crop_lucode = None
     observed_yield_nodata = None
-    production_area = collections.defaultdict(float)
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
@@ -275,17 +274,6 @@ def execute(args):
             #      (interpolated_yield_percentile_raster_path, 1)],
             #     _crop_production_op, percentile_crop_production_raster_path,
             #     gdal.GDT_Float32, _NODATA_YIELD)
-
-        # calculate the non-zero production area for that crop, assuming that
-        # all the percentile rasters have non-zero production so it's okay to
-        # use just one of the percentile rasters
-        # TODO: move this to report generation ara alongside production_lookup
-        LOGGER.info("Calculating production area.")
-        for _, band_values in pygeoprocessing.iterblocks(
-                percentile_crop_production_raster_path):
-            production_area[crop_name] += numpy.count_nonzero(
-                (band_values != _NODATA_YIELD) & (band_values > 0.0))
-        production_area[crop_name] *= pixel_area_ha
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
         global_observed_yield_raster_path = os.path.join(
@@ -406,20 +394,27 @@ def execute(args):
                 nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
-            result_table.write(',%f' % production_area[crop_name])
+            production_area = collections.defaultdict(float)
             production_lookup = {}
+            production_pixel_count = 0.0
             yield_sum = 0.0
             observed_production_raster_path = os.path.join(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
+            
+            LOGGER.info("Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
                     observed_production_raster_path):
+                production_pixel_count += numpy.count_nonzero(
+                    (yield_block != observed_yield_nodata) & (yield_block > 0.0))
                 yield_sum += numpy.sum(
                     yield_block[observed_yield_nodata != yield_block])
+            production_area[crop_name] = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
+            result_table.write(',%f' % production_area[crop_name])
             result_table.write(",%f" % yield_sum)
 
             for yield_percentile_id in sorted(yield_percentile_headers):
