@@ -754,7 +754,7 @@ def execute(args):
     if 'valuation_container' in args and args['valuation_container'] is True:
         LOGGER.info('Starting Wind Energy Valuation Model')
         # Pixel size to be used in later calculations and raster creations
-        mean_pixel_size = mean_pixel_size(
+        mean_pixel_size = _calc_mean_pixel_size(
             pygeoprocessing.get_raster_info(
                 harvested_masked_path)['pixel_size'])
         # path for final distance transform used in valuation calculations
@@ -1253,7 +1253,7 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         None.
 
     """
-    mean_pixel_size = mean_pixel_size(
+    mean_pixel_size = _calc_mean_pixel_size(
         pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
@@ -1763,7 +1763,7 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     land_point_dist_raster_path_list = []
 
     # Get pixel size
-    mean_pixel_size = mean_pixel_size(
+    mean_pixel_size = _calc_mean_pixel_size(
         pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
 
     # Get the original layer definition which holds needed attribute values
@@ -1881,7 +1881,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
         'nodata'][0]
     # Get pixel size from biophysical output
-    mean_pixel_size = mean_pixel_size(
+    mean_pixel_size = _calc_mean_pixel_size(
         pygeoprocessing.get_raster_info(harvested_masked_path)['pixel_size'])
 
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
@@ -2214,9 +2214,9 @@ def validate(args, limit_to=None):
     return warnings
 
 
-def mean_pixel_size(pixel_size):
+def _calc_mean_pixel_size(pixel_size):
     """A placeholder until we debug why pixels are not square."""
     LOGGER.warning(
         "this function assumes a square pixel but they're not in the code "
         "base.")
-    return abs(pixel_size[0])
+    return (abs(pixel_size[0])+abs(pixel_size[1]))/2.0
