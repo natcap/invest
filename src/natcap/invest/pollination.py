@@ -1,6 +1,5 @@
 """Pollinator service model for InVEST."""
 from __future__ import absolute_import
-import tempfile
 import itertools
 import collections
 import re
@@ -8,7 +7,6 @@ import os
 import logging
 import hashlib
 import inspect
-import uuid
 
 from osgeo import gdal
 from osgeo import ogr
@@ -444,7 +442,8 @@ def execute(args):
         # create a convolution kernel for the species flight range
         alpha = (
             scenario_variables['alpha_value'][species] /
-            float(landcover_raster_info['mean_pixel_size']))
+            utils.mean_pixel_size_and_area(
+                landcover_raster_info['pixel_size'])[0])
         kernel_path = os.path.join(
             intermediate_output_dir, _KERNEL_FILE_PATTERN % (
                 alpha, file_suffix))
