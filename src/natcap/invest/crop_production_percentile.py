@@ -151,7 +151,8 @@ def execute(args):
         edge_samples=11)
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(_INTERMEDIATE_OUTPUT_DIR, '_tmp_work_tokens')
+    work_token_dir = os.path.join(
+        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
