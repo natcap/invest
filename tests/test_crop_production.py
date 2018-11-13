@@ -43,7 +43,6 @@ class CropProductionTests(unittest.TestCase):
                 SAMPLE_DATA_PATH, 'landcover_to_crop_table.csv'),
             'aggregate_polygon_path': os.path.join(
                 SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
-            'aggregate_polygon_id': 'id',
             'model_data_path': MODEL_DATA_PATH,
             'n_workers': '-1'
         }
@@ -73,7 +72,6 @@ class CropProductionTests(unittest.TestCase):
                 self.workspace_dir, 'landcover_to_badcrop_table.csv'),
             'aggregate_polygon_path': os.path.join(
                 SAMPLE_DATA_PATH, 'aggregate_shape.shp'),
-            'aggregate_polygon_id': 'id',
             'model_data_path': MODEL_DATA_PATH,
             'n_workers': '-1'
         }

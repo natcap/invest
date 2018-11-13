@@ -70,7 +70,7 @@ class CropProductionPercentile(model.InVESTModel):
                 u"sugarcane, sugarnes, sunflower, swedefor, "
                 u"sweetpotato, tangetc, taro, tea, tobacco, tomato, "
                 u"triticale, tropicalnes, tung, turnipfor, vanilla, "
-                u"vegetablenes, vegfor, vetch,walnut, watermelon, "
+                u"vegetablenes, vegfor, vetch, walnut, watermelon, "
                 u"wheat, yam, and yautia."),
             label=u'Landcover to Crop Table (csv)',
             validator=self.validator)
@@ -78,11 +78,9 @@ class CropProductionPercentile(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
@@ -156,11 +154,9 @@ class CropProductionRegression(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)

@@ -115,6 +115,7 @@ def execute(args):
 
     Returns:
         None.
+
     """
     crop_to_landcover_table = utils.build_lookup_from_csv(
         args['landcover_to_crop_table_path'], 'crop_name', to_lower=True)
@@ -217,7 +218,8 @@ def execute(args):
                     crop_name, yield_percentile_id, file_suffix))
             create_coarse_yield_percentile_task = graph.add_task(
                 func=pygeoprocessing.reclassify_raster,
-                args=((clipped_climate_bin_raster_path, 1), bin_to_percentile_yield,
+                args=((clipped_climate_bin_raster_path, 1),
+                      bin_to_percentile_yield,
                       coarse_yield_percentile_raster_path, gdal.GDT_Float32,
                       _NODATA_YIELD),
                 target_path_list=[coarse_yield_percentile_raster_path],
@@ -378,7 +380,7 @@ def _crop_production_op(
     """Mask in yields that overlap with `crop_lucode`."""
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
-    valid_mask = lulc_array != landcover_nodata
+    valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
     lulc_mask = lulc_array == crop_lucode
     result[valid_mask] = 0
     result[lulc_mask] = (
@@ -391,7 +393,7 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
     result[:] = 0.0
-    valid_mask = observed_yield_array != observed_yield_nodata
+    valid_mask = ~numpy.isclose(observed_yield_array, observed_yield_nodata)
     result[valid_mask] = observed_yield_array[valid_mask]
     return result
 
@@ -402,7 +404,7 @@ def _mask_observed_yield_op(
     """Mask total observed yield to crop lulc type."""
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     result[:] = observed_yield_nodata
-    valid_mask = lulc_array != landcover_nodata
+    valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
     lulc_mask = lulc_array == crop_lucode
     result[valid_mask] = 0
     result[lulc_mask] = (
@@ -450,9 +452,9 @@ def tabulate_results(
             for _, yield_block in pygeoprocessing.iterblocks(
                     observed_production_raster_path):
                 production_pixel_count += numpy.count_nonzero(
-                    (yield_block != observed_yield_nodata) & (yield_block > 0.0))
+                    ~numpy.isclose(yield_block, observed_yield_nodata) & (yield_block > 0.0))
                 yield_sum += numpy.sum(
-                    yield_block[observed_yield_nodata != yield_block])
+                    yield_block[~numpy.isclose(observed_yield_nodata, yield_block)])
             production_area[crop_name] = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area[crop_name])
@@ -467,7 +469,7 @@ def tabulate_results(
                 for _, yield_block in pygeoprocessing.iterblocks(
                         yield_percentile_raster_path):
                     yield_sum += numpy.sum(
-                        yield_block[_NODATA_YIELD != yield_block])
+                        yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
                 result_table.write(",%f" % yield_sum)
 
@@ -492,7 +494,7 @@ def tabulate_results(
         for _, band_values in pygeoprocessing.iterblocks(
                 landcover_raster_path):
             total_area += numpy.count_nonzero(
-                (band_values != landcover_nodata))
+                ~numpy.isclose(band_values, landcover_nodata))
         result_table.write(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))
@@ -658,13 +660,15 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(
+                        args[key], gdal.OF_RASTER | gdal.OF_READONLY)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(
+                        args[key], gdal.OF_VECTOR | gdal.OF_READONLY)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))
