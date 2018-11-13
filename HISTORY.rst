@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Hydropower subwatershed results now include all the same metrics as the
+  watershed results, with the exception of economic valuation metrics.
+* Reimplimenting the Hydropower model using taskgraph.
 * Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
