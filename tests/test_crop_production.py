@@ -48,10 +48,21 @@ class CropProductionTests(unittest.TestCase):
         }
         crop_production_percentile.execute(args)
 
-        result_table_path = os.path.join(
+        agg_result_table_path = os.path.join(
             args['workspace_dir'], 'aggregate_results.csv')
-        expected_result_table_path = os.path.join(
+        expected_agg_result_table_path = os.path.join(
             TEST_DATA_PATH, 'expected_aggregate_results.csv')
+        expected_agg_result_table = pandas.read_csv(
+            expected_agg_result_table_path)
+        agg_result_table = pandas.read_csv(
+            agg_result_table_path)
+        pandas.testing.assert_frame_equal(
+            expected_agg_result_table, agg_result_table, check_dtype=False)
+
+        result_table_path = os.path.join(
+            args['workspace_dir'], 'result_table.csv')
+        expected_result_table_path = os.path.join(
+            TEST_DATA_PATH, 'expected_result_table.csv')
         expected_result_table = pandas.read_csv(
             expected_result_table_path)
         result_table = pandas.read_csv(

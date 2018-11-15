@@ -62,7 +62,7 @@ _OBSERVED_PRODUCTION_FILE_PATTERN = os.path.join(
 
 # file_suffix
 _AGGREGATE_VECTOR_FILE_PATTERN = os.path.join(
-    _INTERMEDIATE_OUTPUT_DIR, 'aggrgate_vector%s.shp')
+    _INTERMEDIATE_OUTPUT_DIR, 'aggregate_vector%s.shp')
 
 # file_suffix
 _AGGREGATE_TABLE_FILE_PATTERN = os.path.join(
@@ -224,7 +224,8 @@ def execute(args):
                       _NODATA_YIELD),
                 target_path_list=[coarse_yield_percentile_raster_path],
                 dependent_task_list=[crop_climate_bin_task],
-                task_name='create_coarse_yield_percentile_%s_%s' % (crop_name, yield_percentile_id))
+                task_name='create_coarse_yield_percentile_%s_%s' % (
+                    crop_name, yield_percentile_id))
             dependent_task_list.append(create_coarse_yield_percentile_task)
 
             LOGGER.info(
@@ -239,7 +240,8 @@ def execute(args):
                         'target_bb': landcover_raster_info['bounding_box']},
                 target_path_list=[interpolated_yield_percentile_raster_path],
                 dependent_task_list=[create_coarse_yield_percentile_task],
-                task_name='create_interpolated_yield_percentile_%s_%s' % (crop_name, yield_percentile_id))
+                task_name='create_interpolated_yield_percentile_%s_%s' % (
+                    crop_name, yield_percentile_id))
             dependent_task_list.append(create_interpolated_yield_percentile_task)
 
             LOGGER.info(
@@ -256,11 +258,13 @@ def execute(args):
                        (interpolated_yield_percentile_raster_path, 1),
                        (landcover_nodata, 'raw'), (crop_lucode, 'raw'),
                        (pixel_area_ha, 'raw')],
-                      _crop_production_op, percentile_crop_production_raster_path,
+                      _crop_production_op,
+                      percentile_crop_production_raster_path,
                       gdal.GDT_Float32, _NODATA_YIELD),
                 target_path_list=[percentile_crop_production_raster_path],
                 dependent_task_list=[create_interpolated_yield_percentile_task],
-                task_name='create_percentile_production_%s_%s' % (crop_name, yield_percentile_id))
+                task_name='create_percentile_production_%s_%s' % (
+                    crop_name, yield_percentile_id))
             dependent_task_list.append(create_percentile_production_task)
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
@@ -347,13 +351,14 @@ def execute(args):
 
     tabulate_results_task = graph.add_task(
         func=tabulate_results,
-        args=(nutrient_table, output_dir, yield_percentile_headers,
-              crop_to_landcover_table, file_suffix, pixel_area_ha,
+        args=(nutrient_table, yield_percentile_headers,
+              crop_to_landcover_table, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
-              result_table_path),
+              output_dir, file_suffix, result_table_path),
         target_path_list=[result_table_path],
         dependent_task_list=dependent_task_list,
         task_name='tabulate_results')
+
     if ('aggregate_polygon_path' in args and
             args['aggregate_polygon_path'] not in ['', None]):
         LOGGER.info("aggregating result over query polygon")
@@ -363,10 +368,12 @@ def execute(args):
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
         aggregate_results_task = graph.add_task(
             func=aggregate_to_polygons,
-            args=(output_dir, file_suffix, landcover_raster_info,
+            args=(args['aggregate_polygon_path'],
+                  target_aggregate_vector_path,
+                  landcover_raster_info['projection'],
                   crop_to_landcover_table, nutrient_table,
-                  yield_percentile_headers, args['aggregate_polygon_path'],
-                  target_aggregate_vector_path, aggregate_results_table_path),
+                  yield_percentile_headers, output_dir, file_suffix,
+                  aggregate_results_table_path),
             target_path_list=[target_aggregate_vector_path,
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
@@ -377,7 +384,19 @@ def execute(args):
 
 def _crop_production_op(
         lulc_array, yield_array, landcover_nodata, crop_lucode, pixel_area_ha):
-    """Mask in yields that overlap with `crop_lucode`."""
+    """Mask in yields that overlap with `crop_lucode`.
+
+    Parameters:
+        lulc_array (numpy.ndarray): landcover raster values
+        yield_array (numpy.ndarray): interpolated yield raster values
+        landcover_nodata (float): extracted from landcover raster values
+        crop_lucode (int): code used to mask in the current crop
+        pixel_area_ha (float): area of lulc raster cells (hectares)
+
+    Returns:
+        numpy.ndarray with float values of yields for the current crop
+
+    """
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     result[:] = _NODATA_YIELD
     valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
@@ -389,7 +408,16 @@ def _crop_production_op(
 
 
 def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
-    """Calculate observed 'actual' yield."""
+    """Reclassify observed_yield nodata to zero.
+
+    Parameters:
+        observed_yield_array (numpy.ndarray): raster values
+        observed_yield_nodata (float): raster nodata value
+
+    Returns:
+        numpy.ndarray with observed yield values
+
+    """
     result = numpy.empty(
         observed_yield_array.shape, dtype=numpy.float32)
     result[:] = 0.0
@@ -401,22 +429,56 @@ def _zero_observed_yield_op(observed_yield_array, observed_yield_nodata):
 def _mask_observed_yield_op(
         lulc_array, observed_yield_array, observed_yield_nodata,
         landcover_nodata, crop_lucode, pixel_area_ha):
-    """Mask total observed yield to crop lulc type."""
+    """Mask total observed yield to crop lulc type.
+
+    Parameters:
+        lulc_array (numpy.ndarray): landcover raster values
+        observed_yield_array (numpy.ndarray): yield raster values
+        observed_yield_nodata (float): yield raster nodata value
+        landcover_nodata (float): landcover raster nodata value
+        crop_lucode (int): code used to mask in the current crop
+        pixel_area_ha (float): area of lulc raster cells (hectares)
+
+    Returns:
+        numpy.ndarray with float values of yields masked to crop_lucode
+
+    """
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
     result[:] = observed_yield_nodata
     valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
     lulc_mask = lulc_array == crop_lucode
-    result[valid_mask] = 0
+    result[valid_mask] = 0.0
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
     return result
 
 
 def tabulate_results(
-        nutrient_table, output_dir, yield_percentile_headers,
-        crop_to_landcover_table, file_suffix, pixel_area_ha,
-        landcover_raster_path, landcover_nodata, result_table_path):
+        nutrient_table, yield_percentile_headers,
+        crop_to_landcover_table, pixel_area_ha, landcover_raster_path,
+        landcover_nodata, output_dir, file_suffix, target_table_path):
+    """Write table with total yield and nutrient results by crop.
 
+    This function includes all the operations that write to results_table.csv.
+
+    Parameters:
+        nutrient_table (dict): a lookup of nutrient values by crop in the
+            form of nutrient_table[<crop>][<nutrient>].
+        yield_percentile_headers (list): list of strings indicating percentiles
+            at which yield was calculated.
+        crop_to_landcover_table (dict): landcover codes keyed by crop names
+        pixel_area_ha (float): area of lulc raster cells (hectares)
+        landcover_raster_path (string): path to landcover raster
+        landcover_nodata (float): landcover raster nodata value
+        output_dir (string): the file path to the output workspace.
+        file_suffix (string): string to appened to any output filenames.
+        target_table_path (string): path to 'result_table.csv' in the output
+            workspace
+
+    Returns:
+        None
+
+    """
     LOGGER.info("Generating report table")
     production_percentile_headers = [
         'production_' + re.match(
@@ -430,7 +492,7 @@ def tabulate_results(
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
-    with open(result_table_path, 'wb') as result_table:
+    with open(target_table_path, 'wb') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
             ','.join(production_percentile_headers) + ',' + ','.join(
@@ -445,16 +507,18 @@ def tabulate_results(
                 output_dir,
                 _OBSERVED_PRODUCTION_FILE_PATTERN % (
                     crop_name, file_suffix))
-            
+
             LOGGER.info("Calculating production area and summing observed yield.")
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
                     observed_production_raster_path):
                 production_pixel_count += numpy.count_nonzero(
-                    ~numpy.isclose(yield_block, observed_yield_nodata) & (yield_block > 0.0))
+                    ~numpy.isclose(yield_block, observed_yield_nodata) &
+                    (yield_block > 0.0))
                 yield_sum += numpy.sum(
-                    yield_block[~numpy.isclose(observed_yield_nodata, yield_block)])
+                    yield_block[
+                        ~numpy.isclose(observed_yield_nodata, yield_block)])
             production_area[crop_name] = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
             result_table.write(',%f' % production_area[crop_name])
@@ -501,98 +565,123 @@ def tabulate_results(
 
 
 def aggregate_to_polygons(
-    output_dir, file_suffix, landcover_raster_info, crop_to_landcover_table,
-    nutrient_table, yield_percentile_headers, base_aggregate_vector_path,
-    target_aggregate_vector_path, aggregate_table_path):
+        base_aggregate_vector_path, target_aggregate_vector_path,
+        landcover_raster_projection, crop_to_landcover_table,
+        nutrient_table, yield_percentile_headers, output_dir, file_suffix,
+        target_aggregate_table_path):
+    """Write table with aggregate results of yield and nutrient values.
 
-        # reproject polygon to LULC's projection
-        pygeoprocessing.reproject_vector(
-            base_aggregate_vector_path,
-            landcover_raster_info['projection'],
-            target_aggregate_vector_path, layer_index=0,
-            driver_name='ESRI Shapefile')
+    Use zonal statistics to summarize total observed and interpolated
+    production and nutrient information for each polygon in
+    base_aggregate_vector_path.
 
-        # loop over every crop and query with pgp function
-        total_yield_lookup = {}
-        total_nutrient_table = collections.defaultdict(
-            lambda: collections.defaultdict(lambda: collections.defaultdict(
-                float)))
-        for crop_name in crop_to_landcover_table:
-            # convert 100g to Mg and fraction left over from refuse
-            nutrient_factor = 1e4 * (
-                1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
-            # loop over percentiles
-            for yield_percentile_id in yield_percentile_headers:
-                percentile_crop_production_raster_path = os.path.join(
-                    output_dir,
-                    _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
-                        crop_name, yield_percentile_id, file_suffix))
-                LOGGER.info(
-                    "Calculating zonal stats for %s  %s", crop_name,
-                    yield_percentile_id)
-                total_yield_lookup['%s_%s' % (
-                    crop_name, yield_percentile_id)] = (
-                        pygeoprocessing.zonal_statistics(
-                            (percentile_crop_production_raster_path, 1),
-                            target_aggregate_vector_path))
+    Parameters:
+        base_aggregate_vector_path (string): path to polygon vector
+        target_aggregate_vector_path (string):
+            path to re-projected copy of polygon vector
+        landcover_raster_projection (string): a WKT projection string
+        crop_to_landcover_table (dict): landcover codes keyed by crop names
+        nutrient_table (dict): a lookup of nutrient values by crop in the
+            form of nutrient_table[<crop>][<nutrient>].
+        yield_percentile_headers (list): list of strings indicating percentiles
+            at which yield was calculated.
+        output_dir (string): the file path to the output workspace.
+        file_suffix (string): string to appened to any output filenames.
+        target_aggregate_table_path (string): path to 'aggregate_results.csv'
+            in the output workspace
 
-                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                    for id_index in total_yield_lookup['%s_%s' % (
-                            crop_name, yield_percentile_id)]:
-                        total_nutrient_table[nutrient_id][
-                            yield_percentile_id][id_index] += (
-                                nutrient_factor *
-                                total_yield_lookup['%s_%s' % (
-                                    crop_name, yield_percentile_id)][
-                                        id_index]['sum'] *
-                                nutrient_table[crop_name][nutrient_id])
+    Returns:
+        None
 
-            # process observed
-            observed_yield_path = os.path.join(
-                output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
-                    crop_name, file_suffix))
-            total_yield_lookup['%s_observed' % crop_name] = (
-                pygeoprocessing.zonal_statistics(
-                    (observed_yield_path, 1),
-                    target_aggregate_vector_path))
+    """
+    # reproject polygon to LULC's projection
+    pygeoprocessing.reproject_vector(
+        base_aggregate_vector_path,
+        landcover_raster_projection,
+        target_aggregate_vector_path, layer_index=0,
+        driver_name='ESRI Shapefile')
+
+    # loop over every crop and query with pgp function
+    total_yield_lookup = {}
+    total_nutrient_table = collections.defaultdict(
+        lambda: collections.defaultdict(lambda: collections.defaultdict(
+            float)))
+    for crop_name in crop_to_landcover_table:
+        # convert 100g to Mg and fraction left over from refuse
+        nutrient_factor = 1e4 * (
+            1.0 - nutrient_table[crop_name]['Percentrefuse'] / 100.0)
+        # loop over percentiles
+        for yield_percentile_id in yield_percentile_headers:
+            percentile_crop_production_raster_path = os.path.join(
+                output_dir,
+                _PERCENTILE_CROP_PRODUCTION_FILE_PATTERN % (
+                    crop_name, yield_percentile_id, file_suffix))
+            LOGGER.info(
+                "Calculating zonal stats for %s  %s", crop_name,
+                yield_percentile_id)
+            total_yield_lookup['%s_%s' % (
+                crop_name, yield_percentile_id)] = (
+                    pygeoprocessing.zonal_statistics(
+                        (percentile_crop_production_raster_path, 1),
+                        target_aggregate_vector_path))
+
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                for id_index in total_yield_lookup['%s_observed' % crop_name]:
-                    total_nutrient_table[
-                        nutrient_id]['observed'][id_index] += (
+                for id_index in total_yield_lookup['%s_%s' % (
+                        crop_name, yield_percentile_id)]:
+                    total_nutrient_table[nutrient_id][
+                        yield_percentile_id][id_index] += (
                             nutrient_factor *
-                            total_yield_lookup[
-                                '%s_observed' % crop_name][id_index]['sum'] *
+                            total_yield_lookup['%s_%s' % (
+                                crop_name, yield_percentile_id)][
+                                    id_index]['sum'] *
                             nutrient_table[crop_name][nutrient_id])
 
-        # use that result to calculate nutrient totals
+        # process observed
+        observed_yield_path = os.path.join(
+            output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
+                crop_name, file_suffix))
+        total_yield_lookup['%s_observed' % crop_name] = (
+            pygeoprocessing.zonal_statistics(
+                (observed_yield_path, 1),
+                target_aggregate_vector_path))
+        for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+            for id_index in total_yield_lookup['%s_observed' % crop_name]:
+                total_nutrient_table[
+                    nutrient_id]['observed'][id_index] += (
+                        nutrient_factor *
+                        total_yield_lookup[
+                            '%s_observed' % crop_name][id_index]['sum'] *
+                        nutrient_table[crop_name][nutrient_id])
 
-        # report everything to a table
-        with open(aggregate_table_path, 'wb') as aggregate_table:
-            # write header
-            aggregate_table.write('FID,')
-            aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
-            aggregate_table.write(
-                ','.join([
-                    '%s_%s' % (nutrient_id, model_type)
-                    for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
-                    for model_type in sorted(
-                        total_nutrient_table.itervalues().next())]))
+    # use that result to calculate nutrient totals
+
+    # report everything to a table
+    with open(target_aggregate_table_path, 'wb') as aggregate_table:
+        # write header
+        aggregate_table.write('FID,')
+        aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
+        aggregate_table.write(
+            ','.join([
+                '%s_%s' % (nutrient_id, model_type)
+                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
+                for model_type in sorted(
+                    total_nutrient_table.itervalues().next())]))
+        aggregate_table.write('\n')
+
+        # iterate by polygon index
+        for id_index in total_yield_lookup.itervalues().next():
+            aggregate_table.write('%s,' % id_index)
+            aggregate_table.write(','.join([
+                str(total_yield_lookup[yield_header][id_index]['sum'])
+                for yield_header in sorted(total_yield_lookup)]))
+
+            for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
+                for model_type in sorted(
+                        total_nutrient_table.itervalues().next()):
+                    aggregate_table.write(
+                        ',%s' % total_nutrient_table[
+                            nutrient_id][model_type][id_index])
             aggregate_table.write('\n')
-
-            # iterate by polygon index
-            for id_index in total_yield_lookup.itervalues().next():
-                aggregate_table.write('%s,' % id_index)
-                aggregate_table.write(','.join([
-                    str(total_yield_lookup[yield_header][id_index]['sum'])
-                    for yield_header in sorted(total_yield_lookup)]))
-
-                for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
-                    for model_type in sorted(
-                            total_nutrient_table.itervalues().next()):
-                        aggregate_table.write(
-                            ',%s' % total_nutrient_table[
-                                nutrient_id][model_type][id_index])
-                aggregate_table.write('\n')
 
 
 # This decorator ensures the input arguments are formatted for InVEST
