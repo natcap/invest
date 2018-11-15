@@ -228,14 +228,16 @@ def execute(args):
         task_name='ls factor calculation')
 
     stream_task = task_graph.add_task(
-        func=_threshold_flow_accumulation,
+        func=pygeoprocessing.routing.extract_streams_mfd,
         args=(
-            f_reg['flow_accumulation_path'],
+            (f_reg['flow_accumulation_path'], 1),
+            (f_reg['flow_direction_path'], 1),
             float(args['threshold_flow_accumulation']),
             f_reg['stream_path']),
+        kwargs={'trace_threshold_proportion': 0.7},
         target_path_list=[f_reg['stream_path']],
         dependent_task_list=[flow_accumulation_task],
-        task_name='flow threshold to streams')
+        task_name='extract streams')
 
     if drainage_present:
         drainage_task = task_graph.add_task(
