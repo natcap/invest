@@ -1263,6 +1263,8 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
         valid_pixels_mask = ((dist_arr != raster_nodata) &
                              (dist_arr >= min_dist) & (dist_arr <= max_dist))
+        import pdb
+        pdb.set_trace()
         out_array[
             valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
         return out_array
@@ -1890,7 +1892,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
                            grid_poly_dist_raster_path, work_dir)
 
     def dist_meters_op(tmp_dist):
-        """vectorize_dataset operation that multiplies by the pixel size
+        """Multiply the pixel value of a raster by the mean pixel size.
 
         Parameters:
             tmp_dist (np.array): an nd numpy array
