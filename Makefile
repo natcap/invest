@@ -2,11 +2,11 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 177
+SVN_DATA_REPO_REV       := 180
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 183
+SVN_TEST_DATA_REPO_REV  := 192
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
