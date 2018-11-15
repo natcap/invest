@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Hydropower subwatershed results now include all the same metrics as the
+  watershed results, with the exception of economic valuation metrics.
+* Reimplimenting the Hydropower model using taskgraph.
+* Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
 * Updating core carbon forest edge regression data coefficient to drop
@@ -21,6 +25,10 @@ Unreleased Changes
   thread will be written to the log file, which we expect to aid in debugging.
 * Fixing an issue with Scenic Quality where viewpoints outside of the AOI
   were not being properly excluded.  Viewpoints are now excluded correctly.
+* The crop production model has been refactored to drop the "aggregate ID"
+  concept when summarizing results across an aggregate polygon. The model now
+  uses the polygon FIDs internally and externally when producing the result
+  summary table.
 
 3.5.0 (2018-08-14)
 ------------------

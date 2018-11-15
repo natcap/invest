@@ -4,7 +4,6 @@ import math
 import logging
 import tempfile
 import shutil
-import collections
 import itertools
 import heapq
 import struct
@@ -489,7 +488,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     spatial_reference = osr.SpatialReference()
     spatial_reference.ImportFromWkt(vis_raster_info['projection'])
     linear_units = spatial_reference.GetLinearUnits()
-    pixel_size_in_m = vis_raster_info['mean_pixel_size'] * linear_units
+    pixel_size_in_m = utils.mean_pixel_size_and_area(
+        vis_raster_info['pixel_size'])[0] * linear_units
 
     valuation_raster = gdal.OpenEx(valuation_raster_path,
                                    gdal.OF_RASTER | gdal.GA_Update)
@@ -617,8 +617,10 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     LOGGER.info('Clipping the DEM to its intersection with the AOI.')
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-    pixel_size = (dem_raster_info['mean_pixel_size'],
-                  dem_raster_info['mean_pixel_size'])
+    mean_pixel_size = (
+        abs(dem_raster_info['pixel_size'][0]) +
+        abs(dem_raster_info['pixel_size'][1])) / 2.0
+    pixel_size = (mean_pixel_size, -mean_pixel_size)
 
     intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim, op) in
                          zip(aoi_vector_info['bounding_box'],
