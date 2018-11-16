@@ -164,7 +164,23 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
     utils.make_directories([inter_dir, out_dir])
 
-    bathymetry_path = args['bathymetry_path']
+    try:
+        bathy_pixel_size = pygeoprocessing.get_raster_info(
+            args['bathymetry_path'])['pixel_size']
+        mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
+        bathymetry_path = args['bathymetry_path']
+    except ValueError:
+        LOGGER.debug(
+            '%s has pixels that are not square. Resampling the raster to have '
+            'square pixels.' % args['bathymetry_path'])
+        bathymetry_path = os.path.join(inter_dir, 'bathymetry_resampled.tif')
+        # Get the minimum absolute value from the bathymetry pixel size tuple
+        mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
+        pygeoprocessing.warp_raster(
+            args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
+            bathymetry_path, 'near')
+
+    # bathymetry_path = args['bathymetry_path']
     number_of_turbines = int(args['number_of_turbines'])
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
@@ -323,8 +339,8 @@ def execute(args):
         LOGGER.info('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        clip_to_projected_coordinate_system(bathymetry_path, aoi_vector_path,
-                                            bathymetry_proj_raster_path)
+        clip_to_projection_with_square_pixels(bathymetry_path, aoi_vector_path,
+                                              bathymetry_proj_raster_path)
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -753,10 +769,7 @@ def execute(args):
 
     if 'valuation_container' in args and args['valuation_container'] is True:
         LOGGER.info('Starting Wind Energy Valuation Model')
-        # Pixel size to be used in later calculations and raster creations
-        mean_pixel_size = _calc_mean_pixel_size(
-            pygeoprocessing.get_raster_info(
-                harvested_masked_path)['pixel_size'])
+
         # path for final distance transform used in valuation calculations
         final_dist_raster_path = os.path.join(
             inter_dir, 'val_distance_trans%s.tif' % suffix)
@@ -1253,7 +1266,7 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         None.
 
     """
-    mean_pixel_size = _calc_mean_pixel_size(
+    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
         pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
@@ -1263,8 +1276,6 @@ def mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         out_array = np.full(dist_arr.shape, out_nodata, dtype=np.float32)
         valid_pixels_mask = ((dist_arr != raster_nodata) &
                              (dist_arr >= min_dist) & (dist_arr <= max_dist))
-        import pdb
-        pdb.set_trace()
         out_array[
             valid_pixels_mask] = dist_arr[valid_pixels_mask] * mean_pixel_size
         return out_array
@@ -1443,16 +1454,19 @@ def dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     output_layer.SyncToDisk()
 
 
-def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
-                                        target_raster_path):
+def clip_to_projection_with_square_pixels(base_raster_path, clip_vector_path,
+                                          target_raster_path):
     """Clip raster with vector into projected coordinate system.
 
-    If base raster is not already projected, choose a suitable UTM zone.
+    If base raster is not already projected, choose a suitable UTM zone. If
+    pixel size of target raster is not square, the minimum absolute value will
+    be used for target_pixel_size.
 
     Parameters:
         base_raster_path (str): path to base raster.
         clip_vector_path (str): path to base clip vector.
-        target_raster_path (str): path to output clipped raster.
+        target_raster_path (str): path to output clipped raster with square
+            pixel size.
 
     Returns:
         None.
@@ -1495,8 +1509,9 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
             target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
             target_srs.ExportToWkt())
 
-        target_pixel_size = convert_degree_pixel_size_to_meters(
+        target_pixel_size = convert_degree_pixel_size_to_square_meters(
             base_raster_info['pixel_size'], centroid_y)
+
         pygeoprocessing.warp_raster(
             base_raster_path,
             target_pixel_size,
@@ -1515,10 +1530,12 @@ def clip_to_projected_coordinate_system(base_raster_path, clip_vector_path,
             vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
-def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
+def convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     """Calculate meter size of a wgs84 square pixel.
 
-    Adapted from: https://gis.stackexchange.com/a/127327/2397
+    Adapted from: https://gis.stackexchange.com/a/127327/2397. If the pixel
+    is not square, this function will use the minimum absolute value from the
+    pixel dimension in the output meter_pixel_size_tuple.
 
     Parameters:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
@@ -1527,7 +1544,7 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
             latitude or an invalid area will be calculated.
 
     Returns:
-        `pixel_size` in meters.
+        `meter_pixel_size_tuple` with minimum absolute value in the pixel sizes
 
     """
     m1 = 111132.92
@@ -1543,8 +1560,14 @@ def convert_degree_pixel_size_to_meters(pixel_size, center_lat):
               m4 * math.cos(6 * lat))
     longlen = abs(p1 * math.cos(lat) + p2 * math.cos(3 * lat) +
                   p3 * math.cos(5 * lat))
+    x_meter_size = longlen * pixel_size[0]
+    y_meter_size = latlen * pixel_size[1]
+    meter_pixel_size_tuple = (x_meter_size, y_meter_size)
+    if not np.isclose(x_meter_size, y_meter_size):
+        min_meter_size = np.min(np.absolute(meter_pixel_size_tuple))
+        meter_pixel_size_tuple = (min_meter_size, -min_meter_size)
 
-    return (longlen * pixel_size[0], latlen * pixel_size[1])
+    return meter_pixel_size_tuple
 
 
 def wind_data_to_point_vector(dict_data,
@@ -1764,8 +1787,8 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     # A list to hold the individual distance transform path's in order
     land_point_dist_raster_path_list = []
 
-    # Get pixel size
-    mean_pixel_size = _calc_mean_pixel_size(
+    # Get the mean pixel size to calculate minimum distance from land to grid
+    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
         pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
 
     # Get the original layer definition which holds needed attribute values
@@ -1826,10 +1849,9 @@ def calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     l2g_dist_array = np.array(l2g_dist)
 
     def _min_land_ocean_dist(*grid_distances):
-        """vectorize_dataset operation to aggregate each features distance
-            transform output and create one distance output that has the
-            shortest distances combined with each features land to grid
-            distance
+        """Aggregate each features distance transform output and create one
+            distance output that has the shortest distances combined with each
+            features land to grid distance
 
         Parameters:
             *grid_distances (numpy.ndarray): a variable number of numpy.ndarray
@@ -1883,7 +1905,7 @@ def calculate_distances_grid(grid_vector_path, harvested_masked_path,
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
         'nodata'][0]
     # Get pixel size from biophysical output
-    mean_pixel_size = _calc_mean_pixel_size(
+    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
         pygeoprocessing.get_raster_info(harvested_masked_path)['pixel_size'])
 
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
