@@ -164,6 +164,7 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
     utils.make_directories([inter_dir, out_dir])
 
+    # Resample the bathymetry raster if it does not have square pixel size
     try:
         bathy_pixel_size = pygeoprocessing.get_raster_info(
             args['bathymetry_path'])['pixel_size']
@@ -180,7 +181,6 @@ def execute(args):
             args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
             bathymetry_path, 'near')
 
-    # bathymetry_path = args['bathymetry_path']
     number_of_turbines = int(args['number_of_turbines'])
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
