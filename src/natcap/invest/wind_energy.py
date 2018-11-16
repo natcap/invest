@@ -1153,7 +1153,7 @@ def execute(args):
 
 
 def _point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
-                              dist_field_name):
+                               dist_field_name):
     """Calculate the distances from points to the nearest polygon.
 
     Distances are calculated from points in a point geometry shapefile to the
@@ -1251,7 +1251,7 @@ def _read_csv_wind_parameters(csv_path, parameter_list):
 
 
 def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
-                     target_raster_path):
+                      target_raster_path):
     """Create a raster whose pixel values are bound by min and max distances.
 
     Parameters:
@@ -1286,7 +1286,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
 
 def _create_distance_raster(base_raster_path, base_vector_path,
-                           target_dist_raster_path, work_dir):
+                            target_dist_raster_path, work_dir):
     """Create and rasterize vector onto a raster, and calculate dist transform.
 
     Create a raster where the pixel values represent the euclidean distance to
@@ -1455,7 +1455,7 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
 
 def _clip_to_projection_with_square_pixels(base_raster_path, clip_vector_path,
-                                          target_raster_path):
+                                           target_raster_path):
     """Clip raster with vector into projected coordinate system.
 
     If base raster is not already projected, choose a suitable UTM zone. If
@@ -1571,9 +1571,9 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
 
 
 def _wind_data_to_point_vector(dict_data,
-                              layer_name,
-                              target_vector_path,
-                              ref_projection_wkt=None):
+                               layer_name,
+                               target_vector_path,
+                               ref_projection_wkt=None):
     """Create a point shapefile given a dictionary of the wind data fields.
 
     Parameters:
@@ -1666,7 +1666,7 @@ def _wind_data_to_point_vector(dict_data,
 
 
 def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
-                              target_vector_path, work_dir):
+                               target_vector_path, work_dir):
     """Clip a vector against an AOI and output result in AOI coordinates.
 
     Parameters:
@@ -1756,7 +1756,7 @@ def _clip_vector_by_vector(
 
 
 def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
-                                  target_dist_raster_path, work_dir):
+                                   target_dist_raster_path, work_dir):
     """Creates a distance transform raster.
 
     The distances are calculated based on the shortest distances of each point
@@ -1838,7 +1838,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
         dist_raster_path = os.path.join(temp_dir,
                                         'dist_%s.tif' % feature_index)
         _create_distance_raster(base_raster_path, single_feature_vector_path,
-                               dist_raster_path, work_dir)
+                                dist_raster_path, work_dir)
         # Add each features distance transform result to list
         land_point_dist_raster_path_list.append(dist_raster_path)
 
@@ -1877,7 +1877,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
 
 def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
-                             final_dist_raster_path, work_dir):
+                              final_dist_raster_path, work_dir):
     """Creates a distance transform raster from an OGR shapefile.
 
     The function first burns the features from 'grid_vector_path' onto a raster
@@ -1911,7 +1911,7 @@ def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
 
     _create_distance_raster(harvested_masked_path, grid_vector_path,
-                           grid_poly_dist_raster_path, work_dir)
+                            grid_poly_dist_raster_path, work_dir)
 
     def _dist_meters_op(tmp_dist):
         """Multiply the pixel value of a raster by the mean pixel size.
