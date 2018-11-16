@@ -88,7 +88,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test given testing inputs
-        wind_energy.calculate_distances_land_grid(
+        wind_energy._calculate_distances_land_grid(
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare the results
@@ -137,7 +137,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             vector_format='ESRI Shapefile', filename=point_file)
         # Call function to test
         field_name = 'L2G'
-        wind_energy.point_to_polygon_distance(
+        wind_energy._point_to_polygon_distance(
             point_vector_path, poly_vector_path, field_name)
 
         exp_results = [.15, .1, .05, .05]
@@ -161,7 +161,7 @@ class WindEnergyUnitTests(unittest.TestCase):
             'air_density', 'exponent_power_curve', 'decommission_cost',
             'operation_maintenance_cost', 'miscellaneous_capex_cost']
 
-        result = wind_energy.read_csv_wind_parameters(csv_path, parameter_list)
+        result = wind_energy._read_csv_wind_parameters(csv_path, parameter_list)
 
         expected_result = {
             'air_density': 1.225, 'exponent_power_curve': 2.0,
@@ -197,7 +197,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test
-        wind_energy.calculate_distances_grid(
+        wind_energy._calculate_distances_grid(
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
@@ -220,7 +220,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -267,7 +267,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy.wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
