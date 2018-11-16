@@ -2236,11 +2236,3 @@ def validate(args, limit_to=None):
             pass
 
     return warnings
-
-
-def _calc_mean_pixel_size(pixel_size):
-    """A placeholder until we debug why pixels are not square."""
-    LOGGER.warning(
-        "this function assumes a square pixel but they're not in the code "
-        "base.")
-    return (abs(pixel_size[0])+abs(pixel_size[1]))/2.0
