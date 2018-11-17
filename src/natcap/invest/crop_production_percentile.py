@@ -499,9 +499,8 @@ def tabulate_results(
                 nutrient_headers) + '\n')
         for crop_name in sorted(crop_to_landcover_table):
             result_table.write(crop_name)
-            production_area = collections.defaultdict(float)
             production_lookup = {}
-            production_pixel_count = 0.0
+            production_pixel_count = 0
             yield_sum = 0.0
             observed_production_raster_path = os.path.join(
                 output_dir,
@@ -519,9 +518,9 @@ def tabulate_results(
                 yield_sum += numpy.sum(
                     yield_block[
                         ~numpy.isclose(observed_yield_nodata, yield_block)])
-            production_area[crop_name] = production_pixel_count * pixel_area_ha
+            production_area = production_pixel_count * pixel_area_ha
             production_lookup['observed'] = yield_sum
-            result_table.write(',%f' % production_area[crop_name])
+            result_table.write(',%f' % production_area)
             result_table.write(",%f" % yield_sum)
 
             for yield_percentile_id in sorted(yield_percentile_headers):
@@ -652,8 +651,6 @@ def aggregate_to_polygons(
                         total_yield_lookup[
                             '%s_observed' % crop_name][id_index]['sum'] *
                         nutrient_table[crop_name][nutrient_id])
-
-    # use that result to calculate nutrient totals
 
     # report everything to a table
     with open(target_aggregate_table_path, 'wb') as aggregate_table:
