@@ -477,7 +477,7 @@ def _calculate_ls_factor(
 
     Parameters:
         flow_accumulation_path (string): path to raster, pixel values are the
-            contributing upstream area at that cell
+            contributing upstream area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
         aspect_path string): path to raster flow direction raster in radians
         out_ls_factor_path (string): path to output ls_factor raster
@@ -491,8 +491,7 @@ def _calculate_ls_factor(
     flow_accumulation_info = pygeoprocessing.get_raster_info(
         flow_accumulation_path)
     flow_accumulation_nodata = flow_accumulation_info['nodata'][0]
-    cell_size, cell_area = utils.mean_pixel_size_and_area(
-            flow_accumulation_info['pixel_size'])
+    cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
@@ -573,7 +572,8 @@ def _calculate_rkls(
     (revised universal soil loss equation with no C or P).
 
     Parameters:
-        ls_factor_path (string): path to LS raster
+        ls_factor_path (string): path to LS raster that has square pixels in
+            meter units.
         erosivity_path (string): path to per pixel erosivity raster
         erodibility_path (string): path to erodibility raster
         stream_path (string): path to drainage raster
@@ -590,9 +590,9 @@ def _calculate_rkls(
     stream_nodata = pygeoprocessing.get_raster_info(
         stream_path)['nodata'][0]
 
-    cell_size, cell_area = utils.mean_pixel_size_and_area(
-        pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'])
-    cell_area_ha = cell_area / 10000.0
+    cell_size = abs(
+        pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
+    cell_area_ha = cell_size**2 / 10000.0
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
@@ -822,9 +822,8 @@ def _calculate_bar_factor(
 def _calculate_d_up(
         w_bar_path, s_bar_path, flow_accumulation_path, out_d_up_path):
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
-    _, cell_area = utils.mean_pixel_size_and_area(
-            pygeoprocessing.get_raster_info(w_bar_path)['pixel_size'])
-
+    cell_area = abs(
+        pygeoprocessing.get_raster_info(w_bar_path)['pixel_size'][0])**2
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
@@ -853,8 +852,8 @@ def _calculate_d_up(
 def _calculate_d_up_bare(
         s_bar_path, flow_accumulation_path, out_d_up_bare_path):
     """Calculate s_bar * sqrt(flow accumulation * cell area)."""
-    _, cell_area = utils.mean_pixel_size_and_area(
-            pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'])
+    cell_area = abs(
+        pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'][0])**2
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
