@@ -150,21 +150,25 @@ def execute(args):
     for file_key in ['dem', 'lulc', 'erosivity', 'erodibility']:
         base_list.append(args[file_key + "_path"])
         aligned_list.append(f_reg["aligned_" + file_key + "_path"])
+    # all continuous rasters can use bilinaer, but lulc should be mode
+    interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
         drainage_present = True
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
+        interpolation_list.append(['near'])
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-    dem_pixel_size = dem_raster_info['pixel_size']
+    min_pixel_size = min([abs(x) for x in dem_raster_info['pixel_size']])
+    target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            base_list, aligned_list, ['near'] * len(base_list),
-            dem_pixel_size, 'intersection'),
+            base_list, aligned_list, interpolation_list,
+            target_pixel_size, 'intersection'),
         kwargs={
             'target_sr_wkt': dem_raster_info['projection'],
             'base_vector_path_list': [args['watersheds_path']],

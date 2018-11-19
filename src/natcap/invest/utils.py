@@ -503,10 +503,12 @@ def mean_pixel_size_and_area(pixel_size_tuple):
     Raises:
         ValueError if the dimensions of pixel_size_tuple are not almost
             square.
+
     """
     x_size, y_size = abs(pixel_size_tuple[0]), abs(pixel_size_tuple[1])
     if not numpy.isclose(x_size, y_size):
         raise ValueError(
-            "pixel size is not square. dimensions: %s", pixel_size_tuple)
+            "pixel size is not square. dimensions: %s" % repr(
+                pixel_size_tuple))
 
     return (x_size, x_size*y_size)

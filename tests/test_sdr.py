@@ -190,6 +190,25 @@ class SDRTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    def test_non_square_dem(self):
+        """SDR non-square DEM pixels.
+
+        Execute SDR with a non-square DEM and get a good result back.
+        """
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(self.workspace_dir)
+        args['dem_path'] = os.path.join(SAMPLE_DATA, 'dem_non_square.tif')
+        # make args explicit that this is a base run of SWY
+        sdr.execute(args)
+
+        SDRTests._assert_regression_results_equal(
+            args['workspace_dir'],
+            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'),
+            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
+
     def test_output_exists_regression(self):
         """SDR test case where an output shapefile already exists.
 

@@ -21,6 +21,6 @@ scipy>=0.16.1
 Shapely>=1.6.4
 six
 hg+https://bitbucket.org/richsharp/pygeoprocessing@95d03f2e70f5#egg=pygeoprocessing
-taskgraph[niced_processes]>=0.7.0
+taskgraph[niced_processes]>=0.7.1
 chardet>=3.0.4
 matplotlib
