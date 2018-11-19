@@ -209,13 +209,6 @@ def execute(args):
         LOGGER.warn(
             "The following lucodes are in the landcover to crop table but "
             "aren't in the landcover raster: %s", missing_lucodes)
-    # valid_lulc_txt_path = os.path.join(
-    #     output_dir, _INTERMEDIATE_OUTPUT_DIR, 'valid_lulc_values.txt')
-    # check_missing_lucodes_task = graph.add_task(
-    #     func=_check_missing_lucodes,
-    #     args=(args['landcover_raster_path'], crop_lucodes, valid_lulc_txt_path),
-    #     target_path_list=[valid_lulc_txt_path],
-    #     task_name='check_missing_lucodes')
 
     LOGGER.info("Checking that crops correspond to known types.")
     for crop_name in crop_to_landcover_table:
@@ -400,7 +393,7 @@ def execute(args):
             calc_nitrogen_yield_task,
             calc_phosphorous_yield_task,
             calc_potassium_yield_task))
-        
+
         LOGGER.info('Calc the min of N, K, and P')
         crop_production_raster_path = os.path.join(
             output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
@@ -499,7 +492,7 @@ def execute(args):
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
     tabulate_results_task = graph.add_task(
-        func=tabulate_results,
+        func=tabulate_regression_results,
         args=(nutrient_table,
               crop_to_landcover_table, pixel_area_ha,
               args['landcover_raster_path'], landcover_nodata,
@@ -517,7 +510,7 @@ def execute(args):
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
         aggregate_results_task = graph.add_task(
-            func=aggregate_to_polygons,
+            func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
                   landcover_raster_info['projection'],
@@ -529,41 +522,6 @@ def execute(args):
             dependent_task_list=dependent_task_list,
             task_name='aggregate_results_to_polygons')
     graph.join()
-
-
-# def _check_missing_lucodes(lulc_path, crop_lucodes, valid_lulc_txt_path):
-#     """Issue Warning if raster values don't appear in lookup table.
-
-#     LULC raster values that are missing from the landcover_to_crop_table
-#     is a common error.
-
-#     Parameters:
-#         lulc_path (string): file path to lulc raster
-#         crop_lucodes (list): codes found in args['landcover_to_crop_table_path']
-#         valid_lulc_txt_path (string): path to a file that gets created if
-#             there are no missing values. serves as target_path_list for
-#             taskgraph.
-
-#     Returns:
-#         None
-
-#     """
-#     unique_lucodes = numpy.array([])
-#     for _, lu_band_data in pygeoprocessing.iterblocks(
-#             lulc_path):
-#         unique_block = numpy.unique(lu_band_data)
-#         unique_lucodes = numpy.unique(numpy.concatenate(
-#             (unique_lucodes, unique_block)))
-
-#     missing_lucodes = set(crop_lucodes).difference(
-#         set(unique_lucodes))
-#     if len(missing_lucodes) > 0:
-#         LOGGER.warn(
-#             "The following lucodes are in the landcover to crop table but "
-#             "aren't in the landcover raster: %s", missing_lucodes)
-#     else:
-#         with open(valid_lulc_txt_path, 'w') as txt_file:
-#             txt_file.write('')
 
 
 def _x_yield_op_gen(fert_rate, crop_lucode, pixel_area_ha):
@@ -649,7 +607,7 @@ def _mask_observed_yield_op(
     return result
 
 
-def tabulate_results(
+def tabulate_regression_results(
         nutrient_table,
         crop_to_landcover_table, pixel_area_ha, landcover_raster_path,
         landcover_nodata, output_dir, file_suffix, target_table_path):
@@ -743,7 +701,8 @@ def tabulate_results(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))
 
-def aggregate_to_polygons(
+
+def aggregate_regression_results_to_polygons(
         base_aggregate_vector_path, target_aggregate_vector_path,
         landcover_raster_projection, crop_to_landcover_table,
         nutrient_table, output_dir, file_suffix,
@@ -871,6 +830,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []

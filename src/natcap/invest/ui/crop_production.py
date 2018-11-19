@@ -30,7 +30,10 @@ class CropProductionPercentile(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
@@ -126,7 +129,10 @@ class CropProductionRegression(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
