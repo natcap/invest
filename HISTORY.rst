@@ -7,6 +7,9 @@ Unreleased Changes
  'production_modeled' and '<nutrient>_modeled' values calculated for each crop   
   were done so using the same crop raster (e.g. wheat, soybean, and barley values 
   were all based on soybean data).
+* Hydropower subwatershed results now include all the same metrics as the
+  watershed results, with the exception of economic valuation metrics.
+* Reimplimenting the Hydropower model using taskgraph.
 * Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
