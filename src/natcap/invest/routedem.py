@@ -18,11 +18,44 @@ from . import validation
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 
 # replace %s with file suffix
+_TARGET_FILLED_PITS_FILED_PATTERN = 'filled%s.tif'
 _TARGET_SLOPE_FILE_PATTERN = 'slope%s.tif'
 _TARGET_FLOW_DIRECTION_FILE_PATTERN = 'flow_direction%s.tif'
 _FLOW_ACCUMULATION_FILE_PATTERN = 'flow_accumulation%s.tif'
 _STREAM_MASK_FILE_PATTERN = 'stream_mask%s.tif'
 _DOWNSTREAM_DISTANCE_FILE_PATTERN = 'downstream_distance%s.tif'
+
+_ROUTING_FUNCS = {
+    'D8': {
+        'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,
+        'flow_direction': pygeoprocessing.routing.flow_dir_d8,
+        'threshold_flow': None,  # Defined in source code here
+        'distance_to_channel': pygeoprocessing.routing.distance_to_channel_d8,
+    },
+    'MFD': {
+        'flow_accumulation': pygeoprocessing.routing.flow_accumulation_mfd,
+        'flow_direction': pygeoprocessing.routing.flow_dir_mfd,
+        'threshold_flow': pygeoprocessing.routing.extract_streams_mfd,
+        'distance_to_channel': pygeoprocessing.routing.distance_to_channel_mfd,
+    }
+}
+
+
+def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
+    out_matrix = numpy.empty(flow_accum_pixels.shape, dtype=numpy.uint8)
+    out_matrix[:] = out_nodata
+    valid_pixels = ~numpy.isclose(flow_accum_pixels, in_nodata)
+    stream_mask = (flow_accum_pixels > threshold)
+    out_matrix[valid_pixels & stream_mask] = 1
+    out_matrix[valid_pixels & ~stream_mask] = 0
+    return out_matrix
+
+
+def _log_callable(message, func):
+    def _call(*args, **kwargs):
+        LOGGER.info(message)
+        return func(*args, **kwargs)
+    return _call
 
 
 def execute(args):
@@ -58,7 +91,8 @@ def execute(args):
         ``None``
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    utils.make_directories([args['workspace_dir']])
+    task_cache_dir = os.path.join(args['workspace_dir'], '_tmp_work_tokens')
+    utils.make_directories([args['workspace_dir'], task_cache_dir])
     dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
     if dem_info['n_bands'] > 1:
         LOGGER.warn(
@@ -66,21 +100,46 @@ def execute(args):
             "on band 1.", args['dem_path'])
     dem_raster_path_band = (args['dem_path'], 1)
 
+    graph = taskgraph.TaskGraph(task_cache_dir, n_workers=-1)
+
     # Calculate slope
     if 'calculate_slope' in args and bool(args['calculate_slope']):
-        LOGGER.info("Calculating slope")
         target_slope_path = os.path.join(
             args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
-        pygeoprocessing.calculate_slope(
-            dem_raster_path_band, target_slope_path)
+        graph.add_task(
+            _log_callable('Calculating slope',
+                          pygeoprocessing.calculate_slope),
+            args=(dem_raster_path_band,
+                  target_slope_path),
+            task_name='calculate_slope',
+            target_path_list=[target_slope_path])
+
+    algorithm = args['algorithm'].upper()
+    routing_funcs = _ROUTING_FUNCS[algorithm]
+
+    dem_filled_pits_path = _TARGET_FILLED_PITS_FILED_PATTERN % suffix
+    filled_pits_task = taskgraph.add_task(
+        _log_callable('Filling hydrological sinks',
+                      pygeoprocessing.routing.fill_pits),
+        args=((args['dem_path'], 1),
+              dem_filled_pits_path,
+              args['workspace'])
+        task_name='fill_pits',
+        target_path_list=[dem_filled_pits_path])
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow direction")
-    flow_direction_path = os.path.join(
+    flow_dir_path = os.path.join(
         args['workspace_dir'],
         _TARGET_FLOW_DIRECTION_FILE_PATTERN % file_suffix)
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        args['dem_path'], flow_direction_path)
+    flow_direction_task = graph.add_task(
+        _log_callable('Calculating flow direction',
+                      routing_funcs['flow_direction']),
+        args=((args['dem_path'], 1),
+              flow_dir_path,
+              args['workspace_dir']),
+        target_path_list=[flow_dir_path],
+        task_name='flow_dir_%s' % algorithm)
 
     if ('calculate_flow_accumulation' in args and
             bool(args['calculate_flow_accumulation'])):
@@ -88,34 +147,70 @@ def execute(args):
         flow_accumulation_path = os.path.join(
             args['workspace_dir'],
             _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
-        natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
-            flow_direction_path, args['dem_path'], flow_accumulation_path)
+        flow_accum_task = graph.add_task(
+            _log_callable('Calculating flow accumulation',
+                          routing_funcs['flow_accumulation']),
+            args=((flow_dir_path, 1),
+                  flow_accumulation_path
+            ),  # TODO allow weight raster to be provided.
+            target_path_list=[flow_accumulation_path],
+            task_name='flow_accumulation',
+            dependent_task_list=[flow_direction_task])
 
         if ('calculate_stream_threshold' in args and
                 bool(args['calculate_stream_threshold'])):
             LOGGER.info("Classifying streams from flow accumulation raster")
 
-            flow_accumulation_threshold = float(
-                args['threshold_flow_accumulation'])
-
-            LOGGER.info(
-                "Calculating stream threshold at %s pixels",
-                flow_accumulation_threshold)
-            stream_mask_path = os.path.join(
-                args['workspace_dir'],
-                _STREAM_MASK_FILE_PATTERN % file_suffix)
-
-            natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
-                flow_accumulation_path, flow_accumulation_threshold,
-                stream_mask_path)
+            stream_mask_path = _STREAM_MASK_FILE_PATTERN % suffix
+            if algorithm == 'D8':
+                flow_accum_task.join()
+                flow_accum_info = pygeoprocessing.get_raster_info(
+                    flow_accumulation_path)
+                stream_threshold_task = graph.add_task(
+                    _log_callable('Classifying streams from flow '
+                                  'accumulation raster',
+                                  pygeoprocessing.raster_calculator),
+                    args=(((flow_accumulation_path, 1),
+                           (float(args['stream_threshold']), 'raw'),
+                           (flow_accum_info['nodata'][0], 'raw'),
+                           (255, 'raw')),
+                          _threshold_flow,
+                          stream_mask_path,
+                          gdal.GDT_Byte,
+                          255),
+                    target_path_list=[stream_mask_path],
+                    task_name='stream_thresholding_d8',
+                    dependent_task_list=[flow_accum_task])
+            else:  # MFD
+                stream_threshold_task = graph.add_task(
+                    _log_callable('Classifying streams from MFD flow '
+                                  'accumulation',
+                                  routing_funcs['threshold_flow']),
+                    # TODO: support trace threshold proportion
+                    args=((flow_accumulation_path, 1),
+                          (flow_dir_path, 1),
+                          float(args['stream_threshold']),
+                          stream_mask_path),
+                    target_path_list=[stream_mask_path],
+                    task_name=['stream_extraction_mfd'],
+                    dependent_path_list=[flow_accum_task])
 
             if ('calculate_downstream_distance' in args and
                     bool(args['calculate_downstream_distance'])):
                 distance_path = os.path.join(
                     args['workspace_dir'],
                     _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
-                natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
-                    flow_direction_path, stream_mask_path, distance_path)
+                graph.add_task(
+                    _log_callable('Calculating distance to stream',
+                                  routing_funcs['distance_to_channel']),
+                    # TODO: support the weight raster
+                    args=((flow_dir_path, 1),
+                          (stream_mask_path, 1),
+                          distance_path),
+                    target_path_list=[distance_path],
+                    task_name='downstream_distance',
+                    dependent_task_list=[stream_threshold_task])
+    graph.join()
 
 
 @validation.invest_validator
