@@ -100,7 +100,7 @@ _MODEL_UIS = {
         gui='recreation.Recreation',
         aliases=()),
     'routedem': _UIMETA(
-        pyname='natcap.invest.routing.routedem',
+        pyname='natcap.invest.routedem',
         gui='routing.RouteDEM',
         aliases=()),
     'scenario_generator': _UIMETA(

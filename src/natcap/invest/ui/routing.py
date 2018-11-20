@@ -1,7 +1,8 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-from natcap.invest.routing import delineateit, routedem
+from natcap.invest.routing import delineateit
+from natcap.invest import routedem
 
 
 class Delineateit(model.InVESTModel):

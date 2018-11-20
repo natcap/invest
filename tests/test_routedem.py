@@ -25,7 +25,7 @@ class RouteDEMTests(unittest.TestCase):
 
     def test_routedem_single_threshold(self):
         """RouteDem: regression testing single stream threshold."""
-        from natcap.invest.routing import routedem
+        from natcap.invest import routedem
         args = {
             'calculate_stream_threshold': True,
             'results_suffix': 'test',

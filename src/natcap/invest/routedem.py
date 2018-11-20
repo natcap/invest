@@ -11,8 +11,8 @@ import pygeoprocessing.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 
-from .. import utils
-from .. import validation
+from . import utils
+from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.routing.routedem')
 
