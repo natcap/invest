@@ -154,13 +154,11 @@ def execute(args):
                   flow_accumulation_path
             ),  # TODO allow weight raster to be provided.
             target_path_list=[flow_accumulation_path],
-            task_name='flow_accumulation',
+            task_name='flow_accumulation_%s' % algorithm,
             dependent_task_list=[flow_direction_task])
 
         if ('calculate_stream_threshold' in args and
                 bool(args['calculate_stream_threshold'])):
-            LOGGER.info("Classifying streams from flow accumulation raster")
-
             stream_mask_path = _STREAM_MASK_FILE_PATTERN % suffix
             if algorithm == 'D8':
                 flow_accum_task.join()
@@ -179,7 +177,7 @@ def execute(args):
                           gdal.GDT_Byte,
                           255),
                     target_path_list=[stream_mask_path],
-                    task_name='stream_thresholding_d8',
+                    task_name='stream_thresholding_D8',
                     dependent_task_list=[flow_accum_task])
             else:  # MFD
                 stream_threshold_task = graph.add_task(
@@ -192,7 +190,7 @@ def execute(args):
                           float(args['stream_threshold']),
                           stream_mask_path),
                     target_path_list=[stream_mask_path],
-                    task_name=['stream_extraction_mfd'],
+                    task_name=['stream_extraction_MFD'],
                     dependent_path_list=[flow_accum_task])
 
             if ('calculate_downstream_distance' in args and
@@ -208,7 +206,7 @@ def execute(args):
                           (stream_mask_path, 1),
                           distance_path),
                     target_path_list=[distance_path],
-                    task_name='downstream_distance',
+                    task_name='downstream_distance_%s' % algorithm,
                     dependent_task_list=[stream_threshold_task])
     graph.join()
 
