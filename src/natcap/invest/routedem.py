@@ -10,6 +10,7 @@ import pygeoprocessing
 import pygeoprocessing.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+import taskgraph
 
 from . import utils
 from . import validation
@@ -25,10 +26,10 @@ _DOWNSTREAM_DISTANCE_FILE_PATTERN = 'downstream_distance%s.tif'
 
 
 def execute(args):
-    """RouteDEM: D-Infinity Routing.
+    """RouteDEM: Hydrological routing.
 
-    This model exposes the pygeoprocessing_0_3_3 d-infinity routing
-    functionality as an InVEST model.
+    This model exposes the pygeoprocessing D8 and Multiple Flow Direction
+    routing functionality as an InVEST model.
 
     Parameters:
         args['workspace_dir'] (string): output directory for intermediate,
@@ -36,12 +37,14 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['dem_path'] (string): path to a digital elevation raster
+        args['algorithm'] (string): The routing algorithm to use.  Must be
+            one of 'D8' or 'MFD' (case-insensitive).
         args['calculate_flow_accumulation'] (bool): If True, model will
             calculate a flow accumulation raster.
         args['calculate_stream_threshold'] (bool): if True, model will
             calculate a stream classification layer by thresholding flow
             accumulation to the provided value in
-            args['threshold_flow_accumulation'].
+            ``args['threshold_flow_accumulation']``.
         args['threshold_flow_accumulation'] (int): The number of upstream
             cells that must flow into a cell before it's classified as a
             stream.
@@ -49,7 +52,7 @@ def execute(args):
             threshold is calculated, model will calculate a downstream
             distance raster in units of pixels.
         args['calculate_slope'] (bool):  If True, model will calculate a
-            slope raster.
+            slope raster from the DEM.
 
     Returns:
         ``None``
