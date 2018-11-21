@@ -181,7 +181,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # Single process mode.
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
     dependent_task_list = []
 
     LOGGER.info(
@@ -255,7 +255,7 @@ def execute(args):
                 crop_name, file_suffix))
         crop_climate_bin_raster_info = pygeoprocessing.get_raster_info(
             crop_climate_bin_raster_path)
-        crop_climate_bin_task = graph.add_task(
+        crop_climate_bin_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(crop_climate_bin_raster_path,
                   crop_climate_bin_raster_info['pixel_size'],
@@ -305,7 +305,7 @@ def execute(args):
                 output_dir,
                 _COARSE_YIELD_REGRESSION_PARAMETER_FILE_PATTERN % (
                     crop_name, yield_regression_id, file_suffix))
-            create_coarse_regression_parameter_task = graph.add_task(
+            create_coarse_regression_parameter_task = task_graph.add_task(
                 func=pygeoprocessing.reclassify_raster,
                 args=((clipped_climate_bin_raster_path, 1),
                       bin_to_regression_value,
@@ -320,7 +320,7 @@ def execute(args):
             LOGGER.info(
                 "Interpolate %s %s parameter to landcover resolution.",
                 crop_name, yield_regression_id)
-            create_interpolated_parameter_task = graph.add_task(
+            create_interpolated_parameter_task = task_graph.add_task(
                 func=pygeoprocessing.warp_raster,
                 args=(coarse_regression_parameter_raster_path,
                       landcover_raster_info['pixel_size'],
@@ -339,7 +339,7 @@ def execute(args):
         nitrogen_yield_raster_path = os.path.join(
             output_dir, _NITROGEN_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calc_nitrogen_yield_task = graph.add_task(
+        calc_nitrogen_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
@@ -357,7 +357,7 @@ def execute(args):
         phosphorous_yield_raster_path = os.path.join(
             output_dir, _PHOSPHOROUS_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calc_phosphorous_yield_task = graph.add_task(
+        calc_phosphorous_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
@@ -375,7 +375,7 @@ def execute(args):
         potassium_yield_raster_path = os.path.join(
             output_dir, _POTASSIUM_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calc_potassium_yield_task = graph.add_task(
+        calc_potassium_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
@@ -399,7 +399,7 @@ def execute(args):
             output_dir, _CROP_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
 
-        calc_min_NKP_task = graph.add_task(
+        calc_min_NKP_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(nitrogen_yield_raster_path, 1),
                    (phosphorous_yield_raster_path, 1),
@@ -420,7 +420,7 @@ def execute(args):
         clipped_observed_yield_raster_path = os.path.join(
             output_dir, _CLIPPED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
-        clip_global_observed_yield_task = graph.add_task(
+        clip_global_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(global_observed_yield_raster_path,
                   global_observed_yield_raster_info['pixel_size'],
@@ -437,7 +437,7 @@ def execute(args):
             output_dir, _ZEROED_OBSERVED_YIELD_FILE_PATTERN % (
                 crop_name, file_suffix))
 
-        nodata_to_zero_for_observed_yield_task = graph.add_task(
+        nodata_to_zero_for_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(clipped_observed_yield_raster_path, 1),
                    (observed_yield_nodata, 'raw')],
@@ -454,7 +454,7 @@ def execute(args):
 
         LOGGER.info(
             "Interpolating observed %s raster to landcover.", crop_name)
-        interpolate_observed_yield_task = graph.add_task(
+        interpolate_observed_yield_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(zeroed_observed_yield_raster_path,
                   landcover_raster_info['pixel_size'],
@@ -469,7 +469,7 @@ def execute(args):
         observed_production_raster_path = os.path.join(
             output_dir, _OBSERVED_PRODUCTION_FILE_PATTERN % (
                 crop_name, file_suffix))
-        calculate_observed_production_task = graph.add_task(
+        calculate_observed_production_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(args['landcover_raster_path'], 1),
                    (interpolated_observed_yield_raster_path, 1),
@@ -491,7 +491,7 @@ def execute(args):
     LOGGER.info("Generating report table")
     result_table_path = os.path.join(
         output_dir, 'result_table%s.csv' % file_suffix)
-    tabulate_results_task = graph.add_task(
+    tabulate_results_task = task_graph.add_task(
         func=tabulate_regression_results,
         args=(nutrient_table,
               crop_to_landcover_table, pixel_area_ha,
@@ -509,7 +509,7 @@ def execute(args):
             output_dir, _AGGREGATE_VECTOR_FILE_PATTERN % (file_suffix))
         aggregate_results_table_path = os.path.join(
             output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-        aggregate_results_task = graph.add_task(
+        aggregate_results_task = task_graph.add_task(
             func=aggregate_regression_results_to_polygons,
             args=(args['aggregate_polygon_path'],
                   target_aggregate_vector_path,
@@ -521,7 +521,9 @@ def execute(args):
                               aggregate_results_table_path],
             dependent_task_list=dependent_task_list,
             task_name='aggregate_results_to_polygons')
-    graph.join()
+
+    task_graph.close()
+    task_graph.join()
 
 
 def _x_yield_op_gen(fert_rate, crop_lucode, pixel_area_ha):
@@ -531,6 +533,10 @@ def _x_yield_op_gen(fert_rate, crop_lucode, pixel_area_ha):
     the nitrogen, phosporous, and potassium.  The only difference is
     the scalars in the equation.  So this closure avoids repeating the
     same function 3 times for 3 almost identical raster_calculator calls.
+
+    Returns:
+        A local_op function to pass to pygeoprocessing.raster_calculator.
+
     """
     def _x_yield_op(y_max, b_x, c_x, lulc_array):
         """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
