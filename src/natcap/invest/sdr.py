@@ -161,7 +161,7 @@ def execute(args):
         interpolation_list.append(['near'])
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
-    min_pixel_size = min([abs(x) for x in dem_raster_info['pixel_size']])
+    min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     align_task = task_graph.add_task(
