@@ -30,7 +30,10 @@ class CropProductionPercentile(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
@@ -70,7 +73,7 @@ class CropProductionPercentile(model.InVESTModel):
                 u"sugarcane, sugarnes, sunflower, swedefor, "
                 u"sweetpotato, tangetc, taro, tea, tobacco, tomato, "
                 u"triticale, tropicalnes, tung, turnipfor, vanilla, "
-                u"vegetablenes, vegfor, vetch,walnut, watermelon, "
+                u"vegetablenes, vegfor, vetch, walnut, watermelon, "
                 u"wheat, yam, and yautia."),
             label=u'Landcover to Crop Table (csv)',
             validator=self.validator)
@@ -78,11 +81,9 @@ class CropProductionPercentile(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
@@ -91,6 +92,7 @@ class CropProductionPercentile(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
+            self.n_workers.args_key: self.n_workers.value(),
             self.model_data_path.args_key: self.model_data_path.value(),
             self.landcover_raster_path.args_key:
                 self.landcover_raster_path.value(),
@@ -127,7 +129,10 @@ class CropProductionRegression(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
@@ -155,11 +160,9 @@ class CropProductionRegression(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)

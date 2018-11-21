@@ -2,6 +2,11 @@
 
 Unreleased Changes
 ------------------
+* Reimplementing Crop Production models using taskgraph.
+* Fixing an issue with Crop Production Regression's result_table.csv where the
+ 'production_modeled' and '<nutrient>_modeled' values calculated for each crop   
+  were done so using the same crop raster (e.g. wheat, soybean, and barley values 
+  were all based on soybean data).
 * Hydropower subwatershed results now include all the same metrics as the
   watershed results, with the exception of economic valuation metrics.
 * Reimplimenting the Hydropower model using taskgraph.
