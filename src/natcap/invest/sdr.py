@@ -173,9 +173,7 @@ def execute(args):
             'target_sr_wkt': dem_raster_info['projection'],
             'base_vector_path_list': [args['watersheds_path']],
             'raster_align_index': 0,
-            'vector_mask_options': {
-                'mask_vector_path': args['watersheds_path'],
-            }},
+            },
         target_path_list=aligned_list,
         task_name='align input rasters')
 
