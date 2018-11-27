@@ -214,6 +214,24 @@ class RouteDEMTests(unittest.TestCase):
             expected_downstream_distance,
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray())
+
+    def test_routedem_mfd(self):
+        from natcap.invest import routedem
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'algorithm': 'mfd',
+            'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'results_suffix': 'foo',
+            'calculate_flow_direction': True,
+            'calculate_flow_accumulation': True,
+            'calculate_stream_threshold': True,
+            'calculate_downstream_distance': True,
+            'calculate_slope': True,
+            'threshold_flow_accumulation': 4,
+        }
+
+        RouteDEMTests._make_dem(args['dem_path'])
+        routedem.execute(args)
             
 
 

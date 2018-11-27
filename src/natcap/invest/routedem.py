@@ -216,11 +216,11 @@ def execute(args):
                         # TODO: support trace threshold proportion
                         args=((flow_accumulation_path, 1),
                               (flow_dir_path, 1),
-                              float(args['stream_threshold']),
+                              float(args['threshold_flow_accumulation']),
                               stream_mask_path),
                         target_path_list=[stream_mask_path],
                         task_name=['stream_extraction_MFD'],
-                        dependent_path_list=[flow_accum_task])
+                        dependent_task_list=[flow_accum_task])
 
                 if ('calculate_downstream_distance' in args and
                         bool(args['calculate_downstream_distance'])):
