@@ -11,6 +11,7 @@ import pygeoprocessing.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing
 import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 import taskgraph
+import numpy
 
 from . import utils
 from . import validation
@@ -98,6 +99,16 @@ def execute(args):
         LOGGER.warn(
             "There are more than 1 bands in %s.  RouteDEM will only operate "
             "on band 1.", args['dem_path'])
+
+    # Check the algorithm early so we can fail quickly.
+    algorithm = args['algorithm'].upper()
+    try:
+        routing_funcs = _ROUTING_FUNCS[algorithm]
+    except KeyError:
+        raise RuntimeError(
+            'Invalid algorithm specified (%s). Must be one of %s' % (
+                args['algorithm'], ', '.join(sorted(_ROUTING_FUNCS.keys()))))
+
     dem_raster_path_band = (args['dem_path'], 1)
 
     graph = taskgraph.TaskGraph(task_cache_dir, n_workers=-1)
@@ -114,16 +125,13 @@ def execute(args):
             task_name='calculate_slope',
             target_path_list=[target_slope_path])
 
-    algorithm = args['algorithm'].upper()
-    routing_funcs = _ROUTING_FUNCS[algorithm]
-
-    dem_filled_pits_path = _TARGET_FILLED_PITS_FILED_PATTERN % suffix
-    filled_pits_task = taskgraph.add_task(
+    dem_filled_pits_path = _TARGET_FILLED_PITS_FILED_PATTERN % file_suffix
+    filled_pits_task = graph.add_task(
         _log_callable('Filling hydrological sinks',
                       pygeoprocessing.routing.fill_pits),
         args=((args['dem_path'], 1),
               dem_filled_pits_path,
-              args['workspace'])
+              args['workspace_dir']),
         task_name='fill_pits',
         target_path_list=[dem_filled_pits_path])
 
@@ -159,7 +167,7 @@ def execute(args):
 
         if ('calculate_stream_threshold' in args and
                 bool(args['calculate_stream_threshold'])):
-            stream_mask_path = _STREAM_MASK_FILE_PATTERN % suffix
+            stream_mask_path = _STREAM_MASK_FILE_PATTERN % file_suffix
             if algorithm == 'D8':
                 flow_accum_task.join()
                 flow_accum_info = pygeoprocessing.get_raster_info(
@@ -169,7 +177,7 @@ def execute(args):
                                   'accumulation raster',
                                   pygeoprocessing.raster_calculator),
                     args=(((flow_accumulation_path, 1),
-                           (float(args['stream_threshold']), 'raw'),
+                           (float(args['threshold_flow_accumulation']), 'raw'),
                            (flow_accum_info['nodata'][0], 'raw'),
                            (255, 'raw')),
                           _threshold_flow,
