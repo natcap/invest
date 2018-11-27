@@ -29,12 +29,15 @@ class RouteDEMTests(unittest.TestCase):
     @staticmethod
     def _make_dem(target_path):
         # makes a 10x10 DEM with a valley in the middle that flows to row 0.
-        elevation = numpy.arange(1, 2, step=0.1).reshape((10, 1))
-        dem_array = numpy.tile(
-            numpy.concatenate((
-                numpy.flip(numpy.arange(5)),
-                numpy.arange(1, 5))),
-            (10, 1)) + elevation
+        elevation = numpy.arange(1.1, 2, step=0.1).reshape((9, 1))
+        valley = numpy.concatenate((
+            numpy.flip(numpy.arange(5)),
+            numpy.arange(1, 5)))
+        valley_with_sink = numpy.array([5, 4, 3, 2, 1.3, 1.3, 3, 4, 5])
+
+        dem_array = numpy.vstack((
+            valley_with_sink,
+            numpy.tile(valley, (9, 1)) + elevation))
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)
@@ -84,8 +87,23 @@ class RouteDEMTests(unittest.TestCase):
         }
 
         RouteDEMTests._make_dem(args['dem_path'])
-
         routedem.execute(args)
+
+        for expected_file in (
+                'downstream_distance_foo.tif',
+                'filled_foo.tif',
+                'flow_accumulation_foo.tif',
+                'flow_direction_foo.tif',
+                'slope_foo.tif',
+                'stream_mask_foo.tif'):
+            self.assertTrue(
+                os.path.exists(
+                    os.path.join(args['workspace_dir'], expected_file)),
+                'Raster not found: %s' % expected_file)
+
+            
+
+
 
         
 
