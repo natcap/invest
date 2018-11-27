@@ -162,7 +162,7 @@ def execute(args):
         flow_direction_task = graph.add_task(
             _log_callable('Calculating flow direction',
                           routing_funcs['flow_direction']),
-            args=((args['dem_path'], 1),
+            args=((dem_filled_pits_path, 1),
                   flow_dir_path,
                   args['workspace_dir']),
             target_path_list=[flow_dir_path],
