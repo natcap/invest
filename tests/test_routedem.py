@@ -177,6 +177,31 @@ class RouteDEMTests(unittest.TestCase):
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
 
+
+        expected_flow_accum = numpy.empty((10, 9), dtype=numpy.float64)
+        expected_flow_accum[:, 0:4] = numpy.arange(1, 5)
+        expected_flow_accum[:, 5:9] = numpy.flip(numpy.arange(1, 5))
+        expected_flow_accum[:, 4] = numpy.array(
+            [82, 77, 72, 63, 54, 45, 36, 27, 18, 9])
+        expected_flow_accum[1, 5] = 1
+        expected_flow_accum[0, 5] = 8
+
+        numpy.testing.assert_almost_equal(
+            expected_flow_accum,
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'flow_accumulation_foo.tif')).ReadAsArray())
+
+        expected_flow_direction = numpy.empty((10, 9), dtype=numpy.uint8)
+        expected_flow_direction[:, 0:4] = 0
+        expected_flow_direction[:, 5:9] = 4
+        expected_flow_direction[:, 4] = 2
+        expected_flow_direction[0:2, 5] = 2
+        expected_flow_direction[1, 6] = 3
+
+        numpy.testing.assert_almost_equal(
+            expected_flow_direction,
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray())
             
 
 
