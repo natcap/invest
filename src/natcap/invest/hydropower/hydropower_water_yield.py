@@ -550,7 +550,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     """Compute actual evapotranspiration values.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -573,7 +573,7 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """Calculate water yield.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -618,7 +618,7 @@ def fractp_op(
             precipitation.
 
     Returns:
-        numpy.ndarray of actual evapotranspiration as fraction
+        numpy.ndarray (float) of actual evapotranspiration as fraction
             of precipitation.
 
     """
@@ -675,7 +675,7 @@ def fractp_op(
         veg[valid_mask] == 1.0,
         veg_result, nonveg_result_fract)
 
-    fractp = numpy.empty_like(precip)
+    fractp = numpy.empty(valid_mask.shape, dtype=numpy.float32)
     fractp[:] = nodata_dict['out_nodata']
     fractp[valid_mask] = result
     return fractp
@@ -695,7 +695,7 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
         numpy.ndarray of potential evapotranspiration (mm)
 
     """
-    result = numpy.empty_like(eto_pix)
+    result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
     valid_mask = (~numpy.isclose(eto_pix, eto_nodata) &
                   ~numpy.isclose(Kc_pix, output_nodata))
