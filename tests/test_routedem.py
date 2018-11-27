@@ -160,6 +160,23 @@ class RouteDEMTests(unittest.TestCase):
                     os.path.join(args['workspace_dir'], expected_file)),
                 'Raster not found: %s' % expected_file)
 
+        expected_stream_mask = numpy.array([
+            [0, 0, 0, 0, 1, 1, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 0, 0, 0, 0],
+        ])
+        numpy.testing.assert_almost_equal(
+            expected_stream_mask,
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
+
             
 
 
