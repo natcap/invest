@@ -125,7 +125,9 @@ def execute(args):
             task_name='calculate_slope',
             target_path_list=[target_slope_path])
 
-    dem_filled_pits_path = _TARGET_FILLED_PITS_FILED_PATTERN % file_suffix
+    dem_filled_pits_path = os.path.join(
+        args['workspace_dir'],
+        _TARGET_FILLED_PITS_FILED_PATTERN % file_suffix)
     filled_pits_task = graph.add_task(
         _log_callable('Filling hydrological sinks',
                       pygeoprocessing.routing.fill_pits),
@@ -167,7 +169,9 @@ def execute(args):
 
         if ('calculate_stream_threshold' in args and
                 bool(args['calculate_stream_threshold'])):
-            stream_mask_path = _STREAM_MASK_FILE_PATTERN % file_suffix
+            stream_mask_path = os.path.join(
+                    args['workspace_dir'],
+                _STREAM_MASK_FILE_PATTERN % file_suffix)
             if algorithm == 'D8':
                 flow_accum_task.join()
                 flow_accum_info = pygeoprocessing.get_raster_info(
