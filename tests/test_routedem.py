@@ -64,6 +64,7 @@ class RouteDEMTests(unittest.TestCase):
             'algorithm': 'invalid',
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
             'results_suffix': 'foo',
+            'calculate_flow_direction': True,
         }
 
         RouteDEMTests._make_dem(args['dem_path'])
@@ -72,6 +73,63 @@ class RouteDEMTests(unittest.TestCase):
 
         self.assertTrue('Invalid algorithm specified' in str(cm.exception))
 
+    def test_routedem_no_options(self):
+        """RouteDEM: assert pitfilling when no other options given."""
+        from natcap.invest import routedem
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'results_suffix': 'foo',
+        }
+        RouteDEMTests._make_dem(args['dem_path'])
+        routedem.execute(args)
+
+        filled_raster_path = os.path.join(args['workspace_dir'], 'filled_foo.tif')
+        self.assertTrue(
+            os.path.exists(filled_raster_path),
+            'Filled DEM not created.')
+
+        # The one sink in the array should have been filled to 1.3.
+        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()
+        expected_filled_array[expected_filled_array < 1.3] = 1.3
+        
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
+        numpy.testing.assert_almost_equal(
+            expected_filled_array,
+            filled_array)
+
+    def test_routedem_slope(self):
+        """RouteDEM: assert slope option."""
+        from natcap.invest import routedem
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'results_suffix': 'foo',
+            'calculate_slope': True,
+        }
+        RouteDEMTests._make_dem(args['dem_path'])
+        routedem.execute(args)
+
+        for path in ('filled_foo.tif', 'slope_foo.tif'):
+            self.assertTrue(os.path.exists(
+                os.path.join(args['workspace_dir'], path)),
+                'File not found: %s' % path)
+
+        slope_array = gdal.OpenEx(
+            os.path.join(args['workspace_dir'], 'slope_foo.tif')).ReadAsArray()
+        # These were determined by inspection of the output array.
+        expected_unique_values = numpy.array(
+            [4.999998,  4.9999995, 5.000001, 5.0000043, 7.126098,
+             13.235317, 45.017357, 48.226353, 48.75, 49.56845,
+             50.249374, 50.24938, 50.249382, 55.17727, 63.18101],
+            dtype=numpy.float32).reshape((15,))
+        numpy.testing.assert_almost_equal(
+            expected_unique_values,
+            numpy.unique(slope_array))
+        numpy.testing.assert_almost_equal(numpy.sum(slope_array), 4088.7358, decimal=4)
+
     def test_routedem_d8(self):
         from natcap.invest import routedem
         args = {
@@ -79,6 +137,7 @@ class RouteDEMTests(unittest.TestCase):
             'algorithm': 'd8',
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
             'results_suffix': 'foo',
+            'calculate_flow_direction': True,
             'calculate_flow_accumulation': True,
             'calculate_stream_threshold': True,
             'calculate_downstream_distance': True,
