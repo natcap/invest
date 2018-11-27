@@ -202,6 +202,18 @@ class RouteDEMTests(unittest.TestCase):
             expected_flow_direction,
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray())
+
+        expected_downstream_distance = numpy.empty((10, 9), dtype=numpy.float64)
+        expected_downstream_distance[:, 0:5] = numpy.flip(numpy.arange(5))
+        expected_downstream_distance[2:, 5:] = numpy.arange(1, 5)
+        expected_downstream_distance[0, 5:] = numpy.arange(4)
+        expected_downstream_distance[1, 5] = 1
+        expected_downstream_distance[1, 6:] = numpy.arange(1, 4) + 0.41421356
+
+        numpy.testing.assert_almost_equal(
+            expected_downstream_distance,
+            gdal.OpenEx(os.path.join(
+                args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray())
             
 
 
