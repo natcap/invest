@@ -226,7 +226,7 @@ class RouteDEMTests(unittest.TestCase):
             'calculate_flow_accumulation': True,
             'calculate_stream_threshold': True,
             'calculate_downstream_distance': True,
-            'calculate_slope': True,
+            'calculate_slope': False,
             'threshold_flow_accumulation': 4,
         }
 
@@ -249,6 +249,22 @@ class RouteDEMTests(unittest.TestCase):
             expected_stream_mask,
             gdal.OpenEx(os.path.join(
                 args['workspace_dir'], 'stream_mask_foo.tif')).ReadAsArray())
+
+        # Raster sums are from manually-inspected outputs.
+        for filename, expected_sum in (
+                ('flow_accumulation_foo.tif', 678.94551294),
+                ('flow_direction_foo.tif', 40968303668.0),
+                ('downstream_distance_foo.tif', 162.28624753707527)):
+            raster_path = os.path.join(args['workspace_dir'], filename)
+            raster = gdal.OpenEx(raster_path)
+            if raster is None:
+                self.fail('Could not open raster %s' % filename)
+
+            self.assertEqual(raster.RasterYSize, expected_stream_mask.shape[0])
+            self.assertEqual(raster.RasterXSize, expected_stream_mask.shape[1])
+
+            raster_sum = numpy.sum(raster.ReadAsArray(), dtype=numpy.float64)
+            numpy.testing.assert_almost_equal(raster_sum, expected_sum)
             
 
 
