@@ -58,6 +58,7 @@ class RouteDEMTests(unittest.TestCase):
         dem_raster = None
 
     def test_routedem_invalid_algorithm(self):
+        """RouteDEM: fail when the algorithm isn't recognized."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
@@ -131,6 +132,7 @@ class RouteDEMTests(unittest.TestCase):
         numpy.testing.assert_almost_equal(numpy.sum(slope_array), 4088.7358, decimal=4)
 
     def test_routedem_d8(self):
+        """RouteDEM: test d8 routing."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
@@ -216,6 +218,7 @@ class RouteDEMTests(unittest.TestCase):
                 args['workspace_dir'], 'downstream_distance_foo.tif')).ReadAsArray())
 
     def test_routedem_mfd(self):
+        """RouteDEM: test mfd routing."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
