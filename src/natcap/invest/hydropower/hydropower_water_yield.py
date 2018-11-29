@@ -107,8 +107,6 @@ def execute(args):
     # which computes valuation if valuation_params is not None.
     valuation_params = None
     if 'valuation_table_path' in args and args['valuation_table_path'] != '':
-        # if 'demand_table_path' not in args or args['demand_table_path'] == '':
-        #     raise ValueError('Cannot compute valuation without a demand table')
         LOGGER.info(
             'Checking that watersheds have entries for every `ws_id` in the '
             'valuation table.')
