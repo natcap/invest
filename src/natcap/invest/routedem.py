@@ -16,7 +16,7 @@ import numpy
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.routing.routedem')
+LOGGER = logging.getLogger(__name__)
 
 # replace %s with file suffix
 _TARGET_FILLED_PITS_FILED_PATTERN = 'filled%s.tif'
@@ -43,6 +43,22 @@ _ROUTING_FUNCS = {
 
 
 def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
+    """Raster_calculator local_op to threshold D8 stream flow.
+
+    Parameters:
+        flow_accum_pixels (numpy.ndarray): Array representing the number of
+            pixels upstream of a given pixel.
+        threshold (int or float): The threshold above which we have a stream.
+        in_nodata (int or float): The nodata value of the flow accumulation
+            raster.
+        out_nodata (int): The nodata value of the target stream mask raster.
+
+    Returns:
+        A numpy.ndarray (dtype is numpy.uint8) with pixel values of 1 where
+        flow accumulation > threshold, 0 where flow accumulation < threshold
+        and out_nodata where flow accumulation is equal to in_nodata.
+
+    """
     out_matrix = numpy.empty(flow_accum_pixels.shape, dtype=numpy.uint8)
     out_matrix[:] = out_nodata
     valid_pixels = ~numpy.isclose(flow_accum_pixels, in_nodata)
@@ -53,6 +69,17 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
 
 
 def _log_callable(message, func):
+    """Log a title message before a function is called.
+
+    Parameters:
+        message (string): The message to log before calling ``func``.
+            This is intended (but not required) to be a title.
+        func (callable): the function to call after logging the message.
+
+    Returns:
+        A callable.
+
+    """
     def _call(*args, **kwargs):
         LOGGER.info(message)
         return func(*args, **kwargs)
