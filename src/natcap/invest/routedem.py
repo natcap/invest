@@ -73,6 +73,8 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['dem_path'] (string): path to a digital elevation raster
+        args['dem_band'] (int): Optional. The band index to operate on.
+            If not provided, band index 1 is assumed.
         args['algorithm'] (string): The routing algorithm to use.  Must be
             one of 'D8' or 'MFD' (case-insensitive). Required when calculating
             flow direction, flow accumulation, stream threshold, and downstream
@@ -106,11 +108,6 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     task_cache_dir = os.path.join(args['workspace_dir'], '_tmp_work_tokens')
     utils.make_directories([args['workspace_dir'], task_cache_dir])
-    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
-    if dem_info['n_bands'] > 1:
-        LOGGER.warn(
-            "There are more than 1 bands in %s.  RouteDEM will only operate "
-            "on band 1.", args['dem_path'])
 
     if ('calculate_flow_direction' in args and
             bool(args['calculate_flow_direction'])):
@@ -125,7 +122,13 @@ def execute(args):
                 'Invalid algorithm specified (%s). Must be one of %s' % (
                     args['algorithm'], ', '.join(sorted(_ROUTING_FUNCS.keys()))))
 
-    dem_raster_path_band = (args['dem_path'], 1)
+    if 'dem_band' in args and args['dem_band'] not in (None, ''):
+        band_index = int(args['dem_band'])
+    else:
+        band_index = 1
+    LOGGER.info('Using DEM band index %s', band_index)
+
+    dem_raster_path_band = (args['dem_path'], band_index)
 
     graph = taskgraph.TaskGraph(task_cache_dir, n_workers=-1)
 
@@ -238,7 +241,6 @@ def execute(args):
                         task_name='downstream_distance_%s' % algorithm,
                         dependent_task_list=[stream_threshold_task])
     graph.join()
-    # TODO: test routedem validate function
     # TODO: add needed functionality to the UI
     # TODO: add n_workers to the UI if it makes sense.
 
