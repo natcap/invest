@@ -296,6 +296,9 @@ def validate(args, limit_to=None):
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
             if (limit_to in [None, key]) and key in required_keys:
+                if args[key] in (None, ''):
+                    # should have already been caught
+                    break
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))
@@ -306,11 +309,5 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
 
     return validation_error_list
