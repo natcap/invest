@@ -73,7 +73,7 @@ def execute(args):
         args['results_suffix'] (string): (optional) string to append to any
             output file names
         args['dem_path'] (string): path to a digital elevation raster
-        args['dem_band'] (int): Optional. The band index to operate on.
+        args['dem_band_index'] (int): Optional. The band index to operate on.
             If not provided, band index 1 is assumed.
         args['algorithm'] (string): The routing algorithm to use.  Must be
             one of 'D8' or 'MFD' (case-insensitive). Required when calculating
@@ -122,8 +122,8 @@ def execute(args):
                 'Invalid algorithm specified (%s). Must be one of %s' % (
                     args['algorithm'], ', '.join(sorted(_ROUTING_FUNCS.keys()))))
 
-    if 'dem_band' in args and args['dem_band'] not in (None, ''):
-        band_index = int(args['dem_band'])
+    if 'dem_band_index' in args and args['dem_band_index'] not in (None, ''):
+        band_index = int(args['dem_band_index'])
     else:
         band_index = 1
     LOGGER.info('Using DEM band index %s', band_index)
@@ -150,7 +150,7 @@ def execute(args):
     filled_pits_task = graph.add_task(
         _log_callable('Filling hydrological sinks',
                       pygeoprocessing.routing.fill_pits),
-        args=((args['dem_path'], 1),
+        args=(dem_raster_path_band,
               dem_filled_pits_path,
               args['workspace_dir']),
         task_name='fill_pits',
@@ -165,7 +165,7 @@ def execute(args):
         flow_direction_task = graph.add_task(
             _log_callable('Calculating flow direction',
                           routing_funcs['flow_direction']),
-            args=((dem_filled_pits_path, 1),
+            args=((dem_filled_pits_path, band_index),
                   flow_dir_path,
                   args['workspace_dir']),
             target_path_list=[flow_dir_path],
@@ -292,6 +292,23 @@ def validate(args, limit_to=None):
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
 
+    if limit_to in ('dem_band_index', None):
+        if ('dem_band_index' in args and
+                args['dem_band_index'] not in (None, '')):
+            invalid_band_index_error_msg = 'must be a positive, nonzero integer'
+            invalid_index = False
+            try:
+                if int(args['dem_band_index']) < 1:
+                    invalid_index = True
+            except (ValueError, TypeError):
+                # ValueError when args['dem_band'] is an invalid string (such
+                # as 'foo')
+                # TypeError when an invalid type is passed.
+                invalid_index = True
+            if invalid_index:
+                validation_error_list.append(
+                    (['dem_band_index'], invalid_band_index_error_msg))
+
     file_type_list = [('dem_path', 'raster')]
 
     # check that existing/optional files are the correct types
@@ -311,5 +328,16 @@ def validate(args, limit_to=None):
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
+
+    if limit_to is None:
+        if ('dem_band_index' in args and
+                args['dem_band_index'] not in (None, '')):
+            # So, validation already passed so far on band index
+            if not invalid_index:  
+                dem_raster = gdal.OpenEx(args['dem_path'])
+                if int(args['dem_band_index']) > dem_raster.RasterCount:
+                    validation_error_list.append((
+                        ['dem_band_index'],
+                        'Must be between 1 and %s' % dem_raster.RasterCount))
 
     return validation_error_list

@@ -46,11 +46,15 @@ class RouteDEMTests(unittest.TestCase):
         driver = gdal.GetDriverByName('GTiff')
         dem_raster = driver.Create(
             target_path, dem_array.shape[1], dem_array.shape[0],
-            1, gdal.GDT_Float32, options=(
+            2, gdal.GDT_Float32, options=(
                 'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
         dem_raster.SetProjection(srs_wkt)
-        dem_band = dem_raster.GetRasterBand(1)
+        ones_band = dem_raster.GetRasterBand(1)
+        ones_band.SetNoDataValue(0)
+        ones_band.WriteArray(numpy.ones(dem_array.shape))
+
+        dem_band = dem_raster.GetRasterBand(2)
         dem_band.SetNoDataValue(-1)
         dem_band.WriteArray(dem_array)
         dem_geotransform = [2, 2, 0, -2, 0, -2]
@@ -81,6 +85,7 @@ class RouteDEMTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'dem_band_index': 2,
             'results_suffix': 'foo',
         }
         RouteDEMTests._make_dem(args['dem_path'])
@@ -92,10 +97,12 @@ class RouteDEMTests(unittest.TestCase):
             'Filled DEM not created.')
 
         # The one sink in the array should have been filled to 1.3.
-        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()
+        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[1]
         expected_filled_array[expected_filled_array < 1.3] = 1.3
 
-        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
+        # Filled rasters currently are copies of the target rasters, though
+        # pixels have only been filled from the desired band.
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()[1]
         numpy.testing.assert_almost_equal(
             expected_filled_array,
             filled_array)
@@ -107,6 +114,7 @@ class RouteDEMTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'dem_band_index': 2,
             'results_suffix': 'foo',
             'calculate_slope': True,
         }
@@ -138,6 +146,7 @@ class RouteDEMTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'algorithm': 'd8',
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'dem_band_index': 2,
             'results_suffix': 'foo',
             'calculate_flow_direction': True,
             'calculate_flow_accumulation': True,
@@ -224,6 +233,7 @@ class RouteDEMTests(unittest.TestCase):
             'workspace_dir': self.workspace_dir,
             'algorithm': 'mfd',
             'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'dem_band_index': 2,
             'results_suffix': 'foo',
             'calculate_flow_direction': True,
             'calculate_flow_accumulation': True,
@@ -353,3 +363,54 @@ class RouteDEMTests(unittest.TestCase):
         self.assertEqual(
             validation_errors[0],
             (['dem_path'], 'not a raster'))
+
+    def test_validation_band_index_type(self):
+        from natcap.invest import routedem
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'notafile.txt'),
+            'dem_band_index': xrange(1, 5),
+        }
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 2)
+        self.assertEqual(
+            validation_errors[0],
+            (['dem_band_index'], 'must be a positive, nonzero integer'))
+        self.assertEqual(
+            validation_errors[1],
+            (['dem_path'], 'not found on disk'))
+
+    def test_validation_band_index_negative_value(self):
+        from natcap.invest import routedem
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'notafile.txt'),
+            'dem_band_index': -5,
+        }
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 2)
+        self.assertEqual(
+            validation_errors[0],
+            (['dem_band_index'], 'must be a positive, nonzero integer'))
+        self.assertEqual(
+            validation_errors[1],
+            (['dem_path'], 'not found on disk'))
+
+    def test_validation_band_index_value_too_large(self):
+        from natcap.invest import routedem
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'raster.tif'),
+            'dem_band_index': 5,
+        }
+
+        # Has two bands, so band index 5 is too large.
+        RouteDEMTests._make_dem(args['dem_path'])
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 1)
+        self.assertEqual(
+            validation_errors[0],
+            (['dem_band_index'], 'Must be between 1 and 2'))
