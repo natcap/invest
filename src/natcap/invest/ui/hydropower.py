@@ -107,7 +107,7 @@ class HydropowerWaterYield(model.InVESTModel):
             args_key=u'do_scarcity_and_valuation',
             expandable=True,
             expanded=False,
-            label=u'Water Scarcity & Valuation')
+            label=u'Water Scarcity and Valuation')
         self.add_input(self.scarcity_valuation_container)
         self.demand_table = inputs.File(
             args_key=u'demand_table_path',
