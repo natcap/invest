@@ -269,8 +269,87 @@ class RouteDEMTests(unittest.TestCase):
             raster_sum = numpy.sum(raster.ReadAsArray(), dtype=numpy.float64)
             numpy.testing.assert_almost_equal(raster_sum, expected_sum)
 
+    def test_validation_required_args(self):
+        """RouteDEM: test required args in validation."""
+        from natcap.invest import routedem
+        args = {}
 
+        required_keys = ['workspace_dir', 'dem_path']
 
+        with self.assertRaises(KeyError) as cm:
+            routedem.validate(args)
+        for key in required_keys:
+            self.assertTrue(key in repr(cm.exception))
 
+    def test_validation_required_args_threshold(self):
+        """RouteDEM: test required args in validation (with threshold)."""
+        from natcap.invest import routedem
 
+        args = {'calculate_stream_threshold': True}
+        required_keys = [
+            'workspace_dir', 'dem_path', 'threshold_flow_accumulation']
 
+        with self.assertRaises(KeyError) as cm:
+            routedem.validate(args)
+        for key in required_keys:
+            self.assertTrue(key in repr(cm.exception))
+
+    def test_validation_required_args_none(self):
+        """RouteDEM: test validation of a present but None args."""
+        from natcap.invest import routedem
+        required_keys = ['workspace_dir', 'dem_path']
+        args = dict((k, None) for k in required_keys)
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 1)
+        self.assertEqual(
+            set(required_keys) - set(validation_errors[0][0]),
+            set([]))
+        self.assertEqual(
+            validation_errors[0][1], 'parameter has no value')
+
+    def test_validation_required_args_empty(self):
+        """RouteDEM: test validation of a present but empty args."""
+        from natcap.invest import routedem
+        required_keys = ['workspace_dir', 'dem_path']
+        args = dict((k, '') for k in required_keys)
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 1)
+        self.assertEqual(
+            set(required_keys) - set(validation_errors[0][0]),
+            set([]))
+        self.assertEqual(
+            validation_errors[0][1], 'parameter has no value')
+
+    def test_validation_dem_not_found(self):
+        """RouteDEM: test validation of a missing DEM."""
+        from natcap.invest import routedem
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'notafile.txt')
+        }
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 1)
+        self.assertEqual(
+            validation_errors[0],
+            (['dem_path'], 'not found on disk'))
+
+    def test_validation_invalid_raster(self):
+        """RouteDEM: test validation of an invalid DEM."""
+        from natcap.invest import routedem
+
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'badraster.tif'),
+        }
+
+        with open(args['dem_path'], 'w') as bad_raster:
+             bad_raster.write('This is an invalid raster format.')
+
+        validation_errors = routedem.validate(args)
+        self.assertEqual(len(validation_errors), 1)
+        self.assertEqual(
+            validation_errors[0],
+            (['dem_path'], 'not a raster'))
