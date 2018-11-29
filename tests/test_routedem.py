@@ -31,7 +31,7 @@ class RouteDEMTests(unittest.TestCase):
         # makes a 10x10 DEM with a valley in the middle that flows to row 0.
         elevation = numpy.arange(1.1, 2, step=0.1).reshape((9, 1))
         valley = numpy.concatenate((
-            numpy.flip(numpy.arange(5)),
+            numpy.flipud(numpy.arange(5)),
             numpy.arange(1, 5)))
         valley_with_sink = numpy.array([5, 4, 3, 2, 1.3, 1.3, 3, 4, 5])
 
@@ -94,7 +94,7 @@ class RouteDEMTests(unittest.TestCase):
         # The one sink in the array should have been filled to 1.3.
         expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()
         expected_filled_array[expected_filled_array < 1.3] = 1.3
-        
+
         filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
         numpy.testing.assert_almost_equal(
             expected_filled_array,
@@ -182,7 +182,7 @@ class RouteDEMTests(unittest.TestCase):
 
         expected_flow_accum = numpy.empty((10, 9), dtype=numpy.float64)
         expected_flow_accum[:, 0:4] = numpy.arange(1, 5)
-        expected_flow_accum[:, 5:9] = numpy.flip(numpy.arange(1, 5))
+        expected_flow_accum[:, 5:9] = numpy.flipud(numpy.arange(1, 5))
         expected_flow_accum[:, 4] = numpy.array(
             [82, 77, 72, 63, 54, 45, 36, 27, 18, 9])
         expected_flow_accum[1, 5] = 1
@@ -206,7 +206,7 @@ class RouteDEMTests(unittest.TestCase):
                 args['workspace_dir'], 'flow_direction_foo.tif')).ReadAsArray())
 
         expected_downstream_distance = numpy.empty((10, 9), dtype=numpy.float64)
-        expected_downstream_distance[:, 0:5] = numpy.flip(numpy.arange(5))
+        expected_downstream_distance[:, 0:5] = numpy.flipud(numpy.arange(5))
         expected_downstream_distance[2:, 5:] = numpy.arange(1, 5)
         expected_downstream_distance[0, 5:] = numpy.arange(4)
         expected_downstream_distance[1, 5] = 1
@@ -268,9 +268,9 @@ class RouteDEMTests(unittest.TestCase):
 
             raster_sum = numpy.sum(raster.ReadAsArray(), dtype=numpy.float64)
             numpy.testing.assert_almost_equal(raster_sum, expected_sum)
-            
 
 
 
-        
+
+
 
