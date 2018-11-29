@@ -101,7 +101,7 @@ _MODEL_UIS = {
         aliases=()),
     'routedem': _UIMETA(
         pyname='natcap.invest.routedem',
-        gui='routing.RouteDEM',
+        gui='routedem.RouteDEM',
         aliases=()),
     'scenario_generator': _UIMETA(
         pyname='natcap.invest.scenario_generator.scenario_generator',
