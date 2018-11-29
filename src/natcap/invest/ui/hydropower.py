@@ -103,12 +103,12 @@ class HydropowerWaterYield(model.InVESTModel):
             label=u'Z parameter',
             validator=self.validator)
         self.add_input(self.seasonality_constant)
-        self.water_scarcity_container = inputs.Container(
-            args_key=u'calculate_water_scarcity',
+        self.scarcity_valuation_container = inputs.Container(
+            args_key=u'do_scarcity_and_valuation',
             expandable=True,
             expanded=False,
-            label=u'Water Scarcity')
-        self.add_input(self.water_scarcity_container)
+            label=u'Water Scarcity & Valuation')
+        self.add_input(self.scarcity_valuation_container)
         self.demand_table = inputs.File(
             args_key=u'demand_table_path',
             helptext=(
@@ -124,13 +124,7 @@ class HydropowerWaterYield(model.InVESTModel):
                 u"for the same land-cover type."),
             label=u'Water Demand Table (CSV)',
             validator=self.validator)
-        self.water_scarcity_container.add_input(self.demand_table)
-        self.valuation_container = inputs.Container(
-            args_key=u'calculate_valuation',
-            expandable=True,
-            expanded=False,
-            label=u'Valuation')
-        self.add_input(self.valuation_container)
+        self.scarcity_valuation_container.add_input(self.demand_table)
         self.hydropower_valuation_table = inputs.File(
             args_key=u'valuation_table_path',
             helptext=(
@@ -139,9 +133,9 @@ class HydropowerWaterYield(model.InVESTModel):
                 u"column fields: 'ws_id', 'efficiency', 'fraction', "
                 u"'height', 'kw_price', 'cost', 'time_span', and "
                 u"'discount'."),
-            label=u'Hydropower Valuation Table (CSV)',
+            label=u'Hydropower Valuation Table (CSV) (Optional)',
             validator=self.validator)
-        self.valuation_container.add_input(self.hydropower_valuation_table)
+        self.scarcity_valuation_container.add_input(self.hydropower_valuation_table)
 
     def assemble_args(self):
         args = {
@@ -161,16 +155,13 @@ class HydropowerWaterYield(model.InVESTModel):
             self.biophysical_table.args_key: self.biophysical_table.value(),
             self.seasonality_constant.args_key:
                 self.seasonality_constant.value(),
-            self.water_scarcity_container.args_key:
-                self.water_scarcity_container.value(),
-            self.valuation_container.args_key: self.valuation_container.value(),
+            self.scarcity_valuation_container.args_key:
+                self.scarcity_valuation_container.value(),
         }
 
-        if self.valuation_container.value():
+        if self.scarcity_valuation_container.value():
+            args[self.demand_table.args_key] = self.demand_table.value()
             args[self.hydropower_valuation_table.args_key] = (
                 self.hydropower_valuation_table.value())
-
-        if self.water_scarcity_container.value():
-            args[self.demand_table.args_key] = self.demand_table.value()
 
         return args
