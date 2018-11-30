@@ -36,9 +36,10 @@ Unreleased Changes
   uses the polygon FIDs internally and externally when producing the result
   summary table.
 * Correcting the rating instructions in the criteria rating instructions on how
-  the data quality (DQ) and weight should be rated. A DQ score of 1 should
-  represent better data quality whereas the score of 3 is worse data quality. A
-  weight score of 1 is more important, whereas that of 3 is less important.
+  the data quality (DQ) and weight should be rated in the HRA Preprocessor.
+  A DQ score of 1 should represent better data quality whereas the score of 3 is
+  worse data quality. A weight score of 1 is more important, whereas that of 3
+  is less important.
 
 3.5.0 (2018-08-14)
 ------------------
