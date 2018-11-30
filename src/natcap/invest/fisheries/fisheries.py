@@ -237,27 +237,44 @@ def validate(args, limit_to=None):
 
     missing_keys = set([])
     keys_with_empty_values = set([])
-    for key, required in (('workspace_dir', True),
-                          ('results_suffix', False),
-                          ('aoi_uri', False),
-                          ('total_timesteps', True),
-                          ('population_type', True),
-                          ('sexsp', True),
-                          ('harvest_units', True),
-                          ('population_csv_uri', False),
-                          ('population_csv_dir', False),
-                          ('total_init_recruits', True),
-                          ('recruitment_type', True),
-                          ('spawn_units', True),
-                          ('alpha', False),
-                          ('beta', False),
-                          ('total_recur_recruits', False),
-                          ('migration_dir', False),
-                          ('migr_cont', True),
-                          ('val_cont', True),
-                          ('frac_post_process', True),
-                          ('unit_price', True)):
-        if key in (None, limit_to):
+    required_key_list = [
+        ('workspace_dir', True),
+        ('results_suffix', False),
+        ('aoi_uri', False),
+        ('total_timesteps', True),
+        ('population_type', True),
+        ('sexsp', True),
+        ('harvest_units', True),
+        ('total_init_recruits', True),
+        ('recruitment_type', True),
+        ('spawn_units', True),
+        ('alpha', False),
+        ('beta', False),
+    ]
+
+    if 'do_batch' in args:
+        if bool(args['do_batch']):
+            # If we're doing batch processing, require the batch-processing
+            # directory.
+            required_key_list.append(('population_csv_dir', True))
+        else:
+            # If we're not doing batch processing, just require the one CSV.
+            required_key_list.append(('population_csv_uri', True))
+
+    if 'val_cont' in args and bool(args['val_cont']):
+        required_key_list += [
+            ('frac_post_process', True),
+            ('unit_price', True),
+        ]
+
+    if 'migr_cont' in args and bool(args['migr_cont']):
+        required_key_list += [
+            ('migration_dir', True),
+            ('total_recur_recruits', True),
+        ]
+
+    for key, required in required_key_list:
+        if limit_to in (None, key):
             try:
                 if args[key] in ('', None) and required:
                     keys_with_empty_values.add(key)
