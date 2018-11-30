@@ -4,8 +4,8 @@ Unreleased Changes
 ------------------
 * Reimplementing Crop Production models using taskgraph.
 * Fixing an issue with Crop Production Regression's result_table.csv where the
- 'production_modeled' and '<nutrient>_modeled' values calculated for each crop   
-  were done so using the same crop raster (e.g. wheat, soybean, and barley values 
+ 'production_modeled' and '<nutrient>_modeled' values calculated for each crop
+  were done so using the same crop raster (e.g. wheat, soybean, and barley values
   were all based on soybean data).
 * Hydropower subwatershed results now include all the same metrics as the
   watershed results, with the exception of economic valuation metrics.
@@ -35,6 +35,11 @@ Unreleased Changes
   concept when summarizing results across an aggregate polygon. The model now
   uses the polygon FIDs internally and externally when producing the result
   summary table.
+* Correcting the rating instructions in the criteria rating instructions on how
+  the data quality (DQ) and weight should be rated in the HRA Preprocessor.
+  A DQ score of 1 should represent better data quality whereas the score of 3 is
+  worse data quality. A weight score of 1 is more important, whereas that of 3
+  is less important.
 
 3.5.0 (2018-08-14)
 ------------------
