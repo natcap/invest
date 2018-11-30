@@ -295,11 +295,15 @@ def validate(args, limit_to=None):
                              'Parameter must be either True or False"'))
 
     if limit_to in ('population_csv_uri', None):
-        try:
-            csv.reader(open(args['population_csv_uri'], 'r'))
-        except (csv.Error, IOError):
-            warnings.append((['population_csv_uri'],
-                             'Parameter must be a valid CSV file.'))
+        # Only validate the CSV if it's provided.
+        # Either the CSV or the batch-processing dir must be valid.
+        if ('population_csv_uri' in args and
+                args['population_csv_uri'] not in ('', None)):
+            try:
+                csv.reader(open(args['population_csv_uri'], 'r'))
+            except (csv.Error, IOError):
+                warnings.append((['population_csv_uri'],
+                                 'Parameter must be a valid CSV file.'))
 
     for directory_key in ('population_csv_dir', 'migration_dir'):
         try:
