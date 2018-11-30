@@ -24,7 +24,8 @@ Unreleased Changes
   their respective tables.
 * Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
   valuation would never be triggered when running the model through the User
-  Interface.
+  Interface. And a related issue where the model would crash if a valuation table
+  was provided but a demand table was not. The UI no longer validates that config.
 * Fixing an issue with how logging is captured when a model is run through the
   InVEST User Interface.  Now, logging from any thread started by the executor
   thread will be written to the log file, which we expect to aid in debugging.

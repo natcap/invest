@@ -76,9 +76,6 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
-        args['calculate_water_scarcity'] (bool): if True, run water scarcity
-            calculation using `args['demand_table_path']`.
-
         args['demand_table_path'] (string): (optional) if a non-empty string,
             a path to an input CSV
             table of LULC classes, showing consumptive water use for each
@@ -92,9 +89,6 @@ def execute(args):
                 ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
                 'cost', 'height', 'kw_price')
             Required if ``calculate_valuation`` is True.
-
-        args['calculate_valuation'] (bool): (optional) if True, valuation will
-            be calculated.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
@@ -1007,6 +1001,12 @@ def validate(args, limit_to=None):
         'biophysical_table_path',
         'seasonality_constant']
 
+    # Valuation calculation is dependent on demand data
+    if limit_to in [None, 'valuation_table_path', 'demand_table_path']:
+        if ('valuation_table_path' in args and
+                args['valuation_table_path'] != ''):
+            required_keys.append('demand_table_path')
+
     for key in required_keys:
         if limit_to is None or limit_to == key:
             if key not in args:
@@ -1043,7 +1043,8 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key)
+                    and key in args and args[key] != ''):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))
