@@ -76,9 +76,6 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
-        args['calculate_water_scarcity'] (bool): if True, run water scarcity
-            calculation using `args['demand_table_path']`.
-
         args['demand_table_path'] (string): (optional) if a non-empty string,
             a path to an input CSV
             table of LULC classes, showing consumptive water use for each
@@ -92,9 +89,6 @@ def execute(args):
                 ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
                 'cost', 'height', 'kw_price')
             Required if ``calculate_valuation`` is True.
-
-        args['calculate_valuation'] (bool): (optional) if True, valuation will
-            be calculated.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
@@ -550,7 +544,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     """Compute actual evapotranspiration values.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -573,7 +567,7 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """Calculate water yield.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -618,7 +612,7 @@ def fractp_op(
             precipitation.
 
     Returns:
-        numpy.ndarray of actual evapotranspiration as fraction
+        numpy.ndarray (float) of actual evapotranspiration as fraction
             of precipitation.
 
     """
@@ -675,7 +669,7 @@ def fractp_op(
         veg[valid_mask] == 1.0,
         veg_result, nonveg_result_fract)
 
-    fractp = numpy.empty_like(precip)
+    fractp = numpy.empty(valid_mask.shape, dtype=numpy.float32)
     fractp[:] = nodata_dict['out_nodata']
     fractp[valid_mask] = result
     return fractp
@@ -695,7 +689,7 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
         numpy.ndarray of potential evapotranspiration (mm)
 
     """
-    result = numpy.empty_like(eto_pix)
+    result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
     valid_mask = (~numpy.isclose(eto_pix, eto_nodata) &
                   ~numpy.isclose(Kc_pix, output_nodata))
@@ -1007,6 +1001,12 @@ def validate(args, limit_to=None):
         'biophysical_table_path',
         'seasonality_constant']
 
+    # Valuation calculation is dependent on demand data
+    if limit_to in [None, 'valuation_table_path', 'demand_table_path']:
+        if ('valuation_table_path' in args and
+                args['valuation_table_path'] != ''):
+            required_keys.append('demand_table_path')
+
     for key in required_keys:
         if limit_to is None or limit_to == key:
             if key not in args:
@@ -1043,7 +1043,8 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key)
+                    and key in args and args[key] != ''):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))

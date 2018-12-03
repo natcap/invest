@@ -90,7 +90,6 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['calculate_water_scarcity'] = True
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
         args['sub_watersheds_path'] = os.path.join(
@@ -128,10 +127,8 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['calculate_water_scarcity'] = True
         args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
-        args['calculate_valuation'] = True
         args['valuation_table_path'] = os.path.join(
             SAMPLE_DATA, 'hydropower_valuation_table.csv')
         args['sub_watersheds_path'] = os.path.join(
@@ -258,9 +255,12 @@ class HydropowerTests(unittest.TestCase):
         args_bad_valuation_table = args.copy()
         bad_valuation_path = os.path.join(
             self.workspace_dir, 'bad_valuation_table.csv')
-
         args_bad_valuation_table['valuation_table_path'] = (
             bad_valuation_path)
+        # args contract requires a demand table if there is a valuation table
+        args_bad_valuation_table['demand_table_path'] = os.path.join(
+            SAMPLE_DATA, 'water_demand_table.csv')
+
         with open(bad_valuation_path, 'wb') as bad_valuation_file:
             with open(os.path.join(
                 SAMPLE_DATA, 'hydropower_valuation_table.csv'), 'rb') as (
