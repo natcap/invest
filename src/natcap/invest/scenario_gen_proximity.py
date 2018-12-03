@@ -278,8 +278,6 @@ def _convert_landscape(
             temp_dir, 'distance_from_non_base_mask_edge.tif'),
         'convertible_distances': os.path.join(
             temp_dir, 'convertible_distances.tif'),
-        'smooth_distance_from_edge': os.path.join(
-            temp_dir, 'smooth_distance_from_edge.tif'),
         'distance_from_edge': os.path.join(
             temp_dir, 'distance_from_edge.tif'),
     }
