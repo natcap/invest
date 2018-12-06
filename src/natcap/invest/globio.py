@@ -10,6 +10,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import numpy
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3
 
 from . import utils
@@ -84,10 +85,14 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
+    aligned_infra_dir = os.path.join(
+        intermediate_dir, "aligned_infrastructure")
     tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
 
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
-        [output_dir, intermediate_dir, tmp_dir])
+    utils.make_directories(
+        [output_dir, intermediate_dir, tmp_dir, aligned_infra_dir])
+    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.create_directories(
+    #     [output_dir, intermediate_dir, tmp_dir])
 
     # cell size should be based on the landcover map
     if not args['predefined_globio']:
@@ -105,11 +110,10 @@ def execute(args):
         globio_lulc_uri = args['globio_lulc_uri']
 
     globio_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(globio_lulc_uri)
-
     infrastructure_uri = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
     _collapse_infrastructure_layers(
-        args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri)
+        args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri, aligned_infra_dir)
 
     # calc_msa_f
     primary_veg_mask_uri = os.path.join(
@@ -118,7 +122,7 @@ def execute(args):
 
     def _primary_veg_mask_op(lulc_array):
         """Masking out natural areas."""
-        nodata_mask = lulc_array == globio_nodata
+        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
         # landcover type 1 in the GLOBIO schema represents primary vegetation
         result = (lulc_array == 1)
         return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
@@ -147,7 +151,7 @@ def execute(args):
             primary_veg_mask_array, smoothed_primary_veg_mask):
         """Mask out ffqi only where there's an ffqi."""
         return numpy.where(
-            primary_veg_mask_array != primary_veg_mask_nodata,
+            ~numpy.isclose(primary_veg_mask_array, primary_veg_mask_nodata),
             primary_veg_mask_array * smoothed_primary_veg_mask,
             primary_veg_mask_nodata)
 
@@ -165,7 +169,7 @@ def execute(args):
 
     def _msa_f_op(primary_veg_smooth):
         """Calculate msa fragmentation."""
-        nodata_mask = primary_veg_mask_nodata == primary_veg_smooth
+        nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
 
         msa_f = numpy.empty(primary_veg_smooth.shape)
 
@@ -270,7 +274,7 @@ def execute(args):
     def _msa_op(msa_f, msa_lu, msa_i):
         """Calculate the MSA which is the product of the sub MSAs."""
         return numpy.where(
-            msa_f != globio_nodata, msa_f * msa_lu * msa_i, globio_nodata)
+            ~numpy.isclose(msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
 
     natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
         [msa_f_uri, msa_lu_uri, msa_i_uri], _msa_op, msa_uri,
@@ -325,12 +329,12 @@ def execute(args):
         # don't need a random poly id anymore
         layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
 
-    for root_dir, _, files in os.walk(tmp_dir):
-        for filename in files:
-            try:
-                os.remove(os.path.join(root_dir, filename))
-            except OSError:
-                LOGGER.warn("couldn't remove temporary file %s", filename)
+    # for root_dir, _, files in os.walk(tmp_dir):
+    #     for filename in files:
+    #         try:
+    #             os.remove(os.path.join(root_dir, filename))
+    #         except OSError:
+    #             LOGGER.warn("couldn't remove temporary file %s", filename)
 
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
@@ -493,7 +497,7 @@ def _calculate_globio_lulc_map(
 
     def _forest_area_mask_op(lulc_array):
         """Masking out forest areas."""
-        nodata_mask = lulc_array == globio_nodata
+        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
         # landcover code 130 represents all MODIS forest codes which originate
         # as 1-5
         result = (lulc_array == 130)
@@ -521,7 +525,7 @@ def _calculate_globio_lulc_map(
     def _ffqi_op(forest_areas_array, smoothed_forest_areas):
         """Mask out ffqi only where there's an ffqi."""
         return numpy.where(
-            forest_areas_array != forest_areas_nodata,
+            ~numpy.isclose(forest_areas_array, forest_areas_nodata),
             forest_areas_array * smoothed_forest_areas,
             forest_areas_nodata)
 
@@ -539,7 +543,7 @@ def _calculate_globio_lulc_map(
             ffqi):
         """Construct GLOBIO lulc given relevant biophysical parameters."""
         # Step 1.2b: Assign high/low according to threshold based on yieldgap.
-        nodata_mask = lulc_array == globio_nodata
+        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
 
         # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
         # custom design of agriculture
@@ -547,7 +551,7 @@ def _calculate_globio_lulc_map(
         # classification scheme
         lulc_ag_split = numpy.where(
             lulc_array == 132, 12, lulc_array)
-        nodata_mask = nodata_mask | (lulc_array == globio_nodata)
+        nodata_mask = nodata_mask | numpy.isclose(lulc_array, globio_nodata)
 
         # Step 1.3a: Split Scrublands and grasslands into pristine
         # vegetations, livestock grazing areas, and man-made pastures.
@@ -595,7 +599,7 @@ def _calculate_globio_lulc_map(
 
 
 def _collapse_infrastructure_layers(
-        infrastructure_dir, base_raster_uri, infrastructure_uri):
+        infrastructure_dir, base_raster_uri, infrastructure_uri, aligned_infra_dir):
     """Collapse all GIS infrastructure layers to one raster.
 
     Gathers all the GIS layers in the given directory and collapses them
@@ -622,43 +626,49 @@ def _collapse_infrastructure_layers(
     infrastructure_tmp_filenames = []
     for root_directory, _, filename_list in os.walk(infrastructure_dir):
         for filename in filename_list:
-            if filename.lower().endswith(".tif"):
+            # import pdb
+            # pdb.set_trace()
+            raster = gdal.OpenEx(
+                os.path.join(root_directory, filename), gdal.OF_RASTER)
+            if raster is not None:
                 infrastructure_filenames.append(
                     os.path.join(root_directory, filename))
                 infrastructure_nodata_list.append(
-                    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-                        infrastructure_filenames[-1]))
-            if filename.lower().endswith(".shp"):
+                    pygeoprocessing.get_raster_info(
+                        infrastructure_filenames[-1])['nodata'][0])
+            vector = gdal.OpenEx(
+                os.path.join(root_directory, filename), gdal.OF_VECTOR)
+            if vector is not None:
                 infrastructure_tmp_raster = (
                     natcap.invest.pygeoprocessing_0_3_3.temporary_filename())
-                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.new_raster_from_base_uri(
+                pygeoprocessing.new_raster_from_base(
                     base_raster_uri, infrastructure_tmp_raster,
-                    'GTiff', -1.0, gdal.GDT_Int32, fill_value=0)
-                natcap.invest.pygeoprocessing_0_3_3.geoprocessing.rasterize_layer_uri(
-                    infrastructure_tmp_raster,
-                    os.path.join(root_directory, filename), burn_values=[1],
+                    gdal.GDT_Int32, [-1.0], fill_value_list=[0])
+                pygeoprocessing.rasterize(
+                    os.path.join(root_directory, filename),
+                    infrastructure_tmp_raster, burn_values=[1],
                     option_list=["ALL_TOUCHED=TRUE"])
                 infrastructure_filenames.append(infrastructure_tmp_raster)
                 infrastructure_tmp_filenames.append(infrastructure_tmp_raster)
                 infrastructure_nodata_list.append(
-                    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-                        infrastructure_filenames[-1]))
+                    pygeoprocessing.get_raster_info(
+                        infrastructure_filenames[-1])['nodata'][0])
 
     if len(infrastructure_filenames) == 0:
         raise ValueError(
-            "infrastructure directory didn't have any GeoTIFFS or "
-            "Shapefiles at %s", infrastructure_dir)
+            "infrastructure directory didn't have any rasters or "
+            "vectors at %s", infrastructure_dir)
 
     infrastructure_nodata = -1
 
     def _collapse_infrastructure_op(*infrastructure_array_list):
         """For each pixel, create mask 1 if all valid, else set to nodata."""
         nodata_mask = (
-            infrastructure_array_list[0] == infrastructure_nodata_list[0])
+            numpy.isclose(infrastructure_array_list[0], infrastructure_nodata_list[0]))
         infrastructure_result = infrastructure_array_list[0] > 0
         for index in range(1, len(infrastructure_array_list)):
-            current_nodata = (
-                infrastructure_array_list[index] ==
+            current_nodata = numpy.isclose(
+                infrastructure_array_list[index],
                 infrastructure_nodata_list[index])
 
             infrastructure_result = (
@@ -672,13 +682,31 @@ def _collapse_infrastructure_layers(
             nodata_mask, infrastructure_nodata, infrastructure_result)
 
     LOGGER.info('collapse infrastructure into one raster')
-    out_pixel_size = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_cell_size_from_uri(
+    aligned_infrastructure_target_list = [os.path.join(
+        aligned_infra_dir, os.path.basename(x))
+        for x in infrastructure_filenames]
+
+    base_raster_info = pygeoprocessing.get_raster_info(
         base_raster_uri)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        infrastructure_filenames, _collapse_infrastructure_op,
-        infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    # import pdb
+    # pdb.set_trace()
+    pygeoprocessing.align_and_resize_raster_stack(
+        infrastructure_filenames,
+        aligned_infrastructure_target_list,
+        ['near'] * len(infrastructure_filenames),
+        base_raster_info['pixel_size'],
+        base_raster_info['bounding_box'])
+    infra_filename_band_list = [
+        (x, 1) for x in aligned_infrastructure_target_list]
+    pygeoprocessing.raster_calculator(
+        infra_filename_band_list, _collapse_infrastructure_op,
+        infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata)
+
+    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
+    #     infrastructure_filenames, _collapse_infrastructure_op,
+    #     infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
+    #     out_pixel_size, "intersection", dataset_to_align_index=0,
+    #     vectorize_op=False)
 
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
