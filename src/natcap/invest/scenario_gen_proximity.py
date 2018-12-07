@@ -331,7 +331,8 @@ def _convert_landscape(
                 if invert_mask:
                     base_mask = ~base_mask
                 return numpy.where(
-                    lulc_array == lulc_nodata, mask_nodata, base_mask)
+                    numpy.isclose(lulc_array, lulc_nodata),
+                    mask_nodata, base_mask)
             pygeoprocessing.raster_calculator(
                 [(output_landscape_raster_path, 1)], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
@@ -659,7 +660,7 @@ def _convert_by_score(
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
 
-    out_ds = gdal.OpenEx(out_raster_path, gdal.GA_Update)
+    out_ds = gdal.OpenEx(out_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
     out_block_col_size, out_block_row_size = out_band.GetBlockSize()
     n_rows = out_band.YSize
@@ -837,13 +838,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))
