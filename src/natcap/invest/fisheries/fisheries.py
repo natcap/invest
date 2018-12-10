@@ -279,7 +279,8 @@ def validate(args, limit_to=None):
                 if args[key] in ('', None) and required:
                     keys_with_empty_values.add(key)
             except KeyError:
-                missing_keys.add(key)
+                if required:
+                    missing_keys.add(key)
 
     if len(missing_keys) > 0:
         raise KeyError(
@@ -303,8 +304,8 @@ def validate(args, limit_to=None):
             column_names = [defn.GetName() for defn in layer.schema]
             if 'Name' not in column_names:
                 warnings.append(
-                    ['aoi_uri'],
-                    'Case-sensitive column name "Name" is missing')
+                    (['aoi_uri'],
+                     'Case-sensitive column name "Name" is missing'))
 
     if limit_to in ('do_batch', None):
         if args['do_batch'] not in (True, False):
