@@ -237,32 +237,50 @@ def validate(args, limit_to=None):
 
     missing_keys = set([])
     keys_with_empty_values = set([])
-    for key, required in (('workspace_dir', True),
-                          ('results_suffix', False),
-                          ('aoi_uri', False),
-                          ('total_timesteps', True),
-                          ('population_type', True),
-                          ('sexsp', True),
-                          ('harvest_units', True),
-                          ('population_csv_uri', False),
-                          ('population_csv_dir', False),
-                          ('total_init_recruits', True),
-                          ('recruitment_type', True),
-                          ('spawn_units', True),
-                          ('alpha', False),
-                          ('beta', False),
-                          ('total_recur_recruits', False),
-                          ('migration_dir', False),
-                          ('migr_cont', True),
-                          ('val_cont', True),
-                          ('frac_post_process', True),
-                          ('unit_price', True)):
-        if key in (None, limit_to):
+    required_key_list = [
+        ('workspace_dir', True),
+        ('results_suffix', False),
+        ('aoi_uri', False),
+        ('total_timesteps', True),
+        ('population_type', True),
+        ('sexsp', True),
+        ('harvest_units', True),
+        ('total_init_recruits', True),
+        ('recruitment_type', True),
+        ('spawn_units', True),
+        ('alpha', False),
+        ('beta', False),
+    ]
+
+    if 'do_batch' in args:
+        if bool(args['do_batch']):
+            # If we're doing batch processing, require the batch-processing
+            # directory.
+            required_key_list.append(('population_csv_dir', True))
+        else:
+            # If we're not doing batch processing, just require the one CSV.
+            required_key_list.append(('population_csv_uri', True))
+
+    if 'val_cont' in args and bool(args['val_cont']):
+        required_key_list += [
+            ('frac_post_process', True),
+            ('unit_price', True),
+        ]
+
+    if 'migr_cont' in args and bool(args['migr_cont']):
+        required_key_list += [
+            ('migration_dir', True),
+            ('total_recur_recruits', True),
+        ]
+
+    for key, required in required_key_list:
+        if limit_to in (None, key):
             try:
                 if args[key] in ('', None) and required:
                     keys_with_empty_values.add(key)
             except KeyError:
-                missing_keys.add(key)
+                if required:
+                    missing_keys.add(key)
 
     if len(missing_keys) > 0:
         raise KeyError(
@@ -286,8 +304,8 @@ def validate(args, limit_to=None):
             column_names = [defn.GetName() for defn in layer.schema]
             if 'Name' not in column_names:
                 warnings.append(
-                    ['aoi_uri'],
-                    'Case-sensitive column name "Name" is missing')
+                    (['aoi_uri'],
+                     'Case-sensitive column name "Name" is missing'))
 
     if limit_to in ('do_batch', None):
         if args['do_batch'] not in (True, False):
@@ -295,11 +313,15 @@ def validate(args, limit_to=None):
                              'Parameter must be either True or False"'))
 
     if limit_to in ('population_csv_uri', None):
-        try:
-            csv.reader(open(args['population_csv_uri'], 'r'))
-        except (csv.Error, IOError):
-            warnings.append((['population_csv_uri'],
-                             'Parameter must be a valid CSV file.'))
+        # Only validate the CSV if it's provided.
+        # Either the CSV or the batch-processing dir must be valid.
+        if ('population_csv_uri' in args and
+                args['population_csv_uri'] not in ('', None)):
+            try:
+                csv.reader(open(args['population_csv_uri'], 'r'))
+            except (csv.Error, IOError):
+                warnings.append((['population_csv_uri'],
+                                 'Parameter must be a valid CSV file.'))
 
     for directory_key in ('population_csv_dir', 'migration_dir'):
         try:
