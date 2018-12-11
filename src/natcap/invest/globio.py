@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import logging
 import collections
+import tempfile
 import uuid
 
 import pandas
@@ -473,7 +474,7 @@ def _calculate_globio_lulc_map(
     Returns:
         a (string) filename to the generated globio GeoTIFF map
     """
-    lulc_to_globio_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_table(
+    lulc_to_globio_table = utils.build_lookup_from_csv(
         lulc_to_globio_table_uri, 'lucode')
 
     lulc_to_globio = dict(
@@ -483,9 +484,9 @@ def _calculate_globio_lulc_map(
     intermediate_globio_lulc_uri = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.reclassify_dataset_uri(
-        lulc_uri, lulc_to_globio, intermediate_globio_lulc_uri,
-        gdal.GDT_Int32, globio_nodata, exception_flag='values_required')
+    pygeoprocessing.reclassify_raster(
+        (lulc_uri, 1), lulc_to_globio, intermediate_globio_lulc_uri,
+        gdal.GDT_Int32, globio_nodata)
 
     globio_lulc_uri = os.path.join(
         intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
@@ -497,18 +498,16 @@ def _calculate_globio_lulc_map(
 
     def _forest_area_mask_op(lulc_array):
         """Masking out forest areas."""
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+        nodata_mask = lulc_array == globio_nodata
         # landcover code 130 represents all MODIS forest codes which originate
         # as 1-5
         result = (lulc_array == 130)
         return numpy.where(nodata_mask, forest_areas_nodata, result)
 
     LOGGER.info("create mask of natural areas")
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri], _forest_area_mask_op,
-        forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(intermediate_globio_lulc_uri, 1)], _forest_area_mask_op,
+        forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata)
 
     LOGGER.info('gaussian filter natural areas')
     gaussian_kernel_uri = os.path.join(
@@ -516,8 +515,8 @@ def _calculate_globio_lulc_map(
     make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
     smoothed_forest_areas_uri = os.path.join(
         tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.convolve_2d_uri(
-        forest_areas_uri, gaussian_kernel_uri, smoothed_forest_areas_uri)
+    pygeoprocessing.convolve_2d(
+        (forest_areas_uri, 1), (gaussian_kernel_uri, 1), smoothed_forest_areas_uri)
 
     ffqi_uri = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
@@ -525,25 +524,24 @@ def _calculate_globio_lulc_map(
     def _ffqi_op(forest_areas_array, smoothed_forest_areas):
         """Mask out ffqi only where there's an ffqi."""
         return numpy.where(
-            ~numpy.isclose(forest_areas_array, forest_areas_nodata),
+            forest_areas_array != forest_areas_nodata,
             forest_areas_array * smoothed_forest_areas,
             forest_areas_nodata)
 
     LOGGER.info('calculate ffqi')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [forest_areas_uri, smoothed_forest_areas_uri], _ffqi_op,
-        ffqi_uri, gdal.GDT_Float32, forest_areas_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(forest_areas_uri, 1), (smoothed_forest_areas_uri, 1)], _ffqi_op,
+        ffqi_uri, gdal.GDT_Float32, forest_areas_nodata)
 
     # remap globio lulc to an internal lulc based on ag and intensification
     # proportion these came from the 'expansion_scenarios.py'
+    # @RICH: Is this reference to expansion_scenarios.py still relevant?
     def _create_globio_lulc(
             lulc_array, potential_vegetation_array, pasture_array,
             ffqi):
         """Construct GLOBIO lulc given relevant biophysical parameters."""
         # Step 1.2b: Assign high/low according to threshold based on yieldgap.
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+        nodata_mask = lulc_array == globio_nodata
 
         # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
         # custom design of agriculture
@@ -551,19 +549,19 @@ def _calculate_globio_lulc_map(
         # classification scheme
         lulc_ag_split = numpy.where(
             lulc_array == 132, 12, lulc_array)
-        nodata_mask = nodata_mask | numpy.isclose(lulc_array, globio_nodata)
+        nodata_mask = nodata_mask | lulc_array == globio_nodata
 
         # Step 1.3a: Split Scrublands and grasslands into pristine
         # vegetations, livestock grazing areas, and man-made pastures.
         # landcover 131 represents grassland/shrubland in the GLOBIO
         # classification
         three_types_of_scrubland = numpy.where(
-            (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6.0,
-            5.0)
+            (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6,
+            5)
 
         three_types_of_scrubland = numpy.where(
-            (three_types_of_scrubland == 5.0) &
-            (pasture_array < pasture_threshold), 1.0,
+            (three_types_of_scrubland == 5) &
+            (pasture_array < pasture_threshold), 1,
             three_types_of_scrubland)
 
         # Step 1.3b: Stamp ag_split classes onto input LULC
@@ -589,11 +587,10 @@ def _calculate_globio_lulc_map(
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
     LOGGER.info('create the globio lulc')
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-        [intermediate_globio_lulc_uri, potential_vegetation_uri, pasture_uri,
-         ffqi_uri], _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32,
-        globio_nodata, out_pixel_size, "intersection",
-        dataset_to_align_index=0, vectorize_op=False)
+    pygeoprocessing.raster_calculator(
+        [(intermediate_globio_lulc_uri, 1), (potential_vegetation_uri, 1),
+         (pasture_uri, 1), (ffqi_uri, 1)],
+        _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata)
 
     return globio_lulc_uri
 
@@ -626,30 +623,24 @@ def _collapse_infrastructure_layers(
     infrastructure_tmp_filenames = []
     for root_directory, _, filename_list in os.walk(infrastructure_dir):
         for filename in filename_list:
-            # import pdb
-            # pdb.set_trace()
-            raster = gdal.OpenEx(
-                os.path.join(root_directory, filename), gdal.OF_RASTER)
-            if raster is not None:
+            if filename.lower().endswith(".tif"):
                 infrastructure_filenames.append(
                     os.path.join(root_directory, filename))
                 infrastructure_nodata_list.append(
                     pygeoprocessing.get_raster_info(
                         infrastructure_filenames[-1])['nodata'][0])
-            vector = gdal.OpenEx(
-                os.path.join(root_directory, filename), gdal.OF_VECTOR)
-            if vector is not None:
-                infrastructure_tmp_raster = (
-                    natcap.invest.pygeoprocessing_0_3_3.temporary_filename())
+            if filename.lower().endswith(".shp"):
+                file_handle, tmp_raster_path = tempfile.mkstemp(suffix='.tif')
+                os.close(file_handle)
                 pygeoprocessing.new_raster_from_base(
-                    base_raster_uri, infrastructure_tmp_raster,
+                    base_raster_uri, tmp_raster_path,
                     gdal.GDT_Int32, [-1.0], fill_value_list=[0])
                 pygeoprocessing.rasterize(
                     os.path.join(root_directory, filename),
-                    infrastructure_tmp_raster, burn_values=[1],
+                    tmp_raster_path, burn_values=[1],
                     option_list=["ALL_TOUCHED=TRUE"])
-                infrastructure_filenames.append(infrastructure_tmp_raster)
-                infrastructure_tmp_filenames.append(infrastructure_tmp_raster)
+                infrastructure_filenames.append(tmp_raster_path)
+                infrastructure_tmp_filenames.append(tmp_raster_path)
                 infrastructure_nodata_list.append(
                     pygeoprocessing.get_raster_info(
                         infrastructure_filenames[-1])['nodata'][0])
@@ -685,11 +676,9 @@ def _collapse_infrastructure_layers(
     aligned_infrastructure_target_list = [os.path.join(
         aligned_infra_dir, os.path.basename(x))
         for x in infrastructure_filenames]
-
     base_raster_info = pygeoprocessing.get_raster_info(
         base_raster_uri)
-    # import pdb
-    # pdb.set_trace()
+
     pygeoprocessing.align_and_resize_raster_stack(
         infrastructure_filenames,
         aligned_infrastructure_target_list,
@@ -701,12 +690,6 @@ def _collapse_infrastructure_layers(
     pygeoprocessing.raster_calculator(
         infra_filename_band_list, _collapse_infrastructure_op,
         infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata)
-
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-    #     infrastructure_filenames, _collapse_infrastructure_op,
-    #     infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata,
-    #     out_pixel_size, "intersection", dataset_to_align_index=0,
-    #     vectorize_op=False)
 
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
