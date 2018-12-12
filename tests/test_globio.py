@@ -6,7 +6,10 @@ import os
 
 import pygeoprocessing.testing
 from osgeo import ogr
+from osgeo import gdal
 import numpy
+
+from natcap.invest import utils
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'globio',
@@ -186,19 +189,18 @@ class GLOBIOTests(unittest.TestCase):
 
         Parameters:
             result_vector_path (string): path to the summary shapefile
-                produced by the Forest Carbon Edge model.
+                produced by GLOBIO model
             agg_results_path (string): path to a csv file that has the
-                expected aggregated_results.shp table in the form of
-                c_sum,c_ha_mean per line
+                expected aoi_summary.shp table in the form of
+                fid,msa_mean per line
 
         Returns:
             None
 
         Raises:
-            AssertionError if any files are missing or results are out of
-            range by `tolerance_places`
+            AssertionError if results are out of range by `tolerance_places`
         """
-        result_vector = ogr.Open(result_vector_path)
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
         # The tolerance of 3 digits after the decimal was determined by
@@ -208,22 +210,19 @@ class GLOBIOTests(unittest.TestCase):
         # and even more reading about picking numerical tolerance (it's hard):
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
         tolerance_places = 3
-
-        with open(agg_results_path, 'rb') as agg_result_file:
-            for line in agg_result_file:
-                fid, sp_rich, en_rich, msa_mean = [
-                    float(x) for x in line.split(',')]
-                feature = result_layer.GetFeature(int(fid))
-                for field, value in [
-                        ('sp_rich', sp_rich),
-                        ('en_rich', en_rich),
-                        ('msa_mean', msa_mean)]:
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
-                ogr.Feature.__swig_destroy__(feature)
-                feature = None
-
+        expected_results = utils.build_lookup_from_csv(agg_results_path, 'fid')
+        for feature in result_layer:
+            fid = feature.GetFID()
+            result_value = feature.GetField('msa_mean')
+            if result_value:
+                numpy.testing.assert_almost_equal(
+                    result_value,
+                    float(expected_results[fid]['msa_mean']),
+                    decimal=tolerance_places)
+            else:
+                # the out-of-bounds polygon will have no result_value
+                assert(expected_results[fid]['msa_mean'] == '')
+        feature = None
         result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
+        gdal.Dataset.__swig_destroy__(result_vector)
         result_vector = None

@@ -274,11 +274,8 @@ def execute(args):
     pygeoprocessing.raster_calculator(
         [(msa_f_uri, 1), (msa_lu_uri, 1), (msa_i_uri, 1)], _msa_op,
         msa_uri, gdal.GDT_Float32, msa_nodata)
-    # natcap.invest.pygeoprocessing_0_3_3.geoprocessing.vectorize_datasets(
-    #     [msa_f_uri, msa_lu_uri, msa_i_uri], _msa_op, msa_uri,
-    #     gdal.GDT_Float32, msa_nodata, out_pixel_size, "intersection",
-    #     dataset_to_align_index=0, vectorize_op=False)
 
+    LOGGER.info('summarize msa result in AOI polygons')
     # ensure that aoi_uri is defined and it's not an empty string
     if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
         # copy the aoi to an output shapefile
@@ -286,6 +283,7 @@ def execute(args):
         summary_aoi_uri = os.path.join(
             output_dir, 'aoi_summary%s.shp' % file_suffix)
         # Delete if existing shapefile with the same name
+        # TODO - this must go for taskgraph
         if os.path.isfile(summary_aoi_uri):
             os.remove(summary_aoi_uri)
         # Copy the input shapefile into the designated output folder
@@ -297,35 +295,19 @@ def execute(args):
         msa_summary_field_def.SetWidth(24)
         msa_summary_field_def.SetPrecision(11)
         layer.CreateField(msa_summary_field_def)
-
-        # make an identifying id per polygon that can be used for aggregation
-        layer_defn = layer.GetLayerDefn()
-        while True:
-            # last 8 characters because shapefile fields are limited to 8
-            poly_id_field = str(uuid.uuid4())[-8:]
-            if layer_defn.GetFieldIndex(poly_id_field) == -1:
-                break
-        layer_id_field = ogr.FieldDefn(poly_id_field, ogr.OFTInteger)
-        layer.CreateField(layer_id_field)
-        for poly_index, poly_feat in enumerate(layer):
-            poly_feat.SetField(poly_id_field, poly_index)
-            layer.SetFeature(poly_feat)
         layer.SyncToDisk()
 
-        # aggregate by ID
-        msa_summary = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            msa_uri, summary_aoi_uri, shapefile_field=poly_id_field)
-
-        # add new column to output file
-        for feature_id in xrange(layer.GetFeatureCount()):
-            feature = layer.GetFeature(feature_id)
-            key_value = feature.GetFieldAsInteger(poly_id_field)
-            feature.SetField(
-                'msa_mean', float(msa_summary.pixel_mean[key_value]))
-            layer.SetFeature(feature)
-
-        # don't need a random poly id anymore
-        layer.DeleteField(layer_defn.GetFieldIndex(poly_id_field))
+        msa_summary = pygeoprocessing.zonal_statistics(
+            (msa_uri, 1), summary_aoi_uri)
+        for feature in layer:
+            feature_fid = feature.GetFID()
+            # count == 0 if polygon outside raster bounds, or only over nodata
+            if msa_summary[feature_fid]['count'] != 0:
+                field_val = (
+                    float(msa_summary[feature_fid]['sum'])
+                    / float(msa_summary[feature_fid]['count']))
+                feature.SetField('msa_mean', field_val)
+                layer.SetFeature(feature)
 
     # for root_dir, _, files in os.walk(tmp_dir):
     #     for filename in files:
