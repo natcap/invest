@@ -1,6 +1,5 @@
 """Pollinator service model for InVEST."""
 from __future__ import absolute_import
-import tempfile
 import itertools
 import collections
 import re
@@ -8,7 +7,6 @@ import os
 import logging
 import hashlib
 import inspect
-import uuid
 
 from osgeo import gdal
 from osgeo import ogr
@@ -441,10 +439,21 @@ def execute(args):
                 foraged_flowers_index_task_map[(species, season)]
                 for season in scenario_variables['season_list']])
 
+        landcover_pixel_size_tuple = landcover_raster_info['pixel_size']
+        try:
+            landcover_mean_pixel_size = utils.mean_pixel_size_and_area(
+                landcover_pixel_size_tuple)[0]
+        except ValueError:
+            landcover_mean_pixel_size = numpy.min(numpy.absolute(
+                landcover_pixel_size_tuple))
+            LOGGER.debug(
+                'Land Cover Raster has unequal x, y pixel sizes: %s. Using'
+                '%s as the mean pixel size.' % (
+                    landcover_pixel_size_tuple, landcover_mean_pixel_size))
         # create a convolution kernel for the species flight range
         alpha = (
             scenario_variables['alpha_value'][species] /
-            float(landcover_raster_info['mean_pixel_size']))
+            landcover_mean_pixel_size)
         kernel_path = os.path.join(
             intermediate_output_dir, _KERNEL_FILE_PATTERN % (
                 alpha, file_suffix))

@@ -64,11 +64,12 @@ def execute(args):
         vars_dict['results_suffix'])
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
-                     for index in xrange(len(args['lulc_snapshot_list']))]
+                     for index in range(len(args['lulc_snapshot_list']))]
     min_pixel_raster_info = min(
         (pygeoprocessing.get_raster_info(path) for path
          in vars_dict['lulc_snapshot_list']),
-        key=lambda info: info['mean_pixel_size'])
+        key=lambda info: utils.mean_pixel_size_and_area(
+            info['pixel_size'])[0])
     pygeoprocessing.align_and_resize_raster_stack(
         vars_dict['lulc_snapshot_list'],
         aligned_lulcs,
@@ -273,7 +274,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
         (i, '') for i in product(lulc_lookup_dict.iterkeys(), repeat=2))
 
     # Determine Transitions and Directions
-    for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
+    for snapshot_idx in range(0, len(lulc_snapshot_list)-1):
         transition_set = _get_land_cover_transitions(
             lulc_snapshot_list[snapshot_idx],
             lulc_snapshot_list[snapshot_idx+1])
