@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Adding some TaskGraph functionality to Scenario Generator: Proximity. 
 * Fixing an issue with the InVEST Fisheries model that would prevent the model
   from batch-processing a directory of population tables.  The model will now
   process these files as expected.
