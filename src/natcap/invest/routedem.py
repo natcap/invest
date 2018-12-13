@@ -8,8 +8,6 @@ from osgeo import gdal
 from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 import taskgraph
 import numpy
 
