@@ -47,13 +47,13 @@ class GLOBIOTests(unittest.TestCase):
         from natcap.invest import globio
 
         args = {
-            'aoi_uri': '',
-            'globio_lulc_uri': os.path.join(
+            'aoi_path': '',
+            'globio_lulc_path': os.path.join(
                 SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'infrastructure_dir'),
             'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
+            'msa_parameters_path': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
@@ -73,13 +73,13 @@ class GLOBIOTests(unittest.TestCase):
         from natcap.invest import globio
 
         args = {
-            'aoi_uri': '',
-            'globio_lulc_uri': os.path.join(
+            'aoi_path': '',
+            'globio_lulc_path': os.path.join(
                 SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'empty_dir'),
             'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
+            'msa_parameters_path': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
@@ -94,13 +94,13 @@ class GLOBIOTests(unittest.TestCase):
         from natcap.invest import globio
 
         args = {
-            'aoi_uri': '',
-            'globio_lulc_uri': os.path.join(
+            'aoi_path': '',
+            'globio_lulc_path': os.path.join(
                 SAMPLE_DATA, 'globio_lulc_small.tif'),
             'infrastructure_dir':  os.path.join(
                 SAMPLE_DATA, 'shape_infrastructure'),
             'intensification_fraction': '0.46',
-            'msa_parameters_uri': os.path.join(
+            'msa_parameters_path': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
@@ -121,19 +121,19 @@ class GLOBIOTests(unittest.TestCase):
         from natcap.invest import globio
 
         args = {
-            'aoi_uri': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
-            'globio_lulc_uri': '',
+            'aoi_path': os.path.join(SAMPLE_DATA, 'sub_aoi.shp'),
+            'globio_lulc_path': '',
             'infrastructure_dir': os.path.join(
                 SAMPLE_DATA, 'infrastructure_dir'),
             'intensification_fraction': '0.46',
-            'lulc_to_globio_table_uri': os.path.join(
+            'lulc_to_globio_table_path': os.path.join(
                 SAMPLE_DATA, 'lulc_conversion_table.csv'),
-            'lulc_uri': os.path.join(SAMPLE_DATA, 'lulc_2008.tif'),
-            'msa_parameters_uri': os.path.join(
+            'lulc_path': os.path.join(SAMPLE_DATA, 'lulc_2008.tif'),
+            'msa_parameters_path': os.path.join(
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'pasture_threshold': '0.5',
-            'pasture_uri': os.path.join(SAMPLE_DATA, 'pasture.tif'),
-            'potential_vegetation_uri': os.path.join(
+            'pasture_path': os.path.join(SAMPLE_DATA, 'pasture.tif'),
+            'potential_vegetation_path': os.path.join(
                 SAMPLE_DATA, 'potential_vegetation.tif'),
             'predefined_globio': False,
             'primary_threshold': 0.66,

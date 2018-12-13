@@ -42,10 +42,10 @@ def execute(args):
             "mode (a)"
         args['results_suffix'] (string): (optional) string to append to any
             output files
-        args['lulc_uri'] (string): used in "mode (a)" path to a base landcover
+        args['lulc_path'] (string): used in "mode (a)" path to a base landcover
             map with integer codes
-        args['lulc_to_globio_table_uri'] (string): used in "mode (a)" path to
-            table that translates the land-cover args['lulc_uri'] to
+        args['lulc_to_globio_table_path'] (string): used in "mode (a)" path to
+            table that translates the land-cover args['lulc_path'] to
             intermediate GLOBIO classes, from which they will be further
             differentiated using the additional data in the model.  Contains
             at least the following fields:
@@ -61,26 +61,26 @@ def execute(args):
             to a folder containing maps of either gdal compatible rasters or
             OGR compatible shapefiles.  These data will be used in the
             infrastructure to calculation of MSA.
-        args['pasture_uri'] (string): used in "mode (a)" path to pasture raster
-        args['potential_vegetation_uri'] (string): used in "mode (a)" path to
+        args['pasture_path'] (string): used in "mode (a)" path to pasture raster
+        args['potential_vegetation_path'] (string): used in "mode (a)" path to
             potential vegetation raster
         args['pasture_threshold'] (float): used in "mode (a)"
         args['intensification_fraction'] (float): used in "mode (a)"; a value
             between 0 and 1 denoting proportion of total agriculture that
             should be classified as 'high input'
         args['primary_threshold'] (float): used in "mode (a)"
-        args['msa_parameters_uri'] (string): path to MSA classification
+        args['msa_parameters_path'] (string): path to MSA classification
             parameters
-        args['aoi_uri'] (string): (optional) if it exists then final MSA raster
+        args['aoi_path'] (string): (optional) if it exists then final MSA raster
             is summarized by AOI
-        args['globio_lulc_uri'] (string): used in "mode (b)" path to predefined
+        args['globio_lulc_path'] (string): used in "mode (b)" path to predefined
             globio raster.
 
     Returns:
         None
     """
     msa_parameter_table = load_msa_parameter_table(
-        args['msa_parameters_uri'], float(args['intensification_fraction']))
+        args['msa_parameters_path'], float(args['intensification_fraction']))
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_dir = os.path.join(
@@ -106,82 +106,82 @@ def execute(args):
 
     globio_lulc_task_list = []
     if not args['predefined_globio']:
-        globio_lulc_uri = os.path.join(
+        globio_lulc_path = os.path.join(
             intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
         globio_lulc_task_list.append(task_graph.add_task(
             func=_calculate_globio_lulc_map,
-            args=(args['lulc_to_globio_table_uri'], args['lulc_uri'],
-                  args['potential_vegetation_uri'], args['pasture_uri'],
+            args=(args['lulc_to_globio_table_path'], args['lulc_path'],
+                  args['potential_vegetation_path'], args['pasture_path'],
                   float(args['pasture_threshold']), float(args['primary_threshold']),
-                  file_suffix, intermediate_dir, tmp_dir, globio_lulc_uri),
-            target_path_list=[globio_lulc_uri],
+                  file_suffix, intermediate_dir, tmp_dir, globio_lulc_path),
+            target_path_list=[globio_lulc_path],
             task_name='make_globio_lulc'))
     else:
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
-        globio_lulc_uri = args['globio_lulc_uri']
+        globio_lulc_path = args['globio_lulc_path']
 
     # join to make the globio_lulc raster info available
     task_graph.join()
     # cell size should be based on the landcover map
-    globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_uri)
+    globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_path)
     out_pixel_size = (abs(globio_lulc_info['pixel_size'][0]) +
                       abs(globio_lulc_info['pixel_size'][0])) / 2
     globio_nodata = globio_lulc_info['nodata'][0]
 
-    infrastructure_uri = os.path.join(
+    infrastructure_path = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
     combine_infrastructure_task = task_graph.add_task(
         func=_collapse_infrastructure_layers,
-        args=(args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri,
+        args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
               tmp_dir),
-        target_path_list=[infrastructure_uri],
+        target_path_list=[infrastructure_path],
         dependent_task_list=globio_lulc_task_list)
 
     # calc_msa_f
-    primary_veg_mask_uri = os.path.join(
+    primary_veg_mask_path = os.path.join(
         tmp_dir, 'primary_veg_mask%s.tif' % file_suffix)
     primary_veg_mask_nodata = -1
 
     LOGGER.info("create mask of primary veg areas")
     mask_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(globio_lulc_uri, 1), (globio_nodata, 'raw'),
+        args=([(globio_lulc_path, 1), (globio_nodata, 'raw'),
               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
-              primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata),
-        target_path_list=[primary_veg_mask_uri],
+              primary_veg_mask_path, gdal.GDT_Int32, primary_veg_mask_nodata),
+        target_path_list=[primary_veg_mask_path],
         dependent_task_list=globio_lulc_task_list,
         task_name='mask_primary_veg')
 
     LOGGER.info('gaussian filter primary veg')
-    gaussian_kernel_uri = os.path.join(
+    gaussian_kernel_path = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
     make_gaussian_kernel_task = task_graph.add_task(
-        func=make_gaussian_kernel_uri,
-        args=(SIGMA, gaussian_kernel_uri),
-        target_path_list=[gaussian_kernel_uri],
+        func=make_gaussian_kernel_path,
+        args=(SIGMA, gaussian_kernel_path),
+        target_path_list=[gaussian_kernel_path],
         task_name='gaussian_kernel')
 
-    smoothed_primary_veg_mask_uri = os.path.join(
+    smoothed_primary_veg_mask_path = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     smooth_primary_veg_mask_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
-        args=((primary_veg_mask_uri, 1), (gaussian_kernel_uri, 1),
-              smoothed_primary_veg_mask_uri),
-        target_path_list=[smoothed_primary_veg_mask_uri],
+        args=((primary_veg_mask_path, 1), (gaussian_kernel_path, 1),
+              smoothed_primary_veg_mask_path),
+        target_path_list=[smoothed_primary_veg_mask_path],
         dependent_task_list=[mask_primary_veg_task, make_gaussian_kernel_task],
         task_name='smooth_primary_veg_mask')
 
-    primary_veg_smooth_uri = os.path.join(
+    primary_veg_smooth_path = os.path.join(
         intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
 
     LOGGER.info('calculate primary_veg_smooth')
     smooth_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(primary_veg_mask_uri, 1), (smoothed_primary_veg_mask_uri, 1),
+        args=([(primary_veg_mask_path, 1), (smoothed_primary_veg_mask_path, 1),
                (primary_veg_mask_nodata, 'raw')],
-              _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
+              _primary_veg_smooth_op, primary_veg_smooth_path, gdal.GDT_Float32,
               primary_veg_mask_nodata),
-        target_path_list=[primary_veg_smooth_uri],
+        target_path_list=[primary_veg_smooth_path],
         dependent_task_list=[smooth_primary_veg_mask_task],
         task_name='smooth_primary_veg')
 
@@ -189,14 +189,14 @@ def execute(args):
     msa_nodata = -1
     msa_f_table = msa_parameter_table['msa_f']
     msa_f_values = sorted(msa_f_table)
-    msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
+    msa_f_path = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
 
     calculate_msa_f_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(primary_veg_smooth_uri, 1), (primary_veg_mask_nodata, 'raw'),
+        args=([(primary_veg_smooth_path, 1), (primary_veg_mask_nodata, 'raw'),
                (msa_f_table, 'raw'), (msa_f_values, 'raw'), (msa_nodata, 'raw')],
-              _msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata),
-        target_path_list=[msa_f_uri],
+              _msa_f_op, msa_f_path, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_f_path],
         dependent_task_list=[smooth_primary_veg_task],
         task_name='calculate_msa_f')
 
@@ -207,63 +207,63 @@ def execute(args):
     msa_i_primary_values = sorted(msa_i_primary_table)
 
     LOGGER.info('calculate msa_i')
-    distance_to_infrastructure_uri = os.path.join(
+    distance_to_infrastructure_path = os.path.join(
         intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
     distance_to_infrastructure_task = task_graph.add_task(
         func=pygeoprocessing.distance_transform_edt,
-        args=((infrastructure_uri, 1), distance_to_infrastructure_uri),
-        target_path_list=[distance_to_infrastructure_uri],
+        args=((infrastructure_path, 1), distance_to_infrastructure_path),
+        target_path_list=[distance_to_infrastructure_path],
         dependent_task_list=[combine_infrastructure_task],
         task_name='distance_to_infrastructure')
 
-    msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
+    msa_i_path = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
     calculate_msa_i_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(globio_lulc_uri, 1), (distance_to_infrastructure_uri, 1),
+        args=([(globio_lulc_path, 1), (distance_to_infrastructure_path, 1),
                (out_pixel_size, 'raw'), (msa_i_primary_table, 'raw'),
                (msa_i_primary_values, 'raw'), (msa_i_other_table, 'raw'),
                (msa_i_other_values, 'raw')],
-              _msa_i_op, msa_i_uri, gdal.GDT_Float32, msa_nodata),
-        target_path_list=[msa_i_uri],
+              _msa_i_op, msa_i_path, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_i_path],
         dependent_task_list=[
             distance_to_infrastructure_task] + globio_lulc_task_list,
         task_name='calculate_msa_i')
 
     # calc_msa_lu
-    msa_lu_uri = os.path.join(
+    msa_lu_path = os.path.join(
         output_dir, 'msa_lu%s.tif' % file_suffix)
     LOGGER.info('calculate msa_lu')
     calculate_msa_lu_task = task_graph.add_task(
         func=pygeoprocessing.reclassify_raster,
-        args=((globio_lulc_uri, 1), msa_parameter_table['msa_lu'], msa_lu_uri,
+        args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'], msa_lu_path,
               gdal.GDT_Float32, globio_nodata),
-        target_path_list=[msa_lu_uri],
+        target_path_list=[msa_lu_path],
         dependent_task_list=globio_lulc_task_list,
         task_name='calculate_msa_lu')
 
     LOGGER.info('calculate msa')
-    msa_uri = os.path.join(
+    msa_path = os.path.join(
         output_dir, 'msa%s.tif' % file_suffix)
 
     calculate_msa_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(msa_f_uri, 1), (msa_lu_uri, 1), (msa_i_uri, 1),
+        args=([(msa_f_path, 1), (msa_lu_path, 1), (msa_i_path, 1),
                (globio_nodata, 'raw')],
-              _msa_op, msa_uri, gdal.GDT_Float32, msa_nodata),
-        target_path_list=[msa_uri],
+              _msa_op, msa_path, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_path],
         dependent_task_list=[
             calculate_msa_f_task, calculate_msa_i_task, calculate_msa_lu_task],
         task_name='calculate_msa')
 
     LOGGER.info('summarize msa result in AOI polygons')
-    # ensure that aoi_uri is defined and it's not an empty string
-    if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
-        summary_aoi_uri = os.path.join(
+    # ensure that aoi_path is defined and it's not an empty string
+    if 'aoi_path' in args and len(args['aoi_path']) > 0:
+        summary_aoi_path = os.path.join(
             output_dir, 'aoi_summary%s.shp' % file_suffix)
         task_graph.add_task(
             func=summarize_results_in_aoi,
-            args=(args['aoi_uri'], summary_aoi_uri, msa_uri),
-            target_path_list=[summary_aoi_uri],
+            args=(args['aoi_path'], summary_aoi_path, msa_path),
+            target_path_list=[summary_aoi_path],
             dependent_task_list=[calculate_msa_task],
             task_name='summarize_msa_in_aoi')
 
@@ -278,28 +278,28 @@ def execute(args):
     #             LOGGER.warn("couldn't remove temporary file %s", filename)
 
 
-def summarize_results_in_aoi(aoi_uri, summary_aoi_uri, msa_uri):
+def summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
     """Aggregate MSA results to AOI polygons.
 
     Parameters:
-        aoi_uri (string): path to aoi shapefile containing polygons
-        summary_aoi_uri (string):
+        aoi_path (string): path to aoi shapefile containing polygons
+        summary_aoi_path (string):
             path to copy of aoi shapefile with summary stats
-        msa_uri (string): path to msa results raster to summarize
+        msa_path (string): path to msa results raster to summarize
 
     Returns:
         None
 
     """
     # copy the aoi to an output shapefile
-    original_datasource = gdal.OpenEx(aoi_uri, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    original_datasource = gdal.OpenEx(aoi_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
     # Delete if existing shapefile with the same name
-    if os.path.isfile(summary_aoi_uri):
-        os.remove(summary_aoi_uri)
+    if os.path.isfile(summary_aoi_path):
+        os.remove(summary_aoi_path)
     # Copy the input shapefile into the designated output folder
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
-        summary_aoi_uri, original_datasource)
+        summary_aoi_path, original_datasource)
     layer = datasource_copy.GetLayer()
     msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
     msa_summary_field_def.SetWidth(24)
@@ -308,7 +308,7 @@ def summarize_results_in_aoi(aoi_uri, summary_aoi_uri, msa_uri):
     layer.SyncToDisk()
 
     msa_summary = pygeoprocessing.zonal_statistics(
-        (msa_uri, 1), summary_aoi_uri)
+        (msa_path, 1), summary_aoi_path)
     for feature in layer:
         feature_fid = feature.GetFID()
         # count == 0 if polygon outside raster bounds or only over nodata
@@ -419,14 +419,14 @@ def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
             ~numpy.isclose(msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
 
 
-def make_gaussian_kernel_uri(sigma, kernel_uri):
+def make_gaussian_kernel_path(sigma, kernel_path):
     """Create a gaussian kernel raster."""
     max_distance = sigma * 5
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
+        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
         gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
 
     # Make some kind of geotransform, it doesn't matter what but
@@ -519,18 +519,18 @@ def load_msa_parameter_table(
 
 
 def _calculate_globio_lulc_map(
-        lulc_to_globio_table_uri, lulc_uri, potential_vegetation_uri,
-        pasture_uri, pasture_threshold, primary_threshold, file_suffix,
-        intermediate_dir, tmp_dir, globio_lulc_uri):
+        lulc_to_globio_table_path, lulc_path, potential_vegetation_path,
+        pasture_path, pasture_threshold, primary_threshold, file_suffix,
+        intermediate_dir, tmp_dir, globio_lulc_path):
     """Translate a general landcover map into a GLOBIO version.
 
     Parameters:
-        lulc_to_globio_table_uri (string): a table that maps arbitrary
+        lulc_to_globio_table_path (string): a table that maps arbitrary
             landcover values to globio equivalents.
-        lulc_uri (string): path to the raw landcover map.
-        potential_vegetation_uri (string): a landcover map that indicates what
+        lulc_path (string): path to the raw landcover map.
+        potential_vegetation_path (string): a landcover map that indicates what
             the vegetation types would be if left to revert to natural state
-        pasture_uri (string): a path to a raster that indicates the percent
+        pasture_path (string): a path to a raster that indicates the percent
             of pasture contained in the pixel.  used to classify forest types
             from scrubland.
         pasture_threshold (float): the threshold to classify pixels in pasture
@@ -550,27 +550,27 @@ def _calculate_globio_lulc_map(
                     GLOBIO process
 
         tmp_dir (string): path to location for temporary files
-        globio_lulc_uri (string): path to globio lulc raster output
+        globio_lulc_path (string): path to globio lulc raster output
 
     Returns:
         a (string) filename to the generated globio GeoTIFF map
     """
     lulc_to_globio_table = utils.build_lookup_from_csv(
-        lulc_to_globio_table_uri, 'lucode')
+        lulc_to_globio_table_path, 'lucode')
 
     lulc_to_globio = dict(
         [(lulc_code, int(table['globio_lucode'])) for
          (lulc_code, table) in lulc_to_globio_table.items()])
 
-    intermediate_globio_lulc_uri = os.path.join(
+    intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
     pygeoprocessing.reclassify_raster(
-        (lulc_uri, 1), lulc_to_globio, intermediate_globio_lulc_uri,
+        (lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
         gdal.GDT_Int32, globio_nodata)
 
     # smoothed natural areas are natural areas run through a gaussian filter
-    forest_areas_uri = os.path.join(
+    forest_areas_path = os.path.join(
         tmp_dir, 'forest_areas%s.tif' % file_suffix)
     forest_areas_nodata = -1
 
@@ -584,19 +584,19 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info("create mask of natural areas")
     pygeoprocessing.raster_calculator(
-        [(intermediate_globio_lulc_uri, 1)], _forest_area_mask_op,
-        forest_areas_uri, gdal.GDT_Int32, forest_areas_nodata)
+        [(intermediate_globio_lulc_path, 1)], _forest_area_mask_op,
+        forest_areas_path, gdal.GDT_Int32, forest_areas_nodata)
 
     LOGGER.info('gaussian filter natural areas')
-    gaussian_kernel_uri = os.path.join(
+    gaussian_kernel_path = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
-    smoothed_forest_areas_uri = os.path.join(
+    make_gaussian_kernel_path(SIGMA, gaussian_kernel_path)
+    smoothed_forest_areas_path = os.path.join(
         tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
     pygeoprocessing.convolve_2d(
-        (forest_areas_uri, 1), (gaussian_kernel_uri, 1), smoothed_forest_areas_uri)
+        (forest_areas_path, 1), (gaussian_kernel_path, 1), smoothed_forest_areas_path)
 
-    ffqi_uri = os.path.join(
+    ffqi_path = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
 
     def _ffqi_op(forest_areas_array, smoothed_forest_areas):
@@ -608,8 +608,8 @@ def _calculate_globio_lulc_map(
 
     LOGGER.info('calculate ffqi')
     pygeoprocessing.raster_calculator(
-        [(forest_areas_uri, 1), (smoothed_forest_areas_uri, 1)], _ffqi_op,
-        ffqi_uri, gdal.GDT_Float32, forest_areas_nodata)
+        [(forest_areas_path, 1), (smoothed_forest_areas_path, 1)], _ffqi_op,
+        ffqi_path, gdal.GDT_Float32, forest_areas_nodata)
 
     # remap globio lulc to an internal lulc based on ag and intensification
     # proportion these came from the 'expansion_scenarios.py'
@@ -667,11 +667,11 @@ def _calculate_globio_lulc_map(
     LOGGER.info('create the globio lulc')
 
     # The veg and pasture rasters are user inputs, so may not be aligned with lulc
-    base_raster_align_list = [potential_vegetation_uri, pasture_uri]
+    base_raster_align_list = [potential_vegetation_path, pasture_path]
     target_raster_align_list = [os.path.join(
         tmp_dir, os.path.basename(x))
         for x in base_raster_align_list]
-    base_raster_info = pygeoprocessing.get_raster_info(lulc_uri)
+    base_raster_info = pygeoprocessing.get_raster_info(lulc_path)
     pygeoprocessing.align_and_resize_raster_stack(
         base_raster_align_list,
         target_raster_align_list,
@@ -680,15 +680,15 @@ def _calculate_globio_lulc_map(
         base_raster_info['bounding_box'])
 
     pygeoprocessing.raster_calculator(
-        [(intermediate_globio_lulc_uri, 1), (target_raster_align_list[0], 1),
-         (target_raster_align_list[1], 1), (ffqi_uri, 1)],
-        _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata)
+        [(intermediate_globio_lulc_path, 1), (target_raster_align_list[0], 1),
+         (target_raster_align_list[1], 1), (ffqi_path, 1)],
+        _create_globio_lulc, globio_lulc_path, gdal.GDT_Int32, globio_nodata)
 
-    return globio_lulc_uri
+    return globio_lulc_path
 
 
 def _collapse_infrastructure_layers(
-        infrastructure_dir, base_raster_uri, infrastructure_uri,
+        infrastructure_dir, base_raster_path, infrastructure_path,
         aligned_infra_dir):
     """Collapse all GIS infrastructure layers to one raster.
 
@@ -701,9 +701,9 @@ def _collapse_infrastructure_layers(
     Parameters:
         infrastructure_dir (string): path to a directory containing maps of
             either gdal compatible rasters or OGR compatible shapefiles.
-        base_raster_uri (string): a path to a file that has the dimensions and
+        base_raster_path (string): a path to a file that has the dimensions and
             projection of the desired output infrastructure file.
-        infrastructure_uri (string): (output) path to a file that will be a
+        infrastructure_path (string): (output) path to a file that will be a
             byte raster with 1s everywhere there was a GIS layer present in
             the GIS layers in `infrastructure_dir`.
         aligned_infra_dir (string): path to folder to store aligned versions of
@@ -728,7 +728,7 @@ def _collapse_infrastructure_layers(
                 file_handle, tmp_raster_path = tempfile.mkstemp(suffix='.tif')
                 os.close(file_handle)
                 pygeoprocessing.new_raster_from_base(
-                    base_raster_uri, tmp_raster_path,
+                    base_raster_path, tmp_raster_path,
                     gdal.GDT_Int32, [-1.0], fill_value_list=[0])
                 pygeoprocessing.rasterize(
                     os.path.join(root_directory, filename),
@@ -772,7 +772,7 @@ def _collapse_infrastructure_layers(
         aligned_infra_dir, os.path.basename(x))
         for x in infrastructure_filenames]
     base_raster_info = pygeoprocessing.get_raster_info(
-        base_raster_uri)
+        base_raster_path)
 
     pygeoprocessing.align_and_resize_raster_stack(
         infrastructure_filenames,
@@ -784,7 +784,7 @@ def _collapse_infrastructure_layers(
         (x, 1) for x in aligned_infrastructure_target_list]
     pygeoprocessing.raster_calculator(
         infra_filename_band_list, _collapse_infrastructure_op,
-        infrastructure_uri, gdal.GDT_Byte, infrastructure_nodata)
+        infrastructure_path, gdal.GDT_Byte, infrastructure_nodata)
 
     # clean up the temporary filenames
     for filename in infrastructure_tmp_filenames:
@@ -815,20 +815,20 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
-        'aoi_uri',
+        'aoi_path',
         'infrastructure_dir',
         'intensification_fraction',
-        'msa_parameters_uri']
+        'msa_parameters_path']
 
     if 'predefined_globio' in args:
         if args['predefined_globio']:
-            required_keys.append('globio_lulc_uri')
+            required_keys.append('globio_lulc_path')
         else:
             required_keys.extend([
-                'lulc_to_globio_table_uri',
-                'lulc_uri',
-                'pasture_uri',
-                'potential_vegetation_uri',
+                'lulc_to_globio_table_path',
+                'lulc_path',
+                'pasture_path',
+                'potential_vegetation_path',
                 'primary_threshold',
                 'pasture_threshold'])
 
@@ -850,14 +850,14 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     file_type_list = [
-        ('aoi_uri', 'vector'),
+        ('aoi_path', 'vector'),
         ('infrastructure_dir', 'directory'),
-        ('msa_parameters_uri', 'table'),
-        ('globio_lulc_uri', 'raster'),
-        ('lulc_to_globio_table_uri', 'table'),
-        ('lulc_uri', 'raster'),
-        ('pasture_uri', 'raster'),
-        ('potential_vegetation_uri', 'raster')]
+        ('msa_parameters_path', 'table'),
+        ('globio_lulc_path', 'raster'),
+        ('lulc_to_globio_table_path', 'table'),
+        ('lulc_path', 'raster'),
+        ('pasture_path', 'raster'),
+        ('potential_vegetation_path', 'raster')]
 
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
