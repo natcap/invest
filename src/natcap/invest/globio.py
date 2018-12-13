@@ -85,12 +85,12 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    aligned_infra_dir = os.path.join(
-        intermediate_dir, "aligned_infrastructure")
-    tmp_dir = os.path.join(args['workspace_dir'], 'tmp')
+    # aligned_infra_dir = os.path.join(
+    #     intermediate_dir, "aligned_infrastructure")
+    tmp_dir = os.path.join(intermediate_dir, 'tmp')
 
     utils.make_directories(
-        [output_dir, intermediate_dir, tmp_dir, aligned_infra_dir])
+        [output_dir, intermediate_dir, tmp_dir])
 
     # Initialize a TaskGraph
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
@@ -133,7 +133,7 @@ def execute(args):
     combine_infrastructure_task = task_graph.add_task(
         func=_collapse_infrastructure_layers,
         args=(args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri,
-              aligned_infra_dir),
+              tmp_dir),
         target_path_list=[infrastructure_uri],
         dependent_task_list=globio_lulc_task_list)
 
@@ -185,19 +185,168 @@ def execute(args):
         dependent_task_list=[smooth_primary_veg_mask_task],
         task_name='smooth_primary_veg')
 
-    task_graph.join()
-
+    LOGGER.info('calculate msa_f')
     msa_nodata = -1
-
     msa_f_table = msa_parameter_table['msa_f']
     msa_f_values = sorted(msa_f_table)
+    msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
 
-    def _msa_f_op(primary_veg_smooth):
+    calculate_msa_f_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(primary_veg_smooth_uri, 1), (primary_veg_mask_nodata, 'raw'),
+               (msa_f_table, 'raw'), (msa_f_values, 'raw'), (msa_nodata, 'raw')],
+              _msa_f_op, msa_f_uri, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_f_uri],
+        dependent_task_list=[smooth_primary_veg_task],
+        task_name='calculate_msa_f')
+
+    # calc_msa_i
+    msa_i_other_table = msa_parameter_table['msa_i_other']
+    msa_i_primary_table = msa_parameter_table['msa_i_primary']
+    msa_i_other_values = sorted(msa_i_other_table)
+    msa_i_primary_values = sorted(msa_i_primary_table)
+
+    LOGGER.info('calculate msa_i')
+    distance_to_infrastructure_uri = os.path.join(
+        intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
+    distance_to_infrastructure_task = task_graph.add_task(
+        func=pygeoprocessing.distance_transform_edt,
+        args=((infrastructure_uri, 1), distance_to_infrastructure_uri),
+        target_path_list=[distance_to_infrastructure_uri],
+        dependent_task_list=[combine_infrastructure_task],
+        task_name='distance_to_infrastructure')
+
+    msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
+    calculate_msa_i_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(globio_lulc_uri, 1), (distance_to_infrastructure_uri, 1),
+               (out_pixel_size, 'raw'), (msa_i_primary_table, 'raw'),
+               (msa_i_primary_values, 'raw'), (msa_i_other_table, 'raw'),
+               (msa_i_other_values, 'raw')],
+              _msa_i_op, msa_i_uri, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_i_uri],
+        dependent_task_list=[
+            distance_to_infrastructure_task] + globio_lulc_task_list,
+        task_name='calculate_msa_i')
+
+    # calc_msa_lu
+    msa_lu_uri = os.path.join(
+        output_dir, 'msa_lu%s.tif' % file_suffix)
+    LOGGER.info('calculate msa_lu')
+    calculate_msa_lu_task = task_graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=((globio_lulc_uri, 1), msa_parameter_table['msa_lu'], msa_lu_uri,
+              gdal.GDT_Float32, globio_nodata),
+        target_path_list=[msa_lu_uri],
+        dependent_task_list=globio_lulc_task_list,
+        task_name='calculate_msa_lu')
+
+    LOGGER.info('calculate msa')
+    msa_uri = os.path.join(
+        output_dir, 'msa%s.tif' % file_suffix)
+
+    calculate_msa_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(msa_f_uri, 1), (msa_lu_uri, 1), (msa_i_uri, 1),
+               (globio_nodata, 'raw')],
+              _msa_op, msa_uri, gdal.GDT_Float32, msa_nodata),
+        target_path_list=[msa_uri],
+        dependent_task_list=[
+            calculate_msa_f_task, calculate_msa_i_task, calculate_msa_lu_task],
+        task_name='calculate_msa')
+
+    LOGGER.info('summarize msa result in AOI polygons')
+    # ensure that aoi_uri is defined and it's not an empty string
+    if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
+        summary_aoi_uri = os.path.join(
+            output_dir, 'aoi_summary%s.shp' % file_suffix)
+        task_graph.add_task(
+            func=summarize_results_in_aoi,
+            args=(args['aoi_uri'], summary_aoi_uri, msa_uri),
+            target_path_list=[summary_aoi_uri],
+            dependent_task_list=[calculate_msa_task],
+            task_name='summarize_msa_in_aoi')
+
+    task_graph.close()
+    task_graph.join()
+
+        # for root_dir, _, files in os.walk(tmp_dir):
+    #     for filename in files:
+    #         try:
+    #             os.remove(os.path.join(root_dir, filename))
+    #         except OSError:
+    #             LOGGER.warn("couldn't remove temporary file %s", filename)
+
+
+def summarize_results_in_aoi(aoi_uri, summary_aoi_uri, msa_uri):
+    """Aggregate MSA results to AOI polygons.
+
+    Parameters:
+        aoi_uri (string): path to aoi shapefile containing polygons
+        summary_aoi_uri (string):
+            path to copy of aoi shapefile with summary stats
+        msa_uri (string): path to msa results raster to summarize
+
+    Returns:
+        None
+
+    """
+    # copy the aoi to an output shapefile
+    original_datasource = gdal.OpenEx(aoi_uri, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    # Delete if existing shapefile with the same name
+    if os.path.isfile(summary_aoi_uri):
+        os.remove(summary_aoi_uri)
+    # Copy the input shapefile into the designated output folder
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    datasource_copy = driver.CreateCopy(
+        summary_aoi_uri, original_datasource)
+    layer = datasource_copy.GetLayer()
+    msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
+    msa_summary_field_def.SetWidth(24)
+    msa_summary_field_def.SetPrecision(11)
+    layer.CreateField(msa_summary_field_def)
+    layer.SyncToDisk()
+
+    msa_summary = pygeoprocessing.zonal_statistics(
+        (msa_uri, 1), summary_aoi_uri)
+    for feature in layer:
+        feature_fid = feature.GetFID()
+        # count == 0 if polygon outside raster bounds or only over nodata
+        if msa_summary[feature_fid]['count'] != 0:
+            field_val = (
+                float(msa_summary[feature_fid]['sum'])
+                / float(msa_summary[feature_fid]['count']))
+            feature.SetField('msa_mean', field_val)
+            layer.SetFeature(feature)
+
+
+def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
+        """Masking out natural areas."""
+        # lulc_array and nodata could conceivably be a float here,
+        # if it's the user-provided globio dataset
+        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+        # landcover type 1 in the GLOBIO schema represents primary vegetation
+        result = (lulc_array == 1)
+        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
+
+
+def _primary_veg_smooth_op(
+        primary_veg_mask_array, smoothed_primary_veg_mask,
+        primary_veg_mask_nodata):
+        """Mask out ffqi only where there's an ffqi."""
+        return numpy.where(
+            primary_veg_mask_array != primary_veg_mask_nodata,
+            primary_veg_mask_array * smoothed_primary_veg_mask,
+            primary_veg_mask_nodata)
+
+
+def _msa_f_op(
+        primary_veg_smooth, primary_veg_mask_nodata, msa_f_table,
+        msa_f_values, msa_nodata):
         """Calculate msa fragmentation."""
         nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
 
         msa_f = numpy.empty(primary_veg_smooth.shape)
-
         for value in reversed(msa_f_values):
             # special case if it's a > or < value
             if value == '>':
@@ -216,153 +365,58 @@ def execute(args):
 
         return msa_f
 
-    LOGGER.info('calculate msa_f')
-    msa_f_uri = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
-    pygeoprocessing.raster_calculator(
-        [(primary_veg_smooth_uri, 1)], _msa_f_op, msa_f_uri, gdal.GDT_Float32,
-        msa_nodata)
 
-    # calc_msa_i
-    msa_f_values = sorted(msa_f_table)
-    msa_i_other_table = msa_parameter_table['msa_i_other']
-    msa_i_primary_table = msa_parameter_table['msa_i_primary']
-    msa_i_other_values = sorted(msa_i_other_table)
-    msa_i_primary_values = sorted(msa_i_primary_table)
+def _msa_i_op(
+        lulc_array, distance_to_infrastructure, out_pixel_size,
+        msa_i_primary_table, msa_i_primary_values, msa_i_other_table,
+        msa_i_other_values):
+    """Calculate msa infrastructure."""
+    distance_to_infrastructure *= out_pixel_size  # convert to meters
+    msa_i_primary = numpy.empty(lulc_array.shape)
+    msa_i_other = numpy.empty(lulc_array.shape)
 
-    def _msa_i_op(lulc_array, distance_to_infrastructure):
-        """Calculate msa infrastructure."""
-        distance_to_infrastructure *= out_pixel_size  # convert to meters
-        msa_i_primary = numpy.empty(lulc_array.shape)
-        msa_i_other = numpy.empty(lulc_array.shape)
+    for value in reversed(msa_i_primary_values):
+        # special case if it's a > or < value
+        if value == '>':
+            msa_i_primary[distance_to_infrastructure >
+                          msa_i_primary_table['>'][0]] = (
+                              msa_i_primary_table['>'][1])
+        elif value == '<':
+            continue
+        else:
+            msa_i_primary[distance_to_infrastructure <= value] = (
+                msa_i_primary_table[value])
 
-        for value in reversed(msa_i_primary_values):
-            # special case if it's a > or < value
-            if value == '>':
-                msa_i_primary[distance_to_infrastructure >
-                              msa_i_primary_table['>'][0]] = (
-                                  msa_i_primary_table['>'][1])
-            elif value == '<':
-                continue
-            else:
-                msa_i_primary[distance_to_infrastructure <= value] = (
-                    msa_i_primary_table[value])
+    if '<' in msa_i_primary_table:
+        msa_i_primary[distance_to_infrastructure <
+                      msa_i_primary_table['<'][0]] = (
+                          msa_i_primary_table['<'][1])
 
-        if '<' in msa_i_primary_table:
-            msa_i_primary[distance_to_infrastructure <
-                          msa_i_primary_table['<'][0]] = (
-                              msa_i_primary_table['<'][1])
+    for value in reversed(msa_i_other_values):
+        # special case if it's a > or < value
+        if value == '>':
+            msa_i_other[distance_to_infrastructure >
+                        msa_i_other_table['>'][0]] = (
+                            msa_i_other_table['>'][1])
+        elif value == '<':
+            continue
+        else:
+            msa_i_other[distance_to_infrastructure <= value] = (
+                msa_i_other_table[value])
 
-        for value in reversed(msa_i_other_values):
-            # special case if it's a > or < value
-            if value == '>':
-                msa_i_other[distance_to_infrastructure >
-                            msa_i_other_table['>'][0]] = (
-                                msa_i_other_table['>'][1])
-            elif value == '<':
-                continue
-            else:
-                msa_i_other[distance_to_infrastructure <= value] = (
-                    msa_i_other_table[value])
+    if '<' in msa_i_other_table:
+        msa_i_other[distance_to_infrastructure <
+                    msa_i_other_table['<'][0]] = (
+                        msa_i_other_table['<'][1])
 
-        if '<' in msa_i_other_table:
-            msa_i_other[distance_to_infrastructure <
-                        msa_i_other_table['<'][0]] = (
-                            msa_i_other_table['<'][1])
+    msa_i = numpy.where(lulc_array == 1, msa_i_primary, msa_i_other)
+    return msa_i
 
-        msa_i = numpy.where(lulc_array == 1, msa_i_primary, msa_i_other)
-        return msa_i
 
-    LOGGER.info('calculate msa_i')
-    distance_to_infrastructure_uri = os.path.join(
-        intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
-    pygeoprocessing.distance_transform_edt(
-        (infrastructure_uri, 1), distance_to_infrastructure_uri)
-    msa_i_uri = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
-    pygeoprocessing.raster_calculator(
-        [(globio_lulc_uri, 1), (distance_to_infrastructure_uri, 1)],
-        _msa_i_op, msa_i_uri, gdal.GDT_Float32, msa_nodata)
-    
-    # calc_msa_lu
-    msa_lu_uri = os.path.join(
-        output_dir, 'msa_lu%s.tif' % file_suffix)
-    LOGGER.info('calculate msa_lu')
-    pygeoprocessing.reclassify_raster(
-        (globio_lulc_uri, 1), msa_parameter_table['msa_lu'], msa_lu_uri,
-        gdal.GDT_Float32, globio_nodata)
-
-    LOGGER.info('calculate msa')
-    msa_uri = os.path.join(
-        output_dir, 'msa%s.tif' % file_suffix)
-
-    def _msa_op(msa_f, msa_lu, msa_i):
+def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
         return numpy.where(
             ~numpy.isclose(msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
-
-    pygeoprocessing.raster_calculator(
-        [(msa_f_uri, 1), (msa_lu_uri, 1), (msa_i_uri, 1)], _msa_op,
-        msa_uri, gdal.GDT_Float32, msa_nodata)
-
-    LOGGER.info('summarize msa result in AOI polygons')
-    # ensure that aoi_uri is defined and it's not an empty string
-    if 'aoi_uri' in args and len(args['aoi_uri']) > 0:
-        # copy the aoi to an output shapefile
-        original_datasource = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
-        summary_aoi_uri = os.path.join(
-            output_dir, 'aoi_summary%s.shp' % file_suffix)
-        # Delete if existing shapefile with the same name
-        # TODO - this must go for taskgraph
-        if os.path.isfile(summary_aoi_uri):
-            os.remove(summary_aoi_uri)
-        # Copy the input shapefile into the designated output folder
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        datasource_copy = driver.CreateCopy(
-            summary_aoi_uri, original_datasource)
-        layer = datasource_copy.GetLayer()
-        msa_summary_field_def = ogr.FieldDefn('msa_mean', ogr.OFTReal)
-        msa_summary_field_def.SetWidth(24)
-        msa_summary_field_def.SetPrecision(11)
-        layer.CreateField(msa_summary_field_def)
-        layer.SyncToDisk()
-
-        msa_summary = pygeoprocessing.zonal_statistics(
-            (msa_uri, 1), summary_aoi_uri)
-        for feature in layer:
-            feature_fid = feature.GetFID()
-            # count == 0 if polygon outside raster bounds, or only over nodata
-            if msa_summary[feature_fid]['count'] != 0:
-                field_val = (
-                    float(msa_summary[feature_fid]['sum'])
-                    / float(msa_summary[feature_fid]['count']))
-                feature.SetField('msa_mean', field_val)
-                layer.SetFeature(feature)
-
-    # for root_dir, _, files in os.walk(tmp_dir):
-    #     for filename in files:
-    #         try:
-    #             os.remove(os.path.join(root_dir, filename))
-    #         except OSError:
-    #             LOGGER.warn("couldn't remove temporary file %s", filename)
-
-
-def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
-        """Masking out natural areas."""
-        # lulc_array and nodata could conceivably be a float here,
-        # if it's the user-provided globio dataset
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
-        # landcover type 1 in the GLOBIO schema represents primary vegetation
-        result = (lulc_array == 1)
-        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
-
-
-def _primary_veg_smooth_op(
-            primary_veg_mask_array, smoothed_primary_veg_mask,
-            primary_veg_mask_nodata):
-        """Mask out ffqi only where there's an ffqi."""
-        return numpy.where(
-            primary_veg_mask_array != primary_veg_mask_nodata,
-            primary_veg_mask_array * smoothed_primary_veg_mask,
-            primary_veg_mask_nodata)
 
 
 def make_gaussian_kernel_uri(sigma, kernel_uri):
@@ -611,16 +665,31 @@ def _calculate_globio_lulc_map(
         return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
     LOGGER.info('create the globio lulc')
+
+    # The veg and pasture rasters are user inputs, so may not be aligned with lulc
+    base_raster_align_list = [potential_vegetation_uri, pasture_uri]
+    target_raster_align_list = [os.path.join(
+        tmp_dir, os.path.basename(x))
+        for x in base_raster_align_list]
+    base_raster_info = pygeoprocessing.get_raster_info(lulc_uri)
+    pygeoprocessing.align_and_resize_raster_stack(
+        base_raster_align_list,
+        target_raster_align_list,
+        ['near', 'bilinear'],
+        base_raster_info['pixel_size'],
+        base_raster_info['bounding_box'])
+
     pygeoprocessing.raster_calculator(
-        [(intermediate_globio_lulc_uri, 1), (potential_vegetation_uri, 1),
-         (pasture_uri, 1), (ffqi_uri, 1)],
+        [(intermediate_globio_lulc_uri, 1), (target_raster_align_list[0], 1),
+         (target_raster_align_list[1], 1), (ffqi_uri, 1)],
         _create_globio_lulc, globio_lulc_uri, gdal.GDT_Int32, globio_nodata)
 
     return globio_lulc_uri
 
 
 def _collapse_infrastructure_layers(
-        infrastructure_dir, base_raster_uri, infrastructure_uri, aligned_infra_dir):
+        infrastructure_dir, base_raster_uri, infrastructure_uri,
+        aligned_infra_dir):
     """Collapse all GIS infrastructure layers to one raster.
 
     Gathers all the GIS layers in the given directory and collapses them
@@ -637,6 +706,8 @@ def _collapse_infrastructure_layers(
         infrastructure_uri (string): (output) path to a file that will be a
             byte raster with 1s everywhere there was a GIS layer present in
             the GIS layers in `infrastructure_dir`.
+        aligned_infra_dir (string): path to folder to store aligned versions of
+            infrastructure rasters.
 
     Returns:
         None
