@@ -30,7 +30,7 @@ _ROUTING_FUNCS = {
     'D8': {
         'flow_accumulation': pygeoprocessing.routing.flow_accumulation_d8,
         'flow_direction': pygeoprocessing.routing.flow_dir_d8,
-        'threshold_flow': None,  # Defined in source code here
+        'threshold_flow': None,  # Defined in source code as _threshold_flow
         'distance_to_channel': pygeoprocessing.routing.distance_to_channel_d8,
     },
     'MFD': {
@@ -68,6 +68,9 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     return out_matrix
 
 
+# TODO: update the RouteDEM scenario file in invest-data
+# TODO: remove outdated routedem test data from test data repo
+# TODO: Update the UG documentation for RouteDEM.
 def execute(args):
     """RouteDEM: Hydrological routing.
 
