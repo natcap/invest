@@ -20,8 +20,8 @@ Rtree>=0.8.2
 scipy>=0.16.1
 Shapely>=1.6.4
 six
-hg+https://bitbucket.org/richsharp/pygeoprocessing@95d03f2e70f5#egg=pygeoprocessing
-hg+https://bitbucket.org/richsharp/taskgraph@ba1079830dd5#egg=taskgraph
+pygeoprocessing==1.5.0
+hg+https://bitbucket.org/richsharp/taskgraph@b7e467cccc82#egg=taskgraph
 # taskgraph[niced_processes]>=0.8.0
 chardet>=3.0.4
 matplotlib
