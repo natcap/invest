@@ -365,6 +365,7 @@ class RouteDEMTests(unittest.TestCase):
             (['dem_path'], 'not a raster'))
 
     def test_validation_band_index_type(self):
+        """RouteDEM: test validation of an invalid band index."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
@@ -382,6 +383,7 @@ class RouteDEMTests(unittest.TestCase):
             (['dem_path'], 'not found on disk'))
 
     def test_validation_band_index_negative_value(self):
+        """RouteDEM: test validation of a negative band index."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
@@ -399,6 +401,7 @@ class RouteDEMTests(unittest.TestCase):
             (['dem_path'], 'not found on disk'))
 
     def test_validation_band_index_value_too_large(self):
+        """RouteDEM: test validation of a too-large band index."""
         from natcap.invest import routedem
         args = {
             'workspace_dir': self.workspace_dir,
