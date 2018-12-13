@@ -188,7 +188,7 @@ def execute(args):
                 routing_funcs['flow_accumulation'],
                 args=((flow_dir_path, 1),
                       flow_accumulation_path
-                ),  # TODO allow weight raster to be provided.
+                ),
                 target_path_list=[flow_accumulation_path],
                 task_name='flow_accumulation_%s' % algorithm,
                 dependent_task_list=[flow_direction_task])
@@ -218,7 +218,6 @@ def execute(args):
                 else:  # MFD
                     stream_threshold_task = graph.add_task(
                         routing_funcs['threshold_flow'],
-                        # TODO: support trace threshold proportion
                         args=((flow_accumulation_path, 1),
                               (flow_dir_path, 1),
                               float(args['threshold_flow_accumulation']),
@@ -234,7 +233,6 @@ def execute(args):
                         _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
                     graph.add_task(
                         routing_funcs['distance_to_channel'],
-                        # TODO: support the weight raster
                         args=((flow_dir_path, 1),
                               (stream_mask_path, 1),
                               distance_path),
