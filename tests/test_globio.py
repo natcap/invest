@@ -57,6 +57,7 @@ class GLOBIOTests(unittest.TestCase):
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
         }
         globio.execute(args)
         GLOBIOTests._test_same_files(
@@ -82,6 +83,7 @@ class GLOBIOTests(unittest.TestCase):
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
         }
 
         with self.assertRaises(ValueError):
@@ -102,6 +104,7 @@ class GLOBIOTests(unittest.TestCase):
                 SAMPLE_DATA, 'msa_parameters.csv'),
             'predefined_globio': True,
             'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
         }
         globio.execute(args)
         GLOBIOTests._test_same_files(
@@ -135,6 +138,7 @@ class GLOBIOTests(unittest.TestCase):
             'predefined_globio': False,
             'primary_threshold': 0.66,
             'workspace_dir': self.workspace_dir,
+            'n_workers': '2',
         }
 
         # Test that overwriting output does not crash.

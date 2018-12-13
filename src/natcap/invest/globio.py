@@ -4,7 +4,6 @@ import os
 import logging
 import collections
 import tempfile
-import uuid
 
 import pandas
 from osgeo import gdal
@@ -12,7 +11,7 @@ from osgeo import ogr
 from osgeo import osr
 import numpy
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3
+import taskgraph
 
 from . import utils
 from . import validation
@@ -93,71 +92,100 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_dir, tmp_dir, aligned_infra_dir])
 
+    # Initialize a TaskGraph
+    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+
+
+    globio_lulc_task_list = []
     if not args['predefined_globio']:
-        globio_lulc_uri = _calculate_globio_lulc_map(
-            args['lulc_to_globio_table_uri'], args['lulc_uri'],
-            args['potential_vegetation_uri'], args['pasture_uri'],
-            float(args['pasture_threshold']), float(args['primary_threshold']),
-            file_suffix, intermediate_dir, tmp_dir)
+        globio_lulc_uri = os.path.join(
+            intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
+        globio_lulc_task_list.append(task_graph.add_task(
+            func=_calculate_globio_lulc_map,
+            args=(args['lulc_to_globio_table_uri'], args['lulc_uri'],
+                  args['potential_vegetation_uri'], args['pasture_uri'],
+                  float(args['pasture_threshold']), float(args['primary_threshold']),
+                  file_suffix, intermediate_dir, tmp_dir, globio_lulc_uri),
+            target_path_list=[globio_lulc_uri],
+            task_name='make_globio_lulc'))
     else:
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
         globio_lulc_uri = args['globio_lulc_uri']
 
+    # join to make the globio_lulc raster info available
+    task_graph.join()
     # cell size should be based on the landcover map
     globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_uri)
     out_pixel_size = (abs(globio_lulc_info['pixel_size'][0]) +
                       abs(globio_lulc_info['pixel_size'][0])) / 2
     globio_nodata = globio_lulc_info['nodata'][0]
+
     infrastructure_uri = os.path.join(
         intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
-    _collapse_infrastructure_layers(
-        args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri, aligned_infra_dir)
+    combine_infrastructure_task = task_graph.add_task(
+        func=_collapse_infrastructure_layers,
+        args=(args['infrastructure_dir'], globio_lulc_uri, infrastructure_uri,
+              aligned_infra_dir),
+        target_path_list=[infrastructure_uri],
+        dependent_task_list=globio_lulc_task_list)
 
     # calc_msa_f
     primary_veg_mask_uri = os.path.join(
         tmp_dir, 'primary_veg_mask%s.tif' % file_suffix)
     primary_veg_mask_nodata = -1
 
-    def _primary_veg_mask_op(lulc_array):
-        """Masking out natural areas."""
-        # lulc_array and nodata could conceivably be a float here,
-        # if it's the user-provided globio dataset
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
-        # landcover type 1 in the GLOBIO schema represents primary vegetation
-        result = (lulc_array == 1)
-        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
-
     LOGGER.info("create mask of primary veg areas")
-    pygeoprocessing.raster_calculator(
-        [(globio_lulc_uri, 1)], _primary_veg_mask_op,
-        primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata)
+    mask_primary_veg_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(globio_lulc_uri, 1), (globio_nodata, 'raw'),
+              (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
+              primary_veg_mask_uri, gdal.GDT_Int32, primary_veg_mask_nodata),
+        target_path_list=[primary_veg_mask_uri],
+        dependent_task_list=globio_lulc_task_list,
+        task_name='mask_primary_veg')
 
     LOGGER.info('gaussian filter primary veg')
     gaussian_kernel_uri = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_uri(SIGMA, gaussian_kernel_uri)
+    make_gaussian_kernel_task = task_graph.add_task(
+        func=make_gaussian_kernel_uri,
+        args=(SIGMA, gaussian_kernel_uri),
+        target_path_list=[gaussian_kernel_uri],
+        task_name='gaussian_kernel')
+
     smoothed_primary_veg_mask_uri = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
-    pygeoprocessing.convolve_2d(
-        (primary_veg_mask_uri, 1), (gaussian_kernel_uri, 1),
-        smoothed_primary_veg_mask_uri)
+    smooth_primary_veg_mask_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=((primary_veg_mask_uri, 1), (gaussian_kernel_uri, 1),
+              smoothed_primary_veg_mask_uri),
+        target_path_list=[smoothed_primary_veg_mask_uri],
+        dependent_task_list=[mask_primary_veg_task, make_gaussian_kernel_task],
+        task_name='smooth_primary_veg_mask')
 
     primary_veg_smooth_uri = os.path.join(
         intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
 
-    def _primary_veg_smooth_op(
-            primary_veg_mask_array, smoothed_primary_veg_mask):
-        """Mask out ffqi only where there's an ffqi."""
-        return numpy.where(
-            primary_veg_mask_array != primary_veg_mask_nodata,
-            primary_veg_mask_array * smoothed_primary_veg_mask,
-            primary_veg_mask_nodata)
-
     LOGGER.info('calculate primary_veg_smooth')
-    pygeoprocessing.raster_calculator(
-        [(primary_veg_mask_uri, 1), (smoothed_primary_veg_mask_uri, 1)],
-        _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
-        primary_veg_mask_nodata)
+    smooth_primary_veg_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(primary_veg_mask_uri, 1), (smoothed_primary_veg_mask_uri, 1),
+               (primary_veg_mask_nodata, 'raw')],
+              _primary_veg_smooth_op, primary_veg_smooth_uri, gdal.GDT_Float32,
+              primary_veg_mask_nodata),
+        target_path_list=[primary_veg_smooth_uri],
+        dependent_task_list=[smooth_primary_veg_mask_task],
+        task_name='smooth_primary_veg')
+
+    task_graph.join()
 
     msa_nodata = -1
 
@@ -317,6 +345,26 @@ def execute(args):
     #             LOGGER.warn("couldn't remove temporary file %s", filename)
 
 
+def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
+        """Masking out natural areas."""
+        # lulc_array and nodata could conceivably be a float here,
+        # if it's the user-provided globio dataset
+        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+        # landcover type 1 in the GLOBIO schema represents primary vegetation
+        result = (lulc_array == 1)
+        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
+
+
+def _primary_veg_smooth_op(
+            primary_veg_mask_array, smoothed_primary_veg_mask,
+            primary_veg_mask_nodata):
+        """Mask out ffqi only where there's an ffqi."""
+        return numpy.where(
+            primary_veg_mask_array != primary_veg_mask_nodata,
+            primary_veg_mask_array * smoothed_primary_veg_mask,
+            primary_veg_mask_nodata)
+
+
 def make_gaussian_kernel_uri(sigma, kernel_uri):
     """Create a gaussian kernel raster."""
     max_distance = sigma * 5
@@ -419,7 +467,7 @@ def load_msa_parameter_table(
 def _calculate_globio_lulc_map(
         lulc_to_globio_table_uri, lulc_uri, potential_vegetation_uri,
         pasture_uri, pasture_threshold, primary_threshold, file_suffix,
-        intermediate_dir, tmp_dir):
+        intermediate_dir, tmp_dir, globio_lulc_uri):
     """Translate a general landcover map into a GLOBIO version.
 
     Parameters:
@@ -447,8 +495,8 @@ def _calculate_globio_lulc_map(
                     biophysical parameters to the function as described in the
                     GLOBIO process
 
-        tmp_dir - (string) path to location for temporary files
-        out_pixel_size - (float) pixel size of output globio map
+        tmp_dir (string): path to location for temporary files
+        globio_lulc_uri (string): path to globio lulc raster output
 
     Returns:
         a (string) filename to the generated globio GeoTIFF map
@@ -466,9 +514,6 @@ def _calculate_globio_lulc_map(
     pygeoprocessing.reclassify_raster(
         (lulc_uri, 1), lulc_to_globio, intermediate_globio_lulc_uri,
         gdal.GDT_Int32, globio_nodata)
-
-    globio_lulc_uri = os.path.join(
-        intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
 
     # smoothed natural areas are natural areas run through a gaussian filter
     forest_areas_uri = os.path.join(
