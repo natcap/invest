@@ -68,24 +68,6 @@ def _threshold_flow(flow_accum_pixels, threshold, in_nodata, out_nodata):
     return out_matrix
 
 
-def _log_callable(message, func):
-    """Log a title message before a function is called.
-
-    Parameters:
-        message (string): The message to log before calling ``func``.
-            This is intended (but not required) to be a title.
-        func (callable): the function to call after logging the message.
-
-    Returns:
-        A callable.
-
-    """
-    def _call(*args, **kwargs):
-        LOGGER.info(message)
-        return func(*args, **kwargs)
-    return _call
-
-
 def execute(args):
     """RouteDEM: Hydrological routing.
 
@@ -164,8 +146,7 @@ def execute(args):
         target_slope_path = os.path.join(
             args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
         graph.add_task(
-            _log_callable('Calculating slope',
-                          pygeoprocessing.calculate_slope),
+            pygeoprocessing.calculate_slope,
             args=(dem_raster_path_band,
                   target_slope_path),
             task_name='calculate_slope',
@@ -175,8 +156,7 @@ def execute(args):
         args['workspace_dir'],
         _TARGET_FILLED_PITS_FILED_PATTERN % file_suffix)
     filled_pits_task = graph.add_task(
-        _log_callable('Filling hydrological sinks',
-                      pygeoprocessing.routing.fill_pits),
+        pygeoprocessing.routing.fill_pits,
         args=(dem_raster_path_band,
               dem_filled_pits_path,
               args['workspace_dir']),
@@ -190,8 +170,7 @@ def execute(args):
             args['workspace_dir'],
             _TARGET_FLOW_DIRECTION_FILE_PATTERN % file_suffix)
         flow_direction_task = graph.add_task(
-            _log_callable('Calculating flow direction',
-                          routing_funcs['flow_direction']),
+            routing_funcs['flow_direction'],
             args=((dem_filled_pits_path, band_index),
                   flow_dir_path,
                   args['workspace_dir']),
@@ -205,8 +184,7 @@ def execute(args):
                 args['workspace_dir'],
                 _FLOW_ACCUMULATION_FILE_PATTERN % file_suffix)
             flow_accum_task = graph.add_task(
-                _log_callable('Calculating flow accumulation',
-                              routing_funcs['flow_accumulation']),
+                routing_funcs['flow_accumulation'],
                 args=((flow_dir_path, 1),
                       flow_accumulation_path
                 ),  # TODO allow weight raster to be provided.
@@ -224,9 +202,7 @@ def execute(args):
                     flow_accum_info = pygeoprocessing.get_raster_info(
                         flow_accumulation_path)
                     stream_threshold_task = graph.add_task(
-                        _log_callable('Classifying streams from flow '
-                                      'accumulation raster',
-                                      pygeoprocessing.raster_calculator),
+                        pygeoprocessing.raster_calculator,
                         args=(((flow_accumulation_path, 1),
                                (float(args['threshold_flow_accumulation']), 'raw'),
                                (flow_accum_info['nodata'][0], 'raw'),
@@ -240,9 +216,7 @@ def execute(args):
                         dependent_task_list=[flow_accum_task])
                 else:  # MFD
                     stream_threshold_task = graph.add_task(
-                        _log_callable('Classifying streams from MFD flow '
-                                      'accumulation',
-                                      routing_funcs['threshold_flow']),
+                        routing_funcs['threshold_flow'],
                         # TODO: support trace threshold proportion
                         args=((flow_accumulation_path, 1),
                               (flow_dir_path, 1),
@@ -258,8 +232,7 @@ def execute(args):
                         args['workspace_dir'],
                         _DOWNSTREAM_DISTANCE_FILE_PATTERN % file_suffix)
                     graph.add_task(
-                        _log_callable('Calculating distance to stream',
-                                      routing_funcs['distance_to_channel']),
+                        routing_funcs['distance_to_channel'],
                         # TODO: support the weight raster
                         args=((flow_dir_path, 1),
                               (stream_mask_path, 1),
