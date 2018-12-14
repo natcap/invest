@@ -138,7 +138,7 @@ class GLOBIOTests(unittest.TestCase):
             'predefined_globio': False,
             'primary_threshold': 0.66,
             'workspace_dir': self.workspace_dir,
-            'n_workers': '2',
+            'n_workers': '-1',
         }
 
         # Test that overwriting output does not crash.

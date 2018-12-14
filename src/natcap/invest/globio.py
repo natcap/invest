@@ -75,6 +75,9 @@ def execute(args):
             is summarized by AOI
         args['globio_lulc_path'] (string): used in "mode (b)" path to predefined
             globio raster.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
 
     Returns:
         None
@@ -85,8 +88,6 @@ def execute(args):
     output_dir = os.path.join(args['workspace_dir'])
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-    # aligned_infra_dir = os.path.join(
-    #     intermediate_dir, "aligned_infrastructure")
     tmp_dir = os.path.join(intermediate_dir, 'tmp')
 
     utils.make_directories(
@@ -103,7 +104,13 @@ def execute(args):
         n_workers = -1  # single process mode.
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
-
+    gaussian_kernel_path = os.path.join(
+        tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
+    make_gaussian_kernel_task = task_graph.add_task(
+        func=make_gaussian_kernel_path,
+        args=(SIGMA, gaussian_kernel_path),
+        target_path_list=[gaussian_kernel_path],
+        task_name='gaussian_kernel')
     globio_lulc_task_list = []
     if not args['predefined_globio']:
         globio_lulc_path = os.path.join(
@@ -112,9 +119,11 @@ def execute(args):
             func=_calculate_globio_lulc_map,
             args=(args['lulc_to_globio_table_path'], args['lulc_path'],
                   args['potential_vegetation_path'], args['pasture_path'],
-                  float(args['pasture_threshold']), float(args['primary_threshold']),
-                  file_suffix, intermediate_dir, tmp_dir, globio_lulc_path),
+                  gaussian_kernel_path, float(args['pasture_threshold']),
+                  float(args['primary_threshold']), file_suffix,
+                  intermediate_dir, tmp_dir, globio_lulc_path, task_graph),
             target_path_list=[globio_lulc_path],
+            dependent_task_list=[make_gaussian_kernel_task],
             task_name='make_globio_lulc'))
     else:
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
@@ -135,7 +144,8 @@ def execute(args):
         args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
               tmp_dir),
         target_path_list=[infrastructure_path],
-        dependent_task_list=globio_lulc_task_list)
+        dependent_task_list=globio_lulc_task_list,
+        task_name='combine_infrastructure')
 
     # calc_msa_f
     primary_veg_mask_path = os.path.join(
@@ -153,14 +163,6 @@ def execute(args):
         task_name='mask_primary_veg')
 
     LOGGER.info('gaussian filter primary veg')
-    gaussian_kernel_path = os.path.join(
-        tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_task = task_graph.add_task(
-        func=make_gaussian_kernel_path,
-        args=(SIGMA, gaussian_kernel_path),
-        target_path_list=[gaussian_kernel_path],
-        task_name='gaussian_kernel')
-
     smoothed_primary_veg_mask_path = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     smooth_primary_veg_mask_task = task_graph.add_task(
@@ -269,13 +271,6 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
-
-        # for root_dir, _, files in os.walk(tmp_dir):
-    #     for filename in files:
-    #         try:
-    #             os.remove(os.path.join(root_dir, filename))
-    #         except OSError:
-    #             LOGGER.warn("couldn't remove temporary file %s", filename)
 
 
 def summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
@@ -520,8 +515,9 @@ def load_msa_parameter_table(
 
 def _calculate_globio_lulc_map(
         lulc_to_globio_table_path, lulc_path, potential_vegetation_path,
-        pasture_path, pasture_threshold, primary_threshold, file_suffix,
-        intermediate_dir, tmp_dir, globio_lulc_path):
+        pasture_path, gaussian_kernel_path, pasture_threshold,
+        primary_threshold, file_suffix, intermediate_dir, tmp_dir,
+        globio_lulc_path, task_graph):
     """Translate a general landcover map into a GLOBIO version.
 
     Parameters:
@@ -533,6 +529,8 @@ def _calculate_globio_lulc_map(
         pasture_path (string): a path to a raster that indicates the percent
             of pasture contained in the pixel.  used to classify forest types
             from scrubland.
+        gaussian_kernel_path (string): path to gaussian kernel raster
+            passed to convolution.
         pasture_threshold (float): the threshold to classify pixels in pasture
             as potential forest or scrub
         primary_threshold (float): the threshold to classify the calculated
@@ -551,9 +549,11 @@ def _calculate_globio_lulc_map(
 
         tmp_dir (string): path to location for temporary files
         globio_lulc_path (string): path to globio lulc raster output
+        task_graph (TaskGraph): in-memory object from taskgraph.TaskGraph()
 
     Returns:
-        a (string) filename to the generated globio GeoTIFF map
+        None
+
     """
     lulc_to_globio_table = utils.build_lookup_from_csv(
         lulc_to_globio_table_path, 'lucode')
@@ -565,105 +565,55 @@ def _calculate_globio_lulc_map(
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
     globio_nodata = -1
-    pygeoprocessing.reclassify_raster(
-        (lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
-        gdal.GDT_Int32, globio_nodata)
+    reclass_lulc_to_globio_task = task_graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
+              gdal.GDT_Int32, globio_nodata),
+        target_path_list=[intermediate_globio_lulc_path],
+        task_name='reclassify_lulc_to_globio')
 
-    # smoothed natural areas are natural areas run through a gaussian filter
     forest_areas_path = os.path.join(
         tmp_dir, 'forest_areas%s.tif' % file_suffix)
     forest_areas_nodata = -1
 
-    def _forest_area_mask_op(lulc_array):
-        """Masking out forest areas."""
-        nodata_mask = lulc_array == globio_nodata
-        # landcover code 130 represents all MODIS forest codes which originate
-        # as 1-5
-        result = (lulc_array == 130)
-        return numpy.where(nodata_mask, forest_areas_nodata, result)
-
     LOGGER.info("create mask of natural areas")
-    pygeoprocessing.raster_calculator(
-        [(intermediate_globio_lulc_path, 1)], _forest_area_mask_op,
-        forest_areas_path, gdal.GDT_Int32, forest_areas_nodata)
+    mask_forests_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(intermediate_globio_lulc_path, 1), (globio_nodata, 'raw'),
+               (forest_areas_nodata, 'raw')], _forest_area_mask_op,
+              forest_areas_path, gdal.GDT_Int32, forest_areas_nodata),
+        target_path_list=[forest_areas_path],
+        dependent_task_list=[reclass_lulc_to_globio_task],
+        task_name='mask_forest_area')
 
-    LOGGER.info('gaussian filter natural areas')
-    gaussian_kernel_path = os.path.join(
-        tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
-    make_gaussian_kernel_path(SIGMA, gaussian_kernel_path)
+    LOGGER.info('smooth natural areas with gaussian filter')
     smoothed_forest_areas_path = os.path.join(
         tmp_dir, 'smoothed_forest_areas%s.tif' % file_suffix)
-    pygeoprocessing.convolve_2d(
-        (forest_areas_path, 1), (gaussian_kernel_path, 1), smoothed_forest_areas_path)
+    smooth_forest_areas_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=((forest_areas_path, 1), (gaussian_kernel_path, 1),
+              smoothed_forest_areas_path),
+        target_path_list=[smoothed_forest_areas_path],
+        dependent_task_list=[mask_forests_task],
+        task_name='smooth_forest_areas')
 
     ffqi_path = os.path.join(
         intermediate_dir, 'ffqi%s.tif' % file_suffix)
-
-    def _ffqi_op(forest_areas_array, smoothed_forest_areas):
-        """Mask out ffqi only where there's an ffqi."""
-        return numpy.where(
-            forest_areas_array != forest_areas_nodata,
-            forest_areas_array * smoothed_forest_areas,
-            forest_areas_nodata)
-
     LOGGER.info('calculate ffqi')
-    pygeoprocessing.raster_calculator(
-        [(forest_areas_path, 1), (smoothed_forest_areas_path, 1)], _ffqi_op,
-        ffqi_path, gdal.GDT_Float32, forest_areas_nodata)
+    calculate_ffqi_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(forest_areas_path, 1), (smoothed_forest_areas_path, 1),
+               (forest_areas_nodata, 'raw')], _ffqi_op,
+              ffqi_path, gdal.GDT_Float32, forest_areas_nodata),
+        target_path_list=[ffqi_path],
+        dependent_task_list=[smooth_forest_areas_task],
+        task_name='ffqi')
 
     # remap globio lulc to an internal lulc based on ag and intensification
     # proportion these came from the 'expansion_scenarios.py'
-    # @RICH: Is this reference to expansion_scenarios.py still relevant?
-    def _create_globio_lulc(
-            lulc_array, potential_vegetation_array, pasture_array,
-            ffqi):
-        """Construct GLOBIO lulc given relevant biophysical parameters."""
-        # Step 1.2b: Assign high/low according to threshold based on yieldgap.
-        nodata_mask = lulc_array == globio_nodata
-
-        # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
-        # custom design of agriculture
-        # landcover 132 represents agriculture landcover types in the GLOBIO
-        # classification scheme
-        lulc_ag_split = numpy.where(
-            lulc_array == 132, 12, lulc_array)
-        nodata_mask = nodata_mask | lulc_array == globio_nodata
-
-        # Step 1.3a: Split Scrublands and grasslands into pristine
-        # vegetations, livestock grazing areas, and man-made pastures.
-        # landcover 131 represents grassland/shrubland in the GLOBIO
-        # classification
-        three_types_of_scrubland = numpy.where(
-            (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6,
-            5)
-
-        three_types_of_scrubland = numpy.where(
-            (three_types_of_scrubland == 5) &
-            (pasture_array < pasture_threshold), 1,
-            three_types_of_scrubland)
-
-        # Step 1.3b: Stamp ag_split classes onto input LULC
-        # landcover 131 represents grassland/shrubland in the GLOBIO
-        # classification
-        broad_lulc_shrub_split = numpy.where(
-            lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
-
-        # Step 1.4a: Split Forests into Primary, Secondary
-        four_types_of_forest = numpy.empty(lulc_array.shape)
-        # 1 is primary forest
-        four_types_of_forest[(ffqi >= primary_threshold)] = 1
-        # 3 is secondary forest
-        four_types_of_forest[(ffqi < primary_threshold)] = 3
-
-        # Step 1.4b: Stamp ag_split classes onto input LULC
-        # landcover code 130 represents all MODIS forest codes which originate
-        # as 1-5
-        globio_lulc = numpy.where(
-            broad_lulc_shrub_split == 130, four_types_of_forest,
-            broad_lulc_shrub_split)  # stamp primary vegetation
-
-        return numpy.where(nodata_mask, globio_nodata, globio_lulc)
-
+    # @RICH: Is this reference to 'expansion_scenarios.py' worth keeping around?
+    # I'm inclined to nix this whole comment because I also don't think
+    # intensification proportion is involved in this reclassification.
     LOGGER.info('create the globio lulc')
 
     # The veg and pasture rasters are user inputs, so may not be aligned with lulc
@@ -672,19 +622,98 @@ def _calculate_globio_lulc_map(
         tmp_dir, os.path.basename(x))
         for x in base_raster_align_list]
     base_raster_info = pygeoprocessing.get_raster_info(lulc_path)
-    pygeoprocessing.align_and_resize_raster_stack(
-        base_raster_align_list,
-        target_raster_align_list,
-        ['near', 'bilinear'],
-        base_raster_info['pixel_size'],
-        base_raster_info['bounding_box'])
+    align_veg_pasture_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(base_raster_align_list,
+              target_raster_align_list,
+              ['near', 'bilinear'],
+              base_raster_info['pixel_size'],
+              base_raster_info['bounding_box']),
+        target_path_list=target_raster_align_list,
+        task_name='align_veg_pasture_rasters')
 
-    pygeoprocessing.raster_calculator(
-        [(intermediate_globio_lulc_path, 1), (target_raster_align_list[0], 1),
-         (target_raster_align_list[1], 1), (ffqi_path, 1)],
-        _create_globio_lulc, globio_lulc_path, gdal.GDT_Int32, globio_nodata)
+    calculate_globio_lulc_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(intermediate_globio_lulc_path, 1),
+               (target_raster_align_list[0], 1),
+               (target_raster_align_list[1], 1),
+               (ffqi_path, 1), (globio_nodata, 'raw'),
+               (pasture_threshold, 'raw'),
+               (primary_threshold, 'raw')],
+              _create_globio_lulc, globio_lulc_path, gdal.GDT_Int32,
+              globio_nodata),
+        target_path_list=[globio_lulc_path],
+        dependent_task_list=[align_veg_pasture_task, calculate_ffqi_task],
+        task_name='calculate_globio_lulc')
 
-    return globio_lulc_path
+
+def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
+    """Masking out forest areas."""
+    nodata_mask = lulc_array == globio_nodata
+    # landcover code 130 represents all MODIS forest codes which originate
+    # as 1-5
+    result = (lulc_array == 130)
+    return numpy.where(nodata_mask, forest_areas_nodata, result)
+
+
+def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
+    """Mask out ffqi only where there's an ffqi."""
+    return numpy.where(
+        forest_areas_array != forest_areas_nodata,
+        forest_areas_array * smoothed_forest_areas,
+        forest_areas_nodata)
+
+
+
+def _create_globio_lulc(
+        lulc_array, potential_vegetation_array, pasture_array,
+        ffqi, globio_nodata, pasture_threshold, primary_threshold):
+    """Construct GLOBIO lulc given relevant biophysical parameters."""
+    # Step 1.2b: Assign high/low according to threshold based on yieldgap.
+    nodata_mask = lulc_array == globio_nodata
+
+    # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
+    # custom design of agriculture
+    # landcover 132 represents agriculture landcover types in the GLOBIO
+    # classification scheme
+    lulc_ag_split = numpy.where(
+        lulc_array == 132, 12, lulc_array)
+    nodata_mask = nodata_mask | lulc_array == globio_nodata
+
+    # Step 1.3a: Split Scrublands and grasslands into pristine
+    # vegetations, livestock grazing areas, and man-made pastures.
+    # landcover 131 represents grassland/shrubland in the GLOBIO
+    # classification
+    three_types_of_scrubland = numpy.where(
+        (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6,
+        5)
+
+    three_types_of_scrubland = numpy.where(
+        (three_types_of_scrubland == 5) &
+        (pasture_array < pasture_threshold), 1,
+        three_types_of_scrubland)
+
+    # Step 1.3b: Stamp ag_split classes onto input LULC
+    # landcover 131 represents grassland/shrubland in the GLOBIO
+    # classification
+    broad_lulc_shrub_split = numpy.where(
+        lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
+
+    # Step 1.4a: Split Forests into Primary, Secondary
+    four_types_of_forest = numpy.empty(lulc_array.shape)
+    # 1 is primary forest
+    four_types_of_forest[(ffqi >= primary_threshold)] = 1
+    # 3 is secondary forest
+    four_types_of_forest[(ffqi < primary_threshold)] = 3
+
+    # Step 1.4b: Stamp ag_split classes onto input LULC
+    # landcover code 130 represents all MODIS forest codes which originate
+    # as 1-5
+    globio_lulc = numpy.where(
+        broad_lulc_shrub_split == 130, four_types_of_forest,
+        broad_lulc_shrub_split)  # stamp primary vegetation
+
+    return numpy.where(nodata_mask, globio_nodata, globio_lulc)
 
 
 def _collapse_infrastructure_layers(
@@ -750,7 +779,8 @@ def _collapse_infrastructure_layers(
     def _collapse_infrastructure_op(*infrastructure_array_list):
         """For each pixel, create mask 1 if all valid, else set to nodata."""
         nodata_mask = (
-            numpy.isclose(infrastructure_array_list[0], infrastructure_nodata_list[0]))
+            numpy.isclose(
+                infrastructure_array_list[0], infrastructure_nodata_list[0]))
         infrastructure_result = infrastructure_array_list[0] > 0
         for index in range(1, len(infrastructure_array_list)):
             current_nodata = numpy.isclose(
