@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Adding TaskGraph functionality to GLOBIO model.
 * Reimplementing Crop Production models using taskgraph.
 * Fixing an issue with Crop Production Regression's result_table.csv where the
  'production_modeled' and '<nutrient>_modeled' values calculated for each crop

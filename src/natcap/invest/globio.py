@@ -86,8 +86,12 @@ def execute(args):
         args['msa_parameters_path'], float(args['intensification_fraction']))
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     output_dir = os.path.join(args['workspace_dir'])
+    # For intermediate files that users may want to explore:
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
+
+    # For intermediate files that users probably don't need to see,
+    # but should persist for taskgraph purposes:
     tmp_dir = os.path.join(intermediate_dir, 'tmp')
 
     utils.make_directories(
@@ -111,25 +115,22 @@ def execute(args):
         args=(SIGMA, gaussian_kernel_path),
         target_path_list=[gaussian_kernel_path],
         task_name='gaussian_kernel')
-    globio_lulc_task_list = []
+
     if not args['predefined_globio']:
         globio_lulc_path = os.path.join(
             intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
-        globio_lulc_task_list.append(task_graph.add_task(
-            func=_calculate_globio_lulc_map,
-            args=(args['lulc_to_globio_table_path'], args['lulc_path'],
-                  args['potential_vegetation_path'], args['pasture_path'],
-                  gaussian_kernel_path, float(args['pasture_threshold']),
-                  float(args['primary_threshold']), file_suffix,
-                  intermediate_dir, tmp_dir, globio_lulc_path, task_graph),
-            target_path_list=[globio_lulc_path],
-            dependent_task_list=[make_gaussian_kernel_task],
-            task_name='make_globio_lulc'))
+        _calculate_globio_lulc_map(
+            args['lulc_to_globio_table_path'], args['lulc_path'],
+            args['potential_vegetation_path'], args['pasture_path'],
+            gaussian_kernel_path, float(args['pasture_threshold']),
+            float(args['primary_threshold']), file_suffix,
+            tmp_dir, globio_lulc_path, task_graph)
     else:
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
         globio_lulc_path = args['globio_lulc_path']
 
-    # join to make the globio_lulc raster info available
+    # joins tasks added in _calculate_globio_lulc_map() in order to
+    # make the globio_lulc raster info available
     task_graph.join()
     # cell size should be based on the landcover map
     globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_path)
@@ -138,13 +139,12 @@ def execute(args):
     globio_nodata = globio_lulc_info['nodata'][0]
 
     infrastructure_path = os.path.join(
-        intermediate_dir, 'combined_infrastructure%s.tif' % file_suffix)
+        tmp_dir, 'combined_infrastructure%s.tif' % file_suffix)
     combine_infrastructure_task = task_graph.add_task(
         func=_collapse_infrastructure_layers,
         args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
               tmp_dir),
         target_path_list=[infrastructure_path],
-        dependent_task_list=globio_lulc_task_list,
         task_name='combine_infrastructure')
 
     # calc_msa_f
@@ -153,16 +153,16 @@ def execute(args):
     primary_veg_mask_nodata = -1
 
     LOGGER.info("create mask of primary veg areas")
+    # lucodes for primary veg are hardcoded in the local_op
     mask_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(globio_lulc_path, 1), (globio_nodata, 'raw'),
               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
               primary_veg_mask_path, gdal.GDT_Int32, primary_veg_mask_nodata),
         target_path_list=[primary_veg_mask_path],
-        dependent_task_list=globio_lulc_task_list,
         task_name='mask_primary_veg')
 
-    LOGGER.info('gaussian filter primary veg')
+    LOGGER.info('smooth primary veg areas with gaussian filter')
     smoothed_primary_veg_mask_path = os.path.join(
         tmp_dir, 'smoothed_primary_veg_mask%s.tif' % file_suffix)
     smooth_primary_veg_mask_task = task_graph.add_task(
@@ -173,15 +173,16 @@ def execute(args):
         dependent_task_list=[mask_primary_veg_task, make_gaussian_kernel_task],
         task_name='smooth_primary_veg_mask')
 
+    LOGGER.info('calculate primary_veg_smooth')
+    # Passing the filter over the veg mask means veg has bled outside the mask,
+    # so mask it again to get the final ffqi
     primary_veg_smooth_path = os.path.join(
         intermediate_dir, 'primary_veg_smooth%s.tif' % file_suffix)
-
-    LOGGER.info('calculate primary_veg_smooth')
     smooth_primary_veg_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(primary_veg_mask_path, 1), (smoothed_primary_veg_mask_path, 1),
                (primary_veg_mask_nodata, 'raw')],
-              _primary_veg_smooth_op, primary_veg_smooth_path, gdal.GDT_Float32,
+              _ffqi_op, primary_veg_smooth_path, gdal.GDT_Float32,
               primary_veg_mask_nodata),
         target_path_list=[primary_veg_smooth_path],
         dependent_task_list=[smooth_primary_veg_mask_task],
@@ -190,13 +191,12 @@ def execute(args):
     LOGGER.info('calculate msa_f')
     msa_nodata = -1
     msa_f_table = msa_parameter_table['msa_f']
-    msa_f_values = sorted(msa_f_table)
     msa_f_path = os.path.join(output_dir, 'msa_f%s.tif' % file_suffix)
 
     calculate_msa_f_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(primary_veg_smooth_path, 1), (primary_veg_mask_nodata, 'raw'),
-               (msa_f_table, 'raw'), (msa_f_values, 'raw'), (msa_nodata, 'raw')],
+               (msa_f_table, 'raw'), (msa_nodata, 'raw')],
               _msa_f_op, msa_f_path, gdal.GDT_Float32, msa_nodata),
         target_path_list=[msa_f_path],
         dependent_task_list=[smooth_primary_veg_task],
@@ -205,10 +205,8 @@ def execute(args):
     # calc_msa_i
     msa_i_other_table = msa_parameter_table['msa_i_other']
     msa_i_primary_table = msa_parameter_table['msa_i_primary']
-    msa_i_other_values = sorted(msa_i_other_table)
-    msa_i_primary_values = sorted(msa_i_primary_table)
 
-    LOGGER.info('calculate msa_i')
+    LOGGER.info('distance transform infrasture raster')
     distance_to_infrastructure_path = os.path.join(
         intermediate_dir, 'distance_to_infrastructure%s.tif' % file_suffix)
     distance_to_infrastructure_task = task_graph.add_task(
@@ -218,17 +216,16 @@ def execute(args):
         dependent_task_list=[combine_infrastructure_task],
         task_name='distance_to_infrastructure')
 
+    LOGGER.info('calculate msa_i')
     msa_i_path = os.path.join(output_dir, 'msa_i%s.tif' % file_suffix)
     calculate_msa_i_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(globio_lulc_path, 1), (distance_to_infrastructure_path, 1),
                (out_pixel_size, 'raw'), (msa_i_primary_table, 'raw'),
-               (msa_i_primary_values, 'raw'), (msa_i_other_table, 'raw'),
-               (msa_i_other_values, 'raw')],
+               (msa_i_other_table, 'raw')],
               _msa_i_op, msa_i_path, gdal.GDT_Float32, msa_nodata),
         target_path_list=[msa_i_path],
-        dependent_task_list=[
-            distance_to_infrastructure_task] + globio_lulc_task_list,
+        dependent_task_list=[distance_to_infrastructure_task],
         task_name='calculate_msa_i')
 
     # calc_msa_lu
@@ -240,13 +237,11 @@ def execute(args):
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'], msa_lu_path,
               gdal.GDT_Float32, globio_nodata),
         target_path_list=[msa_lu_path],
-        dependent_task_list=globio_lulc_task_list,
         task_name='calculate_msa_lu')
 
     LOGGER.info('calculate msa')
     msa_path = os.path.join(
         output_dir, 'msa%s.tif' % file_suffix)
-
     calculate_msa_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(msa_f_path, 1), (msa_lu_path, 1), (msa_i_path, 1),
@@ -258,12 +253,12 @@ def execute(args):
         task_name='calculate_msa')
 
     LOGGER.info('summarize msa result in AOI polygons')
-    # ensure that aoi_path is defined and it's not an empty string
+    # the AOI is an optional argument, so check for its existence
     if 'aoi_path' in args and len(args['aoi_path']) > 0:
         summary_aoi_path = os.path.join(
             output_dir, 'aoi_summary%s.shp' % file_suffix)
         task_graph.add_task(
-            func=summarize_results_in_aoi,
+            func=_summarize_results_in_aoi,
             args=(args['aoi_path'], summary_aoi_path, msa_path),
             target_path_list=[summary_aoi_path],
             dependent_task_list=[calculate_msa_task],
@@ -273,14 +268,14 @@ def execute(args):
     task_graph.join()
 
 
-def summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
-    """Aggregate MSA results to AOI polygons.
+def _summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
+    """Aggregate MSA results to AOI polygons with zonal statistics.
 
     Parameters:
-        aoi_path (string): path to aoi shapefile containing polygons
+        aoi_path (string): path to aoi shapefile containing polygons.
         summary_aoi_path (string):
-            path to copy of aoi shapefile with summary stats
-        msa_path (string): path to msa results raster to summarize
+            path to copy of aoi shapefile with summary stats added.
+        msa_path (string): path to msa results raster to summarize.
 
     Returns:
         None
@@ -316,59 +311,94 @@ def summarize_results_in_aoi(aoi_path, summary_aoi_path, msa_path):
 
 
 def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
-        """Masking out natural areas."""
-        # lulc_array and nodata could conceivably be a float here,
-        # if it's the user-provided globio dataset
-        nodata_mask = numpy.isclose(lulc_array, globio_nodata)
-        # landcover type 1 in the GLOBIO schema represents primary vegetation
-        result = (lulc_array == 1)
-        return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
+    """Masking out natural areas."""
+    # lulc_array and nodata could conceivably be a float here,
+    # if it's the user-provided globio dataset
+    nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+    # landcover type 1 in the GLOBIO schema represents primary vegetation
+    result = (lulc_array == 1)
+    return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
 
 
-def _primary_veg_smooth_op(
-        primary_veg_mask_array, smoothed_primary_veg_mask,
-        primary_veg_mask_nodata):
-        """Mask out ffqi only where there's an ffqi."""
-        return numpy.where(
-            primary_veg_mask_array != primary_veg_mask_nodata,
-            primary_veg_mask_array * smoothed_primary_veg_mask,
-            primary_veg_mask_nodata)
+def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
+    """Mask out ffqi only where there's an ffqi."""
+    return numpy.where(
+        forest_areas_array != forest_areas_nodata,
+        forest_areas_array * smoothed_forest_areas,
+        forest_areas_nodata)
 
 
 def _msa_f_op(
         primary_veg_smooth, primary_veg_mask_nodata, msa_f_table,
-        msa_f_values, msa_nodata):
-        """Calculate msa fragmentation."""
-        nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
+        msa_nodata):
+    """Calculate msa fragmentation.
 
-        msa_f = numpy.empty(primary_veg_smooth.shape)
-        for value in reversed(msa_f_values):
-            # special case if it's a > or < value
-            if value == '>':
-                msa_f[primary_veg_smooth > msa_f_table['>'][0]] = (
-                    msa_f_table['>'][1])
-            elif value == '<':
-                continue
-            else:
-                msa_f[primary_veg_smooth <= value] = msa_f_table[value]
+    Bin ffqi values based on rules defined in msa_parameters.csv.
 
-        if '<' in msa_f_table:
-            msa_f[primary_veg_smooth < msa_f_table['<'][0]] = (
-                msa_f_table['<'][1])
+    Parameters:
+        primary_veg_smooth (array): float values representing ffqi.
+        primary_veg_mask_nodata (int/float)
+        msa_f_table (dict):
+            subset of msa_parameters.csv with fragmentation bins defined.
+        msa_nodata (int/float)
 
-        msa_f[nodata_mask] = msa_nodata
+    Returns:
+        Array with float values. One component of final MSA score.
 
-        return msa_f
+    """
+    nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
+    msa_f = numpy.empty(primary_veg_smooth.shape)
+    msa_f_values = sorted(msa_f_table)
+
+    for value in reversed(msa_f_values):
+        # special case if it's a > or < value
+        if value == '>':
+            msa_f[primary_veg_smooth > msa_f_table['>'][0]] = (
+                msa_f_table['>'][1])
+        elif value == '<':
+            continue
+        else:
+            msa_f[primary_veg_smooth <= value] = msa_f_table[value]
+
+    if '<' in msa_f_table:
+        msa_f[primary_veg_smooth < msa_f_table['<'][0]] = (
+            msa_f_table['<'][1])
+
+    msa_f[nodata_mask] = msa_nodata
+
+    return msa_f
 
 
 def _msa_i_op(
         lulc_array, distance_to_infrastructure, out_pixel_size,
-        msa_i_primary_table, msa_i_primary_values, msa_i_other_table,
-        msa_i_other_values):
-    """Calculate msa infrastructure."""
+        msa_i_primary_table, msa_i_other_table):
+    """Calculate msa infrastructure.
+
+    Bin distance_to_infrastructure values according to rules defined
+    in msa_parameters.csv.
+
+    Parameters:
+        lulc_array (array): integer values representing globio landcover codes.
+        distance_to_infrastructure (array):
+            float values measuring distance from nearest infrastructure present
+            in layers from args['infrastructure_dir'].
+        out_pixel_size (float): from the globio lulc raster info.
+        msa_i_primary_table (dict):
+            subset of msa_parameters.csv with distance to infrastructure bins
+            defined. These bins are applied to areas of primary veg.
+        msa_i_other_table (dict):
+            subset of msa_parameters.csv with distance to infrastructure bins
+            defined. These bins are applied to areas of not primary veg.
+
+    Returns:
+        Array with float values. One component of final MSA score.
+
+    """
     distance_to_infrastructure *= out_pixel_size  # convert to meters
     msa_i_primary = numpy.empty(lulc_array.shape)
     msa_i_other = numpy.empty(lulc_array.shape)
+    msa_i_primary_values = sorted(msa_i_primary_table)
+    msa_i_other_values = sorted(msa_i_other_table)
 
     for value in reversed(msa_i_primary_values):
         # special case if it's a > or < value
@@ -404,6 +434,7 @@ def _msa_i_op(
                     msa_i_other_table['<'][0]] = (
                         msa_i_other_table['<'][1])
 
+    # lulc code 1 is primary veg
     msa_i = numpy.where(lulc_array == 1, msa_i_primary, msa_i_other)
     return msa_i
 
@@ -411,7 +442,8 @@ def _msa_i_op(
 def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
         return numpy.where(
-            ~numpy.isclose(msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
+            ~numpy.isclose(
+                msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
 
 
 def make_gaussian_kernel_path(sigma, kernel_path):
@@ -516,7 +548,7 @@ def load_msa_parameter_table(
 def _calculate_globio_lulc_map(
         lulc_to_globio_table_path, lulc_path, potential_vegetation_path,
         pasture_path, gaussian_kernel_path, pasture_threshold,
-        primary_threshold, file_suffix, intermediate_dir, tmp_dir,
+        primary_threshold, file_suffix, tmp_dir,
         globio_lulc_path, task_graph):
     """Translate a general landcover map into a GLOBIO version.
 
@@ -536,19 +568,17 @@ def _calculate_globio_lulc_map(
         primary_threshold (float): the threshold to classify the calculated
             FFQI pixels into core forest or secondary
         file_suffix - (string) to append on output file
-        intermediate_dir - (string) path to location for temporary files of
-            which the following files are created
-                'intermediate_globio_lulc.tif': reclassified landcover map to
-                    globio landcover codes
+        tmp_dir (string): path to location for intermediate files that users
+            probably don't need to see, but should persist for taskgraph.
+            The following files are created:
+                'intermediate_globio_lulc.tif': reclassified landcover map
+                    to globio landcover codes
                 'ffqi.tif': index of fragmentation due to infrastructure and
                     original values of landscape
-                'globio_lulc.tif': primary output of the function, starts
-                    with intermeidate globio and modifies based on the other
-                    biophysical parameters to the function as described in the
-                    GLOBIO process
-
-        tmp_dir (string): path to location for temporary files
-        globio_lulc_path (string): path to globio lulc raster output
+        globio_lulc_path (string): Path to globio lulc raster. Primary output
+            of the function, starts with intermeidate globio and modifies based
+            on the other biophysical parameters to the function as described in
+            the GLOBIO process.
         task_graph (TaskGraph): in-memory object from taskgraph.TaskGraph()
 
     Returns:
@@ -598,7 +628,7 @@ def _calculate_globio_lulc_map(
         task_name='smooth_forest_areas')
 
     ffqi_path = os.path.join(
-        intermediate_dir, 'ffqi%s.tif' % file_suffix)
+        tmp_dir, 'ffqi%s.tif' % file_suffix)
     LOGGER.info('calculate ffqi')
     calculate_ffqi_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
@@ -616,7 +646,8 @@ def _calculate_globio_lulc_map(
     # intensification proportion is involved in this reclassification.
     LOGGER.info('create the globio lulc')
 
-    # The veg and pasture rasters are user inputs, so may not be aligned with lulc
+    # The veg and pasture rasters are user inputs,
+    # so may not be aligned yet with lulc
     base_raster_align_list = [potential_vegetation_path, pasture_path]
     target_raster_align_list = [os.path.join(
         tmp_dir, os.path.basename(x))
@@ -640,7 +671,7 @@ def _calculate_globio_lulc_map(
                (ffqi_path, 1), (globio_nodata, 'raw'),
                (pasture_threshold, 'raw'),
                (primary_threshold, 'raw')],
-              _create_globio_lulc, globio_lulc_path, gdal.GDT_Int32,
+              _create_globio_lulc_op, globio_lulc_path, gdal.GDT_Int32,
               globio_nodata),
         target_path_list=[globio_lulc_path],
         dependent_task_list=[align_veg_pasture_task, calculate_ffqi_task],
@@ -656,16 +687,7 @@ def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     return numpy.where(nodata_mask, forest_areas_nodata, result)
 
 
-def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
-    """Mask out ffqi only where there's an ffqi."""
-    return numpy.where(
-        forest_areas_array != forest_areas_nodata,
-        forest_areas_array * smoothed_forest_areas,
-        forest_areas_nodata)
-
-
-
-def _create_globio_lulc(
+def _create_globio_lulc_op(
         lulc_array, potential_vegetation_array, pasture_array,
         ffqi, globio_nodata, pasture_threshold, primary_threshold):
     """Construct GLOBIO lulc given relevant biophysical parameters."""
