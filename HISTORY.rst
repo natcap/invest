@@ -3,6 +3,10 @@
 Unreleased Changes
 ------------------
 * Adding TaskGraph functionality to GLOBIO model.
+* Adding some TaskGraph functionality to Scenario Generator: Proximity. 
+* Fixing an issue with the InVEST Fisheries model that would prevent the model
+  from batch-processing a directory of population tables.  The model will now
+  process these files as expected.
 * Reimplementing Crop Production models using taskgraph.
 * Fixing an issue with Crop Production Regression's result_table.csv where the
  'production_modeled' and '<nutrient>_modeled' values calculated for each crop

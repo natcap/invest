@@ -81,6 +81,7 @@ def execute(args):
 
     Returns:
         None
+
     """
     msa_parameter_table = load_msa_parameter_table(
         args['msa_parameters_path'], float(args['intensification_fraction']))
@@ -521,6 +522,7 @@ def load_msa_parameter_table(
                     12: (msa_lu_8 * (1.0 - intensification_fraction) +
                          msa_lu_9 * intensification_fraction}
             }
+
     """
     msa_table = pandas.read_csv(
         msa_parameter_table_filename, sep=None, engine='python')
@@ -762,6 +764,7 @@ def _collapse_infrastructure_layers(
 
     Returns:
         None
+
     """
     # load the infrastructure layers from disk
     infrastructure_filenames = []
@@ -860,6 +863,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
