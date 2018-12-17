@@ -1923,6 +1923,82 @@ class SettingsDialogTest(_SettingsSandbox):
         finally:
             settings_dialog.close()
 
+    def test_dialog_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of dialog log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.dialog_logging_level.value(),
+                         'INFO')
+
+
+    def test_dialog_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for dialog threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.dialog_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.dialog_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
+    def test_logfile_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of logfile log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.logfile_logging_level.value(),
+                         'NOTSET')
+
+    def test_logfile_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for logfile threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.logfile_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.logfile_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
+    def test_n_workers_initialized(self):
+        """UI SettingsDialog: check initialization of n_workers."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.taskgraph_n_workers.value(),
+                         '-1')
+
+    def test_n_workers_set_correctly(self):
+        """UI SettingsDialog: check settings value for n_workers."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.taskgraph_n_workers.set_value('3')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.taskgraph_n_workers.value(),
+                             '3')
+        finally:
+            settings_dialog.close()
+
 
 class DatastackOptionsDialogTests(_QtTest):
     def setUp(self):
