@@ -421,6 +421,31 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
+        # Taskgraph inputs.
+        # Rather than stylizing this to be more readable, just allow an
+        # informed user to provide an appropriate input.
+        self.taskgraph_n_workers = inputs.Text(
+            label='Taskgraph n_workers parameter',
+            helptext=('For models that are implemented with taskgraph, this '
+                      'is provided to the graph at creation.  The default '
+                      'value of -1 is best for most users, as this will '
+                      'eliminate the risk of deadlocks and improve the '
+                      'coherency of the logfile. Allowed values are<ul> '
+                      '<li>-1: Synchronous task execution (most reliable) </li>'
+                      '<li>0: Tasks execute in the main process, but use '
+                      'threaded task management. </li>'
+                      '<li><em>n</em>: Where <em>n</em> is a positive integer, '
+                      'taskgraph will execute tasks in <em>n</em> processes. '
+                      'This can yield a nice speedup, but incurs a risk of '
+                      'deadlock.</li>'
+                      '</ul>Regardless of this value, all models that are '
+                      'taskgraph-enabled take advantage of '
+                      'avoided recomputation.'))
+        self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', '-1', int))
+        self.taskgraph_n_workers.textfield.setMaximumWidth(40)
+        self._global_opts_container.add_input(self.taskgraph_n_workers)
+
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
@@ -439,6 +464,9 @@ class SettingsDialog(OptionsDialog):
             inputs.INVEST_SETTINGS.setValue(
                 'logging/logfile',
                 self.logfile_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'taskgraph/n_workers',
+                self.taskgraph_n_workers.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1186,29 +1214,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.add_input(self.workspace)
         self.add_input(self.suffix)
-
-        # If the model has a documented input for the number of taskgraph
-        # workers, add an input for it.
-        try:
-            if 'n_workers' in self.target.__doc__:
-                n_cpus = max(1, multiprocessing.cpu_count())
-                self.n_workers = inputs.Text(
-                    args_key='n_workers',
-                    helptext=(
-                        u'The number of workers to spawn for executing tasks. '
-                        u'If this input is not provided, the model will be '
-                        u'executed in the current process.  <br/><br/>'
-                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
-                    label='Number of parallel workers (optional)',
-                    validator=self.validator)
-                self.n_workers.textfield.setMaximumWidth(150)
-                self.add_input(self.n_workers)
-                self.n_workers.set_value(n_cpus)
-        except TypeError:
-            # When self.target doesn't have __doc__, assume that there's no
-            # n_workers parameter.
-            pass
-
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
@@ -1524,6 +1529,10 @@ class InVESTModel(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
+ 
+            if 'n_workers' in self.target.__doc__:
+                args['n_workers'] = inputs.INVEST_SETTINGS.value(
+                    'taskgraph/n_workers', -1)
 
             threads_to_exclude = [ui_thread_name,
                                   usage._USAGE_LOGGING_THREAD_NAME]
@@ -1537,12 +1546,6 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
-
-                    try:
-                        args['n_workers'] = self.n_workers.value()
-                    except AttributeError:
-                        # When we don't have n_workers defined
-                        pass
 
                     try:
                         return self.target(args=args)
