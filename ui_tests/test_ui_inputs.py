@@ -2417,6 +2417,32 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
+    def test_run_with_n_workers(self):
+        """UI Model: Check that model runs with n_workers parameter."""
+
+        from natcap.invest.ui import inputs
+
+        n_workers_setting = inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', -1, unicode)
+
+        def target_func(args):
+            """n_workers is required in args."""
+            if 'n_workers' not in args:
+                raise ValueError('n_workers should be in args but is not.')
+
+            if args['n_workers'] != n_workers_setting:
+                raise ValueError('n_workers value is not set correctly')
+
+        model_ui = ModelTests.build_model(target_func=target_func)
+
+        try:
+            # This should run without exception.
+            model_ui.run()
+            self.assertTrue(model_ui.isVisible())
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
     def test_local_docs_from_hyperlink(self):
         """UI Model: Check that we can open the local docs missing dialog."""
         model_ui = ModelTests.build_model()
