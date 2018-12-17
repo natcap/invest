@@ -2417,7 +2417,7 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
-    def test_run_with_n_workers(self):
+    def test_execute_with_n_workers(self):
         """UI Model: Check that model runs with n_workers parameter."""
 
         from natcap.invest.ui import inputs
@@ -2434,12 +2434,17 @@ class ModelTests(_QtTest):
                 raise ValueError('n_workers value is not set correctly')
 
         model_ui = ModelTests.build_model(target_func=target_func)
+        model_ui.workspace.set_value(os.path.join(self.workspace, 'new_dir'))
 
         try:
-            # This should run without exception.
+            # Show the window
             model_ui.run()
             self.assertTrue(model_ui.isVisible())
+
+            # This should execute without exception.
+            model_ui.execute_model()
         finally:
+            self.assertFalse(model_ui.form._thread.failed)
             model_ui.close(prompt=False)
             model_ui.destroy()
 
