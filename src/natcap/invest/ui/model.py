@@ -424,7 +424,12 @@ class SettingsDialog(OptionsDialog):
         # Taskgraph inputs.
         # Rather than stylizing this to be more readable, just allow an
         # informed user to provide an appropriate input.
-        self.taskgraph_n_workers = inputs.Text(
+        n_workers_values = {
+            'Synchronous (-1)': '-1',
+            'Threaded task management (0)': '0'}
+        n_workers_values.update(dict(('%s CPUs' % n, str(n)) for n in range(
+            1, multiprocessing.cpu_count()*2)))
+        self.taskgraph_n_workers = inputs.Dropdown(
             label='Taskgraph n_workers parameter',
             helptext=('For models that are implemented with taskgraph, this '
                       'is provided to the graph at creation.  The default '
@@ -440,10 +445,12 @@ class SettingsDialog(OptionsDialog):
                       'deadlock.</li>'
                       '</ul>Regardless of this value, all models that are '
                       'taskgraph-enabled take advantage of '
-                      'avoided recomputation.'))
+                      'avoided recomputation.'),
+            options=[pair[0] for pair in sorted(
+                n_workers_values.items(), key=lambda x: int(x[1]))],
+            return_value_map=n_workers_values)
         self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', '-1', int))
-        self.taskgraph_n_workers.textfield.setMaximumWidth(40)
+            'taskgraph/n_workers', '-1', unicode))
         self._global_opts_container.add_input(self.taskgraph_n_workers)
 
     def postprocess(self, exitcode):
