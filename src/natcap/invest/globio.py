@@ -451,10 +451,11 @@ def _msa_i_op(
 
 def _msa_op(msa_f, msa_lu, msa_i, globio_nodata):
         """Calculate the MSA which is the product of the sub MSAs."""
-        return numpy.where(
-            ~numpy.isclose(
-                msa_f, globio_nodata), msa_f * msa_lu * msa_i, globio_nodata)
-
+        result = numpy.empty_like(msa_f, dtype=numpy.float32)
+        result[:] = globio_nodata
+        valid_mask = ~numpy.isclose(msa_f, globio_nodata)
+        result[valid_mask] = msa_f[valid_mask] * msa_lu[valid_mask] * msa_i[valid_mask]
+        return result
 
 def make_gaussian_kernel_path(sigma, kernel_path):
     """Create a gaussian kernel raster."""
