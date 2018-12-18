@@ -97,7 +97,7 @@ def execute(args):
         [output_dir, intermediate_dir, tmp_dir])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -105,7 +105,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
     gaussian_kernel_path = os.path.join(
         tmp_dir, 'gaussian_kernel%s.tif' % file_suffix)
