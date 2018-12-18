@@ -2443,8 +2443,8 @@ class ModelTests(_QtTest):
 
             # This should execute without exception.
             model_ui.execute_model()
-        finally:
             self.assertFalse(model_ui.form._thread.failed)
+        finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
 
