@@ -159,7 +159,7 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=([(globio_lulc_path, 1), (globio_nodata, 'raw'),
               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
-              primary_veg_mask_path, gdal.GDT_Int32, primary_veg_mask_nodata),
+              primary_veg_mask_path, gdal.GDT_Int16, primary_veg_mask_nodata),
         target_path_list=[primary_veg_mask_path],
         task_name='mask_primary_veg')
 
@@ -315,18 +315,23 @@ def _primary_veg_mask_op(lulc_array, globio_nodata, primary_veg_mask_nodata):
     """Masking out natural areas."""
     # lulc_array and nodata could conceivably be a float here,
     # if it's the user-provided globio dataset
-    nodata_mask = numpy.isclose(lulc_array, globio_nodata)
+    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     # landcover type 1 in the GLOBIO schema represents primary vegetation
-    result = (lulc_array == 1)
-    return numpy.where(nodata_mask, primary_veg_mask_nodata, result)
+    result = numpy.empty_like(lulc_array, dtype=numpy.int16)
+    result[:] = primary_veg_mask_nodata
+    result[valid_mask] = lulc_array[valid_mask] == 1
+    return result
 
 
 def _ffqi_op(forest_areas_array, smoothed_forest_areas, forest_areas_nodata):
     """Mask out ffqi only where there's an ffqi."""
-    return numpy.where(
-        forest_areas_array != forest_areas_nodata,
-        forest_areas_array * smoothed_forest_areas,
-        forest_areas_nodata)
+    result = numpy.empty_like(forest_areas_array, dtype=numpy.float32)
+    result[:] = forest_areas_nodata
+    # forest_areas_array and _nodata are integer types and not user-defined
+    valid_mask = forest_areas_array != forest_areas_nodata
+    result[valid_mask] = (
+        forest_areas_array[valid_mask] * smoothed_forest_areas[valid_mask])
+    return result
 
 
 def _msa_f_op(
@@ -641,13 +646,7 @@ def _calculate_globio_lulc_map(
         dependent_task_list=[smooth_forest_areas_task],
         task_name='ffqi')
 
-    # remap globio lulc to an internal lulc based on ag and intensification
-    # proportion these came from the 'expansion_scenarios.py'
-    # @RICH: Is this reference to 'expansion_scenarios.py' worth keeping around?
-    # I'm inclined to nix this whole comment because I also don't think
-    # intensification proportion is involved in this reclassification.
     LOGGER.info('create the globio lulc')
-
     # The veg and pasture rasters are user inputs,
     # so may not be aligned yet with lulc
     base_raster_align_list = [potential_vegetation_path, pasture_path]
@@ -673,7 +672,7 @@ def _calculate_globio_lulc_map(
                (ffqi_path, 1), (globio_nodata, 'raw'),
                (pasture_threshold, 'raw'),
                (primary_threshold, 'raw')],
-              _create_globio_lulc_op, globio_lulc_path, gdal.GDT_Int32,
+              _create_globio_lulc_op, globio_lulc_path, gdal.GDT_Int16,
               globio_nodata),
         target_path_list=[globio_lulc_path],
         dependent_task_list=[align_veg_pasture_task, calculate_ffqi_task],
@@ -682,67 +681,69 @@ def _calculate_globio_lulc_map(
 
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
     """Masking out forest areas."""
-    nodata_mask = lulc_array == globio_nodata
+    valid_mask = ~numpy.isclose(lulc_array, globio_nodata)
     # landcover code 130 represents all MODIS forest codes which originate
     # as 1-5
-    result = (lulc_array == 130)
-    return numpy.where(nodata_mask, forest_areas_nodata, result)
+    result = numpy.empty_like(lulc_array, dtype=numpy.int16)
+    result[:] = forest_areas_nodata
+    result[valid_mask] = lulc_array[valid_mask] == 130
+    return result
 
 
 def _create_globio_lulc_op(
         lulc_array, potential_vegetation_array, pasture_array,
         ffqi, globio_nodata, pasture_threshold, primary_threshold):
     """Construct GLOBIO lulc given relevant biophysical parameters."""
-    # Step 1.2b: Assign high/low according to threshold based on yieldgap.
-    nodata_mask = lulc_array == globio_nodata
+    result = numpy.empty_like(lulc_array, dtype=numpy.int16)
+    result[:] = globio_nodata
+    valid_mask = lulc_array != globio_nodata
+    valid_result = result[valid_mask]
 
-    # Step 1.2c: Classify all ag classes as a new LULC value "12" per our
-    # custom design of agriculture
-    # landcover 132 represents agriculture landcover types in the GLOBIO
-    # classification scheme
-    lulc_ag_split = numpy.where(
-        lulc_array == 132, 12, lulc_array)
-    nodata_mask = nodata_mask | lulc_array == globio_nodata
+    # Split Shrublands and grasslands into primary vegetations,
+    # livestock grazing areas, and man-made pastures. Landcover
+    # 131 represents grassland/shrubland in the GLOBIO classification.
+    grass_shrub_mask = lulc_array[valid_mask] == 131
+    grass_shrub_result = valid_result[grass_shrub_mask]
+    # fill with livestock grazing, then re-assign to pasture, primary veg.
+    grass_shrub_result[:] = 5
 
-    # Step 1.3a: Split Scrublands and grasslands into pristine
-    # vegetations, livestock grazing areas, and man-made pastures.
-    # landcover 131 represents grassland/shrubland in the GLOBIO
-    # classification
-    three_types_of_scrubland = numpy.where(
-        (potential_vegetation_array <= 8) & (lulc_ag_split == 131), 6,
-        5)
+    # man-made pasture
+    valid_pasture_mask = potential_vegetation_array[valid_mask][grass_shrub_mask] <= 8
+    grass_shrub_result[valid_pasture_mask] = 6
 
-    three_types_of_scrubland = numpy.where(
-        (three_types_of_scrubland == 5) &
-        (pasture_array < pasture_threshold), 1,
-        three_types_of_scrubland)
+    # primary vegetation
+    valid_primary_veg_mask = ~valid_pasture_mask & (
+        pasture_array[valid_mask][grass_shrub_mask] < pasture_threshold)
+    grass_shrub_result[valid_primary_veg_mask] = 1
 
-    # Step 1.3b: Stamp ag_split classes onto input LULC
-    # landcover 131 represents grassland/shrubland in the GLOBIO
-    # classification
-    broad_lulc_shrub_split = numpy.where(
-        lulc_ag_split == 131, three_types_of_scrubland, lulc_ag_split)
+    valid_result[grass_shrub_mask] = grass_shrub_result
+
+    # Outside of the grass/shrub categories, carry over the original codes:
+    valid_result[~grass_shrub_mask] = lulc_array[valid_mask][~grass_shrub_mask]
 
     # Step 1.4a: Split Forests into Primary, Secondary
-    four_types_of_forest = numpy.empty(lulc_array.shape)
     # 1 is primary forest
-    four_types_of_forest[(ffqi >= primary_threshold)] = 1
     # 3 is secondary forest
-    four_types_of_forest[(ffqi < primary_threshold)] = 3
+    valid_modis_forest_mask = lulc_array[valid_mask] == 130
+    forest_result = valid_result[valid_modis_forest_mask]
+    forest_result[:] = 1
+    forest_result[
+        ffqi[valid_mask][valid_modis_forest_mask] < primary_threshold] = 3
+    valid_result[valid_modis_forest_mask] = forest_result
 
-    # Step 1.4b: Stamp ag_split classes onto input LULC
-    # landcover code 130 represents all MODIS forest codes which originate
-    # as 1-5
-    globio_lulc = numpy.where(
-        broad_lulc_shrub_split == 130, four_types_of_forest,
-        broad_lulc_shrub_split)  # stamp primary vegetation
+    # Classify all ag classes as a new LULC value "12" per our custom design
+    # of agriculture. Landcover 132 represents agriculture landcover types
+    # in the GLOBIO classification scheme
+    valid_ag_mask = lulc_array[valid_mask] == 132
+    valid_result[valid_ag_mask] = 12
 
-    return numpy.where(nodata_mask, globio_nodata, globio_lulc)
+    result[valid_mask] = valid_result
+    return result
 
 
 def _collapse_infrastructure_layers(
         infrastructure_dir, base_raster_path, infrastructure_path,
-        aligned_infra_dir):
+        tmp_dir):
     """Collapse all GIS infrastructure layers to one raster.
 
     Gathers all the GIS layers in the given directory and collapses them
@@ -759,8 +760,8 @@ def _collapse_infrastructure_layers(
         infrastructure_path (string): (output) path to a file that will be a
             byte raster with 1s everywhere there was a GIS layer present in
             the GIS layers in `infrastructure_dir`.
-        aligned_infra_dir (string): path to folder to store aligned versions of
-            infrastructure rasters.
+        tmp_dir (string): path to folder to store inetermediate datasets such
+            as aligned versions of infrastructure rasters.
 
     Returns:
         None
@@ -770,6 +771,8 @@ def _collapse_infrastructure_layers(
     infrastructure_filenames = []
     infrastructure_nodata_list = []
     infrastructure_tmp_filenames = []
+    # in case we need to rasterize some vector inputs:
+    tmp_rasterize_dir = os.path.join(tmp_dir, 'rasterized')
     for root_directory, _, filename_list in os.walk(infrastructure_dir):
         for filename in filename_list:
             if filename.lower().endswith(".tif"):
@@ -779,7 +782,9 @@ def _collapse_infrastructure_layers(
                     pygeoprocessing.get_raster_info(
                         infrastructure_filenames[-1])['nodata'][0])
             if filename.lower().endswith(".shp"):
-                file_handle, tmp_raster_path = tempfile.mkstemp(suffix='.tif')
+                utils.make_directories([tmp_rasterize_dir])
+                file_handle, tmp_raster_path = tempfile.mkstemp(
+                    dir=tmp_rasterize_dir, suffix='.tif')
                 os.close(file_handle)
                 pygeoprocessing.new_raster_from_base(
                     base_raster_path, tmp_raster_path,
@@ -824,7 +829,7 @@ def _collapse_infrastructure_layers(
 
     LOGGER.info('collapse infrastructure into one raster')
     aligned_infrastructure_target_list = [os.path.join(
-        aligned_infra_dir, os.path.basename(x))
+        tmp_dir, os.path.basename(x))
         for x in infrastructure_filenames]
     base_raster_info = pygeoprocessing.get_raster_info(
         base_raster_path)
@@ -842,8 +847,10 @@ def _collapse_infrastructure_layers(
         infrastructure_path, gdal.GDT_Byte, infrastructure_nodata)
 
     # clean up the temporary filenames
-    for filename in infrastructure_tmp_filenames:
-        os.remove(filename)
+    if os.path.isdir(tmp_rasterize_dir):
+        for filename in infrastructure_tmp_filenames:
+            os.remove(filename)
+        os.rmdir(tmp_rasterize_dir)
 
 
 @validation.invest_validator
