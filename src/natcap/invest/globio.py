@@ -90,11 +90,9 @@ def execute(args):
     # For intermediate files that users may want to explore:
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
-
     # For intermediate files that users probably don't need to see,
     # but should persist for taskgraph purposes:
     tmp_dir = os.path.join(intermediate_dir, 'tmp')
-
     utils.make_directories(
         [output_dir, intermediate_dir, tmp_dir])
 
@@ -117,27 +115,30 @@ def execute(args):
         target_path_list=[gaussian_kernel_path],
         task_name='gaussian_kernel')
 
+    calculate_globio_task_list = []
+    # get base raster cell size and nodata from whichever lulc is
+    # provided in args
     if not args['predefined_globio']:
         globio_lulc_path = os.path.join(
             intermediate_dir, 'globio_lulc%s.tif' % file_suffix)
-        _calculate_globio_lulc_map(
+        base_lulc_info = pygeoprocessing.get_raster_info(args['lulc_path'])
+        out_pixel_size = (abs(base_lulc_info['pixel_size'][0]) +
+                          abs(base_lulc_info['pixel_size'][0])) / 2
+        globio_nodata = -1
+        globio_lulc_task = _calculate_globio_lulc_map(
             args['lulc_to_globio_table_path'], args['lulc_path'],
             args['potential_vegetation_path'], args['pasture_path'],
             gaussian_kernel_path, float(args['pasture_threshold']),
             float(args['primary_threshold']), file_suffix,
-            tmp_dir, globio_lulc_path, task_graph)
+            tmp_dir, globio_lulc_path, globio_nodata, task_graph)
+        calculate_globio_task_list.append(globio_lulc_task)
     else:
         LOGGER.info('no need to calculate GLOBIO LULC because it is passed in')
         globio_lulc_path = args['globio_lulc_path']
-
-    # joins tasks added in _calculate_globio_lulc_map() in order to
-    # make the globio_lulc raster info available
-    task_graph.join()
-    # cell size should be based on the landcover map
-    globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_path)
-    out_pixel_size = (abs(globio_lulc_info['pixel_size'][0]) +
-                      abs(globio_lulc_info['pixel_size'][0])) / 2
-    globio_nodata = globio_lulc_info['nodata'][0]
+        globio_lulc_info = pygeoprocessing.get_raster_info(globio_lulc_path)
+        out_pixel_size = (abs(globio_lulc_info['pixel_size'][0]) +
+                          abs(globio_lulc_info['pixel_size'][0])) / 2
+        globio_nodata = globio_lulc_info['nodata'][0]
 
     infrastructure_path = os.path.join(
         tmp_dir, 'combined_infrastructure%s.tif' % file_suffix)
@@ -146,6 +147,7 @@ def execute(args):
         args=(args['infrastructure_dir'], globio_lulc_path, infrastructure_path,
               tmp_dir),
         target_path_list=[infrastructure_path],
+        dependent_task_list=calculate_globio_task_list,
         task_name='combine_infrastructure')
 
     # calc_msa_f
@@ -161,6 +163,7 @@ def execute(args):
               (primary_veg_mask_nodata, 'raw')], _primary_veg_mask_op,
               primary_veg_mask_path, gdal.GDT_Int16, primary_veg_mask_nodata),
         target_path_list=[primary_veg_mask_path],
+        dependent_task_list=calculate_globio_task_list,
         task_name='mask_primary_veg')
 
     LOGGER.info('smooth primary veg areas with gaussian filter')
@@ -238,6 +241,7 @@ def execute(args):
         args=((globio_lulc_path, 1), msa_parameter_table['msa_lu'], msa_lu_path,
               gdal.GDT_Float32, globio_nodata),
         target_path_list=[msa_lu_path],
+        dependent_task_list=calculate_globio_task_list,
         task_name='calculate_msa_lu')
 
     LOGGER.info('calculate msa')
@@ -556,7 +560,7 @@ def _calculate_globio_lulc_map(
         lulc_to_globio_table_path, lulc_path, potential_vegetation_path,
         pasture_path, gaussian_kernel_path, pasture_threshold,
         primary_threshold, file_suffix, tmp_dir,
-        globio_lulc_path, task_graph):
+        globio_lulc_path, globio_nodata, task_graph):
     """Translate a general landcover map into a GLOBIO version.
 
     Parameters:
@@ -586,10 +590,11 @@ def _calculate_globio_lulc_map(
             of the function, starts with intermeidate globio and modifies based
             on the other biophysical parameters to the function as described in
             the GLOBIO process.
+        globio_nodata (int): nodata value assigned to globio_lulc_path raster
         task_graph (TaskGraph): in-memory object from taskgraph.TaskGraph()
 
     Returns:
-        None
+        The ultimate task in this branch of the task_graph
 
     """
     lulc_to_globio_table = utils.build_lookup_from_csv(
@@ -601,7 +606,6 @@ def _calculate_globio_lulc_map(
 
     intermediate_globio_lulc_path = os.path.join(
         tmp_dir, 'intermediate_globio_lulc%s.tif' % file_suffix)
-    globio_nodata = -1
     reclass_lulc_to_globio_task = task_graph.add_task(
         func=pygeoprocessing.reclassify_raster,
         args=((lulc_path, 1), lulc_to_globio, intermediate_globio_lulc_path,
@@ -677,6 +681,8 @@ def _calculate_globio_lulc_map(
         target_path_list=[globio_lulc_path],
         dependent_task_list=[align_veg_pasture_task, calculate_ffqi_task],
         task_name='calculate_globio_lulc')
+
+    return calculate_globio_lulc_task
 
 
 def _forest_area_mask_op(lulc_array, globio_nodata, forest_areas_nodata):
@@ -781,11 +787,13 @@ def _collapse_infrastructure_layers(
                 infrastructure_nodata_list.append(
                     pygeoprocessing.get_raster_info(
                         infrastructure_filenames[-1])['nodata'][0])
+
             if filename.lower().endswith(".shp"):
                 utils.make_directories([tmp_rasterize_dir])
                 file_handle, tmp_raster_path = tempfile.mkstemp(
                     dir=tmp_rasterize_dir, suffix='.tif')
                 os.close(file_handle)
+
                 pygeoprocessing.new_raster_from_base(
                     base_raster_path, tmp_raster_path,
                     gdal.GDT_Int32, [-1.0], fill_value_list=[0])
@@ -793,6 +801,7 @@ def _collapse_infrastructure_layers(
                     os.path.join(root_directory, filename),
                     tmp_raster_path, burn_values=[1],
                     option_list=["ALL_TOUCHED=TRUE"])
+
                 infrastructure_filenames.append(tmp_raster_path)
                 infrastructure_tmp_filenames.append(tmp_raster_path)
                 infrastructure_nodata_list.append(
@@ -824,8 +833,8 @@ def _collapse_infrastructure_layers(
             nodata_mask = (
                 nodata_mask & current_nodata)
 
-        return numpy.where(
-            nodata_mask, infrastructure_nodata, infrastructure_result)
+        infrastructure_result[nodata_mask] = infrastructure_nodata
+        return infrastructure_result
 
     LOGGER.info('collapse infrastructure into one raster')
     aligned_infrastructure_target_list = [os.path.join(
