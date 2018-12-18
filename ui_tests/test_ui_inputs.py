@@ -2443,8 +2443,15 @@ class ModelTests(_QtTest):
 
             # This should execute without exception.
             model_ui.execute_model()
+
+            # I don't particularly like spinning here, but it should be
+            # reliable.
+            while model_ui.form.run_dialog.is_executing:
+                self.qt_app.processEvents()
+                time.sleep(0.1)
             self.assertFalse(model_ui.form._thread.failed)
         finally:
+            model_ui.form.run_dialog.close()
             model_ui.close(prompt=False)
             model_ui.destroy()
 
