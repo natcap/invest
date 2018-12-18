@@ -215,18 +215,20 @@ class GLOBIOTests(unittest.TestCase):
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
         tolerance_places = 3
         expected_results = utils.build_lookup_from_csv(agg_results_path, 'fid')
-        for feature in result_layer:
-            fid = feature.GetFID()
-            result_value = feature.GetField('msa_mean')
-            if result_value:
-                numpy.testing.assert_almost_equal(
-                    result_value,
-                    float(expected_results[fid]['msa_mean']),
-                    decimal=tolerance_places)
-            else:
-                # the out-of-bounds polygon will have no result_value
-                assert(expected_results[fid]['msa_mean'] == '')
-        feature = None
-        result_layer = None
-        gdal.Dataset.__swig_destroy__(result_vector)
-        result_vector = None
+        try:
+            for feature in result_layer:
+                fid = feature.GetFID()
+                result_value = feature.GetField('msa_mean')
+                if result_value:
+                    numpy.testing.assert_almost_equal(
+                        result_value,
+                        float(expected_results[fid]['msa_mean']),
+                        decimal=tolerance_places)
+                else:
+                    # the out-of-bounds polygon will have no result_value
+                    assert(expected_results[fid]['msa_mean'] == '')
+        finally:
+            feature = None
+            result_layer = None
+            gdal.Dataset.__swig_destroy__(result_vector)
+            result_vector = None
