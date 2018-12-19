@@ -15,8 +15,10 @@ from osgeo import osr
 import pygeoprocessing
 
 LOGGER = logging.getLogger(__name__)
-LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
-DATE_FMT = "%m/%d/%Y %H:%M:%S "
+LOG_FMT = (
+    "%(asctime)s "
+    "%(module)s.%(funcName)s(%(lineno)d) "
+    "%(levelname)s %(message)s")
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
@@ -145,7 +147,7 @@ class ThreadFilter(logging.Filter):
 
 @contextlib.contextmanager
 def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
-                log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+                log_fmt=LOG_FMT, date_fmt=None):
     """Log all messages within this context to a file.
 
     Parameters:
@@ -161,8 +163,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
             will cause all logging to be captured.
         log_fmt=LOG_FMT (string): The logging format string to use.  If not
             provided, ``utils.LOG_FMT`` will be used.
-        date_fmt=DATE_FMT (string): The logging date format string to use.
-            If not provided, ``utils.DATE_FMT`` will be used.
+        date_fmt (string): The logging date format string to use.
+            If not provided, ISO8601 format will be used.
 
 
     Yields:
