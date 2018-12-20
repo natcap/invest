@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Removing Scenario Generator: Rule-based model.
 * Adding TaskGraph functionality to GLOBIO model. 
 * Adding some TaskGraph functionality to Scenario Generator: Proximity. 
 * Fixing an issue with the InVEST Fisheries model that would prevent the model

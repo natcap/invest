@@ -2,11 +2,11 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 181
+SVN_DATA_REPO_REV       := 182
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 202
+SVN_TEST_DATA_REPO_REV  := 205
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
@@ -256,7 +256,6 @@ ZIPDIRS = Aquaculture \
 		  Malaria \
 		  pollination \
 		  recreation \
-		  ScenarioGenerator \
 		  scenario_proximity \
 		  ScenicQuality \
 		  seasonal_water_yield \
