@@ -421,9 +421,8 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
-        # Taskgraph inputs.
-        # Rather than stylizing this to be more readable, just allow an
-        # informed user to provide an appropriate input.
+        # Taskgraph n_workers settings.
+        # Using a dropdown to avoid the need to validate.
         n_workers_values = {
             'Synchronous (-1)': '-1',
             'Threaded task management (0)': '0'}
@@ -1536,7 +1535,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
- 
+
             # Only set the n_workers parameter if:
             #    1. The docstring is defined and
             #    2. An n_workers input is described in the docstring.
