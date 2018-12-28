@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Removing Scenario Generator: Rule-based model.
 * Fixing a bug in Hydropower model where watershed aggregations would be incorrect
   if a watershed is partially covering nodata raster values. Nodata values are now
   ignored in zonal statistics. Numerical results change very slightly in the
