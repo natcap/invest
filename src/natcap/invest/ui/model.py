@@ -444,7 +444,9 @@ class SettingsDialog(OptionsDialog):
                       'deadlock.</li>'
                       '</ul>Regardless of this value, all models that are '
                       'taskgraph-enabled take advantage of '
-                      'avoided recomputation.'),
+                      'avoided recomputation. To see if a model uses '
+                      "taskgraph, take a look at the User's Guide chapter "
+                      'for the model, or inspect the source code.'),
             options=[pair[0] for pair in sorted(
                 n_workers_values.items(), key=lambda x: int(x[1]))],
             return_value_map=n_workers_values)
