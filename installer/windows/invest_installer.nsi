@@ -309,7 +309,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
     !insertmacro StartMenuLink "${SMPATH}\SDR" "sdr"
     !insertmacro StartMenuLink "${SMPATH}\NDR" "ndr"
-    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Rule Based" "sg"
     !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
     !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
     !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
@@ -486,7 +485,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 4656
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
-    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 1452
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
   SectionGroupEnd
 SectionGroupEnd
