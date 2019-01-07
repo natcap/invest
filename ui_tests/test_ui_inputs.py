@@ -2455,6 +2455,74 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
+    def test_execute_error_with_n_workers(self):
+        """UI Model: Check that model fails with n_workers parameter."""
+        from natcap.invest.ui import inputs, model
+        from natcap.invest import validation
+
+        n_workers_setting = inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', 1, unicode)
+
+        def target_func(args):
+            raise AssertionError(
+                'Target should not have been called due to n_workers being '
+                'in args.')
+
+        @validation.invest_validator
+        def _validate(args, limit_to=None):
+            return []
+
+        class _TestInVESTModel(model.InVESTModel):
+            def __init__(self):
+                model.InVESTModel.__init__(
+                    self,
+                    label='Test model',
+                    target=target_func,
+                    validator=_validate,
+                    localdoc='testmodel.html')
+
+            # Default model class already has workspace and suffix input.
+            def assemble_args(self):
+                return {
+                    self.workspace.args_key: self.workspace.value(),
+                    self.suffix.args_key: self.suffix.value(),
+                    'n_workers': n_workers_setting  # this should cause an error.
+                }
+
+            def __del__(self):
+                # clear the settings for future runs.
+                self.settings.clear()
+                model.InVESTModel.__del__(self)
+
+        model_ui = _TestInVESTModel()
+        model_ui.workspace.set_value(os.path.join(self.workspace, 'new_dir'))
+
+        try:
+            # Show the window
+            model_ui.run()
+            self.assertTrue(model_ui.isVisible())
+
+            # This should execute without exception.
+            model_ui.execute_model()
+
+            # I don't particularly like spinning here, but it should be
+            # reliable.
+            while model_ui.form.run_dialog.is_executing:
+                self.qt_app.processEvents()
+                time.sleep(0.1)
+            self.assertTrue(model_ui.form._thread.failed)
+
+            # We expect RuntimeError to be raised by the UI in the function
+            # that wraps the target, not by the target itself.
+            self.assertTrue(isinstance(model_ui.form._thread.exception,
+                                       RuntimeError))
+            self.assertTrue('n_workers defined in args.' in
+                            repr(model_ui.form._thread.exception))
+        finally:
+            model_ui.form.run_dialog.close()
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
     def test_local_docs_from_hyperlink(self):
         """UI Model: Check that we can open the local docs missing dialog."""
         model_ui = ModelTests.build_model()

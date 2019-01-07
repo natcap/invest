@@ -1534,17 +1534,16 @@ class InVESTModel(QtWidgets.QMainWindow):
         ui_thread_name = threading.current_thread().name
 
         def _logged_target():
+            if 'n_workers' in args:
+                raise RuntimeError(
+                    'n_workers defined in args. It should not be defined.')
+
+            args['n_workers'] = inputs.INVEST_SETTINGS.value(
+                'taskgraph/n_workers', -1)
+
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
-
-            # Only set the n_workers parameter if:
-            #    1. The docstring is defined and
-            #    2. An n_workers input is described in the docstring.
-            if not isinstance(self.target.__doc__, type(None)):
-                if 'n_workers' in self.target.__doc__:
-                    args['n_workers'] = inputs.INVEST_SETTINGS.value(
-                        'taskgraph/n_workers', -1)
 
             threads_to_exclude = [ui_thread_name,
                                   usage._USAGE_LOGGING_THREAD_NAME]
