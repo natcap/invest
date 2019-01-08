@@ -531,7 +531,7 @@ class TestLocalRecServer(unittest.TestCase):
 
 
 class RecreationRegressionTests(unittest.TestCase):
-    """Regression tests for InVEST Seasonal Water Yield model."""
+    """Regression tests for InVEST Recreation model."""
 
     def setUp(self):
         """Setup workspace directory."""
@@ -925,7 +925,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'cell_size': 7000.0,
             'compute_regression': True,
             'start_year': '2219',  # start year ridiculously out of range
-            'end_year': '2250',
+            'end_year': '2014',
             'grid_aoi': True,
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
@@ -972,11 +972,10 @@ def _assert_regression_results_eq(
         workspace_dir (string): path to the completed model workspace
         file_list_path (string): path to a file that has a list of all
             the expected files relative to the workspace base
-        result_vector_path (string): path to the summary shapefile
-            produced by the SWY model.
+        result_vector_path (string): path to shapefile
+            produced by the Recreation model.
         agg_results_path (string): path to a csv file that has the
-            expected aggregated_results.shp table in the form of
-            fid,vri_sum,qb_val per line
+            expected results of a scenario prediction model run.
 
     Returns:
         None

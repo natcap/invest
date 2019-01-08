@@ -24,6 +24,7 @@ import pygeoprocessing
 import numpy
 import numpy.linalg
 import shapely.speedups
+import taskgraph
 
 if shapely.speedups.available:
     shapely.speedups.enable()
@@ -55,6 +56,7 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
+    'monthly_table_path': 'monthly_table.csv',
     'coefficent_vector_path': 'regression_coefficients.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
@@ -157,33 +159,12 @@ def execute(args):
 
     # in case the user defines a hostname
     if 'hostname' in args:
-        path = "PYRO:natcap.invest.recreation@%s:%s" % (
+        server_path = "PYRO:natcap.invest.recreation@%s:%s" % (
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+        server_path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
 
-    LOGGER.info('Contacting server, please wait.')
-    recmodel_server = Pyro4.Proxy(path)
-    server_version = recmodel_server.get_version()
-    LOGGER.info('Server online, version: %s', server_version)
-
-    # validate available year range
-    min_year, max_year = recmodel_server.get_valid_year_range()
-    LOGGER.info(
-        "Server supports year queries between %d and %d", min_year, max_year)
-    if not min_year <= int(args['start_year']) <= max_year:
-        raise ValueError(
-            "Start year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, args['start_year']))
-    if not min_year <= int(args['end_year']) <= max_year:
-        raise ValueError(
-            "End year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, args['end_year']))
-
-    # append jan 1 to start and dec 31 to end
-    date_range = (str(args['start_year'])+'-01-01',
-                  str(args['end_year'])+'-12-31')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
@@ -193,11 +174,26 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
+     # Initialize a TaskGraph
+    taskgraph_db_dir = os.path.join(output_dir, '_taskgraph_working_dir')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+
+    grid_aoi_task = []
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
-        _grid_vector(
-            args['aoi_path'], args['grid_type'], float(args['cell_size']),
-            file_registry['local_aoi_path'])
+        grid_aoi_task.append(task_graph.add_task(
+            func=_grid_vector,
+            args=(args['aoi_path'], args['grid_type'], float(args['cell_size']),
+                  file_registry['local_aoi_path']),
+            target_path_list=[file_registry['local_aoi_path']],
+            task_name='grid_aoi'))
     else:
         aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
         driver = gdal.GetDriverByName('ESRI Shapefile')
@@ -208,44 +204,23 @@ def execute(args):
         gdal.Dataset.__swig_destroy__(aoi_vector)
         aoi_vector = None
 
-    basename = os.path.splitext(file_registry['local_aoi_path'])[0]
-    with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as aoizip:
-        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
-            filename = basename + suffix
-            if os.path.exists(filename):
-                LOGGER.info('archiving %s', filename)
-                aoizip.write(filename, os.path.basename(filename))
+    photo_user_days_task = task_graph.add_task(
+        func=_retrieve_photo_user_days,
+        args=(file_registry['local_aoi_path'],
+              file_registry['compressed_aoi_path'], args['start_year'],args['end_year'],
+              os.path.basename(file_registry['pud_results_path']),
+              file_registry['compressed_pud_path'],
+              output_dir, server_path),
+        ignore_path_list=[file_registry['compressed_aoi_path'],
+                          file_registry['compressed_pud_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[file_registry['pud_results_path'],
+                          file_registry['monthly_table_path']],
+        dependent_task_list=grid_aoi_task,
+        task_name='photo-user-day-calculation')
 
-    # convert shapefile to binary string for serialization
-    zip_file_binary = open(file_registry['compressed_aoi_path'], 'rb').read()
-
-    # transfer zipped file to server
-    start_time = time.time()
-    LOGGER.info('Please wait for server to calculate PUD...')
-
-    result_zip_file_binary, workspace_id = (
-        recmodel_server.calc_photo_user_days_in_aoi(
-            zip_file_binary, date_range,
-            os.path.basename(file_registry['pud_results_path'])))
-    LOGGER.info(
-        'received result, took %f seconds, workspace_id: %s',
-        time.time() - start_time, workspace_id)
-
-    # unpack result
-    open(file_registry['compressed_pud_path'], 'wb').write(
-        result_zip_file_binary)
-    temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-    zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
-        temporary_output_dir)
-    monthly_table_path = os.path.join(
-        temporary_output_dir, 'monthly_table.csv')
-    if os.path.exists(monthly_table_path):
-        os.rename(
-            monthly_table_path,
-            os.path.splitext(monthly_table_path)[0] + file_suffix + '.csv')
-    for filename in os.listdir(temporary_output_dir):
-        shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
-    shutil.rmtree(temporary_output_dir)
+    task_graph.join()
 
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
@@ -302,8 +277,74 @@ def execute(args):
 
     LOGGER.info('connection release')
     recmodel_server._pyroRelease()
-    LOGGER.info('deleting temporary files')
-    shutil.rmtree(temporary_output_dir, ignore_errors=True)
+    # LOGGER.info('deleting temporary files')
+    # shutil.rmtree(temporary_output_dir, ignore_errors=True)
+
+
+def _retrieve_photo_user_days(
+    local_aoi_path, compressed_aoi_path, start_year, end_year, pud_results_filename,
+    compressed_pud_path, output_dir, server_path):
+
+    LOGGER.info('Contacting server, please wait.')
+    recmodel_server = Pyro4.Proxy(server_path)
+    server_version = recmodel_server.get_version()
+    LOGGER.info('Server online, version: %s', server_version)
+
+    # validate available year range
+    min_year, max_year = recmodel_server.get_valid_year_range()
+    LOGGER.info(
+        "Server supports year queries between %d and %d", min_year, max_year)
+    if not min_year <= int(start_year) <= max_year:
+        raise ValueError(
+            "Start year must be between %d and %d.\n"
+            " User input: (%s)" % (min_year, max_year, start_year))
+    if not min_year <= int(end_year) <= max_year:
+        raise ValueError(
+            "End year must be between %d and %d.\n"
+            " User input: (%s)" % (min_year, max_year, end_year))
+
+    # append jan 1 to start and dec 31 to end
+    date_range = (str(start_year)+'-01-01',
+                  str(end_year)+'-12-31')
+
+    basename = os.path.splitext(local_aoi_path)[0]
+    with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
+        for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
+            filename = basename + suffix
+            if os.path.exists(filename):
+                LOGGER.info('archiving %s', filename)
+                aoizip.write(filename, os.path.basename(filename))
+
+    # convert shapefile to binary string for serialization
+    zip_file_binary = open(compressed_aoi_path, 'rb').read()
+
+    # transfer zipped file to server
+    start_time = time.time()
+    LOGGER.info('Please wait for server to calculate PUD...')
+
+    result_zip_file_binary, workspace_id = (
+        recmodel_server.calc_photo_user_days_in_aoi(
+            zip_file_binary, date_range,
+            pud_results_filename))
+    LOGGER.info(
+        'received result, took %f seconds, workspace_id: %s',
+        time.time() - start_time, workspace_id)
+
+    # unpack result
+    open(compressed_pud_path, 'wb').write(
+        result_zip_file_binary)
+    temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
+    zipfile.ZipFile(compressed_pud_path, 'r').extractall(
+        temporary_output_dir)
+    # monthly_table_path = os.path.join(
+    #     temporary_output_dir, monthly_table_filename)
+    # if os.path.exists(monthly_table_path):
+    #     os.rename(
+    #         monthly_table_path,
+    #         os.path.splitext(monthly_table_path)[0] + file_suffix + '.csv')
+    for filename in os.listdir(temporary_output_dir):
+        shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
+    shutil.rmtree(temporary_output_dir)
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
@@ -489,7 +530,7 @@ def _build_regression_coefficients(
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
     out_predictor_id_list[:] = predictor_table.keys()
-
+    
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
         # Delete the field if it already exists
@@ -510,18 +551,23 @@ def _build_regression_coefficients(
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
-            raster_sum_mean_results = _raster_sum_mean(
-                response_vector_path, predictor_path,
-                tmp_indexed_vector_path)
-            if raster_type == 'mean':
-                mean_results = (
-                    numpy.array(raster_sum_mean_results['sum']) / 
-                    numpy.array(raster_sum_mean_results['count']))
-                predictor_results = dict(
-                    zip(raster_sum_mean_results['fid'], mean_results))
-            else:
-                predictor_results = dict(
-                    zip(raster_sum_mean_results['fid'], raster_sum_mean_results['sum']))
+            try:
+                raster_sum_mean_results = _raster_sum_mean(
+                    response_vector_path, predictor_path,
+                    tmp_indexed_vector_path)
+                if raster_type == 'mean':
+                    mean_results = (
+                        numpy.array(raster_sum_mean_results['sum']) / 
+                        numpy.array(raster_sum_mean_results['count']))
+                    predictor_results = dict(
+                        zip(raster_sum_mean_results['fid'], mean_results))
+                else:
+                    predictor_results = dict(
+                        zip(raster_sum_mean_results['fid'], raster_sum_mean_results['sum']))
+            except ValueError as err:
+                LOGGER.warn(err)
+                LOGGER.warn("Skipping predictor %s", predictor_id)
+                predictor_results = None
         else:
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
