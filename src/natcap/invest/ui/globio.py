@@ -109,7 +109,6 @@ class GLOBIO(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.n_workers.args_key: self.n_workers.value(),
             self.lulc_to_globio_table_path.args_key:
                 self.lulc_to_globio_table_path.value(),
             self.aoi_path.args_key: self.aoi_path.value(),
