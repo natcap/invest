@@ -495,7 +495,66 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'],
             os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
-            os.path.join(REGRESSION_DATA, 'local_server_monthly_table.csv'))
+            os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
+
+    def test_all_metrics_local_server(self):
+        """Recreation test with all but trivial predictor metrics."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': self.resampled_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2004,
+            'max_year': 2015,
+            'max_points_per_node': 200,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
+        server_thread.start()
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+            'compute_regression': True,
+            'start_year': '2005',
+            'end_year': '2014',
+            'grid_aoi': False,
+            'predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_all.csv'),
+            'scenario_predictor_table_path': os.path.join(
+                SAMPLE_DATA, 'predictors_all.csv'),
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+        }
+        recmodel_client.execute(args)
+
+        out_grid_vector_path = os.path.join(
+            self.workspace_dir, 'regression_coefficients.shp')
+        expected_grid_vector_path = os.path.join(
+            REGRESSION_DATA, 'trivial_regression_coefficients.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+
+        out_scenario_path = os.path.join(
+            self.workspace_dir, 'scenario_results.shp')
+        expected_scenario_path = os.path.join(
+            REGRESSION_DATA, 'trivial_scenario_results.shp')
+        pygeoprocessing.testing.assert_vectors_equal(
+            out_scenario_path, expected_scenario_path, 1E-6)
 
 
 class TestLocalRecServer(unittest.TestCase):
@@ -683,40 +742,6 @@ class RecreationRegressionTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
-
-    @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    def test_all_metrics(self):
-        """Recreation test with all but trivial predictor metrics."""
-        from natcap.invest.recreation import recmodel_client
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'andros_aoi_with_extra_fields.shp'),
-            'compute_regression': True,
-            'start_year': '2005',
-            'end_year': '2014',
-            'grid_aoi': False,
-            'predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_all.csv'),
-            'scenario_predictor_table_path': os.path.join(
-                SAMPLE_DATA, 'predictors_all.csv'),
-            'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
-        }
-        recmodel_client.execute(args)
-
-        out_grid_vector_path = os.path.join(
-            self.workspace_dir, 'regression_coefficients.shp')
-        expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'trivial_regression_coefficients.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
-
-        out_scenario_path = os.path.join(
-            self.workspace_dir, 'scenario_results.shp')
-        expected_scenario_path = os.path.join(
-            REGRESSION_DATA, 'trivial_scenario_results.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 1E-6)
 
     def test_hex_grid_regression(self):
         """Recreation hex grid regression test."""
