@@ -7,6 +7,7 @@ import zipfile
 import time
 import logging
 import math
+import pickle
 import urllib
 import tempfile
 import shutil
@@ -66,6 +67,7 @@ _TMP_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
+    'server_version': 'server_version.pickle',
     'tmp_indexed_vector_path': 'indexed_vector.shp',
     'tmp_fid_raster_path': 'vector_fid_raster.tif',
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
@@ -207,16 +209,15 @@ def execute(args):
     photo_user_days_task = task_graph.add_task(
         func=_retrieve_photo_user_days,
         args=(file_registry['local_aoi_path'],
-              file_registry['compressed_aoi_path'], args['start_year'],args['end_year'],
+              file_registry['compressed_aoi_path'], args['start_year'], args['end_year'],
               os.path.basename(file_registry['pud_results_path']),
               file_registry['compressed_pud_path'],
-              output_dir, server_path),
+              output_dir, server_path, file_registry['server_version']),
         ignore_path_list=[file_registry['compressed_aoi_path'],
                           file_registry['compressed_pud_path']],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[file_registry['pud_results_path'],
-                          file_registry['monthly_table_path']],
+                          file_registry['monthly_table_path'],
+                          file_registry['server_version']],
         dependent_task_list=grid_aoi_task,
         task_name='photo-user-day-calculation')
 
@@ -248,6 +249,8 @@ def execute(args):
                 predictor_id_list, coefficents[:-1], se_est[:-1]))
 
         # generate a nice looking regression result and write to log and file
+        with open(file_registry['server_version'], 'rb') as f:
+            server_version = pickle.load(f)
         report_string = (
             '\n******************************\n'
             '%s\n'
@@ -275,20 +278,22 @@ def execute(args):
                 file_registry['tmp_scenario_indexed_vector_path'],
                 file_registry['scenario_results_path'])
 
-    LOGGER.info('connection release')
-    recmodel_server._pyroRelease()
     # LOGGER.info('deleting temporary files')
     # shutil.rmtree(temporary_output_dir, ignore_errors=True)
 
 
 def _retrieve_photo_user_days(
     local_aoi_path, compressed_aoi_path, start_year, end_year, pud_results_filename,
-    compressed_pud_path, output_dir, server_path):
+    compressed_pud_path, output_dir, server_path, server_version_pickle):
 
     LOGGER.info('Contacting server, please wait.')
     recmodel_server = Pyro4.Proxy(server_path)
     server_version = recmodel_server.get_version()
     LOGGER.info('Server online, version: %s', server_version)
+    # store server info in a file because with taskgraph, we won't always connect
+    # to the server, but still want to report version info in results txt file
+    with open(server_version_pickle, 'wb') as f:
+        pickle.dump(server_version, f)
 
     # validate available year range
     min_year, max_year = recmodel_server.get_valid_year_range()
@@ -345,6 +350,9 @@ def _retrieve_photo_user_days(
     for filename in os.listdir(temporary_output_dir):
         shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
     shutil.rmtree(temporary_output_dir)
+
+    LOGGER.info('connection release')
+    recmodel_server._pyroRelease()
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
@@ -529,25 +537,13 @@ def _build_regression_coefficients(
 
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
-    out_predictor_id_list[:] = predictor_table.keys()
-    
+
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
-        # Delete the field if it already exists
-        field_index = out_coefficent_layer.FindFieldIndex(
-            str(predictor_id), 1)
-        if field_index >= 0:
-            out_coefficent_layer.DeleteField(field_index)
-        predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
-        predictor_field.SetWidth(24)
-        predictor_field.SetPrecision(11)
-        out_coefficent_layer.CreateField(predictor_field)
 
         predictor_path = _sanitize_path(
             predictor_table_path, predictor_table[predictor_id]['path'])
-
         predictor_type = predictor_table[predictor_id]['type']
-
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
@@ -567,10 +563,24 @@ def _build_regression_coefficients(
             except ValueError as err:
                 LOGGER.warn(err)
                 LOGGER.warn("Skipping predictor %s", predictor_id)
-                predictor_results = None
+                continue
         else:
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
+
+        # Create a new field for the predictor
+        # Delete the field first if it already exists
+        field_index = out_coefficent_layer.FindFieldIndex(
+            str(predictor_id), 1)
+        if field_index >= 0:
+            out_coefficent_layer.DeleteField(field_index)
+        predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
+        predictor_field.SetWidth(24)
+        predictor_field.SetPrecision(11)
+        out_coefficent_layer.CreateField(predictor_field)
+
+        out_predictor_id_list.append(predictor_id)
+
         for feature_id, value in predictor_results.iteritems():
             feature = out_coefficent_layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)

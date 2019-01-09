@@ -19,6 +19,8 @@ import numpy
 import pandas
 from osgeo import gdal
 
+from natcap.invest import utils
+
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(
@@ -436,7 +438,10 @@ class TestRecServer(unittest.TestCase):
     def test_regression_local_server(self):
         """Recreation base regression test on sample data on local server.
 
-        Executes Recreation model with default data and default arguments.
+        Executes Recreation model all the way through scenario prediction.
+        With this florida AOI, raster and vector predictors do not
+        intersect the AOI. This makes for a fast test and incidentally
+        covers an edge case.
         """
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
@@ -965,7 +970,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
 def _assert_regression_results_eq(
         workspace_dir, file_list_path, result_vector_path,
-        agg_results_path):
+        expected_results_path):
     """Test workspace against the expected list of files and results.
 
     Parameters:
@@ -974,7 +979,7 @@ def _assert_regression_results_eq(
             the expected files relative to the workspace base
         result_vector_path (string): path to shapefile
             produced by the Recreation model.
-        agg_results_path (string): path to a csv file that has the
+        expected_results_path (string): path to a csv file that has the
             expected results of a scenario prediction model run.
 
     Returns:
@@ -988,10 +993,6 @@ def _assert_regression_results_eq(
         # Test that the workspace has the same files as we expect
         _test_same_files(file_list_path, workspace_dir)
 
-        # we expect a file called 'aggregated_results.shp'
-        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
-        result_layer = result_vector.GetLayer()
-
         # The tolerance of 3 digits after the decimal was determined by
         # experimentation on the application with the given range of
         # numbers.  This is an apparently reasonable approach as described
@@ -1000,35 +1001,17 @@ def _assert_regression_results_eq(
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
         tolerance_places = 3
 
-        headers = [
-            'FID', 'PUD_YR_AVG', 'PUD_JAN', 'PUD_FEB', 'PUD_MAR',
-            'PUD_APR', 'PUD_MAY', 'PUD_JUN', 'PUD_JUL', 'PUD_AUG',
-            'PUD_SEP', 'PUD_OCT', 'PUD_NOV', 'PUD_DEC', 'bonefish',
-            'airdist', 'ports', 'bathy', 'PUD_EST']
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
+        result_layer = result_vector.GetLayer()
 
-        with open(agg_results_path, 'rb') as agg_result_file:
-            header_line = agg_result_file.readline().strip()
-            error_in_header = False
-            for expected, actual in zip(headers, header_line.split(',')):
-                if actual != expected:
-                    error_in_header = True
-            if error_in_header:
-                raise ValueError(
-                    "Header not as expected, got\n%s\nexpected:\n%s" % (
-                        str(header_line.split(',')), headers))
-            for line in agg_result_file:
-                try:
-                    expected_result_lookup = dict(
-                        zip(headers, [float(x) for x in line.split(',')]))
-                except ValueError:
-                    raise
-                feature = result_layer.GetFeature(
-                    int(expected_result_lookup['FID']))
-                for field, value in expected_result_lookup.iteritems():
-                    numpy.testing.assert_almost_equal(
-                        feature.GetField(field), value,
-                        decimal=tolerance_places)
-                feature = None
+        expected_results = utils.build_lookup_from_csv(expected_results_path, 'fid')
+        for fid, results in expected_results.iteritems():
+            feature = result_layer.GetFeature(int(fid))
+            for field, value in results.iteritems():
+                numpy.testing.assert_almost_equal(
+                    feature.GetField(field), value, decimal=tolerance_places)
+            feature = None
+
     finally:
         result_layer = None
         gdal.Dataset.__swig_destroy__(result_vector)
