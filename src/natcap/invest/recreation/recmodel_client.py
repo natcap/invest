@@ -187,24 +187,21 @@ def execute(args):
         n_workers = -1  # single process mode.
     task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
-    grid_aoi_task = []
+    prep_aoi_task = []
     if args['grid_aoi']:
         LOGGER.info("gridding aoi")
-        grid_aoi_task.append(task_graph.add_task(
+        prep_aoi_task.append(task_graph.add_task(
             func=_grid_vector,
             args=(args['aoi_path'], args['grid_type'], float(args['cell_size']),
                   file_registry['local_aoi_path']),
             target_path_list=[file_registry['local_aoi_path']],
             task_name='grid_aoi'))
     else:
-        aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        local_aoi_vector = driver.CreateCopy(
-            file_registry['local_aoi_path'], aoi_vector)
-        gdal.Dataset.__swig_destroy__(local_aoi_vector)
-        local_aoi_vector = None
-        gdal.Dataset.__swig_destroy__(aoi_vector)
-        aoi_vector = None
+        prep_aoi_task.append(task_graph.add_task(
+            func=_copy_aoi_no_grid,
+            args=(args['aoi_path'], file_registry['local_aoi_path']),
+            target_path_list=[file_registry['local_aoi_path']],
+            task_name='copy_aoi'))
 
     photo_user_days_task = task_graph.add_task(
         func=_retrieve_photo_user_days,
@@ -218,9 +215,9 @@ def execute(args):
         target_path_list=[file_registry['pud_results_path'],
                           file_registry['monthly_table_path'],
                           file_registry['server_version']],
-        dependent_task_list=grid_aoi_task,
+        dependent_task_list=prep_aoi_task,
         task_name='photo-user-day-calculation')
-
+    task_graph.close()
     task_graph.join()
 
     if 'compute_regression' in args and args['compute_regression']:
@@ -279,6 +276,17 @@ def execute(args):
 
     # LOGGER.info('deleting temporary files')
     # shutil.rmtree(temporary_output_dir, ignore_errors=True)
+
+
+def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
+    aoi_vector = gdal.OpenEx(source_aoi_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    local_aoi_vector = driver.CreateCopy(
+        dest_aoi_path, aoi_vector)
+    gdal.Dataset.__swig_destroy__(local_aoi_vector)
+    local_aoi_vector = None
+    gdal.Dataset.__swig_destroy__(aoi_vector)
+    aoi_vector = None
 
 
 def _retrieve_photo_user_days(
@@ -547,26 +555,15 @@ def _build_regression_coefficients(
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
             try:
-                aggregate_results = pygeoprocessing.zonal_statistics(
-                    (predictor_path, 1), response_vector_path)
-            # zonal statistics will raise a ValueError if vector and raster
+                raster_sum_mean_results = _raster_sum_count(
+                    predictor_path, response_vector_path)
+            # _raster_sum_count will raise a ValueError if vector and raster
             # do not intersect. Since we may have other valid predictors,
             # we can proceed without this one.
             except ValueError as err:
                 LOGGER.warn(err)
                 LOGGER.warn("Skipping predictor %s", predictor_id)
                 continue
-            # remove results when the pixel count is 0 (only nodata pixels).
-            # we don't have predictor data for those features,
-            # so features should be excluded from the linear regression.
-            aggregate_results = {
-                fid: stats for fid, stats in aggregate_results.iteritems()
-                if stats['count'] != 0}
-            raster_sum_mean_results = {
-                'fid': aggregate_results.keys(),
-                'sum': [fid['sum'] for fid in aggregate_results.values()],
-                'count': [fid['count'] for fid in aggregate_results.values()],
-                }
             if raster_type == 'mean':
                 mean_results = (
                     numpy.array(raster_sum_mean_results['sum']) / 
@@ -602,44 +599,7 @@ def _build_regression_coefficients(
     out_coefficent_vector = None
 
 
-def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
-    """Copy single layer vector and add a field to map feature indexes.
-
-    Parameters:
-        vector_path (string): path to OGR vector
-        out_fid_index_vector_path (string): desired path to the copied vector
-            that has an index field added to it
-
-    Returns:
-        fid_field (string): name of FID field added to output vector_path
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(out_fid_index_vector_path):
-        os.remove(out_fid_index_vector_path)
-
-    fid_indexed_vector = driver.CreateCopy(
-        out_fid_index_vector_path, vector)
-    fid_indexed_layer = fid_indexed_vector.GetLayer()
-
-    # make a random field name
-    fid_field = str(uuid.uuid4())[-8:]
-    fid_field_defn = ogr.FieldDefn(str(fid_field), ogr.OFTInteger)
-    fid_indexed_layer.CreateField(fid_field_defn)
-    for feature in fid_indexed_layer:
-        fid = feature.GetFID()
-        feature.SetField(fid_field, fid)
-        fid_indexed_layer.SetFeature(feature)
-
-    fid_indexed_vector.FlushCache()
-    fid_indexed_layer = None
-    fid_indexed_vector = None
-
-    return fid_field
-
-
-def _raster_sum_mean(
-        response_vector_path, raster_path, tmp_indexed_vector_path):
+def _raster_sum_count(raster_path, response_vector_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
@@ -655,11 +615,17 @@ def _raster_sum_mean(
         mapping feature IDs from `response_polygons_lookup` to those values
         of the raster under the polygon.
     """
-    fid_field = _build_temporary_indexed_vector(
-        response_vector_path, tmp_indexed_vector_path)
-
     aggregate_results = pygeoprocessing.zonal_statistics(
-        (raster_path, 1), tmp_indexed_vector_path)
+        (raster_path, 1), response_vector_path)
+    # remove results when the pixel count is 0 (only nodata pixels).
+    # we don't have predictor data for those features,
+    # so features should be excluded from the linear regression.
+    aggregate_results = {
+        fid: stats for fid, stats in aggregate_results.iteritems()
+        if stats['count'] != 0}
+    if not aggregate_results:
+        raise ValueError('raster predictor does not intersect with vector AOI')
+
     fid_raster_values = {
         'fid': aggregate_results.keys(),
         'sum': [fid['sum'] for fid in aggregate_results.values()],

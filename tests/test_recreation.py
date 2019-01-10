@@ -660,7 +660,7 @@ class RecreationRegressionTests(unittest.TestCase):
         recmodel_client.delay_op(last_time, time_delay, func)
         self.assertTrue(called[0])
 
-    def test_raster_sum_mean_no_nodata(self):
+    def test_raster_sum_count_no_nodata(self):
         """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client
 
@@ -668,16 +668,14 @@ class RecreationRegressionTests(unittest.TestCase):
         raster_path = os.path.join(SAMPLE_DATA, 'no_nodata_raster.tif')
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
-        tmp_indexed_vector_path = os.path.join(
-            self.workspace_dir, 'tmp_indexed_vector.shp')
-        fid_values = recmodel_client._raster_sum_mean(
-            response_vector_path, raster_path, tmp_indexed_vector_path)
+        fid_values = recmodel_client._raster_sum_count(
+            raster_path, response_vector_path)
 
         # These constants were calculated by hand by Dave.
         numpy.testing.assert_equal(fid_values['count'][0], 5178)
         numpy.testing.assert_equal(fid_values['sum'][0], 67314)
 
-    def test_raster_sum_mean_nodata(self):
+    def test_raster_sum_count_nodata(self):
         """Recreation test sum/mean if raster is all nodata."""
         from natcap.invest.recreation import recmodel_client
 
@@ -685,15 +683,12 @@ class RecreationRegressionTests(unittest.TestCase):
         raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
-        tmp_indexed_vector_path = os.path.join(
-            self.workspace_dir, 'tmp_indexed_vector.shp')
-        fid_values = recmodel_client._raster_sum_mean(
-            response_vector_path, raster_path, tmp_indexed_vector_path)
+        fid_values = recmodel_client._raster_sum_count(
+            raster_path, response_vector_path)
 
         # These constants were calculated by hand by Rich.
-        # numpy.testing.assert_equal(fid_values['count'][0], 0)
+        numpy.testing.assert_equal(fid_values['count'][0], 0)
         numpy.testing.assert_equal(fid_values['sum'][0], 0)
-        # numpy.testing.assert_equal(fid_values['mean'][0], 0)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
