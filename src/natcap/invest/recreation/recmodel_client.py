@@ -230,7 +230,6 @@ def execute(args):
             file_registry['pud_results_path'], args['predictor_table_path'],
             file_registry['tmp_indexed_vector_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
-
         coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
             _build_regression(
                 file_registry['coefficent_vector_path'], RESPONSE_ID,
@@ -548,22 +547,35 @@ def _build_regression_coefficients(
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
             try:
-                raster_sum_mean_results = _raster_sum_mean(
-                    response_vector_path, predictor_path,
-                    tmp_indexed_vector_path)
-                if raster_type == 'mean':
-                    mean_results = (
-                        numpy.array(raster_sum_mean_results['sum']) / 
-                        numpy.array(raster_sum_mean_results['count']))
-                    predictor_results = dict(
-                        zip(raster_sum_mean_results['fid'], mean_results))
-                else:
-                    predictor_results = dict(
-                        zip(raster_sum_mean_results['fid'], raster_sum_mean_results['sum']))
+                aggregate_results = pygeoprocessing.zonal_statistics(
+                    (predictor_path, 1), response_vector_path)
+            # zonal statistics will raise a ValueError if vector and raster
+            # do not intersect. Since we may have other valid predictors,
+            # we can proceed without this one.
             except ValueError as err:
                 LOGGER.warn(err)
                 LOGGER.warn("Skipping predictor %s", predictor_id)
                 continue
+            # remove results when the pixel count is 0 (only nodata pixels).
+            # we don't have predictor data for those features,
+            # so features should be excluded from the linear regression.
+            aggregate_results = {
+                fid: stats for fid, stats in aggregate_results.iteritems()
+                if stats['count'] != 0}
+            raster_sum_mean_results = {
+                'fid': aggregate_results.keys(),
+                'sum': [fid['sum'] for fid in aggregate_results.values()],
+                'count': [fid['count'] for fid in aggregate_results.values()],
+                }
+            if raster_type == 'mean':
+                mean_results = (
+                    numpy.array(raster_sum_mean_results['sum']) / 
+                    numpy.array(raster_sum_mean_results['count']))
+                predictor_results = dict(
+                    zip(raster_sum_mean_results['fid'], mean_results))
+            else:
+                predictor_results = dict(
+                    zip(raster_sum_mean_results['fid'], raster_sum_mean_results['sum']))
         else:
             predictor_results = predictor_functions[predictor_type](
                 response_polygons_lookup, predictor_path)
@@ -648,7 +660,6 @@ def _raster_sum_mean(
 
     aggregate_results = pygeoprocessing.zonal_statistics(
         (raster_path, 1), tmp_indexed_vector_path)
-    
     fid_raster_values = {
         'fid': aggregate_results.keys(),
         'sum': [fid['sum'] for fid in aggregate_results.values()],
@@ -898,6 +909,10 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
             [feature.GetField(str(response_id))] + [
                 feature.GetField(str(key)) for key in predictor_id_list] +
             [1])  # add the 1s for the y intercept
+    # if some predictor data is missing, drop those features:
+    coefficient_matrix = coefficient_matrix[
+        ~numpy.isnan(coefficient_matrix).any(axis=1)]
+    n_features = coefficient_matrix.shape[0]
 
     y_factors = numpy.log1p(coefficient_matrix[:, 0])
 
