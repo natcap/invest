@@ -1001,10 +1001,16 @@ def _calculate_scenario(
     for feature_id in xrange(scenario_coefficent_layer.GetFeatureCount()):
         feature = scenario_coefficent_layer.GetFeature(feature_id)
         response_value = 0.0
-        for scenario_predictor_id in scenario_predictor_id_list:
-            response_value += (
-                id_to_coefficient[scenario_predictor_id] *
-                feature.GetField(str(scenario_predictor_id)))
+        try:
+            for scenario_predictor_id in scenario_predictor_id_list:
+                response_value += (
+                    id_to_coefficient[scenario_predictor_id] *
+                    feature.GetField(str(scenario_predictor_id)))
+        except TypeError as e:
+            LOGGER.warn(
+                'incomplete predictor data for feature_id %d, \
+                not estimating PUD_EST' % feature_id)
+            continue
         response_value += predictor_coefficents[-1]  # y-intercept
         # recall the coefficients are log normal, so expm1 inverses it
         feature.SetField(response_id, numpy.expm1(response_value))

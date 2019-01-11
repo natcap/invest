@@ -498,7 +498,12 @@ class TestRecServer(unittest.TestCase):
             os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
 
     def test_all_metrics_local_server(self):
-        """Recreation test with all but trivial predictor metrics."""
+        """Recreation test with all but trivial predictor metrics.
+
+        Executes Recreation model all the way through scenario prediction.
+        With this 'extra_fields_features' AOI, we also cover two edge cases:
+        1) the AOI has a pre-existing field that the model wishes to create.
+        2) the AOI has features only covering nodata raster predictor values."""
         from natcap.invest.recreation import recmodel_client
         from natcap.invest.recreation import recmodel_server
 
