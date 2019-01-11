@@ -666,7 +666,7 @@ class RecreationRegressionTests(unittest.TestCase):
         self.assertTrue(called[0])
 
     def test_raster_sum_count_no_nodata(self):
-        """Recreation test sum/mean if raster doesn't have nodata defined."""
+        """Recreation test sum/count if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client
 
         # The following raster has no nodata value
@@ -681,19 +681,24 @@ class RecreationRegressionTests(unittest.TestCase):
         numpy.testing.assert_equal(fid_values['sum'][0], 67314)
 
     def test_raster_sum_count_nodata(self):
-        """Recreation test sum/mean if raster is all nodata."""
+        """Recreation test sum/count if raster has no valid pixels.
+
+        This may be a raster that does not intersect with the AOI, or
+        one that does intersect, but is entirely nodata within the AOI.
+        Such a raster is not usable as a predictor variable.
+        """
         from natcap.invest.recreation import recmodel_client
 
-        # The following raster has no nodata value
+        # The following raster has only nodata pixels.
         raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
-
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
-        fid_values = recmodel_client._raster_sum_count(
-            raster_path, response_vector_path)
 
-        # These constants were calculated by hand by Rich.
-        numpy.testing.assert_equal(fid_values['count'][0], 0)
-        numpy.testing.assert_equal(fid_values['sum'][0], 0)
+        with self.assertRaises(ValueError) as cm:
+            _ = recmodel_client._raster_sum_count(
+                raster_path, response_vector_path)
+            expected_message = 'predictor does not intersect with vector AOI'
+            actual_message = str(cm.exception)
+            self.assertTrue(expected_message in actual_message, actual_message)
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
@@ -831,11 +836,9 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(
-            self.workspace_dir, 'hex_grid_vector_path.shp')
-
-        recmodel_client._grid_vector(
-            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
-            response_vector_path)
+            self.workspace_dir, 'no_grid_vector_path.shp')
+        recmodel_client._copy_aoi_no_grid(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), response_vector_path)
 
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
@@ -865,11 +868,9 @@ class RecreationRegressionTests(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         response_vector_path = os.path.join(
-            self.workspace_dir, 'hex_grid_vector_path.shp')
-
-        recmodel_client._grid_vector(
-            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), 'hexagon', 20000.0,
-            response_vector_path)
+            self.workspace_dir, 'no_grid_vector_path.shp')
+        recmodel_client._copy_aoi_no_grid(
+            os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), response_vector_path)
 
         predictor_table_path = os.path.join(
             self.workspace_dir, 'predictors.csv')

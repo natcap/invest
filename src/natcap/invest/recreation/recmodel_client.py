@@ -566,7 +566,7 @@ def _build_regression_coefficients(
                 continue
             if raster_type == 'mean':
                 mean_results = (
-                    numpy.array(raster_sum_mean_results['sum']) / 
+                    numpy.array(raster_sum_mean_results['sum']) /
                     numpy.array(raster_sum_mean_results['count']))
                 predictor_results = dict(
                     zip(raster_sum_mean_results['fid'], mean_results))
