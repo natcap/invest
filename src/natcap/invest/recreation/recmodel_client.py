@@ -68,7 +68,6 @@ _TMP_BASE_FILES = {
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
     'server_version': 'server_version.pickle',
-    'tmp_indexed_vector_path': 'indexed_vector.shp',
     'tmp_fid_raster_path': 'vector_fid_raster.tif',
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
     }
@@ -225,7 +224,6 @@ def execute(args):
         predictor_id_list = []
         _build_regression_coefficients(
             file_registry['pud_results_path'], args['predictor_table_path'],
-            file_registry['tmp_indexed_vector_path'],
             file_registry['coefficent_vector_path'], predictor_id_list)
         coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
             _build_regression(
@@ -271,7 +269,6 @@ def execute(args):
                 file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
                 coefficents, predictor_id_list,
                 args['scenario_predictor_table_path'],
-                file_registry['tmp_scenario_indexed_vector_path'],
                 file_registry['scenario_results_path'])
 
     # LOGGER.info('deleting temporary files')
@@ -472,8 +469,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 def _build_regression_coefficients(
         response_vector_path, predictor_table_path,
-        tmp_indexed_vector_path, out_coefficient_vector_path,
-        out_predictor_id_list):
+        out_coefficient_vector_path, out_predictor_id_list):
     """Calculate least squares fit for the polygons in the response vector.
 
     Build a least squares regression from the log normalized response vector,
@@ -500,8 +496,6 @@ def _build_regression_coefficients(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
-        tmp_indexed_vector_path (string): path to temporary working file in
-            case the response vector needs an index added
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
@@ -605,8 +599,6 @@ def _raster_sum_count(raster_path, response_vector_path):
     Parameters:
         response_vector_path (string): path to response polygons
         raster_path (string): path to a raster.
-        tmp_indexed_vector_path (string): desired path to a vector that will
-            be used to add unique indexes to `response_vector_path`
         tmp_fid_raster_path (string): desired path to raster that will be used
             to aggregate `raster_path` values by unique response IDs.
 
@@ -919,8 +911,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
 
 def _calculate_scenario(
         base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
-        scenario_predictor_table_path, tmp_indexed_vector_path,
-        scenario_results_path):
+        scenario_predictor_table_path, scenario_results_path):
     """Calculate the PUD of a scenario given an existing regression.
 
     It is expected that the predictor coefficients have been derived from a
@@ -961,8 +952,6 @@ def _calculate_scenario(
                         response polygon in projected units of AOI
                 Note also that each ID in the table must have a corresponding
                 entry in `response_id` else the input is invalid.
-        tmp_indexed_vector_path (string): path to temporary working file in
-            case the response vector needs an index added
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
             AOI but contain the base regression fields as well as the scenario
@@ -974,8 +963,7 @@ def _calculate_scenario(
     scenario_predictor_id_list = []
     _build_regression_coefficients(
         base_aoi_path, scenario_predictor_table_path,
-        tmp_indexed_vector_path, scenario_results_path,
-        scenario_predictor_id_list)
+        scenario_results_path, scenario_predictor_id_list)
 
     id_to_coefficient = dict(
         (p_id, coeff) for p_id, coeff in zip(

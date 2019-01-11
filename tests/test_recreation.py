@@ -843,19 +843,16 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
-        tmp_indexed_vector_path = os.path.join(
-            self.workspace_dir, 'tmp_indexed_vector.shp')
         out_coefficient_vector_path = os.path.join(
             self.workspace_dir, 'out_coefficient_vector.shp')
         out_predictor_id_list = []
         _make_empty_files(
-            [tmp_indexed_vector_path, out_coefficient_vector_path])
+            [out_coefficient_vector_path])
 
         # build again to test against overwriting output
         recmodel_client._build_regression_coefficients(
             response_vector_path, predictor_table_path,
-            tmp_indexed_vector_path, out_coefficient_vector_path,
-            out_predictor_id_list)
+            out_coefficient_vector_path, out_predictor_id_list)
 
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
