@@ -175,7 +175,7 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_TMP_BASE_FILES, output_dir)], file_suffix)
 
-     # Initialize a TaskGraph
+    # Initialize a TaskGraph
     taskgraph_db_dir = os.path.join(output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
