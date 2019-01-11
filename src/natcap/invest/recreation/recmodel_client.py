@@ -883,7 +883,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     y_factors = numpy.log1p(coefficient_matrix[:, 0])
 
     coefficents, _, _, _ = numpy.linalg.lstsq(
-        coefficient_matrix[:, 1:], y_factors)
+        coefficient_matrix[:, 1:], y_factors, rcond=None)
     ssreg = numpy.sum((
         y_factors -
         numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
