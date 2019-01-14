@@ -57,6 +57,8 @@ Unreleased Changes
   A DQ score of 1 should represent better data quality whereas the score of 3 is
   worse data quality. A weight score of 1 is more important, whereas that of 3
   is less important.
+* Fixing a case where a zero discount rate and rate of change in the carbon
+  model would cause a divide by zero error.
 
 3.5.0 (2018-08-14)
 ------------------

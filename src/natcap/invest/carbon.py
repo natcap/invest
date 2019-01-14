@@ -169,9 +169,9 @@ def execute(args):
         storage_path_list = []
         for pool_type in ['c_above', 'c_below', 'c_soil', 'c_dead']:
             carbon_pool_by_type = dict([
-                (lucode, float(carbon_pool_table[lucode][pool_type])) 
+                (lucode, float(carbon_pool_table[lucode][pool_type]))
                 for lucode in carbon_pool_table])
-            
+
             lulc_key = 'lulc_%s_path' % scenario_type
             storage_key = '%s_%s' % (pool_type, scenario_type)
             LOGGER.info(
@@ -214,7 +214,7 @@ def execute(args):
             _diff_rasters,
             args=(storage_path_list, file_registry[output_key]),
             target_path_list=[file_registry[output_key]],
-            dependent_task_list=[sum_rasters_task_lookup['cur'], 
+            dependent_task_list=[sum_rasters_task_lookup['cur'],
                 sum_rasters_task_lookup[scenario_type]],
             task_name='diff_rasters_for_%s' % output_key)
         diff_rasters_task_lookup[scenario_type] = diff_rasters_task
@@ -244,10 +244,10 @@ def execute(args):
                 task_name='calculate_%s' % output_key)
             calculate_npv_tasks.append(calculate_npv_task)
             tifs_to_summarize.add(file_registry[output_key])
-    
+
     # Report aggregate results
-    tasks_to_report = (sum_rasters_task_lookup.values() 
-                       + diff_rasters_task_lookup.values() 
+    tasks_to_report = (sum_rasters_task_lookup.values()
+                       + diff_rasters_task_lookup.values()
                        + calculate_npv_tasks)
     generate_report_task = graph.add_task(
         _generate_report,
@@ -363,8 +363,9 @@ def _calculate_valuation_constant(
                (1 + float(rate_change) / 100.0)))
     valuation_constant = (
         float(price_per_metric_ton_of_c) /
-        (float(lulc_fut_year) - float(lulc_cur_year)) *
-        (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio))
+        (float(lulc_fut_year) - float(lulc_cur_year)))
+    if ratio != 1.0:
+        valuation_constant *= (1.0 - ratio ** (n_years + 1)) / (1.0 - ratio)
     return valuation_constant
 
 
