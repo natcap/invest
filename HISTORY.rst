@@ -2,6 +2,12 @@
 
 Unreleased Changes
 ------------------
+* Removing Scenario Generator: Rule-based model.
+* Fixing a bug in Hydropower model where watershed aggregations would be incorrect
+  if a watershed is partially covering nodata raster values. Nodata values are now
+  ignored in zonal statistics. Numerical results change very slightly in the
+  case where a watershed only includes a few nodata pixels.
+* Adding TaskGraph functionality to GLOBIO model. 
 * Adding some TaskGraph functionality to Scenario Generator: Proximity. 
 * Fixing an issue with the InVEST Fisheries model that would prevent the model
   from batch-processing a directory of population tables.  The model will now
@@ -13,7 +19,7 @@ Unreleased Changes
   were all based on soybean data).
 * Hydropower subwatershed results now include all the same metrics as the
   watershed results, with the exception of economic valuation metrics.
-* Reimplimenting the Hydropower model using taskgraph.
+* Reimplementing the Hydropower model using taskgraph.
 * Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.

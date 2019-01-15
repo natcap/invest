@@ -44,7 +44,6 @@ DATASTACKS = {
     'recreation': ['recreation_andros.invs.json'],
     'routedem': ['routedem_willamette.invs.json'],
     'scenario_generator_proximity': ['scenario_proximity_amazonia.invs.json'],
-    'scenario_generator': ['scenario_generator_demo.invs.json'],
     'scenic_quality': ['wind_turbines_wcvi.invs.json'],
     'sdr': ['sdr_willamette.invs.json'],
     'seasonal_water_yield': ['swy_willamette.invs.json'],
