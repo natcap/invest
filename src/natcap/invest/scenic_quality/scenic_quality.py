@@ -14,14 +14,14 @@ from osgeo import osr
 import taskgraph
 import pygeoprocessing
 
-from natcap.invest.scenic_quality.viewshed import viewshed
+from natcap.invest.scenic_quality.viewshed import (
+    viewshed, FLOAT_GTIFF_CREATION_OPTIONS, BYTE_GTIFF_CREATION_OPTIONS)
 from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
 _BYTE_NODATA = 255  # Largest value a byte can hold
-
 
 _OUTPUT_BASE_FILES = {
     'viewshed_value': 'vshed_value.tif',
@@ -35,7 +35,7 @@ _INTERMEDIATE_BASE_FILES = {
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
     'visibility_pattern': 'visibility_{id}.tif',
-    'auxiliary_pattern': 'auxiliary_{id}.tif',
+    'auxiliary_pattern': 'auxiliary_{id}.tif',  # Retained for debugging.
     'value_pattern': 'value_{id}.tif',
 }
 
@@ -236,19 +236,17 @@ def execute(args):
         visibility_filepath = file_registry['visibility_pattern'].format(
             id=feature_index)
         viewshed_files.append(visibility_filepath)
-        auxiliary_filepath = file_registry['auxiliary_pattern'].format(
-            id=feature_index)
         viewshed_task = graph.add_task(
             viewshed,
             args=((file_registry['clipped_dem'], 1),  # DEM
                   viewpoint,
                   visibility_filepath),
-            kwargs={'curved_earth': True,  # model always assumes this.
+            kwargs={'curved_earth': True,  # SQ model always assumes this.
                     'refraction_coeff': float(args['refraction']),
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
-                    'aux_filepath': auxiliary_filepath},
-            target_path_list=[auxiliary_filepath, visibility_filepath],
+                    'aux_filepath': None},  # Remove aux filepath after run
+            target_path_list=[visibility_filepath],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)
@@ -393,7 +391,8 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
 
     pygeoprocessing.raster_calculator(
         [(dem_path, 1)] + [(path, 1) for path in valuation_filepaths],
-        _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA)
+        _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA,
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
@@ -636,7 +635,8 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
     pygeoprocessing.new_raster_from_base(
         clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte,
-        [_BYTE_NODATA], [0])
+        [_BYTE_NODATA], [0],
+        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
     pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
 
     dem_nodata = dem_raster_info['nodata'][0]
@@ -652,9 +652,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     pygeoprocessing.raster_calculator(
         [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
         _mask_op, target_path, gdal.GDT_Float32, dem_nodata,
-        gtiff_creation_options=(
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'))
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
     try:
         shutil.rmtree(temp_dir)
@@ -723,7 +721,8 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
         ([(clipped_dem_path, 1)] +
          [(vis_path, 1) for vis_path in visibility_raster_path_list] +
          [(weight, 'raw') for weight in weights]),
-        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata)
+        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata,
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):
@@ -860,7 +859,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1)], _map_percentiles, target_path,
-        gdal.GDT_Byte, _BYTE_NODATA)
+        gdal.GDT_Byte, _BYTE_NODATA,
+        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
 
 
 @validation.invest_validator
