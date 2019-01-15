@@ -2,13 +2,20 @@
 
 Unreleased Changes
 ------------------
+* Adding a new input to the InVEST Settings window to allow users to customize
+  the value that should be used for the ``n_workers`` parameter in
+  taskgraph-enabled models.  This change involves removing the "Number of
+  Parallel Workers" input from the model inputs pane for some models in
+  favor of this new location.  The default value for this setting is ``-1``,
+  indicating synchronous (non-threaded, non-multiprocessing) execution of
+  tasks.
 * Removing Scenario Generator: Rule-based model.
 * Fixing a bug in Hydropower model where watershed aggregations would be incorrect
   if a watershed is partially covering nodata raster values. Nodata values are now
   ignored in zonal statistics. Numerical results change very slightly in the
   case where a watershed only includes a few nodata pixels.
-* Adding TaskGraph functionality to GLOBIO model. 
-* Adding some TaskGraph functionality to Scenario Generator: Proximity. 
+* Adding TaskGraph functionality to GLOBIO model.
+* Adding some TaskGraph functionality to Scenario Generator: Proximity.
 * Fixing an issue with the InVEST Fisheries model that would prevent the model
   from batch-processing a directory of population tables.  The model will now
   process these files as expected.
@@ -50,6 +57,8 @@ Unreleased Changes
   A DQ score of 1 should represent better data quality whereas the score of 3 is
   worse data quality. A weight score of 1 is more important, whereas that of 3
   is less important.
+* Fixing a case where a zero discount rate and rate of change in the carbon
+  model would cause a divide by zero error.
 
 3.5.0 (2018-08-14)
 ------------------
