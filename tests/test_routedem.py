@@ -78,6 +78,33 @@ class RouteDEMTests(unittest.TestCase):
 
         self.assertTrue('Invalid algorithm specified' in str(cm.exception))
 
+    def test_routedem_no_options_default_band(self):
+        """RouteDEM: default to band 1 when not specified."""
+        from natcap.invest import routedem
+
+        # Intentionally leaving out the dem_band_index parameter,
+        # should default to band 1.
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'dem.tif'),
+            'results_suffix': 'foo',
+        }
+        RouteDEMTests._make_dem(args['dem_path'])
+        routedem.execute(args)
+
+        filled_raster_path = os.path.join(args['workspace_dir'], 'filled_foo.tif')
+        self.assertTrue(
+            os.path.exists(filled_raster_path),
+            'Filled DEM not created.')
+
+        # The first band has only values of 1, no hydrological pits.
+        # So, the filled band should match the source band.
+        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[1]
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()[1]
+        numpy.testing.assert_almost_equal(
+            expected_filled_array,
+            filled_array)
+
     def test_routedem_no_options(self):
         """RouteDEM: assert pitfilling when no other options given."""
         from natcap.invest import routedem

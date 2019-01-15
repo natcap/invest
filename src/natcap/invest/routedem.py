@@ -150,7 +150,9 @@ def execute(args):
 
     graph = taskgraph.TaskGraph(task_cache_dir, n_workers=n_workers)
 
-    # Calculate slope
+    # Calculate slope.  This is intentionally on the original DEM, not
+    # on the pitfilled DEM.  If the user really wants the slop of the filled
+    # DEM, they can pass it back through RouteDEM.
     if 'calculate_slope' in args and bool(args['calculate_slope']):
         target_slope_path = os.path.join(
             args['workspace_dir'], _TARGET_SLOPE_FILE_PATTERN % file_suffix)
@@ -252,18 +254,18 @@ def execute(args):
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
+    """Validate args to ensure they conform to ``execute``'s contract.
 
     Parameters:
         args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
+            values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
             should only occur on the args[limit_to] value. The intent that
             individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
+            than validating the entire ``args`` dictionary.
 
     Returns:
-        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+        list of ([invalid key_a, invalid key_b, ...], 'warning/error message')
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
@@ -290,7 +292,7 @@ def validate(args, limit_to=None):
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
-            "The following keys were expected in `args` but were missing " +
+            "The following keys were expected in args but were missing " +
             ', '.join(missing_key_list))
 
     if len(no_value_list) > 0:
