@@ -106,11 +106,13 @@ def execute(args):
         args['calculate_downstream_distance'] (bool): If True, and a stream
             threshold is calculated, model will calculate a downstream
             distance raster in units of pixels. Only applies when
-            args['calculate_flow_accumulation'], 
+            args['calculate_flow_accumulation'],
             args['calculate_flow_direction'], and
             args['calculate_stream_threshold'] are all True.
         args['calculate_slope'] (bool):  If True, model will calculate a
             slope raster from the DEM.
+        args['n_workers'] (int): The ``n_workers`` parameter to pass to
+            the task graph.  The default is ``-1`` if not provided.
 
     Returns:
         ``None``
@@ -140,7 +142,13 @@ def execute(args):
 
     dem_raster_path_band = (args['dem_path'], band_index)
 
-    graph = taskgraph.TaskGraph(task_cache_dir, n_workers=-1)
+    try:
+        n_workers = int(args['n_workers'])
+    except (ValueError, KeyError):
+        LOGGER.info('Invalid n_workers parameter; defaulting to -1')
+        n_workers = -1
+
+    graph = taskgraph.TaskGraph(task_cache_dir, n_workers=n_workers)
 
     # Calculate slope
     if 'calculate_slope' in args and bool(args['calculate_slope']):
@@ -330,7 +338,7 @@ def validate(args, limit_to=None):
         if ('dem_band_index' in args and
                 args['dem_band_index'] not in (None, '')):
             # So, validation already passed so far on band index
-            if not invalid_index:  
+            if not invalid_index:
                 dem_raster = gdal.OpenEx(args['dem_path'])
                 if int(args['dem_band_index']) > dem_raster.RasterCount:
                     validation_error_list.append((
