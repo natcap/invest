@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Refactoring RouteDEM to use taskgraph and the latest pygeoprocessing
+  (``>=1.5.0``).  RouteDEM now fills hydrological sinks and users have the
+  option to use either of the D8 or Multiple Flow Direction (MFD) routing
+  algorithms.
 * Adding a new input to the InVEST Settings window to allow users to customize
   the value that should be used for the ``n_workers`` parameter in
   taskgraph-enabled models.  This change involves removing the "Number of
@@ -21,7 +25,7 @@ Unreleased Changes
   process these files as expected.
 * Reimplementing Crop Production models using taskgraph.
 * Fixing an issue with Crop Production Regression's result_table.csv where the
- 'production_modeled' and '<nutrient>_modeled' values calculated for each crop
+  'production_modeled' and '<nutrient>_modeled' values calculated for each crop
   were done so using the same crop raster (e.g. wheat, soybean, and barley values
   were all based on soybean data).
 * Hydropower subwatershed results now include all the same metrics as the
