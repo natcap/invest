@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixing a bug in the percentiles algorithm used by Scenic Quality that
+  would result in incorrect visual quality outputs.
 * Refactoring RouteDEM to use taskgraph and the latest pygeoprocessing
   (``>=1.5.0``).  RouteDEM now fills hydrological sinks and users have the
   option to use either of the D8 or Multiple Flow Direction (MFD) routing

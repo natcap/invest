@@ -809,7 +809,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
             if not packed_score:
                 break
             for value in struct.unpack(
-                    'd' * (len(values_buffer)//dtype_n_bytes), values_buffer):
+                    'd' * (len(packed_score)//dtype_n_bytes), packed_score):
                 yield value
 
     # phase 1: calculate percentiles from the visible_structures raster
@@ -824,7 +824,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
                           raster_info['raster_size'][1])
     for _, block in pygeoprocessing.iterblocks(source_raster_path):
         block = block.astype(numpy.float64)
-        valid_pixels = block[(block != raster_nodata) & (block != 0)]
+        valid_pixels = block[(~numpy.isclose(block, raster_nodata) &
+                               (~numpy.isclose(block, 0)))]
         n_pixels_read += block.size
 
         # Only process blocks that have valid pixels.
@@ -846,7 +847,6 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     rank_ordinals = [math.ceil(n*n_valid_pixels) for n in
                      (0.0, 0.25, 0.50, 0.75)]
-
     percentile_values = []
     current_index = 0
     next_percentile_ordinal = rank_ordinals.pop(0)
