@@ -18,6 +18,7 @@ import pygeoprocessing.testing
 import numpy
 import pandas
 from osgeo import gdal
+import taskgraph
 
 from natcap.invest import utils
 
@@ -486,14 +487,14 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'C:\\Users\\dmf\\projects\\invest_dev\\recreation_pgp_taskgraph\\test_local_florida',
         }
 
         recmodel_client.execute(args)
 
         _assert_regression_results_eq(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
+            os.path.join(REGRESSION_DATA, 'file_list_base_florida_aoi.txt'),
             os.path.join(args['workspace_dir'], 'scenario_results.shp'),
             os.path.join(REGRESSION_DATA, 'local_server_scenario_results.csv'))
 
@@ -543,19 +544,19 @@ class TestRecServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': 'C:\\Users\\dmf\\projects\\invest_dev\\recreation_pgp_taskgraph\\test_all_metrics',
         }
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
-            self.workspace_dir, 'regression_coefficients.shp')
+            args['workspace_dir'], 'regression_coefficients.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
         out_scenario_path = os.path.join(
-            self.workspace_dir, 'scenario_results.shp')
+            args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'trivial_scenario_results.shp')
         pygeoprocessing.testing.assert_vectors_equal(
@@ -835,6 +836,12 @@ class RecreationRegressionTests(unittest.TestCase):
         """Recreation test regression coefficients handle existing output."""
         from natcap.invest.recreation import recmodel_client
 
+        # Initialize a TaskGraph
+        taskgraph_db_dir = os.path.join(
+            self.workspace_dir, '_taskgraph_working_dir')    
+        n_workers = -1  # single process mode.
+        task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+
         response_vector_path = os.path.join(
             self.workspace_dir, 'no_grid_vector_path.shp')
         recmodel_client._copy_aoi_no_grid(
@@ -843,16 +850,21 @@ class RecreationRegressionTests(unittest.TestCase):
         predictor_table_path = os.path.join(SAMPLE_DATA, 'predictors.csv')
 
         # make outputs to be overwritten
+        predictor_dict = utils.build_lookup_from_csv(predictor_table_path, 'id')
+        predictor_list = predictor_dict.keys()
+        tmp_working_dir = tempfile.mkdtemp(dir=self.workspace_dir)
+        empty_json_list = [
+            os.path.join(tmp_working_dir, x + '.json') for x in predictor_list]
         out_coefficient_vector_path = os.path.join(
             self.workspace_dir, 'out_coefficient_vector.shp')
-        out_predictor_id_list = []
         _make_empty_files(
-            [out_coefficient_vector_path])
+            [out_coefficient_vector_path] + empty_json_list)
 
         # build again to test against overwriting output
+        predictor_json_list = []
         recmodel_client._build_regression_coefficients(
-            response_vector_path, predictor_table_path,
-            out_coefficient_vector_path, out_predictor_id_list)
+            response_vector_path, predictor_table_path, predictor_json_list,
+            out_coefficient_vector_path, tmp_working_dir, task_graph)
 
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')

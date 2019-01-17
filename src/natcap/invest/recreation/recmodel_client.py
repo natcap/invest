@@ -1,6 +1,7 @@
 """InVEST Recreation Client."""
 from __future__ import absolute_import
 
+import json
 import uuid
 import os
 import zipfile
@@ -58,7 +59,7 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
     'monthly_table_path': 'monthly_table.csv',
-    'coefficent_vector_path': 'regression_coefficients.shp',
+    'coefficient_vector_path': 'regression_coefficients.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
     }
@@ -169,7 +170,9 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
-    utils.make_directories([output_dir])
+    intermediate_dir = os.path.join(output_dir, 'intermediate')
+    scenario_dir = os.path.join(intermediate_dir, 'scenario')
+    utils.make_directories([output_dir, intermediate_dir, scenario_dir])
 
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -216,31 +219,49 @@ def execute(args):
                           file_registry['server_version']],
         dependent_task_list=prep_aoi_task,
         task_name='photo-user-day-calculation')
-    task_graph.close()
-    task_graph.join()
-
+    
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
-        predictor_id_list = []
-        _build_regression_coefficients(
-            file_registry['pud_results_path'], args['predictor_table_path'],
-            file_registry['coefficent_vector_path'], predictor_id_list)
-        coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
+        predictor_json_list = []  # tracks predictor files to add to shp
+        # because unwanted files from previous runs could be present.
+        build_regression_data_task = task_graph.add_task(
+            func=_build_regression_coefficients,
+            args=(file_registry['pud_results_path'],
+                  args['predictor_table_path'], predictor_json_list,
+                  file_registry['coefficient_vector_path'],
+                  intermediate_dir, task_graph),
+            target_path_list=[file_registry['coefficient_vector_path']],
+            dependent_task_list=[photo_user_days_task],
+            task_name='build predictors')
+        # task_graph.close()
+        task_graph.join()
+
+        predictor_id_list = [
+            os.path.basename(x).replace('.json', '') for x in predictor_json_list
+            if x.endswith('.json')]
+        # _build_regression_coefficients(
+        #     file_registry['pud_results_path'], args['predictor_table_path'],
+        #     file_registry['coefficient_vector_path'], predictor_id_list,
+        #     intermediate_dir)
+        id_to_coefficient, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
             _build_regression(
-                file_registry['coefficent_vector_path'], RESPONSE_ID,
+                file_registry['coefficient_vector_path'], RESPONSE_ID,
                 predictor_id_list))
+        LOGGER.warn(id_to_coefficient)
+        coefficients = id_to_coefficient.values()
+        predictor_id_list = id_to_coefficient.keys()
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
-        coefficents_string = '               estimate     stderr    t value\n'
-        coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
-            '(Intercept)', coefficents[-1], se_est[-1],
-            coefficents[-1] / se_est[-1])
-        coefficents_string += '\n'.join(
+        coefficients_string = '               estimate     stderr    t value\n'
+        coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
+            '(Intercept)', coefficients[-1], se_est[-1],
+            coefficients[-1] / se_est[-1])
+        coefficients_string += '\n'.join(
             '%-12s %+.3e %+.3e %+.3e' % (
-                p_id, coefficent, se_est_factor, coefficent / se_est_factor)
-            for p_id, coefficent, se_est_factor in zip(
-                predictor_id_list, coefficents[:-1], se_est[:-1]))
+                p_id, coefficient, se_est_factor, coefficient / se_est_factor)
+            for p_id, coefficient, se_est_factor in zip(
+                predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
 
         # generate a nice looking regression result and write to log and file
         with open(file_registry['server_version'], 'rb') as f:
@@ -255,7 +276,7 @@ def execute(args):
             'SSreg: %.4f\n'
             'server id hash: %s\n'
             '********************************\n' % (
-                coefficents_string, std_err, dof, r_sq, r_sq_adj, ssreg,
+                coefficients_string, std_err, dof, r_sq, r_sq_adj, ssreg,
                 server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
@@ -267,9 +288,12 @@ def execute(args):
             LOGGER.info('Calculating scenario')
             _calculate_scenario(
                 file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
-                coefficents, predictor_id_list,
+                # coefficients, predictor_id_list,
+                id_to_coefficient,
                 args['scenario_predictor_table_path'],
-                file_registry['scenario_results_path'])
+                file_registry['scenario_results_path'], task_graph, scenario_dir)
+        task_graph.close()
+        task_graph.join()
 
     # LOGGER.info('deleting temporary files')
     # shutil.rmtree(temporary_output_dir, ignore_errors=True)
@@ -468,8 +492,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 
 def _build_regression_coefficients(
-        response_vector_path, predictor_table_path,
-        out_coefficient_vector_path, out_predictor_id_list):
+        response_vector_path, predictor_table_path, predictor_json_list,
+        out_coefficient_vector_path, working_dir, task_graph):
     """Calculate least squares fit for the polygons in the response vector.
 
     Build a least squares regression from the log normalized response vector,
@@ -499,9 +523,6 @@ def _build_regression_coefficients(
         out_coefficient_vector_path (string): path to a copy of
             `response_vector_path` with the modified predictor variable
             responses. Overwritten if exists.
-        out_predictor_id_list (list): a list that is overwritten with the
-            predictor ids that are added to the coefficient vector attribute
-            table.
 
     Returns:
         None
@@ -519,26 +540,25 @@ def _build_regression_coefficients(
     driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_coefficient_vector_path):
         driver.Delete(out_coefficient_vector_path)
-
-    out_coefficent_vector = driver.CreateCopy(
+    out_coefficient_vector = driver.CreateCopy(
         out_coefficient_vector_path, response_vector)
     response_vector = None
-
-    out_coefficent_layer = out_coefficent_vector.GetLayer()
+    out_coefficient_vector = None
 
     # lookup functions for response types
     predictor_functions = {
         'point_count': _point_count,
         'point_nearest_distance': _point_nearest_distance,
         'line_intersect_length': _line_intersect_length,
-        'polygon_area_coverage': lambda x, y: _polygon_area('area', x, y),
-        'polygon_percent_coverage': lambda x, y: _polygon_area(
-            'percent', x, y),
+        'polygon_area_coverage': lambda x, y, z: _polygon_area(
+            'area', x, y, z),
+        'polygon_percent_coverage': lambda x, y, z: _polygon_area(
+            'percent', x, y, z),
         }
 
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
-
+    predictor_task_list = []
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
 
@@ -548,52 +568,88 @@ def _build_regression_coefficients(
         if predictor_type.startswith('raster'):
             # type must be one of raster_sum or raster_mean
             raster_type = predictor_type.split('_')[1]
-            try:
-                raster_sum_mean_results = _raster_sum_count(
-                    predictor_path, response_vector_path)
-            # _raster_sum_count will raise a ValueError if vector and raster
-            # do not intersect. Since we may have other valid predictors,
-            # we can proceed without this one.
-            except ValueError as err:
-                LOGGER.warn(err)
-                LOGGER.warn("Skipping predictor %s", predictor_id)
-                continue
-            if raster_type == 'mean':
-                mean_results = (
-                    numpy.array(raster_sum_mean_results['sum']) /
-                    numpy.array(raster_sum_mean_results['count']))
-                predictor_results = dict(
-                    zip(raster_sum_mean_results['fid'], mean_results))
-            else:
-                predictor_results = dict(
-                    zip(raster_sum_mean_results['fid'], raster_sum_mean_results['sum']))
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=_raster_sum_count,
+                args=(predictor_path, raster_type, response_vector_path,
+                      predictor_target_path),
+                target_path_list=[predictor_target_path],
+                task_name='predictor %s' % predictor_id))
         else:
-            predictor_results = predictor_functions[predictor_type](
-                response_polygons_lookup, predictor_path)
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=predictor_functions[predictor_type],
+                args=(response_polygons_lookup, predictor_path,
+                      predictor_target_path),
+                target_path_list=[predictor_target_path],
+                task_name='predictor %s' % predictor_id))
+            # predictor_results = predictor_functions[predictor_type](
+            #     response_polygons_lookup, predictor_path, 
+            #     predictor_target_path)
 
+    # target_path_list is empty because if we've gotten here
+    # we always want this task to execute.
+    assemble_predictor_data_task = task_graph.add_task(
+        func=_json_to_shp_table,
+        args=(out_coefficient_vector_path, predictor_json_list),
+        target_path_list=[],
+        dependent_task_list=predictor_task_list,
+        task_name='assemble predictor data')
+
+def _json_to_shp_table(vector_path, predictor_json_list):
+    vector = gdal.OpenEx(vector_path, gdal.GA_Update)
+    layer = vector.GetLayer()
+    layer_defn = layer.GetLayerDefn()
+
+    # TODO: leave this list empty if later on we have _build_regression
+    # read PUD_YR_AVG from pud_results.shp instead of regression_coefficients.shp
+    # that would enable server and client ops to happen in parallel.
+    predictor_id_list = ["PUD_YR_AVG"]
+    for json_filename in predictor_json_list:
+        predictor_id = os.path.basename(json_filename).replace('.json', '')
+        predictor_id_list.append(predictor_id)
         # Create a new field for the predictor
         # Delete the field first if it already exists
-        field_index = out_coefficent_layer.FindFieldIndex(
+        field_index = layer.FindFieldIndex(
             str(predictor_id), 1)
         if field_index >= 0:
-            out_coefficent_layer.DeleteField(field_index)
+            layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         predictor_field.SetWidth(24)
         predictor_field.SetPrecision(11)
-        out_coefficent_layer.CreateField(predictor_field)
+        layer.CreateField(predictor_field)
 
-        out_predictor_id_list.append(predictor_id)
-
+        with open(json_filename, 'r') as file:
+            predictor_results = json.load(file)
         for feature_id, value in predictor_results.iteritems():
-            feature = out_coefficent_layer.GetFeature(int(feature_id))
+            feature = layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
-            out_coefficent_layer.SetFeature(feature)
-    out_coefficent_layer = None
-    out_coefficent_vector.FlushCache()
-    out_coefficent_vector = None
+            layer.SetFeature(feature)
+
+    # Get all the fieldnames, if they are not in the predictor_id_list,
+    # get their index and delete
+    n_fields = layer_defn.GetFieldCount()
+    schema = []
+    for idx in range(n_fields):
+        field_defn = layer_defn.GetFieldDefn(idx)
+        schema.append(field_defn.GetName())
+    for field_name in schema:
+        if field_name not in predictor_id_list:
+            idx = layer.FindFieldIndex(field_name, 1)
+            layer.DeleteField(idx)
+    layer_defn = None
+    layer = None
+    vector.FlushCache()
+    vector = None
 
 
-def _raster_sum_count(raster_path, response_vector_path):
+def _raster_sum_count(
+        raster_path, raster_type, response_vector_path,
+        predictor_target_path):
     """Sum all non-nodata values in the raster under each polygon.
 
     Parameters:
@@ -616,17 +672,38 @@ def _raster_sum_count(raster_path, response_vector_path):
         fid: stats for fid, stats in aggregate_results.iteritems()
         if stats['count'] != 0}
     if not aggregate_results:
-        raise ValueError('raster predictor does not intersect with vector AOI')
+        # raise ValueError('raster predictor does not intersect with vector AOI')
+        LOGGER.warn('raster predictor does not intersect with vector AOI')
+        # Create an empty file so that Taskgraph has its target file.
+        predictor_results = {}
+        with open(predictor_target_path, 'w') as jsonfile:
+            json.dump(predictor_results, jsonfile)
+        return None
 
     fid_raster_values = {
         'fid': aggregate_results.keys(),
         'sum': [fid['sum'] for fid in aggregate_results.values()],
         'count': [fid['count'] for fid in aggregate_results.values()],
         }
-    return fid_raster_values
+
+    if raster_type == 'mean':
+        mean_results = (
+            numpy.array(fid_raster_values['sum']) /
+            numpy.array(fid_raster_values['count']))
+        predictor_results = dict(
+            zip(fid_raster_values['fid'], mean_results))
+    else:
+        predictor_results = dict(
+            zip(fid_raster_values['fid'], fid_raster_values['sum']))
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(predictor_results, jsonfile)
+    # predictor_json_list.append(predictor_target_path)
+    # return fid_raster_values
 
 
-def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
+def _polygon_area(
+        mode, response_polygons_lookup, polygon_vector_path,
+        predictor_target_path):
     """Calculate polygon area overlap.
 
     Calculates the amount of projected area overlap from `polygon_vector_path`
@@ -680,10 +757,12 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
     LOGGER.info(
         "%s polygon area: 100.00%% complete",
         os.path.basename(polygon_vector_path))
-    return polygon_coverage_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(polygon_coverage_lookup, jsonfile)
+    # return polygon_coverage_lookup
 
 
-def _line_intersect_length(response_polygons_lookup, line_vector_path):
+def _line_intersect_length(response_polygons_lookup, line_vector_path, predictor_target_path):
     """Calculate the length of the intersecting lines on the response polygon.
 
     Parameters:
@@ -723,10 +802,12 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
     LOGGER.info(
         "%s line intersect length: 100.00%% complete",
         os.path.basename(line_vector_path))
-    return line_length_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(line_length_lookup, jsonfile)
+    # return line_length_lookup
 
 
-def _point_nearest_distance(response_polygons_lookup, point_vector_path):
+def _point_nearest_distance(response_polygons_lookup, point_vector_path, predictor_target_path):
     """Calculate distance to nearest point for all polygons.
 
     Parameters:
@@ -757,10 +838,12 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
     LOGGER.info(
         "%s point distance: 100.00%% complete",
         os.path.basename(point_vector_path))
-    return point_distance_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(point_distance_lookup, jsonfile)
+    # return point_distance_lookup
 
 
-def _point_count(response_polygons_lookup, point_vector_path):
+def _point_count(response_polygons_lookup, point_vector_path, predictor_target_path):
     """Calculate number of points that intersect the response polygons.
 
     Parameters:
@@ -791,7 +874,9 @@ def _point_count(response_polygons_lookup, point_vector_path):
     LOGGER.info(
         "%s point count: 100.00%% complete",
         os.path.basename(point_vector_path))
-    return point_count_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(point_count_lookup, jsonfile)
+    # return point_count_lookup
 
 
 def _ogr_to_geometry_list(vector_path):
@@ -828,7 +913,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     """Multiple regression for log response of the coefficient vector table.
 
     The regression is built such that each feature in the single layer vector
-    pointed to by `coefficent_vector_path` corresponds to one data point.
+    pointed to by `coefficient_vector_path` corresponds to one data point.
     The coefficients are defined in the vector's attribute table such that
     `response_id` is the response coefficient, and `predictor_id_list` is a
     list of the predictor ids.
@@ -855,34 +940,58 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         dof: degrees of freedom
         se_est: standard error estimate on coefficients
     """
-    coefficent_vector = gdal.OpenEx(coefficient_vector_path, gdal.OF_VECTOR)
-    coefficent_layer = coefficent_vector.GetLayer()
+    coefficient_vector = gdal.OpenEx(coefficient_vector_path, gdal.OF_VECTOR)
+    coefficient_layer = coefficient_vector.GetLayer()
+    coefficient_layer_defn = coefficient_layer.GetLayerDefn()
 
     # Loop through each feature and build up the dictionary representing the
     # attribute table
-    n_features = coefficent_layer.GetFeatureCount()
-    coefficient_matrix = numpy.empty((n_features, len(predictor_id_list)+2))
-    for row_index, feature in enumerate(coefficent_layer):
+    n_features = coefficient_layer.GetFeatureCount()
+    n_fields = coefficient_layer_defn.GetFieldCount()
+    n_predictors = n_fields - 1  # don't count PUD_YR_AVG
+    coefficient_matrix = numpy.empty((n_features, n_predictors + 2))
+    
+    predictor_names = []
+    for idx in range(n_fields):
+        field_defn = coefficient_layer_defn.GetFieldDefn(idx)
+        field_name = field_defn.GetName()
+        if field_name != response_id:
+            predictor_names.append(field_name)
+    for row_index, feature in enumerate(coefficient_layer):
         coefficient_matrix[row_index, :] = numpy.array(
             [feature.GetField(str(response_id))] + [
-                feature.GetField(str(key)) for key in predictor_id_list] +
+                feature.GetField(str(key)) for key in predictor_names] +
             [1])  # add the 1s for the y intercept
-    # if some predictor data is missing, drop those features:
+    # if some predictor has no data in all features, drop that predictor:
+    # import pdb; pdb.set_trace()
+    missing_pred = numpy.isnan(coefficient_matrix).all(axis=0)
+    LOGGER.warn(missing_pred)
+    coefficient_matrix = coefficient_matrix[
+        :, ~missing_pred]
+    predictor_names = [
+        pred for (pred, missing) in zip(predictor_names, ~missing_pred)
+        if missing]
+    # if a predictor is missing data for some features, drop those features:
     coefficient_matrix = coefficient_matrix[
         ~numpy.isnan(coefficient_matrix).any(axis=1)]
     n_features = coefficient_matrix.shape[0]
 
     y_factors = numpy.log1p(coefficient_matrix[:, 0])
 
-    coefficents, _, _, _ = numpy.linalg.lstsq(
+    coefficients, _, _, _ = numpy.linalg.lstsq(
         coefficient_matrix[:, 1:], y_factors, rcond=None)
+    LOGGER.warn(predictor_names)
+    LOGGER.warn(coefficients)
+    id_to_coefficient = dict(
+        (p_id, coeff) for p_id, coeff in zip(
+            predictor_names + ['y-intercept'], coefficients))
     ssreg = numpy.sum((
         y_factors -
-        numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
+        numpy.sum(coefficient_matrix[:, 1:] * coefficients, axis=1)) ** 2)
     sstot = numpy.sum((
         numpy.average(y_factors) -
         numpy.log1p(coefficient_matrix[:, 0])) ** 2)
-    dof = n_features - len(predictor_id_list) - 1
+    dof = n_features - n_predictors - 1
 
     if sstot == 0.0 or dof <= 0.0:
         # this can happen if there is only one sample
@@ -896,7 +1005,7 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         std_err = numpy.sqrt(ssreg / dof)
         sigma2 = numpy.sum((
             y_factors - numpy.sum(
-                coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
+                coefficient_matrix[:, 1:] * coefficients, axis=1)) ** 2) / dof
         var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
             numpy.dot(
                 coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
@@ -905,13 +1014,13 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
         LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
         std_err = sigma2 = numpy.nan
         se_est = var_est = [numpy.nan] * coefficient_matrix.shape[0]
-
-    return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
+    return id_to_coefficient, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
-        base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
-        scenario_predictor_table_path, scenario_results_path):
+        base_aoi_path, response_id, id_to_coefficient,
+        scenario_predictor_table_path, scenario_results_path,
+        working_dir, task_graph):
     """Calculate the PUD of a scenario given an existing regression.
 
     It is expected that the predictor coefficients have been derived from a
@@ -923,7 +1032,7 @@ def _calculate_scenario(
             `scenario_results_path` output vector.
         response_id (string): text ID of response variable to write to
             the scenario result
-        predictor_coefficents (numpy.ndarray): 1D array of regression
+        predictor_coefficients (numpy.ndarray): 1D array of regression
             coefficients that are parallel to `predictor_id_list` except the
             last element is the y-intercept.
         predictor_id_list (list of string): list of text ID predictor
@@ -960,53 +1069,55 @@ def _calculate_scenario(
     Returns:
         None
     """
-    scenario_predictor_id_list = []
+    scenario_predictor_json_list = []
     _build_regression_coefficients(
-        base_aoi_path, scenario_predictor_table_path,
-        scenario_results_path, scenario_predictor_id_list)
+        base_aoi_path, scenario_predictor_table_path, scenario_predictor_json_list,
+        scenario_results_path, task_graph, working_dir)
 
-    id_to_coefficient = dict(
-        (p_id, coeff) for p_id, coeff in zip(
-            predictor_id_list, predictor_coefficents))
+    # id_to_coefficient = dict(
+    #     (p_id, coeff) for p_id, coeff in zip(
+    #         predictor_id_list, predictor_coefficients))
 
     # Open for writing
-    scenario_coefficent_vector = gdal.OpenEx(
-        scenario_results_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
-    scenario_coefficent_layer = scenario_coefficent_vector.GetLayer()
+    scenario_coefficient_vector = gdal.OpenEx(
+        scenario_results_path, gdal.OF_VECTOR | gdal.GA_Update)
+    scenario_coefficient_layer = scenario_coefficient_vector.GetLayer()
 
     # delete the response ID if it's already there because it must have been
     # copied from the base layer
-    response_index = scenario_coefficent_layer.FindFieldIndex(response_id, 1)
+    response_index = scenario_coefficient_layer.FindFieldIndex(response_id, 1)
     if response_index >= 0:
-        scenario_coefficent_layer.DeleteField(response_index)
+        scenario_coefficient_layer.DeleteField(response_index)
 
     response_field = ogr.FieldDefn(response_id, ogr.OFTReal)
     response_field.SetWidth(24)
     response_field.SetPrecision(11)
 
-    scenario_coefficent_layer.CreateField(response_field)
+    scenario_coefficient_layer.CreateField(response_field)
+    y_intercept = id_to_coefficient.pop('y-intercept')
 
-    for feature_id in xrange(scenario_coefficent_layer.GetFeatureCount()):
-        feature = scenario_coefficent_layer.GetFeature(feature_id)
+    for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
+        feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
         try:
-            for scenario_predictor_id in scenario_predictor_id_list:
+            for predictor_id, coefficient in id_to_coefficient.iteritems():
                 response_value += (
-                    id_to_coefficient[scenario_predictor_id] *
-                    feature.GetField(str(scenario_predictor_id)))
+                    coefficient *
+                    feature.GetField(str(predictor_id)))
+        # TypeError will happen if GetField returned None
         except TypeError as e:
             LOGGER.warn(
                 'incomplete predictor data for feature_id %d, \
                 not estimating PUD_EST' % feature_id)
             continue
-        response_value += predictor_coefficents[-1]  # y-intercept
+        response_value += y_intercept
         # recall the coefficients are log normal, so expm1 inverses it
         feature.SetField(response_id, numpy.expm1(response_value))
-        scenario_coefficent_layer.SetFeature(feature)
+        scenario_coefficient_layer.SetFeature(feature)
 
-    scenario_coefficent_layer = None
-    scenario_coefficent_vector.FlushCache()
-    scenario_coefficent_vector = None
+    scenario_coefficient_layer = None
+    scenario_coefficient_vector.FlushCache()
+    scenario_coefficient_vector = None
 
 
 def _validate_same_id_lengths(table_path):
