@@ -243,8 +243,8 @@ def execute(args):
         #     file_registry['pud_results_path'], args['predictor_table_path'],
         #     file_registry['coefficient_vector_path'], predictor_id_list,
         #     intermediate_dir)
-        id_to_coefficient, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
-            _build_regression(
+        id_to_coefficient, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+            _build_regression(file_registry['pud_results_path'],
                 file_registry['coefficient_vector_path'], RESPONSE_ID,
                 predictor_id_list))
         LOGGER.warn(id_to_coefficient)
@@ -273,10 +273,10 @@ def execute(args):
             'Residual standard error: %.4f on %d degrees of freedom\n'
             'Multiple R-squared: %.4f\n'
             'Adjusted R-squared: %.4f\n'
-            'SSreg: %.4f\n'
+            'SSres: %.4f\n'
             'server id hash: %s\n'
             '********************************\n' % (
-                coefficients_string, std_err, dof, r_sq, r_sq_adj, ssreg,
+                coefficients_string, std_err, dof, r_sq, r_sq_adj, ssres,
                 server_version))
         LOGGER.info(report_string)
         with open(file_registry['regression_coefficients'], 'w') as \
@@ -608,7 +608,7 @@ def _json_to_shp_table(vector_path, predictor_json_list):
     # TODO: leave this list empty if later on we have _build_regression
     # read PUD_YR_AVG from pud_results.shp instead of regression_coefficients.shp
     # that would enable server and client ops to happen in parallel.
-    predictor_id_list = ["PUD_YR_AVG"]
+    predictor_id_list = []
     for json_filename in predictor_json_list:
         predictor_id = os.path.basename(json_filename).replace('.json', '')
         predictor_id_list.append(predictor_id)
@@ -909,7 +909,9 @@ def _ogr_to_geometry_list(vector_path):
     return geometry_list
 
 
-def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
+def _build_regression(
+        response_vector_path, coefficient_vector_path,
+        response_id, predictor_id_list):
     """Multiple regression for log response of the coefficient vector table.
 
     The regression is built such that each feature in the single layer vector
@@ -933,88 +935,110 @@ def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
     Returns:
         X: A list of coefficients in the least-squares solution including
             the y intercept as the last element
-        ssreg: sums of squared residuals
+        ssres: sums of squared residuals
         r_sq: R^2 value
         r_sq_adj: adjusted R^2 value
         std_err: residual standard error
         dof: degrees of freedom
         se_est: standard error estimate on coefficients
     """
+    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
+    response_layer = response_vector.GetLayer()
+
     coefficient_vector = gdal.OpenEx(coefficient_vector_path, gdal.OF_VECTOR)
     coefficient_layer = coefficient_vector.GetLayer()
     coefficient_layer_defn = coefficient_layer.GetLayerDefn()
 
-    # Loop through each feature and build up the dictionary representing the
-    # attribute table
     n_features = coefficient_layer.GetFeatureCount()
-    n_fields = coefficient_layer_defn.GetFieldCount()
-    n_predictors = n_fields - 1  # don't count PUD_YR_AVG
-    coefficient_matrix = numpy.empty((n_features, n_predictors + 2))
-    
+    # Not sure what would cause this to be untrue, but if it ever is,
+    # we sure want to know about it.
+    assert(n_features == response_layer.GetFeatureCount())
+    # import pdb; pdb.set_trace()
+    # Response data matrix
+    response_array = numpy.empty((n_features, 1))
+    for row_index, feature in enumerate(response_layer):
+        response_array[row_index, :] = feature.GetField(str(response_id))
+    response_array = numpy.log1p(response_array)
+
+    # Y-Intercept data matrix
+    intercept_array = numpy.ones_like(response_array)
+
+    # Predictor data matrix
+    n_predictors = coefficient_layer_defn.GetFieldCount()
+    coefficient_matrix = numpy.empty((n_features, n_predictors))
     predictor_names = []
-    for idx in range(n_fields):
+    for idx in range(n_predictors):
         field_defn = coefficient_layer_defn.GetFieldDefn(idx)
         field_name = field_defn.GetName()
-        if field_name != response_id:
-            predictor_names.append(field_name)
+        predictor_names.append(field_name)
     for row_index, feature in enumerate(coefficient_layer):
         coefficient_matrix[row_index, :] = numpy.array(
-            [feature.GetField(str(response_id))] + [
-                feature.GetField(str(key)) for key in predictor_names] +
-            [1])  # add the 1s for the y intercept
-    # if some predictor has no data in all features, drop that predictor:
-    # import pdb; pdb.set_trace()
-    missing_pred = numpy.isnan(coefficient_matrix).all(axis=0)
-    LOGGER.warn(missing_pred)
-    coefficient_matrix = coefficient_matrix[
-        :, ~missing_pred]
-    predictor_names = [
-        pred for (pred, missing) in zip(predictor_names, ~missing_pred)
-        if missing]
-    # if a predictor is missing data for some features, drop those features:
-    coefficient_matrix = coefficient_matrix[
-        ~numpy.isnan(coefficient_matrix).any(axis=1)]
-    n_features = coefficient_matrix.shape[0]
+            [feature.GetField(str(key)) for key in predictor_names])
+    # for row_index, feature in enumerate(coefficient_layer):
+    #     coefficient_matrix[row_index, :] = numpy.array(
+    #         [feature.GetField(str(response_id))] + [
+    #             feature.GetField(str(key)) for key in predictor_names] +
+    #         [1])  # add the 1s for the y intercept
+    # predictor_names.append('y-intercept')
 
-    y_factors = numpy.log1p(coefficient_matrix[:, 0])
+    # If some predictor has no data in all features, drop that predictor:
+    LOGGER.warn(predictor_names)
+    valid_pred = ~numpy.isnan(coefficient_matrix).all(axis=0)
+    LOGGER.warn(valid_pred)
+    coefficient_matrix = coefficient_matrix[
+        :, valid_pred]
+    predictor_names = [
+        pred for (pred, valid) in zip(predictor_names, valid_pred)
+        if valid]
+    n_predictors = coefficient_matrix.shape[1]
+    # add columns for response variable and y-intercept
+    data_matrix = numpy.concatenate(
+        (response_array, coefficient_matrix, intercept_array), axis=1)
+
+    # if a variable is missing data for some features, drop those features:
+    data_matrix = data_matrix[~numpy.isnan(data_matrix).any(axis=1)]
+    n_features = data_matrix.shape[0]
+    y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
 
     coefficients, _, _, _ = numpy.linalg.lstsq(
-        coefficient_matrix[:, 1:], y_factors, rcond=None)
+        data_matrix[:, 1:], y_factors, rcond=None)
     LOGGER.warn(predictor_names)
     LOGGER.warn(coefficients)
     id_to_coefficient = dict(
         (p_id, coeff) for p_id, coeff in zip(
             predictor_names + ['y-intercept'], coefficients))
-    ssreg = numpy.sum((
+    ssres = numpy.sum((
         y_factors -
-        numpy.sum(coefficient_matrix[:, 1:] * coefficients, axis=1)) ** 2)
+        numpy.sum(data_matrix[:, 1:] * coefficients, axis=1)) ** 2)
+    # sstot = numpy.sum((
+    #     numpy.average(response_array) -
+    #     numpy.log1p(coefficient_matrix[:, 0])) ** 2)
     sstot = numpy.sum((
-        numpy.average(y_factors) -
-        numpy.log1p(coefficient_matrix[:, 0])) ** 2)
+        numpy.average(y_factors) - y_factors) ** 2)
     dof = n_features - n_predictors - 1
-
+    import pdb; pdb.set_trace()
     if sstot == 0.0 or dof <= 0.0:
         # this can happen if there is only one sample
         r_sq = 1.0
         r_sq_adj = 1.0
     else:
-        r_sq = 1. - ssreg / sstot
+        r_sq = 1. - ssres / sstot
         r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / dof
 
     if dof > 0:
-        std_err = numpy.sqrt(ssreg / dof)
+        std_err = numpy.sqrt(ssres / dof)
         sigma2 = numpy.sum((
             y_factors - numpy.sum(
-                coefficient_matrix[:, 1:] * coefficients, axis=1)) ** 2) / dof
+                data_matrix[:, 1:] * coefficients, axis=1)) ** 2) / dof
         var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
             numpy.dot(
-                coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
+                data_matrix[:, 1:].T, data_matrix[:, 1:])))
         se_est = numpy.sqrt(var_est)
     else:
         LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
         std_err = sigma2 = numpy.nan
-        se_est = var_est = [numpy.nan] * coefficient_matrix.shape[0]
-    return id_to_coefficient, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
+        se_est = var_est = [numpy.nan] * data_matrix.shape[1]
+    return id_to_coefficient, ssres, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
