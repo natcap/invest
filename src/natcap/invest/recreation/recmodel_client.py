@@ -287,8 +287,8 @@ def execute(args):
             LOGGER.info('Calculating scenario')
             _calculate_scenario(
                 file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
-                # coefficients, predictor_id_list,
-                id_to_coefficient,
+                coefficients, predictor_id_list,
+                # id_to_coefficient,
                 args['scenario_predictor_table_path'],
                 file_registry['scenario_results_path'], task_graph, scenario_dir)
         task_graph.close()
@@ -1041,7 +1041,7 @@ def _build_regression(
 
 
 def _calculate_scenario(
-        base_aoi_path, response_id, id_to_coefficient,
+        base_aoi_path, response_id, coefficients, predictor_id_list,
         scenario_predictor_table_path, scenario_results_path,
         working_dir, task_graph):
     """Calculate the PUD of a scenario given an existing regression.
@@ -1116,13 +1116,14 @@ def _calculate_scenario(
     response_field.SetPrecision(11)
 
     scenario_coefficient_layer.CreateField(response_field)
-    y_intercept = id_to_coefficient.pop('y-intercept')
+    y_intercept = coefficients[-1]
 
     for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
         feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
         try:
-            for predictor_id, coefficient in id_to_coefficient.iteritems():
+            for predictor_id, coefficient in zip(predictor_id_list[:-1], coefficients[:-1]):
+            # for predictor_id, coefficient in id_to_coefficient.iteritems():
                 response_value += (
                     coefficient *
                     feature.GetField(str(predictor_id)))

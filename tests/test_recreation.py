@@ -911,7 +911,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_coefficient_vector_path, expected_coeff_vector_path, 1E-6)
 
-    def test_absolute_regression_coef(self):
+    def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""
         from natcap.invest.recreation import recmodel_client
 
