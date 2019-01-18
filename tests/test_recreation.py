@@ -701,6 +701,46 @@ class RecreationRegressionTests(unittest.TestCase):
             actual_message = str(cm.exception)
             self.assertTrue(expected_message in actual_message, actual_message)
 
+    def test_least_squares_regression(self):
+        """Recreation regression test for the least-squares linear model."""
+        from natcap.invest.recreation import recmodel_client
+
+        coefficient_vector_path = os.path.join(
+            REGRESSION_DATA, 'predictor_data.shp')
+        response_vector_path = os.path.join(
+            REGRESSION_DATA, 'predictor_data_pud.shp')
+        response_id = 'PUD_YR_AVG'
+
+        _, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+            recmodel_client._build_regression(
+                response_vector_path, coefficient_vector_path, response_id))
+        
+        results = {}
+        results['coefficients'] = coefficients
+        results['ssres'] = ssres
+        results['r_sq'] = r_sq
+        results['r_sq_adj'] = r_sq_adj
+        results['std_err'] = std_err
+        results['dof'] = dof
+        results['se_est'] = se_est
+
+        # Dave created these numbers using Recreation model release/3.5.0
+        expected_results = {}
+        expected_results['coefficients'] = [
+            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01,
+            6.59076098e-01]
+        expected_results['ssres'] = 11.03734250869611
+        expected_results['r_sq'] = 0.5768926587089602
+        expected_results['r_sq_adj'] = 0.5256069203706524
+        expected_results['std_err'] = 0.5783294255923199
+        expected_results['dof'] = 33
+        expected_results['se_est'] = [
+            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02,
+            3.98165865e-01]
+
+        for key in expected_results:
+            numpy.testing.assert_allclose(results[key], expected_results[key])
+
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
@@ -861,9 +901,8 @@ class RecreationRegressionTests(unittest.TestCase):
             [out_coefficient_vector_path] + empty_json_list)
 
         # build again to test against overwriting output
-        predictor_json_list = []
         recmodel_client._build_regression_coefficients(
-            response_vector_path, predictor_table_path, predictor_json_list,
+            response_vector_path, predictor_table_path,
             out_coefficient_vector_path, tmp_working_dir, task_graph)
 
         expected_coeff_vector_path = os.path.join(

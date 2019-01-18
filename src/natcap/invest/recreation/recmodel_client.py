@@ -222,12 +222,12 @@ def execute(args):
     
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
-        predictor_json_list = []  # tracks predictor files to add to shp
+        # predictor_json_list = []  # tracks predictor files to add to shp
         # because unwanted files from previous runs could be present.
         build_regression_data_task = task_graph.add_task(
             func=_build_regression_coefficients,
             args=(file_registry['pud_results_path'],
-                  args['predictor_table_path'], predictor_json_list,
+                  args['predictor_table_path'],
                   file_registry['coefficient_vector_path'],
                   intermediate_dir, task_graph),
             target_path_list=[file_registry['coefficient_vector_path']],
@@ -236,26 +236,25 @@ def execute(args):
         # task_graph.close()
         task_graph.join()
 
-        predictor_id_list = [
-            os.path.basename(x).replace('.json', '') for x in predictor_json_list
-            if x.endswith('.json')]
+        # predictor_id_list = [
+        #     os.path.basename(x).replace('.json', '') for x in predictor_json_list
+        #     if x.endswith('.json')]
         # _build_regression_coefficients(
         #     file_registry['pud_results_path'], args['predictor_table_path'],
         #     file_registry['coefficient_vector_path'], predictor_id_list,
         #     intermediate_dir)
-        id_to_coefficient, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+        predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
             _build_regression(file_registry['pud_results_path'],
-                file_registry['coefficient_vector_path'], RESPONSE_ID,
-                predictor_id_list))
-        LOGGER.warn(id_to_coefficient)
-        coefficients = id_to_coefficient.values()
-        predictor_id_list = id_to_coefficient.keys()
+                file_registry['coefficient_vector_path'], RESPONSE_ID))
+        # LOGGER.warn(id_to_coefficient)
+        # coefficients = id_to_coefficient.values()
+        # predictor_id_list = id_to_coefficient.keys()
 
         # the last coefficient is the y intercept and has no id, thus
         # the [:-1] on the coefficients list
         coefficients_string = '               estimate     stderr    t value\n'
         coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
-            '(Intercept)', coefficients[-1], se_est[-1],
+            predictor_id_list[-1], coefficients[-1], se_est[-1],
             coefficients[-1] / se_est[-1])
         coefficients_string += '\n'.join(
             '%-12s %+.3e %+.3e %+.3e' % (
@@ -492,7 +491,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 
 def _build_regression_coefficients(
-        response_vector_path, predictor_table_path, predictor_json_list,
+        response_vector_path, predictor_table_path,
         out_coefficient_vector_path, working_dir, task_graph):
     """Calculate least squares fit for the polygons in the response vector.
 
@@ -559,6 +558,7 @@ def _build_regression_coefficients(
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
     predictor_task_list = []
+    predictor_json_list = []  # tracks predictor files to add to shp
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
 
@@ -911,7 +911,7 @@ def _ogr_to_geometry_list(vector_path):
 
 def _build_regression(
         response_vector_path, coefficient_vector_path,
-        response_id, predictor_id_list):
+        response_id):
     """Multiple regression for log response of the coefficient vector table.
 
     The regression is built such that each feature in the single layer vector
@@ -953,7 +953,7 @@ def _build_regression(
     # Not sure what would cause this to be untrue, but if it ever is,
     # we sure want to know about it.
     assert(n_features == response_layer.GetFeatureCount())
-    # import pdb; pdb.set_trace()
+
     # Response data matrix
     response_array = numpy.empty((n_features, 1))
     for row_index, feature in enumerate(response_layer):
@@ -985,8 +985,7 @@ def _build_regression(
     LOGGER.warn(predictor_names)
     valid_pred = ~numpy.isnan(coefficient_matrix).all(axis=0)
     LOGGER.warn(valid_pred)
-    coefficient_matrix = coefficient_matrix[
-        :, valid_pred]
+    coefficient_matrix = coefficient_matrix[:, valid_pred]
     predictor_names = [
         pred for (pred, valid) in zip(predictor_names, valid_pred)
         if valid]
@@ -994,6 +993,7 @@ def _build_regression(
     # add columns for response variable and y-intercept
     data_matrix = numpy.concatenate(
         (response_array, coefficient_matrix, intercept_array), axis=1)
+    predictor_names.append('(Intercept)')
 
     # if a variable is missing data for some features, drop those features:
     data_matrix = data_matrix[~numpy.isnan(data_matrix).any(axis=1)]
@@ -1004,9 +1004,9 @@ def _build_regression(
         data_matrix[:, 1:], y_factors, rcond=None)
     LOGGER.warn(predictor_names)
     LOGGER.warn(coefficients)
-    id_to_coefficient = dict(
-        (p_id, coeff) for p_id, coeff in zip(
-            predictor_names + ['y-intercept'], coefficients))
+    # id_to_coefficient = dict(
+    #     (p_id, coeff) for p_id, coeff in zip(
+    #         predictor_names + ['y-intercept'], coefficients))
     ssres = numpy.sum((
         y_factors -
         numpy.sum(data_matrix[:, 1:] * coefficients, axis=1)) ** 2)
@@ -1016,7 +1016,6 @@ def _build_regression(
     sstot = numpy.sum((
         numpy.average(y_factors) - y_factors) ** 2)
     dof = n_features - n_predictors - 1
-    import pdb; pdb.set_trace()
     if sstot == 0.0 or dof <= 0.0:
         # this can happen if there is only one sample
         r_sq = 1.0
@@ -1038,7 +1037,7 @@ def _build_regression(
         LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
         std_err = sigma2 = numpy.nan
         se_est = var_est = [numpy.nan] * data_matrix.shape[1]
-    return id_to_coefficient, ssres, r_sq, r_sq_adj, std_err, dof, se_est
+    return predictor_names, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
@@ -1093,9 +1092,8 @@ def _calculate_scenario(
     Returns:
         None
     """
-    scenario_predictor_json_list = []
     _build_regression_coefficients(
-        base_aoi_path, scenario_predictor_table_path, scenario_predictor_json_list,
+        base_aoi_path, scenario_predictor_table_path,
         scenario_results_path, task_graph, working_dir)
 
     # id_to_coefficient = dict(
