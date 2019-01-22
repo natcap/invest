@@ -219,7 +219,7 @@ class GLOBIOTests(unittest.TestCase):
             for feature in result_layer:
                 fid = feature.GetFID()
                 result_value = feature.GetField('msa_mean')
-                if result_value:
+                if result_value is not None:
                     numpy.testing.assert_almost_equal(
                         result_value,
                         float(expected_results[fid]['msa_mean']),

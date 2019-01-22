@@ -742,6 +742,7 @@ class RecreationRegressionTests(unittest.TestCase):
             numpy.testing.assert_allclose(results[key], expected_results[key])
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
+    ## TODO: Run this test and get it passing, can skip again after that.
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
@@ -1077,13 +1078,18 @@ def _assert_regression_results_eq(
 
         result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
-
-        expected_results = utils.build_lookup_from_csv(expected_results_path, 'fid')
-        for fid, results in expected_results.iteritems():
-            feature = result_layer.GetFeature(int(fid))
-            for field, value in results.iteritems():
-                numpy.testing.assert_almost_equal(
-                    feature.GetField(field), value, decimal=tolerance_places)
+        expected_results = pandas.read_csv(expected_results_path, dtype=float)
+        field_names = list(expected_results)
+        for feature in result_layer:
+            values = [feature.GetField(field) for field in field_names]
+            fid = feature.GetFID()
+            expected_values = list(expected_results.iloc[fid])
+            for v, ev in zip(values, expected_values):
+                if v is not None:
+                    numpy.testing.assert_almost_equal(v, ev, decimal=tolerance_places)
+                else:
+                    # Could happen when a raster predictor is only nodata
+                    assert(numpy.isnan(ev))
             feature = None
 
     finally:
