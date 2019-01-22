@@ -11,6 +11,7 @@ import shutil
 import os
 import functools
 import logging
+import json
 
 import Pyro4
 import pygeoprocessing
@@ -666,23 +667,27 @@ class RecreationRegressionTests(unittest.TestCase):
         recmodel_client.delay_op(last_time, time_delay, func)
         self.assertTrue(called[0])
 
-    def test_raster_sum_count_no_nodata(self):
-        """Recreation test sum/count if raster doesn't have nodata defined."""
+    def test_raster_sum_mean_no_nodata(self):
+        """Recreation test sum/mean if raster doesn't have nodata defined."""
         from natcap.invest.recreation import recmodel_client
 
         # The following raster has no nodata value
         raster_path = os.path.join(SAMPLE_DATA, 'no_nodata_raster.tif')
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
-        fid_values = recmodel_client._raster_sum_count(
-            raster_path, response_vector_path)
+        target_path = os.path.join(self.workspace_dir, "predictor.json")
+        recmodel_client._raster_sum_count(
+            raster_path, "mean", response_vector_path, target_path)
 
+        with open(target_path, 'r') as file:
+            predictor_results = json.load(file)
         # These constants were calculated by hand by Dave.
-        numpy.testing.assert_equal(fid_values['count'][0], 5178)
-        numpy.testing.assert_equal(fid_values['sum'][0], 67314)
+        numpy.testing.assert_almost_equal(predictor_results['0'], 13.0)
+        # numpy.testing.assert_equal(fid_values['count'][0], 5178)
+        # numpy.testing.assert_equal(fid_values['sum'][0], 67314)
 
-    def test_raster_sum_count_nodata(self):
-        """Recreation test sum/count if raster has no valid pixels.
+    def test_raster_sum_mean_nodata(self):
+        """Recreation test sum/mean if raster has no valid pixels.
 
         This may be a raster that does not intersect with the AOI, or
         one that does intersect, but is entirely nodata within the AOI.
@@ -693,13 +698,15 @@ class RecreationRegressionTests(unittest.TestCase):
         # The following raster has only nodata pixels.
         raster_path = os.path.join(SAMPLE_DATA, 'nodata_raster.tif')
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
+        target_path = os.path.join(self.workspace_dir, "predictor.json")
 
-        with self.assertRaises(ValueError) as cm:
-            _ = recmodel_client._raster_sum_count(
-                raster_path, response_vector_path)
-            expected_message = 'predictor does not intersect with vector AOI'
-            actual_message = str(cm.exception)
-            self.assertTrue(expected_message in actual_message, actual_message)
+        recmodel_client._raster_sum_count(
+            raster_path, "sum", response_vector_path, target_path)
+
+        with open(target_path, 'r') as file:
+            predictor_results = json.load(file)
+        # Assert that target file was written and it is an empty dictionary
+        assert(len(predictor_results) == 0)
 
     def test_least_squares_regression(self):
         """Recreation regression test for the least-squares linear model."""
