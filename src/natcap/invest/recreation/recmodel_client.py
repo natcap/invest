@@ -172,7 +172,7 @@ def execute(args):
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(output_dir, 'intermediate')
     scenario_dir = os.path.join(intermediate_dir, 'scenario')
-    utils.make_directories([output_dir, intermediate_dir, scenario_dir])
+    utils.make_directories([output_dir, intermediate_dir])
 
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
@@ -208,89 +208,61 @@ def execute(args):
     photo_user_days_task = task_graph.add_task(
         func=_retrieve_photo_user_days,
         args=(file_registry['local_aoi_path'],
-              file_registry['compressed_aoi_path'], args['start_year'], args['end_year'],
+              file_registry['compressed_aoi_path'],
+              args['start_year'], args['end_year'],
               os.path.basename(file_registry['pud_results_path']),
               file_registry['compressed_pud_path'],
               output_dir, server_path, file_registry['server_version']),
-        ignore_path_list=[file_registry['compressed_aoi_path'],
-                          file_registry['compressed_pud_path']],
-        target_path_list=[file_registry['pud_results_path'],
+        target_path_list=[file_registry['compressed_aoi_path'],
+                          file_registry['compressed_pud_path'],
+                          file_registry['pud_results_path'],
                           file_registry['monthly_table_path'],
                           file_registry['server_version']],
         dependent_task_list=prep_aoi_task,
         task_name='photo-user-day-calculation')
-    
+
     if 'compute_regression' in args and args['compute_regression']:
         LOGGER.info('Calculating regression')
-        # predictor_json_list = []  # tracks predictor files to add to shp
-        # because unwanted files from previous runs could be present.
         build_regression_data_task = task_graph.add_task(
             func=_build_regression_coefficients,
-            args=(file_registry['pud_results_path'],
+            args=(file_registry['local_aoi_path'],
                   args['predictor_table_path'],
                   file_registry['coefficient_vector_path'],
                   intermediate_dir, task_graph),
             target_path_list=[file_registry['coefficient_vector_path']],
-            dependent_task_list=[photo_user_days_task],
+            dependent_task_list=prep_aoi_task,
             task_name='build predictors')
-        # task_graph.close()
-        task_graph.join()
 
-        # predictor_id_list = [
-        #     os.path.basename(x).replace('.json', '') for x in predictor_json_list
-        #     if x.endswith('.json')]
-        # _build_regression_coefficients(
-        #     file_registry['pud_results_path'], args['predictor_table_path'],
-        #     file_registry['coefficient_vector_path'], predictor_id_list,
-        #     intermediate_dir)
-        predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
-            _build_regression(file_registry['pud_results_path'],
-                file_registry['coefficient_vector_path'], RESPONSE_ID))
-        # LOGGER.warn(id_to_coefficient)
-        # coefficients = id_to_coefficient.values()
-        # predictor_id_list = id_to_coefficient.keys()
-
-        # the last coefficient is the y intercept and has no id, thus
-        # the [:-1] on the coefficients list
-        coefficients_string = '               estimate     stderr    t value\n'
-        coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
-            predictor_id_list[-1], coefficients[-1], se_est[-1],
-            coefficients[-1] / se_est[-1])
-        coefficients_string += '\n'.join(
-            '%-12s %+.3e %+.3e %+.3e' % (
-                p_id, coefficient, se_est_factor, coefficient / se_est_factor)
-            for p_id, coefficient, se_est_factor in zip(
-                predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
-
-        # generate a nice looking regression result and write to log and file
-        with open(file_registry['server_version'], 'rb') as f:
-            server_version = pickle.load(f)
-        report_string = (
-            '\n******************************\n'
-            '%s\n'
-            '---\n\n'
-            'Residual standard error: %.4f on %d degrees of freedom\n'
-            'Multiple R-squared: %.4f\n'
-            'Adjusted R-squared: %.4f\n'
-            'SSres: %.4f\n'
-            'server id hash: %s\n'
-            '********************************\n' % (
-                coefficients_string, std_err, dof, r_sq, r_sq_adj, ssres,
-                server_version))
-        LOGGER.info(report_string)
-        with open(file_registry['regression_coefficients'], 'w') as \
-                regression_log:
-            regression_log.write(report_string + '\n')
+        coefficient_json_path = os.path.join(
+            intermediate_dir, 'predictor_estimates.json')
+        compute_regression_task = task_graph.add_task(
+            func=_compute_and_summarize_regression,
+            args=(file_registry['pud_results_path'],
+                  file_registry['coefficient_vector_path'],
+                  file_registry['server_version'],
+                  coefficient_json_path,
+                  file_registry['regression_coefficients']),
+            target_path_list=[file_registry['regression_coefficients']],
+            dependent_task_list=[
+                photo_user_days_task, build_regression_data_task],
+            task_name='compute regression')
 
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
+            utils.make_directories([scenario_dir])
             LOGGER.info('Calculating scenario')
-            _calculate_scenario(
-                file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
-                coefficients, predictor_id_list,
-                # id_to_coefficient,
-                args['scenario_predictor_table_path'],
-                file_registry['scenario_results_path'], task_graph, scenario_dir)
+            task_graph.add_task(
+                func=_calculate_scenario,
+                args=(file_registry['pud_results_path'],
+                      SCENARIO_RESPONSE_ID,
+                      coefficient_json_path,
+                      args['scenario_predictor_table_path'],
+                      file_registry['scenario_results_path'],
+                      task_graph, scenario_dir),
+                target_path_list=[file_registry['scenario_results_path']],
+                dependent_task_list=[compute_regression_task],
+                task_name='calculate scenario')
+
         task_graph.close()
         task_graph.join()
 
@@ -909,6 +881,52 @@ def _ogr_to_geometry_list(vector_path):
     return geometry_list
 
 
+def _compute_and_summarize_regression(
+        response_vector_path, coefficient_vector_path,
+        server_version_path, coefficient_json_path, regression_summary_path):
+
+    predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+        _build_regression(
+            response_vector_path, coefficient_vector_path, RESPONSE_ID))
+
+    # the last coefficient is the y intercept and has no id, thus
+    # the [:-1] on the coefficients list
+    coefficients_string = '               estimate     stderr    t value\n'
+    coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
+        predictor_id_list[-1], coefficients[-1], se_est[-1],
+        coefficients[-1] / se_est[-1])
+    coefficients_string += '\n'.join(
+        '%-12s %+.3e %+.3e %+.3e' % (
+            p_id, coefficient, se_est_factor, coefficient / se_est_factor)
+        for p_id, coefficient, se_est_factor in zip(
+            predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
+
+    # generate a nice looking regression result and write to log and file
+    with open(server_version_path, 'rb') as f:
+        server_version = pickle.load(f)
+    report_string = (
+        '\n******************************\n'
+        '%s\n'
+        '---\n\n'
+        'Residual standard error: %.4f on %d degrees of freedom\n'
+        'Multiple R-squared: %.4f\n'
+        'Adjusted R-squared: %.4f\n'
+        'SSres: %.4f\n'
+        'server id hash: %s\n'
+        '********************************\n' % (
+            coefficients_string, std_err, dof, r_sq, r_sq_adj, ssres,
+            server_version))
+    LOGGER.info(report_string)
+    with open(regression_summary_path, 'w') as \
+            regression_log:
+        regression_log.write(report_string + '\n')
+
+    # these are needed for _calculate_scenario()
+    predictor_estimates = dict(zip(predictor_id_list, coefficients))
+    with open(coefficient_json_path, 'w') as json_file:
+        json.dump(predictor_estimates, json_file)
+
+
 def _build_regression(
         response_vector_path, coefficient_vector_path,
         response_id):
@@ -1041,7 +1059,7 @@ def _build_regression(
 
 
 def _calculate_scenario(
-        base_aoi_path, response_id, coefficients, predictor_id_list,
+        base_aoi_path, response_id, coefficient_json_path,
         scenario_predictor_table_path, scenario_results_path,
         working_dir, task_graph):
     """Calculate the PUD of a scenario given an existing regression.
@@ -1114,15 +1132,18 @@ def _calculate_scenario(
     response_field = ogr.FieldDefn(response_id, ogr.OFTReal)
     response_field.SetWidth(24)
     response_field.SetPrecision(11)
-
     scenario_coefficient_layer.CreateField(response_field)
-    y_intercept = coefficients[-1]
+
+    with open(coefficient_json_path, 'r') as json_file:
+        predictor_estimates = json.load(json_file)
+
+    y_intercept = predictor_estimates.pop("(Intercept)")
 
     for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
         feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
         try:
-            for predictor_id, coefficient in zip(predictor_id_list[:-1], coefficients[:-1]):
+            for predictor_id, coefficient in predictor_estimates.iteritems():
             # for predictor_id, coefficient in id_to_coefficient.iteritems():
                 response_value += (
                     coefficient *
