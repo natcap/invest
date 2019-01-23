@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with the InVEST Carbon Storage and Sequestration model
+  where filepaths containing non-ASCII characters would cause the model's
+  report generation to crash.  The output report is now a UTF-8 document.
 * Refactoring RouteDEM to use taskgraph and the latest pygeoprocessing
   (``>=1.5.0``).  RouteDEM now fills hydrological sinks and users have the
   option to use either of the D8 or Multiple Flow Direction (MFD) routing
