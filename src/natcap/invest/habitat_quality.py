@@ -91,7 +91,7 @@ def execute(args):
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = sensitivity_dict[0].keys()
+    sens_header_list = sensitivity_dict.items()[0][1].keys()
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
         h for h in required_sens_header_list if h not in sens_header_list]
@@ -103,7 +103,7 @@ def execute(args):
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
     for threat in threat_dict:
-        if threat not in sens_header_list:
+        if 'L_' + threat not in sens_header_list:
             missing_threat_header_list = (
                 set(sens_header_list) - set(required_sens_header_list))
             raise ValueError(
@@ -261,7 +261,6 @@ def execute(args):
 
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.iteritems():
-
             LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
                         (threat, threat_data))
 
@@ -318,7 +317,7 @@ def execute(args):
             sens_raster_path = os.path.join(
                 inter_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
             map_raster_to_dict_values(
-                lulc_path, sens_raster_path, sensitivity_dict, threat,
+                lulc_path, sens_raster_path, sensitivity_dict, 'L_' + threat,
                 _OUT_NODATA, values_required=True)
 
             # get the normalized weight for each threat
