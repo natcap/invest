@@ -2,11 +2,11 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 182
+SVN_DATA_REPO_REV       := 184
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 205
+SVN_TEST_DATA_REPO_REV  := 207
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
@@ -203,7 +203,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
-	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
 # API docs are copied to dist/apidocs
