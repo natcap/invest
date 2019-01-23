@@ -271,6 +271,7 @@ def execute(args):
 
 
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
+    """Copy a shapefile from source to destination"""
     aoi_vector = gdal.OpenEx(source_aoi_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     local_aoi_vector = driver.CreateCopy(
@@ -340,12 +341,7 @@ def _retrieve_photo_user_days(
     temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
     zipfile.ZipFile(compressed_pud_path, 'r').extractall(
         temporary_output_dir)
-    # monthly_table_path = os.path.join(
-    #     temporary_output_dir, monthly_table_filename)
-    # if os.path.exists(monthly_table_path):
-    #     os.rename(
-    #         monthly_table_path,
-    #         os.path.splitext(monthly_table_path)[0] + file_suffix + '.csv')
+
     for filename in os.listdir(temporary_output_dir):
         shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
     shutil.rmtree(temporary_output_dir)
@@ -465,11 +461,11 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _build_regression_coefficients(
         response_vector_path, predictor_table_path,
         out_coefficient_vector_path, working_dir, task_graph):
-    """Calculate least squares fit for the polygons in the response vector.
+    """Summarize spatial predictor data by polygons in the response vector.
 
-    Build a least squares regression from the log normalized response vector,
-    spatial predictor datasets in `predictor_table_path`, and a column of 1s
-    for the y intercept.
+    Build a shapefile with geometry from the response vector, and tabular
+    data from aggregate metrics of spatial predictor datasets in
+    `predictor_table_path`.
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
@@ -492,8 +488,12 @@ def _build_regression_coefficients(
                 'raster_mean': average of predictor raster under the
                     response polygon
         out_coefficient_vector_path (string): path to a copy of
-            `response_vector_path` with the modified predictor variable
-            responses. Overwritten if exists.
+            `response_vector_path` with a column for each id in
+            predictor_table_path. Overwritten if exists.
+        working_dir (string): path to an intermediate directory to store json
+            files with geoprocessing results.
+        task_graph (Taskgraph): the graph that was initialized in execute()
+            will have a task added here for each predictor id.
 
     Returns:
         None
@@ -559,9 +559,6 @@ def _build_regression_coefficients(
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
                 task_name='predictor %s' % predictor_id))
-            # predictor_results = predictor_functions[predictor_type](
-            #     response_polygons_lookup, predictor_path, 
-            #     predictor_target_path)
 
     # target_path_list is empty because if we've gotten here
     # we always want this task to execute.
@@ -573,13 +570,23 @@ def _build_regression_coefficients(
         task_name='assemble predictor data')
 
 def _json_to_shp_table(vector_path, predictor_json_list):
+    """Add a field to an existing shapefile for each json file.
+
+    Parameters:
+        vector_path (string): a pre-existing copy of the response vector.
+            Pre-existing fields are deleted.
+        predictor_json_list (list): list of json filenames, one for each
+            predictor dataset. A json file will look like this,
+            {0: 0.0, 1: 0.0}
+            Keys match FIDs of 'vector_path'.
+
+    Returns:
+        None
+    """
     vector = gdal.OpenEx(vector_path, gdal.GA_Update)
     layer = vector.GetLayer()
     layer_defn = layer.GetLayerDefn()
 
-    # TODO: leave this list empty if later on we have _build_regression
-    # read PUD_YR_AVG from pud_results.shp instead of regression_coefficients.shp
-    # that would enable server and client ops to happen in parallel.
     predictor_id_list = []
     for json_filename in predictor_json_list:
         predictor_id = os.path.basename(json_filename).replace('.json', '')
@@ -602,7 +609,7 @@ def _json_to_shp_table(vector_path, predictor_json_list):
             feature.SetField(str(predictor_id), value)
             layer.SetFeature(feature)
 
-    # Get all the fieldnames, if they are not in the predictor_id_list,
+    # Get all the fieldnames. If they are not in the predictor_id_list,
     # get their index and delete
     n_fields = layer_defn.GetFieldCount()
     schema = []

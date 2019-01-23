@@ -268,7 +268,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         empty_point_data_path = os.path.join(
-            self.workspace_dir, 'empty_table.csv')
+            "C:/Users/dmf/projects/invest_dev/recreation_pgp_taskgraph", 'empty_table.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
 
         # attempt to get an open port; could result in race condition but
@@ -734,22 +734,19 @@ class RecreationRegressionTests(unittest.TestCase):
         # Dave created these numbers using Recreation model release/3.5.0
         expected_results = {}
         expected_results['coefficients'] = [
-            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01,
-            6.59076098e-01]
+            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01, 6.59076098e-01]
         expected_results['ssres'] = 11.03734250869611
         expected_results['r_sq'] = 0.5768926587089602
         expected_results['r_sq_adj'] = 0.5256069203706524
         expected_results['std_err'] = 0.5783294255923199
         expected_results['dof'] = 33
         expected_results['se_est'] = [
-            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02,
-            3.98165865e-01]
+            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02, 3.98165865e-01]
 
         for key in expected_results:
             numpy.testing.assert_allclose(results[key], expected_results[key])
 
     @unittest.skip("skipping to avoid remote server call (issue #3753)")
-    ## TODO: Run this test and get it passing, can skip again after that.
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
