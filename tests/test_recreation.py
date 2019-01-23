@@ -268,7 +268,7 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_client
 
         empty_point_data_path = os.path.join(
-            "C:/Users/dmf/projects/invest_dev/recreation_pgp_taskgraph", 'empty_table.csv')
+            self.workspace_dir, 'empty_table.csv')
         open(empty_point_data_path, 'w').close()  # touch the file
 
         # attempt to get an open port; could result in race condition but
@@ -488,7 +488,7 @@ class TestRecServer(unittest.TestCase):
             'results_suffix': u'',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
-            'workspace_dir': 'C:\\Users\\dmf\\projects\\invest_dev\\recreation_pgp_taskgraph\\test_local_florida',
+            'workspace_dir': self.workspace_dir,
         }
 
         recmodel_client.execute(args)
@@ -545,7 +545,7 @@ class TestRecServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
-            'workspace_dir': 'C:\\Users\\dmf\\projects\\invest_dev\\recreation_pgp_taskgraph\\test_all_metrics',
+            'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(args)
 
@@ -676,7 +676,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         target_path = os.path.join(self.workspace_dir, "predictor.json")
-        recmodel_client._raster_sum_count(
+        recmodel_client._raster_sum_mean(
             raster_path, "mean", response_vector_path, target_path)
 
         with open(target_path, 'r') as file:
@@ -700,7 +700,7 @@ class RecreationRegressionTests(unittest.TestCase):
         response_vector_path = os.path.join(SAMPLE_DATA, 'andros_aoi.shp')
         target_path = os.path.join(self.workspace_dir, "predictor.json")
 
-        recmodel_client._raster_sum_count(
+        recmodel_client._raster_sum_mean(
             raster_path, "sum", response_vector_path, target_path)
 
         with open(target_path, 'r') as file:
