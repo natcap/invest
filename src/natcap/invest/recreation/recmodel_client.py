@@ -189,22 +189,26 @@ def execute(args):
         n_workers = -1  # single process mode.
     task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
-    prep_aoi_task = []
+    # prep_aoi_task = []
     if args['grid_aoi']:
-        prep_aoi_task.append(task_graph.add_task(
+        prep_aoi_task = task_graph.add_task(
             func=_grid_vector,
             args=(args['aoi_path'], args['grid_type'],
                   float(args['cell_size']), file_registry['local_aoi_path']),
             target_path_list=[file_registry['local_aoi_path']],
-            task_name='grid_aoi'))
+            task_name='grid_aoi')
     else:
         # Even if we don't modify the AOI by gridding it, we still need
         # to move it to the expected location.
-        prep_aoi_task.append(task_graph.add_task(
+        prep_aoi_task = task_graph.add_task(
             func=_copy_aoi_no_grid,
             args=(args['aoi_path'], file_registry['local_aoi_path']),
             target_path_list=[file_registry['local_aoi_path']],
-            task_name='copy_aoi'))
+            task_name='copy_aoi')
+    # All other tasks are dependent on this one, including tasks added
+    # within _build_regression_coefficients(). Rather than passing
+    # this task to that function, I'm joining here.
+    prep_aoi_task.join()
 
     # All the server communication happens in this task.
     photo_user_days_task = task_graph.add_task(
@@ -220,19 +224,13 @@ def execute(args):
                           file_registry['pud_results_path'],
                           file_registry['monthly_table_path'],
                           file_registry['server_version']],
-        dependent_task_list=prep_aoi_task,
         task_name='photo-user-day-calculation')
 
     if 'compute_regression' in args and args['compute_regression']:
-        build_regression_data_task = task_graph.add_task(
-            func=_build_regression_coefficients,
-            args=(file_registry['local_aoi_path'],
-                  args['predictor_table_path'],
-                  file_registry['coefficient_vector_path'],
-                  intermediate_dir, task_graph),
-            target_path_list=[file_registry['coefficient_vector_path']],
-            dependent_task_list=prep_aoi_task,
-            task_name='build predictors')
+        build_predictor_data_task = _build_regression_coefficients(
+            file_registry['local_aoi_path'], args['predictor_table_path'],
+            file_registry['coefficient_vector_path'], intermediate_dir,
+            task_graph)
 
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
@@ -245,22 +243,25 @@ def execute(args):
                   file_registry['regression_coefficients']),
             target_path_list=[file_registry['regression_coefficients']],
             dependent_task_list=[
-                photo_user_days_task, build_regression_data_task],
+                photo_user_days_task, build_predictor_data_task],
             task_name='compute regression')
 
         if ('scenario_predictor_table_path' in args and
                 args['scenario_predictor_table_path'] != ''):
             utils.make_directories([scenario_dir])
+            build_scenario_data_task = _build_regression_coefficients(
+                file_registry['local_aoi_path'],
+                args['scenario_predictor_table_path'],
+                file_registry['scenario_results_path'],
+                scenario_dir, task_graph)
+
             task_graph.add_task(
                 func=_calculate_scenario,
-                args=(file_registry['pud_results_path'],
-                      SCENARIO_RESPONSE_ID,
-                      coefficient_json_path,
-                      args['scenario_predictor_table_path'],
-                      file_registry['scenario_results_path'],
-                      task_graph, scenario_dir),
+                args=(file_registry['scenario_results_path'],
+                      SCENARIO_RESPONSE_ID, coefficient_json_path),
                 target_path_list=[file_registry['scenario_results_path']],
-                dependent_task_list=[compute_regression_task],
+                dependent_task_list=[
+                    compute_regression_task, build_scenario_data_task],
                 task_name='calculate scenario')
 
         task_graph.close()
@@ -494,26 +495,9 @@ def _build_regression_coefficients(
             will have a task added here for each predictor id.
 
     Returns:
-        None
+        The ultimate task object from this branch of the taskgraph.
     """
     LOGGER.info('Processing predictor datasets')
-    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
-    response_layer = response_vector.GetLayer()
-    response_polygons_lookup = {}  # maps FID to prepared geometry
-    for response_feature in response_layer:
-        feature_geometry = response_feature.GetGeometryRef()
-        feature_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
-        feature_geometry = None
-        response_polygons_lookup[response_feature.GetFID()] = feature_polygon
-    response_layer = None
-
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(out_coefficient_vector_path):
-        driver.Delete(out_coefficient_vector_path)
-    out_coefficient_vector = driver.CreateCopy(
-        out_coefficient_vector_path, response_vector)
-    response_vector = None
-    out_coefficient_vector = None
 
     # lookup functions for response types
     predictor_functions = {
@@ -530,6 +514,21 @@ def _build_regression_coefficients(
         predictor_table_path, 'id')
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
+
+    # Prepare response vector for vector-based geoprocessing only
+    # if at least one predictor is a vector.
+    predictor_type_list = [predictor_table[x]['type'] for x in predictor_table]
+    if any(ptype in predictor_functions.keys() for ptype in predictor_type_list):
+        response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
+        response_layer = response_vector.GetLayer()
+        response_polygons_lookup = {}  # maps FID to prepared geometry
+        for response_feature in response_layer:
+            feature_geometry = response_feature.GetGeometryRef()
+            feature_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
+            feature_geometry = None
+            response_polygons_lookup[response_feature.GetFID()] = feature_polygon
+        response_layer = None
+
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
 
@@ -559,21 +558,27 @@ def _build_regression_coefficients(
                 target_path_list=[predictor_target_path],
                 task_name='predictor %s' % predictor_id))
 
-    # target_path_list is empty because if we've gotten here
-    # we always want this task to execute.
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_shp_table,
-        args=(out_coefficient_vector_path, predictor_json_list),
-        target_path_list=[],
+        args=(response_vector_path, out_coefficient_vector_path,
+              predictor_json_list),
+        target_path_list=[out_coefficient_vector_path],
         dependent_task_list=predictor_task_list,
         task_name='assemble predictor data')
 
-def _json_to_shp_table(vector_path, predictor_json_list):
-    """Add a field to an existing shapefile for each json file.
+    return assemble_predictor_data_task
+
+def _json_to_shp_table(
+        response_vector_path, predictor_vector_path,
+        predictor_json_list):
+    """Create a shapefile and a field with data from each json file.
 
     Parameters:
-        vector_path (string): a pre-existing copy of the response vector.
-            Pre-existing fields are deleted.
+        response_vector_path (string): Path to the response vector polygon
+            shapefile.
+        predictor_vector_path (string): a copy of `response_vector_path`.
+            One field will be added for each json file, and all other
+            fields will be deleted.
         predictor_json_list (list): list of json filenames, one for each
             predictor dataset. A json file will look like this,
             {0: 0.0, 1: 0.0}
@@ -582,8 +587,15 @@ def _json_to_shp_table(vector_path, predictor_json_list):
     Returns:
         None
     """
-    vector = gdal.OpenEx(vector_path, gdal.GA_Update)
-    layer = vector.GetLayer()
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    if os.path.exists(predictor_vector_path):
+        driver.Delete(predictor_vector_path)
+    response_vector = gdal.OpenEx(response_vector_path, gdal.GA_Update)
+    predictor_vector = driver.CreateCopy(
+        predictor_vector_path, response_vector)
+    response_vector = None
+
+    layer = predictor_vector.GetLayer()
     layer_defn = layer.GetLayerDefn()
 
     predictor_id_list = []
@@ -611,18 +623,18 @@ def _json_to_shp_table(vector_path, predictor_json_list):
     # Get all the fieldnames. If they are not in the predictor_id_list,
     # get their index and delete
     n_fields = layer_defn.GetFieldCount()
-    schema = []
+    fieldnames = []
     for idx in range(n_fields):
         field_defn = layer_defn.GetFieldDefn(idx)
-        schema.append(field_defn.GetName())
-    for field_name in schema:
+        fieldnames.append(field_defn.GetName())
+    for field_name in fieldnames:
         if field_name not in predictor_id_list:
             idx = layer.FindFieldIndex(field_name, 1)
             layer.DeleteField(idx)
     layer_defn = None
     layer = None
-    vector.FlushCache()
-    vector = None
+    predictor_vector.FlushCache()
+    predictor_vector = None
 
 
 def _raster_sum_mean(
@@ -1074,9 +1086,7 @@ def _build_regression(
 
 
 def _calculate_scenario(
-        base_aoi_path, response_id, coefficient_json_path,
-        scenario_predictor_table_path, scenario_results_path,
-        working_dir, task_graph):
+        scenario_results_path, response_id, coefficient_json_path):
     """Estimate the PUD of a scenario given an existing regression equation.
 
     It is expected that the predictor coefficients have been derived from a
@@ -1125,10 +1135,6 @@ def _calculate_scenario(
         None
     """
     LOGGER.info("Calculating scenario results")
-    # This creates scenario_results_path
-    _build_regression_coefficients(
-        base_aoi_path, scenario_predictor_table_path,
-        scenario_results_path, task_graph, working_dir)
 
     # Open for writing
     scenario_coefficient_vector = gdal.OpenEx(
