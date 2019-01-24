@@ -280,10 +280,6 @@ def execute(args):
             x for x in crop_regression_table.itervalues().next()
             if x != 'climate_bin']
 
-        clipped_climate_bin_raster_path_info = (
-            pygeoprocessing.get_raster_info(
-                clipped_climate_bin_raster_path))
-
         regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
             # there are extra headers in that table
