@@ -405,6 +405,7 @@ def execute(args):
             target_path_list=[crop_production_raster_path],
             dependent_task_list=dependent_task_list,
             task_name='calc_min_of_NKP')
+        dependent_task_list.append(calc_min_NKP_task)
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
         global_observed_yield_raster_path = os.path.join(
