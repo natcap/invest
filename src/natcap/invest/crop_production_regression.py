@@ -340,10 +340,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_n'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[nitrogen_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -358,10 +358,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[phosphorous_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -376,10 +376,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['potassium_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['potassium_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[potassium_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -522,31 +522,24 @@ def execute(args):
     task_graph.join()
 
 
-def _x_yield_op_gen(fert_rate, crop_lucode, pixel_area_ha):
-    """Create a raster calc op given the fertlization rate.
+def _x_yield_op(
+        y_max, b_x, c_x, lulc_array, fert_rate, crop_lucode, pixel_area_ha):
+    """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
     the nitrogen, phosporous, and potassium.  The only difference is
-    the scalars in the equation.  So this closure avoids repeating the
-    same function 3 times for 3 almost identical raster_calculator calls.
-
-    Returns:
-        A local_op function to pass to pygeoprocessing.raster_calculator.
-
+    the scalars in the equation (fertizlization rate and pixel area).
     """
-    def _x_yield_op(y_max, b_x, c_x, lulc_array):
-        """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
-        result = numpy.empty(b_x.shape, dtype=numpy.float32)
-        result[:] = _NODATA_YIELD
-        valid_mask = (
-            (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
-            (lulc_array == crop_lucode))
-        result[valid_mask] = y_max[valid_mask] * (
-            1 - b_x[valid_mask] * numpy.exp(
-                -c_x[valid_mask] * fert_rate) *
-            pixel_area_ha)
-        return result
-    return _x_yield_op
+    result = numpy.empty(b_x.shape, dtype=numpy.float32)
+    result[:] = _NODATA_YIELD
+    valid_mask = (
+        (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
+        (lulc_array == crop_lucode))
+    result[valid_mask] = y_max[valid_mask] * (
+        1 - b_x[valid_mask] * numpy.exp(
+            -c_x[valid_mask] * fert_rate) *
+        pixel_area_ha)
+    return result
 
 
 def _min_op(y_n, y_p, y_k):
