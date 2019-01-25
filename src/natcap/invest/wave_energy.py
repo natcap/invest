@@ -1415,7 +1415,7 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
 
     # For all the features (points) add the proper raster value
     for block_info, block_matrix in pygeoprocessing.iterblocks(
-            base_raster_path):
+            (base_raster_path, 1)):
         # Calculate block bounding box in decimal degrees
         block_min_x = raster_min_x + block_info['xoff'] * pixel_size_x
         block_max_x = raster_min_x + (
@@ -1528,7 +1528,7 @@ def _calculate_percentiles_from_raster(
     if start_value:
         start_value = float(start_value)
     unique_value_counts = {}
-    for _, block_matrix in pygeoprocessing.iterblocks(base_raster_path):
+    for _, block_matrix in pygeoprocessing.iterblocks((base_raster_path, 1)):
         # Sum the values with the same key in both dictionaries
         unique_values, counts = numpy.unique(block_matrix, return_counts=True)
         # Remove the nodata value from the array
@@ -1601,7 +1601,7 @@ def _count_pixels_groups(raster_path, group_values):
     # Initialize a list that will hold pixel counts for each group
     pixel_count = numpy.zeros(len(group_values))
 
-    for _, block_matrix in pygeoprocessing.iterblocks(raster_path):
+    for _, block_matrix in pygeoprocessing.iterblocks((raster_path, 1)):
         # Cumulatively add the pixels count for each value in 'group_values'
         for idx in xrange(len(group_values)):
             val = group_values[idx]

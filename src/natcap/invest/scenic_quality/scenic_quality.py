@@ -496,7 +496,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     valuation_band = valuation_raster.GetRasterBand(1)
     vis_nodata = vis_raster_info['nodata'][0]
 
-    for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
+    for block_info, vis_block in pygeoprocessing.iterblocks(
+            (visibility_path, 1)):
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _VALUATION_NODATA
 

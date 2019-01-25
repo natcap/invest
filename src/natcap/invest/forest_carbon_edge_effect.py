@@ -561,7 +561,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
     for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
-            edge_distance_path, largest_block=2**12):
+            (edge_distance_path, 1), largest_block=2**12):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(
