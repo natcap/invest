@@ -158,7 +158,8 @@ class PollinationTests(unittest.TestCase):
         result_raster_path = os.path.join(
             self.workspace_dir, 'pollinator_abundance_apis_spring.tif')
         result_sum = numpy.float32(0.0)
-        for _, data_block in pygeoprocessing.iterblocks(result_raster_path):
+        for _, data_block in pygeoprocessing.iterblocks(
+                (result_raster_path, 1)):
             result_sum += numpy.sum(data_block)
         # the number below is just what the sum rounded to two decimal places
         # when I manually inspected a run that appeared to be correct.
