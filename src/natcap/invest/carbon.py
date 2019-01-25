@@ -272,7 +272,7 @@ def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
-    for _, block in pygeoprocessing.iterblocks(raster_path):
+    for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
 
