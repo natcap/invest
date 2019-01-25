@@ -198,7 +198,7 @@ def execute(args):
 
     unique_lucodes = numpy.array([])
     for _, lu_band_data in pygeoprocessing.iterblocks(
-            args['landcover_raster_path']):
+            (args['landcover_raster_path'], 1)):
         unique_block = numpy.unique(lu_band_data)
         unique_lucodes = numpy.unique(numpy.concatenate(
             (unique_lucodes, unique_block)))
@@ -239,7 +239,7 @@ def execute(args):
 
     crop_lucode = None
     observed_yield_nodata = None
-    
+
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
@@ -481,7 +481,7 @@ def execute(args):
             dependent_task_list=[interpolate_observed_yield_task],
             task_name='calculate_observed_production_%s' % crop_name)
         dependent_task_list.append(calculate_observed_production_task)
-    
+
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
     nutrient_table = utils.build_lookup_from_csv(
@@ -659,7 +659,7 @@ def tabulate_regression_results(
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    observed_production_raster_path):
+                    (observed_production_raster_path, 1)):
                 production_pixel_count += numpy.count_nonzero(
                     ~numpy.isclose(yield_block, observed_yield_nodata) &
                     (yield_block > 0.0))
@@ -676,7 +676,7 @@ def tabulate_regression_results(
                     crop_name, file_suffix))
             yield_sum = 0.0
             for _, yield_block in pygeoprocessing.iterblocks(
-                    crop_production_raster_path):
+                    (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
                     yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
@@ -700,7 +700,7 @@ def tabulate_regression_results(
 
         total_area = 0.0
         for _, band_values in pygeoprocessing.iterblocks(
-                landcover_raster_path):
+                (landcover_raster_path, 1)):
             total_area += numpy.count_nonzero(
                 ~numpy.isclose(band_values, landcover_nodata))
         result_table.write(
