@@ -337,7 +337,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset.FlushCache()
 
     for block_data, kernel_block in pygeoprocessing.iterblocks(
-            kernel_filepath):
+            (kernel_filepath, 1)):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])

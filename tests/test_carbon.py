@@ -1,3 +1,4 @@
+# coding=UTF-8
 """Module for Regression Testing the InVEST Carbon model."""
 import unittest
 import tempfile
@@ -80,7 +81,7 @@ class CarbonTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp(suffix=u'\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""

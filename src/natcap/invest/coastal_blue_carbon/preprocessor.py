@@ -168,7 +168,7 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
     raster_val_set = set(reduce(
         lambda accum_value, x: numpy.unique(
             numpy.append(accum_value, x.next()[1].flat)),
-        itertools.chain(pygeoprocessing.iterblocks(snapshot)
+        itertools.chain(pygeoprocessing.iterblocks((snapshot, 1))
                         for snapshot in lulc_snapshot_list),
         numpy.array([])))
 
@@ -196,7 +196,7 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         raster_t1_uri)['nodata'][0]
     transition_set = set()
 
-    for d, a1 in pygeoprocessing.iterblocks(raster_t1_uri):
+    for d, a1 in pygeoprocessing.iterblocks((raster_t1_uri, 1)):
         a2 = read_from_raster(raster_t2_uri, d)
         transition_list = zip(a1.flatten(), a2.flatten())
         transition_set = transition_set.union(set(transition_list))

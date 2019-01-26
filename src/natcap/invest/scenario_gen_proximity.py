@@ -205,7 +205,7 @@ def _mask_raster_by_vector(
     mask_band = mask_raster.GetRasterBand(1)
 
     for offset_dict in pygeoprocessing.iterblocks(
-            mask_raster_path, offset_only=True):
+            (mask_raster_path, 1), offset_only=True):
         data_array = target_band.ReadAsArray(**offset_dict)
         mask_array = mask_band.ReadAsArray(**offset_dict)
         data_array[mask_array != 1] = nodata
@@ -531,7 +531,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
     n_cols = dataset_info['raster_size'][0]
 
     for scores_data, scores_block in pygeoprocessing.iterblocks(
-            dataset_path, largest_block=_BLOCK_SIZE):
+            (dataset_path, 1), largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
 
@@ -758,7 +758,8 @@ def _make_gaussian_kernel_path(sigma, kernel_path):
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
     kernel_dataset.FlushCache()
-    for kernel_data, kernel_block in pygeoprocessing.iterblocks(kernel_path):
+    for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+            (kernel_path, 1)):
         # divide by sum to normalize
         kernel_block /= running_sum
         kernel_band.WriteArray(
