@@ -4,7 +4,6 @@ import logging
 import os
 import collections
 import math
-import datetime
 import re
 import random
 import numpy
@@ -14,6 +13,7 @@ matplotlib.use('AGG')  # Use the Anti-Grain Geometry backend (for PNG files)
 from matplotlib import pyplot as plt
 from osgeo import gdal, ogr, osr
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest.habitat_risk_assessment.hra_core')
 
@@ -797,8 +797,8 @@ def aggregate_multi_rasters_uri(
     layer_overlap_info = collections.defaultdict(
         lambda: collections.defaultdict(lambda: list([0, 0.])))
 
-    for offset_dict, aoi_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(
-            temp_rast_uris[0]):
+    for offset_dict, aoi_block in pygeoprocessing.iterblocks(
+            (temp_rast_uris[0], 1)):
         layer_block_list = {}
         for idx, layer_name in enumerate(rast_labels):
             layer_block_list[layer_name] = (

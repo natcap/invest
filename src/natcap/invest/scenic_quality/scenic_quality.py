@@ -496,7 +496,8 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     valuation_band = valuation_raster.GetRasterBand(1)
     vis_nodata = vis_raster_info['nodata'][0]
 
-    for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
+    for block_info, vis_block in pygeoprocessing.iterblocks(
+            (visibility_path, 1)):
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _VALUATION_NODATA
 
@@ -802,7 +803,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     n_pixels_read = 0
     n_pixels_in_raster = (raster_info['raster_size'][0] *
                           raster_info['raster_size'][1])
-    for _, block in pygeoprocessing.iterblocks(source_raster_path):
+    for _, block in pygeoprocessing.iterblocks((source_raster_path, 1)):
         block = block.astype(numpy.float64)
         valid_pixels = block[(block != raster_nodata) & (block != 0)]
         n_pixels_read += block.size

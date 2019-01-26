@@ -143,7 +143,7 @@ def execute(args):
                         '.tif', '_aligned.tif')))
 
             # save unique codes to check if it's missing in sensitivity table
-            for _, lulc_block in pygeoprocessing.iterblocks(lulc_path):
+            for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
                 raster_unique_lucodes.update(numpy.unique(lulc_block))
 
             # add a key to the threat dictionary that associates all threat
@@ -591,7 +591,7 @@ def raster_pixel_count(raster_path):
     """
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     counts = collections.defaultdict(int)
-    for _, raster_block in pygeoprocessing.iterblocks(raster_path):
+    for _, raster_block in pygeoprocessing.iterblocks((raster_path, 1)):
         for value, count in zip(
                 *numpy.unique(raster_block, return_counts=True)):
             if value == nodata:
