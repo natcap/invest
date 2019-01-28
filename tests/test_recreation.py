@@ -550,7 +550,7 @@ class TestRecServer(unittest.TestCase):
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
-            args['workspace_dir'], 'regression_coefficients.shp')
+            args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'trivial_regression_coefficients.shp')
         pygeoprocessing.testing.assert_vectors_equal(

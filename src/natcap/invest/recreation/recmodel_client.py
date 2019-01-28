@@ -59,19 +59,17 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
     'monthly_table_path': 'monthly_table.csv',
-    'coefficient_vector_path': 'regression_coefficients.shp',
+    'predictor_vector_path': 'predictor_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
     }
 
-_TMP_BASE_FILES = {
+_INTERMEDIATE_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
     'response_polygons_lookup': 'response_polygons_lookup.pickle',
     'server_version': 'server_version.pickle',
-    'tmp_fid_raster_path': 'vector_fid_raster.tif',
-    'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
     }
 
 def execute(args):
@@ -177,10 +175,10 @@ def execute(args):
 
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
 
     # Initialize a TaskGraph
-    taskgraph_db_dir = os.path.join(output_dir, '_taskgraph_working_dir')
+    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -242,7 +240,7 @@ def execute(args):
             file_registry['response_polygons_lookup'],
             prepare_response_polygons_task,
             args['predictor_table_path'],
-            file_registry['coefficient_vector_path'],
+            file_registry['predictor_vector_path'],
             intermediate_dir, task_graph)
 
         # Compute the regression
@@ -251,7 +249,7 @@ def execute(args):
         compute_regression_task = task_graph.add_task(
             func=_compute_and_summarize_regression,
             args=(file_registry['pud_results_path'],
-                  file_registry['coefficient_vector_path'],
+                  file_registry['predictor_vector_path'],
                   file_registry['server_version'],
                   coefficient_json_path,
                   file_registry['regression_coefficients']),
@@ -477,7 +475,7 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 def _build_regression_coefficients(
         response_vector_path, response_polygons_pickle_path,
         prepare_response_polygons_task,
-        predictor_table_path, out_coefficient_vector_path,
+        predictor_table_path, out_predictor_vector_path,
         working_dir, task_graph):
     """Summarize spatial predictor data by polygons in the response vector.
 
@@ -505,7 +503,7 @@ def _build_regression_coefficients(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
-        out_coefficient_vector_path (string): path to a copy of
+        out_predictor_vector_path (string): path to a copy of
             `response_vector_path` with a column for each id in
             predictor_table_path. Overwritten if exists.
         working_dir (string): path to an intermediate directory to store json
@@ -577,9 +575,9 @@ def _build_regression_coefficients(
 
     assemble_predictor_data_task = task_graph.add_task(
         func=_json_to_shp_table,
-        args=(response_vector_path, out_coefficient_vector_path,
+        args=(response_vector_path, out_predictor_vector_path,
               predictor_json_list),
-        target_path_list=[out_coefficient_vector_path],
+        target_path_list=[out_predictor_vector_path],
         dependent_task_list=predictor_task_list,
         task_name='assemble predictor data')
 
@@ -948,14 +946,14 @@ def _ogr_to_geometry_list(vector_path):
 
 
 def _compute_and_summarize_regression(
-        response_vector_path, coefficient_vector_path, server_version_path,
+        response_vector_path, predictor_vector_path, server_version_path,
         coefficient_json_path, regression_summary_path):
     """Compute a regression and summary statistics and generate a report.
 
     Parameters:
         response_vector_path (string): path to polygon vector containing the
             RESPONSE_ID field.
-        coefficient_vector_path (string): path to polygon vector containing
+        predictor_vector_path (string): path to polygon vector containing
             fields for each predictor variable. Geometry is identical to that
             of 'response_vector_path'.
         server_version_path (string): path to pickle file containing the
@@ -970,7 +968,7 @@ def _compute_and_summarize_regression(
 
     predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
         _build_regression(
-            response_vector_path, coefficient_vector_path, RESPONSE_ID))
+            response_vector_path, predictor_vector_path, RESPONSE_ID))
 
     # Generate a nice looking regression result and write to log and file
     coefficients_string = '               estimate     stderr    t value\n'
@@ -1018,10 +1016,10 @@ def _build_regression(
     """Multiple least-squares regression with log-transformed response.
 
     The regression is built such that each feature in the single layer vector
-    pointed to by `coefficient_vector_path` corresponds to one data point.
+    pointed to by `predictor_vector_path` corresponds to one data point.
     `response_id` is the response variable to be log-transformed, and is found
     in `response_vector_path`. Predictor variables are found in
-    `coefficient_vector_path` and are not transformed. Features with incomplete
+    `predictor_vector_path` and are not transformed. Features with incomplete
     data are dropped prior to computing the regression.
 
     Parameters:
@@ -1033,7 +1031,7 @@ def _build_regression(
             values correspond to the regression response variable.
 
     Asserts:
-        `response_vector_path` and `coefficient_vector_path` have an equal
+        `response_vector_path` and `predictor_vector_path` have an equal
         number of features.
 
     Returns:
