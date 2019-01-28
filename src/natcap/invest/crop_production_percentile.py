@@ -512,7 +512,7 @@ def tabulate_results(
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    observed_production_raster_path):
+                    (observed_production_raster_path, 1)):
                 production_pixel_count += numpy.count_nonzero(
                     ~numpy.isclose(yield_block, observed_yield_nodata) &
                     (yield_block > 0.0))
@@ -531,7 +531,7 @@ def tabulate_results(
                         crop_name, yield_percentile_id, file_suffix))
                 yield_sum = 0.0
                 for _, yield_block in pygeoprocessing.iterblocks(
-                        yield_percentile_raster_path):
+                        (yield_percentile_raster_path, 1)):
                     yield_sum += numpy.sum(
                         yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
                 production_lookup[yield_percentile_id] = yield_sum
@@ -556,7 +556,7 @@ def tabulate_results(
 
         total_area = 0.0
         for _, band_values in pygeoprocessing.iterblocks(
-                landcover_raster_path):
+                (landcover_raster_path, 1)):
             total_area += numpy.count_nonzero(
                 ~numpy.isclose(band_values, landcover_nodata))
         result_table.write(

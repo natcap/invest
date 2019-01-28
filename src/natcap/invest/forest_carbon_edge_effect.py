@@ -125,13 +125,15 @@ def execute(args):
                 args['lulc_raster_path'])['bounding_box']
             aoi_vector_bb = pygeoprocessing.get_vector_info(
                 args['aoi_vector_path'])['bounding_box']
-            merged_bb = pygeoprocessing.merge_bounding_box_list(
-                [lulc_raster_bb, aoi_vector_bb], 'intersection')
-            if merged_bb[0] > merged_bb[2] or merged_bb[1] > merged_bb[3]:
+            try:
+                merged_bb = pygeoprocessing.merge_bounding_box_list(
+                    [lulc_raster_bb, aoi_vector_bb], 'intersection')
+                LOGGER.debug("merged bounding boxes: %s", merged_bb)
+            except ValueError:
                 raise ValueError(
                     "The landcover raster %s and AOI %s do not touch each "
                     "other." % (args['lulc_raster_path'], args[
-                    'aoi_vector_path']))
+                        'aoi_vector_path']))
 
     output_dir = args['workspace_dir']
     intermediate_dir = os.path.join(
@@ -561,7 +563,7 @@ def _calculate_tropical_forest_edge_carbon_map(
     # Loop memory block by memory block, calculating the forest edge carbon
     # for every forest pixel.
     for edge_distance_data, edge_distance_block in pygeoprocessing.iterblocks(
-            edge_distance_path, largest_block=2**12):
+            (edge_distance_path, 1), largest_block=2**12):
         current_time = time.time()
         if current_time - last_time > 5.0:
             LOGGER.info(

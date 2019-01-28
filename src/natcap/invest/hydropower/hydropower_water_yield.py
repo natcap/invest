@@ -726,7 +726,7 @@ def _check_missing_lucodes(
 
     missing_bio_lucodes = set()
     missing_demand_lucodes = set()
-    for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_path):
+    for _, lulc_block in pygeoprocessing.iterblocks((clipped_lulc_path, 1)):
         unique_codes = set(numpy.unique(lulc_block))
         missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
         if demand_lucodes is not None:
