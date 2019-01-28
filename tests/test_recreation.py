@@ -889,6 +889,8 @@ class RecreationRegressionTests(unittest.TestCase):
 
         response_vector_path = os.path.join(
             self.workspace_dir, 'no_grid_vector_path.shp')
+        response_polygons_lookup_path = os.path.join(
+            self.workspace_dir, 'response_polygons_lookup.pickle')
         recmodel_client._copy_aoi_no_grid(
             os.path.join(SAMPLE_DATA, 'andros_aoi.shp'), response_vector_path)
 
@@ -905,9 +907,16 @@ class RecreationRegressionTests(unittest.TestCase):
         _make_empty_files(
             [out_coefficient_vector_path] + empty_json_list)
 
+        prepare_response_polygons_task = task_graph.add_task(
+            func=recmodel_client._prepare_response_polygons_lookup,
+            args=(response_vector_path,
+                  response_polygons_lookup_path),
+            target_path_list=[response_polygons_lookup_path],
+            task_name='prepare response polygons for geoprocessing')
         # build again to test against overwriting output
         recmodel_client._build_regression_coefficients(
-            response_vector_path, predictor_table_path,
+            response_vector_path, response_polygons_lookup_path,
+            prepare_response_polygons_task, predictor_table_path,
             out_coefficient_vector_path, tmp_working_dir, task_graph)
 
         expected_coeff_vector_path = os.path.join(

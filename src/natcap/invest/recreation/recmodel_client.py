@@ -68,6 +68,7 @@ _TMP_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
+    'response_polygons_lookup': 'response_polygons_lookup.pickle',
     'server_version': 'server_version.pickle',
     'tmp_fid_raster_path': 'vector_fid_raster.tif',
     'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
@@ -227,11 +228,24 @@ def execute(args):
         task_name='photo-user-day-calculation')
 
     if 'compute_regression' in args and args['compute_regression']:
-        build_predictor_data_task = _build_regression_coefficients(
-            file_registry['local_aoi_path'], args['predictor_table_path'],
-            file_registry['coefficient_vector_path'], intermediate_dir,
-            task_graph)
+        # Prepare the AOI for geoprocessing.
+        prepare_response_polygons_task = task_graph.add_task(
+            func=_prepare_response_polygons_lookup,
+            args=(file_registry['local_aoi_path'],
+                  file_registry['response_polygons_lookup']),
+            target_path_list=[file_registry['response_polygons_lookup']],
+            task_name='prepare response polygons for geoprocessing')
 
+        # Build predictor data
+        build_predictor_data_task = _build_regression_coefficients(
+            file_registry['local_aoi_path'],
+            file_registry['response_polygons_lookup'],
+            prepare_response_polygons_task,
+            args['predictor_table_path'],
+            file_registry['coefficient_vector_path'],
+            intermediate_dir, task_graph)
+
+        # Compute the regression
         coefficient_json_path = os.path.join(
             intermediate_dir, 'predictor_estimates.json')
         compute_regression_task = task_graph.add_task(
@@ -241,7 +255,8 @@ def execute(args):
                   file_registry['server_version'],
                   coefficient_json_path,
                   file_registry['regression_coefficients']),
-            target_path_list=[file_registry['regression_coefficients']],
+            target_path_list=[file_registry['regression_coefficients'],
+                              coefficient_json_path],
             dependent_task_list=[
                 photo_user_days_task, build_predictor_data_task],
             task_name='compute regression')
@@ -251,6 +266,8 @@ def execute(args):
             utils.make_directories([scenario_dir])
             build_scenario_data_task = _build_regression_coefficients(
                 file_registry['local_aoi_path'],
+                file_registry['response_polygons_lookup'],
+                prepare_response_polygons_task,
                 args['scenario_predictor_table_path'],
                 file_registry['scenario_results_path'],
                 scenario_dir, task_graph)
@@ -458,8 +475,10 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
 
 def _build_regression_coefficients(
-        response_vector_path, predictor_table_path,
-        out_coefficient_vector_path, working_dir, task_graph):
+        response_vector_path, response_polygons_pickle_path,
+        prepare_response_polygons_task,
+        predictor_table_path, out_coefficient_vector_path,
+        working_dir, task_graph):
     """Summarize spatial predictor data by polygons in the response vector.
 
     Build a shapefile with geometry from the response vector, and tabular
@@ -500,34 +519,18 @@ def _build_regression_coefficients(
     LOGGER.info('Processing predictor datasets')
 
     # lookup functions for response types
+    # polygon predictor types are a special case because the polygon_area
+    # function requires a 'mode' argument that these fucntions do not.
     predictor_functions = {
         'point_count': _point_count,
         'point_nearest_distance': _point_nearest_distance,
         'line_intersect_length': _line_intersect_length,
-        'polygon_area_coverage': lambda x, y, z: _polygon_area(
-            'area', x, y, z),
-        'polygon_percent_coverage': lambda x, y, z: _polygon_area(
-            'percent', x, y, z),
         }
 
     predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
     predictor_task_list = []
     predictor_json_list = []  # tracks predictor files to add to shp
-
-    # Prepare response vector for vector-based geoprocessing only
-    # if at least one predictor is a vector.
-    predictor_type_list = [predictor_table[x]['type'] for x in predictor_table]
-    if any(ptype in predictor_functions.keys() for ptype in predictor_type_list):
-        response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
-        response_layer = response_vector.GetLayer()
-        response_polygons_lookup = {}  # maps FID to prepared geometry
-        for response_feature in response_layer:
-            feature_geometry = response_feature.GetGeometryRef()
-            feature_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
-            feature_geometry = None
-            response_polygons_lookup[response_feature.GetFID()] = feature_polygon
-        response_layer = None
 
     for predictor_id in predictor_table:
         LOGGER.info("Building predictor %s", predictor_id)
@@ -547,15 +550,29 @@ def _build_regression_coefficients(
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
                 task_name='predictor %s' % predictor_id))
+        # polygon types are a special case because the polygon_area
+        # function requires an additional 'mode' argument.
+        elif predictor_type.startswith('polygon'):
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=_polygon_area,
+                args=(predictor_type, response_polygons_pickle_path,
+                      predictor_path, predictor_target_path),
+                target_path_list=[predictor_target_path],
+                dependent_task_list=[prepare_response_polygons_task],
+                task_name='predictor %s' % predictor_id))
         else:
             predictor_target_path = os.path.join(
                 working_dir, predictor_id + '.json')
             predictor_json_list.append(predictor_target_path)
             predictor_task_list.append(task_graph.add_task(
                 func=predictor_functions[predictor_type],
-                args=(response_polygons_lookup, predictor_path,
+                args=(response_polygons_pickle_path, predictor_path,
                       predictor_target_path),
                 target_path_list=[predictor_target_path],
+                dependent_task_list=[prepare_response_polygons_task],
                 task_name='predictor %s' % predictor_id))
 
     assemble_predictor_data_task = task_graph.add_task(
@@ -567,6 +584,23 @@ def _build_regression_coefficients(
         task_name='assemble predictor data')
 
     return assemble_predictor_data_task
+
+
+def _prepare_response_polygons_lookup(
+        response_vector_path, target_pickle_path):
+
+    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
+    response_layer = response_vector.GetLayer()
+    response_polygons_lookup = {}  # maps FID to prepared geometry
+    for response_feature in response_layer:
+        feature_geometry = response_feature.GetGeometryRef()
+        feature_polygon = shapely.wkt.loads(feature_geometry.ExportToWkt())
+        feature_geometry = None
+        response_polygons_lookup[response_feature.GetFID()] = feature_polygon
+    response_layer = None
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(response_polygons_lookup, pickle_file)
+
 
 def _json_to_shp_table(
         response_vector_path, predictor_vector_path,
@@ -688,7 +722,7 @@ def _raster_sum_mean(
 
 
 def _polygon_area(
-        mode, response_polygons_lookup, polygon_vector_path,
+        mode, response_polygons_pickle_path, polygon_vector_path,
         predictor_target_path):
     """Calculate polygon area overlap.
 
@@ -712,12 +746,15 @@ def _polygon_area(
         None
     """
     start_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     polygons = _ogr_to_geometry_list(polygon_vector_path)
     prepped_polygons = [shapely.prepared.prep(polygon) for polygon in polygons]
     polygon_spatial_index = rtree.index.Index()
     for polygon_index, polygon in enumerate(polygons):
         polygon_spatial_index.insert(polygon_index, polygon.bounds)
     polygon_coverage_lookup = {}  # map FID to point count
+
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
         if time.time() - start_time > 5.0:
@@ -737,9 +774,9 @@ def _polygon_area(
             (geometry.intersection(polygon)).area
             for polygon in intersecting_polygons])
 
-        if mode == 'area':
+        if mode == 'polygon_area_coverage':
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
-        elif mode == 'percent':
+        elif mode == 'polygon_percent_coverage':
             polygon_coverage_lookup[feature_id] = (
                 polygon_area_coverage / geometry.area * 100.0)
     LOGGER.info(
@@ -750,7 +787,8 @@ def _polygon_area(
 
 
 def _line_intersect_length(
-        response_polygons_lookup, line_vector_path, predictor_target_path):
+        response_polygons_pickle_path,
+        line_vector_path, predictor_target_path):
     """Calculate the length of the intersecting lines on the response polygon.
 
     Parameters:
@@ -766,6 +804,8 @@ def _line_intersect_length(
         None
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
 
@@ -796,7 +836,8 @@ def _line_intersect_length(
 
 
 def _point_nearest_distance(
-        response_polygons_lookup, point_vector_path, predictor_target_path):
+        response_polygons_pickle_path, point_vector_path,
+        predictor_target_path):
     """Calculate distance to nearest point for all polygons.
 
     Parameters:
@@ -812,8 +853,11 @@ def _point_nearest_distance(
         None
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     points = _ogr_to_geometry_list(point_vector_path)
     point_distance_lookup = {}  # map FID to point count
+
     index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
@@ -833,7 +877,8 @@ def _point_nearest_distance(
 
 
 def _point_count(
-        response_polygons_lookup, point_vector_path, predictor_target_path):
+        response_polygons_pickle_path, point_vector_path,
+        predictor_target_path):
     """Calculate number of points contained in each response polygon.
 
     Parameters:
@@ -849,8 +894,11 @@ def _point_count(
         None
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
+
     index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
