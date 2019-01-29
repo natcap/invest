@@ -188,7 +188,6 @@ def execute(args):
         n_workers = -1  # single process mode.
     task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
-    # prep_aoi_task = []
     if args['grid_aoi']:
         prep_aoi_task = task_graph.add_task(
             func=_grid_vector,
@@ -296,15 +295,38 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 
 def _retrieve_photo_user_days(
-    local_aoi_path, compressed_aoi_path, start_year, end_year, pud_results_filename,
-    compressed_pud_path, output_dir, server_path, server_version_pickle):
+        local_aoi_path, compressed_aoi_path, start_year, end_year,
+        pud_results_filename, compressed_pud_path, output_dir, server_path,
+        server_version_pickle):
+    """Calculate photo-user-days (PUD) on the server and send back results.
+
+    All of the client-server communication happens in this scope. The local AOI
+    is sent to the server for PUD calculations. PUD results are sent back when
+    complete.
+
+    Parameters:
+        local_aoi_path (string): path to polygon vector for PUD aggregation
+        compressed_aoi_path (string): path to zip file storing compressed AOI
+        start_year (int/string): lower limit of date-range for PUD queries
+        end_year (int/string): upper limit of date-range for PUD queries
+        pud_results_filename (string): filename for a shapefile to hold results
+        compressed_pud_path (string): path to zip file storing compressed PUD
+            results, including 'pud_results.shp' and 'monthly_table.csv'.
+        output_dir (string): path to output workspace where results are
+            unpacked.
+        server_path (string): URL for connecting to the server
+        server_version_pickle (string): path to a pickle that stores server
+            version and workspace id info.
+
+    Returns:
+        None
+    """
 
     LOGGER.info('Contacting server, please wait.')
     recmodel_server = Pyro4.Proxy(server_path)
     server_version = recmodel_server.get_version()
     LOGGER.info('Server online, version: %s', server_version)
-    # store server info in a file because with taskgraph, we won't always connect
-    # to the server, but still want to report version info in results txt file
+    # store server version info in a file so we can list it in results summary.
     with open(server_version_pickle, 'wb') as f:
         pickle.dump(server_version, f)
 
@@ -485,6 +507,10 @@ def _build_regression_coefficients(
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
+        response_polygons_pickle_path (string): path to pickle that stores a
+            dictionary which maps FIDs to shapely geometry.
+        prepare_response_polygons_task (Taskgraph.Task object):
+            A Task needed for dependent_task_lists in this scope.
         predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type'.  'id' is the unique ID for that predictor
             and must be less than 10 characters long. 'path' indicates the
@@ -509,7 +535,6 @@ def _build_regression_coefficients(
         working_dir (string): path to an intermediate directory to store json
             files with geoprocessing results.
         task_graph (Taskgraph): the graph that was initialized in execute()
-            will have a task added here for each predictor id.
 
     Returns:
         The ultimate task object from this branch of the taskgraph.
@@ -586,6 +611,7 @@ def _build_regression_coefficients(
 
 def _prepare_response_polygons_lookup(
         response_vector_path, target_pickle_path):
+    """Translate a shapefile to a dictionary that maps FIDs to geometries."""
 
     response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
     response_layer = response_vector.GetLayer()
@@ -737,8 +763,8 @@ def _polygon_area(
         polygon_vector_path (string): path to a single layer polygon vector
             object.
         predictor_target_path (string): path to json file to store result,
-            which is a dictionary mapping feature IDs from `response_polygons_lookup`
-            to polygon area coverage.
+            which is a dictionary mapping feature IDs from
+            `response_polygons_lookup` to polygon area coverage.
 
     Returns:
         None
@@ -1139,43 +1165,15 @@ def _calculate_scenario(
     log normal distribution.
 
     Parameters:
-        base_aoi_path (string): path to the a polygon vector that was used
-            to build the original regression.  Geometry will be copied for
-            `scenario_results_path` output vector.
+        scenario_results_path (string): path to desired output scenario
+            vector result which will be geometrically a copy of the input
+            AOI but contain the scenario predictor data fields as well as the
+            scenario esimated response.
         response_id (string): text ID of response variable to write to
             the scenario result.
         coefficient_json_path (string): path to json file with the pre-existing
             regression results. It contains a dictionary that maps
             predictor id strings to coefficient values. Includes Y-Intercept.
-        scenario_predictor_table_path (string): path to a CSV table of
-            regression predictors, their IDs and types.  Must contain the
-            fields 'id', 'path', and 'type' where:
-                'id': is a <=10 character length ID that is used to uniquely
-                    describe the predictor.  It will be added to the output
-                    result shapefile attribute table which is an ESRI
-                    Shapefile, thus limited to 10 characters.
-                'path': an absolute or relative (to this table) path to the
-                    predictor dataset, either a vector or raster type.
-                'type': one of the following,
-                    'raster_mean': mean of values in the raster under the
-                        response polygon
-                    'raster_sum': sum of values in the raster under the
-                        response polygon
-                    'point_count': count of the points contained in the
-                        response polygon
-                    'point_nearest_distance': distance to the nearest point
-                        from the response polygon
-                    'line_intersect_length': length of lines that intersect
-                        with the response polygon in projected units of AOI
-                    'polygon_area': area of the polygon contained within
-                        response polygon in projected units of AOI
-                Note also that each ID in the table must have a corresponding
-                entry in `coefficient_json_path`'s dictionary. This is ensured
-                at the start of runtime with `_validate_same_ids_and_types()`.
-        scenario_results_path (string): path to desired output scenario
-            vector result which will be geometrically a copy of the input
-            AOI but contain the scenario predictor data fields as well as the
-            scenario esimated response.
 
     Returns:
         None
