@@ -278,8 +278,8 @@ def execute(args):
                     compute_regression_task, build_scenario_data_task],
                 task_name='calculate scenario')
 
-        task_graph.close()
-        task_graph.join()
+    task_graph.close()
+    task_graph.join()
 
 
 def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
