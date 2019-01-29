@@ -1545,8 +1545,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
 
-            threads_to_exclude = [ui_thread_name,
-                                  usage._USAGE_LOGGING_THREAD_NAME]
+            threads_to_exclude = [usage._USAGE_LOGGING_THREAD_NAME]
 
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
