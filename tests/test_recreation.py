@@ -939,13 +939,13 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # these are absolute paths for predictor data
         predictor_list = [
-            ('ports', os.path.join(SAMPLE_DATA, 'scenarios', 'dredged_ports.shp'),
+            ('ports', os.path.join(SAMPLE_DATA, 'predictors', 'dredged_ports.shp'),
              'point_count'),
-            ('airdist', os.path.join(SAMPLE_DATA, 'scenarios', 'airport.shp'),
+            ('airdist', os.path.join(SAMPLE_DATA, 'predictors', 'airport.shp'),
              'point_nearest_distance'),
-            ('bonefish', os.path.join(SAMPLE_DATA, 'scenarios', 'bonefish.shp'),
+            ('bonefish', os.path.join(SAMPLE_DATA, 'predictors', 'bonefish_trivial.shp'),
              'polygon_percent_coverage'),
-            ('bathy', os.path.join(SAMPLE_DATA, 'scenarios', 'dem90m.tif'),
+            ('bathy', os.path.join(SAMPLE_DATA, 'predictors', 'dem90m.tif'),
              'raster_mean'),
             ]
 
