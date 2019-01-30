@@ -1033,8 +1033,8 @@ def execute(args):
 
     for (harvest_block_info,
          harvest_block_data), (_, dist_block_data) in zip(
-             pygeoprocessing.iterblocks(harvested_masked_path),
-             pygeoprocessing.iterblocks(final_dist_raster_path)):
+             pygeoprocessing.iterblocks((harvested_masked_path, 1)),
+             pygeoprocessing.iterblocks((final_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
         target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
