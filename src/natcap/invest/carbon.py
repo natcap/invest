@@ -486,7 +486,6 @@ def validate(args, limit_to=None):
         'workspace_dir',
         'lulc_cur_path',
         'carbon_pools_path',
-        'calc_sequestration',
         'do_valuation']
 
     if 'calc_sequestration' in args and args['calc_sequestration']:
@@ -510,7 +509,7 @@ def validate(args, limit_to=None):
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
-            "The following keys were expected in `args` but were missing " +
+            "The following keys were expected in `args` but were missing: " +
             ', '.join(missing_key_list))
 
     if len(no_value_list) > 0:
