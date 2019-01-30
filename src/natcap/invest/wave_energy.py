@@ -154,7 +154,7 @@ def execute(args):
                 'The following column fields are missing from the Grid '
                 'Connection Points File: %s' % missing_grid_land_fields)
 
-    if 'valuation_container' in args:
+    if 'valuation_container' in args and args['valuation_container']:
         machine_econ_dict = _machine_csv_to_dict(args['machine_econ_path'])
 
     # Build up a dictionary of possible analysis areas where the key
@@ -390,7 +390,7 @@ def execute(args):
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
-    if 'valuation_container' not in args:
+    if 'valuation_container' not in args or not args['valuation_container']:
         LOGGER.info('Valuation not selected')
         # The rest of the function is valuation, so we can quit now
         return
