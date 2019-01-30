@@ -1,6 +1,8 @@
 .. :changelog:
 
-Unreleased Changes
+.. Unreleased Changes
+
+3.6.0 (2019-01-30)
 ------------------
 * Refactoring RouteDEM to use taskgraph and the latest pygeoprocessing
   (``>=1.5.0``).  RouteDEM now fills hydrological sinks and users have the
