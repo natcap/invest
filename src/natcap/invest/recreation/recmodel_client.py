@@ -716,7 +716,7 @@ def _raster_sum_mean(
     # remove results for a feature when the pixel count is 0.
     # we don't have non-nodata predictor values for those features.
     aggregate_results = {
-        fid: stats for fid, stats in aggregate_results.iteritems()
+        str(fid): stats for fid, stats in aggregate_results.iteritems()
         if stats['count'] != 0}
     if not aggregate_results:
         LOGGER.warn('raster predictor does not intersect with vector AOI')
@@ -801,7 +801,7 @@ def _polygon_area(
         if mode == 'polygon_area_coverage':
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
         elif mode == 'polygon_percent_coverage':
-            polygon_coverage_lookup[feature_id] = (
+            polygon_coverage_lookup[str(feature_id)] = (
                 polygon_area_coverage / geometry.area * 100.0)
     LOGGER.info(
         "%s polygon area: 100.00%% complete",
@@ -851,7 +851,7 @@ def _line_intersect_length(
             (lines[line_index].intersection(geometry)).length
             for line_index in potential_intersecting_lines if
             geometry.intersects(lines[line_index])])
-        line_length_lookup[feature_id] = line_length
+        line_length_lookup[str(feature_id)] = line_length
     LOGGER.info(
         "%s line intersect length: 100.00%% complete",
         os.path.basename(line_vector_path))
@@ -891,7 +891,7 @@ def _point_nearest_distance(
                 os.path.basename(point_vector_path),
                 (100.0*index)/len(response_polygons_lookup)))
 
-        point_distance_lookup[feature_id] = min([
+        point_distance_lookup[str(feature_id)] = min([
             geometry.distance(point) for point in points])
     LOGGER.info(
         "%s point distance: 100.00%% complete",
@@ -933,7 +933,7 @@ def _point_count(
                 (100.0*index)/len(response_polygons_lookup)))
         point_count = len([
             point for point in points if geometry.contains(point)])
-        point_count_lookup[feature_id] = point_count
+        point_count_lookup[str(feature_id)] = point_count
     LOGGER.info(
         "%s point count: 100.00%% complete",
         os.path.basename(point_vector_path))
