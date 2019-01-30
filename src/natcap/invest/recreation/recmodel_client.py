@@ -1123,9 +1123,8 @@ def _build_regression(
     data_matrix = data_matrix[~numpy.isnan(data_matrix).any(axis=1)]
     n_features = data_matrix.shape[0]
     y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
-
     coefficients, _, _, _ = numpy.linalg.lstsq(
-        data_matrix[:, 1:], y_factors, rcond=None)
+        data_matrix[:, 1:], y_factors) 
 
     ssres = numpy.sum((
         y_factors -
