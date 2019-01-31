@@ -1857,7 +1857,7 @@ def validate(args, limit_to=None):
                              'Parameter must be a number.'))
 
     if limit_to is None:
-        if 'valuation_container' in args:
+        if 'valuation_container' in args and args['valuation_container']:
             missing_keys = []
             keys_with_no_value = []
             for required_key in ('land_gridPts_path', 'machine_econ_path',
