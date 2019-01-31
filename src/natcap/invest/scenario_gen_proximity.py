@@ -16,22 +16,12 @@ from osgeo import osr
 from osgeo import gdal
 import scipy
 import pygeoprocessing
+import taskgraph
 
 from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
-
-_OUTPUT_BASE_FILES = {
-    }
-
-_INTERMEDIATE_BASE_FILES = {
-    }
-
-_TMP_BASE_FILES = {
-    'base_lulc_path': 'base_lulc.tif',
-    'masked_lulc_path': 'masked_lulc.tif'
-    }
 
 # This sets the largest number of elements that will be packed at once and
 # addresses a memory leak issue that happens when many arguments are passed
@@ -77,6 +67,9 @@ def execute(args):
             conversion simulation starting from the nearest pixel on the
             edge and work inwards.  Workspace will contain output files named
             'toward_base{suffix}.{tif,csv}.
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
 
     Returns:
         None.
@@ -98,10 +91,15 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
-    f_reg = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Single process mode.
+    task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     area_to_convert = float(args['area_to_convert'])
     replacement_lucode = int(args['replacment_lucode'])
@@ -112,18 +110,19 @@ def execute(args):
     focal_landcover_codes = numpy.array([
         int(x) for x in args['focal_landcover_codes'].split()])
 
-    shutil.copy(args['base_lulc_path'], f_reg['base_lulc_path'])
+    aoi_mask_task_list = []
     if 'aoi_path' in args and args['aoi_path'] != '':
         # clip base lulc to a new raster
-        target_pixel_size = pygeoprocessing.get_raster_info(
-            args['base_lulc_path'])['pixel_size']
-        pygeoprocessing.align_and_resize_raster_stack(
-            [args['base_lulc_path']], [f_reg['base_lulc_path']], ['near'],
-            target_pixel_size, 'intersection',
-            base_vector_path_list=[args['aoi_path']])
-        _mask_raster_by_vector(
-            (f_reg['base_lulc_path'], 1), args['aoi_path'],
-            f_reg['masked_lulc_path'])
+        working_lulc_path = os.path.join(
+            intermediate_output_dir, 'aoi_masked_lulc%s.tif' % file_suffix)
+        aoi_mask_task_list.append(task_graph.add_task(
+            func=_mask_raster_by_vector,
+            args=((args['base_lulc_path'], 1), args['aoi_path'], tmp_dir,
+                  working_lulc_path),
+            target_path_list=[working_lulc_path],
+            task_name='aoi_mask'))
+    else:
+        working_lulc_path = args['base_lulc_path']
 
     scenarios = [
         (args['convert_farthest_from_edge'], 'farthest_from_edge', -1.0),
@@ -139,16 +138,25 @@ def execute(args):
             output_dir, basename+file_suffix+'.csv')
         distance_from_edge_path = os.path.join(
             intermediate_output_dir, basename+'_distance'+file_suffix+'.tif')
-        _convert_landscape(
-            f_reg['masked_lulc_path'], replacement_lucode, area_to_convert,
-            focal_landcover_codes, convertible_type_list, score_weight,
-            int(args['n_fragmentation_steps']), distance_from_edge_path,
-            output_landscape_raster_path, stats_path,
-            args['workspace_dir'])
+        task_graph.add_task(
+            func=_convert_landscape,
+            args=(working_lulc_path, replacement_lucode, area_to_convert,
+                  focal_landcover_codes, convertible_type_list, score_weight,
+                  int(args['n_fragmentation_steps']), distance_from_edge_path,
+                  output_landscape_raster_path, stats_path,
+                  args['workspace_dir']),
+            target_path_list=[
+                distance_from_edge_path, output_landscape_raster_path,
+                stats_path],
+            dependent_task_list=aoi_mask_task_list,
+            task_name='convert_landscape_%s' % basename)
+
+    task_graph.close()
+    task_graph.join()
 
 
 def _mask_raster_by_vector(
-        base_raster_path_band, vector_path, target_raster_path):
+        base_raster_path_band, vector_path, working_dir, target_raster_path):
     """Mask pixels outside of the vector to nodata.
 
     Parameters:
@@ -156,6 +164,7 @@ def _mask_raster_by_vector(
         vector_path (string): path to single layer raster that is used to
             indicate areas to preserve from the base raster.  Areas outside
             of this vector are set to nodata.
+        working_dir (str): path to temporary directory.
         target_raster_path (string): path to a single band raster that will be
             created of the same dimensions and data type as
             `base_raster_path_band` where any pixels that lie outside of
@@ -165,39 +174,43 @@ def _mask_raster_by_vector(
         None.
 
     """
+    # Warp input raster to be same bounding box as AOI if smaller.
     base_raster_info = pygeoprocessing.get_raster_info(
         base_raster_path_band[0])
     nodata = base_raster_info['nodata'][base_raster_path_band[1]-1]
-    pygeoprocessing.new_raster_from_base(
-        base_raster_path_band[0], target_raster_path,
-        base_raster_info['datatype'], [nodata], fill_value_list=[nodata])
+    target_pixel_size = base_raster_info['pixel_size']
+    vector_info = pygeoprocessing.get_vector_info(vector_path)
+    target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+        [base_raster_info['bounding_box'],
+         vector_info['bounding_box']], 'intersection')
+    pygeoprocessing.warp_raster(
+        base_raster_path_band[0], target_pixel_size, target_raster_path,
+        'near', target_bb=target_bounding_box)
 
-    tmp_dir = tempfile.mkdtemp()
+    # Create mask raster same size as the warped raster.
+    tmp_dir = tempfile.mkdtemp(dir=working_dir)
     mask_raster_path = os.path.join(tmp_dir, 'mask.tif')
-
     pygeoprocessing.new_raster_from_base(
-        base_raster_path_band[0], mask_raster_path,
-        gdal.GDT_Byte, [0], fill_value_list=[0])
+        target_raster_path, mask_raster_path, gdal.GDT_Byte, [0],
+        fill_value_list=[0])
 
+    # Rasterize the vector onto the mask raster
     pygeoprocessing.rasterize(vector_path, mask_raster_path, [1], None)
 
+    # Parallel iterate over warped raster and mask raster to mask out original.
     target_raster = gdal.OpenEx(
         target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
     target_band = target_raster.GetRasterBand(1)
-
     mask_raster = gdal.OpenEx(mask_raster_path, gdal.OF_RASTER)
     mask_band = mask_raster.GetRasterBand(1)
 
-    base_raster = gdal.OpenEx(base_raster_path_band[0], gdal.OF_RASTER)
-    base_band = base_raster.GetRasterBand(base_raster_path_band[1])
-
     for offset_dict in pygeoprocessing.iterblocks(
-            mask_raster_path, offset_only=True):
-        base_array = base_band.ReadAsArray(**offset_dict)
+            (mask_raster_path, 1), offset_only=True):
+        data_array = target_band.ReadAsArray(**offset_dict)
         mask_array = mask_band.ReadAsArray(**offset_dict)
-        base_array[mask_array != 1] = nodata
+        data_array[mask_array != 1] = nodata
         target_band.WriteArray(
-            base_array, xoff=offset_dict['xoff'], yoff=offset_dict['yoff'])
+            data_array, xoff=offset_dict['xoff'], yoff=offset_dict['yoff'])
     target_band.FlushCache()
     target_band = None
     target_raster = None
@@ -265,8 +278,6 @@ def _convert_landscape(
             temp_dir, 'distance_from_non_base_mask_edge.tif'),
         'convertible_distances': os.path.join(
             temp_dir, 'convertible_distances.tif'),
-        'smooth_distance_from_edge': os.path.join(
-            temp_dir, 'smooth_distance_from_edge.tif'),
         'distance_from_edge': os.path.join(
             temp_dir, 'distance_from_edge.tif'),
     }
@@ -320,7 +331,8 @@ def _convert_landscape(
                 if invert_mask:
                     base_mask = ~base_mask
                 return numpy.where(
-                    lulc_array == lulc_nodata, mask_nodata, base_mask)
+                    lulc_array == lulc_nodata,
+                    mask_nodata, base_mask)
             pygeoprocessing.raster_calculator(
                 [(output_landscape_raster_path, 1)], _mask_base_op,
                 tmp_file_registry[mask_id], gdal.GDT_Byte,
@@ -519,7 +531,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
     n_cols = dataset_info['raster_size'][0]
 
     for scores_data, scores_block in pygeoprocessing.iterblocks(
-            dataset_path, largest_block=_BLOCK_SIZE):
+            (dataset_path, 1), largest_block=_BLOCK_SIZE):
         # flatten and scale the results
         scores_block = scores_block.flatten() * score_weight
 
@@ -648,7 +660,7 @@ def _convert_by_score(
             out_array[mask_array] = convert_value
             out_band.WriteArray(out_array, xoff=col_index, yoff=row_index)
 
-    out_ds = gdal.OpenEx(out_raster_path, gdal.GA_Update)
+    out_ds = gdal.OpenEx(out_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     out_band = out_ds.GetRasterBand(1)
     out_block_col_size, out_block_row_size = out_band.GetBlockSize()
     n_rows = out_band.YSize
@@ -746,7 +758,8 @@ def _make_gaussian_kernel_path(sigma, kernel_path):
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
     kernel_dataset.FlushCache()
-    for kernel_data, kernel_block in pygeoprocessing.iterblocks(kernel_path):
+    for kernel_data, kernel_block in pygeoprocessing.iterblocks(
+            (kernel_path, 1)):
         # divide by sum to normalize
         kernel_block /= running_sum
         kernel_band.WriteArray(
@@ -826,13 +839,13 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
                     del raster
                 elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
+                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
                     if vector is None:
                         validation_error_list.append(
                             ([key], 'not a vector'))

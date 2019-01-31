@@ -30,7 +30,10 @@ class CropProductionPercentile(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
@@ -70,7 +73,7 @@ class CropProductionPercentile(model.InVESTModel):
                 u"sugarcane, sugarnes, sunflower, swedefor, "
                 u"sweetpotato, tangetc, taro, tea, tobacco, tomato, "
                 u"triticale, tropicalnes, tung, turnipfor, vanilla, "
-                u"vegetablenes, vegfor, vetch,walnut, watermelon, "
+                u"vegetablenes, vegfor, vetch, walnut, watermelon, "
                 u"wheat, yam, and yautia."),
             label=u'Landcover to Crop Table (csv)',
             validator=self.validator)
@@ -78,29 +81,12 @@ class CropProductionPercentile(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
-        self.aggregate_polygon_id = inputs.Text(
-            args_key=u'aggregate_polygon_id',
-            helptext=(
-                u"If an aggregate polygon is provided, this field is "
-                u"used to indicate the key field of that polygon for "
-                u"aggregation.  The aggregate table produced by this "
-                u"model will index the results by this field value."),
-            interactive=False,
-            label=u'Aggregate polygon ID field',
-            validator=self.validator)
-        self.add_input(self.aggregate_polygon_id)
-
-        # Set interactivity, requirement as input sufficiency changes
-        self.aggregate_polygon_path.sufficiency_changed.connect(
-            self.aggregate_polygon_id.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -113,8 +99,6 @@ class CropProductionPercentile(model.InVESTModel):
                 self.landcover_to_crop_table_path.value(),
             self.aggregate_polygon_path.args_key:
                 self.aggregate_polygon_path.value(),
-            self.aggregate_polygon_id.args_key:
-                self.aggregate_polygon_id.value(),
         }
         return args
 
@@ -144,7 +128,10 @@ class CropProductionRegression(model.InVESTModel):
             args_key=u'landcover_raster_path',
             helptext=(
                 u"A raster file, representing integer land use/land "
-                u"code covers for each cell."),
+                u"code covers for each cell. This raster should have"
+                u"a projected coordinate system with units of meters "
+                u"(e.g. UTM) because pixel areas are divided by 10000"
+                u"in order to report some results in hectares."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
@@ -172,29 +159,12 @@ class CropProductionRegression(model.InVESTModel):
         self.aggregate_polygon_path = inputs.File(
             args_key=u'aggregate_polygon_path',
             helptext=(
-                u"A polygon shapefile to aggregate/summarize final "
-                u"results.  It is fine to have overlapping polygons. "
-                u"The attribute table must contain a keyfield for "
-                u"identifying polygons, be sure to indicate the name of "
-                u"this field in the Aggregate Polygon ID Field below."),
+                u"A polygon shapefile containing features with"
+                u"which to aggregate/summarize final results."
+                u"It is fine to have overlapping polygons."),
             label=u'Aggregate results polygon (vector) (optional)',
             validator=self.validator)
         self.add_input(self.aggregate_polygon_path)
-        self.aggregate_polygon_id = inputs.Text(
-            args_key=u'aggregate_polygon_id',
-            helptext=(
-                u"If an aggregate polygon is provided, this field is "
-                u"used to indicate the key field of that polygon for "
-                u"aggregation.  The aggregate table produced by this "
-                u"model will index the results by this field value."),
-            interactive=False,
-            label=u'Aggregate polygon ID field',
-            validator=self.validator)
-        self.add_input(self.aggregate_polygon_id)
-
-        # Set interactivity, requirement as input sufficiency changes
-        self.aggregate_polygon_path.sufficiency_changed.connect(
-            self.aggregate_polygon_id.set_interactive)
 
     def assemble_args(self):
         args = {
@@ -209,7 +179,5 @@ class CropProductionRegression(model.InVESTModel):
                 self.fertilization_rate_table_path.value(),
             self.aggregate_polygon_path.args_key:
                 self.aggregate_polygon_path.value(),
-            self.aggregate_polygon_id.args_key:
-                self.aggregate_polygon_id.value(),
         }
         return args

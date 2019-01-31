@@ -1,7 +1,5 @@
 import unittest
 
-from osgeo import gdal
-
 
 class ValidatorTest(unittest.TestCase):
     def test_args_wrong_type(self):
@@ -125,17 +123,10 @@ class ValidatorTest(unittest.TestCase):
         def validate(args, limit_to=None):
             return []
 
-        validation_errors = validate({'n_workers': -1})
-        self.assertEqual(len(validation_errors), 1)
-        self.assertTrue(validation_errors[0][0] == ['n_workers'])
-        self.assertTrue('must be a nonzero, positive integer'
-                        in validation_errors[0][1])
-
         validation_errors = validate({'n_workers': 1.5})
         self.assertEqual(len(validation_errors), 1)
         self.assertTrue(validation_errors[0][0] == ['n_workers'])
-        self.assertTrue('must be a nonzero, positive integer'
-                        in validation_errors[0][1])
+        self.assertTrue('must be an integer' in validation_errors[0][1])
 
 
 class ValidationContextTests(unittest.TestCase):

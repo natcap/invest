@@ -5,13 +5,9 @@ import shutil
 import os
 
 import pandas
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data',
-    'scenario_proximity')
-REGRESSION_DATA = os.path.join(
+TEST_DATA_DIR = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'scenario_gen_proximity')
 
@@ -29,98 +25,81 @@ class ScenarioProximityTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_scenario_gen_regression(self):
-        """Scenario Gen Proximity: regression testing all functionality."""
-        from natcap.invest import scenario_gen_proximity
-
+    @staticmethod
+    def generate_base_args(workspace_dir):
+        """Generate an args list that is consistent across all three regression
+        tests"""
         args = {
             'aoi_path': os.path.join(
-                SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
-            'area_to_convert': '20000.0',
+                TEST_DATA_DIR, 'input', 'scenario_proximity_aoi.gpkg'),
+            'area_to_convert': '3218.0',
             'base_lulc_path': os.path.join(
-                SAMPLE_DATA, 'scenario_proximity_lulc.tif'),
-            'convert_farthest_from_edge': True,
-            'convert_nearest_to_edge': True,
+                TEST_DATA_DIR, 'input', 'clipped_lulc.tif'),
+            'workspace_dir': workspace_dir,
             'convertible_landcover_codes': '1 2 3 4 5',
             'focal_landcover_codes': '1 2 3 4 5',
             'n_fragmentation_steps': '1',
             'replacment_lucode': '12',
-            'workspace_dir': self.workspace_dir,
+            'n_workers': '-1',
         }
+        return args
+
+    def test_scenario_gen_regression(self):
+        """Scenario Gen Proximity: regression testing all functionality."""
+        from natcap.invest import scenario_gen_proximity
+
+        args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
+        args['convert_farthest_from_edge'] = True
+        args['convert_nearest_to_edge'] = True
 
         scenario_gen_proximity.execute(args)
         ScenarioProximityTests._test_same_files(
             os.path.join(
-                REGRESSION_DATA, 'expected_file_list_regression.txt'),
+                TEST_DATA_DIR, 'expected_file_list_regression.txt'),
             args['workspace_dir'])
 
         base_table = pandas.read_csv(
             os.path.join(self.workspace_dir, 'farthest_from_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
-                REGRESSION_DATA, 'farthest_from_edge_regression.csv'))
+                TEST_DATA_DIR, 'farthest_from_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
         base_table = pandas.read_csv(
             os.path.join(self.workspace_dir, 'nearest_to_edge.csv'))
         expected_table = pandas.read_csv(
             os.path.join(
-                REGRESSION_DATA, 'nearest_to_edge_regression.csv'))
+                TEST_DATA_DIR, 'nearest_to_edge_regression.csv'))
         pandas.testing.assert_frame_equal(base_table, expected_table)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
-    def test_scenario_gen_small_far(self):
+    def test_scenario_gen_farthest(self):
         """Scenario Gen Proximity: testing small far functionality."""
         from natcap.invest import scenario_gen_proximity
 
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
-            'area_to_convert': '20000.0',
-            'base_lulc_path': os.path.join(
-                REGRESSION_DATA, 'clipped_lulc.tif'),
-            'convert_farthest_from_edge': True,
-            'convert_nearest_to_edge': False,
-            'convertible_landcover_codes': '1 2 3 4 5',
-            'focal_landcover_codes': '1 2 3 4 5',
-            'n_fragmentation_steps': '1',
-            'replacment_lucode': '12',
-            'workspace_dir': self.workspace_dir,
-        }
-
+        args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
+        args['convert_farthest_from_edge'] = True
+        args['convert_nearest_to_edge'] = False
+        # running without an AOI
+        del args['aoi_path']
         scenario_gen_proximity.execute(args)
         ScenarioProximityTests._test_same_files(
             os.path.join(
-                REGRESSION_DATA, 'expected_file_list_small_farthest.txt'),
+                TEST_DATA_DIR, 'expected_file_list_farthest.txt'),
             args['workspace_dir'])
 
-        natcap.invest.pygeoprocessing_0_3_3.testing.assertions.assert_csv_equal(
+        pygeoprocessing.testing.assertions.assert_csv_equal(
             os.path.join(self.workspace_dir, 'farthest_from_edge.csv'),
             os.path.join(
-                REGRESSION_DATA, 'small_farthest_from_edge_regression.csv'),
+                TEST_DATA_DIR, 'farthest_from_edge_farthest.csv'),
             rel_tol=1e-6)
 
     def test_scenario_gen_no_scenario(self):
         """Scenario Gen Proximity: no scenario should raise an exception."""
         from natcap.invest import scenario_gen_proximity
 
-        args = {
-            'aoi_path': os.path.join(
-                SAMPLE_DATA, 'scenario_proximity_aoi.shp'),
-            'area_to_convert': '20000.0',
-            'base_lulc_path': os.path.join(
-                SAMPLE_DATA, 'scenario_proximity_lulc.tif'),
-            'convert_farthest_from_edge': False,
-            'convert_nearest_to_edge': False,
-            'convertible_landcover_codes': '1 2 3 4 5',
-            'focal_landcover_codes': '1 2 3 4 5',
-            'n_fragmentation_steps': '1',
-            'replacment_lucode': '12',
-            'workspace_dir': self.workspace_dir,
-        }
+        args = ScenarioProximityTests.generate_base_args(self.workspace_dir)
+        args['convert_farthest_from_edge'] = False
+        args['convert_nearest_to_edge'] = False
 
         # both scenarios false should raise a value error
         with self.assertRaises(ValueError):

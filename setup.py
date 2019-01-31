@@ -42,15 +42,11 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
-        'natcap.invest.overlap_analysis',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
-        'natcap.invest.scenario_generator',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
-        'natcap.invest.wave_energy',
-        'natcap.invest.wind_energy',
         'natcap.invest.pygeoprocessing_0_3_3',
         'natcap.invest.pygeoprocessing_0_3_3.routing',
         'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
@@ -129,13 +125,6 @@ setup(
         'natcap.invest.reporting': [
             'reporting_data/*.js',
             'reporting_data/*.css',
-        ],
-        'natcap.invest.scenario_generator': [
-            '*.js',
-        ],
-        'natcap.invest.wave_energy': [
-            'wave_energy_scripts/*.sh',
-            'wave_energy_scripts/*.txt'
         ],
     }
 )

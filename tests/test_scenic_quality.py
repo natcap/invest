@@ -150,7 +150,7 @@ class ScenicQualityTests(unittest.TestCase):
         from pygeoprocessing.testing import create_raster_on_disk
 
         dem_matrix = numpy.array(
-            [[-1, -1, -1, -1, -1],
+            [[-1, -1, 2, -1, -1],
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
              [-1, -1, -1, -1, -1],
@@ -168,13 +168,14 @@ class ScenicQualityTests(unittest.TestCase):
         viewpoints_path = os.path.join(self.workspace_dir,
                                        'viewpoints.geojson')
         sampledata.create_vector_on_disk(
-            [Point(1.25, -0.5),
-             Point(-1.0, -5.0)],  # off the edge of DEM, won't be included.
+            [Point(1.25, -0.5),  # Valid in DEM but outside of AOI.
+             Point(-1.0, -5.0),  # off the edge of DEM.
+             Point(1.25, -1.5)],  # Within AOI, over nodata.
             WKT, filename=viewpoints_path)
 
         aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
         sampledata.create_vector_on_disk(
-            [Polygon([(0, 0), (0, -2.5), (2.5, -2.5), (2.5, 0), (0, 0)])],
+            [Polygon([(1, -1), (1, -2.5), (2.5, -2.5), (2.5, -1), (1, -1)])],
             WKT, filename=aoi_path)
 
         args = {

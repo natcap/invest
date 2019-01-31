@@ -132,7 +132,7 @@ def execute(args):
 
     # Limit block size here to try to improve memory usage of the application.
     block_iterator = enumerate(pygeoprocessing.iterblocks(
-        d['C_prior_raster'], largest_block=2**10))
+        (d['C_prior_raster'], 1), largest_block=2**10))
     C_nodata = pygeoprocessing.get_raster_info(
         d['C_prior_raster'])['nodata'][0]
 
@@ -1001,7 +1001,7 @@ def validate(args, limit_to=None):
             ('price_table_uri', ('year', 'price'))):
         try:
             table = pandas.read_csv(args[csv_key], sep=None, engine='python')
-            headers = list(table)
+            headers = list(header.lower() for header in table)
             missing_headers = set(required_fields) - set(headers)
             if missing_headers:
                 warnings.append((
