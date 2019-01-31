@@ -1761,10 +1761,10 @@ def validate(args, limit_to=None):
         except KeyError:
             missing_keys.append(required_key)
 
-    if missing_keys > 0:
+    if missing_keys:
         raise KeyError('Keys are missing from args: %s' % str(missing_keys))
 
-    if keys_missing_value > 0:
+    if keys_missing_value:
         warnings.append((keys_missing_value,
                          'Parameter is required but has no value'))
 
