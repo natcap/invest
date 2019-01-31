@@ -1,6 +1,8 @@
 .. :changelog:
 
-Unreleased Changes
+.. Unreleased Changes
+
+3.6.0 (2019-01-30)
 ------------------
 * Correcting an issue with the InVEST Carbon Storage and Sequestration model
   where filepaths containing non-ASCII characters would cause the model's

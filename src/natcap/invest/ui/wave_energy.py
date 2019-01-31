@@ -9,8 +9,8 @@ class WaveEnergy(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label=u'Wave Energy',
-            target=natcap.invest.wave_energy.wave_energy.execute,
-            validator=natcap.invest.wave_energy.wave_energy.validate,
+            target=natcap.invest.wave_energy.execute,
+            validator=natcap.invest.wave_energy.validate,
             localdoc=u'../documentation/wave_energy.html')
 
         self.results_suffix = inputs.Text(
