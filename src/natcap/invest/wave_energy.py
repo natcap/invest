@@ -891,6 +891,8 @@ def _machine_csv_to_dict(machine_csv_path):
     # remove underscore from the keys and make them lowercased
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
+    LOGGER.debug('machine_data dataframe from %s: %s' %
+                 (machine_csv_path, machine_data))
     machine_dict = machine_data.to_dict('index')
     for key in machine_dict.keys():
         machine_dict[key] = machine_dict[key]['value']
