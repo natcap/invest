@@ -1,6 +1,8 @@
 .. :changelog:
 
-Unreleased Changes
+.. Unreleased Changes
+
+3.6.0 (2019-01-30)
 ------------------
 * Refactoring Recreation Model client to use taskgraph and the latest
   pygeoprocessing. Avoided re-computation from taskgraph means that successive 

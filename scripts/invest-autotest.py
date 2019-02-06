@@ -47,7 +47,7 @@ DATASTACKS = {
     'scenic_quality': ['wind_turbines_wcvi.invs.json'],
     'sdr': ['sdr_willamette.invs.json'],
     'seasonal_water_yield': ['swy_willamette.invs.json'],
-    'wind_energy': ['new_england.invs.json'],
+    'wind_energy': ['wind_energy_new_england.invs.json'],
     'wave_energy': [
         'wave_energy_aquabuoy_wcvi.invs.json',
         'wave_energy_owc_wcvi.invs.json',
