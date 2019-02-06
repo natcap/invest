@@ -76,13 +76,9 @@ _MODEL_UIS = {
         gui='habitat_quality.HabitatQuality',
         aliases=('hq',)),
     'habitat_risk_assessment': _UIMETA(
-        pyname='natcap.invest.habitat_risk_assessment.hra',
+        pyname='natcap.invest.hra',
         gui='hra.HabitatRiskAssessment',
         aliases=('hra',)),
-    'habitat_risk_assessment_preprocessor': _UIMETA(
-        pyname='natcap.invest.habitat_risk_assessment.hra_preprocessor',
-        gui='hra.HRAPreprocessor',
-        aliases=('hra_pre',)),
     'hydropower_water_yield': _UIMETA(
         pyname='natcap.invest.hydropower.hydropower_water_yield',
         gui='hydropower.HydropowerWaterYield',
