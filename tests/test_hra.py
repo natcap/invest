@@ -9,7 +9,8 @@ from osgeo import ogr, osr
 import pygeoprocessing.testing
 import pygeoprocessing
 
-TEST_DATA = os.path.join(os.path.dirname(__file__), 'assertion_data')
+TEST_DATA = os.path.join(
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hra')
 
 # Location to start drawing shp and tiff files
 ORIGIN = (1180000.0, 690000.0)
