@@ -12,7 +12,7 @@ class HabitatRiskAssessment(model.InVESTModel):
             validator=hra.validate,
             localdoc=u'../documentation/habitat_risk_assessment.html')
 
-        self.info_csv_path = inputs.Folder(
+        self.info_csv_path = inputs.File(
             args_key=u'info_csv_path',
             helptext=(
                 u"A CSV file that contains the name of the habitat (H) or "
@@ -24,7 +24,7 @@ class HabitatRiskAssessment(model.InVESTModel):
             label=u'Habitat Stressor Information CSV File',
             validator=self.validator)
         self.add_input(self.info_csv_path)
-        self.criteria_csv_path = inputs.Folder(
+        self.criteria_csv_path = inputs.File(
             args_key=u'criteria_csv_path',
             helptext=(
                 u"A CSV file that contains the set of criteria ranking "
@@ -85,7 +85,7 @@ class HabitatRiskAssessment(model.InVESTModel):
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
-            self.results_suffix.args_key: self.results_suffix.value(),
+            self.suffix.args_key: self.suffix.value(),
             self.info_csv_path.args_key: self.info_csv_path.value(),
             self.criteria_csv_path.args_key: self.criteria_csv_path.value(),
             self.resolution.args_key: self.resolution.value(),
