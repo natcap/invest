@@ -38,7 +38,7 @@ setup(
         'natcap.invest.coastal_vulnerability',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
-        'natcap.invest.habitat_risk_assessment',
+        'natcap.invest.hra',
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
