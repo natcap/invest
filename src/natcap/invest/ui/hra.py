@@ -1,6 +1,6 @@
 # coding=UTF-8
 from natcap.invest.ui import model, inputs
-from natcap.invest.hra import hra
+from natcap.invest import hra
 
 
 class HabitatRiskAssessment(model.InVESTModel):
