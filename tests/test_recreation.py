@@ -683,8 +683,6 @@ class RecreationRegressionTests(unittest.TestCase):
             predictor_results = json.load(file)
         # These constants were calculated by hand by Dave.
         numpy.testing.assert_almost_equal(predictor_results['0'], 13.0)
-        # numpy.testing.assert_equal(fid_values['count'][0], 5178)
-        # numpy.testing.assert_equal(fid_values['sum'][0], 67314)
 
     def test_raster_sum_mean_nodata(self):
         """Recreation test sum/mean if raster has no valid pixels.
@@ -914,7 +912,7 @@ class RecreationRegressionTests(unittest.TestCase):
             target_path_list=[response_polygons_lookup_path],
             task_name='prepare response polygons for geoprocessing')
         # build again to test against overwriting output
-        recmodel_client._build_regression_coefficients(
+        recmodel_client._schedule_predictor_data_processing(
             response_vector_path, response_polygons_lookup_path,
             prepare_response_polygons_task, predictor_table_path,
             out_coefficient_vector_path, tmp_working_dir, task_graph)
