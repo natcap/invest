@@ -11,8 +11,8 @@ import pygeoprocessing
 import shapely.wkt
 import taskgraph
 
-import utils
-import validation
+from . import utils
+from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
