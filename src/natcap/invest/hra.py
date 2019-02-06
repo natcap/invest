@@ -136,8 +136,10 @@ def execute(args):
         file_preprocessing_dir, intermediate_dir, file_suffix)
 
     # Append spatially explicit criteria rasters to info_df
+    criteria_csv_dir = os.path.dirname(args['criteria_csv_path'])
     info_df = _append_spatial_raster_row(
-        info_df, recovery_df, overlap_df, file_preprocessing_dir, file_suffix)
+        info_df, recovery_df, overlap_df, criteria_csv_dir,
+        file_preprocessing_dir, file_suffix)
 
     # Get target projection from the AOI vector file
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
@@ -1612,8 +1614,8 @@ def _calc_habitat_recovery(
         _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT)
 
 
-def _append_spatial_raster_row(
-        info_df, recovery_df, overlap_df, output_dir, suffix_end):
+def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
+                               spatial_file_dir, output_dir, suffix_end):
     """Append spatial raster to NAME, PATH, and TYPE column of info_df.
 
     Parameters:
@@ -1625,6 +1627,9 @@ def _append_spatial_raster_row(
 
         overlap_df (dataframe): the multi-index dataframe that has the spatial
             raster information on its `E_SPATIAL` and `C_SPATIAL` columns.
+
+        spatial_file_dir (str): the path to the root directory where the
+            absolute paths of spatial files will be created based on.
 
         output_dir (str): a path to the folder for creating new raster paths at
 
@@ -1650,7 +1655,8 @@ def _append_spatial_raster_row(
 
             # Check if the file on the path is a raster or vector
             info_df['IS_RASTER'] = info_df.apply(
-                lambda row: _label_raster(row['PATH']), axis=1)
+                lambda row: _label_raster(
+                    row['PATH'], spatial_file_dir), axis=1)
             # Generate simplified vector path if the file is a vector
             info_df['SIMPLE_VECTOR_PATH'] = info_df.apply(
                 lambda row: _generate_vector_path(
@@ -1679,20 +1685,32 @@ def _append_spatial_raster_row(
     return info_df
 
 
-def _label_raster(path):
+def _label_raster(path, dir_path):
     """Open a file given the path, and label whether it's a raster.
+
+    If the provided path is a relative path, join it with the dir_path provide.
 
     Parameters:
         path (str): a path to the file to be opened with GDAL.
+
+        dir_path (str): a path to the directory which will be used to create
+            absolute file paths, if the user provides a relative path to the
+            file.
 
     Returns:
         A string of either 'true', 'false', or 'invalid', indicating the
         file path has a raster, vector, or invalid file type.
 
     Raises:
-        ValueError if the file cannot be opened by GDAL.
+        ValueError if the file doesn't exist or can't be opened by GDAL.
 
     """
+    if not os.path.isabs(path):
+        path = os.path.join(dir_path, path)
+
+    if not os.path.exists(path):
+        raise ValueError('The file on %s does not exist.' % path)
+
     raster = gdal.OpenEx(path, gdal.OF_RASTER)
     if raster:
         raster = None
@@ -1807,7 +1825,7 @@ def _label_linear_unit(row):
         return linear_unit
 
 
-def _get_info_dataframe(base_csv_path, file_preprocessing_dir,
+def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
                         intermediate_dir, output_dir, suffix_end):
     """Read CSV file as dataframe and add data info to new columns.
 
@@ -1815,7 +1833,7 @@ def _get_info_dataframe(base_csv_path, file_preprocessing_dir,
     given habitat or stressors to the dataframe.
 
     Parameters:
-        base_csv_path (str): a path to the CSV file that contains the path
+        base_info_csv_path (str): a path to the CSV file that contains the path
             and buffer information.
 
         file_preprocessing_dir (str): a path to the folder where simplified
@@ -1849,7 +1867,7 @@ def _get_info_dataframe(base_csv_path, file_preprocessing_dir,
     required_types = ['habitat', 'stressor']
     required_buffer_type = 'stressor'
 
-    info_df = pandas.read_csv(base_csv_path)
+    info_df = pandas.read_csv(base_info_csv_path)
     info_df.columns = map(str.upper, info_df.columns)
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
@@ -1876,7 +1894,8 @@ def _get_info_dataframe(base_csv_path, file_preprocessing_dir,
 
     # Check if the file on the path is a raster or vector
     info_df['IS_RASTER'] = info_df.apply(
-        lambda row: _label_raster(row['PATH']), axis=1)
+        lambda row: _label_raster(
+            row['PATH'], os.path.dirname(base_info_csv_path)), axis=1)
     # Get raster's linear unit, and raise an exception if projection is missing
     info_df['LINEAR_UNIT'] = info_df.apply(
         lambda row: _label_linear_unit(row), axis=1)
