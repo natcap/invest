@@ -105,7 +105,7 @@ def execute(args):
         intermediate_dir, 'file_preprocessing')
     output_dir = os.path.join(args['workspace_dir'], 'outputs')
     utils.make_directories(
-        [output_dir, intermediate_dir,file_preprocessing_dir])
+        [output_dir, intermediate_dir, file_preprocessing_dir])
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
