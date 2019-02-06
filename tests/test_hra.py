@@ -712,13 +712,13 @@ class HraUnitTests(unittest.TestCase):
 
     def test_label_raster(self):
         """HRA: test exception raised in _label_raster function."""
-        from natcap.invest.hra import _label_raster
+        from hra_model import _label_raster
 
         bad_raster_path = os.path.join(self.workspace_dir, 'bad_raster.tif')
         with self.assertRaises(ValueError) as cm:
-            _label_raster(bad_raster_path)
+            _label_raster(bad_raster_path, self.workspace_dir)
 
-        expected_message = 'is a not a valid GDAL file.'
+        expected_message = 'does not exist.'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
