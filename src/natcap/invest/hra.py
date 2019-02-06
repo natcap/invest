@@ -1653,10 +1653,13 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
             info_df.loc[start_idx, 'PATH'] = raster_path
             info_df.loc[start_idx, 'TYPE'] = _SPATIAL_CRITERIA_TYPE
 
+            # Convert all relative paths to absolute paths
+            info_df['PATH'] = info_df.apply(
+                lambda row: _to_abspath(
+                    row['PATH'], spatial_file_dir), axis=1)
             # Check if the file on the path is a raster or vector
             info_df['IS_RASTER'] = info_df.apply(
-                lambda row: _label_raster(
-                    row['PATH'], spatial_file_dir), axis=1)
+                lambda row: _label_raster(row['PATH']), axis=1)
             # Generate simplified vector path if the file is a vector
             info_df['SIMPLE_VECTOR_PATH'] = info_df.apply(
                 lambda row: _generate_vector_path(
@@ -1685,24 +1688,20 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
     return info_df
 
 
-def _label_raster(path, dir_path):
-    """Open a file given the path, and label whether it's a raster.
-
-    If the provided path is a relative path, join it with the dir_path provide.
+def _to_abspath(path, dir_path):
+    """Return an absolute path within dir_path if the given path is relative.
 
     Parameters:
-        path (str): a path to the file to be opened with GDAL.
+        path (str): a path to the file to be examined.
 
         dir_path (str): a path to the directory which will be used to create
-            absolute file paths, if the user provides a relative path to the
-            file.
+            absolute file paths.
 
     Returns:
-        A string of either 'true', 'false', or 'invalid', indicating the
-        file path has a raster, vector, or invalid file type.
+        path (str): an absolutized version of the path.
 
     Raises:
-        ValueError if the file doesn't exist or can't be opened by GDAL.
+        ValueError if the file doesn't exist.
 
     """
     if not os.path.isabs(path):
@@ -1711,6 +1710,25 @@ def _label_raster(path, dir_path):
     if not os.path.exists(path):
         raise ValueError('The file on %s does not exist.' % path)
 
+    return path
+
+
+def _label_raster(path):
+    """Open a file given the path, and label whether it's a raster.
+
+    If the provided path is a relative path, join it with the dir_path provide.
+
+    Parameters:
+        path (str): a path to the file to be opened with GDAL.
+
+    Returns:
+        A string of either 'true', 'false', or 'invalid', indicating the
+        file path has a raster, vector, or invalid file type.
+
+    Raises:
+        ValueError if the file can't be opened by GDAL.
+
+    """
     raster = gdal.OpenEx(path, gdal.OF_RASTER)
     if raster:
         raster = None
@@ -1892,10 +1910,13 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
             'The %s attribute in Info CSV should be a number for stressors, '
             'and empty for habitats.' % _BUFFER_HEADER)
 
+    # Convert all relative paths to absolute paths
+    info_df['PATH'] = info_df.apply(
+        lambda row: _to_abspath(
+            row['PATH'], os.path.dirname(base_info_csv_path)), axis=1)
     # Check if the file on the path is a raster or vector
     info_df['IS_RASTER'] = info_df.apply(
-        lambda row: _label_raster(
-            row['PATH'], os.path.dirname(base_info_csv_path)), axis=1)
+        lambda row: _label_raster(row['PATH']), axis=1)
     # Get raster's linear unit, and raise an exception if projection is missing
     info_df['LINEAR_UNIT'] = info_df.apply(
         lambda row: _label_linear_unit(row), axis=1)
