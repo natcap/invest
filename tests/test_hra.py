@@ -479,7 +479,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_criteria_header(self):
         """HRA: exception raised when missing criteria from criteria CSV."""
-        from hra_model import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Create a criteria CSV that misses a criteria type
         bad_criteria_csv_path = os.path.join(
@@ -501,7 +501,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_unknown_criteria_from_criteria_csv(self):
         """HRA: exception raised with unknown criteria from criteria CSV."""
-        from hra_model import _get_criteria_dataframe, _get_attributes_from_df
+        from natcap.invest.hra import _get_criteria_dataframe, _get_attributes_from_df
 
         # Create a criteria CSV that has a criteria row that shows up before
         # any stressors
@@ -522,7 +522,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_index_from_criteria_csv(self):
         """HRA: correct error message when missing indexes from criteria CSV."""
-        from hra_model import _get_criteria_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
         bad_criteria_csv_path = os.path.join(
@@ -541,7 +541,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_criteria_header_from_criteria_csv(self):
         """HRA: correct error message when missing indexes from criteria CSV."""
-        from hra_model import _get_criteria_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
         bad_criteria_csv_path = os.path.join(
@@ -560,7 +560,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_missing_columns_from_info_csv(self):
         """HRA: exception raised when columns are missing from info CSV."""
-        from hra_model import _get_info_dataframe
+        from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
         bad_info_csv_path = os.path.join(
@@ -581,7 +581,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_layer_type_in_info_csv(self):
         """HRA: exception raised when columns are missing from info CSV."""
-        from hra_model import _get_info_dataframe
+        from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
         bad_info_csv_path = os.path.join(
@@ -602,7 +602,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_buffer_in_info_csv(self):
         """HRA: exception raised when buffers are not number in info CSV."""
-        from hra_model import _get_info_dataframe
+        from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
         bad_info_csv_path = os.path.join(
@@ -623,7 +623,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_criteria_type_type(self):
         """HRA: exception raised when type is not C or E from criteria CSV."""
-        from hra_model import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_csv_path = os.path.join(
@@ -646,7 +646,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_wrong_weight_from_criteria_csv(self):
         """HRA: exception raised when weight is not a number from CSV."""
-        from hra_model import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_csv_path = os.path.join(
@@ -669,7 +669,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_large_rating_from_criteria_csv(self):
         """HRA: exception raised when rating is larger than maximum rating."""
-        from hra_model import _get_criteria_dataframe, _get_overlap_dataframe
+        from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
         bad_criteria_csv_path = os.path.join(
@@ -697,7 +697,7 @@ class HraUnitTests(unittest.TestCase):
         merges the AOI vector correctly.
 
         """
-        from hra_model import _merge_geometry
+        from natcap.invest.hra import _merge_geometry
 
         aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
@@ -712,7 +712,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_label_raster(self):
         """HRA: test exception raised in _label_raster function."""
-        from hra_model import _label_raster
+        from natcap.invest.hra import _label_raster
 
         bad_raster_path = os.path.join(self.workspace_dir, 'bad_raster.tif')
         with self.assertRaises(ValueError) as cm:
@@ -724,7 +724,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_simplify_geometry(self):
         """HRA: test _simplify_geometry function."""
-        from hra_model import _simplify_geometry
+        from natcap.invest.hra import _simplify_geometry
 
         complicated_vector_path = os.path.join(
             TEST_DATA, 'complicated_vector.gpkg')
@@ -745,7 +745,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_merge_multipolygon_geometry(self):
         """HRA: test _merge_geometry correctly merges a multipolygon vector."""
-        from hra_model import _merge_geometry
+        from natcap.invest.hra import _merge_geometry
 
         multipolygon_aoi_vector_path = os.path.join(
             self.workspace_dir, 'multipolygon_aoi.geojson')
@@ -795,14 +795,14 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_hra_regression_euclidean_linear(self):
         """HRA: regression testing synthetic data with linear, euclidean eqn."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
         _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
-        hra_model.execute(args)
+        natcap.invest.hra.execute(args)
 
         output_layer_names = [
             'risk_habitat_0', 'risk_habitat_1', 'recovery_habitat_0',
@@ -851,7 +851,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_hra_no_subregion_multiplicative_exponential(self):
         """HRA: regression testing with exponential, multiplicative eqn."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
@@ -865,7 +865,7 @@ class HraRegressionTests(unittest.TestCase):
             self.workspace_dir, 'no_subregion_aoi.shp')
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
         args['aoi_vector_path'] = aoi_vector_path
-        hra_model.execute(args)
+        natcap.invest.hra.execute(args)
 
         output_layer_names = [
             'risk_habitat_0', 'risk_habitat_1', 'recovery_habitat_0',
@@ -914,7 +914,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
@@ -927,7 +927,7 @@ class HraRegressionTests(unittest.TestCase):
         args['aoi_vector_path'] = bad_aoi_vector_path
 
         with self.assertRaises(ValueError) as cm:
-            hra_model.execute(args)
+            natcap.invest.hra.execute(args)
 
         expected_message = 'not projected'
         actual_message = str(cm.exception)
@@ -935,7 +935,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_layer_no_projection(self):
         """HRA: testing habitats and stressors without projection."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
@@ -947,7 +947,7 @@ class HraRegressionTests(unittest.TestCase):
         args['info_csv_path'] = bad_info_csv_path
 
         with self.assertRaises(ValueError) as cm:
-            hra_model.execute(args)
+            natcap.invest.hra.execute(args)
 
         expected_message = 'The following layer does not have a projection'
         actual_message = str(cm.exception)
@@ -955,7 +955,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_unmatched_layer_names(self):
         """HRA: testing unmatched layer names between info and criteria CSV."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
@@ -970,7 +970,7 @@ class HraRegressionTests(unittest.TestCase):
         args['criteria_csv_path'] = bad_criteria_csv_path
 
         with self.assertRaises(ValueError) as cm:
-            hra_model.execute(args)
+            natcap.invest.hra.execute(args)
 
         # Two layers that are expected to be missing from criteria CSV
         for missing_layer in ['habitat_0', 'stressor_1']:
@@ -981,7 +981,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_invalid_args(self):
         """HRA: testing invalid arguments."""
-        import hra_model
+        import natcap.invest.hra
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -1000,7 +1000,7 @@ class HraRegressionTests(unittest.TestCase):
         }
 
         with self.assertRaises(ValueError) as cm:
-            hra_model.execute(args)
+            natcap.invest.hra.execute(args)
 
         expected_invalid_parameters = [
             'info_csv_path', 'risk_eq', 'max_rating', 'aoi_vector_path']
@@ -1012,7 +1012,7 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_missing_args(self):
         """HRA: testing invalid arguments."""
-        import hra_model
+        import natcap.invest.hra
 
         args = {
             # missing workspace_dir
@@ -1031,7 +1031,7 @@ class HraRegressionTests(unittest.TestCase):
         }
 
         with self.assertRaises(KeyError) as cm:
-            hra_model.execute(args)
+            natcap.invest.hra.execute(args)
 
         expected_message = 'missing: workspace_dir'
         actual_message = str(cm.exception)
@@ -1039,33 +1039,33 @@ class HraRegressionTests(unittest.TestCase):
 
     def test_validate(self):
         """HRA: testing validation."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
         _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
-        hra_model.validate(args)
+        natcap.invest.hra.validate(args)
 
     def test_validate_max_rating_value(self):
         """HRA: testing validation with max_rating less than 1."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         args['max_rating'] = '-1'
 
-        validation_error_list = hra_model.validate(args)
+        validation_error_list = natcap.invest.hra.validate(args)
         expected_error = (['max_rating'], 'should be larger than 1')
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_no_value(self):
         """HRA: testing validation with no value in resolution."""
-        import hra_model
+        import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
         args['resolution'] = ''
 
-        validation_error_list = hra_model.validate(args)
+        validation_error_list = natcap.invest.hra.validate(args)
         expected_error = (['resolution'], 'parameter has no value')
         self.assertTrue(expected_error in validation_error_list)
