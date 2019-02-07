@@ -288,7 +288,3 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             if result_vector:
                 gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
-
-
-if __name__ == '__main__':
-    unittest.main()
