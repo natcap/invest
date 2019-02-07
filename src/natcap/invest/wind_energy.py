@@ -30,6 +30,7 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
+logging.getLogger('taskgraph').setLevel(logging.ERROR)
 
 speedups.enable()
 
@@ -189,9 +190,15 @@ def execute(args):
         bathymetry_path = os.path.join(inter_dir, 'bathymetry_resampled.tif')
         # Get the minimum absolute value from the bathymetry pixel size tuple
         mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
-        pygeoprocessing.warp_raster(
-            args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
-            bathymetry_path, 'near')
+        graph.add_task(
+            pygeoprocessing.warp_raster,
+            args=(args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
+                  bathymetry_path, 'near'),
+            target_path_list=[bathymetry_path],
+            task_name='resample_bathymetry')
+        # pygeoprocessing.warp_raster(
+        #     args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
+        #     bathymetry_path, 'near')
 
     number_of_turbines = int(args['number_of_turbines'])
 
@@ -351,8 +358,18 @@ def execute(args):
         LOGGER.info('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
-        _clip_to_projection_with_square_pixels(bathymetry_path, aoi_vector_path,
-                                               bathymetry_proj_raster_path)
+
+        # Join the graph first, since this task could be dependent on the
+        # `resample_bathymetry` task, if the task is created
+        graph.join()
+        clip_to_projection_task = graph.add_task(
+            _clip_to_projection_with_square_pixels,
+            args=(bathymetry_path, aoi_vector_path,
+                  bathymetry_proj_raster_path),
+            target_path_list=[bathymetry_proj_raster_path],
+            task_name='clip_to_projection_with_square_pixels')
+        # _clip_to_projection_with_square_pixels(bathymetry_path, aoi_vector_path,
+        #                                        bathymetry_proj_raster_path)
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -363,24 +380,38 @@ def execute(args):
 
         # Create point shapefile from wind data
         LOGGER.info('Create point shapefile from wind data')
-        # Use the projection from the projected bathymetry as reference
-        bathy_projection_wkt = pygeoprocessing.get_raster_info(
-            bathymetry_proj_raster_path)['projection']
-        _wind_data_to_point_vector(wind_data, 'wind_data',
-                                   wind_point_vector_path, bathy_projection_wkt)
+        # Use the projection from the projected bathymetry as reference to
+        # create wind point vector from wind data dictionary
+        wind_data_to_vector_task = graph.add_task(
+            _wind_data_to_point_vector,
+            args=(wind_data, 'wind_data', wind_point_vector_path,
+                  pygeoprocessing.get_raster_info(bathymetry_proj_raster_path)[
+                    'projection']),
+            target_path_list=[wind_point_vector_path],
+            task_name='wind_data_to_vector',
+            dependent_task_list=[clip_to_projection_task])
+        # _wind_data_to_point_vector(wind_data, 'wind_data',
+        #                            wind_point_vector_path, bathy_projection_wkt)
 
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
-        wind_point_proj_vector_path = os.path.join(
+        clipped_wind_point_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
-        _clip_vector_by_vector(wind_point_vector_path, aoi_vector_path,
-                               wind_point_proj_vector_path)
+        graph.add_task(
+            _clip_vector_by_vector,
+            args=(wind_point_vector_path, aoi_vector_path,
+                  clipped_wind_point_vector_path),
+            target_path_list=[clipped_wind_point_vector_path],
+            task_name='clip_wind_point_by_aoi',
+            dependent_task_list=[wind_data_to_vector_task])
+        # _clip_vector_by_vector(wind_point_vector_path, aoi_vector_path,
+        #                        clipped_wind_point_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
         # be the case if an AOI is not provided
         final_bathy_raster_path = bathymetry_proj_raster_path
-        final_wind_point_vector_path = wind_point_proj_vector_path
+        final_wind_point_vector_path = clipped_wind_point_vector_path
 
         # Try to handle the distance inputs and land datasource if they
         # are present
@@ -397,9 +428,15 @@ def execute(args):
                 inter_dir,
                 os.path.basename(land_polygon_vector_path).replace(
                     '.shp', '_projected_clipped%s.shp' % suffix))
-            _clip_and_reproject_vector(land_polygon_vector_path,
-                                       aoi_vector_path,
-                                       land_poly_proj_vector_path, inter_dir)
+            graph.add_task(
+                _clip_and_reproject_vector,
+                args=(land_polygon_vector_path, aoi_vector_path,
+                      land_poly_proj_vector_path, inter_dir),
+                target_path_list=[land_poly_proj_vector_path],
+                task_name='clip_and_reproject_land_poly_to_aoi')
+            # _clip_and_reproject_vector(land_polygon_vector_path,
+            #                            aoi_vector_path,
+            #                            land_poly_proj_vector_path, inter_dir)
 
             # Get the cell size to use in new raster outputs from the DEM
             pixel_size = pygeoprocessing.get_raster_info(
