@@ -710,13 +710,12 @@ class HraUnitTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             target_merged_path, expected_merge_vector_path, 1E-6)
 
-    def test_label_raster(self):
-        """HRA: test exception raised in _label_raster function."""
-        from natcap.invest.hra import _label_raster
+    def test_to_abspath(self):
+        """HRA: test exception raised in _to_abspath function."""
+        from natcap.invest.hra import _to_abspath
 
-        bad_raster_path = os.path.join(self.workspace_dir, 'bad_raster.tif')
         with self.assertRaises(ValueError) as cm:
-            _label_raster(bad_raster_path)
+            _to_abspath('bad_raster.tif', self.workspace_dir)
 
         expected_message = 'does not exist.'
         actual_message = str(cm.exception)
