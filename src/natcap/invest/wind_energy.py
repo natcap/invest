@@ -179,8 +179,7 @@ def execute(args):
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
-        bathy_pixel_size = pygeoprocessing.get_raster_info(
-            args['bathymetry_path'])['pixel_size']
+        bathy_pixel_size = _get_pixel_size(args['bathymetry_path'])
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         bathymetry_path = args['bathymetry_path']
     except ValueError:
@@ -439,8 +438,7 @@ def execute(args):
             #                            land_poly_proj_vector_path, inter_dir)
 
             # Get the cell size to use in new raster outputs from the DEM
-            pixel_size = pygeoprocessing.get_raster_info(
-                final_bathy_raster_path)['pixel_size']
+            pixel_size = _get_pixel_size(final_bathy_raster_path)
 
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
@@ -450,9 +448,17 @@ def execute(args):
 
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
-            pygeoprocessing.create_raster_from_vector_extents(
-                aoi_vector_path, aoi_raster_path, pixel_size,
-                gdal.GDT_Byte, _TARGET_NODATA)
+            graph.add_task(
+                pygeoprocessing.create_raster_from_vector_extents,
+                args=(aoi_vector_path, aoi_raster_path,
+                      _get_pixel_size(final_bathy_raster_path),
+                      gdal.GDT_Byte, _TARGET_NODATA),
+                target_path_list=[aoi_raster_path],
+                task_name='create_aoi_raster_from_vector',
+                dependent_task_list=[clip_to_projection_task])
+            # pygeoprocessing.create_raster_from_vector_extents(
+            #     aoi_vector_path, aoi_raster_path, pixel_size,
+            #     gdal.GDT_Byte, _TARGET_NODATA)
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
@@ -520,8 +526,7 @@ def execute(args):
 
     # Get the cell size here to use from the DEM. The cell size could either
     # come in a project unprojected format
-    pixel_size = pygeoprocessing.get_raster_info(final_bathy_raster_path)[
-        'pixel_size']
+    pixel_size = _get_pixel_size(final_bathy_raster_path)
 
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
@@ -1201,6 +1206,21 @@ def execute(args):
     LOGGER.info('Wind Energy Valuation Model Completed')
 
 
+def _get_pixel_size(base_raster_path):
+    """Get the pixel size tuple from the base raster.
+
+    Parameters:
+        base_raster_path (str): a path to the raster to get the pixel size from.
+
+    Returns:
+        pixel_size (tuple): a tuple of x-size, y-size from the raster.
+
+    """
+    pixel_size = pygeoprocessing.get_raster_info(
+        base_raster_path)['pixel_size']
+    return pixel_size
+
+
 def _point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
                                dist_field_name):
     """Calculate the distances from points to the nearest polygon.
@@ -1316,7 +1336,7 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
 
     """
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
+        _get_pixel_size(base_raster_path))
     raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
         'nodata'][0]
 
@@ -1838,7 +1858,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
     # Get the mean pixel size to calculate minimum distance from land to grid
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        pygeoprocessing.get_raster_info(base_raster_path)['pixel_size'])
+        _get_pixel_size(base_raster_path))
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
@@ -1955,7 +1975,7 @@ def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
         'nodata'][0]
     # Get pixel size from biophysical output
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        pygeoprocessing.get_raster_info(harvested_masked_path)['pixel_size'])
+        _get_pixel_size(harvested_masked_path))
 
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
 
