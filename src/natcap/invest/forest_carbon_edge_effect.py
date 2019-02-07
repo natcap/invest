@@ -9,6 +9,7 @@ import logging
 import time
 import uuid
 
+import pickle
 import numpy
 from osgeo import gdal
 from osgeo import ogr
@@ -18,6 +19,8 @@ import taskgraph
 
 from . import utils
 from . import validation
+
+import pdb
 
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
@@ -172,6 +175,8 @@ def execute(args):
             intermediate_dir, 'c_dead_carbon_stocks%s.tif' % file_suffix)
 
     if args['compute_forest_edge_effects']:
+        output_file_registry['spatial_index_pickle'] = os.path.join(
+            intermediate_dir, 'spatial_index%s.pickle' % file_suffix)
         output_file_registry['edge_distance'] = os.path.join(
             intermediate_dir, 'edge_distance%s.tif' % file_suffix)
         output_file_registry['tropical_forest_edge_carbon_map'] = os.path.join(
@@ -195,34 +200,52 @@ def execute(args):
         if carbon_pool_type in biophysical_keys:
             carbon_maps.append(
                 output_file_registry[carbon_pool_type+'_map'])
-            _calculate_lulc_carbon_map(
-                args['lulc_raster_path'], args['biophysical_table_path'],
-                carbon_pool_type, ignore_tropical_type,
-                args['compute_forest_edge_effects'], carbon_maps[-1])
+            graph.add_task(
+                _calculate_lulc_carbon_map,
+                args=(args['lulc_raster_path'], args['biophysical_table_path'],
+                      carbon_pool_type, ignore_tropical_type,
+                      args['compute_forest_edge_effects'], carbon_maps[-1]),
+                target_path_list=[carbon_maps[-1]],
+                task_name='calculate_lulc_%s_map' % carbon_pool_type)
 
     if args['compute_forest_edge_effects']:
         # generate a map of pixel distance to forest edge from the landcover map
         LOGGER.info('Calculating distance from forest edge')
-        _map_distance_from_tropical_forest_edge(
-            args['lulc_raster_path'], args['biophysical_table_path'],
-            output_file_registry['edge_distance'],
-            output_file_registry['non_forest_mask'])
+        map_distance_task = graph.add_task(
+            _map_distance_from_tropical_forest_edge,
+            args=(args['lulc_raster_path'], args['biophysical_table_path'],
+                  output_file_registry['edge_distance'],
+                  output_file_registry['non_forest_mask']),
+            target_path_list=[output_file_registry['edge_distance'],
+                              output_file_registry['non_forest_mask']],
+            task_name='map_distance_from_forest_edge')
 
         # Build spatial index for gridded global model for closest 3 points
         LOGGER.info('Building spatial index for forest edge models.')
-        kd_tree, theta_model_parameters, method_model_parameter = (
-            _build_spatial_index(
-                args['lulc_raster_path'], intermediate_dir,
-                args['tropical_forest_edge_carbon_model_vector_path']))
+        build_spatial_index_task = graph.add_task(
+            _build_spatial_index,
+            args=(args['lulc_raster_path'], intermediate_dir,
+                  args['tropical_forest_edge_carbon_model_vector_path'],
+                  output_file_registry['spatial_index_pickle']),
+            target_path_list=[output_file_registry['spatial_index_pickle']],
+            task_name='build_spatial_index')
+
+        kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
+            open(output_file_registry['spatial_index_pickle'], 'rb'))
 
         # calculate the carbon edge effect on forests
         LOGGER.info('Calculating forest edge carbon')
-        _calculate_tropical_forest_edge_carbon_map(
-            output_file_registry['edge_distance'], kd_tree,
-            theta_model_parameters, method_model_parameter,
-            int(args['n_nearest_model_points']),
-            float(args['biomass_to_carbon_conversion_factor']),
-            output_file_registry['tropical_forest_edge_carbon_map'])
+        graph.add_task(
+            _calculate_tropical_forest_edge_carbon_map,
+            args=(output_file_registry['edge_distance'], kd_tree,
+                  theta_model_parameters, method_model_parameter,
+                  int(args['n_nearest_model_points']),
+                  float(args['biomass_to_carbon_conversion_factor']),
+                  output_file_registry['tropical_forest_edge_carbon_map']),
+            target_path_list=[
+                output_file_registry['tropical_forest_edge_carbon_map']],
+            task_name='calculate_forest_edge_carbon_map',
+            dependent_task_list=[map_distance_task, build_spatial_index_task])
 
         # This is also a carbon stock
         carbon_maps.append(
@@ -246,17 +269,32 @@ def execute(args):
 
     carbon_maps_band_list = [(path, 1) for path in carbon_maps]
 
-    pygeoprocessing.raster_calculator(
-        carbon_maps_band_list, combine_carbon_maps,
-        output_file_registry['carbon_map'], gdal.GDT_Float32, CARBON_MAP_NODATA
-        )
+    # Join here since the raster calculation depends on the target datasets
+    # from all the tasks above
+    graph.join()
+
+    combine_carbon_maps_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        args=(carbon_maps_band_list, combine_carbon_maps,
+              output_file_registry['carbon_map'], gdal.GDT_Float32,
+              CARBON_MAP_NODATA),
+        target_path_list=[output_file_registry['carbon_map']],
+        task_name='combine_carbon_maps')
 
     # generate report (optional) by aoi if they exist
     if 'aoi_vector_path' in args and args['aoi_vector_path'] != '':
         LOGGER.info('aggregating carbon map by aoi')
-        _aggregate_carbon_map(
-            args['aoi_vector_path'], output_file_registry['carbon_map'],
-            output_file_registry['aggregated_result_vector'])
+        graph.add_task(
+            _aggregate_carbon_map,
+            args=(args['aoi_vector_path'], output_file_registry['carbon_map'],
+                  output_file_registry['aggregated_result_vector']),
+            target_path_list=[output_file_registry['aggregated_result_vector']],
+            task_name='combine_carbon_maps',
+            dependent_task_list=[combine_carbon_maps_task])
+
+    # close taskgraph
+    graph.join()
+    graph.close()
 
 
 def _aggregate_carbon_map(
@@ -455,7 +493,8 @@ def _map_distance_from_tropical_forest_edge(
 
 def _build_spatial_index(
         base_raster_path, local_model_dir,
-        tropical_forest_edge_carbon_model_vector_path):
+        tropical_forest_edge_carbon_model_vector_path,
+        target_pickle_path):
     """Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
@@ -470,13 +509,14 @@ def _build_spatial_index(
             OGR shapefile that has the parameters for the global carbon edge
             model. Each georeferenced feature should have fields 'theta1',
             'theta2', 'theta3', and 'method'
+        target_pickle_path (string): path to the pickle file to store a tuple
+            of: scipy.spatial.cKDTree (georeferenced locally projected model
+                    points)
+                theta_model_parameters (parallel Nx3 array of theta parameters)
+                method_model_parameter (parallel N array of model numbers (1..3))
 
     Returns:
-        a tuple of:
-            scipy.spatial.cKDTree (georeferenced locally projected model
-                points),
-            theta_model_parameters (parallel Nx3 array of theta parameters),
-            method_model_parameter (parallel N array of model numbers (1..3))
+        None
     """
 
     # Reproject the global model into local coordinate system
@@ -515,7 +555,11 @@ def _build_spatial_index(
     LOGGER.info('Building kd_tree')
     kd_tree = scipy.spatial.cKDTree(kd_points)
     LOGGER.info('Done building kd_tree with %d points', len(kd_points))
-    return kd_tree, theta_model_parameters, method_model_parameter
+
+    with open(target_pickle_path, 'wb') as picklefile:
+        picklefile.write(
+            pickle.dumps(
+                (kd_tree, theta_model_parameters, method_model_parameter)))
 
 
 def _calculate_tropical_forest_edge_carbon_map(
