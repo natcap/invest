@@ -24,6 +24,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
+import taskgraph
 import pygeoprocessing
 from . import validation
 from . import utils
@@ -163,6 +164,17 @@ def execute(args):
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
     utils.make_directories([inter_dir, out_dir])
+
+    # Initialize a TaskGraph
+    work_token_dir = os.path.join(inter_dir, '_tmp_work_tokens')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
