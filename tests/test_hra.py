@@ -716,7 +716,7 @@ class HraUnitTests(unittest.TestCase):
 
         bad_raster_path = os.path.join(self.workspace_dir, 'bad_raster.tif')
         with self.assertRaises(ValueError) as cm:
-            _label_raster(bad_raster_path, self.workspace_dir)
+            _label_raster(bad_raster_path)
 
         expected_message = 'does not exist.'
         actual_message = str(cm.exception)
