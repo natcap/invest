@@ -20,8 +20,6 @@ import taskgraph
 from . import utils
 from . import validation
 
-import pdb
-
 LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
 
 # grid cells are 100km. Becky says 500km is a good upper bound to search
