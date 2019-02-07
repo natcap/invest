@@ -228,15 +228,12 @@ def execute(args):
             target_path_list=[output_file_registry['spatial_index_pickle']],
             task_name='build_spatial_index')
 
-        kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
-            open(output_file_registry['spatial_index_pickle'], 'rb'))
-
         # calculate the carbon edge effect on forests
         LOGGER.info('Calculating forest edge carbon')
         graph.add_task(
             _calculate_tropical_forest_edge_carbon_map,
-            args=(output_file_registry['edge_distance'], kd_tree,
-                  theta_model_parameters, method_model_parameter,
+            args=(output_file_registry['edge_distance'],
+                  output_file_registry['spatial_index_pickle'],
                   int(args['n_nearest_model_points']),
                   float(args['biomass_to_carbon_conversion_factor']),
                   output_file_registry['tropical_forest_edge_carbon_map']),
@@ -492,7 +489,7 @@ def _map_distance_from_tropical_forest_edge(
 def _build_spatial_index(
         base_raster_path, local_model_dir,
         tropical_forest_edge_carbon_model_vector_path,
-        target_pickle_path):
+        target_spatial_index_pickle_path):
     """Build a kd-tree index of the locally projected globally georeferenced
     carbon edge model parameters.
 
@@ -507,8 +504,9 @@ def _build_spatial_index(
             OGR shapefile that has the parameters for the global carbon edge
             model. Each georeferenced feature should have fields 'theta1',
             'theta2', 'theta3', and 'method'
-        target_pickle_path (string): path to the pickle file to store a tuple
-            of: scipy.spatial.cKDTree (georeferenced locally projected model
+        spatial_index_pickle_path (string): path to the pickle file to store a
+            tuple of:
+                scipy.spatial.cKDTree (georeferenced locally projected model
                     points)
                 theta_model_parameters (parallel Nx3 array of theta parameters)
                 method_model_parameter (parallel N array of model numbers (1..3))
@@ -554,15 +552,14 @@ def _build_spatial_index(
     kd_tree = scipy.spatial.cKDTree(kd_points)
     LOGGER.info('Done building kd_tree with %d points', len(kd_points))
 
-    with open(target_pickle_path, 'wb') as picklefile:
+    with open(target_spatial_index_pickle_path, 'wb') as picklefile:
         picklefile.write(
             pickle.dumps(
                 (kd_tree, theta_model_parameters, method_model_parameter)))
 
 
 def _calculate_tropical_forest_edge_carbon_map(
-        edge_distance_path, kd_tree, theta_model_parameters,
-        method_model_parameter, n_nearest_model_points,
+        edge_distance_path, spatial_index_pickle_path, n_nearest_model_points,
         biomass_to_carbon_conversion_factor,
         tropical_forest_edge_carbon_map_path):
     """Calculates the carbon on the forest pixels accounting for their global
@@ -571,14 +568,17 @@ def _calculate_tropical_forest_edge_carbon_map(
     Parameters:
         edge_distance_path (string): path to the a raster where each pixel
             contains the pixel distance to forest edge.
-        kd_tree (scipy.spatial.cKDTree): a kd-tree that has indexed the valid
-            model parameter points for fast nearest neighbor calculations.
-        theta_model_parameters (numpy.array Nx3): parallel array of model
-            theta parameters consistent with the order in which points were
-            inserted into 'kd_tree'
-        method_model_parameter (numpy.array N): parallel array of method
-            numbers (1..3) consistent with the order in which points were
-            inserted into 'kd_tree'.
+        spatial_index_pickle_path (string): path to the pickle file that
+            contains a tuple of:
+                kd_tree (scipy.spatial.cKDTree): a kd-tree that has indexed the
+                    valid model parameter points for fast nearest neighbor
+                    calculations.
+                theta_model_parameters (numpy.array Nx3): parallel array of
+                    model theta parameters consistent with the order in which
+                    points were inserted into 'kd_tree'
+                method_model_parameter (numpy.array N): parallel array of
+                    method numbers (1..3) consistent with the order in which
+                    points were inserted into 'kd_tree'.
         n_nearest_model_points (int): number of nearest model points to search
             for.
         biomass_to_carbon_conversion_factor (float): number by which to
@@ -589,6 +589,10 @@ def _calculate_tropical_forest_edge_carbon_map(
 
     Returns:
         None"""
+
+    # load spatial indeces from pickle file
+    kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
+        open(spatial_index_pickle_path, 'rb'))
 
     # create output raster and open band for writing
     # fill nodata, in case we skip entire memory blocks that are non-forest
