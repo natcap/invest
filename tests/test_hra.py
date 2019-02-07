@@ -712,7 +712,7 @@ class HraUnitTests(unittest.TestCase):
 
     def test_label_raster(self):
         """HRA: test exception raised in _label_raster function."""
-        from hra_model import _label_raster
+        from natcap.invest.hra import _label_raster
 
         bad_raster_path = os.path.join(self.workspace_dir, 'bad_raster.tif')
         with self.assertRaises(ValueError) as cm:
