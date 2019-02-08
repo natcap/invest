@@ -383,9 +383,9 @@ def execute(args):
         # create wind point vector from wind data dictionary
         wind_data_to_vector_task = graph.add_task(
             _wind_data_to_point_vector,
-            args=(wind_data, 'wind_data', wind_point_vector_path,
-                  pygeoprocessing.get_raster_info(bathymetry_proj_raster_path)[
-                    'projection']),
+            args=(wind_data, 'wind_data', wind_point_vector_path),
+            kwargs={'ref_projection_wkt': pygeoprocessing.get_raster_info(
+                        bathymetry_proj_raster_path)['projection']},
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector',
             dependent_task_list=[clip_to_projection_task])
@@ -427,7 +427,7 @@ def execute(args):
                 inter_dir,
                 os.path.basename(land_polygon_vector_path).replace(
                     '.shp', '_projected_clipped%s.shp' % suffix))
-            graph.add_task(
+            clip_reproject_land_poly_task = graph.add_task(
                 _clip_and_reproject_vector,
                 args=(land_polygon_vector_path, aoi_vector_path,
                       land_poly_proj_vector_path, inter_dir),
@@ -437,9 +437,6 @@ def execute(args):
             #                            aoi_vector_path,
             #                            land_poly_proj_vector_path, inter_dir)
 
-            # Get the cell size to use in new raster outputs from the DEM
-            pixel_size = _get_pixel_size(final_bathy_raster_path)
-
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
             # on distance
@@ -448,11 +445,11 @@ def execute(args):
 
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
-            graph.add_task(
+            create_aoi_raster_task = graph.add_task(
                 pygeoprocessing.create_raster_from_vector_extents,
                 args=(aoi_vector_path, aoi_raster_path,
-                      _get_pixel_size(final_bathy_raster_path),
-                      gdal.GDT_Byte, _TARGET_NODATA),
+                      _get_pixel_size(final_bathy_raster_path), gdal.GDT_Byte,
+                      _TARGET_NODATA),
                 target_path_list=[aoi_raster_path],
                 task_name='create_aoi_raster_from_vector',
                 dependent_task_list=[clip_to_projection_task])
@@ -462,13 +459,29 @@ def execute(args):
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
-            _create_distance_raster(aoi_raster_path, land_poly_proj_vector_path,
-                                    dist_trans_path, inter_dir)
+            create_distance_raster_task = graph.add_task(
+                _create_distance_raster,
+                args=(aoi_raster_path, land_poly_proj_vector_path,
+                      dist_trans_path, inter_dir),
+                target_path_list=[dist_trans_path],
+                task_name='create_distance_raster',
+                dependent_task_list=[
+                    create_aoi_raster_task, clip_reproject_land_poly_task])
+            # _create_distance_raster(aoi_raster_path, land_poly_proj_vector_path,
+            #                         dist_trans_path, inter_dir)
 
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
-            _mask_by_distance(dist_trans_path, min_distance, max_distance,
-                              _TARGET_NODATA, dist_mask_path)
+
+            graph.add_task(
+                _mask_by_distance,
+                args=(dist_trans_path, min_distance, max_distance,
+                      _TARGET_NODATA, dist_mask_path),
+                target_path_list=[dist_mask_path],
+                task_name='mask_raster_by_distance',
+                dependent_task_list=[create_distance_raster_task])
+            # _mask_by_distance(dist_trans_path, min_distance, max_distance,
+            #                   _TARGET_NODATA, dist_mask_path)
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -481,14 +494,23 @@ def execute(args):
 
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
-        _wind_data_to_point_vector(wind_data, 'wind_data',
-                                   wind_point_vector_path)
+        graph.add_task(
+            _wind_data_to_point_vector,
+            args=(wind_data, 'wind_data', wind_point_vector_path),
+            target_path_list=[wind_point_vector_path],
+            task_name='wind_data_to_vector_without_aoi')
+        # _wind_data_to_point_vector(wind_data, 'wind_data',
+        #                            wind_point_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the unprojected files. This may not
         # be the case if an AOI is provided
         final_wind_point_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
+
+    # Get the cell size for output rasters from the bathymetry DEM. The cell
+    # size could be in a project or unprojected format
+    target_pixel_size = _get_pixel_size(final_bathy_raster_path)
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
@@ -524,15 +546,23 @@ def execute(args):
 
     depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
-    # Get the cell size here to use from the DEM. The cell size could either
-    # come in a project unprojected format
-    pixel_size = _get_pixel_size(final_bathy_raster_path)
-
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-    pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], _depth_op,
-                                      depth_mask_path, _TARGET_DATA_TYPE,
-                                      _TARGET_NODATA)
+
+    # Join the graph first, since the final bathymetry raster could be created
+    # by different possible tasks.
+    graph.join()
+
+    graph.add_task(
+        pygeoprocessing.raster_calculator,
+        args=([(final_bathy_raster_path, 1)], _depth_op, depth_mask_path,
+              _TARGET_DATA_TYPE, _TARGET_NODATA),
+        target_path_list=[depth_mask_path],
+        task_name='mask_depth_on_bathymetry')
+
+    # pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], _depth_op,
+    #                                   depth_mask_path, _TARGET_DATA_TYPE,
+    #                                   _TARGET_NODATA)
 
     # Weibull probability function to integrate over
     def _calc_weibull_probability(v_speed, k_shape, l_scale):
@@ -717,12 +747,12 @@ def execute(args):
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
     pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_density_raster_path, pixel_size,
+        final_wind_point_vector_path, temp_density_raster_path, target_pixel_size,
         _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_harvested_raster_path, pixel_size,
+        final_wind_point_vector_path, temp_harvested_raster_path, target_pixel_size,
         _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     # Interpolate points onto raster for density values and harvested values:
@@ -804,7 +834,7 @@ def execute(args):
     # Align and resize rasters in the density and harvest lists
     pygeoprocessing.align_and_resize_raster_stack(
         merged_mask_list, merged_aligned_mask_list,
-        ['near'] * len(merged_mask_list), pixel_size, 'intersection')
+        ['near'] * len(merged_mask_list), target_pixel_size, 'intersection')
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
