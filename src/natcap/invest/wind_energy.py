@@ -56,6 +56,11 @@ _ALPHA = 0.11
 # Field name to be added to the land point shapefile
 _LAND_TO_GRID_FIELD = 'L2G'
 
+# The field names for the two output fields, Harvested Wind Energy and Wind
+# Density, to be added to the point shapefile
+DENSITY_FIELD_NAME = 'Dens_W/m2'
+HARVESTED_FIELD_NAME = 'Harv_MWhr'
+
 
 def execute(args):
     """Wind Energy.
@@ -332,6 +337,11 @@ def execute(args):
     LOGGER.info('Reading in Wind Data into a dictionary')
     wind_data = _read_csv_wind_data(args['wind_data_path'], hub_height)
 
+    # Compute Wind Density and Harvested Wind Energy, adding the values to the
+    # points to the dictionary
+    wind_data = _compute_density_harvested_fields(
+        wind_data, bio_parameters_dict, number_of_turbines)
+
     if 'grid_points_path' in args:
         if 'aoi_vector_path' not in args:
             raise ValueError(
@@ -539,60 +549,6 @@ def execute(args):
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry')
 
-    # pygeoprocessing.raster_calculator([(final_bathy_raster_path, 1)], _depth_op,
-    #                                   depth_mask_path, _TARGET_DATA_TYPE,
-    #                                   _TARGET_NODATA)
-
-    # Weibull probability function to integrate over
-    def _calc_weibull_probability(v_speed, k_shape, l_scale):
-        """Calculate the Weibull probability function of variable v_speed.
-
-        Parameters:
-            v_speed (int or float): a number representing wind speed
-            k_shape (float): the shape parameter
-            l_scale (float): the scale parameter of the distribution
-
-        Returns:
-            a float
-
-        """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**
-                (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
-
-    # Density wind energy function to integrate over
-    def _calc_density_wind_energy(v_speed, k_shape, l_scale):
-        """Calculate the probability density function of a Weibull variable.
-
-        Parameters:
-            v_speed (int or float): a number representing wind speed
-            k_shape (float): the shape parameter
-            l_scale (float): the scale parameter of the distribution
-
-        Returns:
-            a float
-
-        """
-        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
-                (math.exp(-1 * (v_speed / l_scale)**k_shape))) * v_speed**3
-
-    # Harvested wind energy function to integrate over
-    def _calc_harvested_wind_energy(v_speed, k_shape, l_scale):
-        """Calculate the harvested wind energy.
-
-        Parameters:
-            v_speed (int or float): a number representing wind speed
-            k_shape (float): the shape parameter
-            l_scale (float): the scale parameter of the distribution
-
-        Returns:
-            a float
-
-        """
-        fract = ((v_speed**exp_pwr_curve - v_in**exp_pwr_curve) /
-                 (v_rate**exp_pwr_curve - v_in**exp_pwr_curve))
-
-        return fract * _calc_weibull_probability(v_speed, k_shape, l_scale)
-
     # The rated power is expressed in units of MW but the harvested energy
     # equation calls for it in terms of Wh. Thus we multiply by a million to
     # get to Wh.
@@ -600,13 +556,8 @@ def execute(args):
 
     # Get the rest of the inputs needed to compute harvested wind energy
     # from the dictionary so that it is in a more readable format
-    exp_pwr_curve = int(bio_parameters_dict['exponent_power_curve'])
     air_density_standard = float(bio_parameters_dict['air_density'])
-    v_rate = float(bio_parameters_dict['rated_wspd'])
-    v_out = float(bio_parameters_dict['cut_out_wspd'])
-    v_in = float(bio_parameters_dict['cut_in_wspd'])
     air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
-    losses = float(bio_parameters_dict['loss_parameter'])
 
     # Compute the mean air density, given by CKs formulas
     mean_air_density = air_density_standard - air_density_coef * hub_height
@@ -614,108 +565,6 @@ def execute(args):
     # Fractional coefficient that lives outside the intregation for computing
     # the harvested wind energy
     fract_coef = rated_power * (mean_air_density / air_density_standard)
-
-    # The coefficient that is multiplied by the integration portion of the
-    # harvested wind energy equation
-    scalar = _NUM_DAYS * 24 * fract_coef
-
-    # The field names for the two outputs, Harvested Wind Energy and Wind
-    # Density, to be added to the point shapefile
-    density_field_name = 'Dens_W/m2'
-    harvested_field_name = 'Harv_MWhr'
-
-    def _compute_density_harvested_fields(wind_point_vector_path):
-        """Compute the density and harvested energy.
-
-        This is to help not open and pass around datasets / datasources.
-
-        Parameters:
-            wind_point_vector_path (str): path to a point shapefile to write
-                the results to
-
-        Returns:
-            None.
-
-        """
-        # Open the wind points file to edit
-        wind_points = gdal.OpenEx(wind_point_vector_path, 1)
-        wind_points_layer = wind_points.GetLayer()
-
-        # Get a feature so that we can get field indices that we will use
-        # multiple times
-        feature = wind_points_layer.GetFeature(0)
-
-        # Get the indexes for the scale and shape parameters
-        scale_index = feature.GetFieldIndex(_SCALE_KEY)
-        shape_index = feature.GetFieldIndex(_SHAPE_KEY)
-        LOGGER.debug('Scale/shape index : %s:%s', scale_index, shape_index)
-
-        wind_points_layer.ResetReading()
-
-        LOGGER.debug('Creating Harvest and Density Fields')
-        # Create new fields for the density and harvested values
-        for new_field_name in [density_field_name, harvested_field_name]:
-            new_field = ogr.FieldDefn(new_field_name, ogr.OFTReal)
-            wind_points_layer.CreateField(new_field)
-
-        LOGGER.debug(
-            'Entering Density and Harvest Calculations for each point')
-        # For all the locations compute the Weibull density and
-        # harvested wind energy. Save in a field of the feature
-        for feat in wind_points_layer:
-            # Get the scale and shape values
-            scale_value = feat.GetField(scale_index)
-            shape_value = feat.GetField(shape_index)
-
-            # Integrate over the probability density function. 0 and 50 are
-            # hard coded values set in CKs documentation
-            density_results = integrate.quad(_calc_density_wind_energy, 0, 50,
-                                             (shape_value, scale_value))
-
-            # Compute the final wind power density value
-            density_results = 0.5 * mean_air_density * density_results[0]
-
-            # Integrate over the harvested wind energy function
-            harv_results = integrate.quad(_calc_harvested_wind_energy, v_in,
-                                          v_rate, (shape_value, scale_value))
-
-            # Integrate over the Weibull probability function
-            weibull_results = integrate.quad(_calc_weibull_probability, v_rate,
-                                             v_out, (shape_value, scale_value))
-
-            # Compute the final harvested wind energy value
-            harvested_wind_energy = (
-                scalar * (harv_results[0] + weibull_results[0]))
-
-            # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
-            # 1,000,000
-            harvested_wind_energy = harvested_wind_energy / 1000000.00
-
-            # Now factor in the percent losses due to turbine
-            # downtime (mechanical failure, storm damage, etc.)
-            # and due to electrical resistance in the cables
-            harvested_wind_energy = (1 - losses) * harvested_wind_energy
-
-            # Finally, multiply the harvested wind energy by the number of
-            # turbines to get the amount of energy generated for the entire farm
-            harvested_wind_energy = harvested_wind_energy * number_of_turbines
-
-            # Save the results to their respective fields
-            for field_name, result_value in [(density_field_name,
-                                              density_results),
-                                             (harvested_field_name,
-                                              harvested_wind_energy)]:
-                out_index = feat.GetFieldIndex(field_name)
-                feat.SetField(out_index, result_value)
-
-            # Save the feature and set to None to clean up
-            wind_points_layer.SetFeature(feat)
-
-        wind_points = None
-
-    # Compute Wind Density and Harvested Wind Energy, adding the values to the
-    # points in the wind point shapefile
-    _compute_density_harvested_fields(final_wind_point_vector_path)
 
     # Set paths for creating density and harvested rasters
     temp_density_raster_path = os.path.join(inter_dir,
@@ -726,25 +575,25 @@ def execute(args):
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
     pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_density_raster_path, target_pixel_size,
-        _TARGET_DATA_TYPE, _TARGET_NODATA)
+        final_wind_point_vector_path, temp_density_raster_path,
+        target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     LOGGER.info('Create Harvested Raster')
     pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_harvested_raster_path, target_pixel_size,
-        _TARGET_DATA_TYPE, _TARGET_NODATA)
+        final_wind_point_vector_path, temp_harvested_raster_path,
+        target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Calculate Density Points')
     pygeoprocessing.interpolate_points(
         final_wind_point_vector_path,
-        density_field_name, (temp_density_raster_path, 1),
+        DENSITY_FIELD_NAME, (temp_density_raster_path, 1),
         interpolation_mode='linear')
 
     LOGGER.info('Calculate Harvested Points')
     pygeoprocessing.interpolate_points(
         final_wind_point_vector_path,
-        harvested_field_name, (temp_harvested_raster_path, 1),
+        HARVESTED_FIELD_NAME, (temp_harvested_raster_path, 1),
         interpolation_mode='linear')
 
     def _mask_out_depth_dist(*rasters):
@@ -1447,6 +1296,150 @@ def _read_csv_wind_data(wind_data_path, hub_height):
     return wind_dict
 
 
+def _compute_density_harvested_fields(
+        wind_dict, bio_parameters_dict, number_of_turbines):
+    """Compute the density and harvested energy based on scale and shape keys.
+
+    Parameters:
+        wind_dict (dict): a dictionary whose values are a dictionary with
+            keys `LAM`, `LATI`, `K`, `LONG`, `REF_LAM`, and `REF`, and numbers
+            indicating their corresponding values.
+
+        bio_parameters_dict (dict)
+
+    Returns:
+        wind_dict_copy (dict): a modified dictionary with new
+
+    """
+    wind_dict_copy = wind_dict.copy()
+
+    # The rated power is expressed in units of MW but the harvested energy
+    # equation calls for it in terms of Wh. Thus we multiply by a million to
+    # get to Wh.
+    rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
+
+    # Get the rest of the inputs needed to compute harvested wind energy
+    # from the dictionary so that it is in a more readable format
+    exp_pwr_curve = int(bio_parameters_dict['exponent_power_curve'])
+    air_density_standard = float(bio_parameters_dict['air_density'])
+    v_rate = float(bio_parameters_dict['rated_wspd'])
+    v_out = float(bio_parameters_dict['cut_out_wspd'])
+    v_in = float(bio_parameters_dict['cut_in_wspd'])
+    air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
+    losses = float(bio_parameters_dict['loss_parameter'])
+
+    # Hub Height to use for setting Weibull parameters
+    hub_height = int(bio_parameters_dict['hub_height'])
+
+    # Compute the mean air density, given by CKs formulas
+    mean_air_density = air_density_standard - air_density_coef * hub_height
+
+    # Fractional coefficient that lives outside the intregation for computing
+    # the harvested wind energy
+    fract_coef = rated_power * (mean_air_density / air_density_standard)
+
+    # The coefficient that is multiplied by the integration portion of the
+    # harvested wind energy equation
+    scalar = _NUM_DAYS * 24 * fract_coef
+
+    # Weibull probability function to integrate over
+    def _calc_weibull_probability(v_speed, k_shape, l_scale):
+        """Calculate the Weibull probability function of variable v_speed.
+
+        Parameters:
+            v_speed (int or float): a number representing wind speed
+            k_shape (float): the shape parameter
+            l_scale (float): the scale parameter of the distribution
+
+        Returns:
+            a float
+
+        """
+        return ((k_shape / l_scale) * (v_speed / l_scale)**
+                (k_shape - 1) * (math.exp(-1 * (v_speed / l_scale)**k_shape)))
+
+    # Density wind energy function to integrate over
+    def _calc_density_wind_energy(v_speed, k_shape, l_scale):
+        """Calculate the probability density function of a Weibull variable.
+
+        Parameters:
+            v_speed (int or float): a number representing wind speed
+            k_shape (float): the shape parameter
+            l_scale (float): the scale parameter of the distribution
+
+        Returns:
+            a float
+
+        """
+        return ((k_shape / l_scale) * (v_speed / l_scale)**(k_shape - 1) *
+                (math.exp(-1 * (v_speed / l_scale)**k_shape))) * v_speed**3
+
+    # Harvested wind energy function to integrate over
+    def _calc_harvested_wind_energy(v_speed, k_shape, l_scale):
+        """Calculate the harvested wind energy.
+
+        Parameters:
+            v_speed (int or float): a number representing wind speed
+            k_shape (float): the shape parameter
+            l_scale (float): the scale parameter of the distribution
+
+        Returns:
+            a float
+
+        """
+        fract = ((v_speed**exp_pwr_curve - v_in**exp_pwr_curve) /
+                 (v_rate**exp_pwr_curve - v_in**exp_pwr_curve))
+
+        return fract * _calc_weibull_probability(v_speed, k_shape, l_scale)
+
+    for key, value_fields in wind_dict.items():
+        # Get the indexes for the scale and shape parameters
+        scale_value = value_fields[_SCALE_KEY]
+        shape_value = value_fields[_SHAPE_KEY]
+
+        # Integrate over the probability density function. 0 and 50 are
+        # hard coded values set in CKs documentation
+        density_results = integrate.quad(_calc_density_wind_energy, 0, 50,
+                                         (shape_value, scale_value))
+
+        # Compute the mean air density, given by CKs formulas
+        mean_air_density = air_density_standard - air_density_coef * hub_height
+
+        # Compute the final wind power density value
+        density_results = 0.5 * mean_air_density * density_results[0]
+
+        # Integrate over the harvested wind energy function
+        harv_results = integrate.quad(_calc_harvested_wind_energy, v_in,
+                                      v_rate, (shape_value, scale_value))
+
+        # Integrate over the Weibull probability function
+        weibull_results = integrate.quad(_calc_weibull_probability, v_rate,
+                                         v_out, (shape_value, scale_value))
+
+        # Compute the final harvested wind energy value
+        harvested_wind_energy = (
+            scalar * (harv_results[0] + weibull_results[0]))
+
+        # Convert harvested energy from Whr/yr to MWhr/yr by dividing by
+        # 1,000,000
+        harvested_wind_energy = harvested_wind_energy / 1000000.00
+
+        # Now factor in the percent losses due to turbine
+        # downtime (mechanical failure, storm damage, etc.)
+        # and due to electrical resistance in the cables
+        harvested_wind_energy = (1 - losses) * harvested_wind_energy
+
+        # Finally, multiply the harvested wind energy by the number of
+        # turbines to get the amount of energy generated for the entire farm
+        harvested_wind_energy = harvested_wind_energy * number_of_turbines
+
+        # Append calculated results to the dictionary
+        wind_dict_copy[key][DENSITY_FIELD_NAME] = density_results
+        wind_dict_copy[key][HARVESTED_FIELD_NAME] = harvested_wind_energy
+
+    return wind_dict_copy
+
+
 def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     """Create a point shapefile from a dictionary.
 
@@ -1704,6 +1697,14 @@ def _wind_data_to_point_vector(dict_data,
 
     # Construct a list of fields to add from the keys of the inner dictionary
     field_list = dict_data[dict_data.keys()[0]].keys()
+
+    # For the two fields that we computed and added to the dictionary, move
+    # them to the last
+    for field in [DENSITY_FIELD_NAME, HARVESTED_FIELD_NAME]:
+        if field in field_list:
+            field_list.remove(field)
+            field_list.append(field)
+
     LOGGER.debug('field_list : %s', field_list)
 
     LOGGER.info('Creating fields for the target vector')
