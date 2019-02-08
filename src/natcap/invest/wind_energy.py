@@ -195,9 +195,6 @@ def execute(args):
                   bathymetry_path, 'near'),
             target_path_list=[bathymetry_path],
             task_name='resample_bathymetry')
-        # pygeoprocessing.warp_raster(
-        #     args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
-        #     bathymetry_path, 'near')
 
     number_of_turbines = int(args['number_of_turbines'])
 
@@ -367,8 +364,6 @@ def execute(args):
                   bathymetry_proj_raster_path),
             target_path_list=[bathymetry_proj_raster_path],
             task_name='clip_to_projection_with_square_pixels')
-        # _clip_to_projection_with_square_pixels(bathymetry_path, aoi_vector_path,
-        #                                        bathymetry_proj_raster_path)
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -389,8 +384,6 @@ def execute(args):
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector',
             dependent_task_list=[clip_to_projection_task])
-        # _wind_data_to_point_vector(wind_data, 'wind_data',
-        #                            wind_point_vector_path, bathy_projection_wkt)
 
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
@@ -403,8 +396,6 @@ def execute(args):
             target_path_list=[clipped_wind_point_vector_path],
             task_name='clip_wind_point_by_aoi',
             dependent_task_list=[wind_data_to_vector_task])
-        # _clip_vector_by_vector(wind_point_vector_path, aoi_vector_path,
-        #                        clipped_wind_point_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
@@ -433,9 +424,6 @@ def execute(args):
                       land_poly_proj_vector_path, inter_dir),
                 target_path_list=[land_poly_proj_vector_path],
                 task_name='clip_and_reproject_land_poly_to_aoi')
-            # _clip_and_reproject_vector(land_polygon_vector_path,
-            #                            aoi_vector_path,
-            #                            land_poly_proj_vector_path, inter_dir)
 
             # If the distance inputs are present create a mask for the output
             # area that restricts where the wind energy farms can be based
@@ -453,9 +441,6 @@ def execute(args):
                 target_path_list=[aoi_raster_path],
                 task_name='create_aoi_raster_from_vector',
                 dependent_task_list=[clip_to_projection_task])
-            # pygeoprocessing.create_raster_from_vector_extents(
-            #     aoi_vector_path, aoi_raster_path, pixel_size,
-            #     gdal.GDT_Byte, _TARGET_NODATA)
 
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
@@ -467,8 +452,6 @@ def execute(args):
                 task_name='create_distance_raster',
                 dependent_task_list=[
                     create_aoi_raster_task, clip_reproject_land_poly_task])
-            # _create_distance_raster(aoi_raster_path, land_poly_proj_vector_path,
-            #                         dist_trans_path, inter_dir)
 
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
@@ -480,8 +463,6 @@ def execute(args):
                 target_path_list=[dist_mask_path],
                 task_name='mask_raster_by_distance',
                 dependent_task_list=[create_distance_raster_task])
-            # _mask_by_distance(dist_trans_path, min_distance, max_distance,
-            #                   _TARGET_NODATA, dist_mask_path)
 
     else:
         LOGGER.info("AOI argument was not selected")
@@ -499,8 +480,6 @@ def execute(args):
             args=(wind_data, 'wind_data', wind_point_vector_path),
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector_without_aoi')
-        # _wind_data_to_point_vector(wind_data, 'wind_data',
-        #                            wind_point_vector_path)
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the unprojected files. This may not
