@@ -549,22 +549,18 @@ def execute(args):
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry')
 
-    # The rated power is expressed in units of MW but the harvested energy
-    # equation calls for it in terms of Wh. Thus we multiply by a million to
-    # get to Wh.
-    rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
+    # # The rated power is expressed in units of MW but the harvested energy
+    # # equation calls for it in terms of Wh. Thus we multiply by a million to
+    # # get to Wh.
+    # rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
 
-    # Get the rest of the inputs needed to compute harvested wind energy
-    # from the dictionary so that it is in a more readable format
-    air_density_standard = float(bio_parameters_dict['air_density'])
-    air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
+    # # Get the rest of the inputs needed to compute harvested wind energy
+    # # from the dictionary so that it is in a more readable format
+    # air_density_standard = float(bio_parameters_dict['air_density'])
+    # air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
 
-    # Compute the mean air density, given by CKs formulas
-    mean_air_density = air_density_standard - air_density_coef * hub_height
-
-    # Fractional coefficient that lives outside the intregation for computing
-    # the harvested wind energy
-    fract_coef = rated_power * (mean_air_density / air_density_standard)
+    # # Compute the mean air density, given by CKs formulas
+    # mean_air_density = air_density_standard - air_density_coef * hub_height
 
     # Set paths for creating density and harvested rasters
     temp_density_raster_path = os.path.join(inter_dir,
@@ -1305,10 +1301,13 @@ def _compute_density_harvested_fields(
             keys `LAM`, `LATI`, `K`, `LONG`, `REF_LAM`, and `REF`, and numbers
             indicating their corresponding values.
 
-        bio_parameters_dict (dict)
+        bio_parameters_dict (dict): a dictionary where the 'parameter_list'
+            strings are the keys that have values pulled from bio-parameters
+            CSV.
 
     Returns:
-        wind_dict_copy (dict): a modified dictionary with new
+        wind_dict_copy (dict): a modified dictionary with new fields computed
+            from the existing fields and bio-parameters.
 
     """
     wind_dict_copy = wind_dict.copy()
