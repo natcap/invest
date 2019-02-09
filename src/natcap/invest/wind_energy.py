@@ -794,30 +794,27 @@ def execute(args):
                         'point shapefile.')
                     # Make a path for the grid vector, so Taskgraph can keep
                     # track of the correct timestamp of file being modified
-                    copied_land_vector_path = os.path.join(
+                    land_to_grid_vector_path = os.path.join(
                         inter_dir,
-                        'land_point_copy%s.shp' % suffix)
-                    # _point_to_polygon_distance(
+                        'land_point_to_grid%s.shp' % suffix)
+                    # _calculate_land_to_grid_distance(
                     #     land_projected_vector_path, grid_projected_vector_path,
                     #     _LAND_TO_GRID_FIELD)
                     land_to_grid_task = graph.add_task(
-                        _point_to_polygon_distance,
+                        _calculate_land_to_grid_distance,
                         args=(land_projected_vector_path,
                               grid_projected_vector_path,
-                              _LAND_TO_GRID_FIELD),
-                        kwargs={'copied_point_vector_path':
-                                copied_land_vector_path},
-                        target_path_list=[copied_land_vector_path],
+                              _LAND_TO_GRID_FIELD, land_to_grid_vector_path),
+                        target_path_list=[land_to_grid_vector_path],
                         task_name='calculate_grid_point_to_land_poly',
                         dependent_task_list=[
                             clip_and_reproject_land_vector_task,
                             clip_and_reproject_grid_vector_task])
-                    land_projected_vector_path = copied_land_vector_path
 
                     # Calculate distance raster
                     graph.add_task(
                         _calculate_distances_land_grid,
-                        args=(land_projected_vector_path,
+                        args=(land_to_grid_vector_path,
                               harvested_masked_path, final_dist_raster_path,
                               inter_dir),
                         target_path_list=[final_dist_raster_path],
@@ -1149,9 +1146,9 @@ def _get_pixel_size(base_raster_path):
     return pixel_size
 
 
-def _point_to_polygon_distance(
-        base_point_vector_path, base_polygon_vector_path, dist_field_name,
-        copied_point_vector_path=None):
+def _calculate_land_to_grid_distance(
+        base_land_vector_path, base_grid_vector_path, dist_field_name,
+        target_land_vector_path):
     """Calculate the distances from points to the nearest polygon.
 
     Distances are calculated from points in a point geometry shapefile to the
@@ -1159,9 +1156,9 @@ def _point_to_polygon_distance(
     projected in meters
 
     Parameters:
-        base_point_vector_path (str): a path to an OGR point geometry
+        base_land_vector_path (str): a path to an OGR point geometry
             shapefile projected in meters
-        base_polygon_vector_path (str): a path to an OGR polygon shapefile
+        base_grid_vector_path (str): a path to an OGR polygon shapefile
             projected in meters
         dist_field_name (str): the name of the new distance field to be
             added to the attribute table of base_point_vector
@@ -1173,68 +1170,62 @@ def _point_to_polygon_distance(
         None.
 
     """
-    LOGGER.info('Starting _point_to_polygon_distance.')
+    LOGGER.info('Starting _calculate_land_to_grid_distance.')
 
-    if copied_point_vector_path:
-        file_ext, driver_name = _get_file_ext_and_driver_name(
-            copied_point_vector_path)
-        point_vector = ogr.Open(base_point_vector_path, gdal.OF_VECTOR)
-        driver = ogr.GetDriverByName(driver_name)
-        point_vector_copy = driver.CopyDataSource(
-            point_vector, copied_point_vector_path)
-        point_vector = None
-        point_vector_copy = None
-        point_vector_path = copied_point_vector_path
-    else:
-        point_vector_path = base_point_vector_path
+    # Copy the point vector
+    _, driver_name = _get_file_ext_and_driver_name(
+        target_land_vector_path)
+    base_land_vector = ogr.Open(base_land_vector_path, gdal.OF_VECTOR)
+    driver = ogr.GetDriverByName(driver_name)
+    driver.CopyDataSource(base_land_vector, target_land_vector_path)
+    base_land_vector = None
 
-    point_vector = gdal.OpenEx(
-        point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    poly_vector = gdal.OpenEx(
-        base_polygon_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
+    target_land_vector = gdal.OpenEx(
+        target_land_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    base_grid_vector = gdal.OpenEx(
+        base_grid_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
 
-    poly_layer = poly_vector.GetLayer()
-    # List to store the polygons geometries as shapely objects
-    poly_list = []
+    base_grid_layer = base_grid_vector.GetLayer()
+    # List to store the grid point geometries as shapely objects
+    grid_point_list = []
 
     LOGGER.info('Loading the polygons into Shapely')
-    for poly_feat in poly_layer:
-        # Get the geometry of the polygon in WKT format
-        poly_wkt = poly_feat.GetGeometryRef().ExportToWkt()
+    for grid_point_feat in base_grid_layer:
+        # Get the geometry of the grid point in WKT format
+        grid_point_wkt = grid_point_feat.GetGeometryRef().ExportToWkt()
         # Load the geometry into shapely making it a shapely object
-        shapely_polygon = shapely.wkt.loads(poly_wkt)
-        # Add the shapely polygon geometry to a list, but first simplify the
-        # geometry which smooths the edges making operations a lot faster
-        poly_list.append(
-            shapely_polygon.simplify(0.01, preserve_topology=False))
+        shapely_grid_point = shapely.wkt.loads(grid_point_wkt)
+        # Add the shapely point geometry to a list
+        grid_point_list.append(shapely_grid_point)
 
     # Take the union over the list of polygons to get one defined polygon object
     LOGGER.info('Get the collection of polygon geometries by taking the union')
-    polygon_collection = shapely.ops.unary_union(poly_list)
+    grid_point_collection = shapely.ops.unary_union(grid_point_list)
 
-    point_layer = point_vector.GetLayer()
+    target_land_layer = target_land_vector.GetLayer()
     # Create a new distance field based on the name given
     dist_field_defn = ogr.FieldDefn(dist_field_name, ogr.OFTReal)
-    point_layer.CreateField(dist_field_defn)
+    target_land_layer.CreateField(dist_field_defn)
 
     LOGGER.info('Loading the points into shapely')
-    for point_feat in point_layer:
+    for land_point_feat in target_land_layer:
         # Get the geometry of the point in WKT format
-        point_wkt = point_feat.GetGeometryRef().ExportToWkt()
+        land_point_wkt = land_point_feat.GetGeometryRef().ExportToWkt()
         # Load the geometry into shapely making it a shapely object
-        shapely_point = shapely.wkt.loads(point_wkt)
+        shapely_land_point = shapely.wkt.loads(land_point_wkt)
         # Get the distance in meters and convert to km
-        point_dist = shapely_point.distance(polygon_collection) / 1000.0
+        land_to_grid_dist = shapely_land_point.distance(
+            grid_point_collection) / 1000.0
         # Add the distance value to the new field and set to the feature
-        point_feat.SetField(dist_field_name, point_dist)
-        point_layer.SetFeature(point_feat)
+        land_point_feat.SetField(dist_field_name, land_to_grid_dist)
+        target_land_layer.SetFeature(land_point_feat)
 
-    point_layer = None
-    point_vector = None
-    poly_layer = None
-    poly_vector = None
+    target_land_layer = None
+    target_land_vector = None
+    base_grid_layer = None
+    base_grid_vector = None
 
-    LOGGER.info('Finished _point_to_polygon_distance.')
+    LOGGER.info('Finished _calculate_land_to_grid_distance.')
 
 
 def _read_csv_wind_parameters(csv_path, parameter_list):

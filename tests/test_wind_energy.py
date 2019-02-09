@@ -98,7 +98,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_array = numpy.array([[10, 110, 210, 310], [20, 120, 220, 320]])
         numpy.testing.assert_array_equal(res_array, exp_array)
 
-    def test_point_to_polygon_distance(self):
+    def test_calculate_land_to_grid_distance(self):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
         from natcap.invest import wind_energy
 
@@ -135,14 +135,17 @@ class WindEnergyUnitTests(unittest.TestCase):
         point_vector_path = pygeoprocessing.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
             vector_format='ESRI Shapefile', filename=point_file)
+        target_point_vector_path = os.path.join(
+            self.workspace_dir, 'target_point.shp')
         # Call function to test
         field_name = 'L2G'
-        wind_energy._point_to_polygon_distance(
-            point_vector_path, poly_vector_path, field_name)
+        wind_energy._calculate_land_to_grid_distance(
+            point_vector_path, poly_vector_path, field_name,
+            target_point_vector_path)
 
         exp_results = [.15, .1, .05, .05]
 
-        point_vector = gdal.OpenEx(point_vector_path)
+        point_vector = gdal.OpenEx(target_point_vector_path)
         point_layer = point_vector.GetLayer()
         field_index = point_layer.GetFeature(0).GetFieldIndex(field_name)
         for i, point_feat in enumerate(point_layer):
