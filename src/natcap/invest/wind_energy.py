@@ -425,9 +425,8 @@ def execute(args):
             # Clip and project the land polygon shapefile to AOI
             LOGGER.info('Clip and project land poly to AOI')
             land_poly_proj_vector_path = os.path.join(
-                inter_dir,
-                os.path.basename(land_polygon_vector_path).replace(
-                    '.shp', '_projected_clipped%s.shp' % suffix))
+                inter_dir, os.path.splitext(land_polygon_vector_path)[0] +
+                '_projected_clipped%s.shp' % suffix)
             clip_reproject_land_poly_task = graph.add_task(
                 _clip_and_reproject_vector,
                 args=(land_polygon_vector_path, aoi_vector_path,
@@ -549,19 +548,6 @@ def execute(args):
         target_path_list=[depth_mask_path],
         task_name='mask_depth_on_bathymetry')
 
-    # # The rated power is expressed in units of MW but the harvested energy
-    # # equation calls for it in terms of Wh. Thus we multiply by a million to
-    # # get to Wh.
-    # rated_power = float(bio_parameters_dict['turbine_rated_pwr']) * 1000000
-
-    # # Get the rest of the inputs needed to compute harvested wind energy
-    # # from the dictionary so that it is in a more readable format
-    # air_density_standard = float(bio_parameters_dict['air_density'])
-    # air_density_coef = float(bio_parameters_dict['air_density_coefficient'])
-
-    # # Compute the mean air density, given by CKs formulas
-    # mean_air_density = air_density_standard - air_density_coef * hub_height
-
     # Set paths for creating density and harvested rasters
     temp_density_raster_path = os.path.join(inter_dir,
                                             'temp_density%s.tif' % suffix)
@@ -570,27 +556,39 @@ def execute(args):
 
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
-    pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_density_raster_path,
-        target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA)
+    create_density_raster_task = graph.add_task(
+        pygeoprocessing.create_raster_from_vector_extents,
+        args=(final_wind_point_vector_path, temp_density_raster_path,
+              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
+        target_path_list=[temp_density_raster_path],
+        task_name='create_density_raster')
 
     LOGGER.info('Create Harvested Raster')
-    pygeoprocessing.create_raster_from_vector_extents(
-        final_wind_point_vector_path, temp_harvested_raster_path,
-        target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA)
+    create_harvested_raster_task = graph.add_task(
+        pygeoprocessing.create_raster_from_vector_extents,
+        args=(final_wind_point_vector_path, temp_harvested_raster_path,
+              target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
+        target_path_list=[temp_harvested_raster_path],
+        task_name='create_harvested_raster')
 
     # Interpolate points onto raster for density values and harvested values:
-    LOGGER.info('Calculate Density Points')
-    pygeoprocessing.interpolate_points(
-        final_wind_point_vector_path,
-        DENSITY_FIELD_NAME, (temp_density_raster_path, 1),
-        interpolation_mode='linear')
+    LOGGER.info('Interpolate Density Points')
+    interpolate_density_task = graph.add_task(
+        pygeoprocessing.interpolate_points,
+        args=(final_wind_point_vector_path, DENSITY_FIELD_NAME,
+              (temp_density_raster_path, 1)),
+        kwargs={'interpolation_mode': 'linear'},
+        task_name='interpolate_density_points',
+        dependent_task_list=[create_density_raster_task])
 
-    LOGGER.info('Calculate Harvested Points')
-    pygeoprocessing.interpolate_points(
-        final_wind_point_vector_path,
-        HARVESTED_FIELD_NAME, (temp_harvested_raster_path, 1),
-        interpolation_mode='linear')
+    LOGGER.info('Interpolate Harvested Points')
+    interpolate_harvested_task = graph.add_task(
+        pygeoprocessing.interpolate_points,
+        args=(final_wind_point_vector_path, HARVESTED_FIELD_NAME,
+              (temp_harvested_raster_path, 1)),
+        kwargs={'interpolation_mode': 'linear'},
+        task_name='interpolate_harvested_points',
+        dependent_task_list=[create_harvested_raster_task])
 
     def _mask_out_depth_dist(*rasters):
         """Return the value of an item in the list based on some condition.
@@ -656,22 +654,37 @@ def execute(args):
         if mask not in aligned_density_mask_list
     ]
     # Align and resize rasters in the density and harvest lists
-    pygeoprocessing.align_and_resize_raster_stack(
-        merged_mask_list, merged_aligned_mask_list,
-        ['near'] * len(merged_mask_list), target_pixel_size, 'intersection')
+    align_and_resize_density_and_harvest_task = graph.add_task(
+        pygeoprocessing.align_and_resize_raster_stack,
+        args=(merged_mask_list, merged_aligned_mask_list,
+              ['near'] * len(merged_mask_list), target_pixel_size,
+              'intersection'),
+        task_name='align_and_resize_density_and_harvest_list',
+        target_path_list=merged_aligned_mask_list,
+        dependent_task_list=[
+            interpolate_density_task, interpolate_harvested_task])
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in aligned_density_mask_list], _mask_out_depth_dist,
-        density_masked_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
+    graph.add_task(
+        pygeoprocessing.raster_calculator,
+        args=([(path, 1) for path in aligned_density_mask_list],
+              _mask_out_depth_dist, density_masked_path, _TARGET_DATA_TYPE,
+              _TARGET_NODATA),
+        task_name='mask_density_raster',
+        target_path_list=[density_masked_path],
+        dependent_task_list=[align_and_resize_density_and_harvest_task])
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    pygeoprocessing.raster_calculator(
-        [(path, 1) for path in aligned_harvested_mask_list],
-        _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
-        _TARGET_NODATA)
+    mask_harvested_raster_task = graph.add_task(
+        pygeoprocessing.raster_calculator,
+        args=([(path, 1) for path in aligned_harvested_mask_list],
+              _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
+              _TARGET_NODATA),
+        task_name='mask_harvested_raster',
+        target_path_list=[harvested_masked_path],
+        dependent_task_list=[align_and_resize_density_and_harvest_task])
 
     LOGGER.info('Wind Energy Biophysical Model completed')
 
@@ -714,18 +727,27 @@ def execute(args):
         # Create a point shapefile from the grid point dictionary.
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
-        _dictionary_to_point_vector(grid_dict, 'grid_points', grid_vector_path)
+        grid_dict_to_vector_task = graph.add_task(
+            _dictionary_to_point_vector,
+            args=(grid_dict, 'grid_points', grid_vector_path),
+            target_path_list=[grid_vector_path],
+            task_name='grid_dictionary_to_vector')
 
         # In case any of the above points lie outside the AOI, clip the
         # shapefiles and then project them to the AOI as well.
         grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
-        _clip_and_reproject_vector(grid_vector_path, aoi_vector_path,
-                                   grid_projected_vector_path, inter_dir)
+        clip_and_reproject_grid_vector_task = graph.add_task(
+            _clip_and_reproject_vector,
+            args=(grid_vector_path, aoi_vector_path,
+                  grid_projected_vector_path, inter_dir),
+            target_path_list=[grid_projected_vector_path],
+            task_name='clip_and_reproject_grid_vector',
+            dependent_task_list=[grid_dict_to_vector_task])
 
         # It is possible that NO grid points lie within the AOI, so we need to
         # handle both cases
-        grid_vector = gdal.OpenEx(grid_projected_vector_path)
+        grid_vector = gdal.OpenEx(grid_projected_vector_path, gdal.OF_VECTOR)
         grid_layer = grid_vector.GetLayer()
         if grid_layer.GetFeatureCount() != 0:
             LOGGER.debug('There are %s grid point(s) within AOI.' %
@@ -738,20 +760,28 @@ def execute(args):
                 # Create a point shapefile from the land point dictionary.
                 # This makes it easier for future distance calculations and
                 # provides a nice intermediate output for users
-                _dictionary_to_point_vector(land_dict, 'land_points',
-                                            land_point_vector_path)
+                land_dict_to_vector_task = graph.add_task(
+                    _dictionary_to_point_vector,
+                    args=(land_dict, 'land_points', land_point_vector_path),
+                    target_path_list=[land_point_vector_path],
+                    task_name='land_dictionary_to_vector')
 
                 # In case any of the above points lie outside the AOI, clip the
                 # shapefiles and then project them to the AOI as well.
                 land_projected_vector_path = os.path.join(
                     inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
-                _clip_and_reproject_vector(
-                    land_point_vector_path, aoi_vector_path,
-                    land_projected_vector_path, inter_dir)
+                clip_and_reproject_land_vector_task = graph.add_task(
+                    _clip_and_reproject_vector,
+                    args=(land_point_vector_path, aoi_vector_path,
+                          land_projected_vector_path, inter_dir),
+                    target_path_list=[land_projected_vector_path],
+                    task_name='clip_and_reproject_land_vector',
+                    dependent_task_list=[land_dict_to_vector_task])
 
                 # It is possible that NO land point lie within the AOI, so we
                 # need to handle both cases
-                land_vector = gdal.OpenEx(land_projected_vector_path)
+                land_vector = gdal.OpenEx(
+                    land_projected_vector_path, gdal.OF_VECTOR)
                 land_layer = land_vector.GetLayer()
                 if land_layer.GetFeatureCount() != 0:
                     LOGGER.debug('There are %d land point(s) within AOI.' %
@@ -760,16 +790,40 @@ def execute(args):
                     # Calculate and add the shortest distances from each land
                     # point to the grid points and add them to the new field
                     LOGGER.info(
-                        'Adding land to grid distances ("L2G") to land point '
-                        'shapefile.')
-                    _point_to_polygon_distance(land_projected_vector_path,
-                                               grid_projected_vector_path,
-                                               _LAND_TO_GRID_FIELD)
+                        'Adding land to grid distances ("L2G") field to land '
+                        'point shapefile.')
+                    # Make a path for the grid vector, so Taskgraph can keep
+                    # track of the correct timestamp of file being modified
+                    copied_land_vector_path = os.path.join(
+                        inter_dir,
+                        'land_point_copy%s.shp' % suffix)
+                    # _point_to_polygon_distance(
+                    #     land_projected_vector_path, grid_projected_vector_path,
+                    #     _LAND_TO_GRID_FIELD)
+                    land_to_grid_task = graph.add_task(
+                        _point_to_polygon_distance,
+                        args=(land_projected_vector_path,
+                              grid_projected_vector_path,
+                              _LAND_TO_GRID_FIELD),
+                        kwargs={'copied_point_vector_path':
+                                copied_land_vector_path},
+                        target_path_list=[copied_land_vector_path],
+                        task_name='calculate_grid_point_to_land_poly',
+                        dependent_task_list=[
+                            clip_and_reproject_land_vector_task,
+                            clip_and_reproject_grid_vector_task])
+                    land_projected_vector_path = copied_land_vector_path
 
                     # Calculate distance raster
-                    _calculate_distances_land_grid(
-                        land_projected_vector_path, harvested_masked_path,
-                        final_dist_raster_path, inter_dir)
+                    graph.add_task(
+                        _calculate_distances_land_grid,
+                        args=(land_projected_vector_path,
+                              harvested_masked_path, final_dist_raster_path,
+                              inter_dir),
+                        target_path_list=[final_dist_raster_path],
+                        task_name='calculate_distances_land_grid',
+                        dependent_task_list=[
+                            land_to_grid_task, mask_harvested_raster_task])
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -1060,6 +1114,26 @@ def execute(args):
     LOGGER.info('Wind Energy Valuation Model Completed')
 
 
+def _get_file_ext_and_driver_name(base_vector_path):
+    """Get file extension and GDAL driver name from the vector path.
+
+    Parameters:
+        base_path (str): a path to the vector file to get extension from.
+
+    Returns:
+        file_ext (str): the file extension of the base file path.
+        driver_name (str): the GDAL driver name used to create data.
+
+    """
+    file_ext = os.path.splitext(base_vector_path)[1]
+    if file_ext == '.shp':
+        driver_name = 'ESRI Shapefile'
+    elif file_ext == '.gpkg':
+        driver_name = 'GPKG'
+
+    return file_ext, driver_name
+
+
 def _get_pixel_size(base_raster_path):
     """Get the pixel size tuple from the base raster.
 
@@ -1075,8 +1149,9 @@ def _get_pixel_size(base_raster_path):
     return pixel_size
 
 
-def _point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
-                               dist_field_name):
+def _point_to_polygon_distance(
+        base_point_vector_path, base_polygon_vector_path, dist_field_name,
+        copied_point_vector_path=None):
     """Calculate the distances from points to the nearest polygon.
 
     Distances are calculated from points in a point geometry shapefile to the
@@ -1090,14 +1165,31 @@ def _point_to_polygon_distance(base_point_vector_path, base_polygon_vector_path,
             projected in meters
         dist_field_name (str): the name of the new distance field to be
             added to the attribute table of base_point_vector
+        copied_point_vector_path (str): if a path is provided, make a copy of
+            the base point vector on this path after computing the distance
+            field. (optional)
 
     Returns:
         None.
 
     """
     LOGGER.info('Starting _point_to_polygon_distance.')
+
+    if copied_point_vector_path:
+        file_ext, driver_name = _get_file_ext_and_driver_name(
+            copied_point_vector_path)
+        point_vector = ogr.Open(base_point_vector_path, gdal.OF_VECTOR)
+        driver = ogr.GetDriverByName(driver_name)
+        point_vector_copy = driver.CopyDataSource(
+            point_vector, copied_point_vector_path)
+        point_vector = None
+        point_vector_copy = None
+        point_vector_path = copied_point_vector_path
+    else:
+        point_vector_path = base_point_vector_path
+
     point_vector = gdal.OpenEx(
-        base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+        point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     poly_vector = gdal.OpenEx(
         base_polygon_vector_path, gdal.OF_VECTOR | gdal.GA_ReadOnly)
 
@@ -1466,7 +1558,8 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
     """
     # If the target_vector_path exists delete it
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
+    output_driver = ogr.GetDriverByName(driver_name)
     if os.path.exists(target_vector_path):
         output_driver.DeleteDataSource(target_vector_path)
 
@@ -1665,12 +1758,15 @@ def _wind_data_to_point_vector(dict_data,
     """
     LOGGER.info('Entering _wind_data_to_point_vector')
 
+    # Get driver based on file extension
+    _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
+
     # If the target_vector_path exists delete it
     if os.path.isfile(target_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver = ogr.GetDriverByName(driver_name)
         driver.DeleteDataSource(target_vector_path)
 
-    target_driver = ogr.GetDriverByName('ESRI Shapefile')
+    target_driver = ogr.GetDriverByName(driver_name)
     target_vector = target_driver.CreateDataSource(target_vector_path)
     target_sr = osr.SpatialReference()
     target_sr.SetWellKnownGeogCS("WGS84")
@@ -1759,6 +1855,7 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
     """
     LOGGER.info('Entering _clip_and_reproject_vector')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-reproject-')
+    file_ext, driver_name = _get_file_ext_and_driver_name(target_vector_path)
 
     # Get the base and target spatial reference in Well Known Text
     base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
@@ -1768,23 +1865,25 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Create path for the reprojected shapefile
     clipped_vector_path = os.path.join(
-        temp_dir, 'clipped_vector.shp')
+        temp_dir, 'clipped_vector' + file_ext)
     reprojected_clip_path = os.path.join(
-        temp_dir, 'reprojected_clip_vector.shp')
+        temp_dir, 'reprojected_clip_vector' + file_ext)
 
     if base_sr_wkt != target_sr_wkt:
         # Reproject clip vector to the spatial reference of the base vector.
         # Note: reproject_vector can be expensive if vector has many features.
         pygeoprocessing.reproject_vector(
-            clip_vector_path, base_sr_wkt, reprojected_clip_path)
+            clip_vector_path, base_sr_wkt, reprojected_clip_path,
+            driver_name=driver_name)
 
-    # Clip the shapefile to the AOI
+    # Clip the base vector to the AOI
     _clip_vector_by_vector(
         base_vector_path, reprojected_clip_path, clipped_vector_path)
 
     # Reproject the clipped base vector to the spatial reference of clip vector
     pygeoprocessing.reproject_vector(
-        clipped_vector_path, target_sr_wkt, target_vector_path)
+        clipped_vector_path, target_sr_wkt, target_vector_path,
+        driver_name=driver_name)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
     LOGGER.info('Finished _clip_and_reproject_vector')
@@ -1807,21 +1906,30 @@ def _clip_vector_by_vector(
     """
     LOGGER.info('Entering _clip_vector_by_vector')
 
-    # Get layer and geometry informations from path
-    base_vector = gdal.OpenEx(base_vector_path)
+    # Get layer and geometry informations from base vector path
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
     base_layer_defn = base_layer.GetLayerDefn()
     base_geom_type = base_layer.GetGeomType()
 
-    clip_vector = gdal.OpenEx(clip_vector_path)
+    clip_vector = gdal.OpenEx(clip_vector_path, gdal.OF_VECTOR)
     clip_layer = clip_vector.GetLayer()
 
-    # Create a target vector based on the properties of base vector
-    target_driver = ogr.GetDriverByName('ESRI Shapefile')
-    target_vector = target_driver.CreateDataSource(target_vector_path)
-    target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
-                                             base_layer.GetSpatialRef(),
-                                             base_geom_type)
+    _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
+
+    # Create target layer
+    # target_driver = ogr.GetDriverByName(driver_name)
+    # target_vector = target_driver.CreateDataSource(target_vector_path)
+    # target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
+    #                                          base_layer.GetSpatialRef(),
+    #                                          base_geom_type)
+    # base_layer.Clip(clip_layer, target_layer)
+
+    target_driver = gdal.GetDriverByName(driver_name)
+    target_vector = target_driver.Create(
+        target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_layer = target_vector.CreateLayer(
+        base_layer_defn.GetName(), base_layer.GetSpatialRef(), base_geom_type)
     base_layer.Clip(clip_layer, target_layer)
 
     target_layer = None
@@ -1857,7 +1965,7 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-land')
 
     # Open the point shapefile and get the layer
-    base_point_vector = gdal.OpenEx(base_point_vector_path)
+    base_point_vector = gdal.OpenEx(base_point_vector_path, gdal.OF_VECTOR)
     base_point_layer = base_point_vector.GetLayer()
     # A list to hold the land to grid distances in order for each point
     # features 'L2G' field
@@ -1871,8 +1979,10 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
-    single_feature_vector_path = os.path.join(temp_dir, 'single_feature.shp')
+    file_ext, driver_name = _get_file_ext_and_driver_name(base_point_vector_path)
+    output_driver = ogr.GetDriverByName(driver_name)
+    single_feature_vector_path = os.path.join(
+        temp_dir, 'single_feature' + file_ext)
     target_vector = output_driver.CreateDataSource(single_feature_vector_path)
 
     # Create the new layer for target_vector using same name and
@@ -1976,7 +2086,7 @@ def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
         None
 
     """
-    LOGGER.info('Starting _calculate_distances_land_grid.')
+    LOGGER.info('Starting _calculate_distances_grid.')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-grid-')
 
     # Get nodata value to use in raster creation and masking
@@ -2101,7 +2211,7 @@ def validate(args, limit_to=None):
         try:
             if args[vector_key] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args[vector_key])
+                    vector = gdal.OpenEx(args[vector_key], gdal.OF_VECTOR)
                     if vector is None:
                         warnings.append(
                             ([vector_key],
@@ -2113,7 +2223,7 @@ def validate(args, limit_to=None):
 
     if limit_to in ('bathymetry_path', None):
         with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['bathymetry_path'])
+            raster = gdal.OpenEx(args['bathymetry_path'], gdal.OF_RASTER)
         if raster is None:
             warnings.append((['bathymetry_path'],
                              ('Parameter must be a path to a GDAL-compatible '
@@ -2161,7 +2271,8 @@ def validate(args, limit_to=None):
         try:
             if args['aoi_vector_path'] not in ('', None):
                 with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_vector_path'])
+                    vector = gdal.OpenEx(
+                        args['aoi_vector_path'], gdal.OF_VECTOR)
                     layer = vector.GetLayer()
                     srs = layer.GetSpatialRef()
                     units = srs.GetLinearUnitsName().lower()
