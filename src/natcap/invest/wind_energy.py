@@ -1946,14 +1946,6 @@ def _clip_vector_by_vector(
 
     _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
 
-    # Create target layer
-    # target_driver = ogr.GetDriverByName(driver_name)
-    # target_vector = target_driver.CreateDataSource(target_vector_path)
-    # target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
-    #                                          base_layer.GetSpatialRef(),
-    #                                          base_geom_type)
-    # base_layer.Clip(clip_layer, target_layer)
-
     target_driver = gdal.GetDriverByName(driver_name)
     target_vector = target_driver.Create(
         target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
