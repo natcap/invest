@@ -113,6 +113,7 @@ def execute(args):
 
     Returns:
         None
+
     """
     # just check that the AOI exists since it wouldn't crash until the end of
     # the whole model run if it didn't.
@@ -312,6 +313,7 @@ def _aggregate_carbon_map(
 
     Returns:
         None
+
     """
     aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
@@ -399,7 +401,9 @@ def _calculate_lulc_carbon_map(
             that will contain total mapped carbon per cell.
 
     Returns:
-        None"""
+        None
+
+    """
 
     # classify forest pixels from lulc
     biophysical_table = utils.build_lookup_from_csv(
@@ -457,7 +461,9 @@ def _map_distance_from_tropical_forest_edge(
             mask raster
 
     Returns:
-        None"""
+        None
+
+    """
 
     # Build a list of forest lucodes
     biophysical_table = utils.build_lookup_from_csv(
@@ -590,7 +596,9 @@ def _calculate_tropical_forest_edge_carbon_map(
             type.
 
     Returns:
-        None"""
+        None
+
+    """
 
     # load spatial indeces from pickle file
     kd_tree, theta_model_parameters, method_model_parameter = pickle.load(
@@ -763,6 +771,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
