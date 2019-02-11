@@ -30,7 +30,6 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
-logging.getLogger('taskgraph').setLevel(logging.ERROR)
 
 speedups.enable()
 
