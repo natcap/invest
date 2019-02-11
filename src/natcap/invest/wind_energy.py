@@ -195,7 +195,7 @@ def execute(args):
         # Get the minimum absolute value from the bathymetry pixel size tuple
         mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
         graph.add_task(
-            pygeoprocessing.warp_raster,
+            func=pygeoprocessing.warp_raster,
             args=(args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
                   bathymetry_path, 'near'),
             target_path_list=[bathymetry_path],
@@ -369,7 +369,7 @@ def execute(args):
         # `resample_bathymetry` task, if the task is created
         graph.join()
         clip_to_projection_task = graph.add_task(
-            _clip_to_projection_with_square_pixels,
+            func=_clip_to_projection_with_square_pixels,
             args=(bathymetry_path, aoi_vector_path,
                   bathymetry_proj_raster_path),
             target_path_list=[bathymetry_proj_raster_path],
@@ -387,7 +387,7 @@ def execute(args):
         # Use the projection from the projected bathymetry as reference to
         # create wind point vector from wind data dictionary
         wind_data_to_vector_task = graph.add_task(
-            _wind_data_to_point_vector,
+            func=_wind_data_to_point_vector,
             args=(wind_data, 'wind_data', wind_point_vector_path),
             kwargs={'ref_projection_wkt': pygeoprocessing.get_raster_info(
                         bathymetry_proj_raster_path)['projection']},
@@ -400,7 +400,7 @@ def execute(args):
         clipped_wind_point_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
         graph.add_task(
-            _clip_vector_by_vector,
+            func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
                   clipped_wind_point_vector_path),
             target_path_list=[clipped_wind_point_vector_path],
@@ -428,7 +428,7 @@ def execute(args):
                 inter_dir, os.path.splitext(land_polygon_vector_path)[0] +
                 '_projected_clipped%s.shp' % suffix)
             clip_reproject_land_poly_task = graph.add_task(
-                _clip_and_reproject_vector,
+                func=_clip_and_reproject_vector,
                 args=(land_polygon_vector_path, aoi_vector_path,
                       land_poly_proj_vector_path, inter_dir),
                 target_path_list=[land_poly_proj_vector_path],
@@ -443,7 +443,7 @@ def execute(args):
             # Make a raster from AOI using the bathymetry rasters pixel size
             LOGGER.debug('Create Raster From AOI')
             create_aoi_raster_task = graph.add_task(
-                pygeoprocessing.create_raster_from_vector_extents,
+                func=pygeoprocessing.create_raster_from_vector_extents,
                 args=(aoi_vector_path, aoi_raster_path,
                       _get_pixel_size(final_bathy_raster_path), gdal.GDT_Byte,
                       _TARGET_NODATA),
@@ -454,7 +454,7 @@ def execute(args):
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
             create_distance_raster_task = graph.add_task(
-                _create_distance_raster,
+                func=_create_distance_raster,
                 args=(aoi_raster_path, land_poly_proj_vector_path,
                       dist_trans_path, inter_dir),
                 target_path_list=[dist_trans_path],
@@ -466,7 +466,7 @@ def execute(args):
                                           'distance_mask%s.tif' % suffix)
 
             graph.add_task(
-                _mask_by_distance,
+                func=_mask_by_distance,
                 args=(dist_trans_path, min_distance, max_distance,
                       _TARGET_NODATA, dist_mask_path),
                 target_path_list=[dist_mask_path],
@@ -485,7 +485,7 @@ def execute(args):
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
         graph.add_task(
-            _wind_data_to_point_vector,
+            func=_wind_data_to_point_vector,
             args=(wind_data, 'wind_data', wind_point_vector_path),
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector_without_aoi')
@@ -542,7 +542,7 @@ def execute(args):
     graph.join()
 
     graph.add_task(
-        pygeoprocessing.raster_calculator,
+        func=pygeoprocessing.raster_calculator,
         args=([(final_bathy_raster_path, 1)], _depth_op, depth_mask_path,
               _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[depth_mask_path],
@@ -557,7 +557,7 @@ def execute(args):
     # Create rasters for density and harvested values
     LOGGER.info('Create Density Raster')
     create_density_raster_task = graph.add_task(
-        pygeoprocessing.create_raster_from_vector_extents,
+        func=pygeoprocessing.create_raster_from_vector_extents,
         args=(final_wind_point_vector_path, temp_density_raster_path,
               target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[temp_density_raster_path],
@@ -565,7 +565,7 @@ def execute(args):
 
     LOGGER.info('Create Harvested Raster')
     create_harvested_raster_task = graph.add_task(
-        pygeoprocessing.create_raster_from_vector_extents,
+        func=pygeoprocessing.create_raster_from_vector_extents,
         args=(final_wind_point_vector_path, temp_harvested_raster_path,
               target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[temp_harvested_raster_path],
@@ -574,7 +574,7 @@ def execute(args):
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Interpolate Density Points')
     interpolate_density_task = graph.add_task(
-        pygeoprocessing.interpolate_points,
+        func=pygeoprocessing.interpolate_points,
         args=(final_wind_point_vector_path, DENSITY_FIELD_NAME,
               (temp_density_raster_path, 1)),
         kwargs={'interpolation_mode': 'linear'},
@@ -583,7 +583,7 @@ def execute(args):
 
     LOGGER.info('Interpolate Harvested Points')
     interpolate_harvested_task = graph.add_task(
-        pygeoprocessing.interpolate_points,
+        func=pygeoprocessing.interpolate_points,
         args=(final_wind_point_vector_path, HARVESTED_FIELD_NAME,
               (temp_harvested_raster_path, 1)),
         kwargs={'interpolation_mode': 'linear'},
@@ -655,7 +655,7 @@ def execute(args):
     ]
     # Align and resize rasters in the density and harvest lists
     align_and_resize_density_and_harvest_task = graph.add_task(
-        pygeoprocessing.align_and_resize_raster_stack,
+        func=pygeoprocessing.align_and_resize_raster_stack,
         args=(merged_mask_list, merged_aligned_mask_list,
               ['near'] * len(merged_mask_list), target_pixel_size,
               'intersection'),
@@ -668,7 +668,7 @@ def execute(args):
     # cannot be located
     LOGGER.info('Mask out depth and [distance] areas from Density raster')
     graph.add_task(
-        pygeoprocessing.raster_calculator,
+        func=pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in aligned_density_mask_list],
               _mask_out_depth_dist, density_masked_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
@@ -678,7 +678,7 @@ def execute(args):
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
     mask_harvested_raster_task = graph.add_task(
-        pygeoprocessing.raster_calculator,
+        func=pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in aligned_harvested_mask_list],
               _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
@@ -728,7 +728,7 @@ def execute(args):
         # This makes it easier for future distance calculations and provides a
         # nice intermediate output for users
         grid_dict_to_vector_task = graph.add_task(
-            _dictionary_to_point_vector,
+            func=_dictionary_to_point_vector,
             args=(grid_dict, 'grid_points', grid_vector_path),
             target_path_list=[grid_vector_path],
             task_name='grid_dictionary_to_vector')
@@ -738,7 +738,7 @@ def execute(args):
         grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
         clip_and_reproject_grid_vector_task = graph.add_task(
-            _clip_and_reproject_vector,
+            func=_clip_and_reproject_vector,
             args=(grid_vector_path, aoi_vector_path,
                   grid_projected_vector_path, inter_dir),
             target_path_list=[grid_projected_vector_path],
@@ -761,7 +761,7 @@ def execute(args):
                 # This makes it easier for future distance calculations and
                 # provides a nice intermediate output for users
                 land_dict_to_vector_task = graph.add_task(
-                    _dictionary_to_point_vector,
+                    func=_dictionary_to_point_vector,
                     args=(land_dict, 'land_points', land_point_vector_path),
                     target_path_list=[land_point_vector_path],
                     task_name='land_dictionary_to_vector')
@@ -771,7 +771,7 @@ def execute(args):
                 land_projected_vector_path = os.path.join(
                     inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
                 clip_and_reproject_land_vector_task = graph.add_task(
-                    _clip_and_reproject_vector,
+                    func=_clip_and_reproject_vector,
                     args=(land_point_vector_path, aoi_vector_path,
                           land_projected_vector_path, inter_dir),
                     target_path_list=[land_projected_vector_path],
@@ -800,7 +800,7 @@ def execute(args):
                         'land_point_to_grid%s.shp' % suffix)
 
                     land_to_grid_task = graph.add_task(
-                        _calculate_land_to_grid_distance,
+                        func=_calculate_land_to_grid_distance,
                         args=(land_projected_vector_path,
                               grid_projected_vector_path,
                               _LAND_TO_GRID_FIELD, land_to_grid_vector_path),
@@ -812,7 +812,7 @@ def execute(args):
 
                     # Calculate distance raster
                     graph.add_task(
-                        _calculate_distances_land_grid,
+                        func=_calculate_distances_land_grid,
                         args=(land_to_grid_vector_path,
                               harvested_masked_path, final_dist_raster_path,
                               inter_dir),
@@ -827,7 +827,7 @@ def execute(args):
 
                     # Calculate distance raster
                     graph.add_task(
-                        _calculate_grid_dist_on_raster,
+                        func=_calculate_grid_dist_on_raster,
                         args=(grid_projected_vector_path,
                               harvested_masked_path,
                               final_dist_raster_path, inter_dir),
@@ -848,7 +848,7 @@ def execute(args):
 
                 # Calculate distance raster
                 graph.add_task(
-                    _calculate_grid_dist_on_raster,
+                    func=_calculate_grid_dist_on_raster,
                     args=(grid_projected_vector_path, harvested_masked_path,
                           final_dist_raster_path, inter_dir),
                     target_path_list=[final_dist_raster_path],
@@ -876,7 +876,7 @@ def execute(args):
             inter_dir, 'land_poly_dist%s.tif' % suffix)
 
         land_poly_dist_raster_task = graph.add_task(
-            _create_distance_raster,
+            func=_create_distance_raster,
             args=(harvested_masked_path, land_poly_proj_vector_path,
                   land_poly_dist_raster_path, inter_dir),
             target_path_list=[land_poly_dist_raster_path],
@@ -903,7 +903,7 @@ def execute(args):
             return out_array
 
         graph.add_task(
-            pygeoprocessing.raster_calculator,
+            func=pygeoprocessing.raster_calculator,
             args=([(land_poly_dist_raster_path, 1)], add_avg_dist_op,
                   final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
@@ -1000,7 +1000,7 @@ def execute(args):
 
     # create NPV and levelized cost rasters
     graph.add_task(
-        func=pygeoprocessing.new_raster_from_base,
+        func=func=pygeoprocessing.new_raster_from_base,
         args=(harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
               [_TARGET_NODATA]),
         target_path_list=[npv_raster_path],
