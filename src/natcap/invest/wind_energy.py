@@ -792,14 +792,13 @@ def execute(args):
                     LOGGER.info(
                         'Adding land to grid distances ("L2G") field to land '
                         'point shapefile.')
+
                     # Make a path for the grid vector, so Taskgraph can keep
                     # track of the correct timestamp of file being modified
                     land_to_grid_vector_path = os.path.join(
                         inter_dir,
                         'land_point_to_grid%s.shp' % suffix)
-                    # _calculate_land_to_grid_distance(
-                    #     land_projected_vector_path, grid_projected_vector_path,
-                    #     _LAND_TO_GRID_FIELD)
+
                     land_to_grid_task = graph.add_task(
                         _calculate_land_to_grid_distance,
                         args=(land_projected_vector_path,
@@ -825,10 +824,19 @@ def execute(args):
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
                         'cable distances are calculated from grid data.')
+
                     # Calculate distance raster
-                    _calculate_distances_grid(grid_projected_vector_path,
-                                              harvested_masked_path,
-                                              final_dist_raster_path, inter_dir)
+                    graph.add_task(
+                        _calculate_grid_dist_on_raster,
+                        args=(grid_projected_vector_path,
+                              harvested_masked_path,
+                              final_dist_raster_path, inter_dir),
+                        target_path_list=[final_dist_raster_path],
+                        task_name='calculate_grid_distance',
+                        dependent_task_list=[
+                            clip_and_reproject_grid_vector_task,
+                            mask_harvested_raster_task])
+
                 land_layer = None
                 land_vector = None
 
@@ -839,9 +847,15 @@ def execute(args):
                     'calculated from grid data.')
 
                 # Calculate distance raster
-                _calculate_distances_grid(grid_projected_vector_path,
-                                          harvested_masked_path,
-                                          final_dist_raster_path, inter_dir)
+                graph.add_task(
+                    _calculate_grid_dist_on_raster,
+                    args=(grid_projected_vector_path, harvested_masked_path,
+                          final_dist_raster_path, inter_dir),
+                    target_path_list=[final_dist_raster_path],
+                    task_name='calculate_grid_distance',
+                    dependent_task_list=[
+                        clip_and_reproject_grid_vector_task,
+                        mask_harvested_raster_task])
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
@@ -861,9 +875,14 @@ def execute(args):
         land_poly_dist_raster_path = os.path.join(
             inter_dir, 'land_poly_dist%s.tif' % suffix)
 
-        _create_distance_raster(harvested_masked_path,
-                                land_poly_proj_vector_path,
-                                land_poly_dist_raster_path, inter_dir)
+        land_poly_dist_raster_task = graph.add_task(
+            _create_distance_raster,
+            args=(harvested_masked_path, land_poly_proj_vector_path,
+                  land_poly_dist_raster_path, inter_dir),
+            target_path_list=[land_poly_dist_raster_path],
+            task_name='create_land_poly_dist_raster',
+            dependent_task_list=[
+                mask_harvested_raster_task, clip_reproject_land_poly_task])
 
         def add_avg_dist_op(tmp_dist):
             """Convert distances to meters and add in avg_grid_distance
@@ -883,9 +902,13 @@ def execute(args):
                 valid_pixels_mask] * mean_pixel_size + avg_grid_distance
             return out_array
 
-        pygeoprocessing.raster_calculator(
-            [(land_poly_dist_raster_path, 1)], add_avg_dist_op,
-            final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA)
+        graph.add_task(
+            pygeoprocessing.raster_calculator,
+            args=([(land_poly_dist_raster_path, 1)], add_avg_dist_op,
+                  final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
+            target_path_list=[final_dist_raster_path],
+            task_name='calculate_final_distance_in_meters',
+            dependent_task_list=[land_poly_dist_raster_task])
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -976,12 +999,21 @@ def execute(args):
     carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
     # create NPV and levelized cost rasters
-    pygeoprocessing.new_raster_from_base(
-        harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
-        [_TARGET_NODATA])
-    pygeoprocessing.new_raster_from_base(
-        harvested_masked_path, levelized_raster_path, _TARGET_DATA_TYPE,
-        [_TARGET_NODATA])
+    graph.add_task(
+        func=pygeoprocessing.new_raster_from_base,
+        args=(harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
+              [_TARGET_NODATA]),
+        target_path_list=[npv_raster_path],
+        task_name='create_npv_raster',
+        dependent_task_list=[mask_harvested_raster_task])
+
+    graph.add_task(
+        func=pygeoprocessing.new_raster_from_base,
+        args=(harvested_masked_path, levelized_raster_path, _TARGET_DATA_TYPE,
+              [_TARGET_NODATA]),
+        target_path_list=[levelized_raster_path],
+        task_name='create_levelized_raster',
+        dependent_task_list=[mask_harvested_raster_task])
 
     # Open raster bands for writing
     npv_raster = gdal.OpenEx(npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
@@ -990,10 +1022,9 @@ def execute(args):
         levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
     levelized_band = levelized_raster.GetRasterBand(1)
 
-    for (harvest_block_info,
-         harvest_block_data), (_, dist_block_data) in zip(
-             pygeoprocessing.iterblocks((harvested_masked_path, 1)),
-             pygeoprocessing.iterblocks((final_dist_raster_path, 1))):
+    for (harvest_block_info, harvest_block_data), (_, dist_block_data) in zip(
+            pygeoprocessing.iterblocks((harvested_masked_path, 1)),
+            pygeoprocessing.iterblocks((final_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
         target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
@@ -1009,8 +1040,8 @@ def execute(args):
         # Calculate cable cost. The break at 'circuit_break' indicates the
         # difference in using AC and DC current systems
         circuit_mask = (cable_dist_arr <= circuit_break)
-        cable_cost_arr = np.full(
-            target_arr_shape, 0.0, dtype=np.float32)
+        cable_cost_arr = np.full(target_arr_shape, 0.0, dtype=np.float32)
+
         # Calculate AC cable cost
         cable_cost_arr[circuit_mask] = cable_dist_arr[
             circuit_mask] * cable_coef_ac + (mw_coef_ac * total_mega_watt)
@@ -1047,6 +1078,7 @@ def execute(args):
         levelized_denom_arr = np.full(
             target_arr_shape, 0.0, dtype=np.float32)
         levelized_denom_arr = energy_val_arr / disc_const**0
+
         # Calculate the total NPV and the levelized cost over the lifespan of
         # the wind farm. Starting at year 1, because year 0 yields no revenue
         for year in xrange(1, len(price_list)):
@@ -1105,9 +1137,16 @@ def execute(args):
     levelized_raster.FlushCache()
     levelized_raster = None
 
-    pygeoprocessing.raster_calculator([(harvested_masked_path, 1)],
-                                      _calculate_carbon_op, carbon_path,
-                                      _TARGET_DATA_TYPE, _TARGET_NODATA)
+    graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(harvested_masked_path, 1)], _calculate_carbon_op, carbon_path,
+              _TARGET_DATA_TYPE, _TARGET_NODATA),
+        target_path_list=[carbon_path],
+        task_name='calculate_carbon_raster',
+        dependent_task_list=[mask_harvested_raster_task])
+
+    graph.close()
+    graph.join()
     LOGGER.info('Wind Energy Valuation Model Completed')
 
 
@@ -1198,7 +1237,7 @@ def _calculate_land_to_grid_distance(
         # Add the shapely point geometry to a list
         grid_point_list.append(shapely_grid_point)
 
-    # Take the union over the list of polygons to get one defined polygon object
+    # Take the union over the list of points to get one point collection object
     LOGGER.info('Get the collection of polygon geometries by taking the union')
     grid_point_collection = shapely.ops.unary_union(grid_point_list)
 
@@ -2055,8 +2094,8 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     LOGGER.info('Finished _calculate_distances_land_grid.')
 
 
-def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
-                              final_dist_raster_path, work_dir):
+def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
+                                   final_dist_raster_path, work_dir):
     """Creates a distance transform raster from an OGR shapefile.
 
     The function first burns the features from 'grid_vector_path' onto a raster
@@ -2077,8 +2116,8 @@ def _calculate_distances_grid(grid_vector_path, harvested_masked_path,
         None
 
     """
-    LOGGER.info('Starting _calculate_distances_grid.')
-    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-dist-grid-')
+    LOGGER.info('Starting _calculate_grid_dist_on_raster.')
+    temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-grid-dist-')
 
     # Get nodata value to use in raster creation and masking
     out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[

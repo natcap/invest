@@ -173,7 +173,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         self.assertDictEqual(expected_result, result)
 
-    def test_calculate_distances_grid(self):
+    def test_calculate_grid_dist_on_raster(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
         from natcap.invest import wind_energy
 
@@ -200,7 +200,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test
-        wind_energy._calculate_distances_grid(
+        wind_energy._calculate_grid_dist_on_raster(
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
