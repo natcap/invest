@@ -77,6 +77,9 @@ def execute(args):
             parameters table. (required for Valuation)
         number_of_machines (int): An integer specifying the number of machines
             for a wave farm site. (required for Valuation)
+        n_workers (int): The number of worker processes to use for processing
+            this model.  If omitted, computation will take place in the current
+            process. (optional)
 
     Example Args Dictionary::
 
