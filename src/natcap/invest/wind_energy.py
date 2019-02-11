@@ -30,7 +30,7 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
-
+logging.getLogger('taskgraph').setLevel(logging.ERROR)
 speedups.enable()
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
@@ -130,6 +130,9 @@ def execute(args):
             (required if price_table is false)
         rate_change (float): a float as a percent for the annual rate of change
             in the price of wind energy. (required if price_table is false)
+        n_workers (int): The number of worker processes to use for processing
+            this model.  If omitted, computation will take place in the current
+            process. (optional)
 
     Example Args Dictionary::
 
