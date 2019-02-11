@@ -111,6 +111,10 @@ def execute(args):
             which to multiply forest biomass to convert to carbon in the edge
             effect calculation.
 
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.
+
     Returns:
         None
 
