@@ -23,6 +23,7 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy')
+logging.getLogger('taskgraph').setLevel(logging.ERROR)
 
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
@@ -58,8 +59,8 @@ def execute(args):
         analysis_area_path (str): A string identifying the analysis area of
             interest. Used to determine wave data shapefile, wave data text
             file, and analysis area boundary shape. (required)
-        aoi_path (str): A polygon shapefile outlining a more detailed area
-            within the analysis area. This shapefile should be projected with
+        aoi_path (str): A polygon OGR vector outlining a more detailed area
+            within the analysis area. This vector should be projected with
             linear units being in meters. (required to run Valuation model)
         machine_perf_path (str): The path of a CSV file that holds the
             machine performance table. (required)
@@ -87,7 +88,7 @@ def execute(args):
             'workspace_dir': 'path/to/workspace_dir',
             'wave_base_data_path': 'path/to/base_data_dir',
             'analysis_area_path': 'West Coast of North America and Hawaii',
-            'aoi_path': 'path/to/shapefile',
+            'aoi_path': 'path/to/vector',
             'machine_perf_path': 'path/to/csv',
             'machine_param_path': 'path/to/csv',
             'dem_path': 'path/to/raster',
@@ -252,15 +253,16 @@ def execute(args):
 
     # This if/else statement differentiates between having an AOI or doing
     # a broad run on all the wave points specified by args['analysis_area'].
-    if 'aoi_path' not in args:
+    if 'aoi_path' not in args or not args['aoi_path']:
         LOGGER.info('AOI not provided.')
+        aoi_provided = False
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
         analysis_area_vector = gdal.OpenEx(analysis_area_points_path,
                                            gdal.OF_VECTOR)
-        drv = gdal.GetDriverByName('ESRI Shapefile')
-        drv.CreateCopy(wave_vector_path, analysis_area_vector)
+        driver = gdal.GetDriverByName('ESRI Shapefile')
+        driver.CreateCopy(wave_vector_path, analysis_area_vector)
         analysis_area_vector = None
 
         # The path to a polygon shapefile that specifies the broader AOI
@@ -278,6 +280,7 @@ def execute(args):
             analysis_area_sr, aoi_sr)
     else:
         LOGGER.info('AOI provided.')
+        aoi_provided = True
         aoi_vector_path = args['aoi_path']
         # Create a coordinate transformation from the projection of the given
         # wave energy point shapefile, to the AOI's projection
@@ -285,17 +288,25 @@ def execute(args):
         aoi_sr_wkt = aoi_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
-        _clip_vector_by_vector(analysis_area_points_path, aoi_vector_path,
-                               wave_vector_path, aoi_sr_wkt, intermediate_dir)
+        clip_wave_points_task = task_graph.add_task(
+            func=_clip_vector_by_vector,
+            args=(analysis_area_points_path, aoi_vector_path, wave_vector_path,
+                  aoi_sr_wkt, intermediate_dir),
+            target_path_list=[wave_vector_path],
+            task_name='clip_wave_points_to_aoi')
 
         # Clip the AOI to the Extract shape to make sure the output results do
         # not show extrapolated values outside the bounds of the points
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
             'aoi_clipped_to_extract_path%s.shp' % file_suffix)
-        _clip_vector_by_vector(aoi_vector_path, analysis_area_extract_path,
-                               aoi_clipped_to_extract_path, aoi_sr_wkt,
-                               intermediate_dir)
+        clip_aoi_task = task_graph.add_task(
+            func=_clip_vector_by_vector,
+            args=(aoi_vector_path, analysis_area_extract_path,
+                  aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir),
+            target_path_list=[aoi_clipped_to_extract_path],
+            task_name='clip_aoi_to_extract_data')
+
         # Replace the AOI path with the clipped AOI path
         aoi_vector_path = aoi_clipped_to_extract_path
 
@@ -315,7 +326,18 @@ def execute(args):
     # from the raster DEM
     LOGGER.info('Adding DEPTH_M field to the wave shapefile from the DEM')
     # Add the depth value to the wave points by indexing into the DEM dataset
-    _index_raster_value_to_point_vector(wave_vector_path, dem_path, 'DEPTH_M')
+    indexed_wave_vector_path = os.path.join(
+        intermediate_dir, 'Indexed_WEM_InputOutput_Pts%s.shp' % file_suffix)
+    if aoi_provided:
+        indexing_dependent_task_list = [clip_wave_points_task, clip_aoi_task]
+    else:
+        indexing_dependent_task_list = None
+    task_graph.add_task(
+        func=_index_raster_value_to_point_vector,
+        args=(wave_vector_path, dem_path, indexed_wave_vector_path, 'DEPTH_M'),
+        target_path_list=[indexed_wave_vector_path],
+        task_name='index_depth_to_wave_vector',
+        dependent_task_list=indexing_dependent_task_list)
 
     # Generate an interpolate object for wave_energy_capacity
     LOGGER.info('Interpolating machine performance table.')
@@ -328,12 +350,12 @@ def execute(args):
 
     # Add the sum as a field to the shapefile for the corresponding points
     LOGGER.info('Adding the wave energy sums to the WaveData shapefile')
-    _captured_wave_energy_to_vector(energy_cap, wave_vector_path)
+    _captured_wave_energy_to_vector(energy_cap, indexed_wave_vector_path)
 
     # Calculate wave power for each wave point and add it as a field
     # to the shapefile
     LOGGER.info('Calculating Wave Power.')
-    _compute_wave_power(wave_vector_path)
+    _compute_wave_power(indexed_wave_vector_path)
 
     # Intermediate/final output paths for wave energy and wave power rasters
     unclipped_energy_raster_path = os.path.join(
@@ -357,12 +379,12 @@ def execute(args):
     # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
-    pygeoprocessing.interpolate_points(wave_vector_path, 'CAPWE_MWHY',
+    pygeoprocessing.interpolate_points(indexed_wave_vector_path, 'CAPWE_MWHY',
                                        (unclipped_energy_raster_path, 1),
                                        'near')
 
     pygeoprocessing.interpolate_points(
-        wave_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1), 'near')
+        indexed_wave_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1), 'near')
 
     # Clip wave energy and power rasters to the aoi vector
     target_resample_method = 'near'
@@ -444,7 +466,7 @@ def execute(args):
                           coord_trans)
 
     # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = _get_points_geometries(wave_vector_path)
+    wave_points = _get_points_geometries(indexed_wave_vector_path)
     land_points = _get_points_geometries(land_vector_path)
     grid_points = _get_points_geometries(grid_vector_path)
 
@@ -506,7 +528,7 @@ def execute(args):
         wave_layer = None
         wave_vector = None
 
-    _add_distance_fields_to_vector(wave_vector_path, wave_to_land_dist,
+    _add_distance_fields_to_vector(indexed_wave_vector_path, wave_to_land_dist,
                                    land_to_grid_dist)
 
     def _calc_npv_wave(annual_revenue, annual_cost):
@@ -621,7 +643,7 @@ def execute(args):
         wave_point_vector = None
         LOGGER.info('Finished calculating the Net Present Value.')
 
-    _add_npv_field_to_vector(wave_vector_path)
+    _add_npv_field_to_vector(indexed_wave_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -633,7 +655,7 @@ def execute(args):
     # Interpolate the NPV values based on the dimensions and corresponding
     # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    pygeoprocessing.interpolate_points(wave_vector_path, 'NPV_25Y',
+    pygeoprocessing.interpolate_points(indexed_wave_vector_path, 'NPV_25Y',
                                        (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
@@ -1368,8 +1390,9 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
     return energy_cap
 
 
-def _index_raster_value_to_point_vector(base_point_vector_path,
-                                        base_raster_path, field_name):
+def _index_raster_value_to_point_vector(
+        base_point_vector_path, base_raster_path, target_point_vector_path,
+        field_name):
     """Add the values of a raster to the field of vector point features.
 
     Values are recorded in the attribute field of the vector. Note: If a value
@@ -1377,8 +1400,11 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
     energy point on land should not be used in calculations.
 
     Parameters:
-        base_point_vector_path (str): a path to an ogr point shapefile.
-        base_raster_path(str): a path to a GDAL dataset.
+        base_point_vector_path (str): a path to an OGR point vector file.
+        base_raster_path (str): a path to a GDAL dataset.
+        target_point_vector_path (str): a path to a shapefile that has the
+            target field name in addition to the existing fields in the base
+            point vector.
         field_name (str): the name of the new field that will be added to the
             point feature. An exception will be raised if this field has
             existed in the base point vector.
@@ -1387,9 +1413,14 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
         None
 
     """
-    base_vector = gdal.OpenEx(
-        base_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-    base_layer = base_vector.GetLayer()
+    base_point_vector = gdal.OpenEx(base_point_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName("ESRI Shapefile")
+    driver.CreateCopy(target_point_vector_path, base_point_vector)
+    base_point_vector = None
+
+    target_vector = gdal.OpenEx(
+        target_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
     raster_gt = pygeoprocessing.get_raster_info(base_raster_path)[
         'geotransform']
     pixel_size_x, pixel_size_y, raster_min_x, raster_max_y = \
@@ -1402,8 +1433,8 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
 
     # Raise an exception if the field name already exists in the vector
     exact_match = True
-    if base_layer.FindFieldIndex(field_name, exact_match) == -1:
-        base_layer.CreateField(field_defn)
+    if target_layer.FindFieldIndex(field_name, exact_match) == -1:
+        target_layer.CreateField(field_defn)
     else:
         raise ValueError(
             "'%s' field should not have existed in the wave data shapefiles. "
@@ -1417,13 +1448,13 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
         pygeoprocessing.get_raster_info(base_raster_path)['projection'])
     vector_sr = osr.SpatialReference()
     vector_sr.ImportFromWkt(
-        pygeoprocessing.get_vector_info(base_point_vector_path)[
+        pygeoprocessing.get_vector_info(target_point_vector_path)[
             'projection'])
     vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
-        for feat in base_layer:
+        for feat in target_layer:
             fid = feat.GetFID()
             geom = feat.GetGeometryRef()
             geom_x, geom_y = geom.GetX(), geom.GetY()
@@ -1467,20 +1498,20 @@ def _index_raster_value_to_point_vector(base_point_vector_path,
             # greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
             if block_value >= 0.0:
-                base_layer.DeleteFeature(vector_fid)
+                target_layer.DeleteFeature(vector_fid)
             else:
-                feat = base_layer.GetFeature(vector_fid)
+                feat = target_layer.GetFeature(vector_fid)
                 field_index = feat.GetFieldIndex(field_name)
                 feat.SetField(int(field_index), float(block_value))
-                base_layer.SetFeature(feat)
+                target_layer.SetFeature(feat)
                 feat = None
 
     # It is not enough to just delete a feature from the layer. The
     # database where the information is stored must be re-packed so that
     # feature entry is properly removed
-    base_vector.ExecuteSQL('REPACK ' + base_layer.GetName())
-    base_layer = None
-    base_vector = None
+    target_vector.ExecuteSQL('REPACK ' + target_layer.GetName())
+    target_layer = None
+    target_vector = None
 
 
 def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
