@@ -17,11 +17,12 @@ from osgeo import gdal
 from osgeo import osr
 from osgeo import ogr
 
+import taskgraph
 import pygeoprocessing
 from . import validation
 from . import utils
 
-LOGGER = logging.getLogger('natcap.invest.wave_energy.wave_energy')
+LOGGER = logging.getLogger('natcap.invest.wave_energy')
 
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
@@ -101,6 +102,18 @@ def execute(args):
     output_dir = os.path.join(workspace, 'output')
     intermediate_dir = os.path.join(workspace, 'intermediate')
     utils.make_directories([intermediate_dir, output_dir])
+
+    # Initialize a TaskGraph
+    taskgraph_working_dir = os.path.join(
+        intermediate_dir, '_taskgraph_working_dir')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     file_suffix = utils.make_suffix_string(args, 'suffix')
