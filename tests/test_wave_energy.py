@@ -67,10 +67,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_pixel_size_transform(self):
-        """WaveEnergy: testing pixel size transform helper function.
-
-        Function name is : '_pixel_size_based_on_coordinate_transform'.
+    def test_pixel_size_based_on_coordinate_transform(self):
+        """WaveEnergy: testing '_pixel_size_based_on_coordinate_transform' fn.
         """
         from natcap.invest import wave_energy
 
@@ -367,7 +365,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
                           self.workspace_dir)
 
     def test_binary_wave_data_to_dict(self):
-        """WaveEnergy: testing 'load_binary_wave_data_to_dict' function."""
+        """WaveEnergy: testing '_binary_wave_data_to_dict' function."""
         from natcap.invest import wave_energy
 
         wave_file_path = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')

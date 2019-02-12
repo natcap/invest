@@ -672,6 +672,7 @@ def _calc_npv_wave(annual_revenue, annual_cost, d_rate):
         npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
     return sum(npv)
 
+
 def _get_npv_results(captured_wave_energy, depth, number_of_machines,
                      wave_to_land_dist, land_to_grid_dist, machine_econ_dict):
     """Compute NPV, total captured wave energy, and units for wave point.
@@ -680,7 +681,7 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
         captured_wave_energy (double): the amount of captured wave energy for
             a wave machine.
         depth (double): the depth of that wave point.
-        number_of_machines (int): the number of machines for a given wave point.
+        number_of_machines (int): the number of machines for a given wave point
         wave_to_land_dist (float): the shortest distance from the wave point to
             land points.
         land_to_grid_dist (float): the shortest distance from the wave point to
@@ -956,7 +957,9 @@ def _get_points_geometries(base_vector_path):
 
 
 def _calculate_min_distances(xy_1, xy_2):
-    """For all points in xy_1, this function calculates the distance from point
+    """Calculate the shortest distances and indexes of points in xy_1 to xy_2.
+
+    For all points in xy_1, this function calculates the distance from point
     xy_1 to various points in xy_2, and stores the shortest distances found in
     a list min_dist. The function also stores the index from which ever point
     in xy_2 was closest, as an id in a list that corresponds to min_dist.
@@ -966,8 +969,10 @@ def _calculate_min_distances(xy_1, xy_2):
         xy_2 (numpy.array): An array of points in the form [x,y]
 
     Returns:
-        A numpy array of shortest distances and a numpy array of indexes
-        corresponding to the array of shortest distances
+        min_dist (numpy.array): An array of shortest distances for each point
+            in xy_1 to xy_2.
+        min_id (numpy.array): An array of indexes corresponding to the array
+            of shortest distances (min_dist).
 
     """
     # Create two numpy array of zeros with length set to as many points in xy_1
@@ -979,6 +984,7 @@ def _calculate_min_distances(xy_1, xy_2):
     for idx, xy_point in enumerate(xy_1):
         dists = numpy.sqrt(numpy.sum((xy_point - xy_2)**2, axis=1))
         min_dist[idx], min_id[idx] = dists.min(), dists.argmin()
+
     return min_dist, min_id
 
 
@@ -1135,7 +1141,7 @@ def _get_coordinate_transformation(source_sr, target_sr):
 def _create_percentile_rasters(base_raster_path, target_raster_path,
                                units_short, units_long, percentile_list,
                                start_value=None):
-    """Creates a percentile (quartile) raster based on the raster_dataset.
+    """Create a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
     the ranges provided by taking the quartile of values.
