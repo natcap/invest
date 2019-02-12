@@ -259,11 +259,7 @@ def execute(args):
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
-        analysis_area_vector = gdal.OpenEx(analysis_area_points_path,
-                                           gdal.OF_VECTOR)
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        driver.CreateCopy(wave_vector_path, analysis_area_vector)
-        analysis_area_vector = None
+        _copy_vector(analysis_area_points_path, wave_vector_path)
 
         # The path to a polygon shapefile that specifies the broader AOI
         aoi_vector_path = analysis_area_extract_path
@@ -332,7 +328,7 @@ def execute(args):
         indexing_dependent_task_list = [clip_wave_points_task, clip_aoi_task]
     else:
         indexing_dependent_task_list = None
-    task_graph.add_task(
+    index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
         args=(wave_vector_path, dem_path, indexed_wave_vector_path, 'DEPTH_M'),
         target_path_list=[indexed_wave_vector_path],
@@ -350,6 +346,8 @@ def execute(args):
 
     # Add the sum as a field to the shapefile for the corresponding points
     LOGGER.info('Adding the wave energy sums to the WaveData shapefile')
+    captured_wave_energy_vector_path = os.path.join(
+        intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
     _captured_wave_energy_to_vector(energy_cap, indexed_wave_vector_path)
 
     # Calculate wave power for each wave point and add it as a field
@@ -674,6 +672,23 @@ def execute(args):
                                'thousands of US dollars', percentiles)
 
     LOGGER.info('End of Wave Energy Valuation.')
+
+
+def _copy_vector(base_vector_path, target_vector_path):
+    """Make a shapefile from the base vector.
+
+    Parameters:
+        base_vector_path (str): a path to the base vector to be copied from.
+        target_vector_path (str): a path to the target copied shapefile.
+
+    Returns:
+        None
+
+    """
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName("ESRI Shapefile")
+    driver.CreateCopy(target_vector_path, base_vector)
+    base_vector = None
 
 
 def _get_validated_dataframe(csv_path, field_list):
@@ -1413,10 +1428,7 @@ def _index_raster_value_to_point_vector(
         None
 
     """
-    base_point_vector = gdal.OpenEx(base_point_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName("ESRI Shapefile")
-    driver.CreateCopy(target_point_vector_path, base_point_vector)
-    base_point_vector = None
+    _copy_vector(base_point_vector_path, target_point_vector_path)
 
     target_vector = gdal.OpenEx(
         target_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
