@@ -31,6 +31,23 @@ _TARGET_PIXEL_TYPE = gdal.GDT_Float32
 
 # The life span (25 years) of a wave energy conversion facility.
 _LIFE_SPAN = 25
+# Sea water density constant (kg/m^3)
+_SWD = 1028
+# Gravitational acceleration (m/s^2)
+_GRAV = 9.8
+# Constant determining the shape of a wave spectrum (see users guide pg 23)
+_ALFA = 0.86
+
+# Depth field name to be added to the wave vector from DEM data
+_DEPTH_FIELD_NAME = 'DEPTH_M'
+# Captured wave energy field name to be added to the wave vector
+_CAP_WE_FIELD_NAME = 'CAPWE_MWHY'
+# Wave power field name to be added to the wave vector
+_WAVE_POWER_FIELD_NAME = 'WE_kWM'
+
+# Preexisting field names in the wave energy vector
+_HEIGHT_FIELD_NAME = 'HSAVG_M'
+_PERIOD_FIELD_NAME = 'TPAVG_S'
 
 
 class IntersectionError(Exception):
@@ -330,7 +347,8 @@ def execute(args):
         indexing_dependent_task_list = None
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
-        args=(wave_vector_path, dem_path, indexed_wave_vector_path, 'DEPTH_M'),
+        args=(wave_vector_path, dem_path, indexed_wave_vector_path,
+              _DEPTH_FIELD_NAME),
         target_path_list=[indexed_wave_vector_path],
         task_name='index_depth_to_wave_vector',
         dependent_task_list=indexing_dependent_task_list)
@@ -344,16 +362,18 @@ def execute(args):
     energy_cap = _wave_energy_capacity_to_dict(
         wave_seastate_bins, energy_interp, machine_param_dict)
 
-    # Add the sum as a field to the shapefile for the corresponding points
-    LOGGER.info('Adding the wave energy sums to the WaveData shapefile')
+    # Add wave energy and wave power fields to the shapefile for the
+    # corresponding points
+    LOGGER.info('Adding wave energy and power fields to the WaveData shapefile')
     captured_wave_energy_vector_path = os.path.join(
         intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
-    _captured_wave_energy_to_vector(energy_cap, indexed_wave_vector_path)
-
-    # Calculate wave power for each wave point and add it as a field
-    # to the shapefile
-    LOGGER.info('Calculating Wave Power.')
-    _compute_wave_power(indexed_wave_vector_path)
+    get_captured_wave_energy_task = task_graph.add_task(
+        func=_energy_and_power_to_wave_vector,
+        args=(energy_cap, indexed_wave_vector_path,
+              captured_wave_energy_vector_path),
+        target_path_list=[captured_wave_energy_vector_path],
+        task_name='get_captured_wave_energy_task',
+        dependent_task_list=[index_depth_to_wave_vector_task])
 
     # Intermediate/final output paths for wave energy and wave power rasters
     unclipped_energy_raster_path = os.path.join(
@@ -377,12 +397,12 @@ def execute(args):
     # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
 
-    pygeoprocessing.interpolate_points(indexed_wave_vector_path, 'CAPWE_MWHY',
+    pygeoprocessing.interpolate_points(captured_wave_energy_vector_path, 'CAPWE_MWHY',
                                        (unclipped_energy_raster_path, 1),
                                        'near')
 
     pygeoprocessing.interpolate_points(
-        indexed_wave_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1), 'near')
+        captured_wave_energy_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1), 'near')
 
     # Clip wave energy and power rasters to the aoi vector
     target_resample_method = 'near'
@@ -464,7 +484,7 @@ def execute(args):
                           coord_trans)
 
     # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = _get_points_geometries(indexed_wave_vector_path)
+    wave_points = _get_points_geometries(captured_wave_energy_vector_path)
     land_points = _get_points_geometries(land_vector_path)
     grid_points = _get_points_geometries(grid_vector_path)
 
@@ -526,7 +546,7 @@ def execute(args):
         wave_layer = None
         wave_vector = None
 
-    _add_distance_fields_to_vector(indexed_wave_vector_path, wave_to_land_dist,
+    _add_distance_fields_to_vector(captured_wave_energy_vector_path, wave_to_land_dist,
                                    land_to_grid_dist)
 
     def _calc_npv_wave(annual_revenue, annual_cost):
@@ -593,7 +613,7 @@ def execute(args):
         LOGGER.info('Calculating the Net Present Value.')
 
         while feat_npv is not None:
-            depth_index = feat_npv.GetFieldIndex('DEPTH_M')
+            depth_index = feat_npv.GetFieldIndex(_DEPTH_FIELD_NAME)
             wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
             land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
             captured_wave_energy_index = feat_npv.GetFieldIndex('CAPWE_MWHY')
@@ -641,7 +661,7 @@ def execute(args):
         wave_point_vector = None
         LOGGER.info('Finished calculating the Net Present Value.')
 
-    _add_npv_field_to_vector(indexed_wave_vector_path)
+    _add_npv_field_to_vector(captured_wave_energy_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -653,7 +673,7 @@ def execute(args):
     # Interpolate the NPV values based on the dimensions and corresponding
     # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    pygeoprocessing.interpolate_points(indexed_wave_vector_path, 'NPV_25Y',
+    pygeoprocessing.interpolate_points(captured_wave_energy_vector_path, 'NPV_25Y',
                                        (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
@@ -1128,11 +1148,11 @@ def _compute_wave_power(base_vector_path):
     vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
 
     # Sea water density constant (kg/m^3)
-    swd = 1028
-    # Gravitational acceleration (m/s^2)
-    grav = 9.8
+    _SWD = 1028
+    # _GRAVitational acceleration (m/s^2)
+    _GRAV = 9.8
     # Constant determining the shape of a wave spectrum (see users guide pg 23)
-    alfa = 0.86
+    _ALFA = 0.86
     # Add a waver power field to the shapefile.
     layer = vector.GetLayer()
     field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
@@ -1144,9 +1164,9 @@ def _compute_wave_power(base_vector_path):
     # For every feature (point) calculate the wave power and add the value
     # to itself in a new field
     while feat is not None:
-        height_index = feat.GetFieldIndex('HSAVG_M')
-        period_index = feat.GetFieldIndex('TPAVG_S')
-        depth_index = feat.GetFieldIndex('DEPTH_M')
+        height_index = feat.GetFieldIndex(_HEIGHT_FIELD_NAME)
+        period_index = feat.GetFieldIndex(_PERIOD_FIELD_NAME)
+        depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
         wp_index = feat.GetFieldIndex('WE_kWM')
         height = feat.GetFieldAsDouble(height_index)
         period = feat.GetFieldAsDouble(period_index)
@@ -1154,11 +1174,11 @@ def _compute_wave_power(base_vector_path):
 
         depth = numpy.absolute(depth)
         # wave frequency calculation (used to calculate wave number k)
-        tem = (2.0 * math.pi) / (period * alfa)
+        tem = (2.0 * math.pi) / (period * _ALFA)
         # wave number calculation (expressed as a function of
         # wave frequency and water depth)
-        k = numpy.square(tem) / (grav * numpy.sqrt(
-            numpy.tanh((numpy.square(tem)) * (depth / grav))))
+        k = numpy.square(tem) / (_GRAV * numpy.sqrt(
+            numpy.tanh((numpy.square(tem)) * (depth / _GRAV))))
         # Setting numpy overlow error to ignore because when numpy.sinh
         # gets a really large number it pushes a warning, but Rich
         # and Doug have agreed it's nothing we need to worry about.
@@ -1168,13 +1188,13 @@ def _compute_wave_power(base_vector_path):
         # function of wave energy period and water depth)
         wave_group_velocity = (((1 + (
             (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
-                (grav / k) * numpy.tanh(k * depth))) / 2)
+                (_GRAV / k) * numpy.tanh(k * depth))) / 2)
 
         # Reset the overflow error to print future warnings
         numpy.seterr(over='print')
 
         # wave power calculation
-        wave_pow = ((((swd * grav) / 16) *
+        wave_pow = ((((_SWD * _GRAV) / 16) *
                      (numpy.square(height)) * wave_group_velocity) / 1000)
 
         feat.SetField(wp_index, wave_pow)
@@ -1526,7 +1546,8 @@ def _index_raster_value_to_point_vector(
     target_vector = None
 
 
-def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
+def _energy_and_power_to_wave_vector(
+        energy_cap, base_wave_vector_path, target_wave_vector_path):
     """Add captured wave energy value from energy_cap to a field in wave_vector.
 
     The values are set corresponding to the same I,J values which is the key of
@@ -1535,39 +1556,139 @@ def _captured_wave_energy_to_vector(energy_cap, wave_vector_path):
     Parameters:
         energy_cap (dict): a dictionary with keys (I,J), representing the
             wave energy capacity values.
-        wave_vector_path (str): path to a point geometry shapefile to
-            write the new field/values to
+        wave_vector_path (str): a path to a wave point shapefile with existing
+            fields to copy from.
+        target_wave_vector_path (str): a path to the wave point shapefile
+            to write the new field/values to.
 
     Returns:
         None.
 
     """
-    cap_we_field = 'CAPWE_MWHY'
+    _copy_vector(base_wave_vector_path, target_wave_vector_path)
+
     wave_vector = gdal.OpenEx(
-        wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+        target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     wave_layer = wave_vector.GetLayer()
-    # Create a new field for the shapefile
-    field_defn = ogr.FieldDefn(cap_we_field, ogr.OFTReal)
-    field_defn.SetWidth(24)
-    field_defn.SetPrecision(11)
-    wave_layer.CreateField(field_defn)
-    # For all of the features (points) in the shapefile, get the
-    # corresponding point/value from the dictionary and set the 'capWE_Sum'
-    # field as the value from the dictionary
+    # Create the Captured Energy and Wave Power fields for the shapefile
+    for field_name in [_CAP_WE_FIELD_NAME, _WAVE_POWER_FIELD_NAME]:
+        field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+        wave_layer.CreateField(field_defn)
+
+    # For all of the features (points) in the shapefile, get the corresponding
+    # point/value from the dictionary and set the _CAP_WE_FIELD_NAME field as
+    # the value from the dictionary
     for feat in wave_layer:
+        # Calculate and set the Captured Wave Energy field
         index_i = feat.GetFieldIndex('I')
         index_j = feat.GetFieldIndex('J')
         value_i = feat.GetField(index_i)
         value_j = feat.GetField(index_j)
+        we_index = feat.GetFieldIndex(_CAP_WE_FIELD_NAME)
         we_value = energy_cap[(value_i, value_j)]
 
-        feat.SetField(cap_we_field, we_value)
+        feat.SetField(we_index, we_value)
+
+        # Calculate and set the Wave Power field
+        height_index = feat.GetFieldIndex(_HEIGHT_FIELD_NAME)
+        period_index = feat.GetFieldIndex(_PERIOD_FIELD_NAME)
+        depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
+        wp_index = feat.GetFieldIndex(_WAVE_POWER_FIELD_NAME)
+        height = feat.GetFieldAsDouble(height_index)
+        period = feat.GetFieldAsDouble(period_index)
+        depth = feat.GetFieldAsInteger(depth_index)
+
+        depth = numpy.absolute(depth)
+        # wave frequency calculation (used to calculate wave number k)
+        tem = (2.0 * math.pi) / (period * _ALFA)
+        # wave number calculation (expressed as a function of
+        # wave frequency and water depth)
+        k = numpy.square(tem) / (_GRAV * numpy.sqrt(
+            numpy.tanh((numpy.square(tem)) * (depth / _GRAV))))
+        # Setting numpy overflow error to ignore because when numpy.sinh
+        # gets a really large number it pushes a warning, but Rich
+        # and Doug have agreed it's nothing we need to worry about.
+        numpy.seterr(over='ignore')
+
+        # wave group velocity calculation (expressed as a
+        # function of wave energy period and water depth)
+        wave_group_velocity = (((1 + (
+            (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
+                (_GRAV / k) * numpy.tanh(k * depth))) / 2)
+
+        # Reset the overflow error to print future warnings
+        numpy.seterr(over='print')
+
+        # wave power calculation
+        wave_pow = ((((_SWD * _GRAV) / 16) *
+                     (numpy.square(height)) * wave_group_velocity) / 1000)
+
+        feat.SetField(wp_index, wave_pow)
+
         # Save the feature modifications to the layer.
         wave_layer.SetFeature(feat)
         feat = None
+
     wave_layer = None
     wave_vector = None
 
+    ###########################################################################
+    # vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+
+
+    # # Add a waver power field to the shapefile.
+    # layer = vector.GetLayer()
+    # field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
+    # field_defn.SetWidth(24)
+    # field_defn.SetPrecision(11)
+    # layer.CreateField(field_defn)
+    # layer.ResetReading()
+    # feat = layer.GetNextFeature()
+    # # For every feature (point) calculate the wave power and add the value
+    # # to itself in a new field
+    # while feat is not None:
+    #     height_index = feat.GetFieldIndex(_HEIGHT_FIELD_NAME)
+    #     period_index = feat.GetFieldIndex(_PERIOD_FIELD_NAME)
+    #     depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
+    #     wp_index = feat.GetFieldIndex('WE_kWM')
+    #     height = feat.GetFieldAsDouble(height_index)
+    #     period = feat.GetFieldAsDouble(period_index)
+    #     depth = feat.GetFieldAsInteger(depth_index)
+
+    #     depth = numpy.absolute(depth)
+    #     # wave frequency calculation (used to calculate wave number k)
+    #     tem = (2.0 * math.pi) / (period * _ALFA)
+    #     # wave number calculation (expressed as a function of
+    #     # wave frequency and water depth)
+    #     k = numpy.square(tem) / (_GRAV * numpy.sqrt(
+    #         numpy.tanh((numpy.square(tem)) * (depth / _GRAV))))
+    #     # Setting numpy overlow error to ignore because when numpy.sinh
+    #     # gets a really large number it pushes a warning, but Rich
+    #     # and Doug have agreed it's nothing we need to worry about.
+    #     numpy.seterr(over='ignore')
+
+    #     # wave group velocity calculation (expressed as a
+    #     # function of wave energy period and water depth)
+    #     wave_group_velocity = (((1 + (
+    #         (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
+    #             (_GRAV / k) * numpy.tanh(k * depth))) / 2)
+
+    #     # Reset the overflow error to print future warnings
+    #     numpy.seterr(over='print')
+
+    #     # wave power calculation
+    #     wave_pow = ((((_SWD * _GRAV) / 16) *
+    #                  (numpy.square(height)) * wave_group_velocity) / 1000)
+
+    #     feat.SetField(wp_index, wave_pow)
+    #     layer.SetFeature(feat)
+    #     feat = layer.GetNextFeature()
+
+    # feat = None
+    # layer = None
+    # vector = None
 
 def _calculate_percentiles_from_raster(
         base_raster_path, percentile_list, start_value=None):
