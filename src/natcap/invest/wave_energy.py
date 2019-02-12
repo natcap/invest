@@ -68,9 +68,17 @@ _W2L_DIST_FIELD = 'W2L_MDIST'
 _L2G_DIST_FIELD = 'L2G_MDIST'
 _LAND_ID_FIELD = 'LAND_ID'
 
+# Net Present Value (NPV) field for wave vector
+_NPV_25Y_FIELD = 'NPV_25Y'
+# Total captured wave energy field for wave vector
+_CAPWE_ALL_FIELD = 'CAPWE_ALL'
+# Units field for wave vector
+_UNIT_FIELD = 'UNITS'
+
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
         data points.
+
     """
     pass
 
@@ -531,133 +539,19 @@ def execute(args):
         target_path_list=[land_vector_path],
         task_name='create_land_points_vector')
 
-    # Add wave to land and land to grid distance fields, and land id field to
-    # the wave vector.
-    dist_wave_energy_power_vector_path = os.path.join(
-        intermediate_dir, 'Dist_WEM_InputOutput_Pts%s.shp' % file_suffix)
-    task_graph.add_task(
-        func=_add_dist_fields_to_wave_vector,
+    # Add new fields to the wave vector.
+    final_wave_energy_power_vector_path = os.path.join(
+        intermediate_dir, 'Final_WEM_InputOutput_Pts%s.shp' % file_suffix)
+    add_target_fields_to_wave_vector_task = task_graph.add_task(
+        func=_add_target_fields_to_wave_vector,
         args=(wave_energy_power_vector_path, land_vector_path,
-              grid_vector_path, dist_wave_energy_power_vector_path),
-        target_path_list=[dist_wave_energy_power_vector_path],
-        task_name='add_dist_fields_to_wave_vector',
+              grid_vector_path, final_wave_energy_power_vector_path,
+              machine_econ_dict, args['number_of_machines']),
+        target_path_list=[final_wave_energy_power_vector_path],
+        task_name='add_fields_to_wave_vector',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_land_points_vector_task,
                              create_grid_points_vector_task])
-
-    def _calc_npv_wave(annual_revenue, annual_cost):
-        """Calculate NPV for a wave farm based on the annual revenue and cost.
-
-        Parameters:
-            annual_revenue (numpy.array): an array of the annual revenue for
-                the first 25 years
-            annual_cost (numpy.array): an array of the annual cost for the
-                first 25 years
-
-        Returns: The Total NPV which is the sum of all 25 years
-
-        """
-        # The discount rate calculation for the npv equations
-        d_rate = float(machine_econ_dict['r'])  # discount rate
-        rho = 1.0 / (1.0 + d_rate)
-
-        npv = []
-        for time in range(_LIFE_SPAN):
-            npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
-        return sum(npv)
-
-    def _add_npv_field_to_vector(wave_points_path):
-        """Compute and add NPV to the vector.
-
-        Also compute the total captured wave energy for the entire farm.
-
-        Parameters:
-            wave_points_path (str): a path to the wave energy points with
-                fields for calculating NPV.
-
-        Returns:
-            None
-
-        """
-        wave_point_vector = gdal.OpenEx(
-            wave_points_path, gdal.OF_VECTOR | gdal.GA_Update)
-        wave_point_layer = wave_point_vector.GetLayer()
-
-        # Extract the machine economic parameters
-        cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
-        capital_cost = float(machine_econ_dict['cc'])  # capital cost
-        cml = float(machine_econ_dict['cml'])  # cost of mooring lines
-        cul = float(machine_econ_dict['cul'])  # cost of underwater cable
-        col = float(machine_econ_dict['col'])  # cost of overland cable
-        omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
-        price = float(machine_econ_dict['p'])  # price of electricity
-        smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
-        # Number of machines for a given wave farm
-        units = int(args['number_of_machines'])
-
-        # Add Net Present Value field, Total Captured Wave Energy field, and
-        # Units field to shapefile
-        for field_name in ['NPV_25Y', 'CAPWE_ALL', 'UNITS']:
-            field_defn = ogr.FieldDefn(field_name, ogr.OFTReal)
-            field_defn.SetWidth(24)
-            field_defn.SetPrecision(11)
-            wave_point_layer.CreateField(field_defn)
-        wave_point_layer.ResetReading()
-        feat_npv = wave_point_layer.GetNextFeature()
-
-        # For all the wave farm sites, calculate NPV and write to shapefile
-        LOGGER.info('Calculating the Net Present Value.')
-
-        while feat_npv is not None:
-            depth_index = feat_npv.GetFieldIndex(_DEPTH_FIELD_NAME)
-            wave_to_land_index = feat_npv.GetFieldIndex('W2L_MDIST')
-            land_to_grid_index = feat_npv.GetFieldIndex('L2G_MDIST')
-            captured_wave_energy_index = feat_npv.GetFieldIndex('CAPWE_MWHY')
-            npv_index = feat_npv.GetFieldIndex('NPV_25Y')
-            capwe_all_index = feat_npv.GetFieldIndex('CAPWE_ALL')
-            units_index = feat_npv.GetFieldIndex('UNITS')
-
-            depth = feat_npv.GetFieldAsDouble(depth_index)
-            wave_to_land = feat_npv.GetFieldAsDouble(wave_to_land_index)
-            land_to_grid = feat_npv.GetFieldAsDouble(land_to_grid_index)
-            captured_wave_energy = feat_npv.GetFieldAsDouble(
-                captured_wave_energy_index)
-            capwe_all_result = captured_wave_energy * units
-
-            # Create a numpy array of length 25, filled with the captured wave
-            # energy in kW/h. Represents the lifetime of this wave farm.
-            captured_we = numpy.ones(_LIFE_SPAN) * (
-                int(captured_wave_energy) * 1000.0)
-            # It is expected that there is no revenue from the first year
-            captured_we[0] = 0
-
-            # Compute values to determine NPV
-            lenml = 3.0 * numpy.absolute(depth)
-            install_cost = units * cap_max * capital_cost
-            mooring_cost = smlpm * lenml * cml * units
-            trans_cost = (wave_to_land * cul / 1000.0) + (
-                land_to_grid * col / 1000.0)
-            initial_cost = install_cost + mooring_cost + trans_cost
-            annual_revenue = price * units * captured_we
-            annual_cost = omc * captured_we * units
-
-            # The first year's costs are the initial start up costs
-            annual_cost[0] = initial_cost
-
-            npv_result = _calc_npv_wave(annual_revenue, annual_cost) / 1000.0
-            feat_npv.SetField(npv_index, npv_result)
-            feat_npv.SetField(capwe_all_index, capwe_all_result)
-            feat_npv.SetField(units_index, units)
-
-            wave_point_layer.SetFeature(feat_npv)
-            feat_npv = None
-            feat_npv = wave_point_layer.GetNextFeature()
-
-        wave_point_layer = None
-        wave_point_vector = None
-        LOGGER.info('Finished calculating the Net Present Value.')
-
-    _add_npv_field_to_vector(dist_wave_energy_power_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -669,8 +563,8 @@ def execute(args):
     # Interpolate the NPV values based on the dimensions and corresponding
     # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    pygeoprocessing.interpolate_points(dist_wave_energy_power_vector_path, 'NPV_25Y',
-                                       (npv_proj_path, 1), 'near')
+    pygeoprocessing.interpolate_points(final_wave_energy_power_vector_path, _NPV_25Y_FIELD,
+                                       (npv_proj_path, 1), _TARGET_RESAMPLE_METHOD)
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
 
@@ -707,20 +601,110 @@ def _copy_vector(base_vector_path, target_vector_path):
     base_vector = None
 
 
-def _add_dist_fields_to_wave_vector(
-        base_wave_vector_path, base_land_vector_path, base_grid_vector_path,
-        target_wave_vector_path):
-    """Add two fields to the wave point shapefile.
-
-    The two fields are the distance from ocean to land, and the distance
-    from land to grid.
+def _calc_npv_wave(annual_revenue, annual_cost, d_rate):
+    """Calculate NPV for a wave farm based on the annual revenue and cost.
 
     Parameters:
-        base_wave_vector_path (str): a path to the wave point vector file.
+        annual_revenue (numpy.array): an array of the annual revenue for
+            the first 25 years
+        annual_cost (numpy.array): an array of the annual cost for the
+            first 25 years
+        d_rate (float) : the discount rate calculation for the NPV equations
+
+    Returns:
+        A float that represents the sum of total NPV of all 25 years.
+
+    """
+
+    rho = 1.0 / (1.0 + d_rate)
+
+    npv = []
+    for time in range(_LIFE_SPAN):
+        npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
+    return sum(npv)
+
+def _get_npv_results(captured_wave_energy, depth, number_of_machines,
+                     wave_to_land_dist, land_to_grid_dist, machine_econ_dict):
+    """Compute NPV, total captured wave energy, and units for wave point.
+
+    Parameters:
+        captured_wave_energy (double): the amount of captured wave energy for
+            a wave machine.
+        depth (double): the depth of that wave point.
+        number_of_machines (int): the number of machines for a given wave point.
+        wave_to_land_dist (float): the shortest distance from the wave point to
+            land points.
+        land_to_grid_dist (float): the shortest distance from the wave point to
+            grid points.
+        machine_econ_dict (dict): a dictionary of keys from the first
+            column of the machine economy CSV file and corresponding
+            values from the `VALUE` column.
+
+    Returns:
+        npv_result (float): the sum of total NPV of all 25 years.
+        capwe_all_result (float): the total captured wave energy per year.
+
+    """
+    # Extract the machine economic parameters
+    cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
+    capital_cost = float(machine_econ_dict['cc'])  # capital cost
+    cml = float(machine_econ_dict['cml'])  # cost of mooring lines
+    cul = float(machine_econ_dict['cul'])  # cost of underwater cable
+    col = float(machine_econ_dict['col'])  # cost of overland cable
+    omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
+    price = float(machine_econ_dict['p'])  # price of electricity
+    smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
+    d_rate = float(machine_econ_dict['r'])  # discount rate
+
+    capwe_all_result = captured_wave_energy * number_of_machines
+
+    # Create a numpy array of length 25, filled with the captured wave
+    # energy in kW/h. Represents the lifetime of this wave farm.
+    captured_we = numpy.ones(_LIFE_SPAN) * (int(captured_wave_energy) * 1000.0)
+    # It is expected that there is no revenue from the first year
+    captured_we[0] = 0
+
+    # Compute values to determine NPV
+    lenml = 3.0 * numpy.absolute(depth)
+    install_cost = number_of_machines * cap_max * capital_cost
+    mooring_cost = smlpm * lenml * cml * number_of_machines
+    trans_cost = (wave_to_land_dist * cul / 1000.0) + (
+        land_to_grid_dist * col / 1000.0)
+    initial_cost = install_cost + mooring_cost + trans_cost
+    annual_revenue = price * number_of_machines * captured_we
+    annual_cost = omc * captured_we * number_of_machines
+
+    # The first year's cost is the initial start up cost
+    annual_cost[0] = initial_cost
+
+    # Calculate the total NPV of all 25 years
+    npv_result = _calc_npv_wave(annual_revenue, annual_cost, d_rate) / 1000.0
+
+    return npv_result, capwe_all_result
+
+
+def _add_target_fields_to_wave_vector(
+        base_wave_vector_path, base_land_vector_path, base_grid_vector_path,
+        target_wave_vector_path, machine_econ_dict, number_of_machines):
+    """Add six target fields to the target wave point vector.
+
+    The target fields are the distance from ocean to land, the distance
+    from land to grid, the land point ID, NPV, total captured wave energy, and
+    units.
+
+    Parameters:
+        base_wave_vector_path (str): a path to the wave point vector with
+            fields to calculate distances and NPV.
         base_land_vector_path (str): a path to the land point vector to get
             the wave to land distances from.
         base_grid_vector_path (str): a path to the grid point vector to get
             the land to grid distances from.
+        target_wave_vector_path (str): a path to the target wave point vector
+            to create new fields in.
+        machine_econ_dict (dict): a dictionary of keys from the first column of
+            the machine economy CSV file and corresponding values from the
+            `VALUE` column.
+        number_of_machines (int): the number of machines for each wave point.
 
     Returns:
         None
@@ -732,18 +716,20 @@ def _add_dist_fields_to_wave_vector(
     wave_layer = wave_vector.GetLayer(0)
 
     # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = _get_points_geometries(base_wave_vector_path)
-    land_points = _get_points_geometries(base_land_vector_path)
-    grid_points = _get_points_geometries(base_grid_vector_path)
+    wave_point_list = _get_points_geometries(base_wave_vector_path)
+    land_point_list = _get_points_geometries(base_land_vector_path)
+    grid_point_list = _get_points_geometries(base_grid_vector_path)
 
     # Calculate the minimum distances between the relative point groups
     LOGGER.info('Calculating Min Distances.')
-    wave_to_land_dist, wave_to_land_id = _calculate_min_distances(
-        wave_points, land_points)
-    land_to_grid_dist, _ = _calculate_min_distances(land_points, grid_points)
+    wave_to_land_dist_list, wave_to_land_id_list = _calculate_min_distances(
+        wave_point_list, land_point_list)
+    land_to_grid_dist_list, _ = _calculate_min_distances(
+        land_point_list, grid_point_list)
 
-    # Add three new fields to the vector that will store the distances
-    for field in [_W2L_DIST_FIELD, _L2G_DIST_FIELD, _LAND_ID_FIELD]:
+    # Add target fields to the wave vector to store results
+    for field in [_W2L_DIST_FIELD, _L2G_DIST_FIELD, _LAND_ID_FIELD,
+                  _NPV_25Y_FIELD, _CAPWE_ALL_FIELD, _UNIT_FIELD]:
         field_defn = ogr.FieldDefn(field, ogr.OFTReal)
         field_defn.SetWidth(24)
         field_defn.SetPrecision(11)
@@ -754,15 +740,38 @@ def _add_dist_fields_to_wave_vector(
     wave_layer.ResetReading()
 
     for i, feat in enumerate(wave_layer):
+        # Get indexes for setting distances fields
         wave_to_land_index = feat.GetFieldIndex(_W2L_DIST_FIELD)
         land_to_grid_index = feat.GetFieldIndex(_L2G_DIST_FIELD)
         land_id_index = feat.GetFieldIndex(_LAND_ID_FIELD)
+        # Get corresponding distances and land ID for the wave point
+        land_id = int(wave_to_land_id_list[i])
+        wave_to_land_dist = wave_to_land_dist_list[i]
+        land_to_grid_dist = land_to_grid_dist_list[land_id]
 
-        land_id = int(wave_to_land_id[i])
-
-        feat.SetField(wave_to_land_index, wave_to_land_dist[i])
-        feat.SetField(land_to_grid_index, land_to_grid_dist[land_id])
+        # Set distance and land ID fields to the feature
+        feat.SetField(wave_to_land_index, wave_to_land_dist)
+        feat.SetField(land_to_grid_index, land_to_grid_dist)
         feat.SetField(land_id_index, land_id)
+
+        # Get field indexes for setting NPV, captured energy, and units fields
+        cap_wave_energy_index = feat.GetFieldIndex(_CAP_WE_FIELD_NAME)
+        depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
+        npv_index = feat.GetFieldIndex(_NPV_25Y_FIELD)
+        capwe_all_index = feat.GetFieldIndex(_CAPWE_ALL_FIELD)
+        units_index = feat.GetFieldIndex(_UNIT_FIELD)
+
+        # Get depth and captured wave energy for calculating NPV, total
+        # captured energy, and units
+        captured_wave_energy = feat.GetFieldAsDouble(cap_wave_energy_index)
+        depth = feat.GetFieldAsDouble(depth_index)
+        npv_result, capwe_all_result = _get_npv_results(
+            captured_wave_energy, depth, number_of_machines,
+            wave_to_land_dist, land_to_grid_dist, machine_econ_dict)
+
+        feat.SetField(npv_index, npv_result)
+        feat.SetField(capwe_all_index, capwe_all_result)
+        feat.SetField(units_index, number_of_machines)
 
         wave_layer.SetFeature(feat)
         feat = None
@@ -1010,7 +1019,8 @@ def _machine_csv_to_dict(machine_csv_path):
         machine_csv_path (str): path to the input machine CSV file.
 
     Returns:
-        None.
+        machine_dict (dict): a dictionary of keys from the first column of the
+            CSV file and corresponding values from the `VALUE` column.
 
     """
     machine_dict = {}
