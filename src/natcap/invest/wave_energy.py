@@ -60,6 +60,13 @@ _WP_UNITS_SHORT = ' kW/m'
 _WP_UNITS_LONG = 'wave power per unit width of wave crest length'
 _STARTING_PERC_RANGE = '1'
 
+# Driver name for creating vector files
+_DRIVER_NAME = "ESRI Shapefile"
+
+# Field names for storing distance in wave vector
+_W2L_DIST_FIELD = 'W2L_MDIST'
+_L2G_DIST_FIELD = 'L2G_MDIST'
+_LAND_ID_FIELD = 'LAND_ID'
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -375,14 +382,14 @@ def execute(args):
 
     # Add wave energy and wave power fields to the shapefile for the
     # corresponding points
-    LOGGER.info('Adding wave energy and power fields to the WaveData shapefile')
-    wave_energy_and_power_vector_path = os.path.join(
+    LOGGER.info('Adding wave energy and power fields to the wave vector.')
+    wave_energy_power_vector_path = os.path.join(
         intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
-    get_wave_energy_and_power_task = task_graph.add_task(
+    create_wave_energy_and_power_raster_task = task_graph.add_task(
         func=_energy_and_power_to_wave_vector,
         args=(energy_cap, indexed_wave_vector_path,
-              wave_energy_and_power_vector_path),
-        target_path_list=[wave_energy_and_power_vector_path],
+              wave_energy_power_vector_path),
+        target_path_list=[wave_energy_power_vector_path],
         task_name='get_wave_energy_and_power',
         dependent_task_list=[index_depth_to_wave_vector_task])
 
@@ -421,19 +428,21 @@ def execute(args):
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
     interpolate_energy_points_task = task_graph.add_task(
         func=pygeoprocessing.interpolate_points,
-        args=(wave_energy_and_power_vector_path, _CAP_WE_FIELD_NAME,
+        args=(wave_energy_power_vector_path, _CAP_WE_FIELD_NAME,
               (unclipped_energy_raster_path, 1), _TARGET_RESAMPLE_METHOD),
         target_path_list=[unclipped_energy_raster_path],
         task_name='interpolate_energy_points',
-        dependent_task_list=[create_unclipped_energy_raster_task])
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_unclipped_energy_raster_task])
 
     interpolate_power_points_task = task_graph.add_task(
         func=pygeoprocessing.interpolate_points,
-        args=(wave_energy_and_power_vector_path, _WAVE_POWER_FIELD_NAME,
+        args=(wave_energy_power_vector_path, _WAVE_POWER_FIELD_NAME,
               (unclipped_power_raster_path, 1), _TARGET_RESAMPLE_METHOD),
         target_path_list=[unclipped_power_raster_path],
         task_name='interpolate_power_points',
-        dependent_task_list=[create_unclipped_power_raster_task])
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_unclipped_power_raster_task])
 
     # Clip wave energy and power rasters to the aoi vector
     clip_energy_raster_task = task_graph.add_task(
@@ -508,7 +517,7 @@ def execute(args):
 
     # Make a point shapefile for grid points
     LOGGER.info('Creating Grid Points Vector.')
-    task_graph.add_task(
+    create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(grid_dict, grid_vector_path, 'grid_points', aoi_sr, coord_trans),
         target_path_list=[grid_vector_path],
@@ -516,77 +525,25 @@ def execute(args):
 
     # Make a point shapefile for landing points.
     LOGGER.info('Creating Landing Points Vector.')
-    task_graph.add_task(
+    create_land_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
         args=(land_dict, land_vector_path, 'land_points', aoi_sr, coord_trans),
         target_path_list=[land_vector_path],
         task_name='create_land_points_vector')
 
-    # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = _get_points_geometries(wave_energy_and_power_vector_path)
-    land_points = _get_points_geometries(land_vector_path)
-    grid_points = _get_points_geometries(grid_vector_path)
-
-    # Calculate the minimum distances between the relative point groups
-    LOGGER.info('Calculating Min Distances.')
-    wave_to_land_dist, wave_to_land_id = _calculate_min_distances(
-        wave_points, land_points)
-    land_to_grid_dist, _ = _calculate_min_distances(land_points, grid_points)
-
-    def _add_distance_fields_to_vector(wave_base_vector_path,
-                                       ocean_to_land_dist, land_to_grid_dist):
-        """Add two fields to the wave point shapefile.
-
-        The two fields are the distance from ocean to land, and the distance
-        from land to grid.
-
-        Parameters:
-            wave_base_vector_path (str): a path to the wave points shapefile
-            ocean_to_land_dist (np.array): an array of distance values
-            land_to_grid_dist (np.array): an array of distance values
-
-        Returns:
-            None
-
-        """
-        wave_vector = gdal.OpenEx(
-            wave_base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-        wave_layer = wave_vector.GetLayer(0)
-        # Add three new fields to the shapefile that will store the distances
-        for field in ['W2L_MDIST', 'LAND_ID', 'L2G_MDIST']:
-            field_defn = ogr.FieldDefn(field, ogr.OFTReal)
-            field_defn.SetWidth(24)
-            field_defn.SetPrecision(11)
-            wave_layer.CreateField(field_defn)
-
-        # For each feature in the shapefile add the corresponding distance
-        # from wave_to_land_dist and land_to_grid_dist calculated above
-        iterate_feat = 0
-        wave_layer.ResetReading()
-        feature = wave_layer.GetNextFeature()
-        while feature is not None:
-            wave_to_land_index = feature.GetFieldIndex('W2L_MDIST')
-            land_to_grid_index = feature.GetFieldIndex('L2G_MDIST')
-            id_index = feature.GetFieldIndex('LAND_ID')
-
-            land_id = int(wave_to_land_id[iterate_feat])
-
-            feature.SetField(wave_to_land_index,
-                             ocean_to_land_dist[iterate_feat])
-            feature.SetField(land_to_grid_index, land_to_grid_dist[land_id])
-            feature.SetField(id_index, land_id)
-
-            iterate_feat = iterate_feat + 1
-
-            wave_layer.SetFeature(feature)
-            feature = None
-            feature = wave_layer.GetNextFeature()
-
-        wave_layer = None
-        wave_vector = None
-
-    _add_distance_fields_to_vector(wave_energy_and_power_vector_path, wave_to_land_dist,
-                                   land_to_grid_dist)
+    # Add wave to land and land to grid distance fields, and land id field to
+    # the wave vector.
+    dist_wave_energy_power_vector_path = os.path.join(
+        intermediate_dir, 'Dist_WEM_InputOutput_Pts%s.shp' % file_suffix)
+    task_graph.add_task(
+        func=_add_dist_fields_to_wave_vector,
+        args=(wave_energy_power_vector_path, land_vector_path,
+              grid_vector_path, dist_wave_energy_power_vector_path),
+        target_path_list=[dist_wave_energy_power_vector_path],
+        task_name='add_dist_fields_to_wave_vector',
+        dependent_task_list=[create_wave_energy_and_power_raster_task,
+                             create_land_points_vector_task,
+                             create_grid_points_vector_task])
 
     def _calc_npv_wave(annual_revenue, annual_cost):
         """Calculate NPV for a wave farm based on the annual revenue and cost.
@@ -700,7 +657,7 @@ def execute(args):
         wave_point_vector = None
         LOGGER.info('Finished calculating the Net Present Value.')
 
-    _add_npv_field_to_vector(wave_energy_and_power_vector_path)
+    _add_npv_field_to_vector(dist_wave_energy_power_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -712,7 +669,7 @@ def execute(args):
     # Interpolate the NPV values based on the dimensions and corresponding
     # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    pygeoprocessing.interpolate_points(wave_energy_and_power_vector_path, 'NPV_25Y',
+    pygeoprocessing.interpolate_points(dist_wave_energy_power_vector_path, 'NPV_25Y',
                                        (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
@@ -745,9 +702,73 @@ def _copy_vector(base_vector_path, target_vector_path):
 
     """
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName("ESRI Shapefile")
+    driver = gdal.GetDriverByName(_DRIVER_NAME)
     driver.CreateCopy(target_vector_path, base_vector)
     base_vector = None
+
+
+def _add_dist_fields_to_wave_vector(
+        base_wave_vector_path, base_land_vector_path, base_grid_vector_path,
+        target_wave_vector_path):
+    """Add two fields to the wave point shapefile.
+
+    The two fields are the distance from ocean to land, and the distance
+    from land to grid.
+
+    Parameters:
+        base_wave_vector_path (str): a path to the wave point vector file.
+        base_land_vector_path (str): a path to the land point vector to get
+            the wave to land distances from.
+        base_grid_vector_path (str): a path to the grid point vector to get
+            the land to grid distances from.
+
+    Returns:
+        None
+
+    """
+    _copy_vector(base_wave_vector_path, target_wave_vector_path)
+    wave_vector = gdal.OpenEx(
+        target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    wave_layer = wave_vector.GetLayer(0)
+
+    # Get the coordinates of points of wave, land, and grid vectors
+    wave_points = _get_points_geometries(base_wave_vector_path)
+    land_points = _get_points_geometries(base_land_vector_path)
+    grid_points = _get_points_geometries(base_grid_vector_path)
+
+    # Calculate the minimum distances between the relative point groups
+    LOGGER.info('Calculating Min Distances.')
+    wave_to_land_dist, wave_to_land_id = _calculate_min_distances(
+        wave_points, land_points)
+    land_to_grid_dist, _ = _calculate_min_distances(land_points, grid_points)
+
+    # Add three new fields to the vector that will store the distances
+    for field in [_W2L_DIST_FIELD, _L2G_DIST_FIELD, _LAND_ID_FIELD]:
+        field_defn = ogr.FieldDefn(field, ogr.OFTReal)
+        field_defn.SetWidth(24)
+        field_defn.SetPrecision(11)
+        wave_layer.CreateField(field_defn)
+
+    # For each feature in the shapefile add the corresponding distance
+    # from wave_to_land_dist and land_to_grid_dist calculated above
+    wave_layer.ResetReading()
+
+    for i, feat in enumerate(wave_layer):
+        wave_to_land_index = feat.GetFieldIndex(_W2L_DIST_FIELD)
+        land_to_grid_index = feat.GetFieldIndex(_L2G_DIST_FIELD)
+        land_id_index = feat.GetFieldIndex(_LAND_ID_FIELD)
+
+        land_id = int(wave_to_land_id[i])
+
+        feat.SetField(wave_to_land_index, wave_to_land_dist[i])
+        feat.SetField(land_to_grid_index, land_to_grid_dist[land_id])
+        feat.SetField(land_id_index, land_id)
+
+        wave_layer.SetFeature(feat)
+        feat = None
+
+    wave_layer = None
+    wave_vector = None
 
 
 def _get_validated_dataframe(csv_path, field_list):
@@ -853,7 +874,7 @@ def _get_points_geometries(base_vector_path):
     as [x_location,y_location] in a numpy array.
 
     Parameters:
-        base_vector_path (str): a path to an OGR shapefile
+        base_vector_path (str): a path to an OGR vector file.
 
     Returns:
         an array of points, representing the geometry of each point in the
@@ -863,13 +884,11 @@ def _get_points_geometries(base_vector_path):
     points = []
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer(0)
-    feat = base_layer.GetNextFeature()
-    while feat is not None:
+    for feat in base_layer:
         x_location = float(feat.GetGeometryRef().GetX())
         y_location = float(feat.GetGeometryRef().GetY())
         points.append([x_location, y_location])
         feat = None
-        feat = base_layer.GetNextFeature()
     base_layer = None
     base_vector = None
 
@@ -1199,10 +1218,10 @@ def _compute_wave_power(base_vector_path):
     field_defn.SetPrecision(11)
     layer.CreateField(field_defn)
     layer.ResetReading()
-    feat = layer.GetNextFeature()
+
     # For every feature (point) calculate the wave power and add the value
     # to itself in a new field
-    while feat is not None:
+    for feat in layer:
         height_index = feat.GetFieldIndex(_HEIGHT_FIELD_NAME)
         period_index = feat.GetFieldIndex(_PERIOD_FIELD_NAME)
         depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
@@ -1238,9 +1257,8 @@ def _compute_wave_power(base_vector_path):
 
         feat.SetField(wp_index, wave_pow)
         layer.SetFeature(feat)
-        feat = layer.GetNextFeature()
+        feat = None
 
-    feat = None
     layer = None
     vector = None
 
@@ -1673,61 +1691,6 @@ def _energy_and_power_to_wave_vector(
     wave_layer = None
     wave_vector = None
 
-    ###########################################################################
-    # vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
-
-
-    # # Add a waver power field to the shapefile.
-    # layer = vector.GetLayer()
-    # field_defn = ogr.FieldDefn('WE_kWM', ogr.OFTReal)
-    # field_defn.SetWidth(24)
-    # field_defn.SetPrecision(11)
-    # layer.CreateField(field_defn)
-    # layer.ResetReading()
-    # feat = layer.GetNextFeature()
-    # # For every feature (point) calculate the wave power and add the value
-    # # to itself in a new field
-    # while feat is not None:
-    #     height_index = feat.GetFieldIndex(_HEIGHT_FIELD_NAME)
-    #     period_index = feat.GetFieldIndex(_PERIOD_FIELD_NAME)
-    #     depth_index = feat.GetFieldIndex(_DEPTH_FIELD_NAME)
-    #     wp_index = feat.GetFieldIndex('WE_kWM')
-    #     height = feat.GetFieldAsDouble(height_index)
-    #     period = feat.GetFieldAsDouble(period_index)
-    #     depth = feat.GetFieldAsInteger(depth_index)
-
-    #     depth = numpy.absolute(depth)
-    #     # wave frequency calculation (used to calculate wave number k)
-    #     tem = (2.0 * math.pi) / (period * _ALFA)
-    #     # wave number calculation (expressed as a function of
-    #     # wave frequency and water depth)
-    #     k = numpy.square(tem) / (_GRAV * numpy.sqrt(
-    #         numpy.tanh((numpy.square(tem)) * (depth / _GRAV))))
-    #     # Setting numpy overlow error to ignore because when numpy.sinh
-    #     # gets a really large number it pushes a warning, but Rich
-    #     # and Doug have agreed it's nothing we need to worry about.
-    #     numpy.seterr(over='ignore')
-
-    #     # wave group velocity calculation (expressed as a
-    #     # function of wave energy period and water depth)
-    #     wave_group_velocity = (((1 + (
-    #         (2 * k * depth) / numpy.sinh(2 * k * depth))) * numpy.sqrt(
-    #             (_GRAV / k) * numpy.tanh(k * depth))) / 2)
-
-    #     # Reset the overflow error to print future warnings
-    #     numpy.seterr(over='print')
-
-    #     # wave power calculation
-    #     wave_pow = ((((_SWD * _GRAV) / 16) *
-    #                  (numpy.square(height)) * wave_group_velocity) / 1000)
-
-    #     feat.SetField(wp_index, wave_pow)
-    #     layer.SetFeature(feat)
-    #     feat = layer.GetNextFeature()
-
-    # feat = None
-    # layer = None
-    # vector = None
 
 def _calculate_percentiles_from_raster(
         base_raster_path, percentile_list, start_value=None):
