@@ -1680,8 +1680,8 @@ def _energy_and_power_to_wave_vector(
     Parameters:
         energy_cap (dict): a dictionary with keys (I,J), representing the
             wave energy capacity values.
-        base_wave_vector_path (str): a path to a wave point shapefile with existing
-            fields to copy from.
+        base_wave_vector_path (str): a path to a wave point shapefile with
+            existing fields to copy from.
         target_wave_vector_path (str): a path to the wave point shapefile
             to write the new field/values to.
 
