@@ -49,6 +49,17 @@ _WAVE_POWER_FIELD_NAME = 'WE_kWM'
 _HEIGHT_FIELD_NAME = 'HSAVG_M'
 _PERIOD_FIELD_NAME = 'TPAVG_S'
 
+# Resampling method for target rasters
+_TARGET_RESAMPLE_METHOD = 'near'
+
+# Percentile values and units specified explicitly in the user's guide
+_PERCENTILES = [25, 50, 75, 90]
+_CAPWE_UNITS_SHORT = ' MWh/yr'
+_CAPWE_UNITS_LONG = 'megawatt hours per year'
+_WP_UNITS_SHORT = ' kW/m'
+_WP_UNITS_LONG = 'wave power per unit width of wave crest length'
+_STARTING_PERC_RANGE = '1'
+
 
 class IntersectionError(Exception):
     """A custom error message for when the AOI does not intersect any wave
@@ -365,14 +376,14 @@ def execute(args):
     # Add wave energy and wave power fields to the shapefile for the
     # corresponding points
     LOGGER.info('Adding wave energy and power fields to the WaveData shapefile')
-    captured_wave_energy_vector_path = os.path.join(
+    wave_energy_and_power_vector_path = os.path.join(
         intermediate_dir, 'Captured_WEM_InputOutput_Pts%s.shp' % file_suffix)
-    get_captured_wave_energy_task = task_graph.add_task(
+    get_wave_energy_and_power_task = task_graph.add_task(
         func=_energy_and_power_to_wave_vector,
         args=(energy_cap, indexed_wave_vector_path,
-              captured_wave_energy_vector_path),
-        target_path_list=[captured_wave_energy_vector_path],
-        task_name='get_captured_wave_energy_task',
+              wave_energy_and_power_vector_path),
+        target_path_list=[wave_energy_and_power_vector_path],
+        task_name='get_wave_energy_and_power',
         dependent_task_list=[index_depth_to_wave_vector_task])
 
     # Intermediate/final output paths for wave energy and wave power rasters
@@ -386,63 +397,85 @@ def execute(args):
                                           'wp_kw%s.tif' % file_suffix)
 
     # Create blank rasters bounded by the shape file of analysis area
-    pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
-        _TARGET_PIXEL_TYPE, _NODATA)
+    if aoi_provided:
+        creating_raster_dependent_task_list = [clip_aoi_task]
+    else:
+        creating_raster_dependent_task_list = None
+    create_unclipped_energy_raster_task = task_graph.add_task(
+        func=pygeoprocessing.create_raster_from_vector_extents,
+        args=(aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
+              _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[unclipped_energy_raster_path],
+        task_name='create_unclipped_energy_raster',
+        dependent_task_list=creating_raster_dependent_task_list)
 
-    pygeoprocessing.create_raster_from_vector_extents(
-        aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
-        _TARGET_PIXEL_TYPE, _NODATA)
+    create_unclipped_power_raster_task = task_graph.add_task(
+        func=pygeoprocessing.create_raster_from_vector_extents,
+        args=(aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
+              _TARGET_PIXEL_TYPE, _NODATA),
+        target_path_list=[unclipped_power_raster_path],
+        task_name='create_unclipped_power_raster',
+        dependent_task_list=creating_raster_dependent_task_list)
 
     # Interpolate wave energy and power from the shapefile over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
+    interpolate_energy_points_task = task_graph.add_task(
+        func=pygeoprocessing.interpolate_points,
+        args=(wave_energy_and_power_vector_path, _CAP_WE_FIELD_NAME,
+              (unclipped_energy_raster_path, 1), _TARGET_RESAMPLE_METHOD),
+        target_path_list=[unclipped_energy_raster_path],
+        task_name='interpolate_energy_points',
+        dependent_task_list=[create_unclipped_energy_raster_task])
 
-    pygeoprocessing.interpolate_points(captured_wave_energy_vector_path, 'CAPWE_MWHY',
-                                       (unclipped_energy_raster_path, 1),
-                                       'near')
-
-    pygeoprocessing.interpolate_points(
-        captured_wave_energy_vector_path, 'WE_kWM', (unclipped_power_raster_path, 1), 'near')
+    interpolate_power_points_task = task_graph.add_task(
+        func=pygeoprocessing.interpolate_points,
+        args=(wave_energy_and_power_vector_path, _WAVE_POWER_FIELD_NAME,
+              (unclipped_power_raster_path, 1), _TARGET_RESAMPLE_METHOD),
+        target_path_list=[unclipped_power_raster_path],
+        task_name='interpolate_power_points',
+        dependent_task_list=[create_unclipped_power_raster_task])
 
     # Clip wave energy and power rasters to the aoi vector
-    target_resample_method = 'near'
-    pygeoprocessing.warp_raster(
-        unclipped_energy_raster_path,
-        target_pixel_size,
-        energy_raster_path,
-        target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path},
-        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
-    pygeoprocessing.warp_raster(
-        unclipped_power_raster_path,
-        target_pixel_size,
-        wave_power_raster_path,
-        target_resample_method,
-        vector_mask_options={'mask_vector_path': aoi_vector_path},
-        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
+    clip_energy_raster_task = task_graph.add_task(
+        func=pygeoprocessing.warp_raster,
+        args=(unclipped_energy_raster_path, target_pixel_size,
+              energy_raster_path, _TARGET_RESAMPLE_METHOD),
+        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
+                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        target_path_list=[energy_raster_path],
+        task_name='clip_energy_raster',
+        dependent_task_list=[interpolate_energy_points_task])
 
-    # Create the percentile rasters for wave energy and wave power
-    # These values are hard coded in because it's specified explicitly in
-    # the user's guide what the percentile ranges are and what the units
-    # will be.
-    percentiles = [25, 50, 75, 90]
-    capwe_units_short = ' MWh/yr'
-    capwe_units_long = 'megawatt hours per year'
-    wp_units_short = ' kW/m'
-    wp_units_long = 'wave power per unit width of wave crest length'
-    starting_percentile_range = '1'
+    clip_power_raster_task = task_graph.add_task(
+        func=pygeoprocessing.warp_raster,
+        args=(unclipped_power_raster_path, target_pixel_size,
+              wave_power_raster_path, _TARGET_RESAMPLE_METHOD),
+        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
+                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        target_path_list=[wave_power_raster_path],
+        task_name='clip_power_raster',
+        dependent_task_list=[interpolate_power_points_task])
 
     # Paths for wave energy and wave power percentile rasters
     wp_rc_path = os.path.join(output_dir, 'wp_rc%s.tif' % file_suffix)
     capwe_rc_path = os.path.join(output_dir, 'capwe_rc%s.tif' % file_suffix)
 
-    _create_percentile_rasters(energy_raster_path, capwe_rc_path,
-                               capwe_units_short, capwe_units_long,
-                               percentiles, starting_percentile_range)
+    # Create the percentile rasters for wave energy and wave power
+    task_graph.add_task(
+        func=_create_percentile_rasters,
+        args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
+              _CAPWE_UNITS_LONG, _PERCENTILES, _STARTING_PERC_RANGE),
+        target_path_list=[capwe_rc_path],
+        task_name='create_energy_percentile_raster',
+        dependent_task_list=[clip_energy_raster_task])
 
-    _create_percentile_rasters(wave_power_raster_path, wp_rc_path,
-                               wp_units_short, wp_units_long,
-                               percentiles, starting_percentile_range)
+    task_graph.add_task(
+        func=_create_percentile_rasters,
+        args=(wave_power_raster_path, wp_rc_path, _WP_UNITS_SHORT,
+              _WP_UNITS_LONG, _PERCENTILES, _STARTING_PERC_RANGE),
+        target_path_list=[wp_rc_path],
+        task_name='create_power_percentile_raster',
+        dependent_task_list=[clip_power_raster_task])
 
     LOGGER.info('Completed Wave Energy Biophysical')
 
@@ -454,37 +487,43 @@ def execute(args):
         LOGGER.info('Valuation selected')
 
     # Output path for landing point shapefile
-    land_vector_path = os.path.join(output_dir,
-                                    'LandPts_prj%s.shp' % file_suffix)
+    land_vector_path = os.path.join(
+        output_dir, 'LandPts_prj%s.shp' % file_suffix)
     # Output path for grid point shapefile
-    grid_vector_path = os.path.join(output_dir,
-                                    'GridPts_prj%s.shp' % file_suffix)
+    grid_vector_path = os.path.join(
+        output_dir, 'GridPts_prj%s.shp' % file_suffix)
     # Output path for the projected net present value raster
-    npv_proj_path = os.path.join(intermediate_dir,
-                                 'npv_not_clipped%s.tif' % file_suffix)
+    npv_proj_path = os.path.join(
+        intermediate_dir, 'npv_not_clipped%s.tif' % file_suffix)
     # Path for the net present value percentile raster
     npv_rc_path = os.path.join(output_dir, 'npv_rc%s.tif' % file_suffix)
 
-    grid_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
-                                   'grid']
-    land_data = grid_land_data.loc[grid_land_data['TYPE'].str.lower() ==
-                                   'land']
+    grid_data = grid_land_data.loc[
+        grid_land_data['TYPE'].str.lower() == 'grid']
+    land_data = grid_land_data.loc[
+        grid_land_data['TYPE'].str.lower() == 'land']
 
     grid_dict = grid_data.to_dict('index')
     land_dict = land_data.to_dict('index')
 
     # Make a point shapefile for grid points
-    LOGGER.info('Creating Grid Points Shapefile.')
-    _dict_to_point_vector(grid_dict, grid_vector_path, 'grid_points', aoi_sr,
-                          coord_trans)
+    LOGGER.info('Creating Grid Points Vector.')
+    task_graph.add_task(
+        func=_dict_to_point_vector,
+        args=(grid_dict, grid_vector_path, 'grid_points', aoi_sr, coord_trans),
+        target_path_list=[grid_vector_path],
+        task_name='create_grid_points_vector')
 
     # Make a point shapefile for landing points.
-    LOGGER.info('Creating Landing Points Shapefile.')
-    _dict_to_point_vector(land_dict, land_vector_path, 'land_points', aoi_sr,
-                          coord_trans)
+    LOGGER.info('Creating Landing Points Vector.')
+    task_graph.add_task(
+        func=_dict_to_point_vector,
+        args=(land_dict, land_vector_path, 'land_points', aoi_sr, coord_trans),
+        target_path_list=[land_vector_path],
+        task_name='create_land_points_vector')
 
     # Get the coordinates of points of wave, land, and grid vectors
-    wave_points = _get_points_geometries(captured_wave_energy_vector_path)
+    wave_points = _get_points_geometries(wave_energy_and_power_vector_path)
     land_points = _get_points_geometries(land_vector_path)
     grid_points = _get_points_geometries(grid_vector_path)
 
@@ -546,7 +585,7 @@ def execute(args):
         wave_layer = None
         wave_vector = None
 
-    _add_distance_fields_to_vector(captured_wave_energy_vector_path, wave_to_land_dist,
+    _add_distance_fields_to_vector(wave_energy_and_power_vector_path, wave_to_land_dist,
                                    land_to_grid_dist)
 
     def _calc_npv_wave(annual_revenue, annual_cost):
@@ -661,7 +700,7 @@ def execute(args):
         wave_point_vector = None
         LOGGER.info('Finished calculating the Net Present Value.')
 
-    _add_npv_field_to_vector(captured_wave_energy_vector_path)
+    _add_npv_field_to_vector(wave_energy_and_power_vector_path)
 
     # Create a blank raster from the extents of the wave farm shapefile
     LOGGER.info('Creating Raster From Vector Extents')
@@ -673,7 +712,7 @@ def execute(args):
     # Interpolate the NPV values based on the dimensions and corresponding
     # points of the raster, then write the interpolated values to the raster
     LOGGER.info('Generating Net Present Value Raster.')
-    pygeoprocessing.interpolate_points(captured_wave_energy_vector_path, 'NPV_25Y',
+    pygeoprocessing.interpolate_points(wave_energy_and_power_vector_path, 'NPV_25Y',
                                        (npv_proj_path, 1), 'near')
 
     npv_out_path = os.path.join(output_dir, 'npv_usd%s.tif' % file_suffix)
@@ -683,13 +722,13 @@ def execute(args):
         npv_proj_path,
         target_pixel_size,
         npv_out_path,
-        target_resample_method,
+        _TARGET_RESAMPLE_METHOD,
         vector_mask_options={'mask_vector_path': aoi_vector_path},
         gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
 
     # Create the percentile raster for net present value
     _create_percentile_rasters(npv_out_path, npv_rc_path, ' US$',
-                               'thousands of US dollars', percentiles)
+                               'thousands of US dollars', _PERCENTILES)
 
     LOGGER.info('End of Wave Energy Valuation.')
 
@@ -1029,7 +1068,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
             ex: kW/m.
         units_long (str): The description of the units of the raster values,
             ex: wave power per unit width of wave crest length (kW/m).
-        percentile_list (list): A list of the percentiles ranges,
+        percentile_list (list): A list of the _PERCENTILES ranges,
             ex: [25, 50, 75, 90].
         start_value (str): The first value that goes to the first percentile
             range (start_value: percentile_one) (optional)
@@ -1068,7 +1107,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     LOGGER.debug('Range_values : %s', value_ranges)
 
     def raster_percentile(band):
-        """Group the band pixels together based on percentiles, starting from 1.
+        """Group the band pixels together based on _PERCENTILES, starting from 1.
         """
         valid_data_mask = (band != base_nodata)
         band[valid_data_mask] = numpy.searchsorted(
@@ -1692,7 +1731,7 @@ def _energy_and_power_to_wave_vector(
 
 def _calculate_percentiles_from_raster(
         base_raster_path, percentile_list, start_value=None):
-    """Determine the percentiles of a raster using the nearest-rank method.
+    """Determine the _PERCENTILES of a raster using the nearest-rank method.
 
     Iterate through the raster blocks and round the unique values for
     efficiency. Then add each unique value-count pair into a dictionary.
@@ -1700,13 +1739,13 @@ def _calculate_percentiles_from_raster(
 
     Parameters:
         base_raster_path (str): path to a gdal raster on disk
-        percentile_list (list): a list of desired percentiles to lookup,
+        percentile_list (list): a list of desired _PERCENTILES to lookup,
             ex: [25,50,75,90]
         start_value (str): the first value that goes to the first percentile
             range (start_value: percentile_one). (optional)
 
     Returns:
-            a list of values corresponding to the percentiles from the list
+            a list of values corresponding to the _PERCENTILES from the list
 
     """
     nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
