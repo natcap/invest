@@ -545,7 +545,7 @@ class TestRecServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
-            'workspace_dir': r"C:\Users\Joanna Lin\Documents\rec_test_refactor"#self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(args)
 
@@ -732,14 +732,16 @@ class RecreationRegressionTests(unittest.TestCase):
         # Dave created these numbers using Recreation model release/3.5.0
         expected_results = {}
         expected_results['coefficients'] = [
-            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01, 6.59076098e-01]
+            -3.67484238e-03, -8.76864968e-06, 1.75244536e-01, 2.07040116e-01,
+            6.59076098e-01]
         expected_results['ssres'] = 11.03734250869611
         expected_results['r_sq'] = 0.5768926587089602
         expected_results['r_sq_adj'] = 0.5256069203706524
         expected_results['std_err'] = 0.5783294255923199
         expected_results['dof'] = 33
         expected_results['se_est'] = [
-            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02, 3.98165865e-01]
+            5.93275522e-03, 8.49251058e-06, 1.72921342e-01, 6.39079593e-02,
+            3.98165865e-01]
 
         for key in expected_results:
             numpy.testing.assert_allclose(results[key], expected_results[key])
@@ -959,8 +961,8 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # The expected behavior here is that _validate_same_projection does
         # not raise a ValueError.  The try/except block makes that explicit
-        # and also explictly fails the test if it does.  Note if a different
-        # exception is raised the teest will Error, thus differentating
+        # and also explicitly fails the test if it does.  Note if a different
+        # exception is raised the test will Error, thus differentiating
         # between a failed test and an error.
         try:
             recmodel_client._validate_same_projection(
@@ -1101,7 +1103,8 @@ def _assert_regression_results_eq(
             expected_values = list(expected_results.iloc[fid])
             for v, ev in zip(values, expected_values):
                 if v is not None:
-                    numpy.testing.assert_almost_equal(v, ev, decimal=tolerance_places)
+                    numpy.testing.assert_almost_equal(
+                        v, ev, decimal=tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
                     assert(numpy.isnan(ev))
