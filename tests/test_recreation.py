@@ -201,7 +201,7 @@ class TestRecServer(unittest.TestCase):
                     'port': port,
                     'raw_csv_point_data_path': self.resampled_data_path,
                     'cache_workspace': self.workspace_dir,
-                    'min_year': 2004,
+                    'min_year': 2010,
                     'max_year': 2015,
                 }
 
@@ -523,7 +523,7 @@ class TestRecServer(unittest.TestCase):
             'port': port,
             'raw_csv_point_data_path': self.resampled_data_path,
             'cache_workspace': self.workspace_dir,
-            'min_year': 2004,
+            'min_year': 2008,
             'max_year': 2015,
             'max_points_per_node': 200,
         }
@@ -537,7 +537,7 @@ class TestRecServer(unittest.TestCase):
             'aoi_path': os.path.join(
                 SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
             'compute_regression': True,
-            'start_year': '2005',
+            'start_year': '2008',
             'end_year': '2014',
             'grid_aoi': False,
             'predictor_table_path': os.path.join(
@@ -545,21 +545,21 @@ class TestRecServer(unittest.TestCase):
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': r"C:\Users\Joanna Lin\Documents\rec_test_refactor"#self.workspace_dir,
         }
         recmodel_client.execute(args)
 
         out_grid_vector_path = os.path.join(
             args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
-            REGRESSION_DATA, 'trivial_regression_coefficients.shp')
+            REGRESSION_DATA, 'predictor_data_all_metrics.shp')
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
-            REGRESSION_DATA, 'trivial_scenario_results.shp')
+            REGRESSION_DATA, 'scenario_results_all_metrics.shp')
         pygeoprocessing.testing.assert_vectors_equal(
             out_scenario_path, expected_scenario_path, 1E-6)
 
@@ -581,9 +581,9 @@ class TestLocalRecServer(unittest.TestCase):
 
     def test_local_aoi(self):
         """Recreation test local AOI with local server."""
-        aoi_path = os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp')
+        aoi_path = os.path.join(SAMPLE_DATA, 'test_local_aoi_for_subset.shp')
         date_range = (
-            numpy.datetime64('2005-01-01'),
+            numpy.datetime64('2010-01-01'),
             numpy.datetime64('2014-12-31'))
         out_vector_filename = os.path.join(self.workspace_dir, 'pud.shp')
         self.recreation_server._calc_aggregated_points_in_aoi(
@@ -719,7 +719,7 @@ class RecreationRegressionTests(unittest.TestCase):
         _, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
             recmodel_client._build_regression(
                 response_vector_path, coefficient_vector_path, response_id))
-        
+
         results = {}
         results['coefficients'] = coefficients
         results['ssres'] = ssres
@@ -881,7 +881,7 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # Initialize a TaskGraph
         taskgraph_db_dir = os.path.join(
-            self.workspace_dir, '_taskgraph_working_dir')    
+            self.workspace_dir, '_taskgraph_working_dir')
         n_workers = -1  # single process mode.
         task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
 
@@ -937,13 +937,17 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # these are absolute paths for predictor data
         predictor_list = [
-            ('ports', os.path.join(SAMPLE_DATA, 'predictors', 'dredged_ports.shp'),
+            ('ports',
+             os.path.join(SAMPLE_DATA, 'predictors', 'dredged_ports.shp'),
              'point_count'),
-            ('airdist', os.path.join(SAMPLE_DATA, 'predictors', 'airport.shp'),
+            ('airdist',
+             os.path.join(SAMPLE_DATA, 'predictors', 'airport.shp'),
              'point_nearest_distance'),
-            ('bonefish', os.path.join(SAMPLE_DATA, 'predictors', 'bonefish_trivial.shp'),
+            ('bonefish',
+             os.path.join(SAMPLE_DATA, 'predictors', 'bonefish_simp.shp'),
              'polygon_percent_coverage'),
-            ('bathy', os.path.join(SAMPLE_DATA, 'predictors', 'dem90m.tif'),
+            ('bathy',
+             os.path.join(SAMPLE_DATA, 'predictors', 'dem90m_coarse.tif'),
              'raster_mean'),
             ]
 
