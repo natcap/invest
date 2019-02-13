@@ -2,15 +2,15 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 177
+SVN_DATA_REPO_REV       := 188
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 183
+SVN_TEST_DATA_REPO_REV  := 211
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 10cd532ac720
+HG_UG_REPO_REV          := 0e07bc219650
 
 
 ENV = env
@@ -203,7 +203,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
-	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
 # API docs are copied to dist/apidocs
@@ -256,7 +256,6 @@ ZIPDIRS = Aquaculture \
 		  Malaria \
 		  pollination \
 		  recreation \
-		  ScenarioGenerator \
 		  scenario_proximity \
 		  ScenicQuality \
 		  seasonal_water_yield \

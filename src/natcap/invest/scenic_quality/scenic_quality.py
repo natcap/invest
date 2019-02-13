@@ -4,7 +4,6 @@ import math
 import logging
 import tempfile
 import shutil
-import collections
 import itertools
 import heapq
 import struct
@@ -489,14 +488,16 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     spatial_reference = osr.SpatialReference()
     spatial_reference.ImportFromWkt(vis_raster_info['projection'])
     linear_units = spatial_reference.GetLinearUnits()
-    pixel_size_in_m = vis_raster_info['mean_pixel_size'] * linear_units
+    pixel_size_in_m = utils.mean_pixel_size_and_area(
+        vis_raster_info['pixel_size'])[0] * linear_units
 
     valuation_raster = gdal.OpenEx(valuation_raster_path,
                                    gdal.OF_RASTER | gdal.GA_Update)
     valuation_band = valuation_raster.GetRasterBand(1)
     vis_nodata = vis_raster_info['nodata'][0]
 
-    for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
+    for block_info, vis_block in pygeoprocessing.iterblocks(
+            (visibility_path, 1)):
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _VALUATION_NODATA
 
@@ -525,11 +526,11 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
                                   xoff=block_info['xoff'],
                                   yoff=block_info['yoff'])
 
+    # the 0 means approximate stats are not okay
+    valuation_band.ComputeStatistics(0)
     valuation_band = None
     valuation_raster.FlushCache()
     valuation_raster = None
-
-    pygeoprocessing.calculate_raster_stats(valuation_raster_path)
 
 
 def _viewpoint_within_raster(viewpoint, dem_path):
@@ -617,8 +618,10 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     LOGGER.info('Clipping the DEM to its intersection with the AOI.')
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-    pixel_size = (dem_raster_info['mean_pixel_size'],
-                  dem_raster_info['mean_pixel_size'])
+    mean_pixel_size = (
+        abs(dem_raster_info['pixel_size'][0]) +
+        abs(dem_raster_info['pixel_size'][1])) / 2.0
+    pixel_size = (mean_pixel_size, -mean_pixel_size)
 
     intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim, op) in
                          zip(aoi_vector_info['bounding_box'],
@@ -800,7 +803,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     n_pixels_read = 0
     n_pixels_in_raster = (raster_info['raster_size'][0] *
                           raster_info['raster_size'][1])
-    for _, block in pygeoprocessing.iterblocks(source_raster_path):
+    for _, block in pygeoprocessing.iterblocks((source_raster_path, 1)):
         block = block.astype(numpy.float64)
         valid_pixels = block[(block != raster_nodata) & (block != 0)]
         n_pixels_read += block.size

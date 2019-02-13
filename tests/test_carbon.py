@@ -1,3 +1,4 @@
+# coding=UTF-8
 """Module for Regression Testing the InVEST Carbon model."""
 import unittest
 import tempfile
@@ -80,7 +81,7 @@ class CarbonTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp()
+        self.workspace_dir = tempfile.mkdtemp(suffix=u'\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -120,6 +121,41 @@ class CarbonTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+    def test_carbon_zero_rates(self):
+        """Carbon: test with 0 discount and rate change."""
+        from natcap.invest import carbon
+
+        args = {
+            u'workspace_dir': self.workspace_dir,
+            u'do_valuation': True,
+            u'price_per_metric_ton_of_c': 43.0,
+            u'rate_change': 0.0,
+            u'lulc_cur_year': 2016,
+            u'lulc_fut_year': 2030,
+            u'discount_rate': 0.0,
+            u'n_workers': -1,
+        }
+
+        # Create LULC rasters and pools csv in workspace and add them to args.
+        lulc_names = ['lulc_cur_path', 'lulc_fut_path', 'lulc_redd_path']
+        for fill_val, lulc_name in enumerate(lulc_names, 1):
+            args[lulc_name] = os.path.join(args['workspace_dir'],
+                                           lulc_name + '.tif')
+            make_simple_raster(args[lulc_name], fill_val)
+
+        args['carbon_pools_path'] = os.path.join(args['workspace_dir'],
+                                                 'pools.csv')
+        make_pools_csv(args['carbon_pools_path'])
+
+        carbon.execute(args)
+
+        # Add assertions for npv for future and REDD scenarios.
+        # The npv was calculated based on _calculate_npv in carbon.py.
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.0178143)
+        assert_raster_equal_value(
+            os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.0239571)
 
     def test_carbon_future(self):
         """Carbon: regression testing future scenario."""

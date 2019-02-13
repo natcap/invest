@@ -30,6 +30,7 @@ import pygeoprocessing
 from osgeo import gdal
 from osgeo import osr
 import shapely.geometry
+from .. import utils
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
 from cython.operator cimport preincrement as inc
@@ -678,7 +679,8 @@ def viewshed(dem_raster_path_band,
     dem_srs = osr.SpatialReference()
     dem_srs.ImportFromWkt(dem_raster_info['projection'])
     linear_units = dem_srs.GetLinearUnits()
-    cdef double pixel_size = dem_raster_info['mean_pixel_size']*linear_units
+    cdef double pixel_size = utils.mean_pixel_size_and_area(
+        dem_raster_info['pixel_size'])[0]*linear_units
     cdef long raster_x_size = dem_raster_info['raster_size'][0]
     cdef long raster_y_size = dem_raster_info['raster_size'][1]
     cdef double max_visible_radius
