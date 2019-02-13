@@ -1063,6 +1063,7 @@ def _calculate_l_avail(l_path, gamma, target_l_avail_path):
         [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
         li_nodata)
 
+
 @validation.invest_validator
 def validate(args, limit_to=None):
     """Validate args to ensure they conform to `execute`'s contract.
