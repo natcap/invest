@@ -187,6 +187,25 @@ def _execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
+    bad_value_list = []
+    for lucode, value in biophysical_table.items():
+        for biophysical_id in ['cn_a', 'cn_b', 'cn_c', 'cn_d'] + [
+            'kc_%d' % (month_index+1) for month_index in range(12)]:
+            try:
+                _ = float(value[biophysical_id])
+            except ValueError:
+                bad_value_list.append(
+                    (biophysical_id, lucode, value[biophysical_id]))
+
+    if bad_value_list:
+        raise ValueError(
+            'biophysical_table at %s seems to have the following incorrect '
+            'values (expecting all floating point numbers): %s' % (
+                args['biophysical_table_path'], ','.join(
+                    ['%s(lucode %d): "%s"' % (lucode, biophysical_id, bad_value)
+                     for lucode, biophysical_id, bad_value in
+                        bad_value_list])))
+
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
         alpha_month = dict(
