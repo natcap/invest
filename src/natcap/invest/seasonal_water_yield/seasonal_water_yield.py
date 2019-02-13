@@ -685,7 +685,7 @@ def _calculate_vri(l_path, target_vri_path):
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     for _, block in pygeoprocessing.iterblocks(
-            l_path, band_index_list=[1]):
+            (l_path, 1), band_index_list=[1]):
         valid_mask = block != l_nodata
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
