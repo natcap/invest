@@ -586,7 +586,7 @@ def _raster_to_geojson(
         None.
 
     """
-    raster = gdal.OpenEx(base_raster_path)
+    raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
     band = raster.GetRasterBand(1)
     mask = band.GetMaskBand()
 
@@ -2666,7 +2666,7 @@ def validate(args, limit_to=None):
                 validation_error_list.append(
                     ([aoi_vector_key], 'not found on disk'))
 
-            vector = gdal.OpenEx(args[aoi_vector_key])
+            vector = gdal.OpenEx(args[aoi_vector_key], gdal.OF_VECTOR)
             if vector is None:
                 validation_error_list.append(
                     ([aoi_vector_key], 'not a vector'))
