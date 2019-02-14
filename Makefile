@@ -79,7 +79,7 @@ BUILD_DIR := build
 # if someone wants to build from source outside of mercurial (like if
 # they grabbed a zipfile of the source code)
 # FORKUSER should not need to be set from the CLI.
-FORKNAME := $(filter-out ssh: http:, $(subst /, ,$(shell hg config paths.default)))
+FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
 FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	# DEST_VERSION will be develop unless we are at a tag.
