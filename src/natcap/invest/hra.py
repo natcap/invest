@@ -109,7 +109,8 @@ def execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    taskgraph_working_dir = os.path.join(
+        intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -117,7 +118,7 @@ def execute(args):
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
         n_workers = -1  # single process mode.
-    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     # Calculate recovery for each habitat, and overlap scores for each
     # habitat-stressor, and store data in the dataframes
@@ -177,7 +178,7 @@ def execute(args):
     if subregion_field_exists:
         aoi_preserved_field = (_SUBREGION_FIELD_NAME, ogr.OFTString)
 
-    simplify_aoi_task = graph.add_task(
+    simplify_aoi_task = task_graph.add_task(
         func=_simplify_geometry,
         args=(args['aoi_vector_path'], aoi_tolerance,
               simplified_aoi_vector_path),
@@ -193,7 +194,7 @@ def execute(args):
         merged_aoi_vector_path = os.path.join(
             file_preprocessing_dir, 'merged_aoi.gpkg')
         LOGGER.info('Merging the geometries from the AOI vector.')
-        merge_aoi_task = graph.add_task(
+        merge_aoi_task = task_graph.add_task(
             func=_merge_geometry,
             args=(simplified_aoi_vector_path, merged_aoi_vector_path),
             target_path_list=[merged_aoi_vector_path],
@@ -222,7 +223,7 @@ def execute(args):
 
             # Simplify the vector geometry first, with a tolerance of half the
             # target resolution
-            simplify_geometry_task = graph.add_task(
+            simplify_geometry_task = task_graph.add_task(
                 func=_simplify_geometry,
                 args=(vector_path, tolerance, simplified_vector_path),
                 kwargs={'preserved_field': (_RATING_FIELD, ogr.OFTReal)},
@@ -245,7 +246,7 @@ def execute(args):
                 rasterize_pixel_type = _TARGET_INT_PIXEL
 
             # Create raster from the simplified vector and fill with 0s
-            create_raster_task = graph.add_task(
+            create_raster_task = task_graph.add_task(
                 func=pygeoprocessing.create_raster_from_vector_extents,
                 args=(simplified_vector_path, target_raster_path,
                       target_pixel_size, rasterize_pixel_type, rasterize_nodata),
@@ -254,7 +255,7 @@ def execute(args):
                 task_name='create_raster_from_%s' % vector_name,
                 dependent_task_list=[simplify_geometry_task])
 
-            rasterize_task = graph.add_task(
+            rasterize_task = task_graph.add_task(
                 func=pygeoprocessing.rasterize,
                 args=(simplified_vector_path, target_raster_path),
                 kwargs=rasterize_kwargs,
@@ -264,7 +265,7 @@ def execute(args):
 
     # Join the raster creation tasks first, since align_and_resize_rasters_task
     # is dependent on them.
-    graph.join()
+    task_graph.join()
 
     # Align and resize all the rasters, including rasters provided by the user,
     # and rasters created from the vectors.
@@ -272,7 +273,7 @@ def execute(args):
     align_raster_list = info_df.ALIGN_RASTER_PATH.tolist()
 
     LOGGER.info('Starting align_and_resize_raster_task.')
-    align_and_resize_rasters_task = graph.add_task(
+    align_and_resize_rasters_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_list,
               align_raster_list,
@@ -283,7 +284,7 @@ def execute(args):
         task_name='align_and_resize_raster_task')
 
     # Join here since everything below requires aligned and resized rasters
-    graph.join()
+    task_graph.join()
 
     # Make buffer stressors based on their impact distance and decay function
     align_stressor_raster_list = info_df[
@@ -301,7 +302,7 @@ def execute(args):
          align_stressor_raster_list, dist_stressor_raster_list,
          stressor_names):
 
-        distance_transform_task_list.append(graph.add_task(
+        distance_transform_task_list.append(task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
             args=((align_raster_path, 1), dist_raster_path),
             kwargs={'sampling_distance': sampling_distance,
@@ -329,7 +330,7 @@ def execute(args):
         # habitat, whereas 1 means non-existence.
         habitat_raster_path = info_df.loc[
             info_df.NAME == habitat, 'ALIGN_RASTER_PATH'].item()
-        graph.add_task(
+        task_graph.add_task(
             func=_calc_habitat_recovery,
             args=(habitat_raster_path, habitat, recovery_df, max_rating),
             target_path_list=[
@@ -355,7 +356,7 @@ def execute(args):
             _calc_pair_criteria_score(
                 overlap_df.loc[(habitat, stressor)], habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
-                'E', graph, expo_dependent_task_list)
+                'E', task_graph, expo_dependent_task_list)
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
@@ -363,7 +364,7 @@ def execute(args):
             _calc_pair_criteria_score(
                 overlap_df.loc[(habitat, stressor)], habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
-                'C', graph, conseq_dependent_task_list)
+                'C', task_graph, conseq_dependent_task_list)
 
             # Calculate pairwise habitat-stressor risks.
             pair_e_raster_path, pair_c_raster_path, \
@@ -374,7 +375,7 @@ def execute(args):
                 (pair_e_raster_path, 1), (pair_c_raster_path, 1),
                 (args['risk_eq'], 'raw')]
 
-            graph.add_task(
+            task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(pair_risk_calculation_list, _pair_risk_op,
                       target_pair_risk_raster_path, _TARGET_FLT_PIXEL,
@@ -384,7 +385,7 @@ def execute(args):
                 dependent_task_list=conseq_dependent_task_list +
                 expo_dependent_task_list)
 
-        graph.join()
+        task_graph.join()
 
         # Calculate cumulative E, C & risk scores on each habitat
         final_e_habitat_path, final_c_habitat_path = [
@@ -404,7 +405,7 @@ def execute(args):
             e_num_path_const_list + e_denom_list
 
         # Calculate total exposure on the habitat
-        graph.add_task(
+        task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(final_e_path_band_list,
                   _final_expo_score_op,
@@ -430,7 +431,7 @@ def execute(args):
             c_num_path_const_list + c_denom_list
 
         # Calculate total consequence on the habitat
-        graph.add_task(
+        task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(final_c_path_const_list,
                   _final_conseq_score_op,
@@ -456,7 +457,7 @@ def execute(args):
             (path, 1) for path in pair_risk_path_list]
 
         # Calculate the cumulative risk on the habitat from all stressors
-        calc_risk_task = graph.add_task(
+        calc_risk_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(total_risk_path_band_list, _tot_risk_op,
                   total_habitat_risk_path, _TARGET_FLT_PIXEL,
@@ -466,7 +467,7 @@ def execute(args):
 
         # Calculate the risk score on a reclassified basis by dividing the risk
         # score by the maximum possible risk score.
-        graph.add_task(
+        task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(total_habitat_risk_path, 1), (max_risk_score, 'raw')],
                   _reclassify_risk_op, reclass_habitat_risk_path,
@@ -477,7 +478,7 @@ def execute(args):
 
     # Calculate ecosystem risk scores. This task depends on every task above,
     # so join the graph first.
-    graph.join()
+    task_graph.join()
     LOGGER.info('Calculating ecosystem risk.')
 
     # Create input list for calculating reclassified ecosystem risk.
@@ -491,7 +492,7 @@ def execute(args):
         hab_risk_path_band_list.append((path, 1))
 
     # Calculate and reclassify ecosystem risk
-    graph.add_task(
+    task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(hab_risk_path_band_list, _ecosystem_risk_op,
               ecosystem_risk_raster_path, _TARGET_FLT_PIXEL,
@@ -502,7 +503,7 @@ def execute(args):
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
-    stats_df = _get_zonal_stats(overlap_df, aoi_vector_path, graph)
+    stats_df = _get_zonal_stats(overlap_df, aoi_vector_path, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -534,7 +535,7 @@ def execute(args):
                         -float(args['resolution'])/111111)
 
     # Unproject the rasters to WGS84
-    unproject_task = graph.add_task(
+    unproject_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(out_raster_paths, wgs84_raster_paths,
               ['near'] * len(out_raster_paths), wgs84_pixel_size, 'union'),
@@ -555,15 +556,15 @@ def execute(args):
         else:
             field_name = 'Recovery Potential'
 
-        graph.add_task(
+        task_graph.add_task(
             func=_raster_to_geojson,
             args=(raster_path, vector_path, vector_layer_name, field_name),
             target_path_list=[vector_path],
             task_name='create_%s_geojson' % vector_layer_name,
             dependent_task_list=[unproject_task])
 
-    graph.join()
-    graph.close()
+    task_graph.close()
+    task_graph.join()
 
 
 def _raster_to_geojson(
@@ -658,7 +659,7 @@ def _get_and_pickle_zonal_stats(
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
 
-def _get_zonal_stats(overlap_df, aoi_vector_path, graph):
+def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -672,7 +673,7 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, graph):
         aoi_vector_path (str): a path to a vector containing one or more
             features to calculate statistics over.
 
-        graph (Taskgraph object): an object for building task graphs and
+        task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
     Returns:
@@ -715,7 +716,7 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, graph):
             habitat_stressor = '_'.join(hab_str_idx)
 
             # Calculate and pickle zonal stats to files
-            graph.add_task(
+            task_graph.add_task(
                 func=_get_and_pickle_zonal_stats,
                 args=(criteria_raster_path, aoi_vector_path, fid_name_dict,
                       target_pickle_path),
@@ -723,7 +724,7 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, graph):
                 task_name='_get_and_pickle_%s_zonal_stats' % habitat_stressor)
 
     # Join first to get all the result statistics
-    graph.join()
+    task_graph.join()
 
     # Load zonal stats from a pickled file and write it to the dataframe
     for criteria_type in ['E', 'C']:
@@ -1368,8 +1369,8 @@ def _pair_criteria_num_op(
 
 def _calc_pair_criteria_score(
         habitat_stressor_overlap_df, habitat_raster_path,
-        stressor_dist_raster_path, stressor_buffer, decay_eq,
-        criteria_type, graph, dependent_task_list):
+        stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type,
+        task_graph, dependent_task_list):
     """Calculate exposure or consequence scores for a habitat-stressor pair.
 
     Parameters:
@@ -1394,7 +1395,7 @@ def _calc_pair_criteria_score(
             exposure or consequence scores. Could be `C` or `E`. If `C`,
             recov_score_paths needs to be added.
 
-        graph (Taskgraph object): an object for building task graphs and
+        task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
         dependent_task_list (list): a list of tasks that the tasks for
@@ -1442,7 +1443,7 @@ def _calc_pair_criteria_score(
     task_name = 'exposure' if criteria_type == 'E' else 'consequence'
 
     # Calculate numerator raster for the habitat-stressor pair
-    calc_criteria_num_task = graph.add_task(
+    calc_criteria_num_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(num_list, _pair_criteria_num_op, target_criteria_num_path,
               _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT),
@@ -1453,7 +1454,7 @@ def _calc_pair_criteria_score(
 
     # Calculate E or C raster for the habitat-stressor pair. This task is
     # dependent upon the numerator calculation task
-    calc_criteria_score_task = graph.add_task(
+    calc_criteria_score_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(final_score_list, _pair_criteria_score_op,
               target_pair_criteria_raster_path, _TARGET_FLT_PIXEL,
