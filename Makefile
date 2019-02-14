@@ -74,16 +74,15 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 
-# These are intended to be overridden by a jenkins build.
-# When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
-# to wherever the datasets will be available based on the forkname and where
-# we're storing the datasets.
-# These defaults assume that we're storing datasets for an InVEST release.
-# DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME := natcap/invest
-FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
-
+# The fork name and user here are derived from the mercurial path.
+# They will need to be set manually (e.g. make FORKNAME=natcap/invest)
+# if someone wants to build from source outside of mercurial (like if
+# they grabbed a zipfile of the source code)
+# FORKUSER should not need to be set from the CLI.
+FORKNAME := $(filter-out ssh: http:, $(subst /, ,$(shell hg config paths.default)))
+FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
+	# DEST_VERSION will be develop unless we are at a tag.
 	DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
 else
 	DATA_BASE_URL := http://data.naturalcapitalproject.org/nightly-build/invest-forks/$(FORKUSER)/data
