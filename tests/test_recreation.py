@@ -961,8 +961,8 @@ class RecreationRegressionTests(unittest.TestCase):
 
         # The expected behavior here is that _validate_same_projection does
         # not raise a ValueError.  The try/except block makes that explicit
-        # and also explicitly fails the test if it does.  Note if a different
-        # exception is raised the test will Error, thus differentiating
+        # and also explicitly fails the test if it does. Note if a different
+        # exception is raised the test will raise an error, thus differentiating
         # between a failed test and an error.
         try:
             recmodel_client._validate_same_projection(
