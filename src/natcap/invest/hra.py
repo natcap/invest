@@ -322,7 +322,7 @@ def execute(args):
         overlap_stressor_raster_path, ecosystem_raster_path, max_rating,
         args['risk_eq'])
 
-    # For each habitat, calculate the individual and culmulative exposure,
+    # For each habitat, calculate the individual and cumulative exposure,
     # consequence, and risk scores from each stressor.
     for i, habitat in enumerate(habitat_names):
         LOGGER.info('Calculating recovery scores on habitat %s.' % habitat)
@@ -970,7 +970,7 @@ def _get_max_risk_score(
         target_ecosystem_raster_path, max_rating, risk_eq):
     """Calculate the maximum risk score based on stressor number and ratings.
 
-    The maximum possible risk score is calculatd by either multiplying the
+    The maximum possible risk score is calculated by either multiplying the
     number of stressors and maximum rating (Multiplicative), or multiplying the
     number of stressors and the euclidean distance of the maximum ratings
     (Euclidean).
@@ -1483,7 +1483,8 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
 
         denom (float): the precalculated cumulative denominator score.
 
-        max_rating (float): the rating used to define the recovery reclassified.
+        max_rating (float): the rating used to define the recovery
+            reclassified.
 
     Returns:
         output_recovery_arr (array): an array of the recovery potential
@@ -1524,7 +1525,8 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             respectively on every four items.
 
     Returns:
-        num_arr (array): an array of the numerator score for recovery potential.
+        num_arr (array): an array of the numerator score for recovery
+            potential.
 
     """
     # Initialize numerator and denominator arrays and fill the habitat
@@ -1970,7 +1972,7 @@ def _get_criteria_dataframe(criteria_csv_path):
             stressor criteria ratings.
 
     Returns:
-        criteria_df (dataframe): a dataframe converted from CSV with 'nan' for
+        criteria_df (dataframe): a dataframe converted from CSV with 'NaN' for
             empty cells.
 
     Raises:
@@ -2005,6 +2007,8 @@ def _get_criteria_dataframe(criteria_csv_path):
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria CSV file is missing the column header'
                          ' "%s".' % _CRITERIA_TYPE_HEADER)
+
+    LOGGER.info('Criteria dataframe was created successfully.')
 
     return criteria_df
 
