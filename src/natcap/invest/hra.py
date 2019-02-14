@@ -2387,7 +2387,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                 'one %s rating: %s' % (criteria_type_long, overlap_df[
                     overlap_df[criteria_type + '_DENOM'] == 0].index.tolist()))
 
-    LOGGER.info('overlap_df: %s' % overlap_df)
+    LOGGER.info('Overlap dataframe was created successfully.')
     return overlap_df
 
 
@@ -2488,7 +2488,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
         else:
             i += 1  # Keep finding the next habitat from the habitat list
 
-    LOGGER.info('recovery_df: %s' % recovery_df)
+    LOGGER.info('Recovery dataframe was created successfully.')
     return recovery_df
 
 
