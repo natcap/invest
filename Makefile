@@ -80,8 +80,14 @@ BUILD_DIR := build
 # we're storing the datasets.
 # These defaults assume that we're storing datasets for an InVEST release.
 # DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME :=
-DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+FORKNAME := natcap/invest
+FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
+
+ifeq ($(FORKUSER),natcap)
+	DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+else
+	DATA_BASE_URL := http://data.naturalcapitalproject.org/nightly-build/invest-forks/$(FORKUSER)/data
+endif
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
 
@@ -92,7 +98,7 @@ APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
@@ -292,7 +298,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 		/DVERSION=$(VERSION) \
 		/DBINDIR=$(INVEST_BINARIES_DIR) \
 		/DARCHITECTURE=$(PYTHON_ARCH) \
-		/DFORKNAME=$(FORKNAME) \
+		/DFORKNAME=$(FORKUSER) \
 		/DDATA_LOCATION=$(DATA_BASE_URL) \
 		installer\windows\invest_installer.nsi
 
