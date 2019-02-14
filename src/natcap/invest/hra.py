@@ -194,7 +194,7 @@ def execute(args):
         merged_aoi_vector_path = os.path.join(
             file_preprocessing_dir, 'merged_aoi.gpkg')
         LOGGER.info('Merging the geometries from the AOI vector.')
-        merge_aoi_task = task_graph.add_task(
+        task_graph.add_task(
             func=_merge_geometry,
             args=(simplified_aoi_vector_path, merged_aoi_vector_path),
             target_path_list=[merged_aoi_vector_path],
@@ -255,7 +255,7 @@ def execute(args):
                 task_name='create_raster_from_%s' % vector_name,
                 dependent_task_list=[simplify_geometry_task])
 
-            rasterize_task = task_graph.add_task(
+            task_graph.add_task(
                 func=pygeoprocessing.rasterize,
                 args=(simplified_vector_path, target_raster_path),
                 kwargs=rasterize_kwargs,
@@ -273,7 +273,7 @@ def execute(args):
     align_raster_list = info_df.ALIGN_RASTER_PATH.tolist()
 
     LOGGER.info('Starting align_and_resize_raster_task.')
-    align_and_resize_rasters_task = task_graph.add_task(
+    task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_list,
               align_raster_list,
@@ -324,7 +324,7 @@ def execute(args):
 
     # For each habitat, calculate the individual and cumulative exposure,
     # consequence, and risk scores from each stressor.
-    for i, habitat in enumerate(habitat_names):
+    for habitat in habitat_names:
         LOGGER.info('Calculating recovery scores on habitat %s.' % habitat)
         # On a habitat raster, a pixel value of 0 indicates the existence of
         # habitat, whereas 1 means non-existence.
@@ -341,7 +341,8 @@ def execute(args):
         # Calculate exposure/consequence scores on each stressor-habitat pair
         for j, stressor in enumerate(stressor_names):
             LOGGER.info('Calculating exposure, consequence, and risk scores '
-                        'from stressor %s to habitat %s.' % (stressor, habitat))
+                        'from stressor %s to habitat %s.' %
+                        (stressor, habitat))
 
             stressor_dist_raster_path = info_df.loc[
                 info_df.NAME == stressor, 'DIST_RASTER_PATH'].item()
@@ -595,11 +596,11 @@ def _raster_to_geojson(
     vector = driver.CreateDataSource(target_geojson_path)
 
     # Use raster projection wkt for the GeoJSON
-    sr = osr.SpatialReference()
-    sr.ImportFromWkt(raster.GetProjectionRef())
+    spat_ref = osr.SpatialReference()
+    spat_ref.ImportFromWkt(raster.GetProjectionRef())
 
     layer_name = layer_name.encode('utf-8')
-    vector_layer = vector.CreateLayer(layer_name, sr, ogr.wkbPolygon)
+    vector_layer = vector.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     # Create an integer field that contains risk scores 0 to 3 from the raster
     field_defn = ogr.FieldDefn(field_name, ogr.OFTInteger)
@@ -1545,8 +1546,7 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat and resilience score exist
-        hab_res_overlap_mask = [
-           habitat_mask & (resilience_arr != nodata)]
+        hab_res_overlap_mask = [habitat_mask & (resilience_arr != nodata)]
 
         # Compute cumulative numerator score
         num_arr[hab_res_overlap_mask] += resilience_arr[
@@ -1780,8 +1780,8 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
     elif (suffix_front == 'dist_' or suffix_front == 'buff_') and (
           row['TYPE'] == 'habitat'):
         return None
-    else:
-        return target_raster_path
+
+    return target_raster_path
 
 
 def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
@@ -1813,8 +1813,8 @@ def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
             dir_path,
             suffix_front + basename + suffix_end + '.gpkg')
         return target_vector_path
-    else:
-        return None
+
+    return None
 
 
 def _label_linear_unit(row):
@@ -1840,9 +1840,9 @@ def _label_linear_unit(row):
         raise ValueError('The following layer does not have a projection: %s' %
                          row['PATH'])
     else:
-        sr = osr.SpatialReference()
-        sr.ImportFromWkt(sr_wkt)
-        linear_unit = sr.GetLinearUnits()
+        spat_ref = osr.SpatialReference()
+        spat_ref.ImportFromWkt(sr_wkt)
+        linear_unit = spat_ref.GetLinearUnits()
         return linear_unit
 
 
@@ -2281,7 +2281,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         # Data values on each row corresponds to each column header
         data=[[0, 0, {}, None, None, None, {},
                0, 0, {}, None, None, None, {}]
-              for i in xrange(len(habitat_names)*len(stressor_names))],
+              for _ in xrange(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
     # Start iterating from row indicating the beginning of habitat and stressor
@@ -2338,7 +2338,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         # If rating is less than 1, skip this criteria row
                         rating = row_value
                         if not _validate_rating(
-                            rating, max_rating, criteria_name, habitat,
+                                rating, max_rating, criteria_name, habitat,
                                 stressor):
                             continue
 
@@ -2373,9 +2373,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         overlap_df.loc[
                             (habitat, stressor),
                             criteria_type + '_SPATIAL']['_'.join(
-                                [habitat, stressor,
-                                 criteria_name])] = [
-                                rating, dq, weight]
+                                [habitat, stressor, criteria_name])] = [
+                                    rating, dq, weight]
 
                     # Calculate the cumulative denominator score
                     overlap_df.loc[
