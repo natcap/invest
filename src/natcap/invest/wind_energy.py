@@ -189,6 +189,8 @@ def execute(args):
         bathy_pixel_size = _get_pixel_size(args['bathymetry_path'])
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         bathymetry_path = args['bathymetry_path']
+        # The task list would be empty for clipping and reprojecting bathymetry
+        bathy_dependent_task_list = []
     except ValueError:
         LOGGER.debug(
             '%s has pixels that are not square. Resampling the raster to have '
@@ -196,12 +198,15 @@ def execute(args):
         bathymetry_path = os.path.join(inter_dir, 'bathymetry_resampled.tif')
         # Get the minimum absolute value from the bathymetry pixel size tuple
         mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
-        task_graph.add_task(
+        resapmle_bathymetry_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
                   bathymetry_path, 'near'),
             target_path_list=[bathymetry_path],
             task_name='resample_bathymetry')
+
+        # Build the task list when clipping and reprojecting bathymetry later.
+        bathy_dependent_task_list = [resapmle_bathymetry_task]
 
     number_of_turbines = int(args['number_of_turbines'])
 
@@ -367,15 +372,15 @@ def execute(args):
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
 
-        # Join the graph first, since this task could be dependent on the
-        # `resample_bathymetry` task, if the task is created
-        task_graph.join()
+        # This task will be dependent upon whether the pixel sizes of
+        # bathymetry are equal or not
         clip_to_projection_task = task_graph.add_task(
             func=_clip_to_projection_with_square_pixels,
             args=(bathymetry_path, aoi_vector_path,
                   bathymetry_proj_raster_path),
             target_path_list=[bathymetry_proj_raster_path],
-            task_name='clip_to_projection_with_square_pixels')
+            task_name='clip_to_projection_with_square_pixels',
+            dependent_task_list=bathy_dependent_task_list)
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
