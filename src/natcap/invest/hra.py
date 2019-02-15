@@ -8,6 +8,7 @@ import numpy
 from osgeo import gdal, ogr, osr
 import pandas
 import pygeoprocessing
+import shapely.ops
 import shapely.wkt
 import taskgraph
 
@@ -779,7 +780,7 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
     # Create target layer using same projection from base vector
     target_layer = target_vector.CreateLayer(
         target_layer_name,
-        base_layer.GetSpatialRef(), ogr.wkbPolygon)
+        base_layer.GetSpatialRef(), ogr.wkbPolygon | ogr.wkbMultiPolygon)
 
     # Write the merged geometry to the target layer
     target_layer.StartTransaction()
