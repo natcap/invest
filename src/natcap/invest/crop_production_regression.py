@@ -499,7 +499,7 @@ def execute(args):
         task_name='tabulate_results')
 
     if ('aggregate_polygon_path' in args and
-            args['aggregate_polygon_path'] is not None):
+            args['aggregate_polygon_path'] not in ['', None]):
         LOGGER.info("aggregating result over query polygon")
         # reproject polygon to LULC's projection
         target_aggregate_vector_path = os.path.join(
