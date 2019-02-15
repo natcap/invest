@@ -160,7 +160,7 @@ def execute(args):
             # transform them to meters
             linear_unit = target_sr.GetLinearUnits()
             LOGGER.info(
-                'Target projection from subregion: %s. EPSG: %s. Linear unit: '
+                'Target projection from AOI: %s. EPSG: %s. Linear unit: '
                 '%s.' % (target_sr.GetAttrValue('PROJECTION'),
                          target_sr.GetAttrValue("AUTHORITY", 1), linear_unit))
 
@@ -780,7 +780,7 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
     # Create target layer using same projection from base vector
     target_layer = target_vector.CreateLayer(
         target_layer_name,
-        base_layer.GetSpatialRef(), ogr.wkbPolygon | ogr.wkbMultiPolygon)
+        base_layer.GetSpatialRef(), ogr.wkbPolygon)
 
     # Write the merged geometry to the target layer
     target_layer.StartTransaction()
