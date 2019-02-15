@@ -568,6 +568,8 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
+    LOGGER.info('HRA finished.')
+
 
 def _raster_to_geojson(
         base_raster_path, target_geojson_path, layer_name, field_name):
