@@ -30,7 +30,7 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
-logging.getLogger('taskgraph').setLevel(logging.ERROR)
+
 speedups.enable()
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
