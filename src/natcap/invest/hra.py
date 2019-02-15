@@ -220,7 +220,7 @@ def execute(args):
             simplified_vector_path = row['SIMPLE_VECTOR_PATH']
             tolerance = (float(args['resolution']) / row['LINEAR_UNIT']) / 2
             target_raster_path = row['BASE_RASTER_PATH']
-            LOGGER.info('Rasterizing %s.' % vector_name)
+            LOGGER.info('Rasterizing %s vector.' % vector_name)
 
             # Simplify the vector geometry first, with a tolerance of half the
             # target resolution
@@ -548,8 +548,8 @@ def execute(args):
     # Convert the unprojected rasters to GeoJSON files for web visualization
     for raster_path in wgs84_raster_paths:
         # Remove the `wgs84_` prefix from the output GeoJSON file names
-        vector_layer_name = os.path.splitext(
-            os.path.basename(raster_path))[0].replace('wgs84_', '')
+        vector_layer_name = os.path.splitext(os.path.basename(
+            raster_path))[0].replace('wgs84_', '').encode('utf-8')
         vector_path = os.path.join(
             output_dir, vector_layer_name.replace('wgs84_', '') + '.geojson')
 
@@ -718,6 +718,8 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
             habitat_stressor = '_'.join(hab_str_idx)
 
             # Calculate and pickle zonal stats to files
+            LOGGER.info('Calculating %s zonal stats of %s' %
+                        (criteria_type, habitat_stressor))
             task_graph.add_task(
                 func=_get_and_pickle_zonal_stats,
                 args=(criteria_raster_path, aoi_vector_path, fid_name_dict,
@@ -775,12 +777,19 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
 
     # Get basename from target path as layer name
     target_layer_name = os.path.splitext(
-        os.path.basename(target_merged_vector_path))[0]
+        os.path.basename(target_merged_vector_path))[0].encode('utf-8')
+
+    # Get target spatial reference from base layer
+    target_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromWkt(target_sr_wkt)
 
     # Create target layer using same projection from base vector
+    LOGGER.info('Merging vector %s on projection %s.' %
+                (base_vector_path, target_sr.GetAttrValue('PROJECTION')))
     target_layer = target_vector.CreateLayer(
-        target_layer_name,
-        base_layer.GetSpatialRef(), ogr.wkbPolygon)
+        target_layer_name, target_sr, ogr.wkbPolygon)
 
     # Write the merged geometry to the target layer
     target_layer.StartTransaction()
