@@ -372,12 +372,17 @@ def execute(args):
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
 
+        # Get suitable projection parameters for clipping and reprojecting
+        # bathymetry layers
+        target_sr_wkt, target_pixel_size, target_bounding_box = \
+            _get_suitable_projection_params(bathymetry_path, aoi_vector_path)
+
         # This task will be dependent upon whether the pixel sizes of
         # bathymetry are equal or not
         clip_to_projection_task = task_graph.add_task(
             func=_clip_to_projection_with_square_pixels,
-            args=(bathymetry_path, aoi_vector_path,
-                  bathymetry_proj_raster_path),
+            args=(bathymetry_path, aoi_vector_path, bathymetry_proj_raster_path,
+                  target_sr_wkt, target_pixel_size, target_bounding_box),
             target_path_list=[bathymetry_proj_raster_path],
             task_name='clip_to_projection_with_square_pixels',
             dependent_task_list=bathy_dependent_task_list)
@@ -396,8 +401,7 @@ def execute(args):
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
             args=(wind_data, 'wind_data', wind_point_vector_path),
-            kwargs={'ref_projection_wkt': pygeoprocessing.get_raster_info(
-                        bathymetry_proj_raster_path)['projection']},
+            kwargs={'ref_projection_wkt': target_sr_wkt},
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector',
             dependent_task_list=[clip_to_projection_task])
@@ -1654,22 +1658,24 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     output_layer.SyncToDisk()
 
 
-def _clip_to_projection_with_square_pixels(base_raster_path, clip_vector_path,
-                                           target_raster_path):
-    """Clip raster with vector into projected coordinate system.
+def _get_suitable_projection_params(base_raster_path, clip_vector_path):
+    """Choose projection, pixel size and bounding box for clipping a raster.
 
-    If base raster is not already projected, choose a suitable UTM zone. If
-    pixel size of target raster is not square, the minimum absolute value will
-    be used for target_pixel_size.
+    If base raster is not already projected, choose a suitable UTM zone.
 
     Parameters:
-        base_raster_path (str): path to base raster.
-        clip_vector_path (str): path to base clip vector.
-        target_raster_path (str): path to output clipped raster with square
-            pixel size.
+        base_raster_path (str): path to base raster that might not be projected
+        clip_vector_path (str): path to base clip vector that'll be used to
+            clip the raster.
 
     Returns:
-        None.
+        target_sr_wkt (str): a projection string used as the target projection
+            for warping the base raster later on.
+        target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
+            absolute value.
+        target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
+            that describes the largest fitting bounding box around the original
+            warped bounding box in ``new_epsg`` coordinate system.
 
     """
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
@@ -1692,41 +1698,95 @@ def _clip_to_projection_with_square_pixels(base_raster_path, clip_vector_path,
         target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
             [clip_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
 
-        clip_vector_srs = osr.SpatialReference()
-        clip_vector_srs.ImportFromWkt(clip_vector_info['projection'])
-
+        # Get the suitable UTM code
         centroid_x = (
             target_bounding_box_wgs84[2] + target_bounding_box_wgs84[0]) / 2
         centroid_y = (
             target_bounding_box_wgs84[3] + target_bounding_box_wgs84[1]) / 2
+
+        # Get target pixel size in square meters used for resizing the base
+        # raster later on
+        target_pixel_size = _convert_degree_pixel_size_to_square_meters(
+            base_raster_info['pixel_size'], centroid_y)
+
         utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
         utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
         lat_code = 6 if centroid_y > 0 else 7
         epsg_code = int('32%d%02d' % (lat_code, utm_code))
         target_srs = osr.SpatialReference()
         target_srs.ImportFromEPSG(epsg_code)
+
+        # Transform the merged unprojected bounding box of base raster and clip
+        # vector from WGS84 to the target UTM projection
         target_bounding_box = pygeoprocessing.transform_bounding_box(
             target_bounding_box_wgs84, wgs84_sr.ExportToWkt(),
             target_srs.ExportToWkt())
 
-        target_pixel_size = _convert_degree_pixel_size_to_square_meters(
-            base_raster_info['pixel_size'], centroid_y)
+        target_sr_wkt = target_srs.ExportToWkt()
+    else:
+        # If the base raster is already projected, we do not need a target
+        # bounding box
+        target_sr_wkt = base_raster_info['projection']
+        target_bounding_box = None
 
+        # Get the minimum square pixel size
+        min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
+        target_pixel_size = (min_pixel_size, -min_pixel_size)
+
+    return target_sr_wkt, target_pixel_size, target_bounding_box
+
+
+def _clip_to_projection_with_square_pixels(
+        base_raster_path, clip_vector_path, target_raster_path, target_sr_wkt,
+        target_pixel_size, target_bounding_box):
+    """Clip raster with vector into target projected coordinate system.
+
+    If pixel size of target raster is not square, the minimum absolute value
+    will be used for target_pixel_size.
+
+    Parameters:
+        base_raster_path (str): path to base raster.
+        clip_vector_path (str): path to base clip vector.
+        target_sr_wkt (str): a projection string used as the target projection
+            for warping the base raster.
+        target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
+            absolute value.
+        target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
+            that describes the largest fitting bounding box around the original
+            warped bounding box in ``new_epsg`` coordinate system.
+
+    Returns:
+        None.
+
+    """
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+
+    base_raster_srs = osr.SpatialReference()
+    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
+
+    # If the base raster is not projected, we need to transform the bounding
+    # box from WGS84 to the desired projection first
+    if not base_raster_srs.IsProjected():
         pygeoprocessing.warp_raster(
             base_raster_path,
             target_pixel_size,
             target_raster_path,
-            None,
+            'near',
             target_bb=target_bounding_box,
-            target_sr_wkt=target_srs.ExportToWkt(),
+            target_sr_wkt=target_sr_wkt,
             vector_mask_options={'mask_vector_path': clip_vector_path})
+
+    # Since the base raster is projected, we just need to clip the
+    # raster without designating bounding box
     else:
         pygeoprocessing.align_and_resize_raster_stack(
-            [base_raster_path], [target_raster_path], ['near'],
-            base_raster_info['pixel_size'],
+            [base_raster_path],
+            [target_raster_path],
+            ['near'],
+            target_pixel_size,
             'intersection',
             base_vector_path_list=[clip_vector_path],
-            target_sr_wkt=base_raster_info['projection'],
+            target_sr_wkt=target_sr_wkt,
             vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
