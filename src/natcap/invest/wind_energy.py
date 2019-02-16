@@ -455,9 +455,8 @@ def execute(args):
             LOGGER.debug('Create Raster From AOI')
             create_aoi_raster_task = task_graph.add_task(
                 func=pygeoprocessing.create_raster_from_vector_extents,
-                args=(aoi_vector_path, aoi_raster_path,
-                      _get_pixel_size(final_bathy_raster_path), gdal.GDT_Byte,
-                      _TARGET_NODATA),
+                args=(aoi_vector_path, aoi_raster_path, target_pixel_size,
+                      gdal.GDT_Byte, _TARGET_NODATA),
                 target_path_list=[aoi_raster_path],
                 task_name='create_aoi_raster_from_vector',
                 dependent_task_list=[clip_to_projection_task])
@@ -507,9 +506,8 @@ def execute(args):
         final_wind_point_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
 
-    # Get the cell size for output rasters from the bathymetry DEM. The cell
-    # size could be in a project or unprojected format
-    target_pixel_size = _get_pixel_size(final_bathy_raster_path)
+        # Get the cell size for output rasters from the bathymetry DEM
+        target_pixel_size = _get_pixel_size(final_bathy_raster_path)
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
