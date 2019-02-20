@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import logging
 import os
 import csv
+import pickle
 import shutil
 import tempfile
 import math
@@ -30,7 +31,8 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
-
+logging.getLogger('taskgraph').setLevel(logging.ERROR)
+# logging.getLogger('natcap.invest.wind_energy').setLevel(logging.ERROR)
 speedups.enable()
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
@@ -166,7 +168,7 @@ def execute(args):
 
     """
 
-    LOGGER.debug('Starting the Wind Energy Model')
+    LOGGER.info('Starting the Wind Energy Model')
 
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
@@ -188,20 +190,28 @@ def execute(args):
     try:
         bathy_pixel_size = _get_pixel_size(args['bathymetry_path'])
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
+        target_pixel_size = (mean_pixel_size, -mean_pixel_size)
+        LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
         bathymetry_path = args['bathymetry_path']
         # The task list would be empty for clipping and reprojecting bathymetry
-        bathy_dependent_task_list = []
+        bathy_dependent_task_list = None
+
     except ValueError:
         LOGGER.debug(
             '%s has pixels that are not square. Resampling the raster to have '
             'square pixels.' % args['bathymetry_path'])
         bathymetry_path = os.path.join(inter_dir, 'bathymetry_resampled.tif')
+
         # Get the minimum absolute value from the bathymetry pixel size tuple
         mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
+        # Use it as the target pixel size for resampling and warping rasters
+        target_pixel_size = (mean_pixel_size, -mean_pixel_size)
+        LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
+
         resapmle_bathymetry_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
-            args=(args['bathymetry_path'], (mean_pixel_size, -mean_pixel_size),
-                  bathymetry_path, 'near'),
+            args=(args['bathymetry_path'], target_pixel_size, bathymetry_path,
+                  'near'),
             target_path_list=[bathymetry_path],
             task_name='resample_bathymetry')
 
@@ -249,7 +259,7 @@ def execute(args):
             'spelled correctly.' % missing_biophysical_params)
 
     if 'valuation_container' not in args or args['valuation_container'] is False:
-        LOGGER.debug('Valuation Not Selected')
+        LOGGER.info('Valuation Not Selected')
     else:
         LOGGER.info(
             'Valuation Selected. Checking required parameters from CSV files.')
@@ -367,25 +377,41 @@ def execute(args):
         LOGGER.info('AOI Provided')
         aoi_vector_path = args['aoi_vector_path']
 
+        # Get suitable projection parameters for clipping and reprojecting
+        # bathymetry layers
+        proj_params_pickle_path = os.path.join(
+            inter_dir, 'projection_params%s.pickle' % suffix)
+        task_graph.add_task(
+            func=_get_suitable_projection_params,
+            args=(bathymetry_path, aoi_vector_path, proj_params_pickle_path),
+            target_path_list=[proj_params_pickle_path],
+            task_name='get_suitable_projection_params',
+            dependent_task_list=bathy_dependent_task_list)
+
         # Clip and project the bathymetry shapefile to AOI
         LOGGER.info('Clip and project bathymetry to AOI')
         bathymetry_proj_raster_path = os.path.join(
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
 
-        # Get suitable projection parameters for clipping and reprojecting
-        # bathymetry layers
-        target_sr_wkt, target_pixel_size, target_bounding_box = \
-            _get_suitable_projection_params(bathymetry_path, aoi_vector_path)
+        # Join here because all the following tasks need to unpickle parameters
+        # from `get_suitable_projection_params` task first
+        task_graph.join()
+        target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
+            open(proj_params_pickle_path, 'rb'))
+        LOGGER.debug('target_sr_wkt: %s\ntarget_pixel_size: %s\n' +
+                     'target_bounding_box: %s\n', target_sr_wkt,
+                     (target_pixel_size,), target_bounding_box)
 
-        # This task will be dependent upon whether the pixel sizes of
-        # bathymetry are equal or not
-        clip_to_projection_task = task_graph.add_task(
+        clip_bathy_to_projection_task = task_graph.add_task(
             func=_clip_to_projection_with_square_pixels,
-            args=(bathymetry_path, aoi_vector_path, bathymetry_proj_raster_path,
-                  target_sr_wkt, target_pixel_size, target_bounding_box),
+            args=(bathymetry_path, aoi_vector_path,
+                  bathymetry_proj_raster_path, target_sr_wkt,
+                  target_pixel_size, target_bounding_box),
             target_path_list=[bathymetry_proj_raster_path],
-            task_name='clip_to_projection_with_square_pixels',
-            dependent_task_list=bathy_dependent_task_list)
+            task_name='clip_to_projection_with_square_pixels')
+
+        # Creation of depth mask raster is dependent on the final bathymetry
+        depth_mask_dependent_task_list = [clip_bathy_to_projection_task]
 
         # Since an AOI was provided the wind energy points shapefile will need
         # to be clipped and projected. Thus save the construction of the
@@ -403,8 +429,7 @@ def execute(args):
             args=(wind_data, 'wind_data', wind_point_vector_path),
             kwargs={'ref_projection_wkt': target_sr_wkt},
             target_path_list=[wind_point_vector_path],
-            task_name='wind_data_to_vector',
-            dependent_task_list=[clip_to_projection_task])
+            task_name='wind_data_to_vector')
 
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
@@ -434,10 +459,9 @@ def execute(args):
             LOGGER.info('Distance information not provided')
         else:
             # Clip and project the land polygon shapefile to AOI
-            LOGGER.info('Clip and project land poly to AOI')
+            LOGGER.info('Clip and project land polygon to AOI')
             land_poly_proj_vector_path = os.path.join(
-                inter_dir, os.path.splitext(land_polygon_vector_path)[0] +
-                '_projected_clipped%s.shp' % suffix)
+                inter_dir, 'projected_clipped_land_poly%s.shp' % suffix)
             clip_reproject_land_poly_task = task_graph.add_task(
                 func=_clip_and_reproject_vector,
                 args=(land_polygon_vector_path, aoi_vector_path,
@@ -451,16 +475,17 @@ def execute(args):
             aoi_raster_path = os.path.join(inter_dir,
                                            'aoi_raster%s.tif' % suffix)
 
-            # Make a raster from AOI using the bathymetry rasters pixel size
-            LOGGER.debug('Create Raster From AOI')
+            # Make a raster from AOI using the reprojected bathymetry raster's
+            # pixel size
+            LOGGER.info('Create Raster From AOI')
             create_aoi_raster_task = task_graph.add_task(
                 func=pygeoprocessing.create_raster_from_vector_extents,
                 args=(aoi_vector_path, aoi_raster_path, target_pixel_size,
                       gdal.GDT_Byte, _TARGET_NODATA),
                 target_path_list=[aoi_raster_path],
-                task_name='create_aoi_raster_from_vector',
-                dependent_task_list=[clip_to_projection_task])
+                task_name='create_aoi_raster_from_vector')
 
+            # Rasterize land polygon onto AOI and calculate distance transform
             dist_trans_path = os.path.join(inter_dir,
                                            'distance_trans%s.tif' % suffix)
             create_distance_raster_task = task_graph.add_task(
@@ -472,9 +497,9 @@ def execute(args):
                 dependent_task_list=[
                     create_aoi_raster_task, clip_reproject_land_poly_task])
 
+            # Mask the distance raster by the min and max distances
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
-
             task_graph.add_task(
                 func=_mask_by_distance,
                 args=(dist_trans_path, min_distance, max_distance,
@@ -506,56 +531,27 @@ def execute(args):
         final_wind_point_vector_path = wind_point_vector_path
         final_bathy_raster_path = bathymetry_path
 
-        # Get the cell size for output rasters from the bathymetry DEM
-        target_pixel_size = _get_pixel_size(final_bathy_raster_path)
+        # Creation of depth mask is not dependent on creating additional
+        # bathymetry mask
+        depth_mask_dependent_task_list = None
 
     # Get the min and max depth values from the arguments and set to a negative
     # value indicating below sea level
     min_depth = abs(float(args['min_depth'])) * -1.0
     max_depth = abs(float(args['max_depth'])) * -1.0
 
-    def _depth_op(bath):
-        """Determine if a value falls within the range.
-
-        The function takes a value and uses a range to determine if that falls
-        within the range.
-
-        Parameters:
-            bath (int): a value of either positive or negative
-            min_depth (float): a value specifying the lower limit of the
-                range. This value is set above
-            max_depth (float): a value specifying the upper limit of the
-                range. This value is set above
-            _TARGET_NODATA (int or float): a nodata value set above
-
-        Returns:
-            out_array (np.array): an array where values are _TARGET_NODATA
-                if 'bath' does not fall within the range, or 'bath' if it does.
-
-        """
-        out_array = np.full(
-            bath.shape, _TARGET_NODATA, dtype=np.float32)
-        valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
-                             (bath != _TARGET_NODATA))
-        out_array[
-            valid_pixels_mask] = bath[valid_pixels_mask]
-        return out_array
-
-    depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
-
     # Create a mask for any values that are out of the range of the depth values
     LOGGER.info('Creating Depth Mask')
-
-    # Join the graph first, since the final bathymetry raster could be created
-    # by different possible tasks.
-    task_graph.join()
+    depth_mask_path = os.path.join(inter_dir, 'depth_mask%s.tif' % suffix)
 
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(final_bathy_raster_path, 1)], _depth_op, depth_mask_path,
+        args=([(final_bathy_raster_path, 1), (min_depth, 'raw'),
+              (max_depth, 'raw')], _depth_op, depth_mask_path,
               _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[depth_mask_path],
-        task_name='mask_depth_on_bathymetry')
+        task_name='mask_depth_on_bathymetry',
+        dependent_task_list=depth_mask_dependent_task_list)
 
     # Set paths for creating density and harvested rasters
     temp_density_raster_path = os.path.join(inter_dir,
@@ -599,30 +595,6 @@ def execute(args):
         task_name='interpolate_harvested_points',
         dependent_task_list=[create_harvested_raster_task])
 
-    def _mask_out_depth_dist(*rasters):
-        """Return the value of an item in the list based on some condition.
-
-        Return the value of an item in the list if and only if all other values
-        are not a nodata value.
-
-        Parameters:
-            *rasters (list): a list of values as follows:
-                rasters[0] - the density value (required)
-                rasters[1] - the depth mask value (required)
-                rasters[2] - the distance mask value (optional)
-
-        Returns:
-            out_array (np.array): an array of either _TARGET_NODATA or density
-                values from rasters[0]
-
-        """
-        out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
-        nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
-        for array in rasters:
-            nodata_mask = nodata_mask | (array == _TARGET_NODATA)
-        out_array[~nodata_mask] = rasters[0][~nodata_mask]
-        return out_array
-
     # Output paths for final Density and Harvested rasters after they've been
     # masked by depth and distance
     density_masked_path = os.path.join(
@@ -640,7 +612,7 @@ def execute(args):
         density_mask_list.append(dist_mask_path)
         harvested_mask_list.append(dist_mask_path)
     except NameError:
-        LOGGER.debug('NO Distance Mask to add to list')
+        LOGGER.info('NO Distance Mask to add to list')
 
     # Align and resize the mask rasters
     LOGGER.info('Align and resize the Density rasters')
@@ -893,27 +865,10 @@ def execute(args):
             dependent_task_list=[
                 mask_harvested_raster_task, clip_reproject_land_poly_task])
 
-        def add_avg_dist_op(tmp_dist):
-            """Convert distances to meters and add in avg_grid_distance
-
-            Parameters:
-                tmp_dist (np.array): an array of distances
-
-            Returns:
-                out_array (np.array): distance values in meters with average
-                    grid to land distance factored in
-
-            """
-            out_array = np.full(
-                tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
-            valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
-            out_array[valid_pixels_mask] = tmp_dist[
-                valid_pixels_mask] * mean_pixel_size + avg_grid_distance
-            return out_array
-
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(land_poly_dist_raster_path, 1)], add_avg_dist_op,
+            args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
+                  (avg_grid_distance, 'raw')], add_avg_dist_op,
                   final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
@@ -978,28 +933,6 @@ def execute(args):
     # constant conversion factor provided in the users guide by
     # Rob Griffin
     carbon_coef = float(val_parameters_dict['carbon_coefficient'])
-
-    def _calculate_carbon_op(harvested_arr):
-        """Calculate the carbon offset from harvested array.
-
-        Parameters:
-            harvested_arr (np.array): an array of harvested energy values
-
-        Returns:
-            out_array (np.array): an array of carbon offset values
-
-        """
-        out_array = np.full(
-            harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
-        valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
-
-        # The energy value converted from MWhr/yr (Mega Watt hours as output
-        # from CK's biophysical model equations) to kWhr for the
-        # valuation model
-        out_array[
-            valid_pixels_mask] = harvested_arr[valid_pixels_mask] * \
-            carbon_coef * 1000.0
-        return out_array
 
     # paths for output rasters
     npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
@@ -1148,8 +1081,9 @@ def execute(args):
 
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([(harvested_masked_path, 1)], _calculate_carbon_op, carbon_path,
-              _TARGET_DATA_TYPE, _TARGET_NODATA),
+        args=([(harvested_masked_path, 1), (carbon_coef, 'raw')],
+              _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
+              _TARGET_NODATA),
         target_path_list=[carbon_path],
         task_name='calculate_carbon_raster',
         dependent_task_list=[mask_harvested_raster_task])
@@ -1192,6 +1126,107 @@ def _get_pixel_size(base_raster_path):
     pixel_size = pygeoprocessing.get_raster_info(
         base_raster_path)['pixel_size']
     return pixel_size
+
+
+def _depth_op(bath, min_depth, max_depth):
+    """Determine if a value falls within the range.
+
+    The function takes a value and uses a range to determine if that falls
+    within the range.
+
+    Parameters:
+        bath (int): a value of either positive or negative
+        min_depth (float): a value specifying the lower limit of the
+            range. This value is set above
+        max_depth (float): a value specifying the upper limit of the
+            range. This value is set above
+        _TARGET_NODATA (int or float): a nodata value set above
+
+    Returns:
+        out_array (np.array): an array where values are _TARGET_NODATA
+            if 'bath' does not fall within the range, or 'bath' if it does.
+
+    """
+    out_array = np.full(
+        bath.shape, _TARGET_NODATA, dtype=np.float32)
+    valid_pixels_mask = ((bath >= max_depth) & (bath <= min_depth) &
+                         (bath != _TARGET_NODATA))
+    out_array[
+        valid_pixels_mask] = bath[valid_pixels_mask]
+    return out_array
+
+
+def add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
+    """Convert distances to meters and add in avg_grid_distance
+
+    Parameters:
+        tmp_dist (np.array): an array of distances
+        mean_pixel_size (float): the minimum absolute value of a pixel in
+            meters
+        avg_grid_distance (float): the average land cable distance in km
+            converted to meters
+
+    Returns:
+        out_array (np.array): distance values in meters with average
+            grid to land distance factored in
+
+    """
+    out_array = np.full(
+        tmp_dist.shape, _TARGET_NODATA, dtype=np.float32)
+    valid_pixels_mask = (tmp_dist != _TARGET_NODATA)
+    out_array[valid_pixels_mask] = tmp_dist[
+        valid_pixels_mask] * mean_pixel_size + avg_grid_distance
+    return out_array
+
+
+def _mask_out_depth_dist(*rasters):
+    """Return the value of an item in the list based on some condition.
+
+    Return the value of an item in the list if and only if all other values
+    are not a nodata value.
+
+    Parameters:
+        *rasters (list): a list of values as follows:
+            rasters[0] - the density value (required)
+            rasters[1] - the depth mask value (required)
+            rasters[2] - the distance mask value (optional)
+
+    Returns:
+        out_array (np.array): an array of either _TARGET_NODATA or density
+            values from rasters[0]
+
+    """
+    out_array = np.full(rasters[0].shape, _TARGET_NODATA, dtype=np.float32)
+    nodata_mask = np.full(rasters[0].shape, False, dtype=bool)
+    for array in rasters:
+        nodata_mask = nodata_mask | (array == _TARGET_NODATA)
+    out_array[~nodata_mask] = rasters[0][~nodata_mask]
+    return out_array
+
+
+def _calculate_carbon_op(harvested_arr, carbon_coef):
+    """Calculate the carbon offset from harvested array.
+
+    Parameters:
+        harvested_arr (np.array): an array of harvested energy values
+        carbon_coef (float): the amount of CO2 not released into the
+                atmosphere
+
+    Returns:
+        out_array (np.array): an array of carbon offset values
+
+    """
+    out_array = np.full(
+        harvested_arr.shape, _TARGET_NODATA, dtype=np.float32)
+    valid_pixels_mask = (harvested_arr != _TARGET_NODATA)
+
+    # The energy value converted from MWhr/yr (Mega Watt hours as output
+    # from CK's biophysical model equations) to kWhr for the
+    # valuation model
+    out_array[
+        valid_pixels_mask] = harvested_arr[valid_pixels_mask] * \
+        carbon_coef * 1000.0
+    return out_array
 
 
 def _calculate_land_to_grid_distance(
@@ -1656,17 +1691,12 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
     output_layer.SyncToDisk()
 
 
-def _get_suitable_projection_params(base_raster_path, clip_vector_path):
+def _get_suitable_projection_params(
+        base_raster_path, clip_vector_path, target_pickle_path):
     """Choose projection, pixel size and bounding box for clipping a raster.
 
     If base raster is not already projected, choose a suitable UTM zone.
-
-    Parameters:
-        base_raster_path (str): path to base raster that might not be projected
-        clip_vector_path (str): path to base clip vector that'll be used to
-            clip the raster.
-
-    Returns:
+    The target_pickle_path contains a tuple of three elements:
         target_sr_wkt (str): a projection string used as the target projection
             for warping the base raster later on.
         target_pixel_size (tuple): a tuple of equal x, y pixel sizes in minimum
@@ -1674,6 +1704,16 @@ def _get_suitable_projection_params(base_raster_path, clip_vector_path):
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
             that describes the largest fitting bounding box around the original
             warped bounding box in ``new_epsg`` coordinate system.
+
+    Parameters:
+        base_raster_path (str): path to base raster that might not be projected
+        clip_vector_path (str): path to base clip vector that'll be used to
+            clip the raster.
+        target_pickle_path (str): a path to the pickle file for storing
+            target_sr_wkt, target_pixel_size, and target_bounding_box.
+
+    Returns:
+        None.
 
     """
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
@@ -1731,12 +1771,14 @@ def _get_suitable_projection_params(base_raster_path, clip_vector_path):
         min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
         target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    return target_sr_wkt, target_pixel_size, target_bounding_box
+    pickle.dump(
+        (target_sr_wkt, target_pixel_size, target_bounding_box),
+        open(target_pickle_path, 'wb'))
 
 
 def _clip_to_projection_with_square_pixels(
-        base_raster_path, clip_vector_path, target_raster_path, target_sr_wkt,
-        target_pixel_size, target_bounding_box):
+        base_raster_path, clip_vector_path, target_raster_path,
+        target_sr_wkt, target_pixel_size, target_bounding_box):
     """Clip raster with vector into target projected coordinate system.
 
     If pixel size of target raster is not square, the minimum absolute value
@@ -1757,14 +1799,9 @@ def _clip_to_projection_with_square_pixels(
         None.
 
     """
-    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-
-    base_raster_srs = osr.SpatialReference()
-    base_raster_srs.ImportFromWkt(base_raster_info['projection'])
-
-    # If the base raster is not projected, we need to transform the bounding
-    # box from WGS84 to the desired projection first
-    if not base_raster_srs.IsProjected():
+    # If target_bounding_box exists, the base raster is unprojected, so we need
+    # to transform the bounding box from WGS84 to the desired projection
+    if target_bounding_box:
         pygeoprocessing.warp_raster(
             base_raster_path,
             target_pixel_size,
@@ -1774,8 +1811,8 @@ def _clip_to_projection_with_square_pixels(
             target_sr_wkt=target_sr_wkt,
             vector_mask_options={'mask_vector_path': clip_vector_path})
 
-    # Since the base raster is projected, we just need to clip the
-    # raster without designating bounding box
+    # We just need to clip the raster without designating bounding box,
+    # since the base raster projected
     else:
         pygeoprocessing.align_and_resize_raster_stack(
             [base_raster_path],
@@ -1870,8 +1907,7 @@ def _wind_data_to_point_vector(dict_data,
         ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
         if ref_sr.IsProjected:
             # Get coordinate transformation between two projections
-            coord_trans = osr.CoordinateTransformation(
-                target_sr, ref_sr)
+            coord_trans = osr.CoordinateTransformation(target_sr, ref_sr)
             need_geotranform = True
         else:
             need_geotranform = False
@@ -1913,7 +1949,7 @@ def _wind_data_to_point_vector(dict_data,
         if longitude < -180:
             longitude += 360
         if need_geotranform:
-            point_x, point_y, point_z = coord_trans.TransformPoint(
+            point_x, point_y, _ = coord_trans.TransformPoint(
                 longitude, latitude)
             geom.AddPoint(point_x, point_y)
         else:
@@ -2066,7 +2102,8 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
-    file_ext, driver_name = _get_file_ext_and_driver_name(base_point_vector_path)
+    file_ext, driver_name = _get_file_ext_and_driver_name(
+        base_point_vector_path)
     output_driver = ogr.GetDriverByName(driver_name)
     single_feature_vector_path = os.path.join(
         temp_dir, 'single_feature' + file_ext)
