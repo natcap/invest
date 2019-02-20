@@ -718,7 +718,7 @@ def execute(args):
         # shapefiles and then project them to the AOI as well.
         grid_projected_vector_path = os.path.join(
             inter_dir, 'grid_point_projected_clipped%s.shp' % suffix)
-        clip_and_reproject_grid_vector_task = task_graph.add_task(
+        task_graph.add_task(
             func=_clip_and_reproject_vector,
             args=(grid_vector_path, aoi_vector_path,
                   grid_projected_vector_path, inter_dir),
@@ -728,11 +728,11 @@ def execute(args):
 
         # It is possible that NO grid points lie within the AOI, so we need to
         # handle both cases
-        grid_vector = gdal.OpenEx(grid_projected_vector_path, gdal.OF_VECTOR)
-        grid_layer = grid_vector.GetLayer()
-        if grid_layer.GetFeatureCount() != 0:
+        task_graph.join()  # need to join to get grid feature count
+        grid_feature_count = _get_feature_count(grid_projected_vector_path)
+        if grid_feature_count > 0:
             LOGGER.debug('There are %s grid point(s) within AOI.' %
-                         grid_layer.GetFeatureCount())
+                         grid_feature_count)
             # It's possible that no land points were provided, and we need to
             # handle both cases
             if land_dict:
@@ -751,7 +751,7 @@ def execute(args):
                 # shapefiles and then project them to the AOI as well.
                 land_projected_vector_path = os.path.join(
                     inter_dir, 'land_point_projected_clipped%s.shp' % suffix)
-                clip_and_reproject_land_vector_task = task_graph.add_task(
+                task_graph.add_task(
                     func=_clip_and_reproject_vector,
                     args=(land_point_vector_path, aoi_vector_path,
                           land_projected_vector_path, inter_dir),
@@ -761,12 +761,12 @@ def execute(args):
 
                 # It is possible that NO land point lie within the AOI, so we
                 # need to handle both cases
-                land_vector = gdal.OpenEx(
-                    land_projected_vector_path, gdal.OF_VECTOR)
-                land_layer = land_vector.GetLayer()
-                if land_layer.GetFeatureCount() != 0:
+                task_graph.join()  # need to join to get land feature count
+                land_feature_count = _get_feature_count(
+                    land_projected_vector_path)
+                if land_feature_count > 0:
                     LOGGER.debug('There are %d land point(s) within AOI.' %
-                                 land_layer.GetFeatureCount())
+                                 land_feature_count)
 
                     # Calculate and add the shortest distances from each land
                     # point to the grid points and add them to the new field
@@ -786,10 +786,7 @@ def execute(args):
                               grid_projected_vector_path,
                               _LAND_TO_GRID_FIELD, land_to_grid_vector_path),
                         target_path_list=[land_to_grid_vector_path],
-                        task_name='calculate_grid_point_to_land_poly',
-                        dependent_task_list=[
-                            clip_and_reproject_land_vector_task,
-                            clip_and_reproject_grid_vector_task])
+                        task_name='calculate_grid_point_to_land_poly')
 
                     # Calculate distance raster
                     task_graph.add_task(
@@ -799,8 +796,7 @@ def execute(args):
                               inter_dir),
                         target_path_list=[final_dist_raster_path],
                         task_name='calculate_distances_land_grid',
-                        dependent_task_list=[
-                            land_to_grid_task, mask_harvested_raster_task])
+                        dependent_task_list=[land_to_grid_task])
                 else:
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
@@ -813,13 +809,7 @@ def execute(args):
                               harvested_masked_path,
                               final_dist_raster_path, inter_dir),
                         target_path_list=[final_dist_raster_path],
-                        task_name='calculate_grid_distance',
-                        dependent_task_list=[
-                            clip_and_reproject_grid_vector_task,
-                            mask_harvested_raster_task])
-
-                land_layer = None
-                land_vector = None
+                        task_name='calculate_grid_distance')
 
             else:
                 LOGGER.info(
@@ -833,16 +823,11 @@ def execute(args):
                     args=(grid_projected_vector_path, harvested_masked_path,
                           final_dist_raster_path, inter_dir),
                     target_path_list=[final_dist_raster_path],
-                    task_name='calculate_grid_distance',
-                    dependent_task_list=[
-                        clip_and_reproject_grid_vector_task,
-                        mask_harvested_raster_task])
+                    task_name='calculate_grid_distance')
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
                 'cable distances are not calculated.')
-        grid_layer = None
-        grid_vector = None
 
     else:
         LOGGER.info('Grid points not provided')
@@ -861,9 +846,7 @@ def execute(args):
             args=(harvested_masked_path, land_poly_proj_vector_path,
                   land_poly_dist_raster_path, inter_dir),
             target_path_list=[land_poly_dist_raster_path],
-            task_name='create_land_poly_dist_raster',
-            dependent_task_list=[
-                mask_harvested_raster_task, clip_reproject_land_poly_task])
+            task_name='create_land_poly_dist_raster')
 
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
@@ -946,16 +929,14 @@ def execute(args):
         args=(harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
               [_TARGET_NODATA]),
         target_path_list=[npv_raster_path],
-        task_name='create_npv_raster',
-        dependent_task_list=[mask_harvested_raster_task])
+        task_name='create_npv_raster')
 
     task_graph.add_task(
         func=pygeoprocessing.new_raster_from_base,
         args=(harvested_masked_path, levelized_raster_path, _TARGET_DATA_TYPE,
               [_TARGET_NODATA]),
         target_path_list=[levelized_raster_path],
-        task_name='create_levelized_raster',
-        dependent_task_list=[mask_harvested_raster_task])
+        task_name='create_levelized_raster')
 
     # Open raster bands for writing
     npv_raster = gdal.OpenEx(npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
@@ -1085,12 +1066,31 @@ def execute(args):
               _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
               _TARGET_NODATA),
         target_path_list=[carbon_path],
-        task_name='calculate_carbon_raster',
-        dependent_task_list=[mask_harvested_raster_task])
+        task_name='calculate_carbon_raster')
 
     task_graph.close()
     task_graph.join()
     LOGGER.info('Wind Energy Valuation Model Completed')
+
+
+def _get_feature_count(base_vector_path):
+    """Get feature count from vector and pickle it.
+
+    Parameters:
+        base_vector_path (str): a path to the vector to get feature
+            count from.
+
+    Returns:
+        feature_count (float): the feature count in the base vector.
+
+    """
+    vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    layer = vector.GetLayer()
+    feature_count = layer.GetFeatureCount()
+    layer = None
+    vector = None
+
+    return feature_count
 
 
 def _get_file_ext_and_driver_name(base_vector_path):
