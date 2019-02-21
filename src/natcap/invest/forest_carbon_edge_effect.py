@@ -286,8 +286,17 @@ def execute(args):
 
 
 def combine_carbon_maps(*carbon_maps):
-    """This combines the carbon maps into one and leaves nodata where all
-    the inputs maps were nodata"""
+    """Combine the carbon maps and leave nodata where all inputs were nodata.
+
+    Parameters:
+        *carbon_maps (array): arrays of carbon stocks stored in different pool
+            types.
+
+    Returns:
+        result (array): an array consists of all the carbon stocks from
+            different pool types.
+
+    """
     result = numpy.zeros(carbon_maps[0].shape)
     nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
     nodata_mask[:] = True
