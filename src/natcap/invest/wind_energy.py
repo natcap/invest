@@ -506,7 +506,7 @@ def execute(args):
             # Mask the distance raster by the min and max distances
             dist_mask_path = os.path.join(inter_dir,
                                           'distance_mask%s.tif' % suffix)
-            task_graph.add_task(
+            mask_by_distance_task = task_graph.add_task(
                 func=_mask_by_distance,
                 args=(dist_trans_path, min_distance, max_distance,
                       _TARGET_NODATA, dist_mask_path),
@@ -622,7 +622,17 @@ def execute(args):
     try:
         density_mask_list.append(dist_mask_path)
         harvested_mask_list.append(dist_mask_path)
+
+        # The align_and_resize_density_and_harvest_task will be dependent on
+        # the density, harvested raster interpolation tasks, as well as
+        # masking by distance task
+        align_and_resize_dependent_task_list = [
+            interpolate_density_task, interpolate_harvested_task,
+            mask_by_distance_task]
     except NameError:
+        # No mask_by_distance_task is added to taskgraph
+        align_and_resize_dependent_task_list = [
+            interpolate_density_task, interpolate_harvested_task]
         LOGGER.info('NO Distance Mask to add to list')
 
     # Align and resize the mask rasters
@@ -653,8 +663,7 @@ def execute(args):
               target_pixel_size, 'intersection'),
         task_name='align_and_resize_density_and_harvest_list',
         target_path_list=merged_aligned_mask_list,
-        dependent_task_list=[
-            interpolate_density_task, interpolate_harvested_task])
+        dependent_task_list=align_and_resize_dependent_task_list)
 
     # Mask out any areas where distance or depth has determined that wind farms
     # cannot be located

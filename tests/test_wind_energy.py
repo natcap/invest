@@ -331,7 +331,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 180,
-            'n_workers': 12
+            'n_workers': -1
             }
 
         return args
