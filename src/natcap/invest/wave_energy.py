@@ -73,8 +73,9 @@ _NPV_UNITS_SHORT = ' US$'
 _NPV_UNITS_LONG = 'thousands of US dollars'
 _STARTING_PERC_RANGE = '1'
 
-# Driver name for creating vector files
-_DRIVER_NAME = "ESRI Shapefile"
+# Driver name for creating vector and raster files
+_VECTOR_DRIVER_NAME = "ESRI Shapefile"
+_RASTER_DRIVER_NAME = "GTiff"
 
 
 class IntersectionError(Exception):
@@ -303,7 +304,7 @@ def execute(args):
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
-        _copy_vector(analysis_area_points_path, wave_vector_path)
+        _copy_vector_or_raster(analysis_area_points_path, wave_vector_path)
 
         # The path to a polygon shapefile that specifies the broader AOI
         aoi_vector_path = analysis_area_extract_path
@@ -316,8 +317,8 @@ def execute(args):
         # indexing the DEM
         aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
         aoi_sr_wkt = aoi_sr.ExportToWkt()
-        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
-            analysis_area_sr, aoi_sr)
+        analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
+
     else:
         LOGGER.info('AOI provided.')
         aoi_vector_path = args['aoi_path']
@@ -325,9 +326,10 @@ def execute(args):
         # wave energy point shapefile, to the AOI's projection
         aoi_sr = _get_vector_spatial_ref(aoi_vector_path)
         aoi_sr_wkt = aoi_sr.ExportToWkt()
+        analysis_area_sr_wkt = analysis_area_sr.ExportToWkt()
 
         # Clip the wave data shapefile by the bounds provided from the AOI
-        clip_wave_points_task = task_graph.add_task(
+        task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(analysis_area_points_path, aoi_vector_path, wave_vector_path,
                   aoi_sr_wkt, intermediate_dir),
@@ -339,7 +341,7 @@ def execute(args):
         aoi_clipped_to_extract_path = os.path.join(
             intermediate_dir,
             'aoi_clipped_to_extract_path%s.shp' % file_suffix)
-        clip_aoi_task = task_graph.add_task(
+        task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(aoi_vector_path, analysis_area_extract_path,
                   aoi_clipped_to_extract_path, aoi_sr_wkt, intermediate_dir),
@@ -349,14 +351,13 @@ def execute(args):
         # Replace the AOI path with the clipped AOI path
         aoi_vector_path = aoi_clipped_to_extract_path
 
-        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
-            analysis_area_sr, aoi_sr)
-
         # Join here since we need pixel size for creating output rasters
         task_graph.join()
 
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
+        coord_trans, coord_trans_opposite = _get_coordinate_transformation(
+            analysis_area_sr, aoi_sr)
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
                                                coord_trans_opposite, dem_path)
 
@@ -496,8 +497,10 @@ def execute(args):
     LOGGER.info('Completed Wave Energy Biophysical')
 
     if 'valuation_container' not in args or not args['valuation_container']:
-        LOGGER.info('Valuation not selected')
         # The rest of the function is valuation, so we can quit now
+        LOGGER.info('Valuation not selected')
+        task_graph.close()
+        task_graph.join()
         return
     else:
         LOGGER.info('Valuation selected')
@@ -521,7 +524,8 @@ def execute(args):
     LOGGER.info('Creating Grid Points Vector.')
     create_grid_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
-        args=(grid_dict, grid_vector_path, 'grid_points', aoi_sr, coord_trans),
+        args=(grid_dict, grid_vector_path, 'grid_points', analysis_area_sr_wkt,
+              aoi_sr_wkt),
         target_path_list=[grid_vector_path],
         task_name='create_grid_points_vector')
 
@@ -529,7 +533,8 @@ def execute(args):
     LOGGER.info('Creating Landing Points Vector.')
     create_land_points_vector_task = task_graph.add_task(
         func=_dict_to_point_vector,
-        args=(land_dict, land_vector_path, 'land_points', aoi_sr, coord_trans),
+        args=(land_dict, land_vector_path, 'land_points', analysis_area_sr_wkt,
+              aoi_sr_wkt),
         target_path_list=[land_vector_path],
         task_name='create_land_points_vector')
 
@@ -581,8 +586,8 @@ def execute(args):
     LOGGER.info('End of Wave Energy Valuation.')
 
 
-def _copy_vector(base_vector_path, target_vector_path):
-    """Make a shapefile from the base vector.
+def _copy_vector_or_raster(base_file_path, target_file_path):
+    """Make a copy of a vector or raster.
 
     Parameters:
         base_vector_path (str): a path to the base vector to be copied from.
@@ -592,10 +597,19 @@ def _copy_vector(base_vector_path, target_vector_path):
         None
 
     """
-    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName(_DRIVER_NAME)
-    driver.CreateCopy(target_vector_path, base_vector)
-    base_vector = None
+    # Get file extension so we know that the file is a vector or a raster
+    file_ext = os.path.splitext(base_file_path)[1]
+    if file_ext in ['.shp', '.gpkg', '.geojson']:
+        driver_name = _VECTOR_DRIVER_NAME
+        data_type = gdal.OF_VECTOR
+    else:
+        driver_name = _RASTER_DRIVER_NAME
+        data_type = gdal.OF_RASTER
+
+    base_dataset = gdal.OpenEx(base_file_path, data_type)
+    driver = gdal.GetDriverByName(driver_name)
+    driver.CreateCopy(target_file_path, base_dataset)
+    base_dataset = None
 
 
 def _interpolate_vector_field_onto_raster(
@@ -619,7 +633,7 @@ def _interpolate_vector_field_onto_raster(
         None
 
     """
-    _copy_vector(base_raster_path, target_interpolated_raster_path)
+    _copy_vector_or_raster(base_raster_path, target_interpolated_raster_path)
     pygeoprocessing.interpolate_points(
         base_vector_path, field_name, (target_interpolated_raster_path, 1),
         _TARGET_RESAMPLE_METHOD)
@@ -780,7 +794,7 @@ def _add_target_fields_to_wave_vector(
         None
 
     """
-    _copy_vector(base_wave_vector_path, target_wave_vector_path)
+    _copy_vector_or_raster(base_wave_vector_path, target_wave_vector_path)
     target_wave_vector = gdal.OpenEx(
         target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_wave_layer = target_wave_vector.GetLayer(0)
@@ -875,7 +889,7 @@ def _get_validated_dataframe(csv_path, field_list):
 
 
 def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
-                          target_sr, coord_trans):
+                          base_sr_wkt, target_sr_wkt):
     """Given a dictionary of data create a point shapefile that represents it.
 
     Parameters:
@@ -888,9 +902,9 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
         layer_name (str): the name of the layer.
         target_vector_path (str): path to the output destination of the
             shapefile.
-        target_sr (str): target spatial reference in well-known text format
-        coord_trans (OGRCoordinateTransformation): a coordinate transformation
-            from source to target spatial reference
+        base_sr_wkt (str): the spatial reference of the data from
+            base_dict_data in well-known text format.
+        target_sr_wkt (str): target spatial reference in well-known text format
 
     Returns:
         None
@@ -898,11 +912,19 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     """
     # If the target_vector_path exists delete it
     if os.path.isfile(target_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
         driver.DeleteDataSource(target_vector_path)
 
+    base_sr = osr.SpatialReference()
+    base_sr.ImportFromWkt(base_sr_wkt)
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromWkt(target_sr_wkt)
+    # Get coordinate transformation from base spatial reference to target,
+    # in order to transform wave points to target_sr
+    coord_trans, _ = _get_coordinate_transformation(base_sr, target_sr)
+
     LOGGER.info('Creating new vector')
-    output_driver = ogr.GetDriverByName('ESRI Shapefile')
+    output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
     output_vector = output_driver.CreateDataSource(target_vector_path)
     target_layer = output_vector.CreateLayer(layer_name, target_sr,
                                              ogr.wkbPoint)
@@ -1150,7 +1172,7 @@ def _get_coordinate_transformation(source_sr, target_sr):
 
     Returns:
         A tuple: coord_trans (source to target) and coord_trans_opposite
-        (target to source)
+            (target to source)
 
     """
     coord_trans = osr.CoordinateTransformation(source_sr, target_sr)
@@ -1375,7 +1397,7 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
 
     """
     if os.path.isfile(target_clipped_vector_path):
-        driver = ogr.GetDriverByName('ESRI Shapefile')
+        driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
         driver.DeleteDataSource(target_clipped_vector_path)
 
     # Create a temporary folder within work_dir for saving reprojected files
@@ -1415,7 +1437,7 @@ def _clip_vector_by_vector(base_vector_path, clip_vector_path,
     clip_vector = gdal.OpenEx(reproject_clip_vector_path, gdal.OF_VECTOR)
     clip_layer = clip_vector.GetLayer()
 
-    driver = ogr.GetDriverByName('ESRI Shapefile')
+    driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
     target_vector = driver.CreateDataSource(target_clipped_vector_path)
     target_layer = target_vector.CreateLayer(base_layer_defn.GetName(),
                                              base_layer.GetSpatialRef())
@@ -1592,7 +1614,7 @@ def _index_raster_value_to_point_vector(
         None
 
     """
-    _copy_vector(base_point_vector_path, target_point_vector_path)
+    _copy_vector_or_raster(base_point_vector_path, target_point_vector_path)
 
     target_vector = gdal.OpenEx(
         target_point_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
@@ -1709,7 +1731,7 @@ def _energy_and_power_to_wave_vector(
         None.
 
     """
-    _copy_vector(base_wave_vector_path, target_wave_vector_path)
+    _copy_vector_or_raster(base_wave_vector_path, target_wave_vector_path)
 
     target_wave_vector = gdal.OpenEx(
         target_wave_vector_path, gdal.OF_VECTOR | gdal.GA_Update)

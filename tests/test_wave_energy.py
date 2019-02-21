@@ -3,7 +3,6 @@ import unittest
 import tempfile
 import shutil
 import os
-import re
 
 import numpy
 import numpy.testing
@@ -13,7 +12,8 @@ import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 
 from osgeo import gdal
-from osgeo import osr, ogr
+from osgeo import osr
+
 
 SAMPLE_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy',
@@ -30,6 +30,7 @@ def _make_empty_files(workspace_dir):
 
     Returns:
         None.
+
     """
     intermediate_files = [
         'WEM_InputOutput_Pts.shp', 'aoi_clipped_to_extract_path.shp'
@@ -422,7 +423,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
             'dem_path':
             os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif'),
-            'n_workers': 12
+            'n_workers': -1
         }
         return args
 
