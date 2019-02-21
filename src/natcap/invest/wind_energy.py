@@ -31,8 +31,6 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
-logging.getLogger('taskgraph').setLevel(logging.ERROR)
-# logging.getLogger('natcap.invest.wind_energy').setLevel(logging.ERROR)
 speedups.enable()
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
@@ -59,8 +57,11 @@ _LAND_TO_GRID_FIELD = 'L2G'
 
 # The field names for the two output fields, Harvested Wind Energy and Wind
 # Density, to be added to the point shapefile
-DENSITY_FIELD_NAME = 'Dens_W/m2'
-HARVESTED_FIELD_NAME = 'Harv_MWhr'
+_DENSITY_FIELD_NAME = 'Dens_W/m2'
+_HARVESTED_FIELD_NAME = 'Harv_MWhr'
+
+# Resample method for target rasters
+_TARGET_RESAMPLE_METHOD = 'near'
 
 
 def execute(args):
@@ -175,6 +176,9 @@ def execute(args):
     out_dir = os.path.join(workspace, 'output')
     utils.make_directories([inter_dir, out_dir])
 
+    # Append a _ to the suffix if it's not empty and doesn't already have one
+    suffix = utils.make_suffix_string(args, 'suffix')
+
     # Initialize a TaskGraph
     taskgraph_working_dir = os.path.join(inter_dir, '_taskgraph_working_dir')
     try:
@@ -200,7 +204,8 @@ def execute(args):
         LOGGER.debug(
             '%s has pixels that are not square. Resampling the raster to have '
             'square pixels.' % args['bathymetry_path'])
-        bathymetry_path = os.path.join(inter_dir, 'bathymetry_resampled.tif')
+        bathymetry_path = os.path.join(
+            inter_dir, 'bathymetry_resampled%s.tif' % suffix)
 
         # Get the minimum absolute value from the bathymetry pixel size tuple
         mean_pixel_size = np.min(np.absolute(bathy_pixel_size))
@@ -211,7 +216,7 @@ def execute(args):
         resapmle_bathymetry_task = task_graph.add_task(
             func=pygeoprocessing.warp_raster,
             args=(args['bathymetry_path'], target_pixel_size, bathymetry_path,
-                  'near'),
+                  _TARGET_RESAMPLE_METHOD),
             target_path_list=[bathymetry_path],
             task_name='resample_bathymetry')
 
@@ -219,9 +224,6 @@ def execute(args):
         bathy_dependent_task_list = [resapmle_bathymetry_task]
 
     number_of_turbines = int(args['number_of_turbines'])
-
-    # Append a _ to the suffix if it's not empty and doesn't already have one
-    suffix = utils.make_suffix_string(args, 'suffix')
 
     # Create a list of the biophysical parameters we are looking for from the
     # input csv files
@@ -385,7 +387,7 @@ def execute(args):
             func=_get_suitable_projection_params,
             args=(bathymetry_path, aoi_vector_path, proj_params_pickle_path),
             target_path_list=[proj_params_pickle_path],
-            task_name='get_suitable_projection_params',
+            task_name='get_suitable_projection_params_from_bathy',
             dependent_task_list=bathy_dependent_task_list)
 
         # Clip and project the bathymetry shapefile to AOI
@@ -435,13 +437,17 @@ def execute(args):
         LOGGER.info('Clip and project wind points to AOI')
         clipped_wind_point_vector_path = os.path.join(
             out_dir, 'wind_energy_points%s.shp' % suffix)
-        task_graph.add_task(
+        clip_wind_vector_task = task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
                   clipped_wind_point_vector_path),
             target_path_list=[clipped_wind_point_vector_path],
             task_name='clip_wind_point_by_aoi',
             dependent_task_list=[wind_data_to_vector_task])
+
+        # Creating density and harvested rasters depends on the clipped wind
+        # vector
+        density_harvest_rasters_dependent_task_list = [clip_wind_vector_task]
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the projected files. This may not
@@ -519,11 +525,14 @@ def execute(args):
 
         # Create point shapefile from wind data dictionary
         LOGGER.info('Create point shapefile from wind data')
-        task_graph.add_task(
+        wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
             args=(wind_data, 'wind_data', wind_point_vector_path),
             target_path_list=[wind_point_vector_path],
             task_name='wind_data_to_vector_without_aoi')
+
+        # Creating density and harvested rasters depends on the wind vector
+        density_harvest_rasters_dependent_task_list = [wind_data_to_vector_task]
 
         # Set the bathymetry and points path to use in the rest of the model.
         # In this case these paths refer to the unprojected files. This may not
@@ -566,7 +575,8 @@ def execute(args):
         args=(final_wind_point_vector_path, temp_density_raster_path,
               target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[temp_density_raster_path],
-        task_name='create_density_raster')
+        task_name='create_density_raster',
+        dependent_task_list=density_harvest_rasters_dependent_task_list)
 
     LOGGER.info('Create Harvested Raster')
     create_harvested_raster_task = task_graph.add_task(
@@ -574,13 +584,14 @@ def execute(args):
         args=(final_wind_point_vector_path, temp_harvested_raster_path,
               target_pixel_size, _TARGET_DATA_TYPE, _TARGET_NODATA),
         target_path_list=[temp_harvested_raster_path],
-        task_name='create_harvested_raster')
+        task_name='create_harvested_raster',
+        dependent_task_list=density_harvest_rasters_dependent_task_list)
 
     # Interpolate points onto raster for density values and harvested values:
     LOGGER.info('Interpolate Density Points')
     interpolate_density_task = task_graph.add_task(
         func=pygeoprocessing.interpolate_points,
-        args=(final_wind_point_vector_path, DENSITY_FIELD_NAME,
+        args=(final_wind_point_vector_path, _DENSITY_FIELD_NAME,
               (temp_density_raster_path, 1)),
         kwargs={'interpolation_mode': 'linear'},
         task_name='interpolate_density_points',
@@ -589,7 +600,7 @@ def execute(args):
     LOGGER.info('Interpolate Harvested Points')
     interpolate_harvested_task = task_graph.add_task(
         func=pygeoprocessing.interpolate_points,
-        args=(final_wind_point_vector_path, HARVESTED_FIELD_NAME,
+        args=(final_wind_point_vector_path, _HARVESTED_FIELD_NAME,
               (temp_harvested_raster_path, 1)),
         kwargs={'interpolation_mode': 'linear'},
         task_name='interpolate_harvested_points',
@@ -638,8 +649,8 @@ def execute(args):
     align_and_resize_density_and_harvest_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(merged_mask_list, merged_aligned_mask_list,
-              ['near'] * len(merged_mask_list), target_pixel_size,
-              'intersection'),
+              [_TARGET_RESAMPLE_METHOD] * len(merged_mask_list),
+              target_pixel_size, 'intersection'),
         task_name='align_and_resize_density_and_harvest_list',
         target_path_list=merged_aligned_mask_list,
         dependent_task_list=[
@@ -658,7 +669,7 @@ def execute(args):
         dependent_task_list=[align_and_resize_density_and_harvest_task])
 
     LOGGER.info('Mask out depth and [distance] areas from Harvested raster')
-    mask_harvested_raster_task = task_graph.add_task(
+    task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(path, 1) for path in aligned_harvested_mask_list],
               _mask_out_depth_dist, harvested_masked_path, _TARGET_DATA_TYPE,
@@ -789,7 +800,7 @@ def execute(args):
                         task_name='calculate_grid_point_to_land_poly')
 
                     # Calculate distance raster
-                    task_graph.add_task(
+                    final_dist_task = task_graph.add_task(
                         func=_calculate_distances_land_grid,
                         args=(land_to_grid_vector_path,
                               harvested_masked_path, final_dist_raster_path,
@@ -803,7 +814,7 @@ def execute(args):
                         'cable distances are calculated from grid data.')
 
                     # Calculate distance raster
-                    task_graph.add_task(
+                    final_dist_task = task_graph.add_task(
                         func=_calculate_grid_dist_on_raster,
                         args=(grid_projected_vector_path,
                               harvested_masked_path,
@@ -818,7 +829,7 @@ def execute(args):
                     'calculated from grid data.')
 
                 # Calculate distance raster
-                task_graph.add_task(
+                final_dist_task = task_graph.add_task(
                     func=_calculate_grid_dist_on_raster,
                     args=(grid_projected_vector_path, harvested_masked_path,
                           final_dist_raster_path, inter_dir),
@@ -848,7 +859,7 @@ def execute(args):
             target_path_list=[land_poly_dist_raster_path],
             task_name='create_land_poly_dist_raster')
 
-        task_graph.add_task(
+        final_dist_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
                   (avg_grid_distance, 'raw')], add_avg_dist_op,
@@ -856,6 +867,90 @@ def execute(args):
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
             dependent_task_list=[land_poly_dist_raster_task])
+
+    # Create output NPV and levelized rasters
+    npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
+    levelized_raster_path = os.path.join(
+        out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
+
+    task_graph.add_task(
+        func=_calculate_npv_levelized_rasters,
+        args=(harvested_masked_path, final_dist_raster_path, npv_raster_path,
+              levelized_raster_path, val_parameters_dict, args, price_list),
+        target_path_list=[npv_raster_path, levelized_raster_path],
+        task_name='calculate_npv_levelized_rasters',
+        dependent_task_list=[final_dist_task])
+
+    # Creating output carbon offset raster
+    carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
+
+    # The amount of CO2 not released into the atmosphere, with the constant \
+    # conversion factor provided in the users guide by Rob Griffin
+    carbon_coef = float(val_parameters_dict['carbon_coefficient'])
+
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(harvested_masked_path, 1), (carbon_coef, 'raw')],
+              _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
+              _TARGET_NODATA),
+        target_path_list=[carbon_path],
+        task_name='calculate_carbon_raster')
+
+    task_graph.close()
+    task_graph.join()
+    LOGGER.info('Wind Energy Valuation Model Completed')
+
+
+def _calculate_npv_levelized_rasters(
+        base_harvested_raster_path, base_dist_raster_path,
+        target_npv_raster_path, target_levelized_raster_path,
+        val_parameters_dict, args, price_list):
+    """Calculate NPV and levelized rasters from harvested and dist rasters.
+
+    Parameters:
+        base_harvested_raster_path (str): a path to the raster that indicates
+            the averaged energy output for a given period
+
+        base_dist_raster_path (str): a path to the raster that indicates the
+            distance from wind turbines to the land.
+
+        target_npv_raster_path (str): a path to the target raster to store
+            the net present value of a farm centered on each pixel.
+
+        target_levelized_raster_path (str): a path to the target raster to
+            store the unit price of energy that would be required to set the
+            present value of the farm centered at each pixel equal to zero.
+
+        val_parameters_dict (dict): a dictionary of the turbine and biophysical
+            global parameters.
+
+        args (dict): a dictionary that contains information on
+            `foundation_cost`, `discount_rate`, `number_of_turbines`.
+
+        price_list (list): a list of wind energy prices for a period of time.
+
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Creating output NPV and levelized rasters.')
+
+    pygeoprocessing.new_raster_from_base(
+        base_harvested_raster_path, target_npv_raster_path, _TARGET_DATA_TYPE,
+        [_TARGET_NODATA])
+
+    pygeoprocessing.new_raster_from_base(
+        base_harvested_raster_path, target_levelized_raster_path,
+        _TARGET_DATA_TYPE, [_TARGET_NODATA])
+
+    # Open raster bands for writing
+    npv_raster = gdal.OpenEx(
+        target_npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    npv_band = npv_raster.GetRasterBand(1)
+    levelized_raster = gdal.OpenEx(
+        target_levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
+    levelized_band = levelized_raster.GetRasterBand(1)
 
     # Get constants from val_parameters_dict to make it more readable
     # The length of infield cable in km
@@ -889,14 +984,16 @@ def execute(args):
 
     # The total mega watt capacity of the wind farm where mega watt is the
     # turbines rated power
-    total_mega_watt = mega_watt * number_of_turbines
+    total_mega_watt = mega_watt * int(args['number_of_turbines'])
 
     # Total infield cable cost
-    infield_cable_cost = infield_length * infield_cost * number_of_turbines
+    infield_cable_cost = infield_length * infield_cost * int(
+        args['number_of_turbines'])
     LOGGER.debug('infield_cable_cost : %s', infield_cable_cost)
 
     # Total foundation cost
-    total_foundation_cost = (foundation_cost + unit_cost) * number_of_turbines
+    total_foundation_cost = (foundation_cost + unit_cost) * int(
+        args['number_of_turbines'])
     LOGGER.debug('total_foundation_cost : %s', total_foundation_cost)
 
     # Nominal Capital Cost (CAP) minus the cost of cable which needs distances
@@ -909,45 +1006,12 @@ def execute(args):
 
     # Discount constant raised to the total time, a constant found in the NPV
     # calculation (1+i)^T
-    disc_time = disc_const**time
+    disc_time = disc_const**int(val_parameters_dict['time_period'])
     LOGGER.debug('disc_time : %s', disc_time)
 
-    # The amount of CO2 not released into the atmosphere, with the
-    # constant conversion factor provided in the users guide by
-    # Rob Griffin
-    carbon_coef = float(val_parameters_dict['carbon_coefficient'])
-
-    # paths for output rasters
-    npv_raster_path = os.path.join(out_dir, 'npv_US_millions%s.tif' % suffix)
-    levelized_raster_path = os.path.join(
-        out_dir, 'levelized_cost_price_per_kWh%s.tif' % suffix)
-    carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
-
-    # create NPV and levelized cost rasters
-    task_graph.add_task(
-        func=pygeoprocessing.new_raster_from_base,
-        args=(harvested_masked_path, npv_raster_path, _TARGET_DATA_TYPE,
-              [_TARGET_NODATA]),
-        target_path_list=[npv_raster_path],
-        task_name='create_npv_raster')
-
-    task_graph.add_task(
-        func=pygeoprocessing.new_raster_from_base,
-        args=(harvested_masked_path, levelized_raster_path, _TARGET_DATA_TYPE,
-              [_TARGET_NODATA]),
-        target_path_list=[levelized_raster_path],
-        task_name='create_levelized_raster')
-
-    # Open raster bands for writing
-    npv_raster = gdal.OpenEx(npv_raster_path, gdal.OF_RASTER | gdal.GA_Update)
-    npv_band = npv_raster.GetRasterBand(1)
-    levelized_raster = gdal.OpenEx(
-        levelized_raster_path, gdal.OF_RASTER | gdal.GA_Update)
-    levelized_band = levelized_raster.GetRasterBand(1)
-
     for (harvest_block_info, harvest_block_data), (_, dist_block_data) in zip(
-            pygeoprocessing.iterblocks((harvested_masked_path, 1)),
-            pygeoprocessing.iterblocks((final_dist_raster_path, 1))):
+            pygeoprocessing.iterblocks((base_harvested_raster_path, 1)),
+            pygeoprocessing.iterblocks((base_dist_raster_path, 1))):
 
         target_arr_shape = harvest_block_data.shape
         target_nodata_mask = (harvest_block_data == _TARGET_NODATA)
@@ -1059,18 +1123,6 @@ def execute(args):
     levelized_band = None
     levelized_raster.FlushCache()
     levelized_raster = None
-
-    task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(harvested_masked_path, 1), (carbon_coef, 'raw')],
-              _calculate_carbon_op, carbon_path, _TARGET_DATA_TYPE,
-              _TARGET_NODATA),
-        target_path_list=[carbon_path],
-        task_name='calculate_carbon_raster')
-
-    task_graph.close()
-    task_graph.join()
-    LOGGER.info('Wind Energy Valuation Model Completed')
 
 
 def _get_feature_count(base_vector_path):
@@ -1599,8 +1651,8 @@ def _compute_density_harvested_fields(
         harvested_wind_energy = harvested_wind_energy * number_of_turbines
 
         # Append calculated results to the dictionary
-        wind_dict_copy[key][DENSITY_FIELD_NAME] = density_results
-        wind_dict_copy[key][HARVESTED_FIELD_NAME] = harvested_wind_energy
+        wind_dict_copy[key][_DENSITY_FIELD_NAME] = density_results
+        wind_dict_copy[key][_HARVESTED_FIELD_NAME] = harvested_wind_energy
 
     return wind_dict_copy
 
@@ -1806,7 +1858,7 @@ def _clip_to_projection_with_square_pixels(
             base_raster_path,
             target_pixel_size,
             target_raster_path,
-            'near',
+            _TARGET_RESAMPLE_METHOD,
             target_bb=target_bounding_box,
             target_sr_wkt=target_sr_wkt,
             vector_mask_options={'mask_vector_path': clip_vector_path})
@@ -1817,7 +1869,7 @@ def _clip_to_projection_with_square_pixels(
         pygeoprocessing.align_and_resize_raster_stack(
             [base_raster_path],
             [target_raster_path],
-            ['near'],
+            [_TARGET_RESAMPLE_METHOD],
             target_pixel_size,
             'intersection',
             base_vector_path_list=[clip_vector_path],
@@ -1926,7 +1978,7 @@ def _wind_data_to_point_vector(dict_data,
 
     # For the two fields that we computed and added to the dictionary, move
     # them to the last
-    for field in [DENSITY_FIELD_NAME, HARVESTED_FIELD_NAME]:
+    for field in [_DENSITY_FIELD_NAME, _HARVESTED_FIELD_NAME]:
         if field in field_list:
             field_list.remove(field)
             field_list.append(field)
