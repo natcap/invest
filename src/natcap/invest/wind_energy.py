@@ -687,6 +687,8 @@ def execute(args):
         final_dist_raster_path = os.path.join(
             inter_dir, 'val_distance_trans%s.tif' % suffix)
     else:
+        task_graph.close()
+        task_graph.join()
         LOGGER.info('Valuation Not Selected. Model completed')
         return
 
