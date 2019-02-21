@@ -8,10 +8,10 @@ import pandas
 
 MODEL_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'crop_production_model', 'input', 'model_data')
+    'crop_production_model', 'model_data')
 SAMPLE_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    'crop_production_model', 'input', 'sample_user_data')
+    'crop_production_model', 'sample_user_data')
 TEST_DATA_PATH = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'crop_production_model')
