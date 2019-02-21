@@ -3,6 +3,7 @@ import unittest
 import tempfile
 import shutil
 import os
+import re
 
 import numpy
 import numpy.testing
@@ -12,7 +13,7 @@ import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 
 from osgeo import gdal
-from osgeo import osr
+from osgeo import osr, ogr
 
 
 SAMPLE_DATA = os.path.join(
@@ -222,8 +223,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
             self.workspace_dir)
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
-        pygeoprocessing.testing.assert_vectors_equal(result_path,
-                                                     expected_path, 1e-6)
+        WaveEnergyRegressionTests._assert_point_vectors_equal(
+            result_path, expected_path)
 
     def test_clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""
@@ -311,8 +312,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
             vector_format='ESRI Shapefile',
             filename=expected_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(output_path,
-                                                     expected_shape, 1e-6)
+        WaveEnergyRegressionTests._assert_point_vectors_equal(
+            output_path, expected_shape)
 
     def test_clip_vector_by_vector_no_intersection(self):
         """WaveEnergy: testing '_clip_vector_by_vector' w/ no intersection."""
@@ -458,10 +459,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         vector_results = ['GridPts_prj.shp', 'LandPts_prj.shp']
 
         for vector_path in vector_results:
-            pygeoprocessing.testing.assert_vectors_equal(
+            WaveEnergyRegressionTests._assert_point_vectors_equal(
                 os.path.join(args['workspace_dir'], 'output', vector_path),
-                os.path.join(REGRESSION_DATA, 'valuation', vector_path),
-                1E-6)
+                os.path.join(REGRESSION_DATA, 'valuation', vector_path))
 
         table_results = ['capwe_rc.csv', 'wp_rc.csv', 'npv_rc.csv']
 
@@ -561,3 +561,53 @@ class WaveEnergyRegressionTests(unittest.TestCase):
                 os.path.exists(
                     os.path.join(args['workspace_dir'], 'output', table_path)))
 
+
+    @staticmethod
+    def _assert_point_vectors_equal(a_path, b_path):
+        """Assert that two point geometries in the vectors are equal.
+
+        Parameters:
+            a_path (str): a path to an OGR vector.
+            b_path (str): a path to an OGR vector.
+
+        Returns:
+            None.
+
+        Raises:
+            AssertionError when the two point geometries are not equal up to
+            desired precision (default is 6).
+        """
+        a_shape = ogr.Open(a_path)
+        a_layer = a_shape.GetLayer(0)
+        a_feat = a_layer.GetNextFeature()
+
+        b_shape = ogr.Open(b_path)
+        b_layer = b_shape.GetLayer(0)
+        b_feat = b_layer.GetNextFeature()
+
+        while a_feat is not None:
+            # Get coordinates from point geometry and store them in a list
+            a_geom = a_feat.GetGeometryRef()
+            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
+            a_geom_list = [float(x) for x in a_geom_list]
+
+            b_geom = b_feat.GetGeometryRef()
+            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
+            b_geom_list = [float(x) for x in b_geom_list]
+
+            try:
+                numpy.testing.assert_array_almost_equal(
+                    a_geom_list, b_geom_list)
+            except AssertionError:
+                a_feature_fid = a_feat.GetFID()
+                b_feature_fid = b_feat.GetFID()
+                raise AssertionError('Geometries are not equal in feature %s, '
+                                     'regression feature %s in layer 0' %
+                                     (a_feature_fid, b_feature_fid))
+            a_feat = None
+            b_feat = None
+            a_feat = a_layer.GetNextFeature()
+            b_feat = b_layer.GetNextFeature()
+
+        a_shape = None
+        b_shape = None
