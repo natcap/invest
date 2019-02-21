@@ -545,7 +545,7 @@ def execute(args):
         func=_add_target_fields_to_wave_vector,
         args=(wave_energy_power_vector_path, land_vector_path,
               grid_vector_path, final_wave_energy_power_vector_path,
-              machine_econ_dict, args['number_of_machines']),
+              machine_econ_dict, int(args['number_of_machines'])),
         target_path_list=[final_wave_energy_power_vector_path],
         task_name='add_fields_to_wave_vector',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
