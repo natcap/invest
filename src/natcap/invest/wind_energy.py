@@ -1525,6 +1525,9 @@ def _compute_density_harvested_fields(
             strings are the keys that have values pulled from bio-parameters
             CSV.
 
+        number_of_turbines (int): an integer value for the number of machines
+            for the wind farm.
+
     Returns:
         wind_dict_copy (dict): a modified dictionary with new fields computed
             from the existing fields and bio-parameters.
