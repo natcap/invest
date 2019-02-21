@@ -422,7 +422,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
             'dem_path':
             os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif'),
-            'n_workers': -1
+            'n_workers': 12
         }
         return args
 

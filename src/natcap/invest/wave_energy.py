@@ -23,7 +23,6 @@ from . import validation
 from . import utils
 
 LOGGER = logging.getLogger('natcap.invest.wave_energy')
-logging.getLogger('taskgraph').setLevel(logging.ERROR)
 
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
@@ -301,7 +300,6 @@ def execute(args):
     # a broad run on all the wave points specified by args['analysis_area'].
     if 'aoi_path' not in args or not args['aoi_path']:
         LOGGER.info('AOI not provided.')
-        aoi_provided = False
 
         # Make a copy of the wave point shapefile so that the original input is
         # not corrupted when we clip the vector
@@ -322,7 +320,6 @@ def execute(args):
             analysis_area_sr, aoi_sr)
     else:
         LOGGER.info('AOI provided.')
-        aoi_provided = True
         aoi_vector_path = args['aoi_path']
         # Create a coordinate transformation from the projection of the given
         # wave energy point shapefile, to the AOI's projection
@@ -355,6 +352,9 @@ def execute(args):
         coord_trans, coord_trans_opposite = _get_coordinate_transformation(
             analysis_area_sr, aoi_sr)
 
+        # Join here since we need pixel size for creating output rasters
+        task_graph.join()
+
         # Get the size of the pixels in meters, to be used for creating
         # projected wave power and wave energy capacity rasters
         target_pixel_size = _pixel_size_helper(wave_vector_path, coord_trans,
@@ -370,17 +370,12 @@ def execute(args):
     # Add the depth value to the wave points by indexing into the DEM dataset
     indexed_wave_vector_path = os.path.join(
         intermediate_dir, 'Indexed_WEM_InputOutput_Pts%s.shp' % file_suffix)
-    if aoi_provided:
-        indexing_dependent_task_list = [clip_wave_points_task, clip_aoi_task]
-    else:
-        indexing_dependent_task_list = None
     index_depth_to_wave_vector_task = task_graph.add_task(
         func=_index_raster_value_to_point_vector,
         args=(wave_vector_path, dem_path, indexed_wave_vector_path,
               _DEPTH_FIELD),
         target_path_list=[indexed_wave_vector_path],
-        task_name='index_depth_to_wave_vector',
-        dependent_task_list=indexing_dependent_task_list)
+        task_name='index_depth_to_wave_vector')
 
     # Generate an interpolate object for wave_energy_capacity
     LOGGER.info('Interpolating machine performance table.')
@@ -409,48 +404,47 @@ def execute(args):
         intermediate_dir, 'unclipped_capwe_mwh%s.tif' % file_suffix)
     unclipped_power_raster_path = os.path.join(
         intermediate_dir, 'unclipped_wp_kw%s.tif' % file_suffix)
+    interpolated_energy_raster_path = os.path.join(
+        intermediate_dir, 'interpolated_capwe_mwh%s.tif' % file_suffix)
+    interpolated_power_raster_path = os.path.join(
+        intermediate_dir, 'interpolated_wp_kw%s.tif' % file_suffix)
     energy_raster_path = os.path.join(output_dir,
                                       'capwe_mwh%s.tif' % file_suffix)
     wave_power_raster_path = os.path.join(output_dir,
                                           'wp_kw%s.tif' % file_suffix)
 
     # Create blank rasters bounded by the vector of analysis area (AOI)
-    if aoi_provided:
-        creating_raster_dependent_task_list = [clip_aoi_task]
-    else:
-        creating_raster_dependent_task_list = None
+    LOGGER.info('Create wave power and energy rasters from AOI extent')
     create_unclipped_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
         args=(aoi_vector_path, unclipped_energy_raster_path, target_pixel_size,
               _TARGET_PIXEL_TYPE, _NODATA),
         target_path_list=[unclipped_energy_raster_path],
-        task_name='create_unclipped_energy_raster',
-        dependent_task_list=creating_raster_dependent_task_list)
+        task_name='create_unclipped_energy_raster')
 
     create_unclipped_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.create_raster_from_vector_extents,
         args=(aoi_vector_path, unclipped_power_raster_path, target_pixel_size,
               _TARGET_PIXEL_TYPE, _NODATA),
         target_path_list=[unclipped_power_raster_path],
-        task_name='create_unclipped_power_raster',
-        dependent_task_list=creating_raster_dependent_task_list)
+        task_name='create_unclipped_power_raster')
 
-    # Interpolate wave energy and power from the shapefile over the rasters
+    # Interpolate wave energy and power from the wave vector over the rasters
     LOGGER.info('Interpolate wave power and wave energy capacity onto rasters')
     interpolate_energy_points_task = task_graph.add_task(
-        func=pygeoprocessing.interpolate_points,
-        args=(wave_energy_power_vector_path, _CAP_WE_FIELD,
-              (unclipped_energy_raster_path, 1), _TARGET_RESAMPLE_METHOD),
-        target_path_list=[unclipped_energy_raster_path],
+        func=_interpolate_vector_field_onto_raster,
+        args=(wave_energy_power_vector_path, unclipped_energy_raster_path,
+              interpolated_energy_raster_path, _CAP_WE_FIELD),
+        target_path_list=[interpolated_energy_raster_path],
         task_name='interpolate_energy_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_energy_raster_task])
 
     interpolate_power_points_task = task_graph.add_task(
-        func=pygeoprocessing.interpolate_points,
-        args=(wave_energy_power_vector_path, _WAVE_POWER_FIELD,
-              (unclipped_power_raster_path, 1), _TARGET_RESAMPLE_METHOD),
-        target_path_list=[unclipped_power_raster_path],
+        func=_interpolate_vector_field_onto_raster,
+        args=(wave_energy_power_vector_path, unclipped_power_raster_path,
+              interpolated_power_raster_path, _WAVE_POWER_FIELD),
+        target_path_list=[interpolated_power_raster_path],
         task_name='interpolate_power_points',
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_power_raster_task])
@@ -458,7 +452,7 @@ def execute(args):
     # Clip wave energy and power rasters to the aoi vector
     clip_energy_raster_task = task_graph.add_task(
         func=pygeoprocessing.warp_raster,
-        args=(unclipped_energy_raster_path, target_pixel_size,
+        args=(interpolated_energy_raster_path, target_pixel_size,
               energy_raster_path, _TARGET_RESAMPLE_METHOD),
         kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
                 'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
@@ -468,7 +462,7 @@ def execute(args):
 
     clip_power_raster_task = task_graph.add_task(
         func=pygeoprocessing.warp_raster,
-        args=(unclipped_power_raster_path, target_pixel_size,
+        args=(interpolated_power_raster_path, target_pixel_size,
               wave_power_raster_path, _TARGET_RESAMPLE_METHOD),
         kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
                 'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
@@ -570,8 +564,7 @@ def execute(args):
               target_pixel_size),
         target_path_list=[inter_npv_raster_path, target_npv_raster_path],
         task_name='create_npv_raster',
-        dependent_task_list=creating_raster_dependent_task_list.append(
-            add_target_fields_to_wave_vector_task))
+        dependent_task_list=[add_target_fields_to_wave_vector_task])
 
     LOGGER.info('Create percentile NPV raster.')
     task_graph.add_task(
@@ -603,6 +596,33 @@ def _copy_vector(base_vector_path, target_vector_path):
     driver = gdal.GetDriverByName(_DRIVER_NAME)
     driver.CreateCopy(target_vector_path, base_vector)
     base_vector = None
+
+
+def _interpolate_vector_field_onto_raster(
+        base_vector_path, base_raster_path, target_interpolated_raster_path,
+        field_name):
+    """Interpolate a vector field onto a target raster.
+
+    Copy the base raster to the target interpolated raster, so taskgraph could
+    trace the file state correctly.
+
+    Parameters:
+        base_vector_path (str): a path to a base vector that has field_name to
+            be interpolated.
+        base_raster_path (str): a path to a base raster to make a copy from.
+        target_interpolated_raster_path (str): a path to a target raster copied
+            from the base raster and will have the interpolated values.
+        field_name (str): a field name on the base vector whose values will be
+            interpolated onto the target raster.
+
+    Returns:
+        None
+
+    """
+    _copy_vector(base_raster_path, target_interpolated_raster_path)
+    pygeoprocessing.interpolate_points(
+        base_vector_path, field_name, (target_interpolated_raster_path, 1),
+        _TARGET_RESAMPLE_METHOD)
 
 
 def _create_npv_raster(
