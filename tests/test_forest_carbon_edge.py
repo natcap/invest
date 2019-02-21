@@ -45,7 +45,7 @@ class ForestCarbonEdgeTests(unittest.TestCase):
                 REGRESSION_DATA, 'input', 'core_data',
                 'forest_carbon_edge_regression_model_parameters.shp'),
             'workspace_dir': self.workspace_dir,
-            'n_workers': 12
+            'n_workers': -1
         }
         forest_carbon_edge_effect.execute(args)
         ForestCarbonEdgeTests._test_same_files(

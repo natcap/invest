@@ -255,19 +255,6 @@ def execute(args):
     # combine maps into a single output
     LOGGER.info('combining carbon maps into single raster')
 
-    def combine_carbon_maps(*carbon_maps):
-        """This combines the carbon maps into one and leaves nodata where all
-        the inputs maps were nodata"""
-        result = numpy.zeros(carbon_maps[0].shape)
-        nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
-        nodata_mask[:] = True
-        for carbon_map in carbon_maps:
-            valid_mask = carbon_map != CARBON_MAP_NODATA
-            nodata_mask &= ~valid_mask
-            result[valid_mask] += carbon_map[valid_mask]
-        result[nodata_mask] = CARBON_MAP_NODATA
-        return result
-
     carbon_maps_band_list = [(path, 1) for path in carbon_maps]
 
     # Join here since the raster calculation depends on the target datasets
@@ -296,6 +283,20 @@ def execute(args):
     # close taskgraph
     task_graph.close()
     task_graph.join()
+
+
+def combine_carbon_maps(*carbon_maps):
+    """This combines the carbon maps into one and leaves nodata where all
+    the inputs maps were nodata"""
+    result = numpy.zeros(carbon_maps[0].shape)
+    nodata_mask = numpy.empty(carbon_maps[0].shape, dtype=numpy.bool)
+    nodata_mask[:] = True
+    for carbon_map in carbon_maps:
+        valid_mask = carbon_map != CARBON_MAP_NODATA
+        nodata_mask &= ~valid_mask
+        result[valid_mask] += carbon_map[valid_mask]
+    result[nodata_mask] = CARBON_MAP_NODATA
+    return result
 
 
 def _aggregate_carbon_map(
