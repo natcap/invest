@@ -530,11 +530,13 @@ def execute(args):
     LOGGER.info('Unprojecting output rasters')
     out_risk_raster_paths = info_df[
         info_df.TYPE == _HABITAT_TYPE].RECLASS_RISK_RASTER_PATH.tolist()
-    out_recov_raster_paths = recovery_df.R_RASTER_PATH.tolist()
-    out_raster_paths = out_risk_raster_paths + out_recov_raster_paths \
+    # out_recov_raster_paths = recovery_df.R_RASTER_PATH.tolist()
+    out_stressor_raster_paths = info_df[
+        info_df.TYPE == _STRESSOR_TYPE].ALIGN_RASTER_PATH.tolist()
+    out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths \
         + [ecosystem_risk_raster_path]
 
-    wgs84_raster_paths = [
+    out_wgs84_raster_paths = [
         os.path.join(file_preprocessing_dir, 'wgs84_' + os.path.basename(path))
         for path in out_raster_paths]
 
@@ -555,24 +557,26 @@ def execute(args):
     # Unproject the rasters to WGS84
     unproject_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(out_raster_paths, wgs84_raster_paths,
+        args=(out_raster_paths, out_wgs84_raster_paths,
               ['near'] * len(out_raster_paths), wgs84_pixel_size, 'union'),
         kwargs={'target_sr_wkt': wgs84_wkt},
-        target_path_list=wgs84_raster_paths,
+        target_path_list=out_wgs84_raster_paths,
         task_name='reproject_risk_rasters_to_wgs84')
 
     # Convert the unprojected rasters to GeoJSON files for web visualization
-    for raster_path in wgs84_raster_paths:
-        # Remove the `wgs84_` prefix from the output GeoJSON file names
-        vector_layer_name = os.path.splitext(os.path.basename(
-            raster_path))[0].replace('wgs84_', '').encode('utf-8')
+    for raster_path in out_wgs84_raster_paths:
+        # Remove the `wgs84_` and 'aligned_' prefixes from the raster names
+        vector_layer_name = os.path.splitext(
+            os.path.basename(raster_path))[0].replace('wgs84_', '').replace(
+                'aligned_', '').encode('utf-8')
+
         vector_path = os.path.join(
-            output_dir, vector_layer_name.replace('wgs84_', '') + '.geojson')
+            output_dir, vector_layer_name + '.geojson')
 
         if vector_layer_name.startswith('risk_'):
             field_name = 'Risk Score'
         else:
-            field_name = 'Recovery Potential'
+            field_name = 'Stressor'
 
         task_graph.add_task(
             func=_raster_to_geojson,
@@ -764,6 +768,8 @@ def _get_and_pickle_zonal_stats(
     # Add the entire region score mean to the dictionary
     if count_all_regions and aoi_pixel_count > 0:
         mean_stats_dict[_TOTAL_REGION_NAME] = aoi_pixel_sum/aoi_pixel_count
+    elif count_all_regions:
+        mean_stats_dict[_TOTAL_REGION_NAME] = 0
 
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
@@ -818,7 +824,6 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
         # represent the area of interest
         else:
             fid_name_dict[fid] = _TOTAL_REGION_NAME
-
     aoi_layer = None
     aoi_vector = None
 
@@ -862,11 +867,12 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
     # corresponding E and C scores in each subregion
     subregion_df_list = []
     for subregion in subregion_names:
-        # Make a copy of the stats dataframe, and add subregion name
+        # Make a copy of the stats dataframe
         subregion_df = stats_df.copy()
+        # Add the subregion name to the column
         subregion_df['SUBREGION'] = subregion
 
-        # Update E and C scores
+        # Update E and C scores of that subregion to the dataframe
         for criteria_type in ['E', 'C']:
             subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
                 lambda row: row[criteria_type + '_MEAN'][subregion], axis=1)
@@ -2427,7 +2433,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     multi_index = pandas.MultiIndex.from_product(
         iterables=[habitat_names, stressor_names],
         names=[_HABITAT_HEADER, _STRESSOR_HEADER])
-    LOGGER.info('multi_index: %s' % multi_index)
+    LOGGER.debug('multi_index: %s' % multi_index)
 
     # Create a multi-index dataframe and fill in default cell values
     overlap_df = pandas.DataFrame(
