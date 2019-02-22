@@ -8,10 +8,10 @@ import pickle
 import numpy
 from osgeo import gdal, ogr, osr
 import pandas
-import pygeoprocessing
 import shapely.ops
 import shapely.wkt
 import taskgraph
+import pygeoprocessing
 
 from . import utils
 from . import validation
@@ -28,10 +28,13 @@ _SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
 _HABITAT_TYPE = 'habitat'
 _STRESSOR_TYPE = 'stressor'
 _SUBREGION_FIELD_NAME = 'name'
+_WEIGHT_KEY = 'Weight'
+_DQ_KEY = 'DQ'
 
 # Parameters to be used in dataframe and output stats CSV
 _HABITAT_HEADER = 'HABITAT'
 _STRESSOR_HEADER = 'STRESSOR'
+_TOTAL_REGION_NAME = 'Total Region'
 
 # Parameters for the spatially explicit criteria shapefiles
 _RATING_FIELD = 'rating'
@@ -737,7 +740,7 @@ def _get_and_pickle_zonal_stats(
     # If the AOI vector has more than one subregion, also count the average
     # score from all subregions
     count_all_regions = False
-    if 'AOI' not in fid_name_dict.values():
+    if _TOTAL_REGION_NAME not in fid_name_dict.values():
         count_all_regions = True
         aoi_pixel_sum = 0.
         aoi_pixel_count = 0.
@@ -760,7 +763,7 @@ def _get_and_pickle_zonal_stats(
 
     # Add the entire region score mean to the dictionary
     if count_all_regions and aoi_pixel_count > 0:
-        mean_stats_dict['AOI'] = aoi_pixel_sum/aoi_pixel_count
+        mean_stats_dict[_TOTAL_REGION_NAME] = aoi_pixel_sum/aoi_pixel_count
 
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
@@ -805,12 +808,16 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
                 fid_name_dict[fid] = field_name
             else:
                 # Field name could be None sometimes
-                fid_name_dict[fid] = 'Unknown Subregion Name'
+                LOGGER.warning(
+                    'The subregion `%s` field of fid `%s` in AOI vector is '
+                    'missing , replaced with `%s`' %
+                    (_SUBREGION_FIELD_NAME, fid, 'FID ' + str(fid)))
+                fid_name_dict[fid] = 'FID ' + str(fid)
 
-        # If AOI doesn't have subregion field, use `AOI` to represent the whole
-        # area of interest
+        # If AOI doesn't have subregion field, use total region key to
+        # represent the area of interest
         else:
-            fid_name_dict[fid] = 'AOI'
+            fid_name_dict[fid] = _TOTAL_REGION_NAME
 
     aoi_layer = None
     aoi_vector = None
@@ -847,8 +854,9 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
     stats_df = overlap_df.filter(['E_MEAN', 'C_MEAN'], axis=1)
     # Get a list of subregion names
     subregion_names = fid_name_dict.values()
-    if 'AOI' not in subregion_names:
-        subregion_names.append('AOI')
+    # Add a total region key to the subregion name list
+    if _TOTAL_REGION_NAME not in subregion_names:
+        subregion_names.append(_TOTAL_REGION_NAME)
 
     # Add a `SUBREGION` column to the dataframe and update it with the
     # corresponding E and C scores in each subregion
@@ -2339,8 +2347,8 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
 
     """
     for key, value in {
-            'DQ': dq,
-            'Weight': weight}.iteritems():
+            _DQ_KEY: dq,
+            _WEIGHT_KEY: weight}.iteritems():
 
         # The value might be NaN or a string of digit, therefore check for
         # both cases
