@@ -142,6 +142,11 @@ def execute(args):
     pixel_area_ha = numpy.product([
         abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
     landcover_nodata = landcover_raster_info['nodata'][0]
+    if landcover_nodata is None:
+        LOGGER.warning(
+            "%s does not have nodata value defined; "
+            "assuming all pixel values are valid"
+            % args['landcover_raster_path'])
 
     # Calculate lat/lng bounding box for landcover map
     wgs84srs = osr.SpatialReference()

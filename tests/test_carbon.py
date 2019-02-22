@@ -30,7 +30,6 @@ def make_simple_raster(base_raster_path, fill_val, nodata_val):
 
     n = 10
     gtiff_driver = gdal.GetDriverByName('GTiff')
-    # raster_path = os.path.join(self.workspace_dir, 'small_raster.tif')
     new_raster = gtiff_driver.Create(
         base_raster_path, n, n, 1, gdal.GDT_Int32, options=[
             'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
