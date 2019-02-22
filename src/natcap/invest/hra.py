@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import os
 import logging
 
+import math
 import pickle
 import numpy
 from osgeo import gdal, ogr, osr
@@ -38,6 +39,9 @@ _TARGET_FLT_PIXEL = gdal.GDT_Float32
 _TARGET_INT_PIXEL = gdal.GDT_Byte
 _TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
 _TARGET_NODATA_INT = 255  # for unsigned 8-bit int
+
+# ESPG code for WGS84 coordinate system
+_WGS84_ESPG_CODE = 4326
 
 
 def execute(args):
@@ -528,13 +532,16 @@ def execute(args):
     # Use WGS84 to convert meter coordinates back to lat/lon, since only this
     # format would be recognized by Leaflet
     wgs84_sr = osr.SpatialReference()
-    wgs84_sr.ImportFromEPSG(4326)
+    wgs84_sr.ImportFromEPSG(_WGS84_ESPG_CODE)
     wgs84_wkt = wgs84_sr.ExportToWkt()
 
-    # Convert meter resolution to lat/long pixel size
-    # See https://gis.stackexchange.com/questions/2951/algorithm-for-offsetting-a-latitude-longitude-by-some-amount-of-meters
-    wgs84_pixel_size = (float(args['resolution'])/111111,
-                        -float(args['resolution'])/111111)
+    # Get the latitude of the center of aoi vector
+    aoi_center_lat = _get_latitude_of_vector_center(aoi_vector_path)
+
+    # Convert meter resolution to lat/long degree pixel size
+    wgs84_pixel_size = _convert_meter_pixel_size_to_degrees(
+        (float(args['resolution']), -float(args['resolution'])),
+        aoi_center_lat)
 
     # Unproject the rasters to WGS84
     unproject_task = task_graph.add_task(
@@ -568,7 +575,79 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
-    LOGGER.info('HRA finished.')
+    LOGGER.info('HRA model completed.')
+
+
+def _get_latitude_of_vector_center(base_vector_path):
+    """Get the latitude of the centroid of a vector.
+
+    Parameters:
+        base_polygon_vector_path (str): path to the vector to get centroid from.
+
+    Returns:
+        center_lat (float): the latitude at the center of the vector.
+
+    """
+    # Get projection and bounding box of the vector
+    vector_info = pygeoprocessing.get_vector_info(base_vector_path)
+    base_sr_wkt = vector_info['projection']
+    base_bounding_box = vector_info['bounding_box']
+
+    # Get the base and target spatial references
+    base_sr = osr.SpatialReference()
+    base_sr.ImportFromWkt(base_sr_wkt)
+    target_sr = osr.SpatialReference()
+    target_sr.ImportFromEPSG(_WGS84_ESPG_CODE)
+
+    # Get the x, y coordinates of the center point of the vector
+    center_x = (base_bounding_box[0] + base_bounding_box[2]) / 2.
+    center_y = (base_bounding_box[1] + base_bounding_box[3]) / 2.
+
+    # Transform the center points from base projection to WGS84
+    coord_trans = osr.CoordinateTransformation(base_sr, target_sr)
+    _, center_lat, _ = coord_trans.TransformPoint(center_x, center_y)
+
+    return center_lat
+
+
+def _convert_meter_pixel_size_to_degrees(pixel_size_in_meters, center_lat):
+    """Calculate degree sizes of a pixel in meters.
+
+    Adapted from: https://gis.stackexchange.com/a/127327/2397.
+
+    Parameters:
+        pixel_size_in_meters (tuple): [xsize, ysize] in meters (float).
+
+        center_lat (float): latitude of the center of the pixel. Note this
+            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            latitude or an invalid area will be calculated.
+
+    Returns:
+        pixel_size_in_degrees (tuple): pixel size in degree.
+
+
+    """
+    m1 = 111132.92
+    m2 = -559.82
+    m3 = 1.175
+    m4 = -0.0023
+    p1 = 111412.84
+    p2 = -93.5
+    p3 = 0.118
+
+    lat_rad = center_lat * math.pi / 180
+    lat_len_in_m = (
+        m1 + m2 * math.cos(2 * lat_rad) + m3 * math.cos(4 * lat_rad) +
+        m4 * math.cos(6 * lat_rad))
+    long_len_in_m = abs(
+        p1 * math.cos(lat_rad) + p2 * math.cos(3 * lat_rad) +
+        p3 * math.cos(5 * lat_rad))
+
+    pixel_size_in_degrees = (
+        pixel_size_in_meters[0] / long_len_in_m,
+        pixel_size_in_meters[1] / lat_len_in_m)
+
+    return pixel_size_in_degrees
 
 
 def _raster_to_geojson(
