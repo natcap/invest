@@ -874,9 +874,9 @@ class HraRegressionTests(unittest.TestCase):
         output_raster_paths = [
             os.path.join(self.workspace_dir, 'outputs', layer_name + '.tif')
             for layer_name in output_layer_names]
-        expected_raster_paths = [os.path.join(
-            TEST_DATA, layer_name + '_mul_exp.tif') for layer_name in
-            output_layer_names]
+        expected_raster_paths = [
+            os.path.join(TEST_DATA, layer_name + '_mul_exp.tif') for
+            layer_name in output_layer_names]
 
         # Append a intermediate raster to test the linear decay equation
         output_raster_paths.append(
@@ -891,9 +891,10 @@ class HraRegressionTests(unittest.TestCase):
                 output_raster, expected_raster)
 
         # Assert GeoJSON vectors equal
-        output_vector_paths = [os.path.join(
-            self.workspace_dir, 'outputs', layer_name + '.geojson')
-                for layer_name in output_layer_names]
+        output_vector_paths = [
+            os.path.join(
+                self.workspace_dir, 'outputs', layer_name + '.geojson')
+            for layer_name in output_layer_names]
         expected_vector_paths = [
             os.path.join(TEST_DATA, layer_name + '_mul_exp.geojson') for
             layer_name in output_layer_names]

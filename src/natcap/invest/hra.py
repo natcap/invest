@@ -681,11 +681,9 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
             parallelizing independent tasks.
 
     Returns:
-        stats_df (dataframe): a multi-index dataframe with exposure and
-            consequence mean score columns. Each cell value would have a
-            dictionary whose keys are subregion names from AOI vector and
-            values the mean score. A score of 0  means that there's no
-            overlapped pixel for the habitat-stressor pair.
+        final_stats_df (dataframe): a multi-index dataframe with exposure and
+            consequence mean score, and subregion columns. A score of 0 means
+            there's no overlapped pixel for the habitat-stressor pair.
 
     """
     # Get fid and the name of each feature in the AOI vector
@@ -701,7 +699,12 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
             _SUBREGION_FIELD_NAME)
         if subregion_field_idx != -1:
             field_name = aoi_feature.GetField(subregion_field_idx)
-            fid_name_dict[fid] = field_name
+            if field_name:
+                fid_name_dict[fid] = field_name
+            else:
+                # Field name could be None sometimes
+                fid_name_dict[fid] = 'Unknown Subregion Name'
+
         # If AOI doesn't have subregion field, use `AOI` to represent the whole
         # area of interest
         else:
@@ -739,9 +742,29 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
                 open(row[criteria_type + '_PICKLE_STATS_PATH'], 'rb')), axis=1)
 
     # Extract criteria mean columns to new dataframe stats_df as a copy
-
     stats_df = overlap_df.filter(['E_MEAN', 'C_MEAN'], axis=1)
-    return stats_df
+    # Get a list of subregion names
+    subregion_names = fid_name_dict.values()
+
+    # Add a `SUBREGION` column to the dataframe and update it with the
+    # corresponding E and C scores in each subregion
+    subregion_df_list = []
+    for subregion in subregion_names:
+        # Make a copy of the stats dataframe, and add subregion name
+        subregion_df = stats_df.copy()
+        subregion_df['SUBREGION'] = subregion
+
+        # Update E and C scores
+        for criteria_type in ['E', 'C']:
+            subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
+                lambda row: row[criteria_type + '_MEAN'][subregion], axis=1)
+
+        subregion_df_list.append(subregion_df)
+
+    # Merge all the subregion dataframes
+    final_stats_df = pandas.concat(subregion_df_list)
+
+    return final_stats_df
 
 
 def _merge_geometry(base_vector_path, target_merged_vector_path):
@@ -1915,8 +1938,9 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
     unknown_types = list(set(info_df.TYPE) - set(required_types))
     if unknown_types:
         raise ValueError(
-            'The `TYPE` attribute in Info CSV could only have either `habitat`'
-            ' or `stressor` as its value, but is having %s' % unknown_types)
+            'The `TYPE` attribute in Info CSV could only have either %s '
+            ' or %s as its value, but is having %s' % (
+                required_types[0], required_types[1], unknown_types))
 
     buffer_column_dtype = info_df[info_df.TYPE == required_buffer_type][
         _BUFFER_HEADER].dtype
@@ -2285,7 +2309,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
     multi_index = pandas.MultiIndex.from_product(
-        [habitat_names, stressor_names], names=['habitat', 'stressor'])
+        [habitat_names, stressor_names], names=['HABITAT', 'STRESSOR'])
     LOGGER.info('multi_index: %s' % multi_index)
 
     # Create a multi-index dataframe and fill in default cell values
