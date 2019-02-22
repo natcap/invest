@@ -570,13 +570,14 @@ def execute(args):
             os.path.basename(raster_path))[0].replace('wgs84_', '').replace(
                 'aligned_', '').encode('utf-8')
 
-        vector_path = os.path.join(
-            output_dir, vector_layer_name + '.geojson')
-
         if vector_layer_name.startswith('risk_'):
             field_name = 'Risk Score'
         else:
+            # Append stressor suffix if it's not a risk layer
+            vector_layer_name = 'stressor_' + vector_layer_name
             field_name = 'Stressor'
+
+        vector_path = os.path.join(output_dir, vector_layer_name + '.geojson')
 
         task_graph.add_task(
             func=_raster_to_geojson,
