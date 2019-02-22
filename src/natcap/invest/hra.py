@@ -19,13 +19,19 @@ from . import validation
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided CSV files
-_SUBREGION_FIELD_NAME = 'name'
 _BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
 _CRITERIA_TYPE_HEADER = 'CRITERIA TYPE'
-_SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
 _HABITAT_NAME_HEADER = 'HABITAT NAME'
 _HABITAT_RESILIENCE_HEADER = 'HABITAT RESILIENCE ATTRIBUTES'
 _HABITAT_STRESSOR_OVERLAP_HEADER = 'HABITAT STRESSOR OVERLAP PROPERTIES'
+_SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
+_HABITAT_TYPE = 'habitat'
+_STRESSOR_TYPE = 'stressor'
+_SUBREGION_FIELD_NAME = 'name'
+
+# Parameters to be used in dataframe and output stats CSV
+_HABITAT_HEADER = 'HABITAT'
+_STRESSOR_HEADER = 'STRESSOR'
 
 # Parameters for the spatially explicit criteria shapefiles
 _RATING_FIELD = 'rating'
@@ -293,10 +299,10 @@ def execute(args):
 
     # Make buffer stressors based on their impact distance and decay function
     align_stressor_raster_list = info_df[
-        info_df.TYPE == 'stressor'].ALIGN_RASTER_PATH.tolist()
+        info_df.TYPE == _STRESSOR_TYPE].ALIGN_RASTER_PATH.tolist()
     dist_stressor_raster_list = info_df[
-        info_df.TYPE == 'stressor'].DIST_RASTER_PATH.tolist()
-    stressor_names = info_df[info_df.TYPE == 'stressor'].NAME.tolist()
+        info_df.TYPE == _STRESSOR_TYPE].DIST_RASTER_PATH.tolist()
+    stressor_names = info_df[info_df.TYPE == _STRESSOR_TYPE].NAME.tolist()
 
     LOGGER.info('Calculating euclidean distance transform on stressors.')
     # Convert pixel size from meters to projection unit
@@ -317,7 +323,7 @@ def execute(args):
 
     LOGGER.info('Calculating maximum overlapping stressors on the ecosystem.')
     align_habitat_raster_list = info_df[
-        info_df.TYPE == 'habitat'].ALIGN_RASTER_PATH.tolist()
+        info_df.TYPE == _HABITAT_TYPE].ALIGN_RASTER_PATH.tolist()
     overlap_stressor_raster_path = os.path.join(
         file_preprocessing_dir, 'stressor_overlap%s.tif' % file_suffix)
     ecosystem_raster_path = os.path.join(
@@ -489,7 +495,7 @@ def execute(args):
 
     # Create input list for calculating reclassified ecosystem risk.
     ecosystem_risk_raster_path = os.path.join(output_dir, 'risk_ecosystem.tif')
-    hab_risk_path_list = info_df.loc[info_df.TYPE == 'habitat'][
+    hab_risk_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
         'TOTAL_RISK_RASTER_PATH'].tolist()
     hab_risk_path_band_list = [
         (ecosystem_raster_path, 1), (max_risk_score, 'raw')]
@@ -520,7 +526,7 @@ def execute(args):
     # the rasters to GeoJSON files for visualization
     LOGGER.info('Unprojecting output rasters')
     out_risk_raster_paths = info_df[
-        info_df.TYPE == 'habitat'].RECLASS_RISK_RASTER_PATH.tolist()
+        info_df.TYPE == _HABITAT_TYPE].RECLASS_RISK_RASTER_PATH.tolist()
     out_recov_raster_paths = recovery_df.R_RASTER_PATH.tolist()
     out_raster_paths = out_risk_raster_paths + out_recov_raster_paths \
         + [ecosystem_risk_raster_path]
@@ -727,9 +733,18 @@ def _get_and_pickle_zonal_stats(
     # Create a stats dict that has mean scores calculated from zonal stats.
     # Use the name of the subregion as key of mean_stats_dict.
     mean_stats_dict = {}
+
+    # If the AOI vector has more than one subregion, also count the average
+    # score from all subregions
+    count_all_regions = False
+    if 'AOI' not in fid_name_dict.values():
+        count_all_regions = True
+        aoi_pixel_sum = 0.
+        aoi_pixel_count = 0.
+
     for fid, stats in zonal_stats_dict.iteritems():
-        # 0 indicates no overlap between the habitat and stressor in
-        # the subregion or AOI
+        # 0 indicates no overlap between the habitat and stressor in the
+        # subregion
         region_name = fid_name_dict[fid]
         mean_stats_dict[region_name] = 0
 
@@ -738,6 +753,14 @@ def _get_and_pickle_zonal_stats(
             # Calculate the mean score by dividing the sum of scores by the
             # count of pixel in that subregion
             mean_stats_dict[region_name] = stats['sum']/stats['count']
+
+            if count_all_regions:
+                aoi_pixel_sum += stats['sum']
+                aoi_pixel_count += stats['count']
+
+    # Add the entire region score mean to the dictionary
+    if count_all_regions and aoi_pixel_count > 0:
+        mean_stats_dict['AOI'] = aoi_pixel_sum/aoi_pixel_count
 
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
@@ -824,6 +847,8 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
     stats_df = overlap_df.filter(['E_MEAN', 'C_MEAN'], axis=1)
     # Get a list of subregion names
     subregion_names = fid_name_dict.values()
+    if 'AOI' not in subregion_names:
+        subregion_names.append('AOI')
 
     # Add a `SUBREGION` column to the dataframe and update it with the
     # corresponding E and C scores in each subregion
@@ -842,6 +867,10 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
 
     # Merge all the subregion dataframes
     final_stats_df = pandas.concat(subregion_df_list)
+
+    # Sort habitat and stressor by their names in ascending order
+    final_stats_df.sort_values(
+        [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
 
     return final_stats_df
 
@@ -1892,7 +1921,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
         return path
     # Habitat rasters do not need to be transformed
     elif (suffix_front == 'dist_' or suffix_front == 'buff_') and (
-          row['TYPE'] == 'habitat'):
+          row['TYPE'] == _HABITAT_TYPE):
         return None
 
     return target_raster_path
@@ -1999,8 +2028,8 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
 
     """
     required_column_headers = ['NAME', 'PATH', 'TYPE', _BUFFER_HEADER]
-    required_types = ['habitat', 'stressor']
-    required_buffer_type = 'stressor'
+    required_types = [_HABITAT_TYPE, _STRESSOR_TYPE]
+    required_buffer_type = _STRESSOR_TYPE
 
     info_df = pandas.read_csv(base_info_csv_path)
     info_df.columns = map(str.upper, info_df.columns)
@@ -2073,8 +2102,8 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
         lambda row: _generate_raster_path(
             row, output_dir, 'risk_', suffix_end), axis=1)
 
-    habitat_names = info_df[info_df.TYPE == 'habitat'].NAME.tolist()
-    stressor_names = info_df[info_df.TYPE == 'stressor'].NAME.tolist()
+    habitat_names = info_df[info_df.TYPE == _HABITAT_TYPE].NAME.tolist()
+    stressor_names = info_df[info_df.TYPE == _STRESSOR_TYPE].NAME.tolist()
 
     return info_df, habitat_names, stressor_names
 
@@ -2388,7 +2417,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
     multi_index = pandas.MultiIndex.from_product(
-        [habitat_names, stressor_names], names=['HABITAT', 'STRESSOR'])
+        iterables=[habitat_names, stressor_names],
+        names=[_HABITAT_HEADER, _STRESSOR_HEADER])
     LOGGER.info('multi_index: %s' % multi_index)
 
     # Create a multi-index dataframe and fill in default cell values
