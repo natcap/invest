@@ -180,7 +180,7 @@ def execute(args):
             target_pixel_size, 'intersection'),
         kwargs={
             'target_sr_wkt': dem_raster_info['projection'],
-            'base_vector_path_list': [args['watersheds_path']],
+            'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
             },
         hash_algorithm='md5',
