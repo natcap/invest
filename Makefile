@@ -2,15 +2,15 @@
 DATA_DIR := data
 SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
 SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 180
+SVN_DATA_REPO_REV       := 188
 
 SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
 SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 196
+SVN_TEST_DATA_REPO_REV  := 216
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 10cd532ac720
+HG_UG_REPO_REV          := 0e07bc219650
 
 
 ENV = env
@@ -74,14 +74,19 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 
-# These are intended to be overridden by a jenkins build.
-# When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
-# to wherever the datasets will be available based on the forkname and where
-# we're storing the datasets.
-# These defaults assume that we're storing datasets for an InVEST release.
-# DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME :=
-DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+# The fork name and user here are derived from the mercurial path.
+# They will need to be set manually (e.g. make FORKNAME=natcap/invest)
+# if someone wants to build from source outside of mercurial (like if
+# they grabbed a zipfile of the source code)
+# FORKUSER should not need to be set from the CLI.
+FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
+FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
+ifeq ($(FORKUSER),natcap)
+	# DEST_VERSION will be develop unless we are at a tag.
+	DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+else
+	DATA_BASE_URL := http://data.naturalcapitalproject.org/nightly-build/invest-forks/$(FORKUSER)/data
+endif
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
 
@@ -92,7 +97,7 @@ APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
@@ -203,7 +208,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
-	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
 # API docs are copied to dist/apidocs
@@ -256,7 +261,6 @@ ZIPDIRS = Aquaculture \
 		  Malaria \
 		  pollination \
 		  recreation \
-		  ScenarioGenerator \
 		  scenario_proximity \
 		  ScenicQuality \
 		  seasonal_water_yield \
@@ -293,7 +297,7 @@ $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 		/DVERSION=$(VERSION) \
 		/DBINDIR=$(INVEST_BINARIES_DIR) \
 		/DARCHITECTURE=$(PYTHON_ARCH) \
-		/DFORKNAME=$(FORKNAME) \
+		/DFORKNAME=$(FORKUSER) \
 		/DDATA_LOCATION=$(DATA_BASE_URL) \
 		installer\windows\invest_installer.nsi
 

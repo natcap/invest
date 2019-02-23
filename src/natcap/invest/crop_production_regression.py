@@ -1,14 +1,12 @@
 """InVEST Crop Production Percentile Model."""
 from __future__ import absolute_import
 import collections
-import re
 import os
 import logging
 
 import numpy
 from osgeo import gdal
 from osgeo import osr
-from osgeo import ogr
 import pygeoprocessing
 import taskgraph
 
@@ -198,7 +196,7 @@ def execute(args):
 
     unique_lucodes = numpy.array([])
     for _, lu_band_data in pygeoprocessing.iterblocks(
-            args['landcover_raster_path']):
+            (args['landcover_raster_path'], 1)):
         unique_block = numpy.unique(lu_band_data)
         unique_lucodes = numpy.unique(numpy.concatenate(
             (unique_lucodes, unique_block)))
@@ -228,6 +226,11 @@ def execute(args):
     pixel_area_ha = numpy.product([
         abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
     landcover_nodata = landcover_raster_info['nodata'][0]
+    if landcover_nodata is None:
+        LOGGER.warning(
+            "%s does not have nodata value defined; "
+            "assuming all pixel values are valid"
+            % args['landcover_raster_path'])
 
     # Calculate lat/lng bounding box for landcover map
     wgs84srs = osr.SpatialReference()
@@ -239,7 +242,7 @@ def execute(args):
 
     crop_lucode = None
     observed_yield_nodata = None
-    
+
     for crop_name in crop_to_landcover_table:
         crop_lucode = crop_to_landcover_table[crop_name][
             _EXPECTED_LUCODE_TABLE_HEADER]
@@ -279,10 +282,6 @@ def execute(args):
         yield_regression_headers = [
             x for x in crop_regression_table.itervalues().next()
             if x != 'climate_bin']
-
-        clipped_climate_bin_raster_path_info = (
-            pygeoprocessing.get_raster_info(
-                clipped_climate_bin_raster_path))
 
         regression_parameter_raster_path_lookup = {}
         for yield_regression_id in yield_regression_headers:
@@ -344,10 +343,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_n'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['nitrogen_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   nitrogen_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[nitrogen_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -362,10 +361,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_nut'], 1),
                    (regression_parameter_raster_path_lookup['c_p2o5'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['phosphorous_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   phosphorous_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[phosphorous_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -380,10 +379,10 @@ def execute(args):
             args=([(regression_parameter_raster_path_lookup['yield_ceiling'], 1),
                    (regression_parameter_raster_path_lookup['b_k2o'], 1),
                    (regression_parameter_raster_path_lookup['c_k2o'], 1),
-                   (args['landcover_raster_path'], 1)],
-                  _x_yield_op_gen(
-                      crop_to_fertlization_rate_table[crop_name]['potassium_rate'],
-                      crop_lucode, pixel_area_ha),
+                   (args['landcover_raster_path'], 1),
+                   (crop_to_fertlization_rate_table[crop_name]['potassium_rate'], 'raw'),
+                   (crop_lucode, 'raw'), (pixel_area_ha, 'raw')],
+                  _x_yield_op,
                   potassium_yield_raster_path, gdal.GDT_Float32, _NODATA_YIELD),
             target_path_list=[potassium_yield_raster_path],
             dependent_task_list=dependent_task_list,
@@ -409,6 +408,7 @@ def execute(args):
             target_path_list=[crop_production_raster_path],
             dependent_task_list=dependent_task_list,
             task_name='calc_min_of_NKP')
+        dependent_task_list.append(calc_min_NKP_task)
 
         LOGGER.info("Calculate observed yield for %s", crop_name)
         global_observed_yield_raster_path = os.path.join(
@@ -481,7 +481,7 @@ def execute(args):
             dependent_task_list=[interpolate_observed_yield_task],
             task_name='calculate_observed_production_%s' % crop_name)
         dependent_task_list.append(calculate_observed_production_task)
-    
+
     # both 'crop_nutrient.csv' and 'crop' are known data/header values for
     # this model data.
     nutrient_table = utils.build_lookup_from_csv(
@@ -502,7 +502,7 @@ def execute(args):
         task_name='tabulate_results')
 
     if ('aggregate_polygon_path' in args and
-            args['aggregate_polygon_path'] is not None):
+            args['aggregate_polygon_path'] not in ['', None]):
         LOGGER.info("aggregating result over query polygon")
         # reproject polygon to LULC's projection
         target_aggregate_vector_path = os.path.join(
@@ -526,31 +526,24 @@ def execute(args):
     task_graph.join()
 
 
-def _x_yield_op_gen(fert_rate, crop_lucode, pixel_area_ha):
-    """Create a raster calc op given the fertlization rate.
+def _x_yield_op(
+        y_max, b_x, c_x, lulc_array, fert_rate, crop_lucode, pixel_area_ha):
+    """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC)).
 
     The regression model has identical mathematical equations for
     the nitrogen, phosporous, and potassium.  The only difference is
-    the scalars in the equation.  So this closure avoids repeating the
-    same function 3 times for 3 almost identical raster_calculator calls.
-
-    Returns:
-        A local_op function to pass to pygeoprocessing.raster_calculator.
-
+    the scalars in the equation (fertizlization rate and pixel area).
     """
-    def _x_yield_op(y_max, b_x, c_x, lulc_array):
-        """Calc generalized yield op, Ymax*(1-b_NP*exp(-cN * N_GC))"""
-        result = numpy.empty(b_x.shape, dtype=numpy.float32)
-        result[:] = _NODATA_YIELD
-        valid_mask = (
-            (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
-            (lulc_array == crop_lucode))
-        result[valid_mask] = y_max[valid_mask] * (
-            1 - b_x[valid_mask] * numpy.exp(
-                -c_x[valid_mask] * fert_rate) *
-            pixel_area_ha)
-        return result
-    return _x_yield_op
+    result = numpy.empty(b_x.shape, dtype=numpy.float32)
+    result[:] = _NODATA_YIELD
+    valid_mask = (
+        (b_x != _NODATA_YIELD) & (c_x != _NODATA_YIELD) &
+        (lulc_array == crop_lucode))
+    result[valid_mask] = y_max[valid_mask] * (
+        1 - b_x[valid_mask] * numpy.exp(
+            -c_x[valid_mask] * fert_rate) *
+        pixel_area_ha)
+    return result
 
 
 def _min_op(y_n, y_p, y_k):
@@ -604,10 +597,13 @@ def _mask_observed_yield_op(
 
     """
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-    result[:] = observed_yield_nodata
-    valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+    if landcover_nodata is not None:
+        result[:] = observed_yield_nodata
+        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        result[valid_mask] = 0.0
+    else:
+        result[:] = 0.0
     lulc_mask = lulc_array == crop_lucode
-    result[valid_mask] = 0.0
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
     return result
@@ -659,7 +655,7 @@ def tabulate_regression_results(
             observed_yield_nodata = pygeoprocessing.get_raster_info(
                 observed_production_raster_path)['nodata'][0]
             for _, yield_block in pygeoprocessing.iterblocks(
-                    observed_production_raster_path):
+                    (observed_production_raster_path, 1)):
                 production_pixel_count += numpy.count_nonzero(
                     ~numpy.isclose(yield_block, observed_yield_nodata) &
                     (yield_block > 0.0))
@@ -676,7 +672,7 @@ def tabulate_regression_results(
                     crop_name, file_suffix))
             yield_sum = 0.0
             for _, yield_block in pygeoprocessing.iterblocks(
-                    crop_production_raster_path):
+                    (crop_production_raster_path, 1)):
                 yield_sum += numpy.sum(
                     yield_block[~numpy.isclose(yield_block, _NODATA_YIELD)])
             production_lookup['modeled'] = yield_sum
@@ -700,9 +696,12 @@ def tabulate_regression_results(
 
         total_area = 0.0
         for _, band_values in pygeoprocessing.iterblocks(
-                landcover_raster_path):
-            total_area += numpy.count_nonzero(
-                ~numpy.isclose(band_values, landcover_nodata))
+                (landcover_raster_path, 1)):
+            if landcover_nodata is not None:
+                total_area += numpy.count_nonzero(
+                    ~numpy.isclose(band_values, landcover_nodata))
+            else:
+                total_area += band_values.size
         result_table.write(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))

@@ -45,7 +45,6 @@ setup(
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.routing',
-        'natcap.invest.scenario_generator',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
         'natcap.invest.pygeoprocessing_0_3_3',
@@ -126,9 +125,6 @@ setup(
         'natcap.invest.reporting': [
             'reporting_data/*.js',
             'reporting_data/*.css',
-        ],
-        'natcap.invest.scenario_generator': [
-            '*.js',
         ],
     }
 )
