@@ -143,7 +143,16 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, churn_dir)], file_suffix)
 
-    task_graph = taskgraph.TaskGraph(churn_dir, -1, reporting_interval=5.0)
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+
+    task_graph = taskgraph.TaskGraph(
+        churn_dir, n_workers, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []
@@ -158,7 +167,7 @@ def execute(args):
         drainage_present = True
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
-        interpolation_list.append(['near'])
+        interpolation_list.append('near')
 
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
