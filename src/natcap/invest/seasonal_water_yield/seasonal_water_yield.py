@@ -520,14 +520,12 @@ def _execute(args):
         task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    pygeoprocessing.routing.flow_accumulation_mfd(
-        file_registry['flow_dir_mfd_path'], file_registry['l_sum_path'],
-        weight_raster_path_band=file_registry['l_path'])
-
     l_sum_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=(file_registry['flow_dir_mfd_path'], file_registry['l_sum_path']),
-        kwargs={'weight_raster_path_band': file_registry['l_path']},
+        args=(
+            (file_registry['flow_dir_mfd_path'], 1),
+            file_registry['l_sum_path']),
+        kwargs={'weight_raster_path_band': (file_registry['l_path'], 1)},
         target_path_list=[file_registry['l_sum_path']],
         dependent_task_list=vri_dependent_task_list + [
             fill_pit_task, flow_dir_task, stream_threshold_task],
@@ -537,11 +535,6 @@ def _execute(args):
         b_sum_dependent_task_list = [l_avail_task]
     else:
         b_sum_dependent_task_list = [calculate_local_recharge_task]
-
-    task_graph.close()
-    task_graph.join()
-    return
-    ########### left off here
 
     b_sum_task = task_graph.add_task(
         func=seasonal_water_yield_core.route_baseflow_sum,
