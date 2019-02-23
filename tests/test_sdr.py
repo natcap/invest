@@ -16,6 +16,22 @@ REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'sdr')
 
 
+def assert_expected_results_in_vector(expected_results, vector_path):
+    """Assert one feature vector maps to expected_results key/value pairs."""
+    watershed_results_vector = gdal.OpenEx(vector_path)
+    watershed_results_layer = watershed_results_vector.GetLayer()
+    watershed_results_feature = watershed_results_layer.GetFeature(0)
+    actual_results = {}
+    for key in expected_results:
+        actual_results[key] = watershed_results_feature.GetField(key)
+    watershed_results_vector = None
+    watershed_results_layer = None
+    watershed_results_feature = None
+    for key in expected_results:
+        numpy.testing.assert_almost_equal(
+            expected_results[key], actual_results[key])
+
+
 class SDRTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
 
@@ -184,27 +200,16 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
-        args['workspace_dir'] = 'sdr_regression_workspace'
         sdr.execute(args)
 
         expected_results = {
-            'sed_retent': 392771.84375000000,
+            'sed_retent': 392771.84375,
             'sed_export': 0.77038854361,
             'usle_tot': 12.69931602478,
         }
-        watershed_results_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'))
-        watershed_results_layer = watershed_results_vector.GetLayer()
-        watershed_results_feature = watershed_results_layer.GetFeature(0)
-        actual_results = {}
-        for key in expected_results:
-            actual_results[key] = watershed_results_feature.GetField(key)
-        watershed_results_vector = None
-        watershed_results_layer = None
-        watershed_results_feature = None
-        for key in expected_results:
-            numpy.testing.assert_almost_equal(
-                expected_results[key], actual_results[key])
+        vector_path = os.path.join(
+            args['workspace_dir'], 'watershed_results_sdr.shp')
+        assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_non_square_dem(self):
         """SDR non-square DEM pixels.
@@ -219,36 +224,14 @@ class SDRTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         sdr.execute(args)
 
-        SDRTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
-            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
-
-    def test_output_exists_regression(self):
-        """SDR test case where an output shapefile already exists.
-
-        Execute SDR with sample data but workspace already contains
-        "watershed_results_sdr.shp".  Model should delete file and proceed
-        with report.
-        """
-        from natcap.invest import sdr
-
-        # use predefined directory so test can clean up files during teardown
-        args = SDRTests.generate_base_args(self.workspace_dir)
-
-        # copy AOI on top of where the output shapefile should reside
-        shutil.copy(
-            args['watersheds_path'], os.path.join(
-                self.workspace_dir, 'watershed_results_sdr.shp'))
-
-        sdr.execute(args)
-
-        SDRTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
-            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'),
-            os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
+        expected_results = {
+            'sed_retent': 339973.96875,
+            'sed_export': 0.6207485795,
+            'usle_tot': 11.46732711792,
+        }
+        vector_path = os.path.join(
+            args['workspace_dir'], 'watershed_results_sdr.shp')
+        assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_drainage_regression(self):
         """SDR drainage layer regression test on sample data.
@@ -263,7 +246,6 @@ class SDRTests(unittest.TestCase):
         args = SDRTests.generate_base_args(self.workspace_dir)
         args['drainage_path'] = os.path.join(
             REGRESSION_DATA, 'sample_drainage.tif')
-        args['workspace_dir'] = 'sdr_drainage_workspace_test'
         sdr.execute(args)
 
         expected_results = {
@@ -271,21 +253,9 @@ class SDRTests(unittest.TestCase):
             'sed_export': 0.91835135221,
             'usle_tot': 11.59875869751,
         }
-
-        watershed_results_vector = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'watershed_results_sdr.shp'))
-        watershed_results_layer = watershed_results_vector.GetLayer()
-        watershed_results_feature = watershed_results_layer.GetFeature(0)
-        actual_results = {}
-        for key in expected_results:
-            actual_results[key] = watershed_results_feature.GetField(key)
-        watershed_results_vector = None
-        watershed_results_layer = None
-        watershed_results_feature = None
-        for key in expected_results:
-            numpy.testing.assert_almost_equal(
-                expected_results[key], actual_results[key])
-
+        vector_path = os.path.join(
+            args['workspace_dir'], 'watershed_results_sdr.shp')
+        assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_base_usle_c_too_large(self):
         """SDR test exepected exception for USLE_C > 1.0."""

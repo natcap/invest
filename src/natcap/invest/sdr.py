@@ -106,6 +106,10 @@ def execute(args):
         args['drainage_path'] (string): (optional) path to drainage raster that
             is used to add additional drainage areas to the internally
             calculated stream layer
+        args['n_workers'] (int): if present, indicates how many worker
+            processes should be used in parallel processing. -1 indicates
+            single process mode, 0 is single process but non-blocking mode,
+            and >= 1 is number of processes.
 
     Returns:
         None.
@@ -143,13 +147,9 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, churn_dir)], file_suffix)
 
-    try:
+    n_workers = -1  # single process mode, but adjust if in args
+    if 'n_workers' in args:
         n_workers = int(args['n_workers'])
-    except (KeyError, ValueError, TypeError):
-        # KeyError when n_workers is not present in args
-        # ValueError when n_workers is an empty string.
-        # TypeError when n_workers is None.
-        n_workers = -1  # single process mode.
 
     task_graph = taskgraph.TaskGraph(
         churn_dir, n_workers, reporting_interval=5.0)
@@ -1126,9 +1126,6 @@ def _generate_report(
         }
 
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
-    # Delete if existing shapefile with the same name and path
-    if os.path.isfile(watershed_results_sdr_path):
-        os.remove(watershed_results_sdr_path)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
@@ -1148,37 +1145,6 @@ def _generate_report(
                 field_name,
                 float(field_summaries[field_name][feature_id]['sum']))
         layer.SetFeature(feature)
-
-
-def _threshold_flow_accumulation(
-        flow_accum_path, flow_threshold, target_channel_path):
-    """Calculate channel raster by thresholding flow accumulation.
-
-    Parameters:
-        flow_accum_path (str): path to a single band flow accumulation raster.
-        flow_threshold (float): if the value in `flow_accum_path` is less
-            than or equal to this value, the pixel will be classified as a
-            channel.
-        target_channel_path (str): path to target raster that will contain
-            pixels set to 1 if they are a channel, 0 if not, and possibly
-            between 0 and 1 if a partial channel. (to be defined).
-
-    Returns:
-        None.
-    """
-    nodata = pygeoprocessing.get_raster_info(flow_accum_path)['nodata'][0]
-    channel_nodata = -1.0
-
-    def threshold_op(flow_val):
-        valid_mask = ~numpy.isclose(flow_val, nodata)
-        result = numpy.empty(flow_val.shape, dtype=numpy.float32)
-        result[:] = channel_nodata
-        result[valid_mask] = flow_val[valid_mask] >= flow_threshold
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(flow_accum_path, 1)], threshold_op, target_channel_path,
-        gdal.GDT_Float32, channel_nodata)
 
 
 @validation.invest_validator
@@ -1255,7 +1221,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
@@ -1282,7 +1248,8 @@ def validate(args, limit_to=None):
                             for feature in watersheds_layer:
                                 try:
                                     value = feature.GetFieldAsString('ws_id')
-                                    _ = int(value)  # value should be an integer
+                                    # value should be an integer
+                                    _ = int(value)
                                 except ValueError:
                                     validation_error_list.append((
                                         ['watersheds_path'],
