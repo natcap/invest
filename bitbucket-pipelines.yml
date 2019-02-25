@@ -32,8 +32,17 @@ pipelines:
                     - dist/**
             - step:
                 name: InVEST NSIS Installer
-                image: natcap/nsis-build
+                image: natcap/py27-wine-build:f8dbb1a79151859d0358cc9e645d339bae5b992d
                 script:
+                    # First, need to put the vcredist into the right place (no powershell under WINE)
+                    - make build
+                    - wget -O build/vcredist_x86.x86 \
+                        https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
+                    - apt-get update && apt-get install -y python-setuptools cython python-numpy
+                      # Self-contained make binary, taken from scoop.sh 'package manager'
+                    - wget ftp://ftp.equation.com/make/32/make.exe
+                    - export WINEDEBUG=fixme-all  # Filter out fixme logging from WINE
+                    - wine pip install cython numpy setuptools_scm
                     - make installer
                 artifacts:
                     - dist/**
