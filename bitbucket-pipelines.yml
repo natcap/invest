@@ -42,14 +42,6 @@ pipelines:
                     - wine make PYTHON=env/Scripts/python windows_installer
                 artifacts:
                     - dist/**
-            - step:
-                name: Deploy to release bucket
-                image: google/cloud-sdk
-                script:
-					- # echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
-					- # gcloud auth activate-service-account --key-file=client-secret.json
-					- # gsutil -m rsync -dr build/html gs://releases.naturalcapitalproject.org/invest-userguide/latest
-					- # gsutil cp build/latex/*.pdf gs://releases.naturalcapitalproject.org/invest-userguide/latest
     default:
         - parallel:
             - step:
