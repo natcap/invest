@@ -199,6 +199,8 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 
 
 # Build binaries and put them in dist/invest
+# The `invest.exe --list` is to test the binaries.  If something doesn't
+# import, we want to know right away.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RM) $(BUILD_DIR)/pyi-build
@@ -208,6 +210,7 @@ $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 		--clean \
 		--distpath $(DIST_DIR) \
 		exe/invest.spec
+	$(INVEST_BINARIES_DIR)/invest.exe --list
 	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
 
 # Documentation.
