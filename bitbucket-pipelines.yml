@@ -21,9 +21,6 @@ pipelines:
                 name: InVEST Binaries
                 image: natcap/py27-wine-build:f8dbb1a79151859d0358cc9e645d339bae5b992d
                 script:
-                    - wget ftp://ftp.equation.com/make/32/make.exe
-                    - export WINEDEBUG=fixme-all  # Filter out fixme logging from WINE
-                    - wine pip install https://storage.googleapis.com/natcap-build-dependencies/windows/wheels-win32/PyQt4-4.11.4-cp27-cp27m-win32.whl
                     - wine make env
                     - wine env\scripts\python.exe -m pip install --upgrade .
                     - wine env\scripts\python.exe -m pip install -r requirements-gui.txt
@@ -36,40 +33,32 @@ pipelines:
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
-                    - wget -O build/vcredist_x86.x86 \
+                    - wget -nv -O build/vcredist_x86.exe \
                         https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
-                    - apt-get update && apt-get install -y python-setuptools cython python-numpy
-                      # Self-contained make binary, taken from scoop.sh 'package manager'
-                    - wget ftp://ftp.equation.com/make/32/make.exe
-                    - export WINEDEBUG=fixme-all  # Filter out fixme logging from WINE
-                    - wine pip install cython numpy setuptools_scm
-                    - make installer
+                    - wine python -m virtualenv --system-site-packages env
+                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
+                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
+                    - wine make PYTHON=env/Scripts/python windows_installer
                 artifacts:
                     - dist/**
             - step:
                 name: Deploy to release bucket
-                image: debian:stretch
+                image: google/cloud-sdk
                 script:
-                    - exit 1
+					- # echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
+					- # gcloud auth activate-service-account --key-file=client-secret.json
+					- # gsutil -m rsync -dr build/html gs://releases.naturalcapitalproject.org/invest-userguide/latest
+					- # gsutil cp build/latex/*.pdf gs://releases.naturalcapitalproject.org/invest-userguide/latest
     default:
         - parallel:
             - step:
                 name: UI tests on WINE
                 image: natcap/py27-wine-build:f8dbb1a79151859d0358cc9e645d339bae5b992d
                 script:
-                    - wget ftp://ftp.equation.com/make/32/make.exe
-                    - export WINEDEBUG=fixme-all  # Filter out fixme logging from WINE
-                    - wine pip install https://storage.googleapis.com/natcap-build-dependencies/windows/wheels-win32/PyQt4-4.11.4-cp27-cp27m-win32.whl
-                    - wine pip install cython numpy setuptools_scm
                     - wine make jenkins_test_ui
             - step:
                 name: Model tests on WINE
                 image: natcap/py27-wine-build:f8dbb1a79151859d0358cc9e645d339bae5b992d
                 script:
-                    - apt-get update && apt-get install -y python-setuptools cython python-numpy
-                      # Self-contained make binary, taken from scoop.sh 'package manager'
-                    - wget ftp://ftp.equation.com/make/32/make.exe
-                    - export WINEDEBUG=fixme-all  # Filter out fixme logging from WINE
-                    - wine pip install cython numpy setuptools_scm
                     - make data/invest-test-data
-                    - wine make jenkins_test_ui
+                    - wine make jenkins_test
