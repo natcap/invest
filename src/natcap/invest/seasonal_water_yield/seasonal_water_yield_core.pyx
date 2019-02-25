@@ -380,10 +380,11 @@ cdef class _ManagedRaster:
             raster = None
 
 
-def calculate_local_recharge(
+cpdef calculate_local_recharge(
         precip_path_list, et0_path_list, qfm_path_list, flow_dir_mfd_path,
-        kc_path_list, alpha_month, beta_i, gamma, stream_path, target_li_path,
-        target_li_avail_path, target_l_sum_avail_path, target_aet_path):
+        kc_path_list, alpha_month_map, float beta_i, float gamma, stream_path,
+        target_li_path, target_li_avail_path, target_l_sum_avail_path,
+        target_aet_path):
     """
     Calculate the rasters defined by equations [3]-[7].
 
@@ -398,8 +399,8 @@ def calculate_local_recharge(
             Equation [1].
         flow_dir_mfd_path (str): path to a PyGeoprocessing Multiple Flow
             Direction raster indicating flow directions for this analysis.
-        alpha_month (list): fraction of upslope annual available recharge that
-            is available in month m.
+        alpha_month_map (dict): fraction of upslope annual available recharge
+            that is available in month m (indexed from 1).
         beta_i (float):  fraction of the upgradient subsidy that is available
             for downgradient evapotranspiration.
         gamma (float): the fraction of pixel recharge that is available to
@@ -423,11 +424,19 @@ def calculate_local_recharge(
     """
     cdef int flow_dir_nodata
     cdef int peak_pixel
-    cdef int center_val
-    cdef int xi, yi, xoff, yoff, xi_root, yi_root, xi_n, yi_n, n_flow_dir
+    cdef int flow_dir_i, flow_dir_j
+    cdef int xi, yi, xoff, yoff, xi_root, yi_root, xj, yj
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
-    cdef stack[pair[int, int]] peak_cell_stack
+    cdef float pet_m, p_m, qf_m, aet_i
+
+    cdef stack[pair[int, int]] work_stack
+    cdef _ManagedRaster et0_m_raster, qf_m_raster
+
+    cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
+        numpy.array(
+            [x[1] for x in sorted(alpha_month_map.iteritems())],
+            dtype=numpy.float32))
 
     # used for time-delayed logging
     cdef time_t last_log_time
@@ -438,6 +447,18 @@ def calculate_local_recharge(
     flow_dir_nodata = flow_dir_raster_info['nodata'][0]
     raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
     cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
+
+    et0_m_raster_list = []
+    for et0_path in et0_path_list:
+        et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
+
+    precip_m_raster_list = []
+    for precip_path in precip_path_list:
+        precip_m_raster_list.append(_ManagedRaster(precip_path, 1, 0))
+
+    qf_m_raster_list = []
+    for qfm_path in qfm_path_list:
+        qf_m_raster_list.append(_ManagedRaster(qfm_path, 1, 0))
 
     target_nodata = -1e32
     pygeoprocessing.new_raster_from_base(
@@ -486,8 +507,8 @@ def calculate_local_recharge(
             yi_root = yoff+yi
             for xi in xrange(win_xsize):
                 xi_root = xoff+xi
-                center_val = <int>flow_raster.get(xi_root, yi_root)
-                if center_val == flow_dir_nodata:
+                flow_dir_i = <int>flow_raster.get(xi_root, yi_root)
+                if flow_dir_i == flow_dir_nodata:
                     continue
                 # search neighbors for downhill or nodata
                 peak_pixel = 1
@@ -496,26 +517,48 @@ def calculate_local_recharge(
                     # 321
                     # 4x0
                     # 567
-                    xi_n = xi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
-                    yi_n = yi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
-                    if (xi_n < 0 or xi_n >= raster_x_size or
-                            yi_n < 0 or yi_n >= raster_y_size):
+                    xj = xi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                    yj = yi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                    if (xj < 0 or xj >= raster_x_size or
+                            yj < 0 or yj >= raster_y_size):
                         continue
-                    n_flow_dir = <int>flow_raster.get(xi_n, yi_n)
-                    if (0xF & (n_flow_dir >> (
+                    flow_dir_j = <int>flow_raster.get(xj, yj)
+                    if (0xF & (flow_dir_j >> (
                             4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
                         # pixel flows inward, not a peak
                         peak_pixel = 0
                         break
                 if peak_pixel:
-                    peak_cell_stack.push(
+                    work_stack.push(
                         pair[int, int](xi_root, yi_root))
                     target_l_sum_avail_raster.set(
                         xi_root, yi_root, 0.0)
 
-    while peak_cell_stack.size() > 0:
-        LOGGER.debug(peak_cell_stack.top())
-        peak_cell_stack.pop()
+                while work_stack.size() > 0:
+                    xi = work_stack.top().first
+                    yi = work_stack.top().second
+                    work_stack.pop()
+
+                    l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
+                    aet_i = 0
+                    for m_index in range(12):
+                        precip_m_raster = (
+                            <_ManagedRaster?>precip_m_raster_list[m_index])
+                        qf_m_raster = (
+                            <_ManagedRaster?>qf_m_raster_list[m_index])
+                        et0_m_raster = (
+                            <_ManagedRaster?>et0_m_raster_list[m_index])
+
+                        p_m = precip_m_raster.get(xi, yi)
+                        qf_m = qf_m_raster.get(xi, yi)
+                        pet_m = et0_m_raster.get(xi, yi)
+
+                        aet_i += min(
+                            p_m - qf_m +
+                            alpha_month_array[m_index]*beta_i*l_sum_avail_i,
+                            pet_m)
+                    LOGGER.debug('%d %d %f', xi, yi, aet_i)
+
     """
     route_local_recharge(
         precip_path_list, et0_path_list, kc_path_list, target_li_path,

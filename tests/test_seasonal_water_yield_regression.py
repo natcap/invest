@@ -540,7 +540,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'beta_i': '1.0',
             'gamma': '1.0',
             'results_suffix': '',
-            'threshold_flow_accumulation': '1000',
+            'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
         }
 
@@ -598,6 +598,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
 
+        args['workspace_dir'] = 'swy_test_workspace'
         seasonal_water_yield.execute(args)
 
         # generate aggregated results csv table for assertion

@@ -5,7 +5,6 @@ import os
 import logging
 import re
 import fractions
-import uuid
 import warnings
 
 import scipy.special
@@ -150,6 +149,11 @@ def execute(args):
         args['monthly_alpha'] (boolean): if True, use the alpha
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True.
+        args['n_workers'] (int): (optional) indicates the number of processes
+            to devote to potential parallel task execution. A value < 0 will
+            use a single process, 0 will be non-blocking scheduling but
+            single process, and >= 1 will make additional processes for
+            parallel execution.
 
     Returns:
         ``None``
@@ -208,14 +212,14 @@ def _execute(args):
 
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month = dict(
+        alpha_month_map = dict(
             (key, val['alpha']) for key, val in
             utils.build_lookup_from_csv(
                 args['monthly_alpha_path'], 'month').iteritems())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
-        alpha_month = dict(
+        alpha_month_map = dict(
             (month_index+1, alpha_m) for month_index in range(12))
 
     beta_i = float(fractions.Fraction(args['beta_i']))
@@ -229,8 +233,11 @@ def _execute(args):
     cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
-    task_graph = taskgraph.TaskGraph(
-        cache_dir, -1)#max(1, multiprocessing.cpu_count()))
+
+    n_workers = -1
+    if 'n_workers' in args:
+        n_workers = int(args['n_workers'])
+    task_graph = taskgraph.TaskGraph(cache_dir, n_workers)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -304,7 +311,7 @@ def _execute(args):
             input_align_list, output_align_list, interpolate_list,
             pixel_size, 'intersection'),
         kwargs={
-            'base_vector_path_list': [args['aoi_path']],
+            'base_vector_path_list': (args['aoi_path'],),
             'raster_align_index': align_index},
         target_path_list=output_align_list,
         task_name='align rasters')
@@ -339,9 +346,10 @@ def _execute(args):
         task_name='flow accum task')
 
     stream_threshold_task = task_graph.add_task(
-        func=stream_threshold,
+        func=pygeoprocessing.routing.extract_streams_mfd,
         args=(
-            file_registry['flow_accum_path'],
+            (file_registry['flow_accum_path'], 1),
+            (file_registry['flow_dir_mfd_path'], 1),
             threshold_flow_accumulation,
             file_registry['stream_path']),
         target_path_list=[file_registry['stream_path']],
@@ -396,7 +404,7 @@ def _execute(args):
                         file_registry['dem_aligned_path'],
                         file_registry['n_events_path_list'][month_id],
                         gdal.GDT_Float32, [TARGET_NODATA]),
-                    kwargs={'fill_value_list': [n_events]},
+                    kwargs={'fill_value_list': (n_events,)},
                     target_path_list=[
                         file_registry['n_events_path_list'][month_id]],
                     dependent_task_list=[align_task],
@@ -479,7 +487,7 @@ def _execute(args):
                 file_registry['qfm_path_list'],
                 file_registry['flow_dir_mfd_path'],
                 file_registry['kc_path_list'],
-                alpha_month,
+                alpha_month_map,
                 beta_i, gamma, file_registry['stream_path'],
                 file_registry['l_path'],
                 file_registry['l_avail_path'],
@@ -550,6 +558,7 @@ def _execute(args):
             fill_pit_task, l_sum_task, stream_threshold_task],
         task_name='calculate B_sum')
 
+    """
     LOGGER.info('calculate B')
     b_task = task_graph.add_task(
         func=_calculate_b,
@@ -560,7 +569,6 @@ def _execute(args):
         dependent_task_list=[b_sum_task],
         task_name='calculate B')
 
-    """
     LOGGER.info('deleting temporary files')
     for file_id in _TMP_BASE_FILES:
         try:

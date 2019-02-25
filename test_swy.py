@@ -7,20 +7,22 @@ import natcap.invest.seasonal_water_yield.seasonal_water_yield
 
 logging.basicConfig(level=logging.DEBUG)
 
+logging.getLogger('taskgraph').setLevel(logging.WARN)
+
 args = {
     u'alpha_m': u'1/12',
-    u'aoi_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\watershed.shp',
+    u'aoi_path': u'data\\invest-data\\seasonal_water_yield\\watershed.shp',
     u'beta_i': u'1.0',
-    u'biophysical_table_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\biophysical_table.csv',
-    u'dem_raster_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\dem.tif',
-    u'et0_dir': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\eto_dir',
+    u'biophysical_table_path': u'data\\invest-data\\seasonal_water_yield\\biophysical_table.csv',
+    u'dem_raster_path': u'data\\invest-data\\seasonal_water_yield\\dem.tif',
+    u'et0_dir': u'data\\invest-data\\seasonal_water_yield\\eto_dir',
     u'gamma': u'1.0',
-    u'lulc_raster_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\lulc.tif',
+    u'lulc_raster_path': u'data\\invest-data\\seasonal_water_yield\\lulc.tif',
     u'monthly_alpha': False,
-    u'precip_dir': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\precip_dir',
-    u'rain_events_table_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\rain_events_table.csv',
+    u'precip_dir': u'data\\invest-data\\seasonal_water_yield\\precip_dir',
+    u'rain_events_table_path': u'data\\invest-data\\seasonal_water_yield\\rain_events_table.csv',
     u'results_suffix': u'',
-    u'soil_group_path': u'D:\\rpsharp_documents\\bitbucket_repos\\invest\\data\\invest-data\\seasonal_water_yield\\soil_group.tif',
+    u'soil_group_path': u'data\\invest-data\\seasonal_water_yield\\soil_group.tif',
     u'threshold_flow_accumulation': u'1000',
     u'user_defined_climate_zones': False,
     u'user_defined_local_recharge': False,
