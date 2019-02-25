@@ -381,7 +381,7 @@ cdef class _ManagedRaster:
 
 
 cpdef calculate_local_recharge(
-        precip_path_list, et0_path_list, qfm_path_list, flow_dir_mfd_path,
+        precip_path_list, et0_path_list, qf_m_path_list, flow_dir_mfd_path,
         kc_path_list, alpha_month_map, float beta_i, float gamma, stream_path,
         target_li_path, target_li_avail_path, target_l_sum_avail_path,
         target_aet_path):
@@ -395,7 +395,7 @@ cpdef calculate_local_recharge(
         precip_path_list (list): list of paths to monthly precipitation
             rasters. (model input)
         et0_path_list (list): path to monthly ET0 rasters. (model input)
-        qfm_path_list (list): path to monthly quickflow rasters calculated by
+        qf_m_path_list (list): path to monthly quickflow rasters calculated by
             Equation [1].
         flow_dir_mfd_path (str): path to a PyGeoprocessing Multiple Flow
             Direction raster indicating flow directions for this analysis.
@@ -431,7 +431,7 @@ cpdef calculate_local_recharge(
     cdef float pet_m, p_m, qf_m, aet_i
 
     cdef stack[pair[int, int]] work_stack
-    cdef _ManagedRaster et0_m_raster, qf_m_raster
+    cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
         numpy.array(
@@ -453,12 +453,16 @@ cpdef calculate_local_recharge(
         et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
 
     precip_m_raster_list = []
-    for precip_path in precip_path_list:
-        precip_m_raster_list.append(_ManagedRaster(precip_path, 1, 0))
+    for precip_m_path in precip_path_list:
+        precip_m_raster_list.append(_ManagedRaster(precip_m_path, 1, 0))
 
     qf_m_raster_list = []
-    for qfm_path in qfm_path_list:
-        qf_m_raster_list.append(_ManagedRaster(qfm_path, 1, 0))
+    for qf_m_path in qf_m_path_list:
+        qf_m_raster_list.append(_ManagedRaster(qf_m_path, 1, 0))
+
+    kc_m_raster_list = []
+    for kc_m_path in kc_path_list:
+        kc_m_raster_list.append(_ManagedRaster(kc_m_path, 1, 0))
 
     target_nodata = -1e32
     pygeoprocessing.new_raster_from_base(
@@ -548,10 +552,13 @@ cpdef calculate_local_recharge(
                             <_ManagedRaster?>qf_m_raster_list[m_index])
                         et0_m_raster = (
                             <_ManagedRaster?>et0_m_raster_list[m_index])
+                        kc_m_raster = (
+                            <_ManagedRaster?>kc_m_raster_list[m_index])
 
                         p_m = precip_m_raster.get(xi, yi)
                         qf_m = qf_m_raster.get(xi, yi)
-                        pet_m = et0_m_raster.get(xi, yi)
+                        kc_m = kc_m_raster.get(xi, yi)
+                        pet_m = kc_m * et0_m_raster.get(xi, yi)
 
                         aet_i += min(
                             p_m - qf_m +
