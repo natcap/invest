@@ -1019,14 +1019,14 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     Divide the total risk by the number of habitats on each pixel.
 
     Parameters:
-        habitat_count_arr (array): an array with each pixel indicating the
-            number of habitats existing on that pixel.
+        habitat_count_arr (array): an integer array with each pixel indicating
+            the number of habitats existing on that pixel.
 
         *hab_risk_arrays: a list of arrays representing reclassified risk
             scores for each habitat.
 
     Returns:
-        ecosystem_risk_arr (array): an average risk score calculated by
+        ecosystem_risk_arr (array): an average risk float array calculated by
             dividing the cumulative habitat risks by the habitat count in
             that pixel.
 
@@ -1069,7 +1069,7 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
 
     Returns:
         reclass_ecosystem_risk_arr (array): a reclassified ecosystem risk
-            array.
+            integer array.
 
     """
     reclass_ecosystem_risk_arr = numpy.full(
@@ -1100,7 +1100,7 @@ def _reclassify_risk_op(risk_arr, max_risk_score):
             reclassifying the risk score on each pixel.
 
     Returns:
-        reclass_arr (array): an array of reclassified risk scores for a
+        reclass_arr (array): an integer array of reclassified risk scores for a
             certain habitat.
 
     """
@@ -1123,8 +1123,8 @@ def _count_habitats_op(*habitat_arrays):
         *habitat_arrays: a list of arrays with 1s and 0s values.
 
     Returns:
-        habitat_count_arr (array): an array with each pixel indicating the
-            summation value of input habitat arrays.
+        habitat_count_arr (array): an integer array with each pixel indicating
+            the summation value of input habitat arrays.
 
     """
     # Since the habitat arrays have been aligned, we can just use the shape
@@ -1149,8 +1149,8 @@ def _stressor_overlap_op(habitat_count_arr, *stressor_arrays):
         *stressor_arrays: a list of arrays with 1s and 0s values.
 
     Returns:
-        overlap_arr (array): an array with each pixel indicating the summation
-            value of input arrays.
+        overlap_arr (array): an integer array with each pixel indicating the
+            summation value of input arrays.
 
     """
     overlap_arr = numpy.full(
@@ -1247,15 +1247,15 @@ def _tot_risk_op(habitat_arr, *indi_risk_arrays):
     valid pixel of the habitat.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): an integer habitat array where 1's indicates
+            habitat existence and 0's non-existence.
 
-        *indi_risk_arrays: a list of individual risk arrays from each stressor
-            to a certain habitat.
+        *indi_risk_arrays: a list of individual risk float arrays from each
+            stressor to a certain habitat.
 
     Returns:
-        tot_risk_arr (array): a cumulative risk array calculated by summing
-            all the individual risk arrays.
+        tot_risk_arr (array): a cumulative risk float array calculated by
+            summing up all the individual risk arrays.
 
     """
     # Fill 0s to the total risk array on where habitat exists
@@ -1278,16 +1278,17 @@ def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
     Multiplicative risk equation: R = E * C
 
     Parameters:
-        exosure_arr (array): an array with total exposure scores.
+        exosure_arr (array): a float array with total exposure scores.
 
-        consequence_arr (array): an array with total consequence scores.
+        consequence_arr (array): a float array with total consequence scores.
 
         risk_eq (str): a string identifying the equation that should be
             used in calculating risk scores. It could be either 'Euclidean' or
             'Multiplicative'.
 
     Returns:
-        risk_arr (array): a risk array calculated based on the risk equation.
+        risk_arr (array): a risk float array calculated based on the risk
+            equation.
 
     """
     risk_arr = numpy.full(
@@ -1326,17 +1327,18 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
     the final exposure or consequence score.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
 
-        *num_denom_list (list): if exists, it's a list of numerator arrays in
-            the first half of the list, and denominator scores the second half.
+        *num_denom_list (list): if exists, it's a list of numerator float
+            arrays in the first half of the list, and denominator scores
+            (float) in the second half.
 
     Returns:
-        final_expo_arr (array): an exposure array calculated by dividing the
-            total numerator by the total denominator. Pixel values are nodata
-            outside of habitat, and will be 0 if there is no valid numerator
-            value on that pixel.
+        final_expo_arr (array): an exposure float array calculated by dividing
+            the total numerator by the total denominator. Pixel values are
+            nodata outside of habitat, and will be 0 if there is no valid
+            numerator value on that pixel.
 
     """
     habitat_mask = (habitat_arr == 1)
@@ -1382,21 +1384,21 @@ def _final_conseq_score_op(habitat_arr, recov_num_arr, *num_denom_list):
     the final exposure or consequence score.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
 
-        recov_num_arr (array): an array of the numerator score from recovery
-            potential, to be added to the consequence numerator scores.
+        recov_num_arr (array): a float array of the numerator score from
+            recovery potential, to be added to the consequence numerator scores
 
-        *num_denom_list (list): if exists, it's a list of numerator arrays in
-            the first half of the list, and denominator scores occupies the
-            second half in addition to the last denominator score from recovery
-            potential.
+        *num_denom_list (list): if exists, it's a list of numerator float
+            arrays in the first half of the list, and denominator scores
+            (float) in the second half, in addition there's a last denominator
+            score (float) from recovery potential.
 
     Returns:
-        final_conseq_arr (array): a consequence array calculated by dividing
-            the total numerator by the total denominator. Pixel values are
-            nodata outside of habitat, and will be 0 if there is no valid
+        final_conseq_arr (array): a consequence float array calculated by
+            dividing the total numerator by the total denominator. Pixel values
+            are nodata outside of habitat, and will be 0 if there is no valid
             numerator value on that pixel.
 
     """
@@ -1442,24 +1444,24 @@ def _pair_criteria_score_op(
     and stressor (including buffer zone) exist.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
 
-        stressor_dist_arr (array): a stressor distance array where pixel
+        stressor_dist_arr (array): a stressor distance float array where pixel
             values represent the distance of that pixel to a stressor
             pixel.
 
         stressor_buffor (float): a number representing how far down the
             influence is from the stressor pixel.
 
-        num_arr (array): an array of the numerator scores calculated based on
-            the E/C equation.
+        num_arr (array): a float array of the numerator scores calculated based
+            on the E/C equation.
 
         denom (float): a cumulative value pre-calculated based on the criteria
             CSV table. It will be used to divide the numerator.
 
     Returns:
-        score_arr (array): an array of the scores calculated based on
+        score_arr (array): a float array of the scores calculated based on
             the E/C equation in users guide.
 
     """
@@ -1498,10 +1500,10 @@ def _pair_criteria_num_op(
     added if spatial_explicit_arr_const is provided.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1s indicates habitat
+        habitat_arr (array): a habitat integer array where 1s indicates habitat
             existence and 0s non-existence.
 
-        stressor_dist_arr (array): a stressor distance array where pixel
+        stressor_dist_arr (array): a stressor distance float array where pixel
             values represent the distance of that pixel to a stressor
             pixel.
 
@@ -1516,12 +1518,12 @@ def _pair_criteria_num_op(
             CSV table. It will be divided by denominator to get exposure score.
 
         *spatial_explicit_arr_const: if exists, it is a list of variables
-            representing stressor attribute array, DQ, weight, and nodata
-            respectively on every four items.
+            representing rating float array, DQ, weight, and nodata
+            on every four items.
 
     Returns:
-        num_arr (array): an array of the numerator scores calculated based on
-            the E/C equation.
+        num_arr (array): a float array of the numerator scores calculated based
+            on the E/C equation.
 
     """
     habitat_mask = (habitat_arr == 1)
@@ -1681,10 +1683,10 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
     If 2 < score <= 3, reclassify it to 3.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
 
-        num_arr (array): an array of the numerator score for recovery
+        num_arr (array): a float array of the numerator score for recovery
             potential.
 
         denom (float): the precalculated cumulative denominator score.
@@ -1693,8 +1695,8 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
             reclassified.
 
     Returns:
-        output_recovery_arr (array): an array of the recovery potential
-            score calculated based on the recovery potential equation.
+        output_recovery_arr (array): a integer array of the reclassified
+            recovery potential scores.
 
     """
     # Initialize numerator and denominator arrays and fill the habitat
@@ -1707,7 +1709,7 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
     # Calculate the recovery score by dividing numerator by denominator
     # and then convert it to reclassified by using max_rating
     recov_reclass_arr[habitat_mask] = numpy.ceil(
-        3. - num_arr[habitat_mask] / denom / max_rating * 3.)
+        3. - num_arr[habitat_mask] / denom / max_rating * 3.).astype(int)
 
     return recov_reclass_arr
 
@@ -1720,18 +1722,18 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
     and use a spatial criteria if spatial_explicit_arr_const is provided.
 
     Parameters:
-        habitat_arr (array): a habitat array where 1's indicates habitat
-            existence and 0's non-existence.
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
 
         num (float): a cumulative value pre-calculated based on the criteria
             CSV table. It will be divided by denominator to get exposure score.
 
         *spatial_explicit_arr_const: if exists, it is a list of variables
-            representing resilience array, DQ, weight, and nodata
-            respectively on every four items.
+            representing resilience float array, DQ, weight, and nodata
+            on every four items.
 
     Returns:
-        num_arr (array): an array of the numerator score for recovery
+        num_arr (array): a float array of the numerator score for recovery
             potential.
 
     """
