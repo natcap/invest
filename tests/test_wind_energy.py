@@ -1,10 +1,11 @@
 """Module for Regression Testing the InVEST Wind Energy module."""
 import unittest
-import tempfile
-import shutil
-import os
 import csv
+import shutil
+import tempfile
+import os
 import pickle
+import re
 
 import numpy
 import numpy.testing
@@ -363,9 +364,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
@@ -387,9 +388,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
@@ -413,9 +414,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
@@ -452,9 +453,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path))
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
@@ -493,11 +494,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 1E-6)
 
         vector_path = 'wind_energy_points.shp'
-
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(
-                REGRESSION_DATA, 'pricevalgridland', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path))
 
     def test_grid_points_no_aoi(self):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
@@ -741,3 +740,74 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['rate_change'] = 0.2
 
         wind_energy.validate(args)
+
+    @staticmethod
+    def _assert_vectors_equal(a_vector_path, b_vector_path):
+        """Assert that geometries and fields in the two vectors are equal.
+
+        Parameters:
+            a_vector_path (str): a path to an OGR vector.
+            b_vector_path (str): a path to an OGR vector.
+
+        Returns:
+            None.
+
+        Raises:
+            AssertionError when the two geometries or field values are not
+            equal up to desired precision (default is 6).
+
+        """
+        a_shape = ogr.Open(a_vector_path)
+        a_layer = a_shape.GetLayer(0)
+        a_feat = a_layer.GetNextFeature()
+
+        b_shape = ogr.Open(b_vector_path)
+        b_layer = b_shape.GetLayer(0)
+        b_feat = b_layer.GetNextFeature()
+
+        while a_feat is not None:
+            # Get coordinates from geometry and store them in a list
+            a_geom = a_feat.GetGeometryRef()
+            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
+            a_geom_list = [float(x) for x in a_geom_list]
+
+            b_geom = b_feat.GetGeometryRef()
+            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
+            b_geom_list = [float(x) for x in b_geom_list]
+
+            try:
+                numpy.testing.assert_array_almost_equal(
+                    a_geom_list, b_geom_list)
+            except AssertionError:
+                a_feature_fid = a_feat.GetFID()
+                b_feature_fid = b_feat.GetFID()
+                raise AssertionError('Geometries are not equal in feature %s, '
+                                     'regression feature %s.' %
+                                     (a_feature_fid, b_feature_fid))
+
+            # Get field names/values as dictionaries and compare them without
+            # specifying
+            a_fields = a_feat.items()
+            b_fields = b_feat.items()
+            for a_field, a_value in a_fields.iteritems():
+                try:
+                    b_value = b_fields[a_field]
+                except KeyError:
+                    raise AssertionError(
+                        'Field %s in feature %s does not exist in regression'
+                        'feature %s.' % (a_field, a_feature_fid, b_feature_fid))
+                try:
+                    numpy.testing.assert_almost_equal(a_value, b_value)
+                except AssertionError:
+                    raise AssertionError(
+                        'Values in %s field are not equal in feature %s: %s, '
+                        'regression feature %s: %s.' %
+                        (a_field, a_feature_fid, a_value, b_feature_fid, b_value))
+
+            a_feat = None
+            b_feat = None
+            a_feat = a_layer.GetNextFeature()
+            b_feat = b_layer.GetNextFeature()
+
+        a_shape = None
+        b_shape = None
