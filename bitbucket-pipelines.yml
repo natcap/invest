@@ -48,10 +48,18 @@ pipelines:
                 name: UI tests on WINE
                 image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
-                    - wine make jenkins_test_ui
+                    - wine python -m virtualenv --system-site-packages env
+                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
+                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
+                    - wine make PYTHON=env/Scripts/python install
+                    - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest ui_tests
             - step:
                 name: Model tests on WINE
                 image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     - make data/invest-test-data
-                    - wine make jenkins_test
+                    - wine python -m virtualenv --system-site-packages env
+                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
+                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
+                    - wine make PYTHON=env/Scripts/python install
+                    - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest tests
