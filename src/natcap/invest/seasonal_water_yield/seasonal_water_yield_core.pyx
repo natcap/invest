@@ -28,6 +28,9 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
+cdef int is_close(double x, double y):
+    return abs(x-y) <= (1e-8+1e-05*abs(y))
+
 cdef extern from "LRUCache.h":
     cdef cppclass LRUCache[KEY_T, VAL_T]:
         LRUCache(int)
@@ -424,11 +427,14 @@ cpdef calculate_local_recharge(
     """
     cdef int flow_dir_nodata
     cdef int peak_pixel
-    cdef int flow_dir_i, flow_dir_j
-    cdef int xi, yi, xoff, yoff, xi_root, yi_root, xj, yj
+    cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
+    cdef int xi, yi, xj, yj, flow_dir_j
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
     cdef float pet_m, p_m, qf_m, aet_i, p_i, qf_i, l_i, l_avail_i
+
+    cdef int j_neighbor_end_index, mfd_dir_sum
+    cdef float mfd_direction_array[8]
 
     cdef stack[pair[int, int]] work_stack
     cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
@@ -507,12 +513,12 @@ cpdef calculate_local_recharge(
                     raster_x_size * raster_y_size))
 
         # search block for a peak pixel where no other pixel drains to it.
-        for yi in xrange(win_ysize):
-            yi_root = yoff+yi
-            for xi in xrange(win_xsize):
-                xi_root = xoff+xi
-                flow_dir_i = <int>flow_raster.get(xi_root, yi_root)
-                if flow_dir_i == flow_dir_nodata:
+        for ys in xrange(win_ysize):
+            ys_root = yoff+ys
+            for xs in xrange(win_xsize):
+                xs_root = xoff+xs
+                flow_dir_s = <int>flow_raster.get(xs_root, ys_root)
+                if flow_dir_s == flow_dir_nodata:
                     continue
                 # search neighbors for downhill or nodata
                 peak_pixel = 1
@@ -521,8 +527,8 @@ cpdef calculate_local_recharge(
                     # 321
                     # 4x0
                     # 567
-                    xj = xi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
-                    yj = yi_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                    xj = xs_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                    yj = ys_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
                     if (xj < 0 or xj >= raster_x_size or
                             yj < 0 or yj >= raster_y_size):
                         continue
@@ -534,16 +540,67 @@ cpdef calculate_local_recharge(
                         break
                 if peak_pixel:
                     work_stack.push(
-                        pair[int, int](xi_root, yi_root))
+                        pair[int, int](xs_root, ys_root))
                     target_l_sum_avail_raster.set(
-                        xi_root, yi_root, 0.0)
+                        xs_root, ys_root, 0.0)
 
                 while work_stack.size() > 0:
                     xi = work_stack.top().first
                     yi = work_stack.top().second
                     work_stack.pop()
 
-                    l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
+                    # Equation 7, calculate L_sum_avail_i if possible, skip
+                    # otherwise
+                    upstream_defined = 1
+                    # initialize to 0 so we indicate we haven't tracked any
+                    # mfd values yet
+                    j_neighbor_end_index = 0
+                    mfd_dir_sum = 0
+                    for n_dir in xrange(8):
+                        if not upstream_defined:
+                            break
+                        # searching around the pattern:
+                        # 321
+                        # 4x0
+                        # 567
+                        xj = xi+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                        yj = yi+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                        if (xj < 0 or xj >= raster_x_size or
+                                yj < 0 or yj >= raster_y_size):
+                            continue
+                        flow_dir_j = (<int>flow_raster.get(xj, yj) >> (
+                                4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])) & 0xF
+                        if flow_dir_j:
+                            mfd_dir_sum += flow_dir_j
+                            # pixel flows inward, check upstream
+                            l_sum_avail_j = target_l_sum_avail_raster.get(
+                                xj, yj)
+                            if is_close(l_sum_avail_j, target_nodata):
+                                upstream_defined = 0
+                                break
+                            l_avail_j = target_li_avail_raster.get(
+                                xj, yj)
+                            # A step of Equation 7
+                            mfd_direction_array[j_neighbor_end_index] = (
+                                l_sum_avail_j + l_avail_j) * flow_dir_j
+                            j_neighbor_end_index += 1
+                    # calculate l_sum_avail_i by summing all the valid
+                    # directions then normalizing by the sum of the mfd
+                    # direction weights (Equation 8)
+                    if upstream_defined:
+                        l_sum_avail_i = 0.0
+                        # Equation 7
+                        if j_neighbor_end_index > 0:
+                            # we can have no upstream, and then why would we
+                            # divide?
+                            for index in range(j_neighbor_end_index):
+                                l_sum_avail_i += mfd_direction_array[index]
+                            l_sum_avail_i /= <float>mfd_dir_sum
+                        target_l_sum_avail_raster.set(xi, yi, l_sum_avail_i)
+                    else:
+                        # if not defined, we'll get it on another pass
+                        continue
+
                     aet_i = 0
                     p_i = 0
                     qf_i = 0
@@ -562,14 +619,18 @@ cpdef calculate_local_recharge(
                         qf_m = qf_m_raster.get(xi, yi)
                         qf_i += qf_m
                         kc_m = kc_m_raster.get(xi, yi)
+                        # Equation 6
                         pet_m = kc_m * et0_m_raster.get(xi, yi)
-
+                        # Equation 4/5
                         aet_i += min(
+                            pet_m,
                             p_m - qf_m +
-                            alpha_month_array[m_index]*beta_i*l_sum_avail_i,
-                            pet_m)
+                            alpha_month_array[m_index]*beta_i*l_sum_avail_i)
                     LOGGER.debug('%d %d %f', xi, yi, aet_i)
+                    target_aet_raster.set(xi, yi, aet_i)
                     l_i = (p_i - qf_i - aet_i)
+                    target_li_raster.set(xi, yi, l_i)
+                    # Equation 8
                     l_avail_i = min(gamma*l_i, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
