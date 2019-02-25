@@ -245,6 +245,10 @@ def execute(args):
                 task_name='simplify_%s_vector' % vector_name)
 
             if vector_type == _SPATIAL_CRITERIA_TYPE:
+                # Fill value for the target raster should be nodata float,
+                # since criteria rating could be float
+                fill_value = _TARGET_NODATA_FLT
+
                 # If it's a spatial criteria vector, burn the values from the
                 # `rating` attribute
                 rasterize_kwargs = {
@@ -253,6 +257,10 @@ def execute(args):
                 rasterize_pixel_type = _TARGET_PIXEL_FLT
 
             else:  # Could be a habitat or stressor vector
+                # Initial fill values for the target raster should be nodata
+                # int
+                fill_value = _TARGET_NODATA_INT
+
                 # Fill the raster with 1s on where a vector geometry exists
                 rasterize_kwargs = {'burn_values': [1],
                                     'option_list': ["ALL_TOUCHED=TRUE"]}
@@ -264,7 +272,7 @@ def execute(args):
                 func=pygeoprocessing.create_raster_from_vector_extents,
                 args=(simplified_vector_path, target_raster_path,
                       target_pixel_size, rasterize_pixel_type, rasterize_nodata),
-                kwargs={'fill_value': 0},
+                kwargs={'fill_value': fill_value},
                 target_path_list=[target_raster_path],
                 task_name='create_raster_from_%s' % vector_name,
                 dependent_task_list=[simplify_geometry_task])
@@ -329,11 +337,11 @@ def execute(args):
         info_df.TYPE == _HABITAT_TYPE].ALIGN_RASTER_PATH.tolist()
     overlap_stressor_raster_path = os.path.join(
         file_preprocessing_dir, 'stressor_overlap%s.tif' % file_suffix)
-    ecosystem_raster_path = os.path.join(
-        file_preprocessing_dir, 'ecosystem_abundance%s.tif' % file_suffix)
+    habitat_count_raster_path = os.path.join(
+        file_preprocessing_dir, 'habitat_count%s.tif' % file_suffix)
     max_risk_score = _get_max_risk_score(
         align_stressor_raster_list, align_habitat_raster_list,
-        overlap_stressor_raster_path, ecosystem_raster_path, max_rating,
+        overlap_stressor_raster_path, habitat_count_raster_path, max_rating,
         args['risk_eq'])
 
     # For each habitat, calculate the individual and cumulative exposure,
@@ -494,26 +502,39 @@ def execute(args):
     # Calculate ecosystem risk scores. This task depends on every task above,
     # so join the graph first.
     task_graph.join()
-    LOGGER.info('Calculating ecosystem risk.')
+    LOGGER.info('Calculating average and reclassified ecosystem risks.')
 
-    # Create input list for calculating reclassified ecosystem risk.
-    ecosystem_risk_raster_path = os.path.join(output_dir, 'risk_ecosystem.tif')
-    hab_risk_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
+    # Create input list for calculating average & reclassified ecosystem risks
+    ecosystem_risk_raster_path = os.path.join(
+        intermediate_dir, 'AVG_R_ecosystem.tif')
+    reclass_ecosystem_risk_raster_path = os.path.join(
+        output_dir, 'risk_ecosystem.tif')
+
+    # Append individual habitat risk rasters to the input list
+    hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
         'TOTAL_RISK_RASTER_PATH'].tolist()
-    hab_risk_path_band_list = [
-        (ecosystem_raster_path, 1), (max_risk_score, 'raw')]
-    # Append individual habitat risk rasters to the list
-    for path in hab_risk_path_list:
-        hab_risk_path_band_list.append((path, 1))
+    hab_risk_path_band_list = [(habitat_count_raster_path, 1)]
+    for hab_risk_raster_path in hab_risk_raster_path_list:
+        hab_risk_path_band_list.append((hab_risk_raster_path, 1))
 
-    # Calculate and reclassify ecosystem risk
+    # Calculate average ecosystem risk
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(hab_risk_path_band_list, _ecosystem_risk_op,
-              ecosystem_risk_raster_path, _TARGET_PIXEL_INT,
-              _TARGET_NODATA_INT),
+              ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
+              _TARGET_NODATA_FLT),
         target_path_list=[ecosystem_risk_raster_path],
-        task_name='calculate_ecosystem_risk')
+        task_name='calculate_average_ecosystem_risk')
+
+    # Calculate reclassified ecosystem risk
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
+              _reclassify_ecosystem_risk_op,
+              reclass_ecosystem_risk_raster_path,
+              _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+        target_path_list=[reclass_ecosystem_risk_raster_path],
+        task_name='reclassify_ecosystem_risk')
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
@@ -533,7 +554,7 @@ def execute(args):
     out_stressor_raster_paths = info_df[
         info_df.TYPE == _STRESSOR_TYPE].ALIGN_RASTER_PATH.tolist()
     out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths \
-        + [ecosystem_risk_raster_path]
+        + [reclass_ecosystem_risk_raster_path]
 
     out_wgs84_raster_paths = [
         os.path.join(file_preprocessing_dir, 'wgs84_' + os.path.basename(path))
@@ -992,30 +1013,28 @@ def _has_field_name(base_vector_path, field_name):
         return True
 
 
-def _ecosystem_risk_op(ecosystem_arr, max_risk_score, *hab_risk_arrays):
-    """Calculate cumulative habitat risk scores from hab_risk_arrays.
+def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
+    """Calculate average habitat risk scores from hab_risk_arrays.
 
-    First divide the total risk by the number of habitats on each pixel.
-    Then if 0 < 3*(risk/max risk) <= 1, classify the risk score to 1.
-    If 1 < 3*(risk/max risk) <= 2, classify the risk score to 2.
-    If 2 < 3*(risk/max risk) <= 3 , classify the risk score to 3.
-    Note: If 3*(risk/max risk) == 0, it will remain 0, meaning that there's no
-    stressor on the ecosystem.
+    Divide the total risk by the number of habitats on each pixel.
 
     Parameters:
-        ecosys_arr (array): an array with each pixel indicating the number of
-            habitats existing on that pixel.
+        habitat_count_arr (array): an array with each pixel indicating the
+            number of habitats existing on that pixel.
 
-        max_risk_score (float): the maximum possible risk score used for
-            reclassifying the risk score on each pixel.
+        *hab_risk_arrays: a list of arrays representing reclassified risk
+            scores for each habitat.
 
-        *hab_risk_arrays: a list of arrays representing reclassified
-            risk scores for each habitat.
+    Returns:
+        ecosystem_risk_arr (array): an average risk score calculated by
+            dividing the cumulative habitat risks by the habitat count in
+            that pixel.
 
     """
     ecosystem_risk_arr = numpy.full(
-        ecosystem_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    ecosystem_mask = (ecosystem_arr > 0) & (ecosystem_arr != _TARGET_NODATA_INT)
+        habitat_count_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+    ecosystem_mask = (habitat_count_arr > 0) & (
+        habitat_count_arr != _TARGET_NODATA_INT)
     ecosystem_risk_arr[ecosystem_mask] = 0
 
     # Add up all the risks of each habitat
@@ -1026,14 +1045,43 @@ def _ecosystem_risk_op(ecosystem_arr, max_risk_score, *hab_risk_arrays):
     # Divide risk score by the number of habitats in each pixel. This way we
     # could normalize the risk and not be biased by any large risk score
     # resulting from the existence of multiple habitats
-    ecosystem_risk_arr[ecosystem_mask] /= ecosystem_arr[ecosystem_mask]
+    ecosystem_risk_arr[ecosystem_mask] /= habitat_count_arr[ecosystem_mask]
+
+    return ecosystem_risk_arr
+
+
+def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
+    """Reclassify the ecosystem risk into three categories.
+
+    If 0 < 3*(risk/max risk) <= 1, classify the risk score to 1.
+    If 1 < 3*(risk/max risk) <= 2, classify the risk score to 2.
+    If 2 < 3*(risk/max risk) <= 3 , classify the risk score to 3.
+    Note: If 3*(risk/max risk) == 0, it will remain 0, meaning that there's no
+    stressor on the ecosystem.
+
+    Parameters:
+        ecosystem_risk_arr (array): an average risk score calculated by
+            dividing the cumulative habitat risks by the habitat count in
+            that pixel.
+
+        max_risk_score (float): the maximum possible risk score used for
+            reclassifying the risk score on each pixel.
+
+    Returns:
+        reclass_ecosystem_risk_arr (array): a reclassified ecosystem risk
+            array.
+
+    """
+    reclass_ecosystem_risk_arr = numpy.full(
+        ecosystem_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
+    valid_pixel_mask = (ecosystem_risk_arr != _TARGET_NODATA_FLT)
 
     # Divide risk score by (maximum possible risk score/3) to get a value
     # ranging from 0 to 3, then return the ceiling of the output
-    ecosystem_risk_arr[ecosystem_mask] = numpy.ceil(
-        ecosystem_risk_arr[ecosystem_mask] / (max_risk_score/3.))
+    reclass_ecosystem_risk_arr[valid_pixel_mask] = numpy.ceil(
+        ecosystem_risk_arr[valid_pixel_mask] / (max_risk_score/3.)).astype(int)
 
-    return ecosystem_risk_arr
+    return reclass_ecosystem_risk_arr
 
 
 def _reclassify_risk_op(risk_arr, max_risk_score):
@@ -1057,7 +1105,7 @@ def _reclassify_risk_op(risk_arr, max_risk_score):
 
     """
     reclass_arr = numpy.full(
-        risk_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+        risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
     valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
 
     # Divide risk score by (maximum possible risk score/3) to get a value
@@ -1068,35 +1116,35 @@ def _reclassify_risk_op(risk_arr, max_risk_score):
     return reclass_arr
 
 
-def _ecosystem_op(*habitat_arrays):
+def _count_habitats_op(*habitat_arrays):
     """Adding pixel values together from multiple arrays.
 
     Parameters:
         *habitat_arrays: a list of arrays with 1s and 0s values.
 
     Returns:
-        ecosys_arr (array): an array with each pixel indicating the summation
-            value of input habitat arrays.
+        habitat_count_arr (array): an array with each pixel indicating the
+            summation value of input habitat arrays.
 
     """
     # Since the habitat arrays have been aligned, we can just use the shape
     # of the first habitat array
-    ecosys_arr = numpy.full(
+    habitat_count_arr = numpy.full(
         habitat_arrays[0].shape, 0, dtype=numpy.int8)
 
     for habitat_arr in habitat_arrays:
         habiat_mask = (habitat_arr != _TARGET_NODATA_INT)
-        ecosys_arr[habiat_mask] += habitat_arr.astype(int)[habiat_mask]
+        habitat_count_arr[habiat_mask] += habitat_arr.astype(int)[habiat_mask]
 
-    return ecosys_arr
+    return habitat_count_arr
 
 
-def _stressor_overlap_op(ecosystem_arr, *stressor_arrays):
+def _stressor_overlap_op(habitat_count_arr, *stressor_arrays):
     """Adding pixel values together from multiple arrays.
 
     Parameters:
-        ecosys_arr (array): an array with each pixel indicating the summation
-            value of input habitat arrays.
+        habitat_count_arr (array): an array with each pixel indicating the
+            summation value of input habitat arrays.
 
         *stressor_arrays: a list of arrays with 1s and 0s values.
 
@@ -1106,7 +1154,7 @@ def _stressor_overlap_op(ecosystem_arr, *stressor_arrays):
 
     """
     overlap_arr = numpy.full(
-        ecosystem_arr.shape, 0, dtype=numpy.int8)
+        habitat_count_arr.shape, 0, dtype=numpy.int8)
 
     # Sum up the pixel values of each stressor array
     for stressor_arr in stressor_arrays:
@@ -1116,8 +1164,8 @@ def _stressor_overlap_op(ecosystem_arr, *stressor_arrays):
 
     # Convert the values outside of the ecosystem to nodata, since they won't
     # affect the risk of any habitats in the ecosystem
-    non_ecosystem_mask = (ecosystem_arr < 1) | (
-        ecosystem_arr == _TARGET_NODATA_INT)
+    non_ecosystem_mask = (habitat_count_arr < 1) | (
+        habitat_count_arr == _TARGET_NODATA_INT)
     overlap_arr[non_ecosystem_mask] = _TARGET_NODATA_INT
 
     return overlap_arr
@@ -1125,7 +1173,7 @@ def _stressor_overlap_op(ecosystem_arr, *stressor_arrays):
 
 def _get_max_risk_score(
         stressor_path_list, habitat_path_list, target_overlap_stressor_path,
-        target_ecosystem_raster_path, max_rating, risk_eq):
+        target_habitat_count_raster_path, max_rating, risk_eq):
     """Calculate the maximum risk score based on stressor number and ratings.
 
     The maximum possible risk score is calculated by either multiplying the
@@ -1143,7 +1191,7 @@ def _get_max_risk_score(
         target_overlap_stressor_path (str): a path to the output raster that
             has number of overlapping stressors on each pixel.
 
-        target_ecosystem_raster_path (str): a path to the output raster that
+        target_habitat_count_raster_path (str): a path to the output raster that
             has 1s indicating habitat existence and 0s non-existence.
 
         max_rating (float): a number representing the highest potential value
@@ -1160,11 +1208,11 @@ def _get_max_risk_score(
     """
     habitat_path_band_list = [(path, 1) for path in habitat_path_list]
     pygeoprocessing.raster_calculator(
-        habitat_path_band_list, _ecosystem_op,
-        target_ecosystem_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT)
+        habitat_path_band_list, _count_habitats_op,
+        target_habitat_count_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT)
 
     stressor_path_band_list = [(path, 1) for path in stressor_path_list]
-    stressor_path_band_list.insert(0, (target_ecosystem_raster_path, 1))
+    stressor_path_band_list.insert(0, (target_habitat_count_raster_path, 1))
     pygeoprocessing.raster_calculator(
         stressor_path_band_list, _stressor_overlap_op,
         target_overlap_stressor_path, gdal.GDT_Byte, _TARGET_NODATA_INT)

@@ -796,24 +796,27 @@ class HraRegressionTests(unittest.TestCase):
         """HRA: regression testing synthetic data with linear, euclidean eqn."""
         import natcap.invest.hra
 
-        args = HraRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\synthetic_input")#self.workspace_dir)
+        args = HraRegressionTests.generate_base_args(self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
         _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
         natcap.invest.hra.execute(args)
 
-        output_layer_names = [
-            'risk_habitat_0', 'risk_habitat_1', 'recovery_habitat_0',
-            'recovery_habitat_1', 'risk_ecosystem']
+        output_rasters = [
+            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem',
+            'recovery_habitat_0', 'recovery_habitat_1']
 
-        # Assert rasters equal
+        output_vectors = [
+            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem']
+
+        # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(self.workspace_dir, 'outputs', layer_name + '.tif')
-            for layer_name in output_layer_names]
+            os.path.join(self.workspace_dir, 'outputs', raster_name + '.tif')
+            for raster_name in output_rasters]
         expected_raster_paths = [os.path.join(
-            TEST_DATA, layer_name + '_euc_lin.tif') for layer_name in
-            output_layer_names]
+            TEST_DATA, raster_name + '_euc_lin.tif') for raster_name in
+            output_rasters]
 
         # Append a intermediate raster to test the linear decay equation
         output_raster_paths.append(
@@ -827,16 +830,17 @@ class HraRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 output_raster, expected_raster)
 
-        # Assert GeoJSON vectors equal
+        # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
-            self.workspace_dir, 'outputs', layer_name + '.geojson')
-                for layer_name in output_layer_names]
+            self.workspace_dir, 'outputs', vector_name + '.geojson')
+                for vector_name in output_vectors]
         expected_vector_paths = [
-            os.path.join(TEST_DATA, layer_name + '_euc_lin.geojson') for
-            layer_name in output_layer_names]
+            os.path.join(TEST_DATA, vector_name + '_euc_lin.geojson') for
+            vector_name in output_rasters]
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
+            print output_vector
             pygeoprocessing.testing.assert_vectors_equal(
                 output_vector, expected_vector, 1E-6)
 
@@ -862,21 +866,25 @@ class HraRegressionTests(unittest.TestCase):
 
         aoi_vector_path = os.path.join(
             self.workspace_dir, 'no_subregion_aoi.shp')
+        # Test if `Total Region` gets written in output stats CSV
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
         args['aoi_vector_path'] = aoi_vector_path
         natcap.invest.hra.execute(args)
 
-        output_layer_names = [
-            'risk_habitat_0', 'risk_habitat_1', 'recovery_habitat_0',
-            'recovery_habitat_1', 'risk_ecosystem']
+        output_rasters = [
+            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem',
+            'recovery_habitat_0', 'recovery_habitat_1']
 
-        # Assert rasters equal
+        output_vectors = [
+            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem']
+
+        # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(self.workspace_dir, 'outputs', layer_name + '.tif')
-            for layer_name in output_layer_names]
-        expected_raster_paths = [
-            os.path.join(TEST_DATA, layer_name + '_mul_exp.tif') for
-            layer_name in output_layer_names]
+            os.path.join(self.workspace_dir, 'outputs', raster_name + '.tif')
+            for raster_name in output_rasters]
+        expected_raster_paths = [os.path.join(
+            TEST_DATA, raster_name + '_mul_exp.tif') for raster_name in
+            output_rasters]
 
         # Append a intermediate raster to test the linear decay equation
         output_raster_paths.append(
@@ -890,14 +898,13 @@ class HraRegressionTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 output_raster, expected_raster)
 
-        # Assert GeoJSON vectors equal
-        output_vector_paths = [
-            os.path.join(
-                self.workspace_dir, 'outputs', layer_name + '.geojson')
-            for layer_name in output_layer_names]
+        # Assert GeoJSON vectors are equal
+        output_vector_paths = [os.path.join(
+            self.workspace_dir, 'outputs', vector_name + '.geojson')
+                for vector_name in output_vectors]
         expected_vector_paths = [
-            os.path.join(TEST_DATA, layer_name + '_mul_exp.geojson') for
-            layer_name in output_layer_names]
+            os.path.join(TEST_DATA, vector_name + '_mul_exp.geojson') for
+            vector_name in output_rasters]
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
