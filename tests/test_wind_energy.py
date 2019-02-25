@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import csv
+import pickle
 
 import numpy
 import numpy.testing
@@ -214,16 +215,20 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy
 
-        dict_data = {
+        wind_data = {
             (31.79, 123.76): {
                 'LONG': 123.76, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
+        wind_data_pickle_path = os.path.join(
+            self.workspace_dir, 'wind_data.pickle')
+        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(
+            wind_data_pickle_path, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -245,7 +250,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        dict_data[(31.79, 123.76)][field], field_val)
+                        wind_data[(31.79, 123.76)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)
@@ -261,16 +266,20 @@ class WindEnergyUnitTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
-        dict_data = {
+        wind_data = {
             (31.79, -200.0): {
                 'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
+        wind_data_pickle_path = os.path.join(
+            self.workspace_dir, 'wind_data.pickle')
+        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(
+            wind_data_pickle_path, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -294,7 +303,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        dict_data[(31.79, -200.0)][field], field_val)
+                        wind_data[(31.79, -200.0)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)

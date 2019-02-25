@@ -357,9 +357,15 @@ def execute(args):
     wind_data = _read_csv_wind_data(args['wind_data_path'], hub_height)
 
     # Compute Wind Density and Harvested Wind Energy, adding the values to the
-    # points to the dictionary
-    wind_data = _compute_density_harvested_fields(
-        wind_data, bio_parameters_dict, number_of_turbines)
+    # points to the dictionary, and pickle the dictionary
+    wind_data_pickle_path = os.path.join(
+        inter_dir, 'wind_data%s.pickle' % suffix)
+    compute_density_harvested_task = task_graph.add_task(
+        func=_compute_density_harvested_fields,
+        args=(wind_data, bio_parameters_dict, number_of_turbines,
+              wind_data_pickle_path),
+        target_path_list=[wind_data_pickle_path],
+        task_name='compute_density_harvested_fields')
 
     if 'grid_points_path' in args:
         if 'aoi_vector_path' not in args:
@@ -428,10 +434,11 @@ def execute(args):
         # create wind point vector from wind data dictionary
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
-            args=(wind_data, 'wind_data', wind_point_vector_path),
+            args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
             kwargs={'ref_projection_wkt': target_sr_wkt},
             target_path_list=[wind_point_vector_path],
-            task_name='wind_data_to_vector')
+            task_name='wind_data_to_vector',
+            dependent_task_list=[compute_density_harvested_task])
 
         # Clip the wind energy point shapefile to AOI
         LOGGER.info('Clip and project wind points to AOI')
@@ -527,9 +534,10 @@ def execute(args):
         LOGGER.info('Create point shapefile from wind data')
         wind_data_to_vector_task = task_graph.add_task(
             func=_wind_data_to_point_vector,
-            args=(wind_data, 'wind_data', wind_point_vector_path),
+            args=(wind_data_pickle_path, 'wind_data', wind_point_vector_path),
             target_path_list=[wind_point_vector_path],
-            task_name='wind_data_to_vector_without_aoi')
+            task_name='wind_data_to_vector_without_aoi',
+            dependent_task_list=[compute_density_harvested_task])
 
         # Creating density and harvested rasters depends on the wind vector
         density_harvest_rasters_dependent_task_list = [wind_data_to_vector_task]
@@ -1522,7 +1530,8 @@ def _read_csv_wind_data(wind_data_path, hub_height):
 
 
 def _compute_density_harvested_fields(
-        wind_dict, bio_parameters_dict, number_of_turbines):
+        wind_dict, bio_parameters_dict, number_of_turbines,
+        target_pickle_path):
     """Compute the density and harvested energy based on scale and shape keys.
 
     Parameters:
@@ -1537,9 +1546,12 @@ def _compute_density_harvested_fields(
         number_of_turbines (int): an integer value for the number of machines
             for the wind farm.
 
-    Returns:
-        wind_dict_copy (dict): a modified dictionary with new fields computed
+        target_pickle_path (str): a path to the pickle file that has
+            wind_dict_copy, a modified dictionary with new fields computed
             from the existing fields and bio-parameters.
+
+    Returns:
+        None
 
     """
     wind_dict_copy = wind_dict.copy()
@@ -1668,7 +1680,7 @@ def _compute_density_harvested_fields(
         wind_dict_copy[key][_DENSITY_FIELD_NAME] = density_results
         wind_dict_copy[key][_HARVESTED_FIELD_NAME] = harvested_wind_energy
 
-    return wind_dict_copy
+    pickle.dump(wind_dict_copy, open(target_pickle_path, 'wb'))
 
 
 def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
@@ -1931,20 +1943,21 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     return meter_pixel_size_tuple
 
 
-def _wind_data_to_point_vector(dict_data,
+def _wind_data_to_point_vector(wind_data_pickle_path,
                                layer_name,
                                target_vector_path,
                                ref_projection_wkt=None):
     """Create a point shapefile given a dictionary of the wind data fields.
 
     Parameters:
-        dict_data (dict): a dictionary with the wind data, where the keys
-            are tuples of the lat/long coordinates:
-            {
-            1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10},
-            2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10},
-            3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10}
-            }
+        wind_data_pickle_path (str): a path to the pickle file that has
+            wind_dict_copy, where the keys are tuples of the lat/long
+            coordinates:
+                {
+                1 : {'LATI':97, 'LONG':43, 'LAM':6.3, 'K':2.7, 'REF':10, ...},
+                2 : {'LATI':55, 'LONG':51, 'LAM':6.2, 'K':2.4, 'REF':10, ...},
+                3 : {'LATI':73, 'LONG':47, 'LAM':6.5, 'K':2.3, 'REF':10, ...}
+                }
         layer_name (str): the name of the layer.
         target_vector_path (str): path to the output destination of the
             shapefile.
@@ -1955,6 +1968,9 @@ def _wind_data_to_point_vector(dict_data,
 
     """
     LOGGER.info('Entering _wind_data_to_point_vector')
+
+    # Unpickle the wind data dictionary
+    wind_data = pickle.load(open(wind_data_pickle_path, 'rb'))
 
     # Get driver based on file extension
     _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
@@ -1988,7 +2004,7 @@ def _wind_data_to_point_vector(dict_data,
             layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = dict_data[dict_data.keys()[0]].keys()
+    field_list = wind_data[wind_data.keys()[0]].keys()
 
     # For the two fields that we computed and added to the dictionary, move
     # them to the last
@@ -2006,7 +2022,7 @@ def _wind_data_to_point_vector(dict_data,
 
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
-    for point_dict in dict_data.itervalues():
+    for point_dict in wind_data.itervalues():
         geom = ogr.Geometry(ogr.wkbPoint)
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
