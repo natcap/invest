@@ -2765,22 +2765,26 @@ def _simplify_geometry(
     if target_field_name:
         target_simplified_layer.CreateField(target_field)
 
-    for feature in base_layer:
+    for base_feature in base_layer:
         target_feature = ogr.Feature(target_simplified_layer.GetLayerDefn())
-        feature_geometry = feature.GetGeometryRef()
+        base_geometry = base_feature.GetGeometryRef()
 
         # Use SimplifyPreserveTopology to prevent features from missing
-        simplified_geometry = feature_geometry.SimplifyPreserveTopology(
-            tolerance)
-        feature_geometry = None
+        simplified_geometry = base_geometry.SimplifyPreserveTopology(tolerance)
+        base_geometry = None
         if (simplified_geometry is not None and
                 simplified_geometry.GetArea() > 0):
             target_feature.SetGeometry(simplified_geometry)
             # Set field value to the field name that needs to be preserved
             if target_field_name:
-                field_value = feature.GetField(target_field_name)
+                field_value = base_feature.GetField(target_field_name)
                 target_feature.SetField(target_field_name, field_value)
             target_simplified_layer.CreateFeature(target_feature)
+
+        # If simplify doesn't work, fall back to the original geometry
+        else:
+            target_simplified_layer.CreateFeature(target_feature)
+
     target_simplified_layer.CommitTransaction()
     target_simplified_layer.SyncToDisk()
     target_simplified_layer = None
