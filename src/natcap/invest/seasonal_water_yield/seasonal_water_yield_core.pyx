@@ -22,6 +22,7 @@ from libcpp.list cimport list as clist
 from libcpp.set cimport set as cset
 from libcpp.pair cimport pair
 from libcpp.stack cimport stack
+from libcpp.queue cimport queue
 
 from libc.time cimport time as ctime
 cdef extern from "time.h" nogil:
@@ -425,7 +426,7 @@ cpdef calculate_local_recharge(
             None.
 
     """
-    cdef int flow_dir_nodata
+    cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
     cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
     cdef int xi, yi, xj, yj, flow_dir_j
@@ -436,7 +437,7 @@ cpdef calculate_local_recharge(
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
 
-    cdef stack[pair[int, int]] work_stack
+    cdef queue[pair[int, int]] work_queue
     cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
@@ -539,15 +540,18 @@ cpdef calculate_local_recharge(
                         peak_pixel = 0
                         break
                 if peak_pixel:
-                    work_stack.push(
+                    work_queue.push(
                         pair[int, int](xs_root, ys_root))
-                    target_l_sum_avail_raster.set(
-                        xs_root, ys_root, 0.0)
 
-                while work_stack.size() > 0:
-                    xi = work_stack.top().first
-                    yi = work_stack.top().second
-                    work_stack.pop()
+                while work_queue.size() > 0:
+                    xi = work_queue.front().first
+                    yi = work_queue.front().second
+                    work_queue.pop()
+
+                    l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
+                    if not is_close(l_sum_avail_i, target_nodata):
+                        # already defined
+                        continue
 
                     # Equation 7, calculate L_sum_avail_i if possible, skip
                     # otherwise
@@ -626,13 +630,22 @@ cpdef calculate_local_recharge(
                             pet_m,
                             p_m - qf_m +
                             alpha_month_array[m_index]*beta_i*l_sum_avail_i)
-                    LOGGER.debug('%d %d %f', xi, yi, aet_i)
+                    #LOGGER.debug('%d %d %f', xi, yi, aet_i)
                     target_aet_raster.set(xi, yi, aet_i)
                     l_i = (p_i - qf_i - aet_i)
                     target_li_raster.set(xi, yi, l_i)
                     # Equation 8
                     l_avail_i = min(gamma*l_i, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
+
+                    flow_dir_mfd = <int>flow_raster.get(xi, yi)
+                    for i_n in range(8):
+                        if ((flow_dir_mfd >> (i_n * 4)) & 0xF) == 0:
+                            # no flow in that direction
+                            continue
+                        xi_n = xi+NEIGHBOR_OFFSET_ARRAY[2*i_n]
+                        yi_n = yi+NEIGHBOR_OFFSET_ARRAY[2*i_n+1]
+                        work_queue.push(pair[int, int](xi_n, yi_n))
 
     """
     route_local_recharge(
