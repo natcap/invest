@@ -428,7 +428,7 @@ cpdef calculate_local_recharge(
     cdef int xi, yi, xoff, yoff, xi_root, yi_root, xj, yj
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
-    cdef float pet_m, p_m, qf_m, aet_i
+    cdef float pet_m, p_m, qf_m, aet_i, p_i, qf_i, l_i, l_avail_i
 
     cdef stack[pair[int, int]] work_stack
     cdef _ManagedRaster et0_m_raster, qf_m_raster, kc_m_raster
@@ -545,6 +545,8 @@ cpdef calculate_local_recharge(
 
                     l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
                     aet_i = 0
+                    p_i = 0
+                    qf_i = 0
                     for m_index in range(12):
                         precip_m_raster = (
                             <_ManagedRaster?>precip_m_raster_list[m_index])
@@ -556,7 +558,9 @@ cpdef calculate_local_recharge(
                             <_ManagedRaster?>kc_m_raster_list[m_index])
 
                         p_m = precip_m_raster.get(xi, yi)
+                        p_i += p_m
                         qf_m = qf_m_raster.get(xi, yi)
+                        qf_i += qf_m
                         kc_m = kc_m_raster.get(xi, yi)
                         pet_m = kc_m * et0_m_raster.get(xi, yi)
 
@@ -565,6 +569,9 @@ cpdef calculate_local_recharge(
                             alpha_month_array[m_index]*beta_i*l_sum_avail_i,
                             pet_m)
                     LOGGER.debug('%d %d %f', xi, yi, aet_i)
+                    l_i = (p_i - qf_i - aet_i)
+                    l_avail_i = min(gamma*l_i, l_i)
+                    target_li_avail_raster.set(xi, yi, l_avail_i)
 
     """
     route_local_recharge(
