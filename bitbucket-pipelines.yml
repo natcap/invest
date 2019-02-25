@@ -19,7 +19,7 @@ pipelines:
                     - data/invest-test-data/*.json
             - step:
                 name: InVEST Binaries
-                image: natcap/py27-wine-build:b35346b92de4f92c0b57f7bcd4e0499b1cbf50cb
+                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     - wine make env
                     - wine env\scripts\python.exe -m pip install --upgrade .
@@ -29,7 +29,7 @@ pipelines:
                     - dist/**
             - step:
                 name: InVEST NSIS Installer
-                image: natcap/py27-wine-build:b35346b92de4f92c0b57f7bcd4e0499b1cbf50cb
+                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
@@ -46,12 +46,12 @@ pipelines:
         - parallel:
             - step:
                 name: UI tests on WINE
-                image: natcap/py27-wine-build:b35346b92de4f92c0b57f7bcd4e0499b1cbf50cb
+                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     - wine make jenkins_test_ui
             - step:
                 name: Model tests on WINE
-                image: natcap/py27-wine-build:b35346b92de4f92c0b57f7bcd4e0499b1cbf50cb
+                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     - make data/invest-test-data
                     - wine make jenkins_test
