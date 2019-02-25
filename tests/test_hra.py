@@ -796,7 +796,7 @@ class HraRegressionTests(unittest.TestCase):
         """HRA: regression testing synthetic data with linear, euclidean eqn."""
         import natcap.invest.hra
 
-        args = HraRegressionTests.generate_base_args(self.workspace_dir)
+        args = HraRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\synthetic_input")#self.workspace_dir)
         _make_info_csv(args['info_csv_path'], self.workspace_dir)
         _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])

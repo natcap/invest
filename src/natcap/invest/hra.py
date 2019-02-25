@@ -44,8 +44,8 @@ _RATING_FIELD = 'rating'
 _EXP_DEDAY_CUTOFF = 1E-6
 
 # Target cell type or values for raster files.
-_TARGET_FLT_PIXEL = gdal.GDT_Float32
-_TARGET_INT_PIXEL = gdal.GDT_Byte
+_TARGET_PIXEL_FLT = gdal.GDT_Float32
+_TARGET_PIXEL_INT = gdal.GDT_Byte
 _TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
 _TARGET_NODATA_INT = 255  # for unsigned 8-bit int
 
@@ -250,14 +250,14 @@ def execute(args):
                 rasterize_kwargs = {
                     'option_list': ["ATTRIBUTE=" + _RATING_FIELD]}
                 rasterize_nodata = _TARGET_NODATA_FLT
-                rasterize_pixel_type = _TARGET_FLT_PIXEL
+                rasterize_pixel_type = _TARGET_PIXEL_FLT
 
             else:  # Could be a habitat or stressor vector
                 # Fill the raster with 1s on where a vector geometry exists
                 rasterize_kwargs = {'burn_values': [1],
                                     'option_list': ["ALL_TOUCHED=TRUE"]}
                 rasterize_nodata = _TARGET_NODATA_INT
-                rasterize_pixel_type = _TARGET_INT_PIXEL
+                rasterize_pixel_type = _TARGET_PIXEL_INT
 
             # Create raster from the simplified vector and fill with 0s
             create_raster_task = task_graph.add_task(
@@ -393,7 +393,7 @@ def execute(args):
             task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(pair_risk_calculation_list, _pair_risk_op,
-                      target_pair_risk_raster_path, _TARGET_FLT_PIXEL,
+                      target_pair_risk_raster_path, _TARGET_PIXEL_FLT,
                       _TARGET_NODATA_FLT),
                 target_path_list=[target_pair_risk_raster_path],
                 task_name='calculate_%s_%s_risk' % (habitat, stressor),
@@ -425,7 +425,7 @@ def execute(args):
             args=(final_e_path_band_list,
                   _final_expo_score_op,
                   final_e_habitat_path,
-                  _TARGET_FLT_PIXEL,
+                  _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[final_e_habitat_path],
             task_name='calculate_total_exposure_%s' % habitat)
@@ -451,7 +451,7 @@ def execute(args):
             args=(final_c_path_const_list,
                   _final_conseq_score_op,
                   final_c_habitat_path,
-                  _TARGET_FLT_PIXEL,
+                  _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[final_c_habitat_path],
             task_name='calculate_total_consequence_%s' % habitat)
@@ -475,7 +475,7 @@ def execute(args):
         calc_risk_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(total_risk_path_band_list, _tot_risk_op,
-                  total_habitat_risk_path, _TARGET_FLT_PIXEL,
+                  total_habitat_risk_path, _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[total_habitat_risk_path],
             task_name='calculate_%s_risk' % habitat)
@@ -486,7 +486,7 @@ def execute(args):
             func=pygeoprocessing.raster_calculator,
             args=([(total_habitat_risk_path, 1), (max_risk_score, 'raw')],
                   _reclassify_risk_op, reclass_habitat_risk_path,
-                  _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT),
+                  _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
             target_path_list=[reclass_habitat_risk_path],
             task_name='reclassify_%s_risk' % habitat,
             dependent_task_list=[calc_risk_task])
@@ -510,8 +510,8 @@ def execute(args):
     task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(hab_risk_path_band_list, _ecosystem_risk_op,
-              ecosystem_risk_raster_path, _TARGET_FLT_PIXEL,
-              _TARGET_NODATA_FLT),
+              ecosystem_risk_raster_path, _TARGET_PIXEL_INT,
+              _TARGET_NODATA_INT),
         target_path_list=[ecosystem_risk_raster_path],
         task_name='calculate_ecosystem_risk')
 
@@ -530,7 +530,6 @@ def execute(args):
     LOGGER.info('Unprojecting output rasters')
     out_risk_raster_paths = info_df[
         info_df.TYPE == _HABITAT_TYPE].RECLASS_RISK_RASTER_PATH.tolist()
-    # out_recov_raster_paths = recovery_df.R_RASTER_PATH.tolist()
     out_stressor_raster_paths = info_df[
         info_df.TYPE == _STRESSOR_TYPE].ALIGN_RASTER_PATH.tolist()
     out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths \
@@ -698,7 +697,7 @@ def _raster_to_geojson(
     layer_name = layer_name.encode('utf-8')
     vector_layer = vector.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
-    # Create an integer field that contains risk scores 0 to 3 from the raster
+    # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(field_name, ogr.OFTInteger)
     field_defn.SetWidth(2)
     field_defn.SetPrecision(0)
@@ -1605,7 +1604,7 @@ def _calc_pair_criteria_score(
     calc_criteria_num_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(num_list, _pair_criteria_num_op, target_criteria_num_path,
-              _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT),
+              _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT),
         target_path_list=[target_criteria_num_path],
         task_name='calculate_%s_num_scores' % task_name,
         dependent_task_list=dependent_task_list)
@@ -1616,7 +1615,7 @@ def _calc_pair_criteria_score(
     calc_criteria_score_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(final_score_list, _pair_criteria_score_op,
-              target_pair_criteria_raster_path, _TARGET_FLT_PIXEL,
+              target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
               _TARGET_NODATA_FLT),
         target_path_list=[target_pair_criteria_raster_path],
         task_name='calculate_%s_scores' % task_name,
@@ -1655,7 +1654,7 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
     habitat_mask = (habitat_arr == 1)
 
     recov_reclass_arr = numpy.full(
-        habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+        habitat_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
 
     # Calculate the recovery score by dividing numerator by denominator
     # and then convert it to reclassified by using max_rating
@@ -1767,12 +1766,12 @@ def _calc_habitat_recovery(
     # Calculate cumulative numerator score for the habitat
     pygeoprocessing.raster_calculator(
         num_list, _recovery_num_op, target_r_num_raster_path,
-        _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT)
+        _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT)
 
     # Finally calculate recovery potential for the habitat
     pygeoprocessing.raster_calculator(
         recov_potential_list, _final_recovery_op, target_recov_raster_path,
-        _TARGET_FLT_PIXEL, _TARGET_NODATA_FLT)
+        _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
 
 
 def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
