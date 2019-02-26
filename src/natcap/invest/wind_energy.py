@@ -402,7 +402,7 @@ def execute(args):
             inter_dir, 'bathymetry_projected%s.tif' % suffix)
 
         # Join here because all the following tasks need to unpickle parameters
-        # from `get_suitable_projection_params` task first
+        # from ``get_suitable_projection_params`` task first
         task_graph.join()
         target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
             open(proj_params_pickle_path, 'rb'))
@@ -946,7 +946,7 @@ def _calculate_npv_levelized_rasters(
             global parameters.
 
         args (dict): a dictionary that contains information on
-            `foundation_cost`, `discount_rate`, `number_of_turbines`.
+            ``foundation_cost``, ``discount_rate``, ``number_of_turbines``.
 
         price_list (list): a list of wind energy prices for a period of time.
 
@@ -1538,8 +1538,8 @@ def _compute_density_harvested_fields(
 
     Parameters:
         wind_dict (dict): a dictionary whose values are a dictionary with
-            keys `LAM`, `LATI`, `K`, `LONG`, `REF_LAM`, and `REF`, and numbers
-            indicating their corresponding values.
+            keys ``LAM``, ``LATI``, ``K``, ``LONG``, ``REF_LAM``, and ``REF``,
+            and numbers indicating their corresponding values.
 
         bio_parameters_dict (dict): a dictionary where the 'parameter_list'
             strings are the keys that have values pulled from bio-parameters
@@ -1783,7 +1783,7 @@ def _get_suitable_projection_params(
             absolute value.
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
             that describes the largest fitting bounding box around the original
-            warped bounding box in ``new_epsg`` coordinate system.
+            warped bounding box in ````new_epsg```` coordinate system.
 
     Parameters:
         base_raster_path (str): path to base raster that might not be projected
@@ -1873,7 +1873,7 @@ def _clip_to_projection_with_square_pixels(
             absolute value.
         target_bounding_box (list): a list of the form [xmin, ymin, xmax, ymax]
             that describes the largest fitting bounding box around the original
-            warped bounding box in ``new_epsg`` coordinate system.
+            warped bounding box in ````new_epsg```` coordinate system.
 
     Returns:
         None.
@@ -1915,11 +1915,12 @@ def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
     Parameters:
         pixel_size (tuple): [xsize, ysize] in degrees (float).
         center_lat (float): latitude of the center of the pixel. Note this
-            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            value +/- half the ``pixel-size`` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
 
     Returns:
-        `meter_pixel_size_tuple` with minimum absolute value in the pixel sizes
+        ``meter_pixel_size_tuple`` with minimum absolute value in the pixel
+            sizes.
 
     """
     m1 = 111132.92
@@ -2339,7 +2340,7 @@ def validate(args, limit_to=None):
         args (dict): The args dictionary.
 
         limit_to=None (str or None): If a str key, only this args parameter
-            will be validated.  If ``None``, all args parameters will be
+            will be validated.  If ````None````, all args parameters will be
             validated.
 
     Returns:
