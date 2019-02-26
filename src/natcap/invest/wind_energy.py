@@ -906,7 +906,7 @@ def execute(args):
     # Creating output carbon offset raster
     carbon_path = os.path.join(out_dir, 'carbon_emissions_tons%s.tif' % suffix)
 
-    # The amount of CO2 not released into the atmosphere, with the constant \
+    # The amount of CO2 not released into the atmosphere, with the constant
     # conversion factor provided in the users guide by Rob Griffin
     carbon_coef = float(val_parameters_dict['carbon_coefficient'])
 
@@ -1117,9 +1117,10 @@ def _calculate_npv_levelized_rasters(
 
         # Calculate the final NPV by subtracting other costs from the NPV
         npv_arr[target_nodata_mask] = _TARGET_NODATA
-        npv_arr[~target_nodata_mask] = npv_arr[~target_nodata_mask] - \
-            decommish_capex_arr[~target_nodata_mask] - \
-            capex_arr[~target_nodata_mask]
+        npv_arr[~target_nodata_mask] = (
+            npv_arr[~target_nodata_mask] -
+            decommish_capex_arr[~target_nodata_mask] -
+            capex_arr[~target_nodata_mask])
 
         # Calculate the levelized cost of energy, converting from millions of
         # dollars to dollars
@@ -1292,9 +1293,8 @@ def _calculate_carbon_op(harvested_arr, carbon_coef):
     # The energy value converted from MWhr/yr (Mega Watt hours as output
     # from CK's biophysical model equations) to kWhr for the
     # valuation model
-    out_array[
-        valid_pixels_mask] = harvested_arr[valid_pixels_mask] * \
-        carbon_coef * 1000.0
+    out_array[valid_pixels_mask] = (
+        harvested_arr[valid_pixels_mask] * carbon_coef * 1000.0)
     return out_array
 
 
@@ -1308,12 +1308,12 @@ def _calculate_land_to_grid_distance(
     projected in meters
 
     Parameters:
-        base_land_vector_path (str): a path to an OGR point geometry
-            shapefile projected in meters
+        base_land_vector_path (str): a path to an OGR point geometry shapefile
+            projected in meters
         base_grid_vector_path (str): a path to an OGR polygon shapefile
             projected in meters
-        dist_field_name (str): the name of the new distance field to be
-            added to the attribute table of base_point_vector
+        dist_field_name (str): the name of the new distance field to be added
+            to the attribute table of base_point_vector
         copied_point_vector_path (str): if a path is provided, make a copy of
             the base point vector on this path after computing the distance
             field. (optional)
@@ -1416,8 +1416,8 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         base_raster_path (str): path to a raster with distance values.
         min_dist (int): the minimum distance allowed in meters.
         max_dist (int): the maximum distance allowed in meters.
-        target_raster_path (str): path output to the raster masked by
-            distance values.
+        target_raster_path (str): path output to the raster masked by distance
+            values.
         out_nodata (float): the nodata value of the raster.
 
     Returns:
@@ -2058,8 +2058,8 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
     Parameters:
         base_vector_path (str): path to a base vector
         clip_vector_path (str): path to an AOI vector
-        target_vector_path (str): desired output path to write the
-            clipped base against AOI in AOI's coordinate system.
+        target_vector_path (str): desired output path to write the clipped
+            base against AOI in AOI's coordinate system.
         work_dir (str): path to create a temp folder for saving files.
 
     Returns:
@@ -2280,11 +2280,11 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
 
     Parameters:
         grid_vector_path (str) a path to an OGR shapefile that has the
-            desired features to get the distance from
+            desired features to get the distance from.
         harvested_masked_path (str): a path to a GDAL raster that is used to
-            get the proper extents and configuration for new rasters
+            get the proper extents and configuration for new rasters.
         final_dist_raster_path (str) a path to a GDAL raster for the final
-            distance transform raster output
+            distance transform raster output.
         work_dir (str): path to create a temp folder for saving files.
 
     Returns:
