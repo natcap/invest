@@ -313,7 +313,7 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
     # Make a Shapefile and a GeoTIFF file for each layer and write to the table
     with open(info_table_path, 'wb') as table:
         if missing_columns:
-            table.write('wrong name,PATH,TYPE,"wrong buffer name"\n')
+            table.write('missing habitat,PATH,TYPE,"missing buffer"\n')
         else:
             table.write('NAME,PATH,TYPE,"STRESSOR BUFFER (meters)"\n')
 
@@ -381,10 +381,11 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
 
 
 def _make_criteria_csv(
-        criteria_table_path, workspace_dir=None, missing_criteria=False,
+        criteria_table_path, workspace_dir, missing_criteria=False,
         missing_index=False, missing_layer_names=False,
         missing_criteria_header=False, unknown_criteria=False,
-        wrong_criteria_type=False, wrong_weight=False, large_rating=False):
+        wrong_criteria_type=False, wrong_weight=False, large_rating=False,
+        rel_path=False):
     """Make a synthesized information CSV on the designated path.
 
     Parameters:
@@ -417,21 +418,24 @@ def _make_criteria_csv(
         wrong_weight (bool): if true, provide a weight score that's not a
             number.
 
+        rel_path (bool): if true, write relative raster and vector paths to
+            the table. File locations are relative to the folder of the table.
+
     Returns:
         None
 
     """
     # Create spatially explicit criteria raster and vector files in workspace.
     # Make a rating raster file on criteria 1 of habitat_0
-    rating_raster_path = os.path.join(workspace_dir, 'hab_0_crit_1.tif')
+    abs_rating_raster_path = os.path.join(workspace_dir, 'hab_0_crit_1.tif')
     size = 10
     array = numpy.full((size, size), 2, dtype=numpy.int8)
     array[size / 2:, :] = 3
-    _make_raster_from_array(array, rating_raster_path)
+    _make_raster_from_array(array, abs_rating_raster_path)
 
     # Make a rating shapefile on criteria 3 of habitat_1
-    rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
-    _make_rating_vector(rating_vector_path)
+    abs_rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
+    _make_rating_vector(abs_rating_vector_path)
 
     with open(criteria_table_path, 'wb') as table:
         if missing_index:
@@ -448,7 +452,14 @@ def _make_criteria_csv(
                 '"HABITAT NAME",habitat_0,,,habitat_1,,,"CRITERIA TYPE",\n')
         table.write('"HABITAT RESILIENCE ATTRIBUTES",Rating,DQ,Weight,Rating,'
                     'DQ,Weight,E/C\n')
-        table.write('"criteria 1",'+rating_raster_path+',2,2,3,2,2,C\n')
+
+        # Write relative path to the table
+        if rel_path:
+            rel_rating_raster_path = os.path.relpath(
+                abs_rating_raster_path, workspace_dir)
+            table.write('"criteria 1",'+rel_rating_raster_path+',2,2,3,2,2,C\n')
+        else:
+            table.write('"criteria 1",'+abs_rating_raster_path+',2,2,3,2,2,C\n')
         table.write('"criteria 2",0,2,2,1,2,2,C\n')
 
         if missing_index:
@@ -459,7 +470,13 @@ def _make_criteria_csv(
         if unknown_criteria:
             table.write('"extra criteria",1,2,2,0,2,2,E\n')
         table.write('stressor_0,Rating,DQ,Weight,Rating,DQ,Weight,E/C\n')
-        table.write('"criteria 3",2,2,2,'+rating_vector_path+',2,2,C\n')
+
+        if rel_path:
+            rel_rating_vector_path = os.path.relpath(
+                abs_rating_vector_path, workspace_dir)
+            table.write('"criteria 3",2,2,2,'+rel_rating_vector_path+',2,2,C\n')
+        else:
+            table.write('"criteria 3",2,2,2,'+abs_rating_vector_path+',2,2,C\n')
         table.write('"criteria 4",1,2,2,0,2,2,E\n')
 
         if missing_layer_names:
@@ -528,8 +545,7 @@ class HraUnitTests(unittest.TestCase):
         bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_table_path, workspace_dir=self.workspace_dir,
-            unknown_criteria=True)
+            bad_criteria_table_path, self.workspace_dir, unknown_criteria=True)
 
         with self.assertRaises(ValueError) as cm:
             criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
@@ -578,7 +594,31 @@ class HraUnitTests(unittest.TestCase):
         self.assertTrue(
             expected_message in actual_message, actual_message)
 
-    def test_get_info_excel_file(self):
+    def test_criteria_excel_file(self):
+        """HRA: test excel files read correctly by _get_criteria_dataframe."""
+        from natcap.invest.hra import _get_criteria_dataframe
+
+        # Make an info CSV file and read it as a dataframe
+        criteria_csv_path = os.path.join(self.workspace_dir, 'criteria.csv')
+        _make_criteria_csv(
+            criteria_csv_path, self.workspace_dir, rel_path=True)
+        expected_df = _get_criteria_dataframe(criteria_csv_path).astype(str)
+
+        # Since we don't have openpyxl library, use the existing excel file
+        # from TEST_DATA folder, and copy it to self.workspace_dir so
+        # the function won't raise exceptions about vector or raster files
+        # in the table not existing
+        criteria_excel_path = os.path.join(TEST_DATA, 'criteria_excel.xlsx')
+        copied_criteria_excel_path = os.path.join(
+            self.workspace_dir, 'criteria_excel.xlsx')
+        shutil.copyfile(criteria_excel_path, copied_criteria_excel_path)
+        out_df = _get_criteria_dataframe(copied_criteria_excel_path).astype(str)
+
+        self.assertTrue(
+            out_df.equals(expected_df),
+            'The dataframes from criteria CSV and excel files are different.')
+
+    def test_info_excel_file(self):
         """HRA: test excel files read correctly by _get_info_dataframe."""
         from natcap.invest.hra import _get_info_dataframe
 
@@ -588,7 +628,7 @@ class HraUnitTests(unittest.TestCase):
             info_csv_path, workspace_dir=self.workspace_dir, rel_path=True)
         expected_df = _get_info_dataframe(
             info_csv_path, self.workspace_dir, self.workspace_dir,
-            self.workspace_dir, '')[0]
+            self.workspace_dir, '')[0].astype(str)
 
         # Since we don't have openpyxl library, use the existing excel file
         # from TEST_DATA folder, and copy it to self.workspace_dir so
@@ -600,12 +640,11 @@ class HraUnitTests(unittest.TestCase):
         shutil.copyfile(info_excel_path, copied_info_excel_path)
         out_df = _get_info_dataframe(
             copied_info_excel_path, self.workspace_dir, self.workspace_dir,
-            self.workspace_dir, '')[0]
+            self.workspace_dir, '')[0].astype(str)
 
         self.assertTrue(
             out_df.equals(expected_df),
             'The dataframes read from info CSV and excel files are different.')
-
 
     def test_missing_columns_from_info_csv(self):
         """HRA: exception raised when columns are missing from info CSV."""

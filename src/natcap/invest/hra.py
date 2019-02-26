@@ -63,9 +63,9 @@ def execute(args):
         args['results_suffix'] (str): a string appended to each output file
             path. (optional)
 
-        args['info_table_path'] (str): a path to the CSV file that contains
-            the name of the habitat (H) or stressor (s) on the `NAME` column
-            that matches the names in criteria_table_path. Each H/S has
+        args['info_table_path'] (str): a path to the CSV or Excel file that
+            contains the name of the habitat (H) or stressor (s) on the `NAME`
+            column that matches the names in criteria_table_path. Each H/S has
             its corresponding vector or raster path on the `PATH` column. The
             `STRESSOR BUFFER (meters)` column should have a buffer value if
             the `TYPE` column is a stressor.
@@ -2118,6 +2118,9 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
             'Missing column header(s) from the Info CSV file: %s' %
             missing_columns)
 
+    # Drop columns that have all NA values
+    info_df.dropna(axis=1, how='all', inplace=True)
+
     # Convert the values in TYPE column to lowercase first
     info_df.TYPE = info_df.TYPE.str.lower()
     unknown_types = list(set(info_df.TYPE) - set(required_types))
@@ -2214,8 +2217,12 @@ def _get_criteria_dataframe(base_criteria_table_path):
         raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
                          base_criteria_table_path)
 
-    # Convert empty cells to None (i.e. None)
-    criteria_df.index = [x if isinstance(x, str) else None
+    # Drop columns that have all NA values
+    criteria_df.dropna(axis=1, how='all', inplace=True)
+
+    # Convert empty cells (those that are not in string or unicode format) to
+    # None
+    criteria_df.index = [x if isinstance(x, basestring) else None
                          for x in criteria_df.index]
 
     # Verify the values in the index column, and append to error message if
@@ -2232,7 +2239,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
 
     # Validate the column header, which should have 'criteria type'
     criteria_df.columns = [
-        x if isinstance(x, str) else None for x in
+        x if isinstance(x, basestring) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria CSV file is missing the column header'

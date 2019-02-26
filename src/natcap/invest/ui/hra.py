@@ -12,27 +12,27 @@ class HabitatRiskAssessment(model.InVESTModel):
             validator=hra.validate,
             localdoc=u'../documentation/habitat_risk_assessment.html')
 
-        self.info_csv_path = inputs.File(
-            args_key=u'info_csv_path',
+        self.info_table_path = inputs.File(
+            args_key=u'info_table_path',
             helptext=(
-                u"A CSV file that contains the name of the habitat (H) or "
-                u"stressor (s) on the `NAME` column that matches the names "
-                u"in `criteria_csv_path`. Each H/S has its corresponding "
-                u"vector or raster path on the `PATH` column. The `STRESSOR "
-                u"BUFFER (meters)` column should have a buffer value if the "
-                u"`TYPE` column is a stressor."),
-            label=u'Habitat Stressor Information CSV File',
+                u"A CSV or Excel file that contains the name of the habitat "
+                u"(H) or stressor (s) on the `NAME` column that matches the "
+                u"names in `criteria_table_path`. Each H/S has its "
+                u"corresponding vector or raster path on the `PATH` column. "
+                u"The `STRESSOR BUFFER (meters)` column should have a buffer "
+                u"value if the `TYPE` column is a stressor."),
+            label=u'Habitat Stressor Information CSV or Excel File',
             validator=self.validator)
-        self.add_input(self.info_csv_path)
-        self.criteria_csv_path = inputs.File(
-            args_key=u'criteria_csv_path',
+        self.add_input(self.info_table_path)
+        self.criteria_table_path = inputs.File(
+            args_key=u'criteria_table_path',
             helptext=(
-                u"A CSV file that contains the set of criteria ranking "
-                u"(rating, DQ and weight) of each stressor on each habitat, "
-                u"as well as the habitat resilience attributes."),
-            label=u'Criteria Scores CSV File',
+                u"A CSV or excel file that contains the set of criteria "
+                u"ranking  (rating, DQ and weight) of each stressor on each "
+                u"habitat, as well as the habitat resilience attributes."),
+            label=u'Criteria Scores CSV or Excel File',
             validator=self.validator)
-        self.add_input(self.criteria_csv_path)
+        self.add_input(self.criteria_table_path)
         self.resolution = inputs.Text(
             args_key=u'resolution',
             helptext=(
@@ -86,8 +86,8 @@ class HabitatRiskAssessment(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.info_csv_path.args_key: self.info_csv_path.value(),
-            self.criteria_csv_path.args_key: self.criteria_csv_path.value(),
+            self.info_table_path.args_key: self.info_table_path.value(),
+            self.criteria_table_path.args_key: self.criteria_table_path.value(),
             self.resolution.args_key: self.resolution.value(),
             self.risk_eq.args_key: self.risk_eq.value(),
             self.decay_eq.args_key: self.decay_eq.value(),
