@@ -782,9 +782,12 @@ def route_baseflow_sum(
                                 l_avail_j = l_avail_raster.get(xj, yj)
                                 l_sum_j = l_sum_raster.get(xj, yj)
 
-                                b_sum_i += p_ij_base * (
-                                    (1-l_avail_j / l_sum_j)*(
-                                        b_sum_j / (l_sum_j - l_j)))
+                                if l_sum_j != 0 and (l_sum_j - l_j) != 0:
+                                    b_sum_i += p_ij_base * (
+                                        (1-l_avail_j / l_sum_j)*(
+                                            b_sum_j / (l_sum_j - l_j)))
+                                else:
+                                    b_sum_i += p_ij_base
 
                     if not downstream_defined:
                         continue

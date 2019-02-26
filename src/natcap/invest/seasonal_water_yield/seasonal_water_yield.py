@@ -239,7 +239,8 @@ def _execute(args):
     n_workers = -1
     if 'n_workers' in args:
         n_workers = int(args['n_workers'])
-    task_graph = taskgraph.TaskGraph(cache_dir, n_workers)
+    task_graph = taskgraph.TaskGraph(
+        cache_dir, n_workers, , reporting_interval=5.0)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
@@ -1023,7 +1024,7 @@ def _aggregate_recharge(
                     value = 0.0
             elif op_type == 'sum':
                 value = aggregate_stats[poly_index]['sum']
-            poly_feat.SetField(aggregate_field_id, value)
+            poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
     aggregate_layer.SyncToDisk()
