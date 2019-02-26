@@ -39,13 +39,9 @@ pipelines:
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
-                    - wget -nv -O build/vcredist_x86.exe \
+                    - wget -nv -O build/vcredist_x86.exe
                         https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
-                    - wine python -m virtualenv --system-site-packages env
-                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
-                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
-                    - wine make PYTHON=env/Scripts/python install
-                    - wine make PYTHON=env/Scripts/python windows_installer
+                    - wine make windows_installer
                 artifacts:
                     - dist/**
     default:
