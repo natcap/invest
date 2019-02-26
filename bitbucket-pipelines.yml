@@ -15,7 +15,7 @@ pipelines:
                     script:
                         - apt-get update && apt-get install -y subversion
                             mercurial build-essential zip python-setuptools
-                            python-numpy python-setuptools-scm
+                            python-numpy python-setuptools-scm cython
                         - make sampledata
                     artifacts:
                         - dist/**
