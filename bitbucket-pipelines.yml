@@ -25,9 +25,9 @@ pipelines:
                     image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                     script:
                         - wine make env
-                        - wine env\scripts\python.exe -m pip install --upgrade .
-                        - wine env\scripts\python.exe -m pip install -r requirements-gui.txt
-                        - wine make PYTHON=env\scripts\python.exe binaries
+                        - wine env/scripts/python.exe -m pip install --upgrade .
+                        - wine env/scripts/python.exe -m pip install -r requirements-gui.txt
+                        - wine make PYTHON=env/scripts/python.exe binaries
                     artifacts:
                         - dist/**
             - step:
