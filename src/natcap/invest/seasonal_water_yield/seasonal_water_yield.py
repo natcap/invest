@@ -240,7 +240,7 @@ def _execute(args):
     if 'n_workers' in args:
         n_workers = int(args['n_workers'])
     task_graph = taskgraph.TaskGraph(
-        cache_dir, n_workers, , reporting_interval=5.0)
+        cache_dir, n_workers, reporting_interval=5.0)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
