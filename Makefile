@@ -23,6 +23,7 @@ ifeq ($(OS),Windows_NT)
 	COPYDIR := $(CP) -Recurse
 	MKDIR := powershell.exe mkdir -Force -Path
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
+	RMDIR := cmd /C "rmdir /S /Q"
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
@@ -44,6 +45,7 @@ else
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
+	RMDIR := $(RM)
 	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
@@ -141,15 +143,15 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-$(RM) $(BUILD_DIR)
-	-$(RM) natcap.invest.egg-info
-	-$(RM) cover
+	-$(RMDIR) $(BUILD_DIR)
+	-$(RMDIR) natcap.invest.egg-info
+	-$(RMDIR) cover
 	-$(RM) coverage.xml
 
 purge: clean
 	-$(RM_DATA_DIR)
-	-$(RM) $(HG_UG_REPO_PATH)
-	-$(RM) $(ENV)
+	-$(RMDIR) $(HG_UG_REPO_PATH)
+	-$(RMDIR) $(ENV)
 
 check:
 	@echo "Checking required applications"
@@ -185,7 +187,7 @@ env:
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
-	-$(RM) natcap.invest.egg-info
+	-$(RMDIR) natcap.invest.egg-info
 	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
 
 
@@ -203,8 +205,8 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 # import, we want to know right away.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
-	-$(RM) $(BUILD_DIR)/pyi-build
-	-$(RM) $(INVEST_BINARIES_DIR)
+	-$(RMDIR) $(BUILD_DIR)/pyi-build
+	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller \
 		--workpath $(BUILD_DIR)/pyi-build \
 		--clean \
@@ -227,14 +229,14 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	-$(RM) build/userguide/latex
+	-$(RMDIR) build/userguide/latex
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
-	-$(RM) $(USERGUIDE_HTML_DIR)
+	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
