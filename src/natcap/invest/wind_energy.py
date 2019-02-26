@@ -1147,7 +1147,7 @@ def _calculate_npv_levelized_rasters(
 
 
 def _get_feature_count(base_vector_path):
-    """Get feature count from vector and pickle it.
+    """Get feature count from vector and return it.
 
     Parameters:
         base_vector_path (str): a path to the vector to get feature
