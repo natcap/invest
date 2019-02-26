@@ -51,7 +51,8 @@ pipelines:
                     - wine python -m virtualenv --system-site-packages env
                     - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
                     - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
-                    - wine make PYTHON=env/Scripts/python install
+                    - wine env/Scripts/python setup.py bdist_wheel
+                    - wine env/Scripts/python -m pip install -I --no-deps dist/*.whl
                     - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest ui_tests
             - step:
                 name: Model tests on WINE
@@ -61,5 +62,8 @@ pipelines:
                     - wine python -m virtualenv --system-site-packages env
                     - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
                     - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
-                    - wine make PYTHON=env/Scripts/python install
+                    - wine env/Scripts/python setup.py bdist_wheel
+                    - wine env/Scripts/python -m pip install -I --no-deps dist/*.whl
                     - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest tests
+                artifacts:
+                    - dist/*.whl
