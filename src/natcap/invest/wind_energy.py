@@ -766,6 +766,10 @@ def execute(args):
             # It's possible that no land points were provided, and we need to
             # handle both cases
             if land_dict:
+                # A bool used to determine if the final distance raster should
+                # be calculated without land points later
+                calc_grid_dist_without_land = False
+
                 land_point_vector_path = os.path.join(
                     inter_dir, 'val_land_points%s.shp' % suffix)
                 # Create a point shapefile from the land point dictionary.
@@ -822,7 +826,8 @@ def execute(args):
                     final_dist_task = task_graph.add_task(
                         func=_calculate_distances_land_grid,
                         args=(land_to_grid_vector_path,
-                              harvested_masked_path, final_dist_raster_path,
+                              harvested_masked_path,
+                              final_dist_raster_path,
                               inter_dir),
                         target_path_list=[final_dist_raster_path],
                         task_name='calculate_distances_land_grid',
@@ -831,29 +836,26 @@ def execute(args):
                     LOGGER.debug(
                         'No land point lies within AOI. Energy transmission '
                         'cable distances are calculated from grid data.')
-
-                    # Calculate distance raster
-                    final_dist_task = task_graph.add_task(
-                        func=_calculate_grid_dist_on_raster,
-                        args=(grid_projected_vector_path,
-                              harvested_masked_path,
-                              final_dist_raster_path, inter_dir),
-                        target_path_list=[final_dist_raster_path],
-                        task_name='calculate_grid_distance')
+                    calc_grid_dist_without_land = True
 
             else:
                 LOGGER.info(
                     'No land points provided in the Grid Connection Points '
                     'CSV file. Energy transmission cable distances are '
                     'calculated from grid data.')
+                calc_grid_dist_without_land = True
 
-                # Calculate distance raster
+            if calc_grid_dist_without_land:
+                # Calculate distance raster without land points provided
                 final_dist_task = task_graph.add_task(
                     func=_calculate_grid_dist_on_raster,
-                    args=(grid_projected_vector_path, harvested_masked_path,
-                          final_dist_raster_path, inter_dir),
+                    args=(grid_projected_vector_path,
+                          harvested_masked_path,
+                          final_dist_raster_path,
+                          inter_dir),
                     target_path_list=[final_dist_raster_path],
                     task_name='calculate_grid_distance')
+
         else:
             LOGGER.debug(
                 'No grid or land point lies in AOI. Energy transmission '
