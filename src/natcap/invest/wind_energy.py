@@ -1178,10 +1178,20 @@ def _get_file_ext_and_driver_name(base_vector_path):
 
     """
     file_ext = os.path.splitext(base_vector_path)[1]
-    if file_ext == '.shp':
-        driver_name = 'ESRI Shapefile'
-    elif file_ext == '.gpkg':
-        driver_name = 'GPKG'
+
+    # A dictionary of file extensions/GDAL vector driver names pairs
+    vector_formats = {
+        '.shp': 'ESRI Shapefile',
+        '.gpkg': 'GPKG',
+        '.geojson': 'GeoJSON',
+        '.gmt': 'GMT'
+    }
+
+    try:
+        driver_name = vector_formats[file_ext]
+    except KeyError:
+        raise KeyError(
+            'Unknown file extension for vector file %s' % base_vector_path)
 
     return file_ext, driver_name
 
