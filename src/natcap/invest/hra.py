@@ -18,7 +18,7 @@ from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
-# Parameters from the user-provided CSV files
+# Parameters from the user-provided criteria and info tables
 _BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
 _CRITERIA_TYPE_HEADER = 'CRITERIA TYPE'
 _HABITAT_NAME_HEADER = 'HABITAT NAME'
@@ -109,7 +109,7 @@ def execute(args):
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     # Validate and store inputs
-    LOGGER.info('Validating criteria CSV file and return cleaned dataframe.')
+    LOGGER.info('Validating criteria table file and return cleaned dataframe.')
     criteria_df = _get_criteria_dataframe(args['criteria_table_path'])
 
     # Create initial working directories and determine file suffixes
@@ -151,9 +151,9 @@ def execute(args):
         file_preprocessing_dir, intermediate_dir, file_suffix)
 
     # Append spatially explicit criteria rasters to info_df
-    criteria_csv_dir = os.path.dirname(args['criteria_table_path'])
+    criteria_file_dir = os.path.dirname(args['criteria_table_path'])
     info_df = _append_spatial_raster_row(
-        info_df, recovery_df, overlap_df, criteria_csv_dir,
+        info_df, recovery_df, overlap_df, criteria_file_dir,
         file_preprocessing_dir, file_suffix)
 
     # Get target projection from the AOI vector file
@@ -1195,7 +1195,7 @@ def _get_max_risk_score(
             has 1s indicating habitat existence and 0s non-existence.
 
         max_rating (float): a number representing the highest potential value
-            that should be represented in rating in the criteria CSV table.
+            that should be represented in rating in the criteria table.
 
         risk_eq (str): a string identifying the equation that should be
             used in calculating risk scores for each H-S overlap cell. This
@@ -1458,7 +1458,7 @@ def _pair_criteria_score_op(
             on the E/C equation.
 
         denom (float): a cumulative value pre-calculated based on the criteria
-            CSV table. It will be used to divide the numerator.
+            table. It will be used to divide the numerator.
 
     Returns:
         score_arr (array): a float array of the scores calculated based on
@@ -1515,7 +1515,7 @@ def _pair_criteria_num_op(
             `Exponential`.
 
         num (float): a cumulative value pre-calculated based on the criteria
-            CSV table. It will be divided by denominator to get exposure score.
+            table. It will be divided by denominator to get exposure score.
 
         *spatial_explicit_arr_const: if exists, it is a list of variables
             representing rating float array, DQ, weight, and nodata
@@ -1726,7 +1726,7 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             habitat existence and 0's non-existence.
 
         num (float): a cumulative value pre-calculated based on the criteria
-            CSV table. It will be divided by denominator to get exposure score.
+            table. It will be divided by denominator to get exposure score.
 
         *spatial_explicit_arr_const: if exists, it is a list of variables
             representing resilience float array, DQ, weight, and nodata
@@ -2058,7 +2058,7 @@ def _label_linear_unit(row):
 
 def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
                         intermediate_dir, output_dir, suffix_end):
-    """Read CSV file as dataframe and add data info to new columns.
+    """Read info table as dataframe and add data info to new columns.
 
     Add new columns that provide file information and target file paths of each
     given habitat or stressors to the dataframe.
@@ -2084,9 +2084,9 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         info_df (dataframe): a dataframe that has the information on whether a
             file is a vector, and a raster path column.
 
-        habitat_names (list): a list of habitat names obtained from info CSV.
+        habitat_names (list): a list of habitat names obtained from info file.
 
-        stressor_names (list): a list of stressor names obtained from info CSV.
+        stressor_names (list): a list of stressor names obtained from info file
 
     Raises:
         ValueError if the input table is not a CSV or Excel file.
@@ -2126,7 +2126,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     unknown_types = list(set(info_df.TYPE) - set(required_types))
     if unknown_types:
         raise ValueError(
-            'The `TYPE` attribute in Info CSV could only have either %s '
+            'The `TYPE` attribute in Info table could only have either %s '
             ' or %s as its value, but is having %s' % (
                 required_types[0], required_types[1], unknown_types))
 
@@ -2134,7 +2134,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         _BUFFER_HEADER].dtype
     if not numpy.issubdtype(buffer_column_dtype, numpy.number):
         raise ValueError(
-            'The %s attribute in Info CSV should be a number for stressors, '
+            'The %s attribute in Info table should be a number for stressors, '
             'and empty for habitats.' % _BUFFER_HEADER)
 
     # Convert all relative paths to absolute paths
@@ -2189,19 +2189,20 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 
 
 def _get_criteria_dataframe(base_criteria_table_path):
-    """Get validated criteria dataframe from a given path to a CSV file.
+    """Get validated criteria dataframe from a criteria table.
 
     Parameters:
         base_criteria_table_path (str): a path to the CSV or Excel file with
             habitat and stressor criteria ratings.
 
     Returns:
-        criteria_df (dataframe): a dataframe converted from CSV with 'NaN' for
-            empty cells.
+        criteria_df (dataframe): a validated dataframe converted from the table
+            where None represents an empty cell.
 
     Raises:
-        ValueError when any required index or column header is missing from the
-            CSV file.
+        ValueError if the input table is not a CSV or Excel file.
+        ValueError if any required index or column header is missing from the
+            table.
 
     """
     # Read the table into dataframe based on its type, with first column as
@@ -2233,7 +2234,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
     missing_indexes = set(required_indexes) - set(criteria_df.index.values)
 
     if missing_indexes:
-        raise ValueError('The Criteria CSV file is missing the following '
+        raise ValueError('The Criteria table is missing the following '
                          'value(s) in the first column: %s.\n' %
                          list(missing_indexes))
 
@@ -2242,7 +2243,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
         x if isinstance(x, basestring) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
-        raise ValueError('The Criteria CSV file is missing the column header'
+        raise ValueError('The Criteria table is missing the column header'
                          ' "%s".' % _CRITERIA_TYPE_HEADER)
 
     LOGGER.info('Criteria dataframe was created successfully.')
@@ -2259,9 +2260,10 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
         criteria_df (dataframe): a validated dataframe with required
             fields in it.
 
-        habitat_names (list): a list of habitat names obtained from info CSV.
+        habitat_names (list): a list of habitat names obtained from info table.
 
-        stressor_names (list): a list of stressor names obtained from info CSV.
+        stressor_names (list): a list of stressor names obtained from info
+            table.
 
     Returns:
         resilience_attributes (list): a list of resilience attributes used for
@@ -2287,12 +2289,12 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
     missing_names_error_message = ''
     if missing_habitat_names:
         missing_names_error_message += (
-            'The following Habitats in the info CSV file are missing from the '
-            'criteria CSV file: %s. ' % missing_habitat_names)
+            'The following Habitats in the info table are missing from the '
+            'criteria table: %s. ' % missing_habitat_names)
     if missing_stressor_names:
         missing_names_error_message += (
-            'The following Stresors in the info CSV file are missing from the '
-            'criteria CSV file: %s' % missing_stressor_names)
+            'The following Stresors in the info table are missing from the '
+            'criteria table: %s' % missing_stressor_names)
     if missing_names_error_message:
         raise ValueError(missing_names_error_message)
 
@@ -2341,7 +2343,7 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
             # Raise an exception if a criteria shows up before a stressor
             else:
                 raise ValueError('The "%s" criteria does not belong to any '
-                                 'stressors. Please check your criteria CSV.'
+                                 'stressors. Please check your criteria table.'
                                  % field)
 
     LOGGER.info('stressor_attributes: %s' % stressor_attributes)
@@ -2403,7 +2405,7 @@ def _validate_rating(
 
             error_message += (
                 ' has a rating %s larger than the maximum rating %s. '
-                'Please check your criteria CSV file.' % (rating, max_rating))
+                'Please check your criteria table.' % (rating, max_rating))
 
             raise ValueError(error_message)
 
@@ -2537,7 +2539,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             criteria_name = row_idx
             criteria_type = row_data[_CRITERIA_TYPE_HEADER].upper()
             if criteria_type not in ['E', 'C']:
-                raise ValueError('Criteria Type in the criteria scores CSV '
+                raise ValueError('Criteria Type in the criteria scores table '
                                  'table should be either E or C.')
 
             for idx, (row_key, row_value) in enumerate(row_data.iteritems()):
