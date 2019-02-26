@@ -63,14 +63,14 @@ def execute(args):
         args['results_suffix'] (str): a string appended to each output file
             path. (optional)
 
-        args['info_csv_path'] (str): a path to the CSV file that contains
+        args['info_table_path'] (str): a path to the CSV file that contains
             the name of the habitat (H) or stressor (s) on the `NAME` column
-            that matches the names in criteria_csv_path. Each H/S has
+            that matches the names in criteria_table_path. Each H/S has
             its corresponding vector or raster path on the `PATH` column. The
             `STRESSOR BUFFER (meters)` column should have a buffer value if
             the `TYPE` column is a stressor.
 
-        args['criteria_csv_path'] (str): a path to the CSV file that
+        args['criteria_table_path'] (str): a path to the CSV file that
             contains the set of criteria ranking of each stressor on each
             habitat.
 
@@ -110,7 +110,7 @@ def execute(args):
 
     # Validate and store inputs
     LOGGER.info('Validating criteria CSV file and return cleaned dataframe.')
-    criteria_df = _get_criteria_dataframe(args['criteria_csv_path'])
+    criteria_df = _get_criteria_dataframe(args['criteria_table_path'])
 
     # Create initial working directories and determine file suffixes
     intermediate_dir = os.path.join(
@@ -137,7 +137,7 @@ def execute(args):
     # Calculate recovery for each habitat, and overlap scores for each
     # habitat-stressor, and store data in the dataframes
     info_df, habitat_names, stressor_names = _get_info_dataframe(
-        args['info_csv_path'], file_preprocessing_dir, intermediate_dir,
+        args['info_table_path'], file_preprocessing_dir, intermediate_dir,
         output_dir, file_suffix)
     resilience_attributes, stressor_attributes = \
         _get_attributes_from_df(criteria_df, habitat_names, stressor_names)
@@ -151,7 +151,7 @@ def execute(args):
         file_preprocessing_dir, intermediate_dir, file_suffix)
 
     # Append spatially explicit criteria rasters to info_df
-    criteria_csv_dir = os.path.dirname(args['criteria_csv_path'])
+    criteria_csv_dir = os.path.dirname(args['criteria_table_path'])
     info_df = _append_spatial_raster_row(
         info_df, recovery_df, overlap_df, criteria_csv_dir,
         file_preprocessing_dir, file_suffix)
@@ -1898,29 +1898,32 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
     return info_df
 
 
-def _to_abspath(path, dir_path):
+def _to_abspath(base_path, dir_path):
     """Return an absolute path within dir_path if the given path is relative.
 
     Parameters:
-        path (str): a path to the file to be examined.
+        base_path (str): a path to the file to be examined.
 
         dir_path (str): a path to the directory which will be used to create
             absolute file paths.
 
     Returns:
-        path (str): an absolutized version of the path.
+        target_abs_path (str): an absolutized version of the path.
 
     Raises:
         ValueError if the file doesn't exist.
 
     """
-    if not os.path.isabs(path):
-        path = os.path.join(dir_path, path)
+    if not os.path.isabs(base_path):
+        target_abs_path = os.path.join(dir_path, base_path)
 
-    if not os.path.exists(path):
-        raise ValueError('The file on %s does not exist.' % path)
+        if not os.path.exists(target_abs_path):
+            raise ValueError(
+                'The file on %s does not exist.' % target_abs_path)
+        else:
+            return target_abs_path
 
-    return path
+    return base_path
 
 
 def _label_raster(path):
@@ -2053,7 +2056,7 @@ def _label_linear_unit(row):
         return linear_unit
 
 
-def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
+def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
                         intermediate_dir, output_dir, suffix_end):
     """Read CSV file as dataframe and add data info to new columns.
 
@@ -2061,8 +2064,8 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
     given habitat or stressors to the dataframe.
 
     Parameters:
-        base_info_csv_path (str): a path to the CSV file that contains the path
-            and buffer information.
+        base_info_table_path (str): a path to the CSV or excel file that
+            contains the path and buffer information.
 
         file_preprocessing_dir (str): a path to the folder where simplified
             vectors paths, and base, aligned and distance raster paths will
@@ -2095,7 +2098,16 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
     required_types = [_HABITAT_TYPE, _STRESSOR_TYPE]
     required_buffer_type = _STRESSOR_TYPE
 
-    info_df = pandas.read_csv(base_info_csv_path)
+    # Read file with pandas based on its type
+    file_ext = os.path.splitext(base_info_table_path)[1]
+    if file_ext == '.csv':
+        info_df = pandas.read_csv(base_info_table_path)
+    elif file_ext in ['.xlsx', '.xls']:
+        info_df = pandas.read_excel(base_info_table_path)
+    else:
+        raise ValueError('Info table %s is not a CSV or an Excel file.' %
+                         base_info_table_path)
+
     info_df.columns = map(str.upper, info_df.columns)
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
@@ -2124,7 +2136,7 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
     # Convert all relative paths to absolute paths
     info_df['PATH'] = info_df.apply(
         lambda row: _to_abspath(
-            row['PATH'], os.path.dirname(base_info_csv_path)), axis=1)
+            row['PATH'], os.path.dirname(base_info_table_path)), axis=1)
     # Check if the file on the path is a raster or vector
     info_df['IS_RASTER'] = info_df.apply(
         lambda row: _label_raster(row['PATH']), axis=1)
@@ -2172,12 +2184,12 @@ def _get_info_dataframe(base_info_csv_path, file_preprocessing_dir,
     return info_df, habitat_names, stressor_names
 
 
-def _get_criteria_dataframe(criteria_csv_path):
+def _get_criteria_dataframe(base_criteria_table_path):
     """Get validated criteria dataframe from a given path to a CSV file.
 
     Parameters:
-        criteria_csv_path (str): a path to the CSV file with habitat and
-            stressor criteria ratings.
+        base_criteria_table_path (str): a path to the CSV or Excel file with
+            habitat and stressor criteria ratings.
 
     Returns:
         criteria_df (dataframe): a dataframe converted from CSV with 'NaN' for
@@ -2188,10 +2200,19 @@ def _get_criteria_dataframe(criteria_csv_path):
             CSV file.
 
     """
+    # Read the table into dataframe based on its type, with first column as
+    # index. Column names are auto-generated ordinal values
+    file_ext = os.path.splitext(base_criteria_table_path)[1]
+    if file_ext == '.csv':
+        criteria_df = pandas.read_csv(
+            base_criteria_table_path, index_col=0, header=None)
+    elif file_ext in ['.xlsx', '.xls']:
+        criteria_df = pandas.read_excel(
+            base_criteria_table_path, index_col=0, header=None)
+    else:
+        raise ValueError('Criteria table %s is not a CSV or an Excel file.' %
+                         base_criteria_table_path)
 
-    # Read the CSV file into dataframe, with first column as index.
-    # Column names are auto-generated ordinal values
-    criteria_df = pandas.read_csv(criteria_csv_path, index_col=0, header=None)
     # Convert empty cells to None (i.e. None)
     criteria_df.index = [x if isinstance(x, str) else None
                          for x in criteria_df.index]
@@ -2819,8 +2840,8 @@ def validate(args, limit_to=None):
 
     for key in [
             'workspace_dir',
-            'info_csv_path',
-            'criteria_csv_path',
+            'info_table_path',
+            'criteria_table_path',
             'resolution',
             'max_rating',
             'risk_eq',
@@ -2843,11 +2864,16 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     for key in [
-            'criteria_csv_path', 'info_csv_path']:
-        if (limit_to is None or limit_to == key) and (
-                not os.path.exists(args[key])):
-            validation_error_list.append(
-                ([key], 'not found on disk'))
+            'criteria_table_path', 'info_table_path']:
+        if (limit_to is None or limit_to == key):
+            if not os.path.exists(args[key]):
+                validation_error_list.append(([key], 'not found on disk'))
+
+            # Validate file type
+            file_ext = os.path.splitext(args[key])[1]
+            if file_ext not in ['.csv', '.xlsx', '.xls']:
+                validation_error_list.append(
+                    ([key], 'not a CSV or an Excel file'))
 
     for key, key_values in {
             'risk_eq': ['Euclidean', 'Multiplicative'],

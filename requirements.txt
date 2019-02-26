@@ -24,3 +24,4 @@ pygeoprocessing>=1.6.1
 taskgraph[niced_processes]>=0.8.1
 chardet>=3.0.4
 matplotlib
+xlrd>=1.2.0

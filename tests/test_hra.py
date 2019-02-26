@@ -282,13 +282,13 @@ def _make_raster_from_array(base_array, target_raster_path, projected=True):
         filename=target_raster_path)
 
 
-def _make_info_csv(info_csv_path, workspace_dir, missing_columns=False,
+def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
                    wrong_layer_type=False, wrong_buffer_value=False,
                    projected=True):
     """Make a synthesized information csv on the designated path.
 
     Parameters:
-        info_csv_path (str): path to the csv with information on habitats and
+        info_table_path (str): path to the csv with information on habitats and
             stressors.
 
         workspace_dir (str): path to the workspace for creating file paths.
@@ -308,7 +308,7 @@ def _make_info_csv(info_csv_path, workspace_dir, missing_columns=False,
 
     """
     # Make a Shapefile and a GeoTIFF file for each layer and write to info csv
-    with open(info_csv_path, 'wb') as table:
+    with open(info_table_path, 'wb') as table:
         if missing_columns:
             table.write('wrong name,PATH,TYPE,"wrong buffer name"\n')
         else:
@@ -321,15 +321,16 @@ def _make_info_csv(info_csv_path, workspace_dir, missing_columns=False,
 
         for layer_type in layer_types:
             # Create a shapefile for habitat_0 and stressor_0
-            vector_path = os.path.join(
+            abs_vector_path = os.path.join(
                 workspace_dir, layer_type + '_0') + '.shp'
+            rel_vector_path = os.path.relpath(abs_vector_path, workspace_dir)
             if projected:
-                _make_simple_vector(vector_path, projected=True)
+                _make_simple_vector(abs_vector_path, projected=True)
             else:
-                _make_simple_vector(vector_path, projected=False)
+                _make_simple_vector(abs_vector_path, projected=False)
 
             # Write the information about the shapefile layer to csv
-            table.write(layer_type + '_0,' + vector_path + ',' + layer_type)
+            table.write(layer_type + '_0,' + rel_vector_path + ',' + layer_type)
 
             # Add buffer of 3 meters to stressor_0
             if layer_type == 'stressor':
@@ -361,7 +362,7 @@ def _make_info_csv(info_csv_path, workspace_dir, missing_columns=False,
 
 
 def _make_criteria_csv(
-        criteria_csv_path, workspace_dir=None, missing_criteria=False,
+        criteria_table_path, workspace_dir=None, missing_criteria=False,
         missing_index=False, missing_layer_names=False,
         missing_criteria_header=False, unknown_criteria=False,
         wrong_criteria_type=False, wrong_weight=False, large_rating=False):
@@ -369,8 +370,8 @@ def _make_criteria_csv(
 
     Parameters:
 
-        info_csv_path (str): path to the CSV with information on habitats and
-            stressors.
+        info_table_path (str): path to the CSV or Excel file with information
+            on habitats and stressors.
 
         workspace_dir (str): path to the folder for saving spatially explicit
             criteria files.
@@ -413,7 +414,7 @@ def _make_criteria_csv(
     rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
     _make_rating_vector(rating_vector_path)
 
-    with open(criteria_csv_path, 'wb') as table:
+    with open(criteria_table_path, 'wb') as table:
         if missing_index:
             table.write(
                 '"missing index",habitat_0,,,habitat_1,,,"CRITERIA TYPE",\n')
@@ -482,13 +483,13 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Create a criteria CSV that misses a criteria type
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir, missing_criteria=True)
+            bad_criteria_table_path, self.workspace_dir, missing_criteria=True)
 
         with self.assertRaises(ValueError) as cm:
-            criteria_df = _get_criteria_dataframe(bad_criteria_csv_path)
+            criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
             _get_overlap_dataframe(
                 criteria_df, ['habitat_0', 'habitat_1'],
                 {'stressor_0': ['criteria 3', 'criteria 4'],
@@ -505,14 +506,14 @@ class HraUnitTests(unittest.TestCase):
 
         # Create a criteria CSV that has a criteria row that shows up before
         # any stressors
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, workspace_dir=self.workspace_dir,
+            bad_criteria_table_path, workspace_dir=self.workspace_dir,
             unknown_criteria=True)
 
         with self.assertRaises(ValueError) as cm:
-            criteria_df = _get_criteria_dataframe(bad_criteria_csv_path)
+            criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
             _get_attributes_from_df(criteria_df, ['habitat_0', 'habitat_1'],
                                     ['stressor_0', 'stressor_1'])
 
@@ -525,13 +526,13 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir, missing_index=True)
+            bad_criteria_table_path, self.workspace_dir, missing_index=True)
 
         with self.assertRaises(ValueError) as cm:
-            _get_criteria_dataframe(bad_criteria_csv_path)
+            _get_criteria_dataframe(bad_criteria_table_path)
 
         expected_message = (
             "'HABITAT NAME', 'HABITAT STRESSOR OVERLAP PROPERTIES'")
@@ -544,34 +545,46 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe
 
         # Use a criteria CSV that misses two indexes
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir,
+            bad_criteria_table_path, self.workspace_dir,
             missing_criteria_header=True)
 
         with self.assertRaises(ValueError) as cm:
-            _get_criteria_dataframe(bad_criteria_csv_path)
+            _get_criteria_dataframe(bad_criteria_table_path)
 
         expected_message = 'missing the column header "CRITERIA TYPE"'
         actual_message = str(cm.exception)
         self.assertTrue(
             expected_message in actual_message, actual_message)
 
+
+    def test_excel_info_table(self):
+        """HRA: test excel files read correctly by _get_info_dataframe."""
+        from natcap.invest.hra import _get_info_dataframe
+
+        # Make an info CSV file and read it as a dataframe
+        info_csv_path = os.path.join(r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\excel_files", 'info.csv')
+        _make_info_csv(info_csv_path, workspace_dir=r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\excel_files")
+
+
+
+
     def test_missing_columns_from_info_csv(self):
         """HRA: exception raised when columns are missing from info CSV."""
         from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
-        bad_info_csv_path = os.path.join(
+        bad_info_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_info_csv(
-            bad_info_csv_path, workspace_dir=self.workspace_dir,
+            bad_info_table_path, workspace_dir=self.workspace_dir,
             missing_columns=True)
 
         with self.assertRaises(ValueError) as cm:
             _get_info_dataframe(
-                bad_info_csv_path, self.workspace_dir, self.workspace_dir,
+                bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
         expected_message = "'NAME', 'STRESSOR BUFFER (METERS)'"
@@ -584,15 +597,15 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
-        bad_info_csv_path = os.path.join(
+        bad_info_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_info_csv(
-            bad_info_csv_path, workspace_dir=self.workspace_dir,
+            bad_info_table_path, workspace_dir=self.workspace_dir,
             wrong_layer_type=True)
 
         with self.assertRaises(ValueError) as cm:
             _get_info_dataframe(
-                bad_info_csv_path, self.workspace_dir, self.workspace_dir,
+                bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
         expected_message = "The `TYPE` attribute in Info CSV"
@@ -605,15 +618,15 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
-        bad_info_csv_path = os.path.join(
+        bad_info_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_info_csv(
-            bad_info_csv_path, workspace_dir=self.workspace_dir,
+            bad_info_table_path, workspace_dir=self.workspace_dir,
             wrong_buffer_value=True)
 
         with self.assertRaises(ValueError) as cm:
             _get_info_dataframe(
-                bad_info_csv_path, self.workspace_dir, self.workspace_dir,
+                bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
         expected_message = "should be a number for stressors"
@@ -626,14 +639,14 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir,
+            bad_criteria_table_path, self.workspace_dir,
             wrong_criteria_type=True)
 
         with self.assertRaises(ValueError) as cm:
-            criteria_df = _get_criteria_dataframe(bad_criteria_csv_path)
+            criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
             _get_overlap_dataframe(
                 criteria_df, ['habitat_0', 'habitat_1'],
                 {'stressor_0': ['criteria 3', 'criteria 4'],
@@ -649,13 +662,13 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir, wrong_weight=True)
+            bad_criteria_table_path, self.workspace_dir, wrong_weight=True)
 
         with self.assertRaises(ValueError) as cm:
-            criteria_df = _get_criteria_dataframe(bad_criteria_csv_path)
+            criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
             _get_overlap_dataframe(
                 criteria_df, ['habitat_0', 'habitat_1'],
                 {'stressor_0': ['criteria 3', 'criteria 4'],
@@ -672,13 +685,13 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _get_criteria_dataframe, _get_overlap_dataframe
 
         # Use a criteria CSV that's missing a criteria type
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
         _make_criteria_csv(
-            bad_criteria_csv_path, self.workspace_dir, large_rating=True)
+            bad_criteria_table_path, self.workspace_dir, large_rating=True)
 
         with self.assertRaises(ValueError) as cm:
-            criteria_df = _get_criteria_dataframe(bad_criteria_csv_path)
+            criteria_df = _get_criteria_dataframe(bad_criteria_table_path)
             _get_overlap_dataframe(
                 criteria_df, ['habitat_0', 'habitat_1'],
                 {'stressor_0': ['criteria 3', 'criteria 4'],
@@ -715,7 +728,7 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _to_abspath
 
         with self.assertRaises(ValueError) as cm:
-            _to_abspath('bad_raster.tif', self.workspace_dir)
+            _to_abspath('non_exist_raster.tif', self.workspace_dir)
 
         expected_message = 'does not exist.'
         actual_message = str(cm.exception)
@@ -780,8 +793,8 @@ class HraRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': workspace_dir,
             'results_suffix': u'',
-            'info_csv_path': os.path.join(workspace_dir, 'info.csv'),
-            'criteria_csv_path': os.path.join(workspace_dir, 'criteria.csv'),
+            'info_table_path': os.path.join(workspace_dir, 'info.csv'),
+            'criteria_table_path': os.path.join(workspace_dir, 'criteria.csv'),
             'max_rating': 3,
             'risk_eq': 'Euclidean',
             'decay_eq': 'Linear',
@@ -797,8 +810,8 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_csv_path'], self.workspace_dir)
-        _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
+        _make_info_csv(args['info_table_path'], self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
         natcap.invest.hra.execute(args)
@@ -857,8 +870,8 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_csv_path'], self.workspace_dir)
-        _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
+        _make_info_csv(args['info_table_path'], self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['risk_eq'] = 'Multiplicative'
         args['decay_eq'] = 'Exponential'
@@ -924,8 +937,8 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_csv_path'], self.workspace_dir)
-        _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
+        _make_info_csv(args['info_table_path'], self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
 
         # Make unprojected AOI vector
         bad_aoi_vector_path = os.path.join(
@@ -945,13 +958,13 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
         # Make unprojected files and write their filepaths to info csv.
-        bad_info_csv_path = os.path.join(self.workspace_dir, 'bad_info.csv')
-        _make_info_csv(bad_info_csv_path, self.workspace_dir, projected=False)
-        args['info_csv_path'] = bad_info_csv_path
+        bad_info_table_path = os.path.join(self.workspace_dir, 'bad_info.csv')
+        _make_info_csv(bad_info_table_path, self.workspace_dir, projected=False)
+        args['info_table_path'] = bad_info_table_path
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
@@ -965,16 +978,16 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_csv_path'], self.workspace_dir)
+        _make_info_csv(args['info_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
         # Make habitat and stressor layer names in criteria CSV different from
         # that in info CSV.
-        bad_criteria_csv_path = os.path.join(
+        bad_criteria_table_path = os.path.join(
             self.workspace_dir, 'bad_criteria.csv')
-        _make_criteria_csv(bad_criteria_csv_path, self.workspace_dir,
+        _make_criteria_csv(bad_criteria_table_path, self.workspace_dir,
                            missing_layer_names=True)
-        args['criteria_csv_path'] = bad_criteria_csv_path
+        args['criteria_table_path'] = bad_criteria_table_path
 
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
@@ -993,9 +1006,9 @@ class HraRegressionTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': u'',
-            'info_csv_path': os.path.join(
+            'info_table_path': os.path.join(
                 TEST_DATA, 'file_not_exist.csv'),  # invalid file path
-            'criteria_csv_path': os.path.join(
+            'criteria_table_path': os.path.join(
                 TEST_DATA, 'exposure_consequence_criteria.csv'),
             'max_rating': 'not a number',  # invalid value
             'risk_eq': 'Typo',  # invalid value
@@ -1010,7 +1023,7 @@ class HraRegressionTests(unittest.TestCase):
             natcap.invest.hra.execute(args)
 
         expected_invalid_parameters = [
-            'info_csv_path', 'risk_eq', 'max_rating', 'aoi_vector_path']
+            'info_table_path', 'risk_eq', 'max_rating', 'aoi_vector_path']
         actual_message = str(cm.exception)
 
         for invalid_parameter in expected_invalid_parameters:
@@ -1024,9 +1037,9 @@ class HraRegressionTests(unittest.TestCase):
         args = {
             # missing workspace_dir
             'results_suffix': u'',
-            'info_csv_path': os.path.join(
+            'info_table_path': os.path.join(
                 TEST_DATA, 'habitat_stressor_info.csv'),
-            'criteria_csv_path': os.path.join(
+            'criteria_table_path': os.path.join(
                 TEST_DATA, 'exposure_consequence_criteria.csv'),
             'max_rating': 3,
             'risk_eq': 'Euclidean',
@@ -1049,8 +1062,8 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_csv_path'], self.workspace_dir)
-        _make_criteria_csv(args['criteria_csv_path'], self.workspace_dir)
+        _make_info_csv(args['info_table_path'], self.workspace_dir)
+        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
         natcap.invest.hra.validate(args)
