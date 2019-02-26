@@ -1,34 +1,37 @@
 pipelines:
     custom:
         win32-installer:
+            - parallel:
+                - step:
+                    name: User's Guide
+                    image: natcap/userguide-build:0da3dbeaf1aa3a7bb4b7bd583db9fea708e61709
+                    script:
+                        - make userguide
+                    artifacts:
+                        - dist/**
+                - step:
+                    name: Sample Data
+                    image: debian:9.7
+                    script:
+                        - apt-get update && apt-get install -y subversion \
+                            mercurial build-essential zip python-setuptools \
+                            python-numpy python-setuptools-scm
+                        - make sampledata
+                    artifacts:
+                        - dist/**
+                        - data/invest-test-data/*.json
+                - step:
+                    name: Python Binaries
+                    image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                    script:
+                        - wine make env
+                        - wine env\scripts\python.exe -m pip install --upgrade .
+                        - wine env\scripts\python.exe -m pip install -r requirements-gui.txt
+                        - wine make PYTHON=env\scripts\python.exe binaries
+                    artifacts:
+                        - dist/**
             - step:
-                name: InVEST User's Guide
-                image: natcap/userguide-build:0da3dbeaf1aa3a7bb4b7bd583db9fea708e61709
-                script:
-                    - make userguide
-                artifacts:
-                    - dist/**
-            - step:
-                name: Archive Sample Data
-                image: debian:9.7
-                script:
-                    - apt-get update && apt-get install -y subversion mercurial build-essential zip
-                    - make sampledata
-                artifacts:
-                    - dist/**
-                    - data/invest-test-data/*.json
-            - step:
-                name: InVEST Binaries
-                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
-                script:
-                    - wine make env
-                    - wine env\scripts\python.exe -m pip install --upgrade .
-                    - wine env\scripts\python.exe -m pip install -r requirements-gui.txt
-                    - wine make PYTHON=env\scripts\python.exe binaries
-                artifacts:
-                    - dist/**
-            - step:
-                name: InVEST NSIS Installer
+                name: NSIS Installer
                 image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
