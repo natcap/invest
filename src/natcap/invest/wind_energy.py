@@ -1823,7 +1823,6 @@ def _get_suitable_projection_params(
         target_pixel_size = _convert_degree_pixel_size_to_square_meters(
             base_raster_info['pixel_size'], centroid_y)
 
-        utm_code = (math.floor((centroid_x + 180) / 6) % 60) + 1
         utm_code = (math.floor((centroid_x + 180.0) / 6) % 60) + 1
         lat_code = 6 if centroid_y > 0 else 7
         epsg_code = int('32%d%02d' % (lat_code, utm_code))
