@@ -716,12 +716,14 @@ def route_baseflow_sum(
             for xs in xrange(win_xsize):
                 xs_root = xoff+xs
                 flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
+                if flow_dir_s == flow_dir_nodata:
+                    continue
                 outlet = 1
                 for n_dir in xrange(8):
-                    if (flow_dir_s >> n_dir * 4) & 0xF:
+                    if (flow_dir_s >> (n_dir * 4)) & 0xF:
                         # flows in this direction
-                        xj = xs+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
-                        yj = ys+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                        xj = xs_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                        yj = ys_root+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
                         if (xj < 0 or xj >= raster_x_size or
                                 yj < 0 or yj >= raster_y_size):
                             continue
@@ -742,7 +744,6 @@ def route_baseflow_sum(
                     if not is_close(b_sum_i, target_nodata):
                         continue
 
-                    LOGGER.debug("%s %s %s", xi, yi, b_sum_i)
                     b_sum_i = 0.0
                     mfd_dir_sum = 0
                     downstream_defined = 1
