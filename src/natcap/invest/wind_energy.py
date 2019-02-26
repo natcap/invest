@@ -884,7 +884,7 @@ def execute(args):
         final_dist_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(land_poly_dist_raster_path, 1), (mean_pixel_size, 'raw'),
-                  (avg_grid_distance, 'raw')], add_avg_dist_op,
+                  (avg_grid_distance, 'raw')], _add_avg_dist_op,
                   final_dist_raster_path, _TARGET_DATA_TYPE, _TARGET_NODATA),
             target_path_list=[final_dist_raster_path],
             task_name='calculate_final_distance_in_meters',
@@ -1225,7 +1225,7 @@ def _depth_op(bath, min_depth, max_depth):
     return out_array
 
 
-def add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
+def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
     """Convert distances to meters and add in avg_grid_distance
 
     Parameters:
