@@ -89,7 +89,7 @@ cdef int* FLOW_DIR_REVERSE_DIRECTION = [4, 5, 6, 7, 0, 1, 2, 3]
 ctypedef pair[int, double*] BlockBufferPair
 
 # Number of raster blocks to hold in memory at once per Managed Raster
-cdef int MANAGED_RASTER_N_BLOCKS = 2**6
+cdef int MANAGED_RASTER_N_BLOCKS = 2**4
 
 # a class to allow fast random per-pixel access to a raster for both setting
 # and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
@@ -548,6 +548,9 @@ cpdef calculate_local_recharge(
                     yi = work_queue.front().second
                     work_queue.pop()
 
+                    if yi < 0:
+                        LOGGER.error("%s %s", xi, yi)
+
                     l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
                     if not is_close(l_sum_avail_i, target_nodata):
                         # already defined
@@ -645,6 +648,9 @@ cpdef calculate_local_recharge(
                             continue
                         xi_n = xi+NEIGHBOR_OFFSET_ARRAY[2*i_n]
                         yi_n = yi+NEIGHBOR_OFFSET_ARRAY[2*i_n+1]
+                        if (xi_n < 0 or xi_n >= raster_x_size or
+                                yi_n < 0 or yi_n >= raster_y_size):
+                            continue
                         work_queue.push(pair[int, int](xi_n, yi_n))
 
 
@@ -667,7 +673,7 @@ def route_baseflow_sum(
     cdef int n_dir
     cdef int xs, ys, flow_dir_s, win_xsize, win_ysize
     cdef int stream_nodata
-    cdef queue[pair[int, int]] work_queue
+    cdef stack[pair[int, int]] work_stack
 
     # we know the PyGeoprocessing MFD raster flow dir type is a 32 bit int.
     flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
@@ -727,13 +733,12 @@ def route_baseflow_sum(
                             break
                 if not outlet:
                     continue
-                work_queue.push(
-                    pair[int, int](xs_root, ys_root))
+                work_stack.push(pair[int, int](xs_root, ys_root))
 
-                while work_queue.size() > 0:
-                    xi = work_queue.front().first
-                    yi = work_queue.front().second
-                    work_queue.pop()
+                while work_stack.size() > 0:
+                    xi = work_stack.top().first
+                    yi = work_stack.top().second
+                    work_stack.pop()
                     b_sum_i = target_b_sum_raster.get(xi, yi)
                     if not is_close(b_sum_i, target_nodata):
                         continue
@@ -810,4 +815,4 @@ def route_baseflow_sum(
                         if (0xF & (flow_dir_j >> (
                                 4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
                             # pixel flows here, push on queue
-                            work_queue.push(pair[int, int](xj, yj))
+                            work_stack.push(pair[int, int](xj, yj))

@@ -20,6 +20,8 @@ from .. import validation
 
 from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
 
+gdal.SetCacheMax(2**26)
+
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
 
@@ -512,9 +514,9 @@ def _execute(args):
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
 
     if args['user_defined_local_recharge']:
-        vri_dependent_task_list = [calculate_local_recharge_task]
+        vri_dependent_task_list = [l_avail_task]
     else:
-        vri_dependent_task_list = []
+        vri_dependent_task_list = [calculate_local_recharge_task]
 
     vri_task = task_graph.add_task(
         func=_calculate_vri,
@@ -565,30 +567,6 @@ def _execute(args):
             file_registry['b_sum_path'], file_registry['b_path']],
         dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
-
-    """
-    LOGGER.info('calculate B')
-    b_task = task_graph.add_task(
-        func=_calculate_b,
-        args=(
-            file_registry['b_sum_path'], file_registry['l_path'],
-            file_registry['l_sum_path'], file_registry['b_path']),
-        target_path_list=[file_registry['b_path']],
-        dependent_task_list=[b_sum_task],
-        task_name='calculate B')
-
-    LOGGER.info('deleting temporary files')
-    for file_id in _TMP_BASE_FILES:
-        try:
-            if isinstance(file_registry[file_id], str):
-                os.remove(file_registry[file_id])
-            elif isinstance(file_registry[file_id], list):
-                for index in range(len(file_registry[file_id])):
-                    os.remove(file_registry[file_id][index])
-        except OSError:
-            # Let it go.
-            pass
-    """
 
     task_graph.close()
     task_graph.join()
