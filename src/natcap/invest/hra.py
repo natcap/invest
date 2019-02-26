@@ -2089,7 +2089,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         stressor_names (list): a list of stressor names obtained from info CSV.
 
     Raises:
-        ValueError if any column header is missing from the CSV file.
+        ValueError if the input table is not a CSV or Excel file.
+        ValueError if any column header is missing from the table.
         ValueError if any input format is not correct.
         ValueError if if any input file does not have a projection.
 
@@ -2105,7 +2106,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     elif file_ext in ['.xlsx', '.xls']:
         info_df = pandas.read_excel(base_info_table_path)
     else:
-        raise ValueError('Info table %s is not a CSV or an Excel file.' %
+        raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
     info_df.columns = map(str.upper, info_df.columns)

@@ -284,7 +284,7 @@ def _make_raster_from_array(base_array, target_raster_path, projected=True):
 
 def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
                    wrong_layer_type=False, wrong_buffer_value=False,
-                   projected=True):
+                   projected=True, rel_path=False):
     """Make a synthesized information csv on the designated path.
 
     Parameters:
@@ -303,11 +303,14 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
         projected (bool): if true, define projection information when creating
             vectors and rasters.
 
+        rel_path (bool): if true, write relative raster and vector paths to
+            the table. File locations are relative to the folder of the table.
+
     Returns:
         None.
 
     """
-    # Make a Shapefile and a GeoTIFF file for each layer and write to info csv
+    # Make a Shapefile and a GeoTIFF file for each layer and write to the table
     with open(info_table_path, 'wb') as table:
         if missing_columns:
             table.write('wrong name,PATH,TYPE,"wrong buffer name"\n')
@@ -323,14 +326,22 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
             # Create a shapefile for habitat_0 and stressor_0
             abs_vector_path = os.path.join(
                 workspace_dir, layer_type + '_0') + '.shp'
-            rel_vector_path = os.path.relpath(abs_vector_path, workspace_dir)
+
             if projected:
                 _make_simple_vector(abs_vector_path, projected=True)
             else:
                 _make_simple_vector(abs_vector_path, projected=False)
 
-            # Write the information about the shapefile layer to csv
-            table.write(layer_type + '_0,' + rel_vector_path + ',' + layer_type)
+            # Write relative path to the table
+            if rel_path:
+                rel_vector_path = os.path.relpath(
+                    abs_vector_path, workspace_dir)
+                # Write the information about the shapefile layer to the table
+                table.write(
+                    layer_type + '_0,' + rel_vector_path + ',' + layer_type)
+            else:
+                table.write(
+                    layer_type + '_0,' + abs_vector_path + ',' + layer_type)
 
             # Add buffer of 3 meters to stressor_0
             if layer_type == 'stressor':
@@ -344,16 +355,24 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
             size = 10
             array = numpy.zeros((size, size), dtype=numpy.int8)
             array[size/2:, :] = 1
-            raster_path = os.path.join(
+            abs_raster_path = os.path.join(
                 workspace_dir, layer_type + '_1') + '.tif'
             if projected:
-                _make_raster_from_array(array, raster_path, projected=True)
+                _make_raster_from_array(array, abs_raster_path, projected=True)
             else:
-                _make_raster_from_array(array, raster_path, projected=False)
+                _make_raster_from_array(array, abs_raster_path, projected=False)
 
-            # Write the information about the raster layer to csv
-            table.write(
-                '\n' + layer_type + '_1,' + raster_path + ',' + layer_type)
+            if rel_path:
+                rel_raster_path = os.path.relpath(
+                    abs_raster_path, workspace_dir)
+                # Write relevant info to the table
+                table.write(
+                    '\n' + layer_type + '_1,' + rel_raster_path + ',' +
+                    layer_type)
+            else:
+                table.write(
+                    '\n' + layer_type + '_1,' + abs_raster_path + ',' +
+                    layer_type)
 
             # Add buffer of 5 meters to stressor_1
             if layer_type == 'stressor':
@@ -559,16 +578,33 @@ class HraUnitTests(unittest.TestCase):
         self.assertTrue(
             expected_message in actual_message, actual_message)
 
-
-    def test_excel_info_table(self):
+    def test_get_info_excel_file(self):
         """HRA: test excel files read correctly by _get_info_dataframe."""
         from natcap.invest.hra import _get_info_dataframe
 
         # Make an info CSV file and read it as a dataframe
-        info_csv_path = os.path.join(r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\excel_files", 'info.csv')
-        _make_info_csv(info_csv_path, workspace_dir=r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\excel_files")
+        info_csv_path = os.path.join(self.workspace_dir, 'info.csv')
+        _make_info_csv(
+            info_csv_path, workspace_dir=self.workspace_dir, rel_path=True)
+        expected_df = _get_info_dataframe(
+            info_csv_path, self.workspace_dir, self.workspace_dir,
+            self.workspace_dir, '')[0]
 
+        # Since we don't have openpyxl library, use the existing excel file
+        # from TEST_DATA folder, and copy it to self.workspace_dir so
+        # the function won't raise exceptions about vector or raster files
+        # in the table not existing
+        info_excel_path = os.path.join(TEST_DATA, 'info_excel.xlsx')
+        copied_info_excel_path = os.path.join(
+            self.workspace_dir, 'info_excel.xlsx')
+        shutil.copyfile(info_excel_path, copied_info_excel_path)
+        out_df = _get_info_dataframe(
+            copied_info_excel_path, self.workspace_dir, self.workspace_dir,
+            self.workspace_dir, '')[0]
 
+        self.assertTrue(
+            out_df.equals(expected_df),
+            'The dataframes read from info CSV and excel files are different.')
 
 
     def test_missing_columns_from_info_csv(self):
@@ -810,7 +846,9 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        _make_info_csv(args['info_table_path'], self.workspace_dir)
+        # Also test out relative path
+        _make_info_csv(
+            args['info_table_path'], self.workspace_dir, rel_path=True)
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
