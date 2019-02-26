@@ -793,3 +793,19 @@ def route_baseflow_sum(
                     l_sum_i = l_sum_raster.get(xi, yi)
                     b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
                     target_b_raster.set(xi, yi, b_i)
+
+                    for n_dir in xrange(8):
+                        # searching upstream for pixels that flow in
+                        # 321
+                        # 4x0
+                        # 567
+                        xj = xi+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                        yj = yi+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                        if (xj < 0 or xj >= raster_x_size or
+                                yj < 0 or yj >= raster_y_size):
+                            continue
+                        flow_dir_j = <int>flow_raster.get(xj, yj)
+                        if (0xF & (flow_dir_j >> (
+                                4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
+                            # pixel flows here, push on queue
+                            work_queue.push(pair[int, int](xj, yj))
