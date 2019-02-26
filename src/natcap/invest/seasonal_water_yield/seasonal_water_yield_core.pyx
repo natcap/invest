@@ -548,9 +548,6 @@ cpdef calculate_local_recharge(
                     yi = work_queue.front().second
                     work_queue.pop()
 
-                    if yi < 0:
-                        LOGGER.error("%s %s", xi, yi)
-
                     l_sum_avail_i = target_l_sum_avail_raster.get(xi, yi)
                     if not is_close(l_sum_avail_i, target_nodata):
                         # already defined
