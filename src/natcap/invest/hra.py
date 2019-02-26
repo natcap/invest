@@ -70,7 +70,7 @@ def execute(args):
             `STRESSOR BUFFER (meters)` column should have a buffer value if
             the `TYPE` column is a stressor.
 
-        args['criteria_table_path'] (str): a path to the CSV file that
+        args['criteria_table_path'] (str): a path to the CSV or Excel file that
             contains the set of criteria ranking of each stressor on each
             habitat.
 
@@ -79,7 +79,7 @@ def execute(args):
 
         args['max_rating'] (str, int or float): a number representing the
             highest potential value that should be represented in rating in the
-            criteria scores CSV table.
+            criteria scores table.
 
         args['risk_eq'] (str): a string identifying the equation that should be
             used in calculating risk scores for each H-S overlap cell. This
