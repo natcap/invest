@@ -547,15 +547,17 @@ def _execute(args):
     b_sum_task = task_graph.add_task(
         func=seasonal_water_yield_core.route_baseflow_sum,
         args=(
-            file_registry['dem_pit_filled_path'],
+            file_registry['flow_dir_mfd_path'],
             file_registry['l_path'],
             file_registry['l_avail_path'],
             file_registry['l_sum_path'],
             file_registry['stream_path'],
+            file_registry['b_path'],
             file_registry['b_sum_path']),
-        target_path_list=[file_registry['b_sum_path']],
-        dependent_task_list=b_sum_dependent_task_list + [
-            fill_pit_task, l_sum_task, stream_threshold_task],
+
+        target_path_list=[
+            file_registry['b_sum_path'], file_registry['b_path']],
+        dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
         task_name='calculate B_sum')
 
     """

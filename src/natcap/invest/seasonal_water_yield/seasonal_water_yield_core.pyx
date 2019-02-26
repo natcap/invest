@@ -429,7 +429,7 @@ cpdef calculate_local_recharge(
     cdef int i_n, flow_dir_nodata, flow_dir_mfd
     cdef int peak_pixel
     cdef int xs, ys, xs_root, ys_root, xoff, yoff, flow_dir_s
-    cdef int xi, yi, xj, yj, flow_dir_j
+    cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
     cdef float pet_m, p_m, qf_m, aet_i, p_i, qf_i, l_i, l_avail_i
@@ -572,10 +572,10 @@ cpdef calculate_local_recharge(
                         if (xj < 0 or xj >= raster_x_size or
                                 yj < 0 or yj >= raster_y_size):
                             continue
-                        flow_dir_j = (<int>flow_raster.get(xj, yj) >> (
+                        p_ij_base = (<int>flow_raster.get(xj, yj) >> (
                                 4 * FLOW_DIR_REVERSE_DIRECTION[n_dir])) & 0xF
-                        if flow_dir_j:
-                            mfd_dir_sum += flow_dir_j
+                        if p_ij_base:
+                            mfd_dir_sum += p_ij_base
                             # pixel flows inward, check upstream
                             l_sum_avail_j = target_l_sum_avail_raster.get(
                                 xj, yj)
@@ -586,7 +586,7 @@ cpdef calculate_local_recharge(
                                 xj, yj)
                             # A step of Equation 7
                             mfd_direction_array[j_neighbor_end_index] = (
-                                l_sum_avail_j + l_avail_j) * flow_dir_j
+                                l_sum_avail_j + l_avail_j) * p_ij_base
                             j_neighbor_end_index += 1
                     # calculate l_sum_avail_i by summing all the valid
                     # directions then normalizing by the sum of the mfd
@@ -647,413 +647,148 @@ cpdef calculate_local_recharge(
                         yi_n = yi+NEIGHBOR_OFFSET_ARRAY[2*i_n+1]
                         work_queue.push(pair[int, int](xi_n, yi_n))
 
-    """
-    route_local_recharge(
-        precip_path_list, et0_path_list, kc_path_list, target_li_path,
-        target_li_avail_path, target_l_sum_avail_path, target_aet_path,
-        alpha_month_array, beta_i, gamma, qfm_path_list, stream_path,
-        outlet_cell_deque)
-    """
-"""
+
 def route_baseflow_sum(
-        dem_path, l_path, l_avail_path, l_sum_path,
-        stream_path, b_sum_path):
-    LOGGER.error('implement route_baseflow_sum')
-    cdef _ManagedRaster dem_raster = _ManagedRaster(dem_path, 1, 0)
+        flow_dir_mfd_path, l_path, l_avail_path, l_sum_path,
+        stream_path, target_b_path, target_b_sum_path):
+    """Route Baseflow Equation 11.
 
-    cdef time_t start
-    time(&start)
-"""
-
-def _generate_read_bounds(offset_dict, raster_x_size, raster_y_size):
-    """Helper function to expand GDAL memory block read bound by 1 pixel.
-
-    This function is used in the context of reading a memory block on a GDAL
-    raster plus an additional 1 pixel boundary if it fits into an existing
-    numpy array of size (2+offset_dict['y_size'], 2+offset_dict['x_size']).
-
-    Parameters:
-        offset_dict (dict): dictionary that has values for 'win_xsize',
-            'win_ysize', 'xoff', and 'yoff' to describe the bounding box
-            to read from the raster.
-        raster_x_size, raster_y_size (int): these are the global x/y sizes
-            of the raster that's being read.
-
-    Returns:
-        (xa, xb, ya, yb) (tuple of int): bounds that can be used to slice a
-            numpy array of size
-                (2+offset_dict['y_size'], 2+offset_dict['x_size'])
-        modified_offset_dict (dict): a copy of `offset_dict` with the
-            `win_*size` keys expanded if the modified bounding box will still
-            fit on the array.
     """
-    xa = 1
-    xb = -1
-    ya = 1
-    yb = -1
-    target_offset_dict = offset_dict.copy()
-    if offset_dict['xoff'] > 0:
-        xa = None
-        target_offset_dict['xoff'] -= 1
-        target_offset_dict['win_xsize'] += 1
-    if offset_dict['yoff'] > 0:
-        ya = None
-        target_offset_dict['yoff'] -= 1
-        target_offset_dict['win_ysize'] += 1
-    if (offset_dict['xoff'] + offset_dict['win_xsize'] < raster_x_size):
-        xb = None
-        target_offset_dict['win_xsize'] += 1
-    if (offset_dict['yoff'] + offset_dict['win_ysize'] < raster_y_size):
-        yb = None
-        target_offset_dict['win_ysize'] += 1
-    return (xa, xb, ya, yb), target_offset_dict
+    # used for time-delayed logging
+    cdef time_t last_log_time
+    last_log_time = ctime(NULL)
 
+    cdef float target_nodata = -1e32
+    cdef int stream_val, outlet
+    cdef float b_i, b_sum_i, l_j, l_avail_j, l_sum_j
+    cdef int xi, yi, xj, yj, flow_dir_i, p_ij_base
+    cdef int mfd_dir_sum, flow_dir_nodata
+    cdef int raster_x_size, raster_y_size, xs_root, ys_root, xoff, yoff
+    cdef int n_dir
+    cdef int xs, ys, flow_dir_s, win_xsize, win_ysize
+    cdef int stream_nodata
+    cdef queue[pair[int, int]] work_queue
 
-"""
-cdef route_local_recharge(
-        precip_path_list, et0_path_list, kc_path_list, li_path,
-        li_avail_path, l_sum_avail_path, aet_path, numpy.ndarray alpha_month,
-        float beta_i, float gamma, qfi_path_list, outflow_direction_path,
-        outflow_weights_path, stream_path, deque[int] &sink_cell_deque):
-    #Pass transport
-    cdef time_t start
-    time(&start)
+    # we know the PyGeoprocessing MFD raster flow dir type is a 32 bit int.
+    flow_dir_raster_info = pygeoprocessing.get_raster_info(flow_dir_mfd_path)
+    flow_dir_nodata = flow_dir_raster_info['nodata'][0]
+    raster_x_size, raster_y_size = flow_dir_raster_info['raster_size']
 
-    #load a base raster so we can determine the n_rows/cols
-    outflow_direction_raster = gdal.OpenEx(outflow_direction_path, gdal.OF_RASTER)
-    cdef int n_cols = outflow_direction_raster.RasterXSize
-    cdef int n_rows = outflow_direction_raster.RasterYSize
-    outflow_direction_band = outflow_direction_raster.GetRasterBand(1)
+    stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
-    cdef int raster_x_size, raster_y_size
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_b_sum_path, gdal.GDT_Float32,
+        [target_nodata], fill_value_list=[target_nodata])
+    pygeoprocessing.new_raster_from_base(
+        flow_dir_mfd_path, target_b_path, gdal.GDT_Float32,
+        [target_nodata], fill_value_list=[target_nodata])
 
+    cdef _ManagedRaster target_b_sum_raster = _ManagedRaster(
+        target_b_sum_path, 1, 1)
+    cdef _ManagedRaster target_b_raster = _ManagedRaster(
+        target_b_path, 1, 1)
+    cdef _ManagedRaster l_raster = _ManagedRaster(l_path, 1, 0)
+    cdef _ManagedRaster l_avail_raster = _ManagedRaster(l_avail_path, 1, 0)
+    cdef _ManagedRaster l_sum_raster = _ManagedRaster(l_sum_path, 1, 0)
+    cdef _ManagedRaster flow_dir_mfd_raster = _ManagedRaster(
+        flow_dir_mfd_path, 1, 0)
 
-    raster_x_size, raster_y_size = dem_raster_info['raster_size']
+    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, 0)
 
-    cdef int block_col_size, block_row_size
-    block_col_size, block_row_size = outflow_direction_band.GetBlockSize()
+    for offset_dict in pygeoprocessing.iterblocks(
+            (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
 
-    #center point of global index
-    cdef int global_row, global_col #index into the overall raster
-    cdef int row_index, col_index #the index of the cache block
-    cdef int row_block_offset, col_block_offset #index into the cache block
-    cdef int global_block_row, global_block_col #used to walk the global blocks
+        if ctime(NULL) - last_log_time > 5.0:
+            last_log_time = ctime(NULL)
+            current_pixel = xoff + yoff * raster_x_size
+            LOGGER.info(
+                'route base flow %.2f%% complete',
+                100.0 * current_pixel / <float>(
+                    raster_x_size * raster_y_size))
 
-    #neighbor sections of global index
-    cdef int neighbor_row, neighbor_col #neighbor equivalent of global_{row,col}
-    cdef int neighbor_row_index, neighbor_col_index #neighbor cache index
-    cdef int neighbor_row_block_offset, neighbor_col_block_offset #index into the neighbor cache block
+        # search block for a peak pixel where no other pixel drains to it.
+        for ys in xrange(win_ysize):
+            ys_root = yoff+ys
+            for xs in xrange(win_xsize):
+                xs_root = xoff+xs
+                flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
+                outlet = 1
+                for n_dir in xrange(8):
+                    if (flow_dir_s >> n_dir * 4) & 0xF:
+                        # flows in this direction
+                        xj = xs+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                        yj = ys+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                        if (xj < 0 or xj >= raster_x_size or
+                                yj < 0 or yj >= raster_y_size):
+                            continue
+                        stream_val = <int>stream_raster.get(xj, yj)
+                        if stream_val != stream_nodata:
+                            outlet = 0
+                            break
+                if not outlet:
+                    continue
+                work_queue.push(
+                    pair[int, int](xs_root, ys_root))
 
-    #define all the single caches
-    cdef numpy.ndarray[numpy.npy_int8, ndim=4] outflow_direction_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.int8)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] outflow_weights_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] li_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] li_avail_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] l_sum_avail_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] aet_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=4] stream_block = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size),
-        dtype=numpy.float32)
+                while work_queue.size() > 0:
+                    xi = work_queue.front().first
+                    yi = work_queue.front().second
+                    work_queue.pop()
+                    b_sum_i = target_b_sum_raster.get(xi, yi)
+                    if not is_close(b_sum_i, target_nodata):
+                        continue
 
-    #these are 12 band blocks
-    cdef numpy.ndarray[numpy.npy_float32, ndim=5] precip_block_list = numpy.zeros(
-        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=5] et0_block_list = numpy.zeros(
-        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=5] qfi_block_list = numpy.zeros(
-        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
-    cdef numpy.ndarray[numpy.npy_float32, ndim=5] kc_block_list = numpy.zeros(
-        (N_MONTHS, N_BLOCK_ROWS, N_BLOCK_COLS, block_row_size, block_col_size), dtype=numpy.float32)
+                    LOGGER.debug("%s %s %s", xi, yi, b_sum_i)
+                    b_sum_i = 0.0
+                    mfd_dir_sum = 0
+                    downstream_defined = 1
+                    flow_dir_i = <int>flow_dir_mfd_raster.get(xi, yi)
+                    if flow_dir_i == flow_dir_nodata:
+                        LOGGER.error("flow dir nodata? this makes no sense")
+                        continue
+                    for n_dir in xrange(8):
+                        if not downstream_defined:
+                            break
+                        # searching around the pattern:
+                        # 321
+                        # 4x0
+                        # 567
+                        p_ij_base = (flow_dir_i >> (4*n_dir)) & 0xF
+                        if p_ij_base:
+                            mfd_dir_sum += p_ij_base
+                            xj = xi+NEIGHBOR_OFFSET_ARRAY[2*n_dir]
+                            yj = yi+NEIGHBOR_OFFSET_ARRAY[2*n_dir+1]
+                            if (xj < 0 or xj >= raster_x_size or
+                                    yj < 0 or yj >= raster_y_size):
+                                continue
+                            stream_val = <int>stream_raster.get(xj, yj)
 
-    cdef numpy.ndarray[numpy.npy_int8, ndim=2] cache_dirty = numpy.zeros(
-        (N_BLOCK_ROWS, N_BLOCK_COLS), dtype=numpy.int8)
+                            if stream_val:
+                                b_sum_i += p_ij_base
+                            else:
+                                b_sum_j = target_b_sum_raster.get(xj, yj)
+                                if is_close(b_sum_j, target_nodata):
+                                    downstream_defined = 0
+                                    break
+                                l_j = l_raster.get(xj, yj)
+                                l_avail_j = l_avail_raster.get(xj, yj)
+                                l_sum_j = l_sum_raster.get(xj, yj)
 
-    cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        outflow_direction_path)
+                                b_sum_i += p_ij_base * (
+                                    (1-l_avail_j / l_sum_j)*(
+                                        b_sum_j / (l_sum_j - l_j)))
 
-    #load the et0 and precip bands
-    et0_raster_list = []
-    et0_band_list = []
-    precip_datset_list = []
-    precip_band_list = []
-
-    for path_list, raster_list, band_list in [
-            (et0_path_list, et0_raster_list, et0_band_list),
-            (precip_path_list, precip_datset_list, precip_band_list)]:
-        for index, path in enumerate(path_list):
-            raster_list.append(gdal.OpenEx(path))
-            band_list.append(raster_list[index].GetRasterBand(1))
-
-    cdef float precip_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(precip_path_list[0])
-    cdef float et0_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(et0_path_list[0])
-
-    qfi_datset_list = []
-    qfi_band_list = []
-
-    outflow_weights_raster = gdal.OpenEx(outflow_weights_path)
-    outflow_weights_band = outflow_weights_raster.GetRasterBand(1)
-    cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        outflow_weights_path)
-    stream_raster = gdal.OpenEx(stream_path)
-    stream_band = stream_raster.GetRasterBand(1)
-
-    #Create output arrays qfi and local_recharge and local_recharge_avail
-    cdef float local_recharge_nodata = -99999
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        outflow_direction_path, li_path, 'GTiff', local_recharge_nodata,
-        gdal.GDT_Float32)
-    li_raster = gdal.OpenEx(li_path, gdal.GA_Update)
-    li_band = li_raster.GetRasterBand(1)
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        outflow_direction_path, li_avail_path, 'GTiff', local_recharge_nodata,
-        gdal.GDT_Float32)
-    li_avail_raster = gdal.OpenEx(li_avail_path, gdal.GA_Update)
-    li_avail_band = li_avail_raster.GetRasterBand(1)
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-       outflow_direction_path, l_sum_avail_path, 'GTiff', local_recharge_nodata,
-       gdal.GDT_Float32)
-    l_sum_avail_raster = gdal.OpenEx(l_sum_avail_path, gdal.GA_Update)
-    l_sum_avail_band = l_sum_avail_raster.GetRasterBand(1)
-
-    cdef float aet_nodata = -99999
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        outflow_direction_path, aet_path, 'GTiff', aet_nodata,
-        gdal.GDT_Float32)
-    aet_raster = gdal.OpenEx(aet_path, gdal.GA_Update)
-    aet_band = aet_raster.GetRasterBand(1)
-
-    qfi_raster_list = []
-    qfi_band_list = []
-    kc_raster_list = []
-    kc_band_list = []
-    cdef float qfi_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        qfi_path_list[0])
-    for index, (qfi_path, kc_path) in enumerate(
-            zip(qfi_path_list, kc_path_list)):
-        qfi_raster_list.append(gdal.OpenEx(qfi_path, gdal.GA_ReadOnly))
-        qfi_band_list.append(qfi_raster_list[index].GetRasterBand(1))
-        kc_raster_list.append(gdal.OpenEx(kc_path, gdal.GA_ReadOnly))
-        kc_band_list.append(kc_raster_list[index].GetRasterBand(1))
-
-    band_list = ([
-        outflow_direction_band, outflow_weights_band, stream_band] +
-        precip_band_list + et0_band_list + qfi_band_list + kc_band_list +
-        [li_band, li_avail_band, l_sum_avail_band, aet_band])
-
-    block_list = [
-        outflow_direction_block, outflow_weights_block, stream_block]
-    block_list.extend([precip_block_list[i] for i in xrange(N_MONTHS)])
-    block_list.extend([et0_block_list[i] for i in xrange(N_MONTHS)])
-    block_list.extend([qfi_block_list[i] for i in xrange(N_MONTHS)])
-    block_list.extend([kc_block_list[i] for i in xrange(N_MONTHS)])
-    block_list.append(li_block)
-    block_list.append(li_avail_block)
-    block_list.append(l_sum_avail_block)
-    block_list.append(aet_block)
-
-    update_list = (
-        [False] * (3 + len(precip_band_list) + len(et0_band_list) +
-            len(qfi_band_list) + len(kc_band_list)) + [True, True, True, True])
-
-    cache_dirty[:] = 0
-
-    cdef BlockCache block_cache = BlockCache(
-        N_BLOCK_ROWS, N_BLOCK_COLS, n_rows, n_cols,
-        block_row_size, block_col_size,
-        band_list, block_list, update_list, cache_dirty)
-
-    #Process flux through the grid
-    cdef stack[int] cells_to_process
-    cdef stack[int] cell_neighbor_to_process
-    cdef stack[float] r_sum_stack
-
-    for cell in sink_cell_deque:
-        cells_to_process.push(cell)
-        cell_neighbor_to_process.push(0)
-        r_sum_stack.push(0.0)
-
-    #Diagonal offsets are based off the following index notation for neighbors
-    #    3 2 1
-    #    4 p 0
-    #    5 6 7
-
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-    cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
-
-    cdef int neighbor_direction
-    cdef double absorption_rate
-    cdef double outflow_weight
-    cdef double in_flux
-    cdef int current_neighbor_index
-    cdef int current_index
-    cdef float current_l_sum_avail
-    cdef float qf_nodata = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_nodata_from_uri(
-        qfi_path_list[0])
-    cdef int month_index
-    cdef float aet_sum
-    cdef float pet_m
-    cdef float aet_m
-    cdef float p_i
-    cdef float qf_i
-    cdef float qfi_m
-    cdef float p_m
-    cdef float l_i
-    cdef float li_avail_value
-    cdef float l_sum_avail_value
-    cdef int neighbors_calculated = 0
-
-    cdef time_t last_time, current_time
-    time(&last_time)
-    while not cells_to_process.empty():
-        time(&current_time)
-        if current_time - last_time > 5.0:
-            LOGGER.info('route_local_recharge work queue size = %d' % (
-                cells_to_process.size()))
-            last_time = current_time
-
-        current_index = cells_to_process.top()
-        cells_to_process.pop()
-        with cython.cdivision(True):
-            global_row = current_index / n_cols
-            global_col = current_index % n_cols
-        #see if we need to update the row cache
-
-        current_neighbor_index = cell_neighbor_to_process.top()
-        cell_neighbor_to_process.pop()
-        current_l_sum_avail = r_sum_stack.top()
-        r_sum_stack.pop()
-        neighbors_calculated = 1
-
-        block_cache.update_cache(
-            global_row, global_col, &row_index, &col_index, &row_block_offset,
-            &col_block_offset)
-
-        #Ensure we are working on a valid pixel, if not set everything to 0
-        #check quickflow nodata? month 0? qfi_nodata
-        if qfi_block_list[0, row_index, col_index, row_block_offset, col_block_offset] == qfi_nodata:
-            li_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = 0.0
-            cache_dirty[row_index, col_index] = 1
-            continue
-
-        for direction_index in xrange(current_neighbor_index, 8):
-            #get percent flow from neighbor to current cell
-            neighbor_row = global_row + row_offsets[direction_index]
-            neighbor_col = global_col + col_offsets[direction_index]
-
-            #See if neighbor out of bounds
-            if (neighbor_row < 0 or neighbor_row >= n_rows or neighbor_col < 0 or neighbor_col >= n_cols):
-                continue
-
-            block_cache.update_cache(
-                neighbor_row, neighbor_col, &neighbor_row_index,
-                &neighbor_col_index, &neighbor_row_block_offset,
-                &neighbor_col_block_offset)
-            #if neighbor inflows
-            neighbor_direction = outflow_direction_block[
-                neighbor_row_index, neighbor_col_index,
-                neighbor_row_block_offset, neighbor_col_block_offset]
-            if neighbor_direction == outflow_direction_nodata:
-                continue
-
-            #check if the cell flows directly, or is one index off
-            if (inflow_offsets[direction_index] != neighbor_direction and
-                    ((inflow_offsets[direction_index] - 1) % 8) != neighbor_direction):
-                #then neighbor doesn't inflow into current cell
-                continue
-
-            #Calculate the outflow weight
-            outflow_weight = outflow_weights_block[
-                neighbor_row_index, neighbor_col_index,
-                neighbor_row_block_offset, neighbor_col_block_offset]
-
-            if ((inflow_offsets[direction_index] - 1) % 8) == neighbor_direction:
-                outflow_weight = 1.0 - outflow_weight
-
-            if outflow_weight <= 0.0:
-                continue
-
-            if l_sum_avail_block[neighbor_row_index, neighbor_col_index, neighbor_row_block_offset, neighbor_col_block_offset] == local_recharge_nodata:
-                #push current cell and and loop
-                cells_to_process.push(current_index)
-                cell_neighbor_to_process.push(direction_index)
-                r_sum_stack.push(current_l_sum_avail)
-                cells_to_process.push(neighbor_row * n_cols + neighbor_col)
-                cell_neighbor_to_process.push(0)
-                r_sum_stack.push(0.0)
-                neighbors_calculated = 0
-                break
-            else:
-                #'calculate l_avail_i and l_i'
-                #add the contribution of the upstream to l_avail and l_i eq [7]
-                # in cases of bad user data we can sometimes loop and still
-                # get nodata, treat it as zero flow.
-                li_avail_value = li_avail_block[
-                    neighbor_row_index, neighbor_col_index,
-                    neighbor_row_block_offset, neighbor_col_block_offset]
-                if li_avail_value == local_recharge_nodata:
-                    li_avail_value = 0.0
-                l_sum_avail_value = l_sum_avail_block[
-                    neighbor_row_index, neighbor_col_index,
-                    neighbor_row_block_offset, neighbor_col_block_offset]
-                if l_sum_avail_value == local_recharge_nodata:
-                    l_sum_avail_value = 0.0
-                current_l_sum_avail += (
-                    li_avail_value + l_sum_avail_value) * outflow_weight
-
-        if not neighbors_calculated:
-            continue
-
-        #if we got here current_l_sum_avail is correct
-        block_cache.update_cache(global_row, global_col, &row_index, &col_index, &row_block_offset, &col_block_offset)
-        p_i = 0.0
-        qf_i = 0.0
-        aet_sum = 0.0
-        for month_index in xrange(N_MONTHS):
-            p_m = precip_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
-            if abs(p_m-precip_nodata) > 1e-6:  # it's too far apart to be nodata
-                p_i += p_m
-            else:
-                p_m = 0.0 # don't add a nodata value later
-            # Eq [6]
-            # This check for nodata came up when several users had ill aligned data
-            if abs(et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]-et0_nodata) > 1e-6:
-                pet_m = (
-                    kc_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset] *
-                    et0_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset])
-            else:
-                pet_m = 0.0
-            qfi_m = qfi_block_list[month_index, row_index, col_index, row_block_offset, col_block_offset]
-            qf_i += qfi_m
-            # Eq [5]
-            aet_m = min(
-                pet_m, p_m - qfi_m + alpha_month[month_index] * beta_i *
-                current_l_sum_avail)
-            aet_sum += aet_m
-        # Eq [3]
-        l_i = p_i - qf_i - aet_sum
-
-        #if it's a stream, set all recharge to 0 and aet to nodata
-        if stream_block[row_index, col_index, row_block_offset, col_block_offset] == 1:
-            l_i = 0
-            current_l_sum_avail = 0
-            aet_sum = aet_nodata
-
-        # Eq [8]
-        li_avail_block[row_index, col_index, row_block_offset, col_block_offset] = max(gamma * l_i, l_i)
-
-        l_sum_avail_block[row_index, col_index, row_block_offset, col_block_offset] = current_l_sum_avail
-        li_block[row_index, col_index, row_block_offset, col_block_offset] = l_i
-        aet_block[row_index, col_index, row_block_offset, col_block_offset] = aet_sum
-        cache_dirty[row_index, col_index] = 1
-
-    block_cache.flush_cache()
-"""
+                    if not downstream_defined:
+                        continue
+                    if mfd_dir_sum > 0:
+                        # normalize by mfd weight
+                        b_sum_i = b_sum_i / <float>mfd_dir_sum
+                    target_b_sum_raster.set(xi, yi, b_sum_i)
+                    l_i = l_raster.get(xi, yi)
+                    l_sum_i = l_sum_raster.get(xi, yi)
+                    b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
+                    target_b_raster.set(xi, yi, b_i)
