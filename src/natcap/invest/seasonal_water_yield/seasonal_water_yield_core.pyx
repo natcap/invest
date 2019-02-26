@@ -695,20 +695,13 @@ def route_baseflow_sum(
 
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, 0)
 
+    current_pixel = 0
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
         win_xsize = offset_dict['win_xsize']
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
-
-        if ctime(NULL) - last_log_time > 5.0:
-            last_log_time = ctime(NULL)
-            current_pixel = xoff + yoff * raster_x_size
-            LOGGER.info(
-                'route base flow %.2f%% complete',
-                100.0 * current_pixel / <float>(
-                    raster_x_size * raster_y_size))
 
         # search block for a peak pixel where no other pixel drains to it.
         for ys in xrange(win_ysize):
@@ -717,6 +710,7 @@ def route_baseflow_sum(
                 xs_root = xoff+xs
                 flow_dir_s = <int>flow_dir_mfd_raster.get(xs_root, ys_root)
                 if flow_dir_s == flow_dir_nodata:
+                    current_pixel += 1
                     continue
                 outlet = 1
                 for n_dir in xrange(8):
@@ -743,6 +737,13 @@ def route_baseflow_sum(
                     b_sum_i = target_b_sum_raster.get(xi, yi)
                     if not is_close(b_sum_i, target_nodata):
                         continue
+
+                    if ctime(NULL) - last_log_time > 5.0:
+                        last_log_time = ctime(NULL)
+                        LOGGER.info(
+                            'route base flow %.2f%% complete',
+                            100.0 * current_pixel / <float>(
+                                raster_x_size * raster_y_size))
 
                     b_sum_i = 0.0
                     mfd_dir_sum = 0
@@ -785,14 +786,15 @@ def route_baseflow_sum(
 
                     if not downstream_defined:
                         continue
+                    l_sum_i = l_sum_raster.get(xi, yi)
                     if mfd_dir_sum > 0:
                         # normalize by mfd weight
-                        b_sum_i = b_sum_i / <float>mfd_dir_sum
+                        b_sum_i = l_sum_i * b_sum_i / <float>mfd_dir_sum
                     target_b_sum_raster.set(xi, yi, b_sum_i)
                     l_i = l_raster.get(xi, yi)
-                    l_sum_i = l_sum_raster.get(xi, yi)
                     b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
                     target_b_raster.set(xi, yi, b_i)
+                    current_pixel += 1
 
                     for n_dir in xrange(8):
                         # searching upstream for pixels that flow in
@@ -804,7 +806,7 @@ def route_baseflow_sum(
                         if (xj < 0 or xj >= raster_x_size or
                                 yj < 0 or yj >= raster_y_size):
                             continue
-                        flow_dir_j = <int>flow_raster.get(xj, yj)
+                        flow_dir_j = <int>flow_dir_mfd_raster.get(xj, yj)
                         if (0xF & (flow_dir_j >> (
                                 4 * FLOW_DIR_REVERSE_DIRECTION[n_dir]))):
                             # pixel flows here, push on queue
