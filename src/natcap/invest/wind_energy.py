@@ -192,7 +192,8 @@ def execute(args):
 
     # Resample the bathymetry raster if it does not have square pixel size
     try:
-        bathy_pixel_size = _get_pixel_size(args['bathymetry_path'])
+        bathy_pixel_size = pygeoprocessing.get_raster_info(
+            args['bathymetry_path'])['pixel_size']
         mean_pixel_size, _ = utils.mean_pixel_size_and_area(bathy_pixel_size)
         target_pixel_size = (mean_pixel_size, -mean_pixel_size)
         LOGGER.debug('Target pixel size: %s' % (target_pixel_size,))
@@ -1196,21 +1197,6 @@ def _get_file_ext_and_driver_name(base_vector_path):
     return file_ext, driver_name
 
 
-def _get_pixel_size(base_raster_path):
-    """Get the pixel size tuple from the base raster.
-
-    Parameters:
-        base_raster_path (str): a path to the raster to get the pixel size from.
-
-    Returns:
-        pixel_size (tuple): a tuple of x-size, y-size from the raster.
-
-    """
-    pixel_size = pygeoprocessing.get_raster_info(
-        base_raster_path)['pixel_size']
-    return pixel_size
-
-
 def _depth_op(bath, min_depth, max_depth):
     """Determine if a value falls within the range.
 
@@ -1438,10 +1424,10 @@ def _mask_by_distance(base_raster_path, min_dist, max_dist, out_nodata,
         None.
 
     """
+    raster_info = pygeoprocessing.get_raster_info(base_raster_path)
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        _get_pixel_size(base_raster_path))
-    raster_nodata = pygeoprocessing.get_raster_info(base_raster_path)[
-        'nodata'][0]
+        raster_info['pixel_size'])
+    raster_nodata = raster_info['nodata'][0]
 
     def _dist_mask_op(dist_arr):
         """Mask & multiply distance values by min/max values & cell size."""
@@ -2192,8 +2178,8 @@ def _calculate_distances_land_grid(base_point_vector_path, base_raster_path,
     land_point_dist_raster_path_list = []
 
     # Get the mean pixel size to calculate minimum distance from land to grid
-    mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        _get_pixel_size(base_raster_path))
+    pixel_size = pygeoprocessing.get_raster_info(base_raster_path)['pixel_size']
+    mean_pixel_size, _ = utils.mean_pixel_size_and_area(pixel_size)
 
     # Get the original layer definition which holds needed attribute values
     base_layer_defn = base_point_layer.GetLayerDefn()
@@ -2308,12 +2294,12 @@ def _calculate_grid_dist_on_raster(grid_vector_path, harvested_masked_path,
     LOGGER.info('Starting _calculate_grid_dist_on_raster.')
     temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='calc-grid-dist-')
 
+    raster_info = pygeoprocessing.get_raster_info(harvested_masked_path)
     # Get nodata value to use in raster creation and masking
-    out_nodata = pygeoprocessing.get_raster_info(harvested_masked_path)[
-        'nodata'][0]
+    out_nodata = raster_info['nodata'][0]
     # Get pixel size from biophysical output
     mean_pixel_size, _ = utils.mean_pixel_size_and_area(
-        _get_pixel_size(harvested_masked_path))
+        raster_info['pixel_size'])
 
     grid_poly_dist_raster_path = os.path.join(temp_dir, 'grid_poly_dist.tif')
 
