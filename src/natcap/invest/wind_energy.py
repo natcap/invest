@@ -30,6 +30,7 @@ import pygeoprocessing
 from . import validation
 from . import utils
 
+
 LOGGER = logging.getLogger('natcap.invest.wind_energy')
 speedups.enable()
 
@@ -170,6 +171,9 @@ def execute(args):
     """
 
     LOGGER.info('Starting the Wind Energy Model')
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     workspace = args['workspace_dir']
     inter_dir = os.path.join(workspace, 'intermediate')
@@ -2385,16 +2389,16 @@ def validate(args, limit_to=None):
                 missing_distance_key -= 1
         except KeyError:
             missing_distance_key -= 1
-            try:
-                if args['grid_points_path'] in ('', None):
-                    missing_distance_key -= 1
-            except KeyError:
+        try:
+            if args['grid_points_path'] in ('', None):
                 missing_distance_key -= 1
+        except KeyError:
+            missing_distance_key -= 1
         if missing_distance_key > 1:
-            return [
-                'Either avg_grid_distance or grid_points_path must be '
-                'provided.'
-            ]
+            return [(
+                ['avg_grid_distance', 'grid_points_path'],
+                'Either avg_grid_distance or grid_points_path must be provided.'
+            )]
 
     for required_key in required_keys:
         try:

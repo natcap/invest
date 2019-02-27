@@ -351,6 +351,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        # Also test on input bathymetry that has equal x, y pixel sizes
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_global_dem_equal_pixel.tif')
 
         wind_energy.execute(args)
 
@@ -533,8 +536,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -624,8 +626,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
+                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -678,11 +679,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
+                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -718,28 +717,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         vector_path = 'wind_energy_points.shp'
         self.assertTrue(os.path.exists(
             os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-    def test_validate(self):
-        """WindEnergy: testing validation with valuation checked."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'simple_north_america_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_land_pts.csv')
-        args['price_table'] = False
-        args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
-
-        wind_energy.validate(args)
 
     @staticmethod
     def _assert_vectors_equal(a_vector_path, b_vector_path):
