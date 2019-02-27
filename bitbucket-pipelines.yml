@@ -4,7 +4,7 @@ pipelines:
             - parallel:
                 - step:
                     name: User's Guide
-                    image: natcap/userguide-build:0da3dbeaf1aa3a7bb4b7bd583db9fea708e61709
+                    image: natcap/userguide-build:fba743220031e1ba99b528a8939a86c8201da949
                     script:
                         - make userguide
                     artifacts:
