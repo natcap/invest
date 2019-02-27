@@ -105,7 +105,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins purge mac_zipfile
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -296,11 +296,12 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
 # don't want)
 ci_windows_installer: $(WINDOWS_INSTALLER_FILE)
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
-							$(USERGUIDE_HTML_DIR) \
-							$(USERGUIDE_PDF_FILE) \
-							build/vcredist_x86.exe \
-							$(SVN_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE):
+		$(INVEST_BINARIES_DIR) \
+		$(USERGUIDE_HTML_DIR) \
+		$(USERGUIDE_PDF_FILE) \
+		build/vcredist_x86.exe \
+		$(SVN_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis \
 		/DVERSION=$(VERSION) \
