@@ -1739,7 +1739,7 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
 
 def _get_suitable_projection_params(
-        base_raster_path, clip_vector_path, target_pickle_path):
+        base_raster_path, aoi_vector_path, target_pickle_path):
     """Choose projection, pixel size and bounding box for clipping a raster.
 
     If base raster is not already projected, choose a suitable UTM zone.
@@ -1754,7 +1754,7 @@ def _get_suitable_projection_params(
 
     Parameters:
         base_raster_path (str): path to base raster that might not be projected
-        clip_vector_path (str): path to base clip vector that'll be used to
+        aoi_vector_path (str): path to base AOI vector that'll be used to
             clip the raster.
         target_pickle_path (str): a path to the pickle file for storing
             target_sr_wkt, target_pixel_size, and target_bounding_box.
@@ -1764,7 +1764,7 @@ def _get_suitable_projection_params(
 
     """
     base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
-    clip_vector_info = pygeoprocessing.get_vector_info(clip_vector_path)
+    aoi_vector_info = pygeoprocessing.get_vector_info(aoi_vector_path)
 
     base_raster_srs = osr.SpatialReference()
     base_raster_srs.ImportFromWkt(base_raster_info['projection'])
@@ -1772,8 +1772,8 @@ def _get_suitable_projection_params(
     if not base_raster_srs.IsProjected():
         wgs84_sr = osr.SpatialReference()
         wgs84_sr.ImportFromEPSG(4326)
-        clip_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
-            clip_vector_info['bounding_box'], clip_vector_info['projection'],
+        aoi_wgs84_bounding_box = pygeoprocessing.transform_bounding_box(
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
             wgs84_sr.ExportToWkt())
 
         base_raster_bounding_box = pygeoprocessing.transform_bounding_box(
@@ -1781,7 +1781,7 @@ def _get_suitable_projection_params(
             wgs84_sr.ExportToWkt())
 
         target_bounding_box_wgs84 = pygeoprocessing.merge_bounding_box_list(
-            [clip_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
+            [aoi_wgs84_bounding_box, base_raster_bounding_box], 'intersection')
 
         # Get the suitable UTM code
         centroid_x = (
@@ -2315,8 +2315,6 @@ def validate(args, limit_to=None):
 
     """
     warnings = []
-    keys_missing_value = set([])
-    missing_keys = set([])
 
     required_keys = [
         'workspace_dir',
@@ -2330,91 +2328,83 @@ def validate(args, limit_to=None):
     ]
 
     # If we're doing valuation, min and max distance are required.
-    if 'valuation_container' in args and args['valuation_container']:
+    if 'valuation_container' in args and args['valuation_container'] and (
+            limit_to in ('valuation_container', None)):
         for key in ('min_distance', 'max_distance'):
-            if args[key] in ('', None):
+            if key not in args or args[key] in ('', None):
                 warnings.append(([key], 'Value must be defined.'))
 
-        required_keys.extend([
-            'discount_rate',
-            'foundation_cost',
-        ])
+        required_keys.extend(['discount_rate', 'foundation_cost'])
 
         if limit_to in ('price_table', None):
             if 'price_table' in args and args['price_table'] not in (True,
                                                                      False):
                 warnings.append((['price_table'],
-                                 'Parameter must be either True or False'))
-            if args['price_table']:
-                required_keys.append('wind_schedule')
-
-                # Validate cell types in price table
-                wind_price_df = pandas.read_csv(args["wind_schedule"])
-                wind_price_df.columns = wind_price_df.columns.str.lower()
-                if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
-                    warnings.append(
-                        (['price_table'],
-                            'Value(s) in Year column is not integer.'))
-                if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
-                    warnings.append(
-                        (['price_table'],
-                            'Value(s) in Price column is not numeric.'))
-                year_list = wind_price_df['year'].tolist()
-                duplicate_years = set(
-                    [year for year in year_list if year_list.count(year) > 1])
-                if duplicate_years:
-                    warnings.append(
-                        (['price_table'],
-                            'The following year(s) showed up more than once: '
-                            '%s.' % list(duplicate_years)))
+                                 'Parameter must be either True or False.'))
+            elif 'price_table' in args and args['price_table']:
+                if 'wind_schedule' in args and (
+                        os.path.exists(args['wind_schedule'])):
+                    # Validate cell types in price table
+                    wind_price_df = pandas.read_csv(args["wind_schedule"])
+                    wind_price_df.columns = wind_price_df.columns.str.lower()
+                    if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
+                        warnings.append(
+                            (['wind_schedule'],
+                                'Value(s) in Year column is not integer.'))
+                    if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
+                        warnings.append(
+                            (['wind_schedule'],
+                                'Value(s) in Price column is not numeric.'))
+                    year_list = wind_price_df['year'].tolist()
+                    duplicate_years = set(
+                        [year for year in year_list if year_list.count(year) > 1])
+                    if duplicate_years:
+                        warnings.append(
+                            (['wind_schedule'],
+                                'The following year(s) showed up more than '
+                                'once: %s.' % list(duplicate_years)))
+                else:
+                    warnings.append((
+                        ['wind_schedule'],
+                        'Parameter is required when price_table is True.'))
             else:
                 required_keys.extend(['wind_price', 'rate_change'])
 
         missing_distance_key = 2
         try:
-            if args['avg_grid_distance'] in ('', None):
-                missing_distance_key -= 1
-        except KeyError:
+            float(args['avg_grid_distance'])
+            # If the value can be converted to float, then the key is valid
             missing_distance_key -= 1
-        try:
-            if args['grid_points_path'] in ('', None):
-                missing_distance_key -= 1
-        except KeyError:
+        except (ValueError, KeyError, TypeError):
+            pass
+        if 'grid_points_path' in args and os.path.exists(args['grid_points_path']):
             missing_distance_key -= 1
         if missing_distance_key > 1:
-            return [(
-                ['avg_grid_distance', 'grid_points_path'],
+            warnings.append((
+                ['grid_points_path'],
                 'Either avg_grid_distance or grid_points_path must be provided.'
-            )]
+            ))
 
+    # Check if required keys have non-empty value in the dictionary
     for required_key in required_keys:
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_value.add(required_key)
-        except KeyError:
-            missing_keys.add(required_key)
-
-    if missing_keys:
-        return [(missing_keys,
-                 'Required keys are missing from args: %s' % ', '.join(
-                     sorted(missing_keys)))]
-
-    if keys_missing_value:
-        warnings.append((keys_missing_value, 'Parameter must have a value.'))
+        if required_key in args and args[required_key] in ('', None):
+            warnings.append(([required_key], 'Parameter must have a value.'))
 
     for vector_key in ('aoi_vector_path', 'land_polygon_vector_path'):
-        try:
-            if args[vector_key] not in ('', None):
-                with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args[vector_key], gdal.OF_VECTOR)
-                    if vector is None:
-                        warnings.append(
-                            ([vector_key],
-                             ('Parameter must be a path to an OGR-compatible '
-                              'vector file.')))
-        except KeyError:
-            # neither of these vectors are required, so they may be omitted.
-            pass
+        if limit_to in (vector_key, None):
+            try:
+                if args[vector_key] not in ('', None):
+                    with utils.capture_gdal_logging():
+                        vector = gdal.OpenEx(args[vector_key], gdal.OF_VECTOR)
+                        if vector is None:
+                            warnings.append(
+                                ([vector_key],
+                                 ('Parameter must be a path to an OGR-'
+                                  'compatible vector file.')))
+                        vector = None
+            except KeyError:
+                # neither of these vectors are required, so they may be omitted.
+                pass
 
     if limit_to in ('bathymetry_path', None):
         with utils.capture_gdal_logging():
@@ -2426,8 +2416,8 @@ def validate(args, limit_to=None):
 
     if limit_to in ('wind_data_path', None):
         try:
-            table_dict = utils.build_lookup_from_csv(args['wind_data_path'],
-                                                     'REF')
+            table_dict = utils.build_lookup_from_csv(
+                args['wind_data_path'], 'REF')
 
             missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) - set(
                 table_dict.itervalues().next().keys()))
@@ -2438,6 +2428,14 @@ def validate(args, limit_to=None):
 
             try:
                 for ref_key, record in table_dict.iteritems():
+                    try:
+                        if float(ref_key) != int(float(ref_key)):
+                            raise ValueError()
+                    except ValueError:
+                        warnings.append(
+                            (['wind_data_path'],
+                             ('Ref %s must be an integer.' % ref_key)))
+
                     for float_field in ('long', 'lati', 'lam', 'k'):
                         try:
                             float(record[float_field])
@@ -2447,16 +2445,11 @@ def validate(args, limit_to=None):
                                  ('Ref %s column %s must be a number.' %
                                   (ref_key, float_field))))
 
-                        try:
-                            if float(ref_key) != int(float(ref_key)):
-                                raise ValueError()
-                        except ValueError:
-                            warnings.append(
-                                (['wind_data_path'],
-                                 ('Ref %s ust be an integer.' % ref_key)))
             except KeyError:
                 # missing keys are reported earlier.
                 pass
+        except ValueError:
+            warnings.append((['wind_data_path'], 'Missing REF field.'))
         except IOError:
             warnings.append((['wind_data_path'], 'Could not locate file.'))
         except csv.Error:
@@ -2468,24 +2461,27 @@ def validate(args, limit_to=None):
                 with utils.capture_gdal_logging():
                     vector = gdal.OpenEx(
                         args['aoi_vector_path'], gdal.OF_VECTOR)
-                    layer = vector.GetLayer()
-                    srs = layer.GetSpatialRef()
-                    units = srs.GetLinearUnitsName().lower()
-                    if units not in ('meter', 'metre'):
-                        warnings.append((['aoi_vector_path'],
-                                         'Vector must be projected in meters'))
+                    if vector:
+                        layer = vector.GetLayer()
+                        srs = layer.GetSpatialRef()
+                        units = srs.GetLinearUnitsName().lower()
+                        if units not in ('meter', 'metre'):
+                            warnings.append((
+                                ['aoi_vector_path'],
+                                'Vector must be projected in meters'))
+                    vector = None
         except KeyError:
             # Parameter is not required.
             pass
 
-    for simple_csv_key in ('global_wind_parameters_path',
-                           'turbine_parameters_path'):
-        try:
-            csv.reader(open(args[simple_csv_key]))
-        except IOError:
-            warnings.append(([simple_csv_key], 'File not found.'))
-        except csv.Error:
-            warnings.append(([simple_csv_key], 'Could not read CSV file.'))
+    for csv_key in ('global_wind_parameters_path', 'turbine_parameters_path'):
+        if limit_to in (csv_key, None):
+            try:
+                csv.reader(open(args[csv_key]))
+            except IOError:
+                warnings.append(([csv_key], 'File not found.'))
+            except csv.Error:
+                warnings.append(([csv_key], 'Could not read CSV file.'))
 
     if limit_to in ('number_of_turbines', None):
         try:
@@ -2499,17 +2495,18 @@ def validate(args, limit_to=None):
     for float_key in ('min_depth', 'max_depth', 'min_distance', 'max_distance',
                       'foundation_cost', 'discount_rate', 'avg_grid_distance',
                       'wind_price', 'rate_change'):
-        try:
-            float(args[float_key])
-        except ValueError:
-            warnings.append(([float_key], 'Parameter must be a number.'))
-        except KeyError:
-            pass
+        if limit_to in (float_key, None):
+            if float_key in args and args[float_key]:
+                try:
+                    float(args[float_key])
+                except (ValueError, KeyError, TypeError):
+                    warnings.append((
+                        [float_key], 'Parameter must be a number.'))
 
     if limit_to in ('grid_points_path', None):
         try:
-            table_dict = utils.build_lookup_from_csv(args['grid_points_path'],
-                                                     'id')
+            table_dict = utils.build_lookup_from_csv(
+                args['grid_points_path'], 'id')
 
             missing_fields = (set(['long', 'lati', 'id', 'type']) - set(
                 table_dict.itervalues().next().keys()))
@@ -2518,13 +2515,22 @@ def validate(args, limit_to=None):
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
 
-            if 'aoi_vector_path' not in args or args['aoi_vector_path'] in ('', None):
+            if 'aoi_vector_path' not in args or (
+                    args['aoi_vector_path'] in ('', None)):
                 warnings.append((
                     ['aoi_vector_path'],
                     'is required to clip and reproject the grid points.'))
 
             try:
                 for id_key, record in table_dict.iteritems():
+                    try:
+                        if float(id_key) != int(float(id_key)):
+                            raise ValueError()
+                    except ValueError:
+                        warnings.append(
+                            (['grid_points_path'],
+                             ('ID %s must be an integer.' % id_key)))
+
                     for float_field in ('long', 'lati'):
                         try:
                             float(record[float_field])
@@ -2534,22 +2540,16 @@ def validate(args, limit_to=None):
                                  ('ID %s column %s must be a number.' %
                                   (id_key, float_field))))
 
-                        try:
-                            if float(id_key) != int(float(id_key)):
-                                raise ValueError()
-                        except ValueError:
-                            warnings.append(
-                                (['grid_points_path'],
-                                 ('ID %s must be an integer.' % id_key)))
-
-                        if record['type'] not in ('land', 'grid'):
-                            warnings.append(
-                                (['grid_points_path'],
-                                 ('ID %s column TYPE must be either "land" or '
-                                  '"grid" (case-insensitive)') % id_key))
+                    if record['type'] not in ('land', 'grid'):
+                        warnings.append(
+                            (['grid_points_path'],
+                             ('ID %s column TYPE must be either "land" or '
+                              '"grid" (case-insensitive)') % id_key))
             except KeyError:
                 # missing keys are reported earlier.
                 pass
+        except ValueError:
+            warnings.append((['grid_points_path'], 'Missing ID field.'))
         except KeyError:
             # This is not a required input.
             pass
@@ -2558,64 +2558,15 @@ def validate(args, limit_to=None):
         except csv.Error:
             warnings.append((['grid_points_path'], 'Could not open CSV file.'))
 
-    if limit_to in ('wind_schedule', None) and ('price_table' in args and
-                                                args['price_table'] is True):
-        try:
-            table_dict = utils.build_lookup_from_csv(args['wind_schedule'],
-                                                     'year')
-
-            missing_fields = (set(['year', 'price']) - set(
-                table_dict.itervalues().next().keys()))
-            if missing_fields:
-                warnings.append((['wind_schedule'],
-                                 ('CSV missing required fields: %s' %
-                                  (', '.join(missing_fields)))))
-
-            try:
-                year_list = []
-                for year_key, record in table_dict.iteritems():
-                    try:
-                        if float(year_key) != int(float(year_key)):
-                            raise ValueError()
-                    except ValueError:
-                        warnings.append(
-                            (['wind_schedule'],
-                             ('Year %s must be an integer.' % year_key)))
-                    else:
-                        year_list.append(year_key)
-
-                    try:
-                        float(record['price'])
-                    except ValueError:
-                        warnings.append(
-                            (['wind_schedule'],
-                             ('Price %s must be a number' % record['price'])))
-
-                duplicate_years = set(
-                    [year for year in year_list if year_list.count(year) > 1])
-                if duplicate_years:
-                    warnings.append(
-                        (['wind_schedule'], "The following year(s) showed up "
-                         "more than once: %s." % list(duplicate_years)))
-
-            except KeyError:
-                # missing keys are reported earlier.
-                pass
-        except IOError:
-            warnings.append((['wind_schedule'], 'Could not locate file.'))
-        except KeyError:
-            warnings.append((['wind_schedule'], 'Key Undefined.'))
-        except csv.Error:
-            warnings.append((['wind_schedule'], 'Could not open CSV file.'))
-
-    if limit_to is None:
+    if limit_to in (None, 'land_polygon_vector_path'):
         # Require land_polygon_vector_path if any of min_distance,
         # max_distance, or valuation_container have a value.
         try:
             if any((args['min_distance'] not in ('', None),
                     args['max_distance'] not in ('', None),
                     args['valuation_container'] is True)):
-                if args['land_polygon_vector_path'] in ('', None):
+                if 'land_polygon_vector_path' not in args or (
+                        args['land_polygon_vector_path'] in ('', None)):
                     warnings.append(
                         (['land_polygon_vector_path'],
                          'Parameter is required, but has no value.'))
