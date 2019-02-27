@@ -291,6 +291,10 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
+# The c_windows_installer target is intended for a CI build where we don't want
+# to use a phony target (phony targets will rebuild all dependencies, which we
+# don't want)
+ci_windows_installer: $(WINDOWS_INSTALLER_FILE)
 windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
 							$(USERGUIDE_HTML_DIR) \
