@@ -56,7 +56,9 @@ pipelines:
                     - touch dist/*.pdf dist/userguide data/invest-data
 
                     # Now we can run make.
-                    - wine make windows_installer
+                    # Need to set PYTHON_ARCH because for some reason the
+                    # string isn't being correctly set.
+                    - wine make PYTHON_ARCH=x86 windows_installer
                 artifacts:
                     - dist/**
     default:
