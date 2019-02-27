@@ -444,6 +444,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         wind_energy.execute(args)
 
+        # Make sure the output files were created.
+        vector_path = 'wind_energy_points.shp'
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'output', vector_path)))
+
+        # Run through the model again, which should mean deleting shapefiles
+        # that have already been made, but which need to be created again.
+        wind_energy.execute(args)
+
         raster_results = [
             'carbon_emissions_tons.tif',
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
@@ -668,56 +677,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
         args['global_wind_parameters_path'] = file_path
 
         self.assertRaises(ValueError, wind_energy.execute, args)
-
-    def test_remove_datasources(self):
-        """WindEnergy: testing datasources which already exist are removed."""
-        from natcap.invest import wind_energy
-
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
-            'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA, '3_6_turbine.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-        }
-
-        wind_energy.execute(args)
-
-        # Make sure the output files were created.
-        vector_path = 'wind_energy_points.shp'
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-        # Run through the model again, which should mean deleting
-        # shapefiles that have already been made, but which need
-        # to be created again.
-        wind_energy.execute(args)
-
-        # For testing, just check to make sure the output files
-        # were created again.
-        vector_path = 'wind_energy_points.shp'
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'output', vector_path)))
 
     @staticmethod
     def _assert_vectors_equal(a_vector_path, b_vector_path):
