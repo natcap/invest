@@ -315,3 +315,10 @@ jenkins_test_ui: env
 
 jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
+
+
+# Notes on Makefile development
+#
+# * Use the -drR to show the decision tree (and none of the implicit rules)
+#   if a task is (or is not) executing when expected.
+# * Use -n to print the actions to be executed instead of actually executing them.

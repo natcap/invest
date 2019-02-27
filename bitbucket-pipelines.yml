@@ -24,7 +24,7 @@ pipelines:
                         - make sampledata
                     artifacts:
                         - dist/**
-                        - data/invest-sample-data/*.json
+                        - data/invest-data/*.json
                 - step:
                     name: Python Binaries
                     image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
@@ -48,6 +48,14 @@ pipelines:
                     - make build
                     - wget -nv -O build/vcredist_x86.exe
                         https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
+
+                    # Make relies on timestamps to check whether the targets need to be rebuilt,
+                    # so touching the needed artifacts will make sure that Make uses these
+                    # artifacts instead of rebuilding.
+                    - mkdir doc/users-guide
+                    - touch dist/*.pdf dist/userguide data/invest-data
+
+                    # Now we can run make.
                     - wine make windows_installer
                 artifacts:
                     - dist/**
