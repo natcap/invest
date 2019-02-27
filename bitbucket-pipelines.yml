@@ -47,16 +47,6 @@ pipelines:
     default:
         - parallel:
             - step:
-                name: UI tests on WINE
-                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
-                script:
-                    - wine python -m virtualenv --system-site-packages env
-                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
-                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
-                    - wine env/Scripts/python setup.py bdist_wheel
-                    - wine env/Scripts/python -m pip install -I --no-deps dist/*.whl
-                    - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest ui_tests
-            - step:
                 name: Model tests on WINE
                 image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
                 script:
