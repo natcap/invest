@@ -797,7 +797,10 @@ def route_baseflow_sum(
                         b_sum_i = l_sum_i * b_sum_i / <float>mfd_dir_sum
                     target_b_sum_raster.set(xi, yi, b_sum_i)
                     l_i = l_raster.get(xi, yi)
-                    b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
+                    if l_sum_i != 0:
+                        b_i = max(b_sum_i * l_i / l_sum_i, 0.0)
+                    else:
+                        b_i = 0.0
                     target_b_raster.set(xi, yi, b_i)
                     current_pixel += 1
 
