@@ -207,13 +207,9 @@ binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
-	$(PYTHON) -m PyInstaller \
-		--workpath $(BUILD_DIR)/pyi-build \
-		--clean \
-		--distpath $(DIST_DIR) \
-		exe/invest.spec
-	$(INVEST_BINARIES_DIR)/invest.exe --list
+	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(INVEST_BINARIES_DIR)/invest.exe --list
 
 # Documentation.
 # API docs are copied to dist/apidocs
