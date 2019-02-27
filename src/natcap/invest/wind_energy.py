@@ -312,25 +312,6 @@ def execute(args):
             wind_price_df = pandas.read_csv(args["wind_schedule"])
             wind_price_df.columns = wind_price_df.columns.str.lower()
 
-            if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
-                raise ValueError(
-                    "Please make sure that the Year column in the Wind Energy "
-                    "Price Table is integer.")
-
-            if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
-                raise ValueError(
-                    "Please make sure that the Price column in the Wind Energy"
-                    " Price Table is numeric.")
-
-            year_list = wind_price_df['year'].tolist()
-            duplicate_years = set(
-                [year for year in year_list if year_list.count(year) > 1])
-            if duplicate_years:
-                raise ValueError(
-                    "The following year(s) showed up more than once in the "
-                    "Wind Energy Price Table: %s. Please remove the duplicated"
-                    " years from the table.", list(duplicate_years))
-
             year_count = len(wind_price_df['year'])
             if year_count != time + 1:
                 raise ValueError(
@@ -371,20 +352,6 @@ def execute(args):
               wind_data_pickle_path),
         target_path_list=[wind_data_pickle_path],
         task_name='compute_density_harvested_fields')
-
-    if 'grid_points_path' in args:
-        if 'aoi_vector_path' not in args:
-            raise ValueError(
-                'An AOI shapefile is required to clip and reproject the grid '
-                'points.')
-        grid_points_dict = utils.build_lookup_from_csv(
-            args['grid_points_path'], 'id')  # turn all strs to lower-cased
-        missing_grid_fields = list({'long', 'lati', 'id', 'type'} - set(
-            grid_points_dict.itervalues().next().keys()))
-        if missing_grid_fields:
-            raise ValueError(
-                'The following field value(s) are missing from the Grid '
-                'Connection Points csv file: %s.' % missing_grid_fields)
 
     if 'aoi_vector_path' in args:
         LOGGER.info('AOI Provided')
@@ -2380,6 +2347,26 @@ def validate(args, limit_to=None):
                                  'Parameter must be either True or False'))
             if args['price_table']:
                 required_keys.append('wind_schedule')
+
+                # Validate cell types in price table
+                wind_price_df = pandas.read_csv(args["wind_schedule"])
+                wind_price_df.columns = wind_price_df.columns.str.lower()
+                if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
+                    warnings.append(
+                        (['price_table'],
+                            'Value(s) in Year column is not integer.'))
+                if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
+                    warnings.append(
+                        (['price_table'],
+                            'Value(s) in Price column is not numeric.'))
+                year_list = wind_price_df['year'].tolist()
+                duplicate_years = set(
+                    [year for year in year_list if year_list.count(year) > 1])
+                if duplicate_years:
+                    warnings.append(
+                        (['price_table'],
+                            'The following year(s) showed up more than once: '
+                            '%s.' % list(duplicate_years)))
             else:
                 required_keys.extend(['wind_price', 'rate_change'])
 
@@ -2530,6 +2517,11 @@ def validate(args, limit_to=None):
                 warnings.append((['grid_points_path'],
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
+
+            if 'aoi_vector_path' not in args or args['aoi_vector_path'] in ('', None):
+                warnings.append((
+                    ['aoi_vector_path'],
+                    'is required to clip and reproject the grid points.'))
 
             try:
                 for id_key, record in table_dict.iteritems():

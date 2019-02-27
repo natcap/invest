@@ -516,6 +516,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # Provide the grid points but not AOI
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
+        args['aoi_vector_path'] = ''  # Empty AOI value
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
