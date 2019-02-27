@@ -1,4 +1,6 @@
 pipelines:
+    options:
+        max-time: 20
     custom:
         win32-installer:
             - parallel:
@@ -22,10 +24,12 @@ pipelines:
                         - make sampledata
                     artifacts:
                         - dist/**
-                        - data/invest-test-data/*.json
+                        - data/invest-sample-data/*.json
                 - step:
                     name: Python Binaries
                     image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                    caches:
+                        - pip
                     script:
                         - wine make env
                         - wine env/scripts/python.exe -m pip install --upgrade .
