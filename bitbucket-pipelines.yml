@@ -6,6 +6,9 @@ pipelines:
                     name: User's Guide
                     image: natcap/userguide-build:fba743220031e1ba99b528a8939a86c8201da949
                     script:
+                        # If setup.py --version fails, we'll get bad version
+                        # info in the UG build.
+                        - python setup.py --version
                         - make userguide
                     artifacts:
                         - dist/**
@@ -49,6 +52,7 @@ pipelines:
             - step:
                 name: Model tests on WINE
                 image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                max-time: 15
                 script:
                     - make data/invest-test-data
                     - wine python -m virtualenv --system-site-packages env
