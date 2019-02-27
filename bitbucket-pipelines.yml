@@ -27,7 +27,7 @@ pipelines:
                         - data/invest-data/*.json
                 - step:
                     name: Python Binaries
-                    image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                    image: natcap/py27-wine-build:9eaaafb186a1119b189a766fb849a50fe3474a31
                     caches:
                         - pip
                     script:
@@ -42,7 +42,7 @@ pipelines:
                         - dist/**
             - step:
                 name: NSIS Installer
-                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                image: natcap/py27-wine-build:9eaaafb186a1119b189a766fb849a50fe3474a31
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
@@ -63,7 +63,7 @@ pipelines:
         - parallel:
             - step:
                 name: Model tests on WINE
-                image: natcap/py27-wine-build:d34b1377dbd1c6e77dfbae5c273bf84dbd0fc583
+                image: natcap/py27-wine-build:9eaaafb186a1119b189a766fb849a50fe3474a31
                 max-time: 15
                 caches:
                     - pip
