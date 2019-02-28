@@ -90,12 +90,19 @@ pipelines:
                 caches:
                     - pip
                 script:
+                    # The Atlassian image assumes that the pip cache is at ~/.cache/pip.
+                    # Since we're using pip under WINE, we need to tell the WINE pip to
+                    # use the cache directory (which speeds up this step by about 4
+                    # minutes per run.
+                    - export PIP_CACHE_DIR=$HOME/.cache/pip
+                    - wine make env
+                    - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install --upgrade .
+                    - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install
+                        -r requirements-gui.txt
+                        -r requirements-dev.txt
+                        -r requirements.txt
+
                     - make data/invest-test-data
-                    - wine python -m virtualenv --system-site-packages env
-                    - wine env/Scripts/python -m pip install -r requirements.txt -r requirements-gui.txt
-                    - wine env/Scripts/python -m pip install -I -r requirements-dev.txt
-                    - wine env/Scripts/python setup.py bdist_wheel
-                    - wine env/Scripts/python -m pip install -I --no-deps dist/*.whl
                     - wine env/Scripts/python -m nose -vsP --with-coverage --with-timer --cover-package=natcap.invest tests
                 artifacts:
                     - dist/*.whl
