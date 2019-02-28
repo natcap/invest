@@ -42,6 +42,7 @@ pipelines:
                             -r requirements.txt
                         - wine make PYTHON=env/scripts/python.exe binaries
                     artifacts:
+                        - dist/invest/**
                         - dist/*.whl
             - step:
                 name: NSIS Installer
