@@ -85,9 +85,11 @@ FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
+	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 else
 	BUCKET := gs://natcap-dev-build-artifacts
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
+	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
@@ -97,13 +99,14 @@ TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.inve
 
 
 # Target names.
+# WINDOWS_INSTALLER_FILE name is defined above because the filename differs
+# a bit when we're on a fork vs. when we are on the main natcap/invest repo.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
