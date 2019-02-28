@@ -27,7 +27,7 @@ _HABITAT_STRESSOR_OVERLAP_HEADER = 'HABITAT STRESSOR OVERLAP PROPERTIES'
 _SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
 _HABITAT_TYPE = 'habitat'
 _STRESSOR_TYPE = 'stressor'
-_SUBREGION_FIELD_NAME = 'name'
+_SUBREGION_FIELD_NAME = 'NAME'
 _WEIGHT_KEY = 'Weight'
 _DQ_KEY = 'DQ'
 
@@ -933,8 +933,8 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
         geom = feat.GetGeometryRef()
         geom_wkt = shapely.wkt.loads(geom.ExportToWkt())
         # Buffer geometry to prevent invalid geometries
-        geom_buffered = geom_wkt.buffer(0)
-        shapely_geoms.append(geom_buffered)
+        # geom_buffered = geom_wkt.buffer(0)
+        shapely_geoms.append(geom_wkt)
 
     # Return the union of the geometries in the list
     merged_geom = shapely.ops.unary_union(shapely_geoms)
@@ -986,32 +986,26 @@ def _has_field_name(base_vector_path, field_name):
     Returns:
         True if the field name exists, False if it doesn't.
 
-    Raises:
-        ValueError if two or more field names show up in the attributes.
-
     """
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
     base_layer_defn = base_layer.GetLayerDefn()
     field_count = base_layer_defn.GetFieldCount()
-    field_name_counts = 0
 
     for fld_index in range(field_count):
         field = base_layer_defn.GetFieldDefn(fld_index)
         base_field_name = field.GetName()
-        if base_field_name == field_name:
-            field_name_counts += 1
+        # Find the first field name, case-insensitive
+        if base_field_name.lower() == field_name.lower():
+            LOGGER.info('The %s field is provided in the vector.' % field_name)
+            base_vector = None
+            base_layer = None
+            return True
     base_vector = None
     base_layer = None
 
-    if field_name_counts == 0:
-        LOGGER.info('The %s field is not provided in AOI vector.' % field_name)
-        return False
-
-    elif field_name_counts == 1:
-        LOGGER.info('The %s field is provided in AOI vector.' % field_name)
-        return True
-
+    LOGGER.info('The %s field is not provided in the vector.' % field_name)
+    return False
 
 def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     """Calculate average habitat risk scores from hab_risk_arrays.
@@ -2763,7 +2757,8 @@ def _simplify_geometry(
     if preserved_field:
         for i in range(base_layer_defn.GetFieldCount()):
             base_field_name = base_layer_defn.GetFieldDefn(i).GetName()
-            if base_field_name == preserved_field[0]:
+            # Find the first field name, case-insensitive
+            if base_field_name.lower() == preserved_field[0].lower():
                 # Create a target field definition
                 target_field_name = preserved_field[0]
                 target_field = ogr.FieldDefn(
