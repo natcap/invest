@@ -68,7 +68,6 @@ endif
 PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
-DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 
 
 # Output directory names
@@ -84,11 +83,16 @@ BUILD_DIR := build
 FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
 FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
-	# DEST_VERSION will be develop unless we are at a tag.
-	DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+	BUCKET := gs://releases.naturalcapitalproject.org
+	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
 else
-	DATA_BASE_URL := http://data.naturalcapitalproject.org/nightly-build/invest-forks/$(FORKUSER)/data
+	BUCKET := gs://natcap-dev-build-artifacts
+	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
 endif
+DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
+DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+
+
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
 
@@ -105,7 +109,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -315,6 +319,12 @@ jenkins_test_ui: env
 
 jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
+
+deploy:
+	gsutil -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
+	@echo Binaries (if they were created) can be downloaded from:
+	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
+	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(MAC_BINARIES_ZIP_FILE))"
 
 
 # Notes on Makefile development
