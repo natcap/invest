@@ -33,6 +33,10 @@ pipelines:
                     caches:
                         - pip
                     script:
+                        # The Atlassian image assumes that the pip cache is at ~/.cache/pip.
+                        # Since we're using pip under WINE, we need to tell the WINE pip to
+                        # use the cache directory (which speeds up this step by about 4
+                        # minutes per run.
                         - export PIP_CACHE_DIR=$HOME/.cache/pip
                         - wine make env
                         - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install --upgrade .
