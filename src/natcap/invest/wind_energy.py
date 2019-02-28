@@ -1230,6 +1230,8 @@ def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
         target_aoi_raster_path (str): a path to the target AOI raster.
         target_pixel_size (tuple): a tuple of x, y pixel sizes for the target
             AOI raster.
+        target_sr_wkt (str): a projection string used as the target projection
+            for the AOI raster.
         work_dir (str): path to create a temp folder for saving temp files.
 
     Returns:
@@ -1984,14 +1986,13 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
     target_sr = osr.SpatialReference()
     target_sr.SetWellKnownGeogCS("WGS84")
 
+    need_geotranform = False
     if ref_projection_wkt:
         ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
         if ref_sr.IsProjected:
             # Get coordinate transformation between two projections
             coord_trans = osr.CoordinateTransformation(target_sr, ref_sr)
             need_geotranform = True
-        else:
-            need_geotranform = False
     else:
         need_geotranform = False
 
