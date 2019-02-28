@@ -513,7 +513,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
     def test_val_no_grid_land_pts(self):
         """WindEnergy: testing Valuation without grid or land points."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(r"C:\Users\Joanna Lin\Documents\wind_energy_workspace")#self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
         # Also use an already projected bathymetry
         args['bathymetry_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_global_dem_projected.tif')

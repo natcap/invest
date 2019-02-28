@@ -419,7 +419,7 @@ def execute(args):
         clip_wind_vector_task = task_graph.add_task(
             func=_clip_vector_by_vector,
             args=(wind_point_vector_path, aoi_vector_path,
-                  clipped_wind_point_vector_path),
+                  clipped_wind_point_vector_path, inter_dir),
             target_path_list=[clipped_wind_point_vector_path],
             task_name='clip_wind_point_by_aoi',
             dependent_task_list=[wind_data_to_vector_task])
@@ -464,9 +464,9 @@ def execute(args):
             # pixel size
             LOGGER.info('Create Raster From AOI')
             create_aoi_raster_task = task_graph.add_task(
-                func=pygeoprocessing.create_raster_from_vector_extents,
+                func=_create_aoi_raster,
                 args=(aoi_vector_path, aoi_raster_path, target_pixel_size,
-                      gdal.GDT_Byte, _TARGET_NODATA),
+                      target_sr_wkt, inter_dir),
                 target_path_list=[aoi_raster_path],
                 task_name='create_aoi_raster_from_vector')
 
@@ -1220,6 +1220,45 @@ def _add_avg_dist_op(tmp_dist, mean_pixel_size, avg_grid_distance):
     return out_array
 
 
+def _create_aoi_raster(base_aoi_vector_path, target_aoi_raster_path,
+                       target_pixel_size, target_sr_wkt, work_dir):
+    """Create an AOI raster from a vector with target pixel size and projection.
+
+    Parameters:
+        base_aoi_vector_path (str): a path to the base AOI vector to create
+            AOI raster from.
+        target_aoi_raster_path (str): a path to the target AOI raster.
+        target_pixel_size (tuple): a tuple of x, y pixel sizes for the target
+            AOI raster.
+        work_dir (str): path to create a temp folder for saving temp files.
+
+    Returns:
+        None
+
+    """
+    base_sr_wkt = pygeoprocessing.get_vector_info(
+        base_aoi_vector_path)['projection']
+    if base_sr_wkt != target_sr_wkt:
+        # Reproject clip vector to the spatial reference of the base vector.
+        # Note: reproject_vector can be expensive if vector has many features.
+        temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-')
+        file_ext, driver_name = _get_file_ext_and_driver_name(
+            base_aoi_vector_path)
+        reprojected_aoi_vector_path = os.path.join(
+            temp_dir, 'reprojected_aoi' + file_ext)
+        pygeoprocessing.reproject_vector(
+            base_aoi_vector_path, target_sr_wkt,
+            reprojected_aoi_vector_path, driver_name=driver_name)
+        pygeoprocessing.create_raster_from_vector_extents(
+            reprojected_aoi_vector_path, target_aoi_raster_path,
+            target_pixel_size, gdal.GDT_Byte, _TARGET_NODATA)
+        shutil.rmtree(temp_dir, ignore_errors=True)
+    else:
+        pygeoprocessing.create_raster_from_vector_extents(
+            base_aoi_vector_path, target_aoi_raster_path, target_pixel_size,
+            gdal.GDT_Byte, _TARGET_NODATA)
+
+
 def _mask_out_depth_dist(*rasters):
     """Return the value of an item in the list based on some condition.
 
@@ -1808,10 +1847,17 @@ def _get_suitable_projection_params(
 
         target_sr_wkt = target_srs.ExportToWkt()
     else:
-        # If the base raster is already projected, we do not need a target
-        # bounding box
+        # If the base raster is already projected, transform the bounding
+        # box from base raster and aoi vector bounding boxes
         target_sr_wkt = base_raster_info['projection']
-        target_bounding_box = None
+
+        aoi_bounding_box = pygeoprocessing.transform_bounding_box(
+            aoi_vector_info['bounding_box'], aoi_vector_info['projection'],
+            target_sr_wkt)
+
+        target_bounding_box = pygeoprocessing.merge_bounding_box_list(
+            [aoi_bounding_box, base_raster_info['bounding_box']],
+            'intersection')
 
         # Get the minimum square pixel size
         min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
@@ -1845,30 +1891,14 @@ def _clip_to_projection_with_square_pixels(
         None.
 
     """
-    # If target_bounding_box exists, the base raster is unprojected, so we need
-    # to transform the bounding box from WGS84 to the desired projection
-    if target_bounding_box:
-        pygeoprocessing.warp_raster(
-            base_raster_path,
-            target_pixel_size,
-            target_raster_path,
-            _TARGET_RESAMPLE_METHOD,
-            target_bb=target_bounding_box,
-            target_sr_wkt=target_sr_wkt,
-            vector_mask_options={'mask_vector_path': clip_vector_path})
-
-    # We just need to clip the raster without designating bounding box,
-    # since the base raster projected
-    else:
-        pygeoprocessing.align_and_resize_raster_stack(
-            [base_raster_path],
-            [target_raster_path],
-            [_TARGET_RESAMPLE_METHOD],
-            target_pixel_size,
-            'intersection',
-            base_vector_path_list=[clip_vector_path],
-            target_sr_wkt=target_sr_wkt,
-            vector_mask_options={'mask_vector_path': clip_vector_path})
+    pygeoprocessing.warp_raster(
+        base_raster_path,
+        target_pixel_size,
+        target_raster_path,
+        _TARGET_RESAMPLE_METHOD,
+        target_bb=target_bounding_box,
+        target_sr_wkt=target_sr_wkt,
+        vector_mask_options={'mask_vector_path': clip_vector_path})
 
 
 def _convert_degree_pixel_size_to_square_meters(pixel_size, center_lat):
@@ -2030,7 +2060,8 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
         clip_vector_path (str): path to an AOI vector
         target_vector_path (str): desired output path to write the clipped
             base against AOI in AOI's coordinate system.
-        work_dir (str): path to create a temp folder for saving files.
+        work_dir (str): path to create a temp folder for saving temporary
+            files. The temp folder will be deleted when function finishes.
 
     Returns:
         None.
@@ -2060,7 +2091,7 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
     # Clip the base vector to the AOI
     _clip_vector_by_vector(
-        base_vector_path, reprojected_clip_path, clipped_vector_path)
+        base_vector_path, reprojected_clip_path, clipped_vector_path, temp_dir)
 
     # Reproject the clipped base vector to the spatial reference of clip vector
     pygeoprocessing.reproject_vector(
@@ -2072,7 +2103,7 @@ def _clip_and_reproject_vector(base_vector_path, clip_vector_path,
 
 
 def _clip_vector_by_vector(
-        base_vector_path, clip_vector_path, target_vector_path):
+        base_vector_path, clip_vector_path, target_vector_path, work_dir):
     """Create a new target vector where base features are contained in the
         polygon in clip_vector_path. Assumes all data are in the same
         projection.
@@ -2081,12 +2112,33 @@ def _clip_vector_by_vector(
         base_vector_path (str): path to a vector to clip.
         clip_vector_path (str): path to a polygon vector for clipping.
         target_vector_path (str): output path for the clipped vector.
+        work_dir (str): path to create a temp folder for saving temporary
+            files. The temp folder will be deleted when function finishes.
 
     Returns:
         None.
 
     """
     LOGGER.info('Entering _clip_vector_by_vector')
+
+    file_ext, driver_name = _get_file_ext_and_driver_name(target_vector_path)
+
+    # Get the base and target spatial reference in Well Known Text
+    base_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
+        'projection']
+    target_sr_wkt = pygeoprocessing.get_vector_info(clip_vector_path)[
+        'projection']
+
+    if base_sr_wkt != target_sr_wkt:
+        # Reproject clip vector to the spatial reference of the base vector.
+        # Note: reproject_vector can be expensive if vector has many features.
+        temp_dir = tempfile.mkdtemp(dir=work_dir, prefix='clip-')
+        reprojected_clip_vector_path = os.path.join(
+            temp_dir, 'reprojected_clip_vector' + file_ext)
+        pygeoprocessing.reproject_vector(
+            clip_vector_path, base_sr_wkt, reprojected_clip_vector_path,
+            driver_name=driver_name)
+        clip_vector_path = reprojected_clip_vector_path
 
     # Get layer and geometry informations from base vector path
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -2096,8 +2148,6 @@ def _clip_vector_by_vector(
 
     clip_vector = gdal.OpenEx(clip_vector_path, gdal.OF_VECTOR)
     clip_layer = clip_vector.GetLayer()
-
-    _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
 
     target_driver = gdal.GetDriverByName(driver_name)
     target_vector = target_driver.Create(
@@ -2112,6 +2162,10 @@ def _clip_vector_by_vector(
     clip_vector = None
     base_layer = None
     base_vector = None
+
+    if base_sr_wkt != target_sr_wkt:
+        shutil.rmtree(temp_dir, ignore_errors=True)
+
     LOGGER.info('Finished _clip_vector_by_vector')
 
 
