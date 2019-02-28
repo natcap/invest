@@ -76,7 +76,7 @@ pipelines:
                     # Authenticate with the service account key and upload files to bucket.
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
-                    - make deploy
+                    - make PYTHON_ARCH=x86 deploy
     default:
         - parallel:
             - step:
