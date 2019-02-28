@@ -67,8 +67,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_pixel_size_based_on_coordinate_transform(self):
-        """WaveEnergy: testing '_pixel_size_based_on_coordinate_transform' fn.
-        """
+        """WaveEnergy: testing '_pixel_size_based_on_coordinate_transform' fn"""
         from natcap.invest import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -79,6 +78,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Define a Lat/Long WGS84 projection
         epsg_id = 4326
         reference = osr.SpatialReference()
+        reference.ImportFromEPSG(epsg_id)
         # Get projection as WKT
         latlong_proj = reference.ExportToWkt()
         # Set origin to use for setting up geometries / geotransforms
@@ -559,6 +559,51 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(args['workspace_dir'], 'output', table_path)))
+
+    def test_missing_required_keys(self):
+        """WaveEnergy: testing missing required keys from args."""
+        from natcap.invest import wave_energy
+
+        args = {}
+        with self.assertRaises(KeyError) as cm:
+            wave_energy.execute(args)
+        expected_message = (
+            "Keys are missing from args: ['workspace_dir', " +
+            "'wave_base_data_path', 'analysis_area_path', " +
+            "'machine_perf_path', 'machine_param_path', 'dem_path']")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_incorrect_analysis_area_path_value(self):
+        """WaveEnergy: testing incorrect analysis_area_path value."""
+        from natcap.invest import wave_energy
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['analysis_area_path'] = 'Incorrect Analysis Area'
+        with self.assertRaises(ValueError) as cm:
+            wave_energy.execute(args)
+        expected_message = (
+            "'analysis_area_path'], 'Parameter must be a known analysis area.")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_validate_keys_missing_values(self):
+        """WaveEnergy: testing validate when keys are missing values."""
+        from natcap.invest import wave_energy
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['wave_base_data_path'] = None
+        args['dem_path'] = None
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['wave_base_data_path'],
+             'Parameter not found or is not a folder.'),
+            (['dem_path'],
+             'Parameter must be a filepath to a GDAL-compatible raster file.')]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
 
 
     @staticmethod

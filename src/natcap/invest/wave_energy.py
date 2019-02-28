@@ -1985,7 +1985,8 @@ def validate(args, limit_to=None):
                          'Parameter is required but has no value'))
 
     if limit_to in ('wave_base_data_path', None):
-        if not os.path.isdir(args['wave_base_data_path']):
+        if not args['wave_base_data_path'] or (
+                not os.path.isdir(args['wave_base_data_path'])):
             warnings.append((['wave_base_data_path'],
                              'Parameter not found or is not a folder.'))
 
@@ -2026,10 +2027,10 @@ def validate(args, limit_to=None):
             pass
 
     for csv_key, required_fields in (
-        ('machine_perf_path', set([])),
-        ('machine_param_path', set(['name', 'value', 'note'])),
-        ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
-        ('machine_econ_path', set(['name', 'value', 'note']))):
+            ('machine_perf_path', set([])),
+            ('machine_param_path', set(['name', 'value', 'note'])),
+            ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
+            ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
             _, missing_fields = _get_validated_dataframe(
                 args[csv_key], required_fields)
@@ -2043,9 +2044,10 @@ def validate(args, limit_to=None):
             warnings.append(([csv_key], 'File not found.'))
 
     if limit_to in ('dem_path', None):
-        with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['dem_path'], gdal.OF_RASTER)
-        if raster is None:
+        if args['dem_path']:
+            with utils.capture_gdal_logging():
+                raster = gdal.OpenEx(args['dem_path'], gdal.OF_RASTER)
+        if not args['dem_path'] or raster is None:
             warnings.append(
                 (['dem_path'],
                  ('Parameter must be a filepath to a GDAL-compatible '
