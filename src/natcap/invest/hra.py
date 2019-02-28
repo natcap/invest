@@ -2183,7 +2183,6 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 
     habitat_names = info_df[info_df.TYPE == _HABITAT_TYPE].NAME.tolist()
     stressor_names = info_df[info_df.TYPE == _STRESSOR_TYPE].NAME.tolist()
-
     return info_df, habitat_names, stressor_names
 
 
@@ -2596,9 +2595,9 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                     # Check the DQ and weight values when we have collected
                     # both of them
                     _validate_dq_weight(dq, weight, habitat, stressor)
-
                     # Calculate cumulative numerator score if rating is a digit
-                    if isinstance(rating, basestring) and rating.isdigit():
+                    if (isinstance(rating, basestring) and rating.isdigit()) or (
+                            isinstance(rating, (int, float))):
                         overlap_df.loc[(habitat, stressor),
                                        criteria_type + '_NUM'] += \
                             float(rating)/float(dq)/float(weight)
@@ -2712,12 +2711,13 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
                     continue
 
                 # If rating is a number, calculate the numerator score
-                if isinstance(rating, basestring) and rating.isdigit():
+                if (isinstance(rating, basestring) and rating.isdigit()) or (
+                        isinstance(rating, (int, float))):
                     recovery_df.loc[habitat, 'R_NUM'] += \
                         float(rating)/float(dq)/float(weight)
                 else:
-                    # If rating is based a spatial file, store the file path,
-                    # dq, and weight in the dictionary
+                    # If rating is not a number, store the file path, dq &
+                    # weight in the dictionary
                     recovery_df.loc[habitat, 'R_SPATIAL'][
                         habitat + '_' + resilience_attr] = [rating, dq, weight]
 
