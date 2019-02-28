@@ -69,7 +69,7 @@ pipelines:
                 image: google/cloud-sdk:latest
                 script:
                     # Build tools needed for running setup.py
-                    - apt-get install -y make python-numpy cython python-pip mercurial
+                    - apt-get update && apt-get install -y make python-numpy cython python-pip mercurial
                     - pip install setuptools_scm
 
                     # Authenticate with the service account key and upload files to bucket.
