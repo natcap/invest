@@ -692,29 +692,6 @@ def _create_npv_raster(
         gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
 
 
-def _calc_npv_wave(annual_revenue, annual_cost, d_rate):
-    """Calculate NPV for a wave farm based on the annual revenue and cost.
-
-    Parameters:
-        annual_revenue (numpy.array): an array of the annual revenue for
-            the first 25 years
-        annual_cost (numpy.array): an array of the annual cost for the
-            first 25 years
-        d_rate (float) : the discount rate calculation for the NPV equations
-
-    Returns:
-        A float that represents the sum of total NPV of all 25 years.
-
-    """
-
-    rho = 1.0 / (1.0 + d_rate)
-
-    npv = []
-    for time in range(_LIFE_SPAN):
-        npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
-    return sum(npv)
-
-
 def _get_npv_results(captured_wave_energy, depth, number_of_machines,
                      wave_to_land_dist, land_to_grid_dist, machine_econ_dict):
     """Compute NPV, total captured wave energy, and units for wave point.
@@ -769,8 +746,12 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     # The first year's cost is the initial start up cost
     annual_cost[0] = initial_cost
 
-    # Calculate the total NPV of all 25 years
-    npv_result = _calc_npv_wave(annual_revenue, annual_cost, d_rate) / 1000.0
+    # Calculate the total NPV of total life span
+    rho = 1.0 / (1.0 + d_rate)
+    npv = []
+    for time in range(_LIFE_SPAN):
+        npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
+    npv_result = sum(npv) / 1000.0
 
     return npv_result, capwe_all_result
 
