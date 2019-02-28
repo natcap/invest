@@ -17,6 +17,7 @@ from . import utils
 from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.hra')
+logging.getLogger('taskgraph').setLevel(logging.DEBUG)
 
 # Parameters from the user-provided criteria and info tables
 _BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
@@ -27,7 +28,7 @@ _HABITAT_STRESSOR_OVERLAP_HEADER = 'HABITAT STRESSOR OVERLAP PROPERTIES'
 _SPATIAL_CRITERIA_TYPE = 'spatial_criteria'
 _HABITAT_TYPE = 'habitat'
 _STRESSOR_TYPE = 'stressor'
-_SUBREGION_FIELD_NAME = 'NAME'
+_SUBREGION_FIELD_NAME = 'name'
 _WEIGHT_KEY = 'Weight'
 _DQ_KEY = 'DQ'
 
@@ -539,7 +540,7 @@ def execute(args):
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
-    stats_df = _get_zonal_stats(overlap_df, aoi_vector_path, task_graph)
+    stats_df = _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -733,7 +734,7 @@ def _raster_to_geojson(
     vector = None
 
 
-def _get_and_pickle_zonal_stats(
+def _calc_and_pickle_zonal_stats(
         criteria_raster_path, aoi_vector_path, fid_name_dict,
         target_pickle_path):
     """Write zonal stats to the dataframe and pickle them to files.
@@ -795,7 +796,7 @@ def _get_and_pickle_zonal_stats(
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
 
-def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
+def _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -861,7 +862,7 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
             LOGGER.info('Calculating %s zonal stats of %s' %
                         (criteria_type, habitat_stressor))
             task_graph.add_task(
-                func=_get_and_pickle_zonal_stats,
+                func=_calc_and_pickle_zonal_stats,
                 args=(criteria_raster_path, aoi_vector_path, fid_name_dict,
                       target_pickle_path),
                 target_path_list=[target_pickle_path],
@@ -913,6 +914,9 @@ def _get_zonal_stats(overlap_df, aoi_vector_path, task_graph):
 def _merge_geometry(base_vector_path, target_merged_vector_path):
     """Merge geometries from base vector into target vector.
 
+    Note: for some reason this function could take a long time when merging
+    the AOI vector.
+
     Parameters:
         base_vector_path (str): a path to the vector with geometries going to
             be merged.
@@ -933,8 +937,8 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
         geom = feat.GetGeometryRef()
         geom_wkt = shapely.wkt.loads(geom.ExportToWkt())
         # Buffer geometry to prevent invalid geometries
-        # geom_buffered = geom_wkt.buffer(0)
-        shapely_geoms.append(geom_wkt)
+        geom_buffered = geom_wkt.buffer(0)
+        shapely_geoms.append(geom_buffered)
 
     # Return the union of the geometries in the list
     merged_geom = shapely.ops.unary_union(shapely_geoms)
@@ -1006,6 +1010,7 @@ def _has_field_name(base_vector_path, field_name):
 
     LOGGER.info('The %s field is not provided in the vector.' % field_name)
     return False
+
 
 def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     """Calculate average habitat risk scores from hab_risk_arrays.
@@ -1970,8 +1975,8 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
 
     """
     path = row['PATH']
-    # Get file base name without extension
-    basename = os.path.splitext(os.path.basename(path))[0]
+    # Get file base name from the NAME column
+    basename = row['NAME']
     target_raster_path = os.path.join(
         dir_path,
         suffix_front + basename + suffix_end + '.tif')
@@ -2008,10 +2013,8 @@ def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
 
     """
     if not row['IS_RASTER']:
-        # Generate a new vector path with suffix in the dir_path
-        path = row['PATH']
-        # Get file base name without extension
-        basename = os.path.splitext(os.path.basename(path))[0]
+        # Get file base name from the NAME column
+        basename = row['NAME']
         target_vector_path = os.path.join(
             dir_path,
             suffix_front + basename + suffix_end + '.gpkg')
@@ -2554,7 +2557,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                         overlap_df.loc[
                             (habitat, stressor),
                             'PAIR_RISK_RASTER_PATH'] = os.path.join(
-                                output_dir, 'R_' +
+                                output_dir, 'RISK_' +
                                 habitat + '_' + stressor + suffix + '.tif')
 
                         # Create pickle file path that stores zonal stats dict
