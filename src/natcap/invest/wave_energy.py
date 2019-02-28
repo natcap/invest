@@ -590,26 +590,34 @@ def _copy_vector_or_raster(base_file_path, target_file_path):
     """Make a copy of a vector or raster.
 
     Parameters:
-        base_vector_path (str): a path to the base vector to be copied from.
-        target_vector_path (str): a path to the target copied shapefile.
+        base_file_path (str): a path to the base vector or raster to be copied
+            from.
+        target_file_path (str): a path to the target copied vector or raster.
 
     Returns:
         None
 
-    """
-    # Get file extension so we know that the file is a vector or a raster
-    file_ext = os.path.splitext(base_file_path)[1]
-    if file_ext in ['.shp', '.gpkg', '.geojson']:
-        driver_name = _VECTOR_DRIVER_NAME
-        data_type = gdal.OF_VECTOR
-    else:
-        driver_name = _RASTER_DRIVER_NAME
-        data_type = gdal.OF_RASTER
+    Raises:
+        ValueError if the base file can't be opened by GDAL.
 
-    base_dataset = gdal.OpenEx(base_file_path, data_type)
-    driver = gdal.GetDriverByName(driver_name)
-    driver.CreateCopy(target_file_path, base_dataset)
-    base_dataset = None
+    """
+    # Open the file as raster first
+    source_dataset = gdal.OpenEx(base_file_path, gdal.OF_RASTER)
+    target_driver_name = _RASTER_DRIVER_NAME
+    if source_dataset is None:
+        # File didn't open as a raster; assume it's a vector
+        source_dataset = gdal.OpenEx(base_file_path, gdal.OF_VECTOR)
+        target_driver_name = _VECTOR_DRIVER_NAME
+
+        # Raise an exception if the file can't be opened by GDAL
+        if source_dataset is None:
+            raise ValueError(
+                'File %s is neither a GDAL-compatible raster nor a vector.'
+                % base_file_path)
+
+    driver = gdal.GetDriverByName(target_driver_name)
+    driver.CreateCopy(target_file_path, source_dataset)
+    source_dataset = None
 
 
 def _interpolate_vector_field_onto_raster(
