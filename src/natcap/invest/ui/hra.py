@@ -27,7 +27,7 @@ class HabitatRiskAssessment(model.InVESTModel):
         self.criteria_table_path = inputs.File(
             args_key=u'criteria_table_path',
             helptext=(
-                u"A CSV or excel file that contains the set of criteria "
+                u"A CSV or Excel file that contains the set of criteria "
                 u"ranking  (rating, DQ and weight) of each stressor on each "
                 u"habitat, as well as the habitat resilience attributes."),
             label=u'Criteria Scores CSV or Excel File',
@@ -48,7 +48,7 @@ class HabitatRiskAssessment(model.InVESTModel):
                 u"This is the highest score that is used to rate a criteria "
                 u"within this model run. This value would be used to compare "
                 u"with the values within Rating column of the Criteria Scores "
-                u"CSV file."),
+                u"table."),
             label=u'Maximum Criteria Score',
             validator=self.validator)
         self.add_input(self.max_rating)
