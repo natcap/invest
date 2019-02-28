@@ -60,7 +60,20 @@ pipelines:
                     # string isn't being correctly set.
                     - wine make PYTHON_ARCH=x86 windows_installer
                 artifacts:
-                    - dist/**
+                    - dist/*.exe
+                    - dist/data/*
+                    - dist/*.zip
+                    - dist/*.whl
+                    - dist/userguide/**
+                    - dist/*.pdf
+            - step:
+                name: Deploy to bucket
+                image: google/cloud-sdk:latest
+                script:
+                    - apt-get install -y make
+                    - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
+                    - gcloud auth activate-service-account --key-file=client-secret.json
+                    - make deploy
     default:
         - parallel:
             - step:
