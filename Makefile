@@ -322,7 +322,7 @@ jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
 
 deploy:
 	gsutil -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
-	@echo Binaries (if they were created) can be downloaded from:
+	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(MAC_BINARIES_ZIP_FILE))"
 
