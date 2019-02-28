@@ -616,7 +616,7 @@ def _copy_vector_or_raster(base_file_path, target_file_path):
         # Raise an exception if the file can't be opened by GDAL
         if source_dataset is None:
             raise ValueError(
-                'File %s is neither a GDAL-compatible raster nor a vector.'
+                'File %s is neither a GDAL-compatible raster nor vector.'
                 % base_file_path)
 
     driver = gdal.GetDriverByName(target_driver_name)

@@ -7,20 +7,17 @@ import re
 
 import numpy
 import numpy.testing
+from osgeo import gdal
+from osgeo import osr, ogr
 from shapely.geometry import Polygon
 from shapely.geometry import Point
+
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 
-from osgeo import gdal
-from osgeo import osr, ogr
-
-
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy',
-    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
+SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 
 def _make_empty_files(workspace_dir):
@@ -82,7 +79,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Define a Lat/Long WGS84 projection
         epsg_id = 4326
         reference = osr.SpatialReference()
-        proj_result = reference.ImportFromEPSG(epsg_id)
         # Get projection as WKT
         latlong_proj = reference.ExportToWkt()
         # Set origin to use for setting up geometries / geotransforms
@@ -212,8 +208,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         from natcap.invest import wave_energy
 
         aoi_path = os.path.join(REGRESSION_DATA, 'aoi_proj_to_extract.shp')
-        extract_path = os.path.join(SAMPLE_DATA, 'WaveData',
-                                    'Global_extract.shp')
+        extract_path = os.path.join(
+            SAMPLE_DATA, 'WaveData', 'Global_extract.shp')
 
         result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
         target_projection = pygeoprocessing.get_vector_info(
@@ -257,8 +253,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Create geometry for the polygons, which will be used to clip
         geom_two = [
             Polygon([(pos_x, pos_y), (pos_x + 60, pos_y),
-                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60), (pos_x,
-                                                                     pos_y)])
+                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60),
+                     (pos_x, pos_y)])
         ]
 
         shape_to_clip_path = os.path.join(self.workspace_dir,
@@ -333,8 +329,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Create geometry for the polygons, which will be used to clip
         geom_two = [
             Polygon([(pos_x, pos_y), (pos_x + 60, pos_y),
-                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60), (pos_x,
-                                                                     pos_y)])
+                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60),
+                     (pos_x, pos_y)])
         ]
 
         shape_to_clip_path = os.path.join(self.workspace_dir,
@@ -362,8 +358,11 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
-                          wave_energy._clip_vector_by_vector, shape_to_clip_path,
-                          binding_shape_path, output_path, srs.projection,
+                          wave_energy._clip_vector_by_vector,
+                          shape_to_clip_path,
+                          binding_shape_path,
+                          output_path,
+                          srs.projection,
                           self.workspace_dir)
 
     def test_binary_wave_data_to_dict(self):
@@ -435,8 +434,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
-        args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
-                                                 'LandGridPts_WCVI.csv')
+        args['land_gridPts_path'] = os.path.join(
+            SAMPLE_DATA, 'LandGridPts_WCVI.csv')
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
