@@ -13,7 +13,9 @@ pipelines:
                         - python setup.py --version
                         - make userguide
                     artifacts:
-                        - dist/**
+                        - dist/userguide/**
+                        - dist/*.pdf
+                        - dist/*.zip
                 - step:
                     name: Sample Data
                     image: debian:9.7
@@ -23,7 +25,7 @@ pipelines:
                             python-numpy python-setuptools-scm cython
                         - make sampledata
                     artifacts:
-                        - dist/**
+                        - dist/data/*
                         - data/invest-data/*.json
                 - step:
                     name: Python Binaries
@@ -40,7 +42,7 @@ pipelines:
                             -r requirements.txt
                         - wine make PYTHON=env/scripts/python.exe binaries
                     artifacts:
-                        - dist/**
+                        - dist/*.whl
             - step:
                 name: NSIS Installer
                 image: natcap/py27-wine-build:117580cbeba1c9c21634c30d749a052fb5bb7936
@@ -62,17 +64,15 @@ pipelines:
                     - wine make PYTHON_ARCH=x86 windows_installer
                 artifacts:
                     - dist/*.exe
-                    - dist/data/*
-                    - dist/*.zip
-                    - dist/*.whl
-                    - dist/userguide/**
-                    - dist/*.pdf
             - step:
                 name: Deploy to bucket
                 image: google/cloud-sdk:latest
                 script:
                     # Build tools needed for running setup.py
-                    - apt-get install -y make python-numpy cython python-setuptools-scm mercurial
+                    - apt-get install -y make python-numpy cython python-pip mercurial
+                    - pip install setuptools_scm
+
+                    # Authenticate with the service account key and upload files to bucket.
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
                     - make deploy
