@@ -22,7 +22,7 @@ import pygeoprocessing
 from . import validation
 from . import utils
 
-LOGGER = logging.getLogger('natcap.invest.wave_energy')
+LOGGER = logging.getLogger(__name__)
 
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
