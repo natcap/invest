@@ -1865,8 +1865,7 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
 
             # Convert all relative paths to absolute paths
             info_df['PATH'] = info_df.apply(
-                lambda row: _to_abspath(
-                    row['PATH'], spatial_file_dir), axis=1)
+                lambda row: _to_abspath(row['PATH'], spatial_file_dir), axis=1)
             # Check if the file on the path is a raster or vector
             info_df['IS_RASTER'] = info_df.apply(
                 lambda row: _label_raster(row['PATH']), axis=1)
@@ -2127,7 +2126,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     if unknown_types:
         raise ValueError(
             'The `TYPE` attribute in Info table could only have either %s '
-            ' or %s as its value, but is having %s' % (
+            'or %s as its value, but is having %s' % (
                 required_types[0], required_types[1], unknown_types))
 
     buffer_column_dtype = info_df[info_df.TYPE == required_buffer_type][
@@ -2380,33 +2379,30 @@ def _validate_rating(
     """
     _rating_lg_one = True
 
-    if rating.isdigit():
+    # Rating might be a string of path or a string of digit. Validate the value
+    # when it's a digit
+    if isinstance(rating, basestring) and rating.isdigit():
+        rating = float(rating)
         # If rating is less than 1, ignore this criteria attribute
-        if float(rating) < 1:
+        if rating < 1:
             _rating_lg_one = False
             warning_message = '"%s" for habitat %s' % (criteria_name, habitat)
-
             if stressor:
                 warning_message += (' and stressor %s' % stressor)
-
             warning_message += (
                 ' has a rating %s less than 1, so this criteria attribute is '
                 'ignored in calculation.' % rating)
-
             LOGGER.warning(warning_message)
 
         # Raise an exception if rating is larger than the maximum rating that
         # the user specified
-        elif float(rating) > float(max_rating):
+        elif rating > float(max_rating):
             error_message = '"%s" for habitat %s' % (criteria_name, habitat)
-
             if stressor:
                 error_message += (' and stressor %s' % stressor)
-
             error_message += (
                 ' has a rating %s larger than the maximum rating %s. '
                 'Please check your criteria table.' % (rating, max_rating))
-
             raise ValueError(error_message)
 
     return _rating_lg_one
@@ -2437,10 +2433,10 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
             _DQ_KEY: dq,
             _WEIGHT_KEY: weight}.iteritems():
 
-        # The value might be NaN or a string of digit, therefore check for
+        # The value might be NaN or a string of non-digit, therefore check for
         # both cases
-        if (isinstance(value, (float, int)) and numpy.isnan(value)) or \
-                not value.isdigit():
+        if (isinstance(value, (float, int)) and numpy.isnan(value)) or (
+                isinstance(value, basestring) and not value.isdigit()):
             error_message = (
                 'Values in the %s column for habitat "%s" ' % (key, habitat))
 
@@ -2540,7 +2536,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             criteria_type = row_data[_CRITERIA_TYPE_HEADER].upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
-                                 'table should be either E or C.')
+                                 'should be either E or C.')
 
             for idx, (row_key, row_value) in enumerate(row_data.iteritems()):
                 # The first value in the criteria row should be a rating value
@@ -2601,8 +2597,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                     # both of them
                     _validate_dq_weight(dq, weight, habitat, stressor)
 
-                    # Calculate the cumulative numerator score
-                    if rating.isdigit():
+                    # Calculate cumulative numerator score if rating is a digit
+                    if isinstance(rating, basestring) and rating.isdigit():
                         overlap_df.loc[(habitat, stressor),
                                        criteria_type + '_NUM'] += \
                             float(rating)/float(dq)/float(weight)
@@ -2716,7 +2712,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
                     continue
 
                 # If rating is a number, calculate the numerator score
-                if rating.isdigit():
+                if isinstance(rating, basestring) and rating.isdigit():
                     recovery_df.loc[habitat, 'R_NUM'] += \
                         float(rating)/float(dq)/float(weight)
                 else:

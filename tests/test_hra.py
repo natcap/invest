@@ -664,11 +664,10 @@ class HraUnitTests(unittest.TestCase):
 
         expected_message = "'NAME', 'STRESSOR BUFFER (METERS)'"
         actual_message = str(cm.exception)
-        self.assertTrue(
-            expected_message in actual_message, actual_message)
+        self.assertTrue(expected_message in actual_message, actual_message)
 
     def test_wrong_layer_type_in_info_csv(self):
-        """HRA: exception raised when columns are missing from info CSV."""
+        """HRA: exception raised when layer type is wrong info CSV."""
         from natcap.invest.hra import _get_info_dataframe
 
         # Test missing columns from info CSV
@@ -683,7 +682,7 @@ class HraUnitTests(unittest.TestCase):
                 bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
-        expected_message = "The `TYPE` attribute in Info CSV"
+        expected_message = "is having ['wrong type']"
         actual_message = str(cm.exception)
         self.assertTrue(
             expected_message in actual_message, actual_message)
@@ -728,7 +727,7 @@ class HraUnitTests(unittest.TestCase):
                  'stressor_1': ['criteria 5', 'criteria 6']},
                 3, self.workspace_dir, self.workspace_dir, '')
 
-        expected_message = 'Criteria Type in the criteria scores CSV'
+        expected_message = 'Criteria Type in the criteria scores table'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -773,7 +772,7 @@ class HraUnitTests(unittest.TestCase):
                  'stressor_1': ['criteria 5', 'criteria 6']},
                 3, self.workspace_dir, self.workspace_dir, '')
 
-        expected_message = 'rating 99999 larger than the maximum rating 3'
+        expected_message = 'rating 99999.0 larger than the maximum rating 3'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -930,7 +929,6 @@ class HraRegressionTests(unittest.TestCase):
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
-            print output_vector
             pygeoprocessing.testing.assert_vectors_equal(
                 output_vector, expected_vector, 1E-6)
 
@@ -1072,7 +1070,7 @@ class HraRegressionTests(unittest.TestCase):
         # Two layers that are expected to be missing from criteria CSV
         for missing_layer in ['habitat_0', 'stressor_1']:
             expected_message = (
-                "missing from the criteria CSV file: ['" + missing_layer)
+                "missing from the criteria table: ['" + missing_layer)
             actual_message = str(cm.exception)
             self.assertTrue(expected_message in actual_message, actual_message)
 
