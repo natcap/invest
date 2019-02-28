@@ -70,7 +70,8 @@ pipelines:
                 name: Deploy to bucket
                 image: google/cloud-sdk:latest
                 script:
-                    - apt-get install -y make
+                    # Build tools needed for running setup.py
+                    - apt-get install -y make python-numpy cython python-setuptools-scm mercurial
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
                     - make deploy
