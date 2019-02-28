@@ -604,7 +604,20 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         for expected_error in expected_errors:
             self.assertTrue(expected_error in validation_error_list)
 
+    def test_validate_bad_aoi_format(self):
+        """WaveEnergy: testing bad AOI vector format with validate."""
+        from natcap.invest import wave_energy
 
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['aoi_path'], 'Vector must contain only polygons.'),
+            (['aoi_path'], 'Vector must be projected in meters.'),
+            (['aoi_path'], 'Vector must use the WGS_1984 datum.'),]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod
     def _assert_point_vectors_equal(a_path, b_path):

@@ -2013,7 +2013,7 @@ def validate(args, limit_to=None):
                     units = srs.GetLinearUnitsName().lower()
                     if units not in ('meter', 'metre'):
                         warnings.append((['aoi_path'],
-                                         'Vector must be projected in meters'))
+                                         'Vector must be projected in meters.'))
 
                     datum = srs.GetAttrValue('DATUM')
                     if datum != 'WGS_1984':
@@ -2029,7 +2029,8 @@ def validate(args, limit_to=None):
     for csv_key, required_fields in (
             ('machine_perf_path', set([])),
             ('machine_param_path', set(['name', 'value', 'note'])),
-            ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
+            ('land_gridPts_path',
+                set(['id', 'type', 'lat', 'long', 'location'])),
             ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
             _, missing_fields = _get_validated_dataframe(
