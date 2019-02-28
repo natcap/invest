@@ -146,6 +146,10 @@ def execute(args):
         }
 
     """
+    LOGGER.info('Starting the Wave Energy Model.')
+    invalid_parameters = validate(args)
+    if invalid_parameters:
+        raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
 
     # Create the Output and Intermediate directories if they do not exist.
     workspace = args['workspace_dir']
@@ -1101,7 +1105,8 @@ def _machine_csv_to_dict(machine_csv_path):
     """Create a dictionary from the table in machine csv file.
 
     The dictionary's keys are the 'NAME' from the machine table and its values
-    are from the corresponding 'VALUE' field.
+    are from the corresponding 'VALUE' field. No need to check for missing
+    columns since the file is validated by validate() function.
 
     Parameters:
         machine_csv_path (str): path to the input machine CSV file.
@@ -1113,11 +1118,9 @@ def _machine_csv_to_dict(machine_csv_path):
     """
     machine_dict = {}
     machine_data = pandas.read_csv(machine_csv_path, index_col=0)
+    # make columns and indexes lowercased
     machine_data.columns = machine_data.columns.str.lower()
-    if 'value' not in machine_data.columns:
-        raise ValueError('Please make sure that the "VALUE" column is in the '
-                         'Machine Parameters Table.')
-    # remove underscore from the keys and make them lowercased
+    # remove underscore from the keys
     machine_data.index = machine_data.index.str.strip()
     machine_data.index = machine_data.index.str.lower()
 
@@ -2022,13 +2025,11 @@ def validate(args, limit_to=None):
             # Parameter is not required.
             pass
 
-    for csv_key, required_fields in (('machine_perf_path', set(
-        [])), ('machine_param_path', set(
-            ['name', 'value',
-             'note'])), ('land_gridPts_path',
-                         set(['id', 'type', 'lat', 'long', 'location'])),
-                                     ('machine_econ_path',
-                                      set(['name', 'value', 'note']))):
+    for csv_key, required_fields in (
+        ('machine_perf_path', set([])),
+        ('machine_param_path', set(['name', 'value', 'note'])),
+        ('land_gridPts_path', set(['id', 'type', 'lat', 'long', 'location'])),
+        ('machine_econ_path', set(['name', 'value', 'note']))):
         try:
             _, missing_fields = _get_validated_dataframe(
                 args[csv_key], required_fields)
