@@ -98,7 +98,6 @@ pipelines:
                     - wine make env
                     - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install --upgrade .
                     - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install
-                        -r requirements-gui.txt
                         -r requirements-dev.txt
                         -r requirements.txt
 
