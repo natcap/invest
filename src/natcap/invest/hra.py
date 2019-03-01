@@ -17,7 +17,6 @@ from . import utils
 from . import validation
 
 LOGGER = logging.getLogger('natcap.invest.hra')
-logging.getLogger('taskgraph').setLevel(logging.DEBUG)
 
 # Parameters from the user-provided criteria and info tables
 _BUFFER_HEADER = 'STRESSOR BUFFER (METERS)'
@@ -540,7 +539,8 @@ def execute(args):
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
-    stats_df = _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph)
+    stats_df = _get_zonal_stats_df(
+        overlap_df, aoi_vector_path, task_graph, max_risk_score)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -796,7 +796,8 @@ def _calc_and_pickle_zonal_stats(
     pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
 
 
-def _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph):
+def _get_zonal_stats_df(
+        overlap_df, aoi_vector_path, task_graph, max_risk_score):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -812,6 +813,9 @@ def _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph):
 
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
+
+        max_risk_score (float): the maximum possible risk score used for
+            reclassifying the risk score on each pixel.
 
     Returns:
         final_stats_df (dataframe): a multi-index dataframe with exposure and
@@ -894,10 +898,12 @@ def _get_zonal_stats_df(overlap_df, aoi_vector_path, task_graph):
         # Add the subregion name to the column
         subregion_df['SUBREGION'] = subregion
 
-        # Update E and C scores of that subregion to the dataframe
+        # Reclassify E and C scores to 0 to 3 and update them to the dataframe
         for criteria_type in ['E', 'C']:
             subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
-                lambda row: row[criteria_type + '_MEAN'][subregion], axis=1)
+                lambda row:
+                numpy.ceil(row[criteria_type + '_MEAN'][subregion])/(
+                    max_risk_score/3.), axis=1)
 
         subregion_df_list.append(subregion_df)
 
@@ -2171,7 +2177,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Generate cumulative risk raster paths with risk suffix.
     info_df['TOTAL_RISK_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
-            row, intermediate_dir, 'TOT_R_', suffix_end), axis=1)
+            row, intermediate_dir, 'TOT_RISK_', suffix_end), axis=1)
 
     # Generate reclassified risk raster paths with risk suffix.
     info_df['RECLASS_RISK_RASTER_PATH'] = info_df.apply(
@@ -2748,6 +2754,7 @@ def _simplify_geometry(
 
         preserved_field (tuple): a tuple of field name (string) and field type
             (OGRFieldType) that will remain in the target simplified vector.
+            Field name will be converted to lowercased.
 
     Returns:
         None
@@ -2762,10 +2769,10 @@ def _simplify_geometry(
             base_field_name = base_layer_defn.GetFieldDefn(i).GetName()
             # Find the first field name, case-insensitive
             if base_field_name.lower() == preserved_field[0].lower():
-                # Create a target field definition
-                target_field_name = preserved_field[0]
+                # Create a target field definition with lowercased field name
+                target_field_name = preserved_field[0].lower().encode('utf-8')
                 target_field = ogr.FieldDefn(
-                    base_field_name, preserved_field[1])
+                    target_field_name, preserved_field[1])
                 break
 
     # Convert a unicode string into UTF-8 standard to avoid TypeError when
