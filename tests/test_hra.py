@@ -957,6 +957,7 @@ class HraRegressionTests(unittest.TestCase):
         # Test if `Total Region` gets written in output stats CSV
         _make_aoi_vector(aoi_vector_path, subregion_field=False)
         args['aoi_vector_path'] = aoi_vector_path
+
         natcap.invest.hra.execute(args)
 
         output_rasters = [

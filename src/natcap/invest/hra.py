@@ -506,7 +506,7 @@ def execute(args):
 
     # Create input list for calculating average & reclassified ecosystem risks
     ecosystem_risk_raster_path = os.path.join(
-        intermediate_dir, 'AVG_R_ecosystem.tif')
+        intermediate_dir, 'AVG_RISK_ecosystem.tif')
     reclass_ecosystem_risk_raster_path = os.path.join(
         output_dir, 'risk_ecosystem.tif')
 
@@ -540,7 +540,7 @@ def execute(args):
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
     stats_df = _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, task_graph, max_risk_score)
+        overlap_df, aoi_vector_path, task_graph, max_rating)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -799,7 +799,7 @@ def _calc_and_pickle_zonal_stats(
 
 
 def _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, task_graph, max_risk_score):
+        overlap_df, aoi_vector_path, task_graph, max_rating):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -816,8 +816,8 @@ def _get_zonal_stats_df(
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
-        max_risk_score (float): the maximum possible risk score used for
-            reclassifying the risk score on each pixel.
+        max_rating (float): the maximum possible score used for reclassifying
+            the average E and C scores.
 
     Returns:
         final_stats_df (dataframe): a multi-index dataframe with exposure and
@@ -903,9 +903,8 @@ def _get_zonal_stats_df(
         # Reclassify E and C scores to 0 to 3 and update them to the dataframe
         for criteria_type in ['E', 'C']:
             subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
-                lambda row:
-                numpy.ceil(row[criteria_type + '_MEAN'][subregion])/(
-                    max_risk_score/3.), axis=1)
+                lambda row: row[criteria_type + '_MEAN'][subregion]/(
+                    max_rating/3.), axis=1)
 
         subregion_df_list.append(subregion_df)
 
