@@ -587,9 +587,9 @@ def execute(args):
     # Convert the unprojected rasters to GeoJSON files for web visualization
     for raster_path in out_wgs84_raster_paths:
         # Remove the `wgs84_` and 'aligned_' prefixes from the raster names
-        vector_layer_name = os.path.splitext(
-            os.path.basename(raster_path))[0].replace('wgs84_', '').replace(
-                'aligned_', '').encode('utf-8')
+        raster_layer_name = os.path.splitext(os.path.basename(raster_path))[0]
+        vector_layer_name = raster_layer_name.replace('wgs84_', '').replace(
+            'aligned_', '').encode('utf-8')
 
         if vector_layer_name.startswith('risk_'):
             field_name = 'Risk Score'
@@ -681,6 +681,8 @@ def _convert_meter_pixel_size_to_degrees(pixel_size_in_meters, center_lat):
     pixel_size_in_degrees = (
         pixel_size_in_meters[0] / long_len_in_m,
         pixel_size_in_meters[1] / lat_len_in_m)
+
+    LOGGER.debug('Pixel size in degrees: %s' % (pixel_size_in_degrees,))
 
     return pixel_size_in_degrees
 
