@@ -473,7 +473,8 @@ def execute(args):
 
         # Get a list of habitat path and individual risk paths on that habitat
         # for the final risk calculation
-        total_risk_path_band_list = [(habitat_raster_path, 1)]
+        total_risk_path_band_list = [
+            (habitat_raster_path, 1), ((max_risk_score, 'raw'))]
         pair_risk_path_list = overlap_df.loc[
             habitat, 'PAIR_RISK_RASTER_PATH'].tolist()
         total_risk_path_band_list = total_risk_path_band_list + [
@@ -488,13 +489,13 @@ def execute(args):
             target_path_list=[total_habitat_risk_path],
             task_name='calculate_%s_risk' % habitat)
 
-        # Calculate the risk score on a reclassified basis by dividing the risk
-        # score by the maximum possible risk score.
+        # Reclassify the risk score into three categories by dividing the total
+        # risk score by 3, and return the ceiling
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(total_habitat_risk_path, 1), (max_risk_score, 'raw')],
-                  _reclassify_risk_op, reclass_habitat_risk_path,
-                  _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+            args=([(total_habitat_risk_path, 1)], _reclassify_risk_op,
+                  reclass_habitat_risk_path, _TARGET_PIXEL_INT,
+                  _TARGET_NODATA_INT),
             target_path_list=[reclass_habitat_risk_path],
             task_name='reclassify_%s_risk' % habitat,
             dependent_task_list=[calc_risk_task])
@@ -816,8 +817,8 @@ def _get_zonal_stats_df(
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
-        max_rating (float): the maximum possible score used for reclassifying
-            the average E and C scores.
+        max_rating (float): the maximum score defined by user. It's used for
+            reclassifying the average E and C scores into 0 to 3.
 
     Returns:
         final_stats_df (dataframe): a multi-index dataframe with exposure and
@@ -1090,38 +1091,6 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
     return reclass_ecosystem_risk_arr
 
 
-def _reclassify_risk_op(risk_arr, max_risk_score):
-    """Reclassify total risk score on each pixel into 1 to 3.
-
-    If 0 < 3*(risk/max risk) <= 1, classify the risk score to 1.
-    If 1 < 3*(risk/max risk) <= 2, classify the risk score to 2.
-    If 2 < 3*(risk/max risk) <= 3 , classify the risk score to 3.
-    Note: If 3*(risk/max risk) == 0, it will remain 0, meaning that there's no
-    stressor on that habitit.
-
-    Parameters:
-        risk_arr (array): an array of cumulative risk scores from all stressors
-
-        max_risk_score (float): the maximum possible risk score used for
-            reclassifying the risk score on each pixel.
-
-    Returns:
-        reclass_arr (array): an integer array of reclassified risk scores for a
-            certain habitat.
-
-    """
-    reclass_arr = numpy.full(
-        risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
-    valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
-
-    # Divide risk score by (maximum possible risk score/3) to get a value
-    # ranging from 0 to 3, then return the ceiling of the output
-    reclass_arr[valid_pixel_mask] = numpy.ceil(risk_arr[valid_pixel_mask] / (
-        max_risk_score/3.))
-
-    return reclass_arr
-
-
 def _count_habitats_op(*habitat_arrays):
     """Adding pixel values together from multiple arrays.
 
@@ -1246,22 +1215,54 @@ def _get_max_risk_score(
     return max_risk_score
 
 
-def _tot_risk_op(habitat_arr, *indi_risk_arrays):
-    """Calculate cumulative risk to a habitat or species from all stressors.
+def _reclassify_risk_op(risk_arr):
+    """Reclassify total risk score on each pixel into 0 to 3, discretely.
+
+    If 0 < risk <= 1, classify the risk score to 1.
+    If 1 < risk <= 2, classify the risk score to 2.
+    If 2 < risk <= 3 , classify the risk score to 3.
+    Note: If risk == 0, it will remain 0, meaning that there's no
+    stressor on that habitat.
+
+    Parameters:
+        risk_arr (array): an array of cumulative risk scores from all stressors
+
+    Returns:
+        reclass_arr (array): an integer array of reclassified risk scores for a
+            certain habitat. The values are discrete on the array.
+
+    """
+    reclass_arr = numpy.full(
+        risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
+    valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
+
+    # Return the ceiling of the continuous risk score
+    reclass_arr[valid_pixel_mask] = numpy.ceil(risk_arr[valid_pixel_mask])
+
+    return reclass_arr
+
+
+def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
+    """Calculate and reclassify cumulative risk to a habitat from all stressors.
 
     The risk score is calculated by summing up all the risk scores on each
-    valid pixel of the habitat.
+    valid pixel of the habitat, then divided by the (max_risk_score/3) to get
+    a continuous risk score of 0 to 3 on output tot_risk_arr.
 
     Parameters:
         habitat_arr (array): an integer habitat array where 1's indicates
             habitat existence and 0's non-existence.
 
-        *indi_risk_arrays: a list of individual risk float arrays from each
+        max_risk_score (float): the maximum possible risk score used for
+            reclassifying the risk score into 0 to 3 on each pixel.
+
+        *pair_risk_arrays: a list of individual risk float arrays from each
             stressor to a certain habitat.
 
     Returns:
         tot_risk_arr (array): a cumulative risk float array calculated by
-            summing up all the individual risk arrays.
+            summing up all the individual risk arrays. The values are
+            continuous on the array.
 
     """
     # Fill 0s to the total risk array on where habitat exists
@@ -1270,9 +1271,13 @@ def _tot_risk_op(habitat_arr, *indi_risk_arrays):
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     tot_risk_arr[habitat_mask] = 0
 
-    for indi_risk_arr in indi_risk_arrays:
-        valid_pixel_mask = (indi_risk_arr != _TARGET_NODATA_FLT)
-        tot_risk_arr[valid_pixel_mask] += indi_risk_arr[valid_pixel_mask]
+    for pair_risk_arr in pair_risk_arrays:
+        valid_pixel_mask = (pair_risk_arr != _TARGET_NODATA_FLT)
+        tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
+
+    # Reclassify the scores into 0 to 3 continuously.
+    tot_risk_arr[valid_pixel_mask] = tot_risk_arr[valid_pixel_mask]/(
+        max_risk_score/3.)
 
     return tot_risk_arr
 
