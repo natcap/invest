@@ -752,10 +752,9 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
 
     # Calculate the total NPV of total life span
     rho = 1.0 / (1.0 + d_rate)
-    npv = []
-    for time in range(_LIFE_SPAN):
-        npv.append(rho**time * (annual_revenue[time] - annual_cost[time]))
-    npv_result = sum(npv) / 1000.0
+    npv = numpy.power(rho, numpy.arange(_LIFE_SPAN)) * (
+        annual_revenue - annual_cost)
+    npv_result = numpy.sum(npv) / 1000.0
 
     return npv_result, capwe_all_result
 
