@@ -719,13 +719,13 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
 
     """
     # Extract the machine economic parameters
-    cap_max = float(machine_econ_dict['capmax'])  # maximum capacity
-    capital_cost = float(machine_econ_dict['cc'])  # capital cost
-    cml = float(machine_econ_dict['cml'])  # cost of mooring lines
-    cul = float(machine_econ_dict['cul'])  # cost of underwater cable
-    col = float(machine_econ_dict['col'])  # cost of overland cable
-    omc = float(machine_econ_dict['omc'])  # operating & maintenance cost
-    price = float(machine_econ_dict['p'])  # price of electricity
+    cap_max = float(machine_econ_dict['capmax'])  # maximum capacity, kW
+    capital_cost = float(machine_econ_dict['cc'])  # capital cost, $/kW
+    cml = float(machine_econ_dict['cml'])  # cost of mooring lines, $ per m
+    cul = float(machine_econ_dict['cul'])  # cost of underwater cable, $ per km
+    col = float(machine_econ_dict['col'])  # cost of overland cable, $ per km
+    omc = float(machine_econ_dict['omc'])  # operating & maintenance cost, $ per kWh
+    price = float(machine_econ_dict['p'])  # price of electricity, $ per kWh
     smlpm = float(machine_econ_dict['smlpm'])  # slack-moored
     d_rate = float(machine_econ_dict['r'])  # discount rate
 
@@ -733,6 +733,7 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
 
     # Create a numpy array of length 25, filled with the captured wave
     # energy in kW/h. Represents the lifetime of this wave farm.
+    # Note: Divide the result by 1000 to convert W/h to kW/h
     captured_we = numpy.ones(_LIFE_SPAN) * (int(captured_wave_energy) * 1000.0)
     # It is expected that there is no revenue from the first year
     captured_we[0] = 0
@@ -741,6 +742,7 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     lenml = 3.0 * numpy.absolute(depth)
     install_cost = number_of_machines * cap_max * capital_cost
     mooring_cost = smlpm * lenml * cml * number_of_machines
+    # Divide by 1000.0 to convert cul and col from [$ per km] to [$ per m]
     trans_cost = (wave_to_land_dist * cul / 1000.0) + (
         land_to_grid_dist * col / 1000.0)
     initial_cost = install_cost + mooring_cost + trans_cost
@@ -754,7 +756,7 @@ def _get_npv_results(captured_wave_energy, depth, number_of_machines,
     rho = 1.0 / (1.0 + d_rate)
     npv = numpy.power(rho, numpy.arange(_LIFE_SPAN)) * (
         annual_revenue - annual_cost)
-    npv_result = numpy.sum(npv) / 1000.0
+    npv_result = numpy.sum(npv) / 1000.0  # Convert [$US] to [thousands of $US]
 
     return npv_result, capwe_all_result
 
@@ -1503,7 +1505,7 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
         mult_matrix[mult_matrix < 0] = 0
 
         # Sum all of the values from the matrix to get the total
-        # captured wave energy and convert into mega watts
+        # captured wave energy and convert kWh into MWh
         sum_we = (mult_matrix.sum() / 1000)
         energy_cap[key] = sum_we
 
@@ -1681,7 +1683,7 @@ def _energy_and_power_to_wave_vector(
         period_index = feat.GetFieldIndex(_PERIOD_FIELD)
         depth_index = feat.GetFieldIndex(_DEPTH_FIELD)
         wp_index = feat.GetFieldIndex(_WAVE_POWER_FIELD)
-        height = feat.GetFieldAsDouble(height_index)
+        height = feat.GetFieldAsDouble(height_index)  # in meters
         period = feat.GetFieldAsDouble(period_index)
         depth = feat.GetFieldAsInteger(depth_index)
 
@@ -1706,7 +1708,10 @@ def _energy_and_power_to_wave_vector(
         # Reset the overflow error to print future warnings
         numpy.seterr(over='print')
 
-        # wave power calculation
+        # Wave power calculation. Divide by 1000 to convert W/m to kW/m
+        # Note: _SWD: Sea water density constant (kg/m^3),
+        # _GRAV: Gravitational acceleration (m/s^2),
+        # height: in m, wave_group_velocity: in m/s
         wave_pow = ((((_SWD * _GRAV) / 16) *
                      (numpy.square(height)) * wave_group_velocity) / 1000)
 
