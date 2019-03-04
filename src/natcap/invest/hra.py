@@ -16,6 +16,8 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
+import pdb
+
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables
@@ -1209,8 +1211,8 @@ def _get_max_risk_score(
         max_risk_score = max_overlap_stressors*numpy.sqrt(
             numpy.power((max_rating-1), 2)*2)
 
-    LOGGER.debug('max_overlap_stressors: %s. max_risk_score: %s.' %
-                 (max_overlap_stressors, max_risk_score))
+    LOGGER.info('max_overlap_stressors: %s. max_risk_score: %s.' %
+                (max_overlap_stressors, max_risk_score))
 
     return max_risk_score
 
@@ -1237,7 +1239,8 @@ def _reclassify_risk_op(risk_arr):
     valid_pixel_mask = (risk_arr != _TARGET_NODATA_FLT)
 
     # Return the ceiling of the continuous risk score
-    reclass_arr[valid_pixel_mask] = numpy.ceil(risk_arr[valid_pixel_mask])
+    reclass_arr[valid_pixel_mask] = numpy.ceil(
+        risk_arr[valid_pixel_mask]).astype(int)
 
     return reclass_arr
 
@@ -1261,8 +1264,8 @@ def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
 
     Returns:
         tot_risk_arr (array): a cumulative risk float array calculated by
-            summing up all the individual risk arrays. The values are
-            continuous on the array.
+            summing up all the individual risk arrays. The values on the array
+            range from 0 to 3 continuously.
 
     """
     # Fill 0s to the total risk array on where habitat exists
@@ -1276,8 +1279,9 @@ def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
 
     # Reclassify the scores into 0 to 3 continuously.
-    tot_risk_arr[valid_pixel_mask] = tot_risk_arr[valid_pixel_mask]/(
-        max_risk_score/3.)
+    final_valid_pixel_mask = (tot_risk_arr != _TARGET_NODATA_FLT)
+    tot_risk_arr[final_valid_pixel_mask] = tot_risk_arr[
+        final_valid_pixel_mask] / (max_risk_score/3.)
 
     return tot_risk_arr
 
