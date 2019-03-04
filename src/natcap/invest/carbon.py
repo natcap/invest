@@ -294,13 +294,10 @@ def _generate_carbon_map(
         None.
     """
     lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    nodata = lulc_info['nodata'][0]
     pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
         (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.iteritems()])
-
-    carbon_stock_by_type[nodata] = _CARBON_NODATA
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,

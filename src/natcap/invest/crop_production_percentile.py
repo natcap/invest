@@ -142,6 +142,11 @@ def execute(args):
     pixel_area_ha = numpy.product([
         abs(x) for x in landcover_raster_info['pixel_size']]) / 10000.0
     landcover_nodata = landcover_raster_info['nodata'][0]
+    if landcover_nodata is None:
+        LOGGER.warning(
+            "%s does not have nodata value defined; "
+            "assuming all pixel values are valid"
+            % args['landcover_raster_path'])
 
     # Calculate lat/lng bounding box for landcover map
     wgs84srs = osr.SpatialReference()
@@ -399,10 +404,13 @@ def _crop_production_op(
 
     """
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-    result[:] = _NODATA_YIELD
-    valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+    if landcover_nodata is not None:
+        result[:] = _NODATA_YIELD
+        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        result[valid_mask] = 0.0
+    else:
+        result[:] = 0.0
     lulc_mask = lulc_array == crop_lucode
-    result[valid_mask] = 0
     result[lulc_mask] = (
         yield_array[lulc_mask] * pixel_area_ha)
     return result
@@ -445,10 +453,13 @@ def _mask_observed_yield_op(
 
     """
     result = numpy.empty(lulc_array.shape, dtype=numpy.float32)
-    result[:] = observed_yield_nodata
-    valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+    if landcover_nodata is not None:
+        result[:] = observed_yield_nodata
+        valid_mask = ~numpy.isclose(lulc_array, landcover_nodata)
+        result[valid_mask] = 0.0
+    else:
+        result[:] = 0.0
     lulc_mask = lulc_array == crop_lucode
-    result[valid_mask] = 0.0
     result[lulc_mask] = (
         observed_yield_array[lulc_mask] * pixel_area_ha)
     return result
@@ -557,8 +568,11 @@ def tabulate_results(
         total_area = 0.0
         for _, band_values in pygeoprocessing.iterblocks(
                 (landcover_raster_path, 1)):
-            total_area += numpy.count_nonzero(
-                ~numpy.isclose(band_values, landcover_nodata))
+            if landcover_nodata is not None:
+                total_area += numpy.count_nonzero(
+                    ~numpy.isclose(band_values, landcover_nodata))
+            else:
+                total_area += band_values.size
         result_table.write(
             '\n,total area (both crop and non-crop)\n,%f\n' % (
                 total_area * pixel_area_ha))
