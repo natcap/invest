@@ -820,38 +820,27 @@ def _add_target_fields_to_wave_vector(
 
     LOGGER.info('Calculating and adding new fields to wave layer.')
     for i, feat in enumerate(target_wave_layer):
-        # Get indexes for setting distances fields
-        wave_to_land_index = feat.GetFieldIndex(_W2L_DIST_FIELD)
-        land_to_grid_index = feat.GetFieldIndex(_L2G_DIST_FIELD)
-        land_id_index = feat.GetFieldIndex(_LAND_ID_FIELD)
         # Get corresponding distances and land ID for the wave point
         land_id = int(wave_to_land_id_list[i])
         wave_to_land_dist = wave_to_land_dist_list[i]
         land_to_grid_dist = land_to_grid_dist_list[land_id]
 
         # Set distance and land ID fields to the feature
-        feat.SetField(wave_to_land_index, wave_to_land_dist)
-        feat.SetField(land_to_grid_index, land_to_grid_dist)
-        feat.SetField(land_id_index, land_id)
-
-        # Get field indexes for setting NPV, captured energy, and units fields
-        cap_wave_energy_index = feat.GetFieldIndex(_CAP_WE_FIELD)
-        depth_index = feat.GetFieldIndex(_DEPTH_FIELD)
-        npv_index = feat.GetFieldIndex(_NPV_25Y_FIELD)
-        capwe_all_index = feat.GetFieldIndex(_CAPWE_ALL_FIELD)
-        units_index = feat.GetFieldIndex(_UNIT_FIELD)
+        feat.SetField(_W2L_DIST_FIELD, wave_to_land_dist)
+        feat.SetField(_L2G_DIST_FIELD, land_to_grid_dist)
+        feat.SetField(_LAND_ID_FIELD, land_id)
 
         # Get depth and captured wave energy for calculating NPV, total
         # captured energy, and units
-        captured_wave_energy = feat.GetFieldAsDouble(cap_wave_energy_index)
-        depth = feat.GetFieldAsDouble(depth_index)
+        captured_wave_energy = feat.GetFieldAsDouble(_CAP_WE_FIELD)
+        depth = feat.GetFieldAsDouble(_DEPTH_FIELD)
         npv_result, capwe_all_result = _get_npv_results(
             captured_wave_energy, depth, number_of_machines,
             wave_to_land_dist, land_to_grid_dist, machine_econ_dict)
 
-        feat.SetField(npv_index, npv_result)
-        feat.SetField(capwe_all_index, capwe_all_result)
-        feat.SetField(units_index, number_of_machines)
+        feat.SetField(_NPV_25Y_FIELD, npv_result)
+        feat.SetField(_CAPWE_ALL_FIELD, capwe_all_result)
+        feat.SetField(_UNIT_FIELD, number_of_machines)
 
         target_wave_layer.SetFeature(feat)
         feat = None
@@ -954,8 +943,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
         target_layer.CreateFeature(output_feature)
 
         for field_name in point_dict:
-            field_index = output_feature.GetFieldIndex(field_name)
-            output_feature.SetField(field_index, point_dict[field_name])
+            output_feature.SetField(field_name, point_dict[field_name])
         output_feature.SetGeometryDirectly(geom)
         target_layer.SetFeature(output_feature)
         output_feature = None
@@ -1620,8 +1608,7 @@ def _index_raster_value_to_point_vector(
                 target_layer.DeleteFeature(vector_fid)
             else:
                 feat = target_layer.GetFeature(vector_fid)
-                field_index = feat.GetFieldIndex(field_name)
-                feat.SetField(int(field_index), float(block_value))
+                feat.SetField(field_name, float(block_value))
                 target_layer.SetFeature(feat)
                 feat = None
 
@@ -1669,23 +1656,16 @@ def _energy_and_power_to_wave_vector(
     # the value from the dictionary
     for feat in target_wave_layer:
         # Calculate and set the Captured Wave Energy field
-        index_i = feat.GetFieldIndex('I')
-        index_j = feat.GetFieldIndex('J')
-        value_i = feat.GetField(index_i)
-        value_j = feat.GetField(index_j)
-        we_index = feat.GetFieldIndex(_CAP_WE_FIELD)
+        value_i = feat.GetField('I')
+        value_j = feat.GetField('J')
         we_value = energy_cap[(value_i, value_j)]
 
-        feat.SetField(we_index, we_value)
+        feat.SetField(_CAP_WE_FIELD, we_value)
 
         # Calculate and set the Wave Power field
-        height_index = feat.GetFieldIndex(_HEIGHT_FIELD)
-        period_index = feat.GetFieldIndex(_PERIOD_FIELD)
-        depth_index = feat.GetFieldIndex(_DEPTH_FIELD)
-        wp_index = feat.GetFieldIndex(_WAVE_POWER_FIELD)
-        height = feat.GetFieldAsDouble(height_index)  # in meters
-        period = feat.GetFieldAsDouble(period_index)
-        depth = feat.GetFieldAsInteger(depth_index)
+        height = feat.GetFieldAsDouble(_HEIGHT_FIELD)  # in meters
+        period = feat.GetFieldAsDouble(_PERIOD_FIELD)
+        depth = feat.GetFieldAsInteger(_DEPTH_FIELD)
 
         depth = numpy.absolute(depth)
         # wave frequency calculation (used to calculate wave number k)
@@ -1715,7 +1695,7 @@ def _energy_and_power_to_wave_vector(
         wave_pow = ((((_SWD * _GRAV) / 16) *
                      (numpy.square(height)) * wave_group_velocity) / 1000)
 
-        feat.SetField(wp_index, wave_pow)
+        feat.SetField(_WAVE_POWER_FIELD, wave_pow)
 
         # Save the feature modifications to the layer.
         target_wave_layer.SetFeature(feat)
