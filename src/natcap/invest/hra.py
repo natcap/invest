@@ -51,8 +51,13 @@ _TARGET_PIXEL_INT = gdal.GDT_Byte
 _TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
 _TARGET_NODATA_INT = 255  # for unsigned 8-bit int
 
-# ESPG code for WGS84 coordinate system
+# ESPG code and target bounding box for warping rasters to WGS84 coordinate
+# system
 _WGS84_ESPG_CODE = 4326
+_WGS84_BOUNDING_BOX = [-180.0, -90.0, 180.0, 90.0]
+
+# Resampling method for rasters
+_RESAMPLE_METHOD = 'near'
 
 
 def execute(args):
@@ -299,9 +304,8 @@ def execute(args):
     LOGGER.info('Starting align_and_resize_raster_task.')
     task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(base_raster_list,
-              align_raster_list,
-              ['near'] * len(base_raster_list),
+        args=(base_raster_list, align_raster_list,
+              [_RESAMPLE_METHOD] * len(base_raster_list),
               target_pixel_size, 'union'),
         kwargs={'target_sr_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
@@ -543,7 +547,7 @@ def execute(args):
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
     stats_df = _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, task_graph, max_rating)
+        overlap_df, aoi_vector_path, max_rating, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -560,10 +564,6 @@ def execute(args):
     out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths \
         + [reclass_ecosystem_risk_raster_path]
 
-    out_wgs84_raster_paths = [
-        os.path.join(file_preprocessing_dir, 'wgs84_' + os.path.basename(path))
-        for path in out_raster_paths]
-
     # Use WGS84 to convert meter coordinates back to lat/lon, since only this
     # format would be recognized by Leaflet
     wgs84_sr = osr.SpatialReference()
@@ -578,36 +578,40 @@ def execute(args):
         (float(args['resolution']), -float(args['resolution'])),
         aoi_center_lat)
 
-    # Unproject the rasters to WGS84
-    unproject_task = task_graph.add_task(
-        func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(out_raster_paths, out_wgs84_raster_paths,
-              ['near'] * len(out_raster_paths), wgs84_pixel_size, 'union'),
-        kwargs={'target_sr_wkt': wgs84_wkt},
-        target_path_list=out_wgs84_raster_paths,
-        task_name='reproject_risk_rasters_to_wgs84')
+    # Unproject the rasters to WGS84, and convert the unprojected rasters to
+    # GeoJSON files for web visualization
+    for out_raster_path in out_raster_paths:
+        # Get raster basename without file extension and the 'aligned_'
+        # substring
+        layer_name = os.path.splitext(
+            os.path.basename(out_raster_path))[0].replace('aligned_', '')
 
-    # Convert the unprojected rasters to GeoJSON files for web visualization
-    for raster_path in out_wgs84_raster_paths:
-        # Remove the `wgs84_` and 'aligned_' prefixes from the raster names
-        raster_layer_name = os.path.splitext(os.path.basename(raster_path))[0]
-        vector_layer_name = raster_layer_name.replace('wgs84_', '').replace(
-            'aligned_', '').encode('utf-8')
+        # Unproject raster to WGS84. Add maximum bounding box so the polar
+        # regions in the output raster won't be cut off
+        wgs84_raster_path = os.path.join(
+            file_preprocessing_dir, 'wgs84_' + layer_name + '.tif')
+        unproject_task = task_graph.add_task(
+            func=pygeoprocessing.warp_raster,
+            args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
+                  _RESAMPLE_METHOD),
+            kwargs={'target_bb': _WGS84_BOUNDING_BOX,
+                    'target_sr_wkt': wgs84_wkt},
+            target_path_list=[wgs84_raster_path],
+            task_name='unprojecting_%s_raster' % layer_name)
 
-        if vector_layer_name.startswith('risk_'):
+        # Make a GeoJSON from the unprojected raster
+        if layer_name.startswith('risk_'):
             field_name = 'Risk Score'
         else:
             # Append stressor suffix if it's not a risk layer
-            vector_layer_name = 'stressor_' + vector_layer_name
+            layer_name = 'stressor_' + layer_name
             field_name = 'Stressor'
-
-        vector_path = os.path.join(output_dir, vector_layer_name + '.geojson')
-
+        geojson_path = os.path.join(output_dir, layer_name + '.geojson')
         task_graph.add_task(
             func=_raster_to_geojson,
-            args=(raster_path, vector_path, vector_layer_name, field_name),
-            target_path_list=[vector_path],
-            task_name='create_%s_geojson' % vector_layer_name,
+            args=(wgs84_raster_path, geojson_path, layer_name, field_name),
+            target_path_list=[geojson_path],
+            task_name='create_%s_geojson' % layer_name,
             dependent_task_list=[unproject_task])
 
     task_graph.close()
@@ -725,7 +729,7 @@ def _raster_to_geojson(
     vector_layer = vector.CreateLayer(layer_name, spat_ref, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
-    field_defn = ogr.FieldDefn(field_name, ogr.OFTInteger)
+    field_defn = ogr.FieldDefn(field_name.encode('utf-8'), ogr.OFTInteger)
     field_defn.SetWidth(2)
     field_defn.SetPrecision(0)
     vector_layer.CreateField(field_defn)
@@ -802,7 +806,7 @@ def _calc_and_pickle_zonal_stats(
 
 
 def _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, task_graph, max_rating):
+        overlap_df, aoi_vector_path, max_rating, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -816,11 +820,11 @@ def _get_zonal_stats_df(
         aoi_vector_path (str): a path to a vector containing one or more
             features to calculate statistics over.
 
-        task_graph (Taskgraph object): an object for building task graphs and
-            parallelizing independent tasks.
-
         max_rating (float): the maximum score defined by user. It's used for
             reclassifying the average E and C scores into 0 to 3.
+
+        task_graph (Taskgraph object): an object for building task graphs and
+            parallelizing independent tasks.
 
     Returns:
         final_stats_df (dataframe): a multi-index dataframe with exposure and
@@ -1048,7 +1052,7 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
 
     # Add up all the risks of each habitat
     for hab_risk_arr in hab_risk_arrays:
-        valid_risk_mask = (hab_risk_arr != _TARGET_NODATA_FLT)
+        valid_risk_mask = ecosystem_mask & (hab_risk_arr != _TARGET_NODATA_FLT)
         ecosystem_risk_arr[valid_risk_mask] += hab_risk_arr[valid_risk_mask]
 
     # Divide risk score by the number of habitats in each pixel. This way we
