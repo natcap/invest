@@ -47,11 +47,11 @@ def execute(args):
         args['built_infrastructure_vector_path'] (string): path to a vector
             with built infrastructure footprints. Attribute table contains a
             column 'Type' with integers (e.g. 1=residential, 2=office, etc.).
-        args['infrastructure_damage_loss_table_path'] (string): path to a
-            a CSV table with columns 'Type' and 'Damage' with values of built
-            infrastructure type from the 'Type' field in
+        args['infrastructure_damage_loss_table_path'] (string): (optional)
+            path to a a CSV table with columns 'Type' and 'Damage' with values
+            of built infrastructure type from the 'Type' field in
             `args['built_infrastructure_vector_path']` and potential damage
-            loss (in $/m^2).
+            loss (in $/m^2). If it exists this
 
     Returns:
         None.
@@ -67,7 +67,7 @@ def execute(args):
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
     task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, -1) #max(1, multiprocessing.cpu_count()))
+        temporary_working_dir, -1)  # max(1, multiprocessing.cpu_count()))
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
@@ -214,13 +214,19 @@ def execute(args):
     intermediate_target_watershed_result_vector_path = os.path.join(
         temporary_working_dir,
         'intermediate_flood_risk_service%s.gpkg' % file_suffix)
+
+    infrastructure_damage_loss_table_path = None
+    if 'infrastructure_damage_loss_table_path' in args:
+        infrastructure_damage_loss_table_path = (
+            args['infrastructure_damage_loss_table_path'])
+
     # this is the field name that can be used to uniquely identify a feature
     key_field_id = 'objectid_invest_natcap'
     intermediate_affected_vector_task = task_graph.add_task(
         func=build_affected_vector,
         args=(
             args['aoi_watersheds_path'], target_sr_wkt,
-            args['infrastructure_damage_loss_table_path'],
+            infrastructure_damage_loss_table_path,
             args['built_infrastructure_vector_path'], key_field_id,
             intermediate_target_watershed_result_vector_path),
         target_path_list=[intermediate_target_watershed_result_vector_path],
@@ -455,10 +461,10 @@ def build_affected_vector(
         target_wkt (str): desired target projection.
         built_infrastructure_vector_path (str): path to infrastructure vector
             containing at least the integer field 'Type'.
-        damage_table_path (str): path to a CSV table containing fields
+        damage_table_path (None or str): path to a CSV table containing fields
             'Type' and 'Damage'. For every value of 'Type' in the
             built_infrastructure_vector there must be a corresponding entry
-            in this table.
+            in this table. If None, this field is ignored.
         key_field_id (str): a field to add to the target watershed vector
             that can be used to uniquely identify each feature for zonal
             stats calculations later.
@@ -470,8 +476,11 @@ def build_affected_vector(
         None.
 
     """
-    damage_type_map = utils.build_lookup_from_csv(
-        damage_table_path, 'type', to_lower=True, warn_if_missing=True)
+    if damage_table_path is not None:
+        damage_type_map = utils.build_lookup_from_csv(
+            damage_table_path, 'type', to_lower=True, warn_if_missing=True)
+    else:
+        damage_type_map = None
 
     if os.path.exists(target_watershed_result_vector_path):
         LOGGER.warn(
@@ -514,9 +523,11 @@ def build_affected_vector(
         infrastructure_geometry_list.append({
             'geom': shapely.wkb.loads(
                 infrastructure_geom.ExportToWkb()),
-            'damage': damage_type_map[
-                infrastructure_feature.GetField(type_index)]['damage']
         })
+        if damage_type_map is not None:
+            infrastructure_geometry_list[-1]['damage'] = (
+                damage_type_map[
+                    infrastructure_feature.GetField(type_index)]['damage'])
         infrastructure_rtree.insert(
             len(infrastructure_geometry_list)-1,
             infrastructure_geometry_list[-1]['geom'].bounds)
@@ -548,13 +559,16 @@ def build_affected_vector(
                 watershed_shapely.bounds):
             infrastructure_geom = infrastructure_geometry_list[
                 infrastructure_index]['geom']
-            if watershed_prep_geom.intersects(infrastructure_geom):
-                total_damage += (
-                    watershed_shapely.intersection(infrastructure_geom).area *
-                    infrastructure_geometry_list[infrastructure_index][
-                        'damage'])
+            if damage_type_map:
+                if watershed_prep_geom.intersects(infrastructure_geom):
+                    total_damage += (
+                        watershed_shapely.intersection(
+                            infrastructure_geom).area *
+                        infrastructure_geometry_list[infrastructure_index][
+                            'damage'])
 
-        watershed_feature.SetField('Affected_Build', total_damage)
+        if damage_type_map:
+            watershed_feature.SetField('Affected_Build', total_damage)
         watershed_feature.SetField(key_field_id, watershed_index)
         watershed_layer.SetFeature(watershed_feature)
     watershed_layer.SyncToDisk()
@@ -671,8 +685,7 @@ def validate(args, limit_to=None):
         'lulc_path',
         'soils_hydrological_group_raster_path',
         'curve_number_table_path',
-        'built_infrastructure_vector_path',
-        'infrastructure_damage_loss_table_path',
+        'built_infrastructure_vector_path'
         ]
 
     for key in required_keys:
