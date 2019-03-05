@@ -76,9 +76,6 @@ def execute(args):
         args['results_suffix'] (string): a string that will be concatenated
             onto the end of file names (optional)
 
-        args['calculate_water_scarcity'] (bool): if True, run water scarcity
-            calculation using `args['demand_table_path']`.
-
         args['demand_table_path'] (string): (optional) if a non-empty string,
             a path to an input CSV
             table of LULC classes, showing consumptive water use for each
@@ -92,9 +89,6 @@ def execute(args):
                 ('ws_id', 'time_span', 'discount', 'efficiency', 'fraction',
                 'cost', 'height', 'kw_price')
             Required if ``calculate_valuation`` is True.
-
-        args['calculate_valuation'] (bool): (optional) if True, valuation will
-            be calculated.
 
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
@@ -541,7 +535,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
 
     """
     ws_stats_dict = pygeoprocessing.zonal_statistics(
-        (raster_path, 1), base_vector_path, ignore_nodata=False)
+        (raster_path, 1), base_vector_path, ignore_nodata=True)
     with open(target_stats_pickle, 'w') as picklefile:
         picklefile.write(pickle.dumps(ws_stats_dict))
 
@@ -550,7 +544,7 @@ def aet_op(fractp, precip, precip_nodata, output_nodata):
     """Compute actual evapotranspiration values.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -573,7 +567,7 @@ def wyield_op(fractp, precip, precip_nodata, output_nodata):
     """Calculate water yield.
 
     Parameters:
-        fractp (numpy.ndarray): fractp raster values.
+        fractp (numpy.ndarray float): fractp raster values.
         precip (numpy.ndarray): precipitation raster values (mm).
         precip_nodata (float): nodata value from the precip raster.
         output_nodata (float): nodata value assigned to output of
@@ -618,7 +612,7 @@ def fractp_op(
             precipitation.
 
     Returns:
-        numpy.ndarray of actual evapotranspiration as fraction
+        numpy.ndarray (float) of actual evapotranspiration as fraction
             of precipitation.
 
     """
@@ -675,7 +669,7 @@ def fractp_op(
         veg[valid_mask] == 1.0,
         veg_result, nonveg_result_fract)
 
-    fractp = numpy.empty_like(precip)
+    fractp = numpy.empty(valid_mask.shape, dtype=numpy.float32)
     fractp[:] = nodata_dict['out_nodata']
     fractp[valid_mask] = result
     return fractp
@@ -695,7 +689,7 @@ def pet_op(eto_pix, Kc_pix, eto_nodata, output_nodata):
         numpy.ndarray of potential evapotranspiration (mm)
 
     """
-    result = numpy.empty_like(eto_pix)
+    result = numpy.empty(eto_pix.shape, dtype=numpy.float32)
     result[:] = output_nodata
     valid_mask = (~numpy.isclose(eto_pix, eto_nodata) &
                   ~numpy.isclose(Kc_pix, output_nodata))
@@ -732,7 +726,7 @@ def _check_missing_lucodes(
 
     missing_bio_lucodes = set()
     missing_demand_lucodes = set()
-    for _, lulc_block in pygeoprocessing.iterblocks(clipped_lulc_path):
+    for _, lulc_block in pygeoprocessing.iterblocks((clipped_lulc_path, 1)):
         unique_codes = set(numpy.unique(lulc_block))
         missing_bio_lucodes.update(unique_codes.difference(bio_lucodes))
         if demand_lucodes is not None:
@@ -800,32 +794,35 @@ def compute_watershed_valuation(watershed_results_vector_path, val_dict):
         # Get the rsupply volume for the watershed
         rsupply_vl = ws_feat.GetField('rsupply_vl')
 
-        # Get the valuation parameters for watershed 'ws_id'
-        val_row = val_dict[ws_id]
+        # there won't be a rsupply_vl value if the polygon feature only
+        # covers nodata raster values, so check before doing math.
+        if rsupply_vl:
+            # Get the valuation parameters for watershed 'ws_id'
+            val_row = val_dict[ws_id]
 
-        # Compute hydropower energy production (KWH)
-        # This is from the equation given in the Users' Guide
-        energy = (
-            val_row['efficiency'] * val_row['fraction'] * val_row['height'] *
-            rsupply_vl * 0.00272)
+            # Compute hydropower energy production (KWH)
+            # This is from the equation given in the Users' Guide
+            energy = (
+                val_row['efficiency'] * val_row['fraction'] * val_row['height'] *
+                rsupply_vl * 0.00272)
 
-        dsum = 0.
-        # Divide by 100 because it is input at a percent and we need
-        # decimal value
-        disc = val_row['discount'] / 100.0
-        # To calculate the summation of the discount rate term over the life
-        # span of the dam we can use a geometric series
-        ratio = 1. / (1. + disc)
-        if ratio != 1.:
-            dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
+            dsum = 0.
+            # Divide by 100 because it is input at a percent and we need
+            # decimal value
+            disc = val_row['discount'] / 100.0
+            # To calculate the summation of the discount rate term over the life
+            # span of the dam we can use a geometric series
+            ratio = 1. / (1. + disc)
+            if ratio != 1.:
+                dsum = (1. - math.pow(ratio, val_row['time_span'])) / (1. - ratio)
 
-        npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
+            npv = ((val_row['kw_price'] * energy) - val_row['cost']) * dsum
 
-        # Get the volume field index and add value
-        ws_feat.SetField(energy_field, energy)
-        ws_feat.SetField(npv_field, npv)
+            # Get the volume field index and add value
+            ws_feat.SetField(energy_field, energy)
+            ws_feat.SetField(npv_field, npv)
 
-        ws_layer.SetFeature(ws_feat)
+            ws_layer.SetFeature(ws_feat)
 
 
 def compute_rsupply_volume(watershed_results_vector_path):
@@ -869,14 +866,17 @@ def compute_rsupply_volume(watershed_results_vector_path):
         consump_mn = ws_feat.GetField('consum_mn')
 
         # Calculate realized supply
-        rsupply_vol = wyield - consump_vol
-        rsupply_mn = wyield_mn - consump_mn
+        # these values won't exist if the polygon feature only
+        # covers nodata raster values, so check before doing math.
+        if wyield_mn and consump_mn:
+            rsupply_vol = wyield - consump_vol
+            rsupply_mn = wyield_mn - consump_mn
 
-        # Set values for the new rsupply fields
-        ws_feat.SetField(rsupply_vol_name, rsupply_vol)
-        ws_feat.SetField(rsupply_mn_name, rsupply_mn)
+            # Set values for the new rsupply fields
+            ws_feat.SetField(rsupply_vol_name, rsupply_vol)
+            ws_feat.SetField(rsupply_mn_name, rsupply_mn)
 
-        ws_layer.SetFeature(ws_feat)
+            ws_layer.SetFeature(ws_feat)
 
 
 def compute_water_yield_volume(watershed_results_vector_path):
@@ -911,14 +911,17 @@ def compute_water_yield_volume(watershed_results_vector_path):
     # Iterate over the number of features (polygons) and compute volume
     for feat in layer:
         wyield_mn = feat.GetField('wyield_mn')
-        geom = feat.GetGeometryRef()
-        # Calculate water yield volume,
-        # 1000 is for converting the mm of wyield to meters
-        vol = wyield_mn * geom.Area() / 1000.0
-        # Get the volume field index and add value
-        feat.SetField(vol_name, vol)
+        # there won't be a wyield_mn value if the polygon feature only
+        # covers nodata raster values, so check before doing math.
+        if wyield_mn:
+            geom = feat.GetGeometryRef()
+            # Calculate water yield volume,
+            # 1000 is for converting the mm of wyield to meters
+            vol = wyield_mn * geom.Area() / 1000.0
+            # Get the volume field index and add value
+            feat.SetField(vol_name, vol)
 
-        layer.SetFeature(feat)
+            layer.SetFeature(feat)
 
 
 def _add_zonal_stats_dict_to_shape(
@@ -958,19 +961,21 @@ def _add_zonal_stats_dict_to_shape(
 
         # Using the unique feature ID, index into the
         # dictionary to get the corresponding value
-        if aggregate_field_id == 'mean':
-            if stats_map[feature_fid]['count'] == 0:
-                field_val = 0.0
-            else:
+        # only write a value if zonal stats found valid pixels in the polygon:
+        if stats_map[feature_fid]['count'] > 0:
+            if aggregate_field_id == 'mean':
+                # if stats_map[feature_fid]['count'] == 0:
+                #     field_val = 0.0
+                # else:
                 field_val = float(
                     stats_map[feature_fid]['sum']) / stats_map[feature_fid]['count']
-        else:
-            field_val = float(stats_map[feature_fid][aggregate_field_id])
+            else:
+                field_val = float(stats_map[feature_fid][aggregate_field_id])
 
-        # Set the value for the new field
-        feature.SetField(field_name, field_val)
+            # Set the value for the new field
+            feature.SetField(field_name, field_val)
 
-        layer.SetFeature(feature)
+            layer.SetFeature(feature)
 
 
 @validation.invest_validator
@@ -1006,6 +1011,12 @@ def validate(args, limit_to=None):
         'watersheds_path',
         'biophysical_table_path',
         'seasonality_constant']
+
+    # Valuation calculation is dependent on demand data
+    if limit_to in [None, 'valuation_table_path', 'demand_table_path']:
+        if ('valuation_table_path' in args and
+                args['valuation_table_path'] != ''):
+            required_keys.append('demand_table_path')
 
     for key in required_keys:
         if limit_to is None or limit_to == key:
@@ -1043,7 +1054,8 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
+            if ((limit_to is None or limit_to == key)
+                    and key in args and args[key] != ''):
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))

@@ -1,10 +1,48 @@
 .. :changelog:
 
+.. Unreleased Changes
+
 Unreleased Changes
 ------------------
+* Carbon Model and Crop Production models no longer crash if user-input rasters
+  do not have a nodata value defined. In this case these models treat all pixel values as valid data.
+* Refactoring Recreation Model client to use taskgraph and the latest
+  pygeoprocessing. Avoided re-computation from taskgraph means that successive model runs with the same AOI and gridding option can re-use PUD results and avoid server communication entirely. Successive runs with the same predictor data will re-use intermediate geoprocessing results. Multiprocessing offered by taskgraph means server-side PUD calculations and client-side predictor data processing can happen in parallel. Some output filenames have changed.
+
+3.6.0 (2019-01-30)
+------------------
+* Correcting an issue with the InVEST Carbon Storage and Sequestration model
+  where filepaths containing non-ASCII characters would cause the model's
+  report generation to crash.  The output report is now a UTF-8 document.
+* Refactoring RouteDEM to use taskgraph and the latest pygeoprocessing
+  (``>=1.5.0``).  RouteDEM now fills hydrological sinks and users have the
+  option to use either of the D8 or Multiple Flow Direction (MFD) routing
+  algorithms.
+* Adding a new input to the InVEST Settings window to allow users to customize
+  the value that should be used for the ``n_workers`` parameter in
+  taskgraph-enabled models.  This change involves removing the "Number of
+  Parallel Workers" input from the model inputs pane for some models in
+  favor of this new location.  The default value for this setting is ``-1``,
+  indicating synchronous (non-threaded, non-multiprocessing) execution of
+  tasks.
+* Removing Scenario Generator: Rule-based model.
+* Fixing a bug in Hydropower model where watershed aggregations would be incorrect
+  if a watershed is partially covering nodata raster values. Nodata values are now
+  ignored in zonal statistics. Numerical results change very slightly in the
+  case where a watershed only includes a few nodata pixels.
+* Adding TaskGraph functionality to GLOBIO model.
+* Adding some TaskGraph functionality to Scenario Generator: Proximity.
+* Fixing an issue with the InVEST Fisheries model that would prevent the model
+  from batch-processing a directory of population tables.  The model will now
+  process these files as expected.
+* Reimplementing Crop Production models using taskgraph.
+* Fixing an issue with Crop Production Regression's result_table.csv where the
+  'production_modeled' and '<nutrient>_modeled' values calculated for each crop
+  were done so using the same crop raster (e.g. wheat, soybean, and barley values
+  were all based on soybean data).
 * Hydropower subwatershed results now include all the same metrics as the
   watershed results, with the exception of economic valuation metrics.
-* Reimplimenting the Hydropower model using taskgraph.
+* Reimplementing the Hydropower model using taskgraph.
 * Reimplementing the Carbon model using taskgraph.
 * Fixing an issue with Coastal Blue Carbon validation to allow column names to
   ignore case.
@@ -19,7 +57,8 @@ Unreleased Changes
   their respective tables.
 * Fixing an issue with Hydropower Water Yield ("Annual Water Yield") where
   valuation would never be triggered when running the model through the User
-  Interface.
+  Interface. And a related issue where the model would crash if a valuation table
+  was provided but a demand table was not. The UI no longer validates that config.
 * Fixing an issue with how logging is captured when a model is run through the
   InVEST User Interface.  Now, logging from any thread started by the executor
   thread will be written to the log file, which we expect to aid in debugging.
@@ -29,6 +68,13 @@ Unreleased Changes
   concept when summarizing results across an aggregate polygon. The model now
   uses the polygon FIDs internally and externally when producing the result
   summary table.
+* Correcting the rating instructions in the criteria rating instructions on how
+  the data quality (DQ) and weight should be rated in the HRA Preprocessor.
+  A DQ score of 1 should represent better data quality whereas the score of 3 is
+  worse data quality. A weight score of 1 is more important, whereas that of 3
+  is less important.
+* Fixing a case where a zero discount rate and rate of change in the carbon
+  model would cause a divide by zero error.
 
 3.5.0 (2018-08-14)
 ------------------

@@ -106,7 +106,6 @@ class Pollination(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.n_workers.args_key: self.n_workers.value(),
             self.landcover_raster_path.args_key:
                 self.landcover_raster_path.value(),
             self.landcover_biophysical_table_path.args_key:

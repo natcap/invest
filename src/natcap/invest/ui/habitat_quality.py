@@ -11,9 +11,10 @@ class HabitatQuality(model.InVESTModel):
             label=u'Habitat Quality',
             target=natcap.invest.habitat_quality.execute,
             validator=natcap.invest.habitat_quality.validate,
-            localdoc=u'../documentation/habitat_quality.html')
+            localdoc=u'../documentation/habitat_quality.html',
+            suffix_args_key='suffix')
         self.current_landcover = inputs.File(
-            args_key=u'landuse_cur_uri',
+            args_key=u'lulc_cur_path',
             helptext=(
                 u"A GDAL-supported raster file.  The current LULC must "
                 u"have its' own threat rasters, where each threat "
@@ -27,7 +28,7 @@ class HabitatQuality(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.current_landcover)
         self.future_landcover = inputs.File(
-            args_key=u'landuse_fut_uri',
+            args_key=u'lulc_fut_path',
             helptext=(
                 u"Optional.  A GDAL-supported raster file.  Inputting "
                 u"a future LULC will generate degradation, habitat "
@@ -44,7 +45,7 @@ class HabitatQuality(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.future_landcover)
         self.baseline_landcover = inputs.File(
-            args_key=u'landuse_bas_uri',
+            args_key=u'lulc_bas_path',
             helptext=(
                 u"Optional.  A GDAL-supported raster file.  If the "
                 u"baseline LULC is provided, rarity outputs will be "
@@ -74,7 +75,7 @@ class HabitatQuality(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.threat_rasters)
         self.threats_data = inputs.File(
-            args_key=u'threats_uri',
+            args_key=u'threats_table_path',
             helptext=(
                 u"A CSV file of all the threats for the model to "
                 u"consider.  Each row in the table is a degradation "
@@ -105,7 +106,7 @@ class HabitatQuality(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.threats_data)
         self.accessibility_threats = inputs.File(
-            args_key=u'access_uri',
+            args_key=u'access_vector_path',
             helptext=(
                 u"An OGR-supported vector file.  The input contains "
                 u"data on the relative protection that legal / "
@@ -119,7 +120,7 @@ class HabitatQuality(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.accessibility_threats)
         self.sensitivity_data = inputs.File(
-            args_key=u'sensitivity_uri',
+            args_key=u'sensitivity_table_path',
             helptext=(
                 u"A CSV file of LULC types, whether or not the are "
                 u"considered habitat, and, for LULC types that are "
