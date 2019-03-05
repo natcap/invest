@@ -1974,6 +1974,31 @@ class SettingsDialogTest(_SettingsSandbox):
         finally:
             settings_dialog.close()
 
+    def test_taskgraph_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of taskgraph log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.taskgraph_logging_level.value(),
+                         'ERROR')
+
+    def test_taskgraph_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for taskgraph threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.taskgraph_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.taskgraph_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
     def test_n_workers_initialized(self):
         """UI SettingsDialog: check initialization of n_workers."""
         from natcap.invest.ui import model

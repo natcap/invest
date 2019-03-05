@@ -8,8 +8,6 @@ import codecs
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'src', 'natcap', 'invest')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'reporting')
 
