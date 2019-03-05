@@ -3,7 +3,6 @@ import math
 import os
 import contextlib
 import logging
-import threading
 import tempfile
 import shutil
 from datetime import datetime
@@ -338,7 +337,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset.FlushCache()
 
     for block_data, kernel_block in pygeoprocessing.iterblocks(
-            kernel_filepath):
+            (kernel_filepath, 1)):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])
@@ -489,3 +488,25 @@ def make_directories(directory_list):
         except OSError:
             if not os.path.isdir(path):
                 raise
+
+
+def mean_pixel_size_and_area(pixel_size_tuple):
+    """Convert to mean and raise Exception if they are not close.
+
+    Parameter:
+        pixel_size_tuple (tuple): a 2 tuple indicating the x/y size of a
+            pixel.
+
+    Returns:
+        tuple of (mean absolute average of pixel_size, area of pixel size)
+
+    Raises:
+        ValueError if the dimensions of pixel_size_tuple are not almost
+            square.
+    """
+    x_size, y_size = abs(pixel_size_tuple[0]), abs(pixel_size_tuple[1])
+    if not numpy.isclose(x_size, y_size):
+        raise ValueError(
+            "pixel size is not square. dimensions: %s", pixel_size_tuple)
+
+    return (x_size, x_size*y_size)

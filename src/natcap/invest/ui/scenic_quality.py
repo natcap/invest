@@ -112,7 +112,6 @@ class ScenicQuality(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.n_workers.args_key: self.n_workers.value(),
             self.aoi_path.args_key: self.aoi_path.value(),
             self.structure_path.args_key: self.structure_path.value(),
             self.dem_path.args_key: self.dem_path.value(),

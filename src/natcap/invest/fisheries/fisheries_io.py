@@ -105,7 +105,6 @@ def fetch_args(args, create_outputs=True):
 
     params_dict = _verify_single_params(args, create_outputs=create_outputs)
 
-    # Implement Single / Batch Here
     pop_list = read_population_csvs(args)
 
     mig_dict = read_migration_tables(
@@ -116,6 +115,13 @@ def fetch_args(args, create_outputs=True):
     for pop_dict in pop_list:
         vars_dict = dict(pop_dict.items() + mig_dict.items() +
                          params_dict.items())
+
+        # When writing out files, we need to ensure that the
+        # 'population_csv_uri' key is exactly where we expect it to be in the
+        # vars dict.  The dict() call just above this comment unfortunately
+        # causes the 'population_csv_uri' key present in pop_dict to be
+        # overwritten by other parameters from other dictionaries.
+        vars_dict['population_csv_uri'] = pop_dict['population_csv_uri']
         model_list.append(vars_dict)
 
     return model_list
