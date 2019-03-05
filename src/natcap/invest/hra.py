@@ -925,6 +925,126 @@ def _get_zonal_stats_df(
     return final_stats_df
 
 
+def _rasterize_vector_features(
+        base_vector_path, target_pickle_path, field_name=None):
+    """Rasterize features of same field name from a vector into a raster.
+
+    Parameters:
+        base_vector_path (str): a path to the vector with a set of features
+            to be rasterized.
+
+        target_pickle_path (str): a path to the pickle file that contains a
+            dictionary of field names to their corresponding raster path
+            rasterized from features that have the same field name.
+
+        field_name (str): if exists, features with the same field name will be
+            rasterized to a raster. Otherwise, all features will be merged and
+            rasterized into a single raster, with _TOTAL_REGION_NAME as key.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Rasterizing vector features.')
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    if base_vector is None:
+        raise RuntimeError(
+            'Could not open vector at %s' % base_vector_path)
+    base_layer = base_vector.GetLayer()
+    spat_ref = base_layer.GetSpatialRef()
+
+    # Rasterize the layer onto a single raster
+    if field_name is None:
+        field_name = _TOTAL_REGION_NAME
+
+    # Make a shapefile that non-overlapping layers can be added to
+    driver = ogr.GetDriverByName('MEMORY')
+    disjoint_vector = driver.CreateDataSource('disjoint_vector')
+
+    LOGGER.info("creating disjoint polygon set")
+    disjoint_fid_sets = pygeoprocessing.calculate_disjoint_polygon_set(
+        base_vector_path)
+
+    for set_index, disjoint_fid_set in enumerate(disjoint_fid_sets):
+        LOGGER.info(
+            'Processing disjoint polygon set %d of FIDs %d.',
+            set_index, disjoint_fid_set)
+        disjoint_layer = disjoint_vector.CreateLayer(
+            'disjoint_vector', spat_ref, ogr.wkbPolygon)
+        disjoint_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
+        disjoint_layer_defn = disjoint_layer.GetLayerDefn()
+
+        # Add disjoint polygons to disjoint_layer
+        disjoint_layer.StartTransaction()
+        for feature_fid in disjoint_fid_set:
+            base_feat = base_layer.GetFeature(feature_fid)
+            disjoint_feat = ogr.Feature(disjoint_layer_defn)
+            disjoint_feat.SetGeometry(base_feat.GetGeometryRef().Clone())
+            disjoint_feat.SetField(
+                field_name, feature_fid)
+            disjoint_layer.CreateFeature(disjoint_feat)
+        disjoint_layer.CommitTransaction()
+
+        # Nodata out the mask
+        agg_fid_band = agg_fid_raster.GetRasterBand(1)
+        agg_fid_band.Fill(agg_fid_nodata)
+        gdal.RasterizeLayer(
+            agg_fid_raster, [1], disjoint_layer,
+            callback=rasterize_callback, **rasterize_layer_args)
+        agg_fid_raster.FlushCache()
+
+        # Delete the features we just added to the subset_layer
+        disjoint_layer = None
+        disjoint_vector.DeleteLayer(0)
+
+        # create a key array
+        # and parallel min, max, count, and nodata count arrays
+        LOGGER.info(
+            "summarizing rasterized disjoint polygon set %d of %d %s",
+            set_index+1, len(disjoint_fid_sets),
+            os.path.basename(aggregate_vector_path))
+        for agg_fid_offsets in iterblocks(
+                (agg_fid_raster_path, 1), offset_only=True):
+            agg_fid_block = agg_fid_band.ReadAsArray(**agg_fid_offsets)
+            clipped_block = clipped_band.ReadAsArray(**agg_fid_offsets)
+            valid_mask = (agg_fid_block != agg_fid_nodata)
+            valid_agg_fids = agg_fid_block[valid_mask]
+            valid_clipped = clipped_block[valid_mask]
+            for agg_fid in numpy.unique(valid_agg_fids):
+                masked_clipped_block = valid_clipped[
+                    valid_agg_fids == agg_fid]
+                if raster_nodata is not None:
+                    clipped_nodata_mask = numpy.isclose(
+                        masked_clipped_block, raster_nodata)
+                else:
+                    clipped_nodata_mask = numpy.zeros(
+                        masked_clipped_block.shape, dtype=numpy.bool)
+                aggregate_stats[agg_fid]['nodata_count'] += (
+                    numpy.count_nonzero(clipped_nodata_mask))
+                if ignore_nodata:
+                    masked_clipped_block = (
+                        masked_clipped_block[~clipped_nodata_mask])
+                if masked_clipped_block.size == 0:
+                    continue
+
+                if aggregate_stats[agg_fid]['min'] is None:
+                    aggregate_stats[agg_fid]['min'] = (
+                        masked_clipped_block[0])
+                    aggregate_stats[agg_fid]['max'] = (
+                        masked_clipped_block[0])
+
+                aggregate_stats[agg_fid]['min'] = min(
+                    numpy.min(masked_clipped_block),
+                    aggregate_stats[agg_fid]['min'])
+                aggregate_stats[agg_fid]['max'] = max(
+                    numpy.max(masked_clipped_block),
+                    aggregate_stats[agg_fid]['max'])
+                aggregate_stats[agg_fid]['count'] += (
+                    masked_clipped_block.size)
+                aggregate_stats[agg_fid]['sum'] += numpy.sum(
+                    masked_clipped_block)
+
+
 def _merge_geometry(base_vector_path, target_merged_vector_path):
     """Merge geometries from base vector into target vector.
 
