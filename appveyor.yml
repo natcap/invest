@@ -2,6 +2,8 @@
 
 skip_non_tags: false  # we want to build untagged revisions.
 
+version: "{branch}.{build}"  # Makes build version information more readable on appveyor
+
 environment:
   matrix:
     # For Python versions available on Appveyor, see
