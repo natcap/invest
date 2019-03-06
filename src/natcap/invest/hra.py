@@ -72,42 +72,33 @@ def execute(args):
     Parameters:
         args['workspace_dir'] (str): a path to the output workspace folder.
             It will overwrite any files that exist if the path already exists.
-
         args['results_suffix'] (str): a string appended to each output file
             path. (optional)
-
         args['info_table_path'] (str): a path to the CSV or Excel file that
             contains the name of the habitat (H) or stressor (s) on the ``NAME``
             column that matches the names in criteria_table_path. Each H/S has
             its corresponding vector or raster path on the ``PATH`` column. The
             ``STRESSOR BUFFER (meters)`` column should have a buffer value if
             the ``TYPE`` column is a stressor.
-
         args['criteria_table_path'] (str): a path to the CSV or Excel file that
             contains the set of criteria ranking of each stressor on each
             habitat.
-
         args['resolution'] (int): a number representing the desired pixel
             dimensions of output rasters in meters.
-
         args['max_rating'] (str, int or float): a number representing the
             highest potential value that should be represented in rating in the
             criteria scores table.
-
         args['risk_eq'] (str): a string identifying the equation that should be
             used in calculating risk scores for each H-S overlap cell. This
             will be either 'Euclidean' or 'Multiplicative'.
-
         args['decay_eq'] (str): a string identifying the equation that should
             be used in calculating the decay of stressor buffer influence. This
             can be 'None', 'Linear', or 'Exponential'.
-
         args['aoi_vector_path'] (str): a path to the shapefile containing one
             or more planning regions used to get the average risk value for
             each habitat-stressor combination over each area. Optionally, if
             each of the shapefile features contain a 'name' field, it will
             be used as a way of identifying each individual shape.
-
         args['n_workers'] (int): the number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process. (optional)
@@ -664,7 +655,6 @@ def _convert_meter_pixel_size_to_degrees(pixel_size_in_meters, center_lat):
 
     Parameters:
         pixel_size_in_meters (tuple): [xsize, ysize] in meters (float).
-
         center_lat (float): latitude of the center of the pixel. Note this
             value +/- half the ``pixel-size`` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
@@ -708,11 +698,8 @@ def _raster_to_geojson(
     Parameters:
         base_raster_path (str): the raster that needs to be turned into a
             GeoJSON file.
-
         target_geojson_path (str): the desired path for the new GeoJSON.
-
         layer_name (str): the name of the layer going into the new shapefile.
-
         field_name (str): the name of the field to write raster values in.
 
     Returns:
@@ -756,13 +743,10 @@ def _calc_and_pickle_zonal_stats(
     Parameters:
         criteria_raster_path (str): the path to the criteria score raster
             to be analyzed.
-
         aoi_vector_path (str): a path to a vector containing one or more
             features to calculate statistics over.
-
         fid_name_dict (dict): a dictionary of fid key and feature name value
             for converting fid in zonal_stats_dict to feature name.
-
         target_pickle_path (str): a path to the pickle file for storing zonal
             statistics.
 
@@ -821,13 +805,10 @@ def _get_zonal_stats_df(
         overlap_df (dataframe): a multi-index dataframe with exposure and
             consequence raster paths, as well as stats columns for writing
             zonal statistics dictionary on.
-
         aoi_vector_path (str): a path to a vector containing one or more
             features to calculate statistics over.
-
         max_rating (float): the maximum score defined by user. It's used for
             reclassifying the average E and C scores into 0 to 3.
-
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
@@ -1010,17 +991,13 @@ def _rasterize_vector_features(
     Parameters:
         base_vector_path (str): a path to the vector with a set of features
             to be rasterized.
-
         working_dir (str): a path indicating where raster files should be
             created.
-
         target_pickle_path (str): a path to the pickle file that contains a
             dictionary of field names to their corresponding raster path
             rasterized from features that have the same field name.
-
         target_pixel_size (list/tuple): the x/y pixel size as a sequence in the
             projection of base vector. ex: [30.0, -30.0], unit: meters.
-
         field_name (str): if exists, same values on this field will be merged
             and rasterized into an individual raster. Otherwise, the entire
             vector will be rasterized into a single raster.
@@ -1131,7 +1108,6 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
     Parameters:
         base_vector_path (str): a path to the vector with geometries going to
             be merged.
-
         target_merged_vector_path (str): a path to the target vector to write
             merged geometries at.
 
@@ -1195,7 +1171,6 @@ def _has_field_name(base_vector_path, field_name):
     Parameters:
         base_vector_path (str): a path to the vector to check the field name
             with.
-
         field_name (str): the field name to be inspected.
 
     Returns:
@@ -1231,7 +1206,6 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     Parameters:
         habitat_count_arr (array): an integer array with each pixel indicating
             the number of habitats existing on that pixel.
-
         *hab_risk_arrays: a list of arrays representing reclassified risk
             scores for each habitat.
 
@@ -1273,7 +1247,6 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
         ecosystem_risk_arr (array): an average risk score calculated by
             dividing the cumulative habitat risks by the habitat count in
             that pixel.
-
         max_risk_score (float): the maximum possible risk score used for
             reclassifying the risk score on each pixel.
 
@@ -1323,7 +1296,6 @@ def _stressor_overlap_op(habitat_count_arr, *stressor_arrays):
     Parameters:
         habitat_count_arr (array): an array with each pixel indicating the
             summation value of input habitat arrays.
-
         *stressor_arrays: a list of arrays with 1s and 0s values.
 
     Returns:
@@ -1362,19 +1334,14 @@ def _get_max_risk_score(
     Parameters:
         stressor_path_list (list): a list of stressor raster paths with pixel
             values of 1 representing stressor existence and 0 non-existence.
-
         habitat_path_list (list): a list of habitat raster paths with pixel
             values of 1 representing stressor existence and 0 non-existence.
-
         target_overlap_stressor_path (str): a path to the output raster that
             has number of overlapping stressors on each pixel.
-
         target_habitat_count_raster_path (str): a path to the output raster that
             has 1s indicating habitat existence and 0s non-existence.
-
         max_rating (float): a number representing the highest potential value
             that should be represented in rating in the criteria table.
-
         risk_eq (str): a string identifying the equation that should be
             used in calculating risk scores for each H-S overlap cell. This
             will be either 'Euclidean' or 'Multiplicative'.
@@ -1456,10 +1423,8 @@ def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
     Parameters:
         habitat_arr (array): an integer habitat array where 1's indicates
             habitat existence and 0's non-existence.
-
         max_risk_score (float): the maximum possible risk score used for
             reclassifying the risk score into 0 to 3 on each pixel.
-
         *pair_risk_arrays: a list of individual risk float arrays from each
             stressor to a certain habitat.
 
@@ -1495,9 +1460,7 @@ def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
 
     Parameters:
         exosure_arr (array): a float array with total exposure scores.
-
         consequence_arr (array): a float array with total consequence scores.
-
         risk_eq (str): a string identifying the equation that should be
             used in calculating risk scores. It could be either 'Euclidean' or
             'Multiplicative'.
@@ -1545,7 +1508,6 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
-
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
             (float) in the second half.
@@ -1602,10 +1564,8 @@ def _final_conseq_score_op(habitat_arr, recov_num_arr, *num_denom_list):
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
-
         recov_num_arr (array): a float array of the numerator score from
             recovery potential, to be added to the consequence numerator scores
-
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
             (float) in the second half, in addition there's a last denominator
@@ -1662,17 +1622,13 @@ def _pair_criteria_score_op(
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
-
         stressor_dist_arr (array): a stressor distance float array where pixel
             values represent the distance of that pixel to a stressor
             pixel.
-
         stressor_buffor (float): a number representing how far down the
             influence is from the stressor pixel.
-
         num_arr (array): a float array of the numerator scores calculated based
             on the E/C equation.
-
         denom (float): a cumulative value pre-calculated based on the criteria
             table. It will be used to divide the numerator.
 
@@ -1718,21 +1674,16 @@ def _pair_criteria_num_op(
     Parameters:
         habitat_arr (array): a habitat integer array where 1s indicates habitat
             existence and 0s non-existence.
-
         stressor_dist_arr (array): a stressor distance float array where pixel
             values represent the distance of that pixel to a stressor
             pixel.
-
         stressor_buffer (float): a number representing how far down the
             influence is from the stressor pixel.
-
         decay_eq (str): a string representing the decay format of the
             stressor in the buffer zone. Could be ````None````, ````Linear````, or
             ````Exponential````.
-
         num (float): a cumulative value pre-calculated based on the criteria
             table. It will be divided by denominator to get exposure score.
-
         *spatial_explicit_arr_const: if exists, it is a list of variables
             representing rating float array, DQ, weight, and nodata
             on every four items.
@@ -1800,31 +1751,23 @@ def _calc_pair_criteria_score(
     Parameters:
         habitat_stressor_overlap_df (dataframe): a dataframe that has
             information on stressor and habitat overlap property.
-
         habitat_raster_path (str): a path to the habitat raster where 0's
             indicate no habitat and 1's indicate habitat existence. 1's will be
             used for calculating recovery potential output raster.
-
         stressor_dist_raster_path (str): a path to a raster where each pixel
             represents the Euclidean distance to the closest stressor pixel.
-
         stressor_buffor (float): a number representing how far down the
             influence is from the stressor pixel.
-
         decay_eq (str): a string representing the decay format of the
             stressor in the buffer zone. Could be ``None``, ``Linear``, or
             ``Exponential``.
-
         criteria_type (str): a string indicating that this function calculates
             exposure or consequence scores. Could be ``C`` or ``E``. If ``C``,
             recov_score_paths needs to be added.
-
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
-
         dependent_task_list (list): a list of tasks that the tasks for
             calculating numerators and criteria scores will be dependent upon.
-
         recov_num_path (str): a path to the recovery numerator raster
             calculated based on habitat resilience attribute. The array values
             will be added to consequence scores.
@@ -1901,12 +1844,9 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
-
         num_arr (array): a float array of the numerator score for recovery
             potential.
-
         denom (float): the precalculated cumulative denominator score.
-
         max_rating (float): the rating used to define the recovery
             reclassified.
 
@@ -1940,10 +1880,8 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
-
         num (float): a cumulative value pre-calculated based on the criteria
             table. It will be divided by denominator to get exposure score.
-
         *spatial_explicit_arr_const: if exists, it is a list of variables
             representing resilience float array, DQ, weight, and nodata
             on every four items.
@@ -1986,14 +1924,11 @@ def _calc_habitat_recovery(
         habitat_raster_path (str): a path to the habitat raster where 0's
             indicate no habitat and 1's indicate habitat existence. 1's will be
             used for calculating recovery potential output raster.
-
         habitat_name (str): the habitat name for finding the information on
             recovery potential from recovery_df.
-
         recovery_df (dataframe): the dataframe with recovery information such
             as numerator and denominator scores, spatially explicit criteria
             dictionary, and target habitat recovery raster paths.
-
         max_rating (float): the rating used to reclassify the recovery score.
 
     Returns:
@@ -2047,18 +1982,13 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
     Parameters:
         info_df (dataframe): the dataframe to append spatial raster information
             to.
-
         recovery_df (dataframe): the dataframe that has the spatial raster
             information on its ``R_SPATIAL`` column.
-
         overlap_df (dataframe): the multi-index dataframe that has the spatial
             raster information on its ``E_SPATIAL`` and ``C_SPATIAL`` columns.
-
         spatial_file_dir (str): the path to the root directory where the
             absolute paths of spatial files will be created based on.
-
         output_dir (str): a path to the folder for creating new raster paths at
-
         suffix_end (str): a suffix to be appended a the end of the filenames.
 
     Returns:
@@ -2118,7 +2048,6 @@ def _to_abspath(base_path, dir_path):
 
     Parameters:
         base_path (str): a path to the file to be examined.
-
         dir_path (str): a path to the directory which will be used to create
             absolute file paths.
 
@@ -2178,12 +2107,9 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
 
     Parameters:
         row (pandas.Series): a row on the dataframe to get path value from.
-
         dir_path (str): a path to the folder which raster paths will be
             created based on.
-
         suffix (str): a suffix appended to the end of the raster file name.
-
         suffix_end (str): a file suffix to append to the end of filenames.
 
     Returns:
@@ -2216,12 +2142,9 @@ def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
 
     Parameters:
         row (pandas.Series): a row on the dataframe to get path value from.
-
         dir_path (str): a path to the folder which raster paths will be
             created based on.
-
         suffix (str): a suffix appended to the end of the raster file name.
-
         suffix_end (str): a file suffix to append to the end of filenames.
 
     Returns:
@@ -2279,26 +2202,20 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     Parameters:
         base_info_table_path (str): a path to the CSV or excel file that
             contains the path and buffer information.
-
         file_preprocessing_dir (str): a path to the folder where simplified
             vectors paths, and base, aligned and distance raster paths will
             be created in.
-
         intermediate_dir (str): a path to the folder where cumulative
             exposure and consequence raster paths for each habitat will be
             created in.
-
         output_dir (str): a path to the folder where risk raster path for each
             habitat will be created in.
-
         suffix_end (str): a file suffix to append to the end of filenames.
 
     Returns:
         info_df (dataframe): a dataframe that has the information on whether a
             file is a vector, and a raster path column.
-
         habitat_names (list): a list of habitat names obtained from info file.
-
         stressor_names (list): a list of stressor names obtained from info file
 
     Raises:
@@ -2471,23 +2388,19 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
     Parameters:
         criteria_df (dataframe): a validated dataframe with required
             fields in it.
-
         habitat_names (list): a list of habitat names obtained from info table.
-
         stressor_names (list): a list of stressor names obtained from info
             table.
 
     Returns:
         resilience_attributes (list): a list of resilience attributes used for
             getting rating, dq, and weight for each attribute.
-
         stressor_attributes (dict): a dictionary with stressor names as keys,
             and a list of overlap properties (strings) as values.
 
     Raises:
         ValueError if criteria_df does not have names from habitat_names and
             stressor_names.
-
         ValueError if a stressor criteria shows up before any stressor.
 
     """
@@ -2570,15 +2483,11 @@ def _validate_rating(
     Parameters:
         rating (str): a string of either digit or file path. If it's a digit,
             it should range between 1 to maximum rating.
-
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
-
         criteria_name (str): the name of the criteria attribute where rating
             is from.
-
         habitat (str): the name of the habitat where rating is from.
-
         stressor (str): the name of the stressor where rating is from. Can be
             None when we're checking the habitat-only attributes. (optional)
 
@@ -2626,12 +2535,8 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
 
     Parameters:
         dq (str): a string representing the value of data quality score.
-
         weight (str): a string representing the value of weight score.
-
-
         habitat (str): the name of the habitat where the score is from.
-
         stressor (str): the name of the stressor where the score is from. Can
             be None when we're checking the habitat-only attributes. (optional)
 
@@ -2673,23 +2578,16 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     later on.
 
     Parameters:
-        criteria_df (dataframe): a validated dataframe with required
-            fields.
-
+        criteria_df (dataframe): a validated dataframe with required fields.
         habitat_names (list): a list of habitat names used as dataframe index.
-
         stressor_attributes (dict): a dictionary with stressor names as keys,
             and a list of overlap criteria (strings) as values.
-
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
-
         inter_dir (str): a path to the folder where numerator/denominator E/C
             paths will be created in.
-
         output_dir (str): a path to the folder where E/C raster paths will be
             created in.
-
         suffix (str): a file suffix to append to the end of filenames.
 
     Returns:
@@ -2699,13 +2597,10 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     Raises:
         ValueError if the value of the criteria type column from criteria_df
             is not either E or C.
-
         ValueError if the value of the rating column from criteria_df is less
             than 1 or larger than the maximum rating.
-
         ValueError if the value of the DQ or weight column from criteria_df is
             not a number or is a number less than 1.
-
         ValueError if any stressor-habitat does not have at least one E and C
             criteria rating.
 
@@ -2855,21 +2750,15 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     Parameters:
         criteria_df (dataframe): a validated dataframe with required
             fields.
-
         habitat_names (list): a list of habitat names used as dataframe index.
-
         resilience_attributes (list): a list of resilience attributes used for
             getting rating, dq, and weight for each attribute.
-
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
-
         inter_dir (str): a path to the folder where numerator/denominator
             scores for recovery potential paths will be created in.
-
         output_dir (str): a path to the folder where recovery raster paths will
             be created in.
-
         suffix (str): a file suffix to append to the end of filenames.
 
     Returns:
@@ -2879,7 +2768,6 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     Raises:
         ValueError if the value of the rating column from criteria_df is less
             than 1 or larger than the maximum rating.
-
         ValueError if the value of the DQ or weight column from criteria_df is
             not a number or is a number less than 1.
 
@@ -2956,13 +2844,10 @@ def _simplify_geometry(
 
     Parameters:
         base_vector_path (string): path to base vector.
-
         tolerance (float): all new vertices in the geometry will be within
             this distance (in units of the vector's projection).
-
         target_simplified_vector_path (string): path to desired simplified
             vector.
-
         preserved_field (tuple): a tuple of field name (string) and field type
             (OGRFieldType) that will remain in the target simplified vector.
             Field name will be converted to lowercased.
