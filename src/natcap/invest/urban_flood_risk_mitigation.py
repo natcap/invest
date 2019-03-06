@@ -221,13 +221,12 @@ def execute(args):
             args['infrastructure_damage_loss_table_path'])
 
     # this is the field name that can be used to uniquely identify a feature
-    key_field_id = 'objectid_invest_natcap'
     intermediate_affected_vector_task = task_graph.add_task(
         func=build_affected_vector,
         args=(
             args['aoi_watersheds_path'], target_sr_wkt,
             infrastructure_damage_loss_table_path,
-            args['built_infrastructure_vector_path'], key_field_id,
+            args['built_infrastructure_vector_path'],
             intermediate_target_watershed_result_vector_path),
         target_path_list=[intermediate_target_watershed_result_vector_path],
         task_name='build affected vector')
@@ -239,7 +238,7 @@ def execute(args):
     runoff_retention_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_target_watershed_result_vector_path, key_field_id,
+            intermediate_target_watershed_result_vector_path,
             runoff_retention_raster_path, runoff_retention_pickle_path),
         dependent_task_list=[
             intermediate_affected_vector_task, runoff_retention_task],
@@ -252,7 +251,7 @@ def execute(args):
     runoff_retention_ret_vol_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_target_watershed_result_vector_path, key_field_id,
+            intermediate_target_watershed_result_vector_path,
             runoff_retention_ret_vol_raster_path,
             runoff_retention_ret_vol_pickle_path),
         dependent_task_list=[
@@ -265,7 +264,7 @@ def execute(args):
     flood_vol_pickle_task = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
-            intermediate_target_watershed_result_vector_path, key_field_id,
+            intermediate_target_watershed_result_vector_path,
             flood_vol_raster_path, flood_vol_pickle_path),
         dependent_task_list=[
             intermediate_affected_vector_task, flood_vol_task],
@@ -282,7 +281,7 @@ def execute(args):
             runoff_retention_ret_vol_pickle_path,
             flood_vol_pickle_path,
             intermediate_target_watershed_result_vector_path,
-            key_field_id, target_watershed_result_vector_path),
+            target_watershed_result_vector_path),
         target_path_list=[target_watershed_result_vector_path],
         dependent_task_list=[
             flood_vol_pickle_task, runoff_retention_ret_vol_pickle_task,
@@ -294,13 +293,11 @@ def execute(args):
 
 
 def pickle_zonal_stats(
-        base_vector_path, key_field, base_raster_path, target_pickle_path):
+        base_vector_path, base_raster_path, target_pickle_path):
     """Calculate Zonal Stats for a vector/raster pair and pickle result.
 
     Parameters:
         base_vector_path (str): path to vector file
-        key_field (str): field in `base_vector_path` file that uniquely
-            identifies each feature.
         base_raster_path (str): path to raster file to aggregate over.
         target_pickle_path (str): path to desired target pickle file that will
             be a pickle of the pygeoprocessing.zonal_stats function.
@@ -310,7 +307,7 @@ def pickle_zonal_stats(
 
     """
     zonal_stats = pygeoprocessing.zonal_statistics(
-        (base_raster_path, 1), base_vector_path, key_field)
+        (base_raster_path, 1), base_vector_path)
     with open(target_pickle_path, 'wb') as pickle_file:
         pickle.dump(zonal_stats, pickle_file)
 
@@ -343,7 +340,7 @@ def add_zonal_stats(
         runoff_retention_pickle_path,
         runoff_retention_ret_vol_pickle_path,
         flood_vol_pickle_path,
-        base_watershed_result_vector_path, key_field_id,
+        base_watershed_result_vector_path,
         target_watershed_result_vector_path):
     """Add watershed scale values of the given base_raster.
 
@@ -356,8 +353,6 @@ def add_zonal_stats(
             pickle file.
         base_watershed_result_vector_path (str): path to existing vector
             to copy for the target vector.
-        key_field_id (str): field id to uniquely define each feature in the
-            base vector
         target_watershed_result_vector_path (str): path to target vector that
             will contain the additional fields:
                 * runoff_retention_index
@@ -412,7 +407,7 @@ def add_zonal_stats(
     target_layer_defn = target_watershed_layer.GetLayerDefn()
 
     for target_index, base_feature in enumerate(base_watershed_layer):
-        feature_id = base_feature.GetField(key_field_id)
+        feature_id = base_feature.GetFID()
         target_feature = ogr.Feature(target_layer_defn)
         base_geom_ref = base_feature.GetGeometryRef()
         target_feature.SetGeometry(base_geom_ref.Clone())
@@ -449,7 +444,7 @@ def add_zonal_stats(
 
 def build_affected_vector(
         base_watershed_vector_path, target_wkt, damage_table_path,
-        built_infrastructure_vector_path, key_field_id,
+        built_infrastructure_vector_path,
         target_watershed_result_vector_path):
     """Construct the affected area vector.
 
@@ -459,15 +454,12 @@ def build_affected_vector(
     Parameters:
         base_watershed_vector_path (str): path to base watershed vector,
         target_wkt (str): desired target projection.
-        built_infrastructure_vector_path (str): path to infrastructure vector
-            containing at least the integer field 'Type'.
         damage_table_path (None or str): path to a CSV table containing fields
             'Type' and 'Damage'. For every value of 'Type' in the
             built_infrastructure_vector there must be a corresponding entry
             in this table. If None, this field is ignored.
-        key_field_id (str): a field to add to the target watershed vector
-            that can be used to uniquely identify each feature for zonal
-            stats calculations later.
+        built_infrastructure_vector_path (str): path to infrastructure vector
+            containing at least the integer field 'Type'.
         target_watershed_result_vector_path (str): path to desired target
             watershed result vector that will have an additional field called
             'Affected_Build'.
@@ -538,7 +530,6 @@ def build_affected_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
-    watershed_layer.CreateField(ogr.FieldDefn(key_field_id, ogr.OFTInteger))
     watershed_layer.CreateField(ogr.FieldDefn('Affected_Build', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
@@ -569,7 +560,6 @@ def build_affected_vector(
 
         if damage_type_map:
             watershed_feature.SetField('Affected_Build', total_damage)
-        watershed_feature.SetField(key_field_id, watershed_index)
         watershed_layer.SetFeature(watershed_feature)
     watershed_layer.SyncToDisk()
     watershed_layer = None
