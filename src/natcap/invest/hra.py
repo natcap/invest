@@ -10,6 +10,7 @@ from osgeo import gdal, ogr, osr
 import pandas
 import shapely.ops
 import shapely.wkt
+import tempfile
 import taskgraph
 import pygeoprocessing
 
@@ -59,6 +60,11 @@ _WGS84_BOUNDING_BOX = [-180.0, -90.0, 180.0, 90.0]
 # Resampling method for rasters
 _RESAMPLE_METHOD = 'near'
 
+# For creating a raster from bounding box
+_DEFAULT_GTIFF_CREATION_OPTIONS = (
+    'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+    'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+
 
 def execute(args):
     """InVEST Habitat Risk Assessment (HRA) Model.
@@ -71,11 +77,11 @@ def execute(args):
             path. (optional)
 
         args['info_table_path'] (str): a path to the CSV or Excel file that
-            contains the name of the habitat (H) or stressor (s) on the `NAME`
+            contains the name of the habitat (H) or stressor (s) on the ``NAME``
             column that matches the names in criteria_table_path. Each H/S has
-            its corresponding vector or raster path on the `PATH` column. The
-            `STRESSOR BUFFER (meters)` column should have a buffer value if
-            the `TYPE` column is a stressor.
+            its corresponding vector or raster path on the ``PATH`` column. The
+            ``STRESSOR BUFFER (meters)`` column should have a buffer value if
+            the ``TYPE`` column is a stressor.
 
         args['criteria_table_path'] (str): a path to the CSV or Excel file that
             contains the set of criteria ranking of each stressor on each
@@ -257,7 +263,7 @@ def execute(args):
                 fill_value = _TARGET_NODATA_FLT
 
                 # If it's a spatial criteria vector, burn the values from the
-                # `rating` attribute
+                # ``rating`` attribute
                 rasterize_kwargs = {
                     'option_list': ["ATTRIBUTE=" + _RATING_FIELD]}
                 rasterize_nodata = _TARGET_NODATA_FLT
@@ -661,7 +667,7 @@ def _convert_meter_pixel_size_to_degrees(pixel_size_in_meters, center_lat):
         pixel_size_in_meters (tuple): [xsize, ysize] in meters (float).
 
         center_lat (float): latitude of the center of the pixel. Note this
-            value +/- half the `pixel-size` must not exceed 90/-90 degrees
+            value +/- half the ``pixel-size`` must not exceed 90/-90 degrees
             latitude or an invalid area will be calculated.
 
     Returns:
@@ -850,8 +856,8 @@ def _get_zonal_stats_df(
             else:
                 # Field name could be None sometimes
                 LOGGER.warning(
-                    'The subregion `%s` field of fid `%s` in AOI vector is '
-                    'missing , replaced with `%s`' %
+                    'The subregion ``%s`` field of fid ``%s`` in AOI vector is '
+                    'missing , replaced with ``%s``' %
                     (_SUBREGION_FIELD_NAME, fid, 'FID ' + str(fid)))
                 fid_name_dict[fid] = 'FID ' + str(fid)
 
@@ -898,7 +904,7 @@ def _get_zonal_stats_df(
     if _TOTAL_REGION_NAME not in subregion_names:
         subregion_names.append(_TOTAL_REGION_NAME)
 
-    # Add a `SUBREGION` column to the dataframe and update it with the
+    # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding E and C scores in each subregion
     subregion_df_list = []
     for subregion in subregion_names:
@@ -925,21 +931,98 @@ def _get_zonal_stats_df(
     return final_stats_df
 
 
+def _create_raster_from_bounding_box(
+        bounding_box, target_raster_path, target_sr_wkt, target_pixel_size,
+        target_pixel_type, target_nodata,
+        gtiff_creation_options=_DEFAULT_GTIFF_CREATION_OPTIONS):
+    """Create a blank raster from a bounding box in given projection.
+
+    Parameters:
+        bounding_box (sequence): a sequence of 4 coordinates in
+            ``target_sr_wkt`` coordinate system describing the bound in the
+            order [xmin, ymin, xmax, ymax].
+
+        target_raster_path (string): path to location of generated geotiff;
+            the upper left hand corner of this raster will be aligned with the
+            bounding box the extent will be exactly equal or contained the
+            bounding box depending on whether the pixel size divides evenly
+            into the bounding box; if not coordinates will be rounded up to
+            contain the original extent.
+
+        target_sr_wkt (str): the desired projection of all target rasters in
+            Well Known Text format.
+        target_pixel_size (list/tuple): the x/y pixel size as a sequence
+            ex: [30.0, -30.0]
+        target_pixel_type (int): gdal GDT pixel type of target raster
+        target_nodata (numeric): target nodata value. Can be None if no nodata
+            value is needed.
+        gtiff_creation_options (sequence): this is an argument list that will
+            be passed to the GTiff driver.  Useful for blocksizes,
+            compression, and more.
+
+    Returns:
+        None
+
+    """
+
+    # Round up on the rows and cols so that the target raster is larger than
+    # or equal to the bounding box
+    n_cols = int(numpy.ceil(
+        abs((bounding_box[1] - bounding_box[0]) / target_pixel_size[0])))
+    n_rows = int(numpy.ceil(
+        abs((bounding_box[3] - bounding_box[2]) / target_pixel_size[1])))
+
+    driver = gdal.GetDriverByName('GTiff')
+    n_bands = 1
+    raster = driver.Create(
+        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
+        options=gtiff_creation_options)
+
+    # Initialize everything to nodata
+    raster.GetRasterBand(1).SetNoDataValue(target_nodata)
+
+    # Set the transform based on the upper left corner and given pixel
+    # dimensions
+    if target_pixel_size[0] < 0:
+        x_source = bounding_box[1]
+    else:
+        x_source = bounding_box[0]
+    if target_pixel_size[1] < 0:
+        y_source = bounding_box[3]
+    else:
+        y_source = bounding_box[2]
+    raster_transform = [
+        x_source, target_pixel_size[0], 0.0,
+        y_source, 0.0, target_pixel_size[1]]
+    raster.SetGeoTransform(raster_transform)
+
+    # Set target projection
+    raster.SetProjection(target_sr_wkt)
+    raster = None
+
+
 def _rasterize_vector_features(
-        base_vector_path, target_pickle_path, field_name=None):
+        base_vector_path, working_dir, target_pickle_path, target_pixel_size,
+        field_name=None):
     """Rasterize features of same field name from a vector into a raster.
 
     Parameters:
         base_vector_path (str): a path to the vector with a set of features
             to be rasterized.
 
+        working_dir (str): a path indicating where raster files should be
+            created.
+
         target_pickle_path (str): a path to the pickle file that contains a
             dictionary of field names to their corresponding raster path
             rasterized from features that have the same field name.
 
-        field_name (str): if exists, features with the same field name will be
-            rasterized to a raster. Otherwise, all features will be merged and
-            rasterized into a single raster, with _TOTAL_REGION_NAME as key.
+        target_pixel_size (list/tuple): the x/y pixel size as a sequence
+            ex: [30.0, -30.0]
+
+        field_name (str): if exists, same values on this field will be merged
+            and rasterized into an individual raster. Otherwise, the entire
+            vector will be rasterized into a single raster.
 
     Returns:
         None
@@ -953,97 +1036,36 @@ def _rasterize_vector_features(
     base_layer = base_vector.GetLayer()
     spat_ref = base_layer.GetSpatialRef()
 
-    # Rasterize the layer onto a single raster
-    if field_name is None:
-        field_name = _TOTAL_REGION_NAME
+    shapely_geoms_by_field = {}
+    for feat in base_layer:
+        field_value = feat.GetField(field_name)
+        geom = feat.GetGeometryRef()
+        geom_wkt = shapely.wkt.loads(geom.ExportToWkt())
+        # Append buffered geometry to prevent invalid geometries
+        if field_value in shapely_geoms_by_field:
+            shapely_geoms_by_field[field_value].append(geom_wkt.buffer(0))
+        else:
+            shapely_geoms_by_field[field_value] = [geom_wkt.buffer(0)]
 
-    # Make a shapefile that non-overlapping layers can be added to
-    driver = ogr.GetDriverByName('MEMORY')
-    disjoint_vector = driver.CreateDataSource('disjoint_vector')
+    for field_value, shapely_geoms in shapely_geoms_by_field.iteritems():
+        # Get the union of the geometries in the list
+        merged_shapely_geom = shapely.ops.unary_union(shapely_geoms)
 
-    LOGGER.info("creating disjoint polygon set")
-    disjoint_fid_sets = pygeoprocessing.calculate_disjoint_polygon_set(
-        base_vector_path)
+        # Get geometry extents
+        geom = ogr.CreateGeometryFromWkb(merged_shapely_geom.wkb)
+        geom_bbox = geom.GetEnvelope()
 
-    for set_index, disjoint_fid_set in enumerate(disjoint_fid_sets):
-        LOGGER.info(
-            'Processing disjoint polygon set %d of FIDs %d.',
-            set_index, disjoint_fid_set)
-        disjoint_layer = disjoint_vector.CreateLayer(
-            'disjoint_vector', spat_ref, ogr.wkbPolygon)
-        disjoint_layer.CreateField(ogr.FieldDefn(field_name, ogr.OFTInteger))
-        disjoint_layer_defn = disjoint_layer.GetLayerDefn()
-
-        # Add disjoint polygons to disjoint_layer
-        disjoint_layer.StartTransaction()
-        for feature_fid in disjoint_fid_set:
-            base_feat = base_layer.GetFeature(feature_fid)
-            disjoint_feat = ogr.Feature(disjoint_layer_defn)
-            disjoint_feat.SetGeometry(base_feat.GetGeometryRef().Clone())
-            disjoint_feat.SetField(
-                field_name, feature_fid)
-            disjoint_layer.CreateFeature(disjoint_feat)
-        disjoint_layer.CommitTransaction()
-
-        # Nodata out the mask
-        agg_fid_band = agg_fid_raster.GetRasterBand(1)
-        agg_fid_band.Fill(agg_fid_nodata)
-        gdal.RasterizeLayer(
-            agg_fid_raster, [1], disjoint_layer,
-            callback=rasterize_callback, **rasterize_layer_args)
-        agg_fid_raster.FlushCache()
-
-        # Delete the features we just added to the subset_layer
-        disjoint_layer = None
-        disjoint_vector.DeleteLayer(0)
-
-        # create a key array
-        # and parallel min, max, count, and nodata count arrays
-        LOGGER.info(
-            "summarizing rasterized disjoint polygon set %d of %d %s",
-            set_index+1, len(disjoint_fid_sets),
-            os.path.basename(aggregate_vector_path))
-        for agg_fid_offsets in iterblocks(
-                (agg_fid_raster_path, 1), offset_only=True):
-            agg_fid_block = agg_fid_band.ReadAsArray(**agg_fid_offsets)
-            clipped_block = clipped_band.ReadAsArray(**agg_fid_offsets)
-            valid_mask = (agg_fid_block != agg_fid_nodata)
-            valid_agg_fids = agg_fid_block[valid_mask]
-            valid_clipped = clipped_block[valid_mask]
-            for agg_fid in numpy.unique(valid_agg_fids):
-                masked_clipped_block = valid_clipped[
-                    valid_agg_fids == agg_fid]
-                if raster_nodata is not None:
-                    clipped_nodata_mask = numpy.isclose(
-                        masked_clipped_block, raster_nodata)
-                else:
-                    clipped_nodata_mask = numpy.zeros(
-                        masked_clipped_block.shape, dtype=numpy.bool)
-                aggregate_stats[agg_fid]['nodata_count'] += (
-                    numpy.count_nonzero(clipped_nodata_mask))
-                if ignore_nodata:
-                    masked_clipped_block = (
-                        masked_clipped_block[~clipped_nodata_mask])
-                if masked_clipped_block.size == 0:
-                    continue
-
-                if aggregate_stats[agg_fid]['min'] is None:
-                    aggregate_stats[agg_fid]['min'] = (
-                        masked_clipped_block[0])
-                    aggregate_stats[agg_fid]['max'] = (
-                        masked_clipped_block[0])
-
-                aggregate_stats[agg_fid]['min'] = min(
-                    numpy.min(masked_clipped_block),
-                    aggregate_stats[agg_fid]['min'])
-                aggregate_stats[agg_fid]['max'] = max(
-                    numpy.max(masked_clipped_block),
-                    aggregate_stats[agg_fid]['max'])
-                aggregate_stats[agg_fid]['count'] += (
-                    masked_clipped_block.size)
-                aggregate_stats[agg_fid]['sum'] += numpy.sum(
-                    masked_clipped_block)
-
+        # Create raster from bounding box of the merged geometry
+        file_prefix = ''
+        if isinstance(field_value, basestring):
+            file_prefix = field_value.encode('utf-8')
+        with tempfile.NamedTemporaryFile(
+                prefix=file_prefix, suffix='.tif', delete=False,
+                dir=working_dir) as target_raster_file:
+            target_raster_path = target_raster_file.name
+        _create_raster_from_bounding_box(
+            geom_bbox, target_raster_path, spat_ref.ExportToWkt(),
+            target_pixel_size, _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
 
 def _merge_geometry(base_vector_path, target_merged_vector_path):
     """Merge geometries from base vector into target vector.
@@ -1650,8 +1672,8 @@ def _pair_criteria_num_op(
             influence is from the stressor pixel.
 
         decay_eq (str): a string representing the decay format of the
-            stressor in the buffer zone. Could be `None`, `Linear`, or
-            `Exponential`.
+            stressor in the buffer zone. Could be ````None````, ````Linear````, or
+            ````Exponential````.
 
         num (float): a cumulative value pre-calculated based on the criteria
             table. It will be divided by denominator to get exposure score.
@@ -1735,11 +1757,11 @@ def _calc_pair_criteria_score(
             influence is from the stressor pixel.
 
         decay_eq (str): a string representing the decay format of the
-            stressor in the buffer zone. Could be `None`, `Linear`, or
-            `Exponential`.
+            stressor in the buffer zone. Could be ``None``, ``Linear``, or
+            ``Exponential``.
 
         criteria_type (str): a string indicating that this function calculates
-            exposure or consequence scores. Could be `C` or `E`. If `C`,
+            exposure or consequence scores. Could be ``C`` or ``E``. If ``C``,
             recov_score_paths needs to be added.
 
         task_graph (Taskgraph object): an object for building task graphs and
@@ -1972,10 +1994,10 @@ def _append_spatial_raster_row(info_df, recovery_df, overlap_df,
             to.
 
         recovery_df (dataframe): the dataframe that has the spatial raster
-            information on its `R_SPATIAL` column.
+            information on its ``R_SPATIAL`` column.
 
         overlap_df (dataframe): the multi-index dataframe that has the spatial
-            raster information on its `E_SPATIAL` and `C_SPATIAL` columns.
+            raster information on its ``E_SPATIAL`` and ``C_SPATIAL`` columns.
 
         spatial_file_dir (str): the path to the root directory where the
             absolute paths of spatial files will be created based on.
@@ -2121,7 +2143,7 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
         dir_path,
         suffix_front + basename + suffix_end + '.tif')
 
-    # Return the original file path from `PATH` if it's already a raster
+    # Return the original file path from ``PATH`` if it's already a raster
     if suffix_front == 'base_' and row['IS_RASTER']:
         return path
     # Habitat rasters do not need to be transformed
@@ -2262,7 +2284,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     unknown_types = list(set(info_df.TYPE) - set(required_types))
     if unknown_types:
         raise ValueError(
-            'The `TYPE` attribute in Info table could only have either %s '
+            'The ``TYPE`` attribute in Info table could only have either %s '
             'or %s as its value, but is having %s' % (
                 required_types[0], required_types[1], unknown_types))
 
@@ -2960,15 +2982,15 @@ def _simplify_geometry(
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
+    """Validate args to ensure they conform to ``execute``'s contract.
 
     Parameters:
         args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
+            values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
             should only occur on the args[limit_to] value. The intent that
             individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
+            than validating the entire ``args`` dictionary.
 
     Returns:
         list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
@@ -3001,7 +3023,7 @@ def validate(args, limit_to=None):
     if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
-            "The following keys were expected in `args` but were missing: " +
+            "The following keys were expected in ``args`` but were missing: " +
             ', '.join(missing_key_list))
 
     if no_value_list:
