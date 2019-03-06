@@ -9,7 +9,7 @@ import numpy
 from osgeo import gdal, ogr, osr
 import pandas
 import shapely.ops
-import shapely.wkt
+import shapely.wkb
 import tempfile
 import taskgraph
 import pygeoprocessing
@@ -600,8 +600,7 @@ def execute(args):
             func=pygeoprocessing.warp_raster,
             args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
                   _RESAMPLE_METHOD),
-            kwargs={'target_bb': _WGS84_BOUNDING_BOX,
-                    'target_sr_wkt': wgs84_wkt},
+            kwargs={'target_sr_wkt': wgs84_wkt},
             target_path_list=[wgs84_raster_path],
             task_name='unprojecting_%s_raster' % layer_name)
 
@@ -931,39 +930,38 @@ def _get_zonal_stats_df(
     return final_stats_df
 
 
-def _create_raster_from_bounding_box(
-        bounding_box, target_raster_path, target_sr_wkt, target_pixel_size,
+def _create_raster_from_geometry(
+        geometry, target_raster_path, target_sr_wkt, target_pixel_size,
         target_pixel_type, target_nodata,
         gtiff_creation_options=_DEFAULT_GTIFF_CREATION_OPTIONS):
-    """Create a blank raster from a bounding box in given projection.
+    """Create a blank raster from an OGR geometry in given projection.
 
     Parameters:
-        bounding_box (sequence): a sequence of 4 coordinates in
-            ``target_sr_wkt`` coordinate system describing the bound in the
-            order [xmin, ymin, xmax, ymax].
-
+        geometry (ogr.Geometry object): an OGR geometry objects used for
+            retrieve bounding box to create a blank raster.
+        vector (ogr.DataSource object):
         target_raster_path (string): path to location of generated geotiff;
             the upper left hand corner of this raster will be aligned with the
             bounding box the extent will be exactly equal or contained the
             bounding box depending on whether the pixel size divides evenly
             into the bounding box; if not coordinates will be rounded up to
             contain the original extent.
-
         target_sr_wkt (str): the desired projection of all target rasters in
             Well Known Text format.
-        target_pixel_size (list/tuple): the x/y pixel size as a sequence
-            ex: [30.0, -30.0]
-        target_pixel_type (int): gdal GDT pixel type of target raster
+        target_pixel_size (list/tuple): the x/y pixel size as a sequence,
+            ex: [30.0, -30.0].
+        target_pixel_type (int): GDAL GDT pixel type of target raster.
         target_nodata (numeric): target nodata value. Can be None if no nodata
             value is needed.
         gtiff_creation_options (sequence): this is an argument list that will
-            be passed to the GTiff driver.  Useful for blocksizes,
-            compression, and more.
+            be passed to the GTiff driver. Useful for blocksizes, compression,
+            and more.
 
     Returns:
         None
 
     """
+    bounding_box = geometry.GetEnvelope()
 
     # Round up on the rows and cols so that the target raster is larger than
     # or equal to the bounding box
@@ -1004,7 +1002,10 @@ def _create_raster_from_bounding_box(
 def _rasterize_vector_features(
         base_vector_path, working_dir, target_pickle_path, target_pixel_size,
         field_name=None):
-    """Rasterize features of same field name from a vector into a raster.
+    """Rasterize geometries from a vector into a raster.
+
+    If field_name is provided, merge and rasterize geometries with same field
+    value on that field into a raster.
 
     Parameters:
         base_vector_path (str): a path to the vector with a set of features
@@ -1017,8 +1018,8 @@ def _rasterize_vector_features(
             dictionary of field names to their corresponding raster path
             rasterized from features that have the same field name.
 
-        target_pixel_size (list/tuple): the x/y pixel size as a sequence
-            ex: [30.0, -30.0]
+        target_pixel_size (list/tuple): the x/y pixel size as a sequence in the
+            projection of base vector. ex: [30.0, -30.0], unit: meters.
 
         field_name (str): if exists, same values on this field will be merged
             and rasterized into an individual raster. Otherwise, the entire
@@ -1036,36 +1037,90 @@ def _rasterize_vector_features(
     base_layer = base_vector.GetLayer()
     spat_ref = base_layer.GetSpatialRef()
 
+    # Rasterize the entire vector onto a raster with values of 1
+    if field_name is None or not _has_field_name(base_vector_path, field_name):
+        # Fill the raster with 1s on where a vector geometry touches any pixel
+        # on the raster
+        target_raster_path = os.path.join(
+            working_dir, 'rasterized_single_vector.tif')
+        pygeoprocessing.create_raster_from_vector_extents(
+            base_vector_path, target_raster_path, target_pixel_size,
+            _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
+        pygeoprocessing.rasterize(
+            base_vector_path, target_raster_path, burn_values=[1],
+            option_list=["ALL_TOUCHED=TRUE"])
+        return target_raster_path
+
+    LOGGER.info('Collecting geometries on field %s.' % field_name)
     shapely_geoms_by_field = {}
     for feat in base_layer:
         field_value = feat.GetField(field_name)
         geom = feat.GetGeometryRef()
-        geom_wkt = shapely.wkt.loads(geom.ExportToWkt())
+        geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
         # Append buffered geometry to prevent invalid geometries
         if field_value in shapely_geoms_by_field:
-            shapely_geoms_by_field[field_value].append(geom_wkt.buffer(0))
+            shapely_geoms_by_field[field_value].append(geom_wkb.buffer(0))
         else:
-            shapely_geoms_by_field[field_value] = [geom_wkt.buffer(0)]
+            shapely_geoms_by_field[field_value] = [geom_wkb.buffer(0)]
+
+    LOGGER.info('Creating rasters from geometries on field %s.' % field_name)
+    raster_paths_by_field = {}
+    # Make a vector so we could create layer for each geometry to be added to
+    driver = gdal.GetDriverByName('MEMORY')
+    merged_vector = driver.CreateDataSource('merged_vector')
 
     for field_value, shapely_geoms in shapely_geoms_by_field.iteritems():
+        file_basename = 'rasterized_'
+        if field_value is None:
+            raise ValueError('Field value in field %s in vector %s is None.' %
+                             (field_name, base_vector_path))
+        elif ~isinstance(field_value, basestring):
+            field_value = str(field_value)
+
+        field_value = field_value.encode('utf-8')
+        file_basename += field_value
+
+        target_raster_path = os.path.join(working_dir, file_basename + '.tif')
+
         # Get the union of the geometries in the list
         merged_shapely_geom = shapely.ops.unary_union(shapely_geoms)
-
-        # Get geometry extents
-        geom = ogr.CreateGeometryFromWkb(merged_shapely_geom.wkb)
-        geom_bbox = geom.GetEnvelope()
+        merged_geom = ogr.CreateGeometryFromWkb(merged_shapely_geom.wkb)
 
         # Create raster from bounding box of the merged geometry
-        file_prefix = ''
-        if isinstance(field_value, basestring):
-            file_prefix = field_value.encode('utf-8')
-        with tempfile.NamedTemporaryFile(
-                prefix=file_prefix, suffix='.tif', delete=False,
-                dir=working_dir) as target_raster_file:
-            target_raster_path = target_raster_file.name
-        _create_raster_from_bounding_box(
-            geom_bbox, target_raster_path, spat_ref.ExportToWkt(),
-            target_pixel_size, _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
+        LOGGER.info('Rasterizing geometries of field value %s.' % field_value)
+        _create_raster_from_geometry(
+            merged_geom, merged_vector, target_raster_path,
+            spat_ref.ExportToWkt(), target_pixel_size, _TARGET_PIXEL_INT,
+            _TARGET_NODATA_INT)
+
+        # Burn the merged geometry onto the raster with values of 1
+        merged_layer = merged_vector.CreateLayer(
+            'merged_vector', spat_ref, ogr.wkbPolygon)
+        merged_layer_defn = merged_layer.GetLayerDefn()
+
+        # Add geometries to merged layer
+        merged_layer.StartTransaction()
+        feat = merged_layer.GetNextFeature()
+        merged_feat = ogr.Feature(merged_layer_defn)
+        merged_feat.SetGeometry(merged_geom)
+        merged_layer.CreateFeature(merged_feat)
+        merged_layer.CommitTransaction()
+
+        target_raster = gdal.OpenEx(
+            target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
+
+        gdal.RasterizeLayer(target_raster, [1], merged_layer, burn_values=[1])
+        target_raster.FlushCache()
+
+        # Delete the layer we just added to the vector
+        merged_layer = None
+        merged_vector.DeleteLayer(0)
+        target_raster = None
+
+        raster_paths_by_field[field_value] = target_raster_path
+
+    return raster_paths_by_field
+
 
 def _merge_geometry(base_vector_path, target_merged_vector_path):
     """Merge geometries from base vector into target vector.
@@ -1091,9 +1146,9 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
 
     for feat in base_layer:
         geom = feat.GetGeometryRef()
-        geom_wkt = shapely.wkt.loads(geom.ExportToWkt())
+        geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
         # Buffer geometry to prevent invalid geometries
-        geom_buffered = geom_wkt.buffer(0)
+        geom_buffered = geom_wkb.buffer(0)
         shapely_geoms.append(geom_buffered)
 
     # Return the union of the geometries in the list
