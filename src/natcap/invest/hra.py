@@ -710,8 +710,9 @@ def _raster_to_geojson(
     band = raster.GetRasterBand(1)
     mask = band.GetMaskBand()
 
-    driver = ogr.GetDriverByName('GeoJSON')
-    vector = driver.CreateDataSource(target_geojson_path)
+    driver = gdal.GetDriverByName('GeoJSON')
+    vector = driver.Create(target_geojson_path, 0, 0, 0, gdal.GDT_Unknown)
+    vector.StartTransaction()
 
     # Use raster projection wkt for the GeoJSON
     spat_ref = osr.SpatialReference()
@@ -722,15 +723,16 @@ def _raster_to_geojson(
 
     # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(field_name.encode('utf-8'), ogr.OFTInteger)
-    field_defn.SetWidth(2)
+    field_defn.SetWidth(3)
     field_defn.SetPrecision(0)
     vector_layer.CreateField(field_defn)
 
     gdal.Polygonize(band, mask, vector_layer, 0)
+    vector_layer.SyncToDisk()
+    vector.CommitTransaction()
 
     band = None
     raster = None
-    vector.SyncToDisk()
     vector_layer = None
     vector = None
 
@@ -1044,7 +1046,7 @@ def _rasterize_vector_features(
     raster_paths_by_field = {}
     # Make a vector so we could create layer for each geometry to be added to
     driver = gdal.GetDriverByName('MEMORY')
-    merged_vector = driver.CreateDataSource('merged_vector')
+    merged_vector = driver.Create('merged_vector', 0, 0, 0, gdal.GDT_Unknown)
 
     for field_value, shapely_geoms in shapely_geoms_by_field.iteritems():
         file_basename = 'rasterized_'
@@ -1131,8 +1133,10 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
     merged_geom = shapely.ops.unary_union(shapely_geoms)
 
     # Create a new geopackage
-    target_driver = ogr.GetDriverByName('GPKG')
-    target_vector = target_driver.CreateDataSource(target_merged_vector_path)
+    target_driver = gdal.GetDriverByName('GPKG')
+    target_vector = target_driver.Create(
+        target_merged_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+    target_vector.StartTransaction()
 
     # Get basename from target path as layer name
     target_layer_name = os.path.splitext(
@@ -1151,13 +1155,12 @@ def _merge_geometry(base_vector_path, target_merged_vector_path):
         target_layer_name, target_sr, ogr.wkbPolygon)
 
     # Write the merged geometry to the target layer
-    target_layer.StartTransaction()
     target_feature = ogr.Feature(target_layer.GetLayerDefn())
 
     # Make a geometry, from Shapely object
     target_feature.SetGeometry(ogr.CreateGeometryFromWkb(merged_geom.wkb))
     target_layer.CreateFeature(target_feature)
-    target_layer.CommitTransaction()
+    target_vector.CommitTransaction()
 
     base_layer = None
     base_vector = None
@@ -2880,15 +2883,15 @@ def _simplify_geometry(
     if os.path.exists(target_simplified_vector_path):
         os.remove(target_simplified_vector_path)
 
-    gpkg_driver = ogr.GetDriverByName('GPKG')
+    gpkg_driver = gdal.GetDriverByName('GPKG')
 
-    target_simplified_vector = gpkg_driver.CreateDataSource(
-        target_simplified_vector_path)
+    target_simplified_vector = gpkg_driver.Create(
+        target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
         target_layer_name,
         base_layer.GetSpatialRef(), ogr.wkbPolygon)
 
-    target_simplified_layer.StartTransaction()
+    target_simplified_vector.StartTransaction()
 
     if target_field_name:
         target_simplified_layer.CreateField(target_field)
@@ -2913,10 +2916,10 @@ def _simplify_geometry(
         else:
             target_simplified_layer.CreateFeature(target_feature)
 
-    target_simplified_layer.CommitTransaction()
     target_simplified_layer.SyncToDisk()
+    target_simplified_vector.CommitTransaction()
+
     target_simplified_layer = None
-    target_simplified_vector.SyncToDisk()
     target_simplified_vector = None
 
 
