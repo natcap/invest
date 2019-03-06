@@ -24,7 +24,11 @@ install:
     - "%PYTHON%\\python.exe -m pipwin install rtree"
     - "%PYTHON%\\python.exe -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "%PYTHON%\\python.exe setup.py sdist bdist_wheel"
-    - "%PYTHON%\\python.exe -m pip install natcap.invest --find-links dist"
+
+    # Need to install with -I because pip thinks that cwd is a valid installation directory.
+    # It's not (in our case).  Adding --no-deps because that's what all of the above
+    # with pipwin and pip is for.
+    - "%PYTHON%\\python.exe -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
 
 build: off
