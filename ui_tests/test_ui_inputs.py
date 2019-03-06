@@ -2448,7 +2448,7 @@ class ModelTests(_QtTest):
         from natcap.invest.ui import inputs
 
         n_workers_setting = inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', -1, unicode)
+            'taskgraph/n_workers', '-1', unicode)
 
         def target_func(args):
             """n_workers is required in args."""
