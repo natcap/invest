@@ -53,14 +53,15 @@ _TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
 _TARGET_NODATA_INT = 255  # for unsigned 8-bit int
 
 # ESPG code and target bounding box for warping rasters to WGS84 coordinate
-# system
+# system.
 _WGS84_ESPG_CODE = 4326
 _WGS84_BOUNDING_BOX = [-180.0, -90.0, 180.0, 90.0]
 
-# Resampling method for rasters
+# Resampling method for rasters.
 _RESAMPLE_METHOD = 'near'
 
-# For creating a raster from bounding box
+# An argument list that will be passed to the GTiff driver. Useful for
+# blocksizes, compression, and more.
 _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
@@ -181,6 +182,11 @@ def execute(args):
                 '%s.' % (target_sr.GetAttrValue('PROJECTION'),
                          target_sr.GetAttrValue("AUTHORITY", 1), linear_unit))
 
+    # Rasterize habitat and stressor layers if they are vectors.
+    # Divide resolution (meters) by linear unit to convert to projection units
+    target_pixel_size = (float(args['resolution'])/linear_unit,
+                         -float(args['resolution'])/linear_unit)
+
     # Simplify the AOI vector for faster run on zonal statistics
     simplified_aoi_vector_path = os.path.join(
         file_preprocessing_dir, 'simplified_aoi%s.gpkg' % file_suffix)
@@ -191,10 +197,15 @@ def execute(args):
         args['aoi_vector_path'], _SUBREGION_FIELD_NAME)
 
     # Simplify the AOI and preserve the subregion field if it exists
-    LOGGER.info('Simplifying the AOI vector.')
     aoi_preserved_field = None
+    aoi_field_name = None
     if subregion_field_exists:
         aoi_preserved_field = (_SUBREGION_FIELD_NAME, ogr.OFTString)
+        aoi_field_name = _SUBREGION_FIELD_NAME
+        LOGGER.info('Simplifying AOI vector while preserving field %s.' %
+                    aoi_field_name)
+    else:
+        LOGGER.info('Simplifying AOI vector without subregion field.')
 
     simplify_aoi_task = task_graph.add_task(
         func=_simplify_geometry,
@@ -207,7 +218,15 @@ def execute(args):
     # Use the simplified AOI vector to run analysis on
     aoi_vector_path = simplified_aoi_vector_path
 
-    # Merge geometries in the simplified AOI if subregion field doesn't exist
+    # Rasterize AOI vector for later risk statistics calculation
+    LOGGER.info('Rasterizing AOI vector.')
+    rasterized_aoi_pickle_path = os.path.join(
+        file_preprocessing_dir, 'rasterized_aoi_dictionary.pickle')
+    _rasterize_vector_features(
+        simplified_aoi_vector_path, file_preprocessing_dir,
+        rasterized_aoi_pickle_path, target_pixel_size, task_graph,
+        [simplify_aoi_task], aoi_field_name)
+
     if not subregion_field_exists:
         merged_aoi_vector_path = os.path.join(
             file_preprocessing_dir, 'merged_aoi.gpkg')
@@ -222,13 +241,9 @@ def execute(args):
         # Use the merged AOI vector to run analysis on
         aoi_vector_path = merged_aoi_vector_path
 
-    # Rasterize habitat and stressor layers if they are vectors.
-    # Divide resolution (meters) by linear unit to convert to projection units
-    target_pixel_size = (float(args['resolution'])/linear_unit,
-                         -float(args['resolution'])/linear_unit)
-
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
+    align_and_resize_dependent_tasks = []
     for _, row in info_df.iterrows():
         if not row['IS_RASTER']:
             vector_name = row['NAME']
@@ -281,17 +296,13 @@ def execute(args):
                 task_name='create_raster_from_%s' % vector_name,
                 dependent_task_list=[simplify_geometry_task])
 
-            task_graph.add_task(
+            align_and_resize_dependent_tasks.append(task_graph.add_task(
                 func=pygeoprocessing.rasterize,
                 args=(simplified_vector_path, target_raster_path),
                 kwargs=rasterize_kwargs,
                 target_path_list=[target_raster_path],
                 task_name='rasterize_%s' % vector_name,
-                dependent_task_list=[create_raster_task])
-
-    # Join the raster creation tasks first, since align_and_resize_rasters_task
-    # is dependent on them.
-    task_graph.join()
+                dependent_task_list=[create_raster_task]))
 
     # Align and resize all the rasters, including rasters provided by the user,
     # and rasters created from the vectors.
@@ -306,7 +317,8 @@ def execute(args):
               target_pixel_size, 'union'),
         kwargs={'target_sr_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
-        task_name='align_and_resize_raster_task')
+        task_name='align_and_resize_raster_task',
+        dependent_task_list=align_and_resize_dependent_tasks)
 
     # Join here since everything below requires aligned and resized rasters
     task_graph.join()
@@ -521,30 +533,30 @@ def execute(args):
     for hab_risk_raster_path in hab_risk_raster_path_list:
         hab_risk_path_band_list.append((hab_risk_raster_path, 1))
 
-    # Calculate average ecosystem risk
-    task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=(hab_risk_path_band_list, _ecosystem_risk_op,
-              ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
-              _TARGET_NODATA_FLT),
-        target_path_list=[ecosystem_risk_raster_path],
-        task_name='calculate_average_ecosystem_risk')
+    # # Calculate average ecosystem risk
+    # task_graph.add_task(
+    #     func=pygeoprocessing.raster_calculator,
+    #     args=(hab_risk_path_band_list, _ecosystem_risk_op,
+    #           ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
+    #           _TARGET_NODATA_FLT),
+    #     target_path_list=[ecosystem_risk_raster_path],
+    #     task_name='calculate_average_ecosystem_risk')
 
-    # Calculate reclassified ecosystem risk
-    task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
-              _reclassify_ecosystem_risk_op,
-              reclass_ecosystem_risk_raster_path,
-              _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
-        target_path_list=[reclass_ecosystem_risk_raster_path],
-        task_name='reclassify_ecosystem_risk')
+    # # Calculate reclassified ecosystem risk
+    # task_graph.add_task(
+    #     func=pygeoprocessing.raster_calculator,
+    #     args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
+    #           _reclassify_ecosystem_risk_op,
+    #           reclass_ecosystem_risk_raster_path,
+    #           _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+    #     target_path_list=[reclass_ecosystem_risk_raster_path],
+    #     task_name='reclassify_ecosystem_risk')
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
     stats_df = _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, max_rating, task_graph)
+        overlap_df, rasterized_aoi_pickle_path, max_rating, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -575,40 +587,39 @@ def execute(args):
         (float(args['resolution']), -float(args['resolution'])),
         aoi_center_lat)
 
-    # Unproject the rasters to WGS84, and convert the unprojected rasters to
-    # GeoJSON files for web visualization
-    for out_raster_path in out_raster_paths:
-        # Get raster basename without file extension and the 'aligned_'
-        # substring
-        layer_name = os.path.splitext(
-            os.path.basename(out_raster_path))[0].replace('aligned_', '')
+    # # Unproject the rasters to WGS84, and convert the unprojected rasters to
+    # # GeoJSON files for web visualization
+    # for out_raster_path in out_raster_paths:
+    #     # Get raster basename without file extension and 'aligned_' substring
+    #     layer_name = os.path.splitext(
+    #         os.path.basename(out_raster_path))[0].replace('aligned_', '')
 
-        # Unproject raster to WGS84. Add maximum bounding box so the polar
-        # regions in the output raster won't be cut off
-        wgs84_raster_path = os.path.join(
-            file_preprocessing_dir, 'wgs84_' + layer_name + '.tif')
-        unproject_task = task_graph.add_task(
-            func=pygeoprocessing.warp_raster,
-            args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
-                  _RESAMPLE_METHOD),
-            kwargs={'target_sr_wkt': wgs84_wkt},
-            target_path_list=[wgs84_raster_path],
-            task_name='unprojecting_%s_raster' % layer_name)
+    #     # Unproject raster to WGS84. Add maximum bounding box so the polar
+    #     # regions in the output raster won't be cut off
+    #     wgs84_raster_path = os.path.join(
+    #         file_preprocessing_dir, 'wgs84_' + layer_name + '.tif')
+    #     unproject_task = task_graph.add_task(
+    #         func=pygeoprocessing.warp_raster,
+    #         args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
+    #               _RESAMPLE_METHOD),
+    #         kwargs={'target_sr_wkt': wgs84_wkt},
+    #         target_path_list=[wgs84_raster_path],
+    #         task_name='unprojecting_%s_raster' % layer_name)
 
-        # Make a GeoJSON from the unprojected raster
-        if layer_name.startswith('risk_'):
-            field_name = 'Risk Score'
-        else:
-            # Append stressor suffix if it's not a risk layer
-            layer_name = 'stressor_' + layer_name
-            field_name = 'Stressor'
-        geojson_path = os.path.join(output_dir, layer_name + '.geojson')
-        task_graph.add_task(
-            func=_raster_to_geojson,
-            args=(wgs84_raster_path, geojson_path, layer_name, field_name),
-            target_path_list=[geojson_path],
-            task_name='create_%s_geojson' % layer_name,
-            dependent_task_list=[unproject_task])
+    #     # Make a GeoJSON from the unprojected raster
+    #     if layer_name.startswith('risk_'):
+    #         field_name = 'Risk Score'
+    #     else:
+    #         # Append stressor suffix if it's not a risk layer
+    #         layer_name = 'stressor_' + layer_name
+    #         field_name = 'Stressor'
+    #     geojson_path = os.path.join(output_dir, layer_name + '.geojson')
+    #     task_graph.add_task(
+    #         func=_raster_to_geojson,
+    #         args=(wgs84_raster_path, geojson_path, layer_name, field_name),
+    #         target_path_list=[geojson_path],
+    #         task_name='create_%s_geojson' % layer_name,
+    #         dependent_task_list=[unproject_task])
 
     task_graph.close()
     task_graph.join()
@@ -738,66 +749,66 @@ def _raster_to_geojson(
 
 
 def _calc_and_pickle_zonal_stats(
-        criteria_raster_path, aoi_vector_path, fid_name_dict,
-        target_pickle_path):
+        score_raster_path, zonal_raster_path, target_pickle_stats_path):
     """Write zonal stats to the dataframe and pickle them to files.
 
     Parameters:
-        criteria_raster_path (str): the path to the criteria score raster
-            to be analyzed.
-        aoi_vector_path (str): a path to a vector containing one or more
-            features to calculate statistics over.
-        fid_name_dict (dict): a dictionary of fid key and feature name value
-            for converting fid in zonal_stats_dict to feature name.
-        target_pickle_path (str): a path to the pickle file for storing zonal
-            statistics.
+        score_raster_path (str): the path to the E/C/risk score raster to be
+            analyzed.
+        zonal_raster_path (str): a path to the zonal raster with 1s
+            representing the regional extent, used for getting statistics
+            from score raster in that region.
+        target_pickle_stats_path (str): a path to the pickle file for storing
+            zonal statistics, including count, sum, min, max, and mean.
 
     Returns:
         None.
 
     """
-    zonal_stats_dict = pygeoprocessing.zonal_statistics(
-        (criteria_raster_path, 1), aoi_vector_path)
+    # Create a stats dictionary for saving zonal statistics, including
+    # mean, min, and max
+    stats_dict = {}
 
-    # Create a stats dict that has mean scores calculated from zonal stats.
-    # Use the name of the subregion as key of mean_stats_dict.
-    mean_stats_dict = {}
+    score_raster = gdal.OpenEx(score_raster_path, gdal.OF_RASTER)
+    score_band = score_raster.GetRasterBand(1)
+    score_nodata = score_band.GetNoDataValue()
 
-    # If the AOI vector has more than one subregion, also count the average
-    # score from all subregions
-    count_all_regions = False
-    if _TOTAL_REGION_NAME not in fid_name_dict.values():
-        count_all_regions = True
-        aoi_pixel_sum = 0.
-        aoi_pixel_count = 0.
+    zonal_raster = gdal.OpenEx(zonal_raster_path, gdal.OF_RASTER)
+    zonal_band = zonal_raster.GetRasterBand(1)
 
-    for fid, stats in zonal_stats_dict.iteritems():
-        # 0 indicates no overlap between the habitat and stressor in the
-        # subregion
-        region_name = fid_name_dict[fid]
-        mean_stats_dict[region_name] = 0
+    stats_dict['COUNT'] = 0.
+    stats_dict['SUM'] = 0.
+    stats_dict['MIN'] = float('inf')
+    stats_dict['MAX'] = float('-inf')
+    stats_dict['MEAN'] = 0
 
-        # If there's overlap between habitat and stressor
-        if stats['count'] > 0:
-            # Calculate the mean score by dividing the sum of scores by the
-            # count of pixel in that subregion
-            mean_stats_dict[region_name] = stats['sum']/stats['count']
+    for score_offsets, zonal_offsets in zip(
+            pygeoprocessing.iterblocks(
+                (score_raster_path, 1), offset_only=True),
+            pygeoprocessing.iterblocks(
+                (zonal_raster_path, 1), offset_only=True)):
 
-            if count_all_regions:
-                aoi_pixel_sum += stats['sum']
-                aoi_pixel_count += stats['count']
+        score_block = score_band.ReadAsArray(**score_offsets)
+        zonal_block = zonal_band.ReadAsArray(**zonal_offsets)
 
-    # Add the entire region score mean to the dictionary
-    if count_all_regions and aoi_pixel_count > 0:
-        mean_stats_dict[_TOTAL_REGION_NAME] = aoi_pixel_sum/aoi_pixel_count
-    elif count_all_regions:
-        mean_stats_dict[_TOTAL_REGION_NAME] = 0
+        valid_mask = (score_block != score_nodata and zonal_block == 1)
+        valid_score_block = score_block[valid_mask]
 
-    pickle.dump(mean_stats_dict, open(target_pickle_path, 'wb'))
+        stats_dict['COUNT'] += valid_score_block.size
+        stats_dict['SUM'] += numpy.sum(valid_score_block)
+        stats_dict['MIN'] = min(
+            stats_dict['MIN'], numpy.min(valid_score_block))
+        stats_dict['MAX'] = max(
+            stats_dict['MAX'], numpy.max(valid_score_block))
+
+    if stats_dict['COUNT'] > 0:
+        stats_dict['MEAN'] = stats_dict['SUM'] / stats_dict['COUNT']
+
+    pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
 
 
 def _get_zonal_stats_df(
-        overlap_df, aoi_vector_path, max_rating, task_graph):
+        overlap_df, zonal_rasters_pickle_path, max_rating, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -807,8 +818,9 @@ def _get_zonal_stats_df(
         overlap_df (dataframe): a multi-index dataframe with exposure and
             consequence raster paths, as well as stats columns for writing
             zonal statistics dictionary on.
-        aoi_vector_path (str): a path to a vector containing one or more
-            features to calculate statistics over.
+        zonal_rasters_pickle_path (str): a path to the pickle file that
+            contains a dictionary of region names to their corresponding raster
+            paths with 1s representing their extent.
         max_rating (float): the maximum score defined by user. It's used for
             reclassifying the average E and C scores into 0 to 3.
         task_graph (Taskgraph object): an object for building task graphs and
@@ -820,174 +832,231 @@ def _get_zonal_stats_df(
             there's no overlapped pixel for the habitat-stressor pair.
 
     """
-    # Get fid and the name of each feature in the AOI vector
-    aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
-    aoi_layer = aoi_vector.GetLayer()
-    fid_name_dict = {}
-    for aoi_feature in aoi_layer:
-        fid = aoi_feature.GetFID()
-        aoi_layer_defn = aoi_layer.GetLayerDefn()
+    # # Get fid and the name of each feature in the AOI vector
+    # aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
+    # aoi_layer = aoi_vector.GetLayer()
+    # fid_name_dict = {}
+    # for aoi_feature in aoi_layer:
+    #     fid = aoi_feature.GetFID()
+    #     aoi_layer_defn = aoi_layer.GetLayerDefn()
 
-        # If AOI has the subregion field, use that field to get subregion names
-        subregion_field_idx = aoi_layer_defn.GetFieldIndex(
-            _SUBREGION_FIELD_NAME)
-        if subregion_field_idx != -1:
-            field_name = aoi_feature.GetField(subregion_field_idx)
-            if field_name:
-                fid_name_dict[fid] = field_name
-            else:
-                # Field name could be None sometimes
-                LOGGER.warning(
-                    'The subregion ``%s`` field of fid ``%s`` in AOI vector is '
-                    'missing , replaced with ``%s``' %
-                    (_SUBREGION_FIELD_NAME, fid, 'FID ' + str(fid)))
-                fid_name_dict[fid] = 'FID ' + str(fid)
+    #     # If AOI has the subregion field, use that field to get subregion names
+    #     subregion_field_idx = aoi_layer_defn.GetFieldIndex(
+    #         _SUBREGION_FIELD_NAME)
+    #     if subregion_field_idx != -1:
+    #         field_name = aoi_feature.GetField(subregion_field_idx)
+    #         if field_name:
+    #             fid_name_dict[fid] = field_name
+    #         else:
+    #             # Field name could be None sometimes
+    #             LOGGER.warning(
+    #                 'The subregion ``%s`` field of fid ``%s`` in AOI vector is '
+    #                 'missing , replaced with ``%s``' %
+    #                 (_SUBREGION_FIELD_NAME, fid, 'FID ' + str(fid)))
+    #             fid_name_dict[fid] = 'FID ' + str(fid)
 
-        # If AOI doesn't have subregion field, use total region key to
-        # represent the area of interest
-        else:
-            fid_name_dict[fid] = _TOTAL_REGION_NAME
-    aoi_layer = None
-    aoi_vector = None
+    #     # If AOI doesn't have subregion field, use total region key to
+    #     # represent the area of interest
+    #     else:
+    #         fid_name_dict[fid] = _TOTAL_REGION_NAME
+    # aoi_layer = None
+    # aoi_vector = None
+
+    zonal_rasters = pickle.load(open(zonal_rasters_pickle_path, 'rb'))
 
     # Compute zonal criteria scores on each habitat-stressor pair within AOI
     for hab_str_idx, row in overlap_df.iterrows():
         for criteria_type in ['E', 'C']:
             criteria_raster_path = row[criteria_type + '_RASTER_PATH']
-            target_pickle_path = row[criteria_type + '_PICKLE_STATS_PATH']
+            target_pickle_stats_path = row[criteria_type + '_PICKLE_STATS_PATH']
 
             # Get habitat-stressor name without extension
             habitat_stressor = '_'.join(hab_str_idx)
 
-            # Calculate and pickle zonal stats to files
-            LOGGER.info('Calculating %s zonal stats of %s' %
-                        (criteria_type, habitat_stressor))
-            task_graph.add_task(
-                func=_calc_and_pickle_zonal_stats,
-                args=(criteria_raster_path, aoi_vector_path, fid_name_dict,
-                      target_pickle_path),
-                target_path_list=[target_pickle_path],
-                task_name='_get_and_pickle_%s_zonal_stats' % habitat_stressor)
+            for region_name, zonal_raster_path in zonal_rasters.iteritems():
+                # Calculate and pickle zonal stats to files
+                LOGGER.info('Calculating %s zonal stats of %s on %s.' %
+                            (criteria_type, habitat_stressor, region_name))
+
+                task_graph.add_task(
+                    func=_calc_and_pickle_zonal_stats,
+                    args=(criteria_raster_path, zonal_raster_path,
+                          target_pickle_stats_path),
+                    target_path_list=[target_pickle_stats_path],
+                    task_name='calc_%s_stats_on_%s' % (
+                        habitat_stressor, region_name))
 
     # Join first to get all the result statistics
     task_graph.join()
 
+    # Create a stats dataframe with just habitat and stressor index from
+    # overlap dataframe
+    stats_df = pandas.DataFrame(
+        index=overlap_df.index, columns=['MEAN', 'SUM', 'COUNT', 'MIN', 'MAX'])
+
     # Load zonal stats from a pickled file and write it to the dataframe
-    for criteria_type in ['E', 'C']:
-        overlap_df[criteria_type + '_MEAN'] = overlap_df.apply(
-            lambda row: pickle.load(
-                open(row[criteria_type + '_PICKLE_STATS_PATH'], 'rb')), axis=1)
-
-    # Extract criteria mean columns to new dataframe stats_df as a copy
-    stats_df = overlap_df.filter(['E_MEAN', 'C_MEAN'], axis=1)
-    # Get a list of subregion names
-    subregion_names = fid_name_dict.values()
-    # Add a total region key to the subregion name list
-    if _TOTAL_REGION_NAME not in subregion_names:
-        subregion_names.append(_TOTAL_REGION_NAME)
-
-    # Add a ``SUBREGION`` column to the dataframe and update it with the
-    # corresponding E and C scores in each subregion
-    subregion_df_list = []
-    for subregion in subregion_names:
-        # Make a copy of the stats dataframe
-        subregion_df = stats_df.copy()
-        # Add the subregion name to the column
-        subregion_df['SUBREGION'] = subregion
-
-        # Reclassify E and C scores to 0 to 3 and update them to the dataframe
+    for hab_str_idx, row in overlap_df.iterrows():
         for criteria_type in ['E', 'C']:
-            subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
-                lambda row: row[criteria_type + '_MEAN'][subregion]/(
-                    max_rating/3.), axis=1)
+            stats_dict = pickle.load(
+                open(row[criteria_type + '_PICKLE_STATS_PATH'], 'rb'))
+            for stats_type in stats_dict:
+                stats_df.loc[hab_str_idx, stats_type] = stats_dict[stats_type]
 
-        subregion_df_list.append(subregion_df)
+    # # Get a list of subregion names
+    # subregion_names = fid_name_dict.values()
+    # # Add a total region key to the subregion name list
+    # if _TOTAL_REGION_NAME not in subregion_names:
+    #     subregion_names.append(_TOTAL_REGION_NAME)
 
-    # Merge all the subregion dataframes
-    final_stats_df = pandas.concat(subregion_df_list)
+    # # Add a ``SUBREGION`` column to the dataframe and update it with the
+    # # corresponding E and C scores in each subregion
+    # subregion_df_list = []
+    # for subregion in subregion_names:
+    #     # Make a copy of the stats dataframe
+    #     subregion_df = stats_df.copy()
+    #     # Add the subregion name to the column
+    #     subregion_df['SUBREGION'] = subregion
 
-    # Sort habitat and stressor by their names in ascending order
-    final_stats_df.sort_values(
-        [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
+    #     # Reclassify E and C scores to 0 to 3 and update them to the dataframe
+    #     for criteria_type in ['E', 'C']:
+    #         subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
+    #             lambda row: row[criteria_type + '_MEAN'][subregion]/(
+    #                 max_rating/3.), axis=1)
 
-    return final_stats_df
+    #     subregion_df_list.append(subregion_df)
+
+    # # Merge all the subregion dataframes
+    # final_stats_df = pandas.concat(subregion_df_list)
+
+    # # Sort habitat and stressor by their names in ascending order
+    # final_stats_df.sort_values(
+    #     [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
+
+    return stats_df
 
 
-def _create_raster_from_geometry(
-        geometry, target_raster_path, target_sr_wkt, target_pixel_size,
-        target_pixel_type, target_nodata,
-        gtiff_creation_options=_DEFAULT_GTIFF_CREATION_OPTIONS):
-    """Create a blank raster from an OGR geometry in given projection.
+def _create_rasters_from_geometries(
+        geom_pickle_path, working_dir, target_pickle_path,
+        target_pixel_size):
+    """Create a blank integer raster from a list of geometries.
+
+    Pixel value of 1 on the target rasters indicates the existence of the
+    geometry collection, and everywhere else is nodata.
 
     Parameters:
-        geometry (ogr.Geometry object): an OGR geometry objects used for
-            retrieve bounding box to create a blank raster.
-        vector (ogr.DataSource object):
-        target_raster_path (string): path to location of generated geotiff;
+        geom_pickle_path (str): a path to a tuple of pickled geom_sets_by_field
+            and target spatial reference. geom_sets_by_field is a list of
+            shapely geometry objects in Well Known Binary (WKB) format.
+        working_dir (str): a path indicating where raster files should be
+            created.
+        target_pickle_path (str): path to location of generated geotiff;
             the upper left hand corner of this raster will be aligned with the
             bounding box the extent will be exactly equal or contained the
             bounding box depending on whether the pixel size divides evenly
             into the bounding box; if not coordinates will be rounded up to
             contain the original extent.
-        target_sr_wkt (str): the desired projection of all target rasters in
-            Well Known Text format.
         target_pixel_size (list/tuple): the x/y pixel size as a sequence,
             ex: [30.0, -30.0].
-        target_pixel_type (int): GDAL GDT pixel type of target raster.
-        target_nodata (numeric): target nodata value. Can be None if no nodata
-            value is needed.
-        gtiff_creation_options (sequence): this is an argument list that will
-            be passed to the GTiff driver. Useful for blocksizes, compression,
-            and more.
 
     Returns:
         None
 
     """
-    bounding_box = geometry.GetEnvelope()
+    # Get the geometry collections and desired projection for target rasters
+    geom_sets_by_field, target_spat_ref = pickle.load(
+        open(geom_pickle_path, 'rb'))
+    raster_paths_by_field = {}
 
-    # Round up on the rows and cols so that the target raster is larger than
-    # or equal to the bounding box
-    n_cols = int(numpy.ceil(
-        abs((bounding_box[1] - bounding_box[0]) / target_pixel_size[0])))
-    n_rows = int(numpy.ceil(
-        abs((bounding_box[3] - bounding_box[2]) / target_pixel_size[1])))
+    for field_value, shapely_geoms_wkb in geom_sets_by_field.iteritems():
+        # Create file basename based on field value
+        file_basename = 'rasterized_'
+        if not isinstance(field_value, basestring):
+            field_value = str(field_value)
 
-    driver = gdal.GetDriverByName('GTiff')
-    n_bands = 1
-    raster = driver.Create(
-        target_raster_path, n_cols, n_rows, n_bands, target_pixel_type,
-        options=gtiff_creation_options)
+        field_value = field_value.encode('utf-8')
+        file_basename += field_value
+        target_raster_path = os.path.join(working_dir, file_basename + '.tif')
 
-    # Initialize everything to nodata
-    raster.GetRasterBand(1).SetNoDataValue(target_nodata)
+        # Add the field value and file path pair to dictionary
+        raster_paths_by_field[field_value] = target_raster_path
 
-    # Set the transform based on the upper left corner and given pixel
-    # dimensions
-    if target_pixel_size[0] < 0:
-        x_source = bounding_box[1]
-    else:
-        x_source = bounding_box[0]
-    if target_pixel_size[1] < 0:
-        y_source = bounding_box[3]
-    else:
-        y_source = bounding_box[2]
-    raster_transform = [
-        x_source, target_pixel_size[0], 0.0,
-        y_source, 0.0, target_pixel_size[1]]
-    raster.SetGeoTransform(raster_transform)
+        # Create raster from bounding box of the merged geometry
+        LOGGER.info('Rasterizing geometries of field value %s.' % field_value)
 
-    # Set target projection
-    raster.SetProjection(target_sr_wkt)
-    raster = None
+        # Get the union of the geometries in the list
+        union_geom = shapely.ops.unary_union(shapely_geoms_wkb)
+        geom = ogr.CreateGeometryFromWkb(union_geom.wkb)
+        bounding_box = geom.GetEnvelope()
+
+        # Round up on the rows and cols so that the target raster is larger
+        # than or equal to the bounding box
+        n_cols = int(numpy.ceil(
+            abs((bounding_box[1] - bounding_box[0]) / target_pixel_size[0])))
+        n_rows = int(numpy.ceil(
+            abs((bounding_box[3] - bounding_box[2]) / target_pixel_size[1])))
+
+        raster_driver = gdal.GetDriverByName('GTiff')
+        n_bands = 1
+        target_raster = raster_driver.Create(
+            target_raster_path, n_cols, n_rows, n_bands, _TARGET_PIXEL_INT,
+            options=_DEFAULT_GTIFF_CREATION_OPTIONS)
+
+        # Initialize everything to nodata
+        target_raster.GetRasterBand(1).SetNoDataValue(_TARGET_NODATA_INT)
+
+        # Set the transform based on the upper left corner and given pixel
+        # dimensions
+        if target_pixel_size[0] < 0:
+            x_source = bounding_box[1]
+        else:
+            x_source = bounding_box[0]
+        if target_pixel_size[1] < 0:
+            y_source = bounding_box[3]
+        else:
+            y_source = bounding_box[2]
+        raster_transform = [
+            x_source, target_pixel_size[0], 0.0,
+            y_source, 0.0, target_pixel_size[1]]
+        target_raster.SetGeoTransform(raster_transform)
+
+        # Set target projection
+        target_raster.SetProjection(target_spat_ref.ExportToWkt())
+
+        # Make a temporary vector so we can create layer and add the geometry
+        # to it
+        vector_driver = gdal.GetDriverByName('MEMORY')
+        temp_vector = vector_driver.Create('temp', 0, 0, 0, gdal.GDT_Unknown)
+        temp_layer = temp_vector.CreateLayer(
+            'temp', target_spat_ref, ogr.wkbPolygon)
+        layer_defn = temp_layer.GetLayerDefn()
+
+        # Add geometries to the layer
+        temp_layer.StartTransaction()
+        temp_feat = temp_layer.GetNextFeature()
+        temp_feat = ogr.Feature(layer_defn)
+        temp_feat.SetGeometry(geom)
+        temp_layer.CreateFeature(temp_feat)
+        temp_layer.CommitTransaction()
+
+        # Burn the geometry onto the raster with values of 1
+        gdal.RasterizeLayer(target_raster, [1], temp_layer, burn_values=[1])
+        target_raster.FlushCache()
+        target_raster = None
+
+        # Delete the layer we just added to the vector
+        temp_layer = None
+        temp_vector.DeleteLayer(0)
+        temp_vector = None
+
+    pickle.dump(raster_paths_by_field, open(target_pickle_path, 'wb'))
 
 
 def _rasterize_vector_features(
         base_vector_path, working_dir, target_pickle_path, target_pixel_size,
-        field_name=None):
+        task_graph, dependent_task_list, field_name):
     """Rasterize geometries from a vector into a raster.
 
-    If field_name is provided, merge and rasterize geometries with same field
+    If field_name is not None, merge and rasterize geometries with same field
     value on that field into a raster.
 
     Parameters:
@@ -996,19 +1065,91 @@ def _rasterize_vector_features(
         working_dir (str): a path indicating where raster files should be
             created.
         target_pickle_path (str): a path to the pickle file that contains a
-            dictionary of field names to their corresponding raster path
-            rasterized from features that have the same field name.
+            dictionary of field names to their corresponding output raster
+            paths rasterized from base vector.
         target_pixel_size (list/tuple): the x/y pixel size as a sequence in the
             projection of base vector. ex: [30.0, -30.0], unit: meters.
-        field_name (str): if exists, same values on this field will be merged
-            and rasterized into an individual raster. Otherwise, the entire
-            vector will be rasterized into a single raster.
+        task_graph (Taskgraph object): an object for building task graphs and
+            parallelizing independent tasks.
+        dependent_task_list (list): a list of tasks that the upcoming tasks
+            will be dependent upon.
+        field_name (str): same values on this field will be merged and
+            rasterized into an individual raster. If None, the entire vector
+            will be rasterized into a single raster.
 
     Returns:
         None
 
     """
-    LOGGER.info('Rasterizing vector features.')
+    # Rasterize the entire vector onto a raster with values of 1
+    if field_name is None:
+        # Fill the raster with 1s on where a vector geometry touches any pixel
+        # on the raster
+        target_raster_path = os.path.join(
+            working_dir, 'rasterized_simplified_aoi.tif')
+        create_raster_task = task_graph.add_task(
+            func=pygeoprocessing.create_raster_from_vector_extents,
+            args=(base_vector_path, target_raster_path, target_pixel_size,
+                  _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+            target_path_list=[target_raster_path],
+            task_name='rasterize_single_vector',
+            dependent_task_list=dependent_task_list)
+        dependent_task_list.append(create_raster_task)
+
+        # Fill the raster with 1s on where a vector geometry exists
+        rasterize_kwargs = {'burn_values': [1],
+                            'option_list': ["ALL_TOUCHED=TRUE"]}
+        task_graph.add_task(
+            func=pygeoprocessing.rasterize,
+            args=(base_vector_path, target_raster_path),
+            kwargs=rasterize_kwargs,
+            target_path_list=[target_raster_path],
+            task_name='rasterize_single_vector',
+            dependent_task_list=dependent_task_list)
+
+        pickle.dump(
+            {_TOTAL_REGION_NAME: target_raster_path},
+            open(target_pickle_path, 'wb'))
+        return
+
+    geom_pickle_path = os.path.join(working_dir, 'aoi_geometries.pickle')
+
+    get_vector_geoms_task = task_graph.add_task(
+        func=_get_vector_geometries_by_field,
+        args=(base_vector_path, field_name, geom_pickle_path),
+        target_path_list=[geom_pickle_path],
+        task_name='get_vector_geoms_by_field_%s' % field_name,
+        dependent_task_list=dependent_task_list)
+    dependent_task_list.append(get_vector_geoms_task)
+
+    task_graph.add_task(
+        func=_create_rasters_from_geometries,
+        args=(geom_pickle_path, working_dir, target_pickle_path,
+              target_pixel_size),
+        target_path_list=[target_pickle_path],
+        task_name='create_rasters_from_geometries',
+        dependent_task_list=dependent_task_list)
+
+
+def _get_vector_geometries_by_field(
+        base_vector_path, field_name, target_geom_pickle_path):
+    """Get a dictionary of field values with list of geometries from a vector.
+
+    Parameters:
+        base_vector_path (str): a path to the vector the get geometry
+            collections based on the given field name.
+        field_name (str): the field name used to aggregate the geometries
+            of features in the base vector.
+        target_geom_pickle_path (str): a target path to a tuple of pickled
+            geom_sets_by_field and target spatial reference.
+            geom_sets_by_field is a list of shapely geometry objects in Well
+            Known Binary (WKB) format.
+
+    Returns:
+        None
+
+    """
+    LOGGER.info('Collecting geometries on field %s.' % field_name)
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     if base_vector is None:
         raise RuntimeError(
@@ -1016,89 +1157,25 @@ def _rasterize_vector_features(
     base_layer = base_vector.GetLayer()
     spat_ref = base_layer.GetSpatialRef()
 
-    # Rasterize the entire vector onto a raster with values of 1
-    if field_name is None or not _has_field_name(base_vector_path, field_name):
-        # Fill the raster with 1s on where a vector geometry touches any pixel
-        # on the raster
-        target_raster_path = os.path.join(
-            working_dir, 'rasterized_single_vector.tif')
-        pygeoprocessing.create_raster_from_vector_extents(
-            base_vector_path, target_raster_path, target_pixel_size,
-            _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
-        pygeoprocessing.rasterize(
-            base_vector_path, target_raster_path, burn_values=[1],
-            option_list=["ALL_TOUCHED=TRUE"])
-        return target_raster_path
-
-    LOGGER.info('Collecting geometries on field %s.' % field_name)
-    shapely_geoms_by_field = {}
+    geom_sets_by_field = {}
     for feat in base_layer:
         field_value = feat.GetField(field_name)
         geom = feat.GetGeometryRef()
         geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
         # Append buffered geometry to prevent invalid geometries
-        if field_value in shapely_geoms_by_field:
-            shapely_geoms_by_field[field_value].append(geom_wkb.buffer(0))
-        else:
-            shapely_geoms_by_field[field_value] = [geom_wkb.buffer(0)]
-
-    LOGGER.info('Creating rasters from geometries on field %s.' % field_name)
-    raster_paths_by_field = {}
-    # Make a vector so we could create layer for each geometry to be added to
-    driver = gdal.GetDriverByName('MEMORY')
-    merged_vector = driver.Create('merged_vector', 0, 0, 0, gdal.GDT_Unknown)
-
-    for field_value, shapely_geoms in shapely_geoms_by_field.iteritems():
-        file_basename = 'rasterized_'
         if field_value is None:
             raise ValueError('Field value in field %s in vector %s is None.' %
                              (field_name, base_vector_path))
-        elif ~isinstance(field_value, basestring):
-            field_value = str(field_value)
+        elif field_value in geom_sets_by_field:
+            geom_sets_by_field[field_value].append(geom_wkb.buffer(0))
+        else:
+            geom_sets_by_field[field_value] = [geom_wkb.buffer(0)]
 
-        field_value = field_value.encode('utf-8')
-        file_basename += field_value
+    base_vector = None
+    base_layer = None
 
-        target_raster_path = os.path.join(working_dir, file_basename + '.tif')
-
-        # Get the union of the geometries in the list
-        merged_shapely_geom = shapely.ops.unary_union(shapely_geoms)
-        merged_geom = ogr.CreateGeometryFromWkb(merged_shapely_geom.wkb)
-
-        # Create raster from bounding box of the merged geometry
-        LOGGER.info('Rasterizing geometries of field value %s.' % field_value)
-        _create_raster_from_geometry(
-            merged_geom, merged_vector, target_raster_path,
-            spat_ref.ExportToWkt(), target_pixel_size, _TARGET_PIXEL_INT,
-            _TARGET_NODATA_INT)
-
-        # Burn the merged geometry onto the raster with values of 1
-        merged_layer = merged_vector.CreateLayer(
-            'merged_vector', spat_ref, ogr.wkbPolygon)
-        merged_layer_defn = merged_layer.GetLayerDefn()
-
-        # Add geometries to merged layer
-        merged_layer.StartTransaction()
-        feat = merged_layer.GetNextFeature()
-        merged_feat = ogr.Feature(merged_layer_defn)
-        merged_feat.SetGeometry(merged_geom)
-        merged_layer.CreateFeature(merged_feat)
-        merged_layer.CommitTransaction()
-
-        target_raster = gdal.OpenEx(
-            target_raster_path, gdal.GA_Update | gdal.OF_RASTER)
-
-        gdal.RasterizeLayer(target_raster, [1], merged_layer, burn_values=[1])
-        target_raster.FlushCache()
-
-        # Delete the layer we just added to the vector
-        merged_layer = None
-        merged_vector.DeleteLayer(0)
-        target_raster = None
-
-        raster_paths_by_field[field_value] = target_raster_path
-
-    return raster_paths_by_field
+    pickle.dump(
+        (geom_sets_by_field, spat_ref), open(target_geom_pickle_path, 'wb'))
 
 
 def _merge_geometry(base_vector_path, target_merged_vector_path):
@@ -1226,7 +1303,7 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
 
     # Add up all the risks of each habitat
     for hab_risk_arr in hab_risk_arrays:
-        valid_risk_mask = ecosystem_mask & (hab_risk_arr != _TARGET_NODATA_FLT)
+        valid_risk_mask = (hab_risk_arr != _TARGET_NODATA_FLT)
         ecosystem_risk_arr[valid_risk_mask] += hab_risk_arr[valid_risk_mask]
 
     # Divide risk score by the number of habitats in each pixel. This way we
@@ -2611,10 +2688,10 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # Create column headers to keep track of data needed to calculate
     # exposure and consequence scores
     column_headers = ['_NUM', '_DENOM', '_SPATIAL', '_RASTER_PATH',
-                      '_NUM_RASTER_PATH', '_PICKLE_STATS_PATH', '_MEAN']
+                      '_NUM_RASTER_PATH', '_PICKLE_STATS_PATH']
     overlap_column_headers = map(
         str.__add__,
-        ['E']*7 + ['C']*7, column_headers*2)
+        ['E']*6 + ['C']*6, column_headers*2)
 
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
@@ -2626,8 +2703,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # Create a multi-index dataframe and fill in default cell values
     overlap_df = pandas.DataFrame(
         # Data values on each row corresponds to each column header
-        data=[[0, 0, {}, None, None, None, {},
-               0, 0, {}, None, None, None, {}]
+        data=[[0, 0, {}, None, None, None,
+               0, 0, {}, None, None, None]
               for _ in xrange(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
