@@ -150,7 +150,7 @@ def execute(args):
     max_rating = float(args['max_rating'])
     recovery_df = _get_recovery_dataframe(
         criteria_df, habitat_names, resilience_attributes, max_rating,
-        file_preprocessing_dir, output_dir, file_suffix)
+        file_preprocessing_dir, intermediate_dir, file_suffix)
     overlap_df = _get_overlap_dataframe(
         criteria_df, habitat_names, stressor_attributes, max_rating,
         file_preprocessing_dir, intermediate_dir, file_suffix)
@@ -488,8 +488,7 @@ def execute(args):
 
         # Get a list of habitat path and individual risk paths on that habitat
         # for the final risk calculation
-        total_risk_path_band_list = [
-            (habitat_raster_path, 1), ((max_risk_score, 'raw'))]
+        total_risk_path_band_list = [(habitat_raster_path, 1)]
         pair_risk_path_list = overlap_df.loc[
             habitat, 'PAIR_RISK_RASTER_PATH'].tolist()
         total_risk_path_band_list = total_risk_path_band_list + [
@@ -508,9 +507,9 @@ def execute(args):
         # risk score by 3, and return the ceiling
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(total_habitat_risk_path, 1)], _reclassify_risk_op,
-                  reclass_habitat_risk_path, _TARGET_PIXEL_INT,
-                  _TARGET_NODATA_INT),
+            args=([(total_habitat_risk_path, 1), ((max_risk_score, 'raw'))],
+                  _reclassify_risk_op, reclass_habitat_risk_path,
+                  _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
             target_path_list=[reclass_habitat_risk_path],
             task_name='reclassify_%s_risk' % habitat,
             dependent_task_list=[calc_risk_task])
@@ -522,9 +521,9 @@ def execute(args):
 
     # Create input list for calculating average & reclassified ecosystem risks
     ecosystem_risk_raster_path = os.path.join(
-        intermediate_dir, 'AVG_RISK_ecosystem.tif')
+        intermediate_dir, 'TOT_RISK_ecosystem.tif')
     reclass_ecosystem_risk_raster_path = os.path.join(
-        output_dir, 'risk_ecosystem.tif')
+        output_dir, 'RECLASS_RISK_ecosystem.tif')
 
     # Append individual habitat risk rasters to the input list
     hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
@@ -533,30 +532,30 @@ def execute(args):
     for hab_risk_raster_path in hab_risk_raster_path_list:
         hab_risk_path_band_list.append((hab_risk_raster_path, 1))
 
-    # # Calculate average ecosystem risk
-    # task_graph.add_task(
-    #     func=pygeoprocessing.raster_calculator,
-    #     args=(hab_risk_path_band_list, _ecosystem_risk_op,
-    #           ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
-    #           _TARGET_NODATA_FLT),
-    #     target_path_list=[ecosystem_risk_raster_path],
-    #     task_name='calculate_average_ecosystem_risk')
+    # Calculate average ecosystem risk
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(hab_risk_path_band_list, _ecosystem_risk_op,
+              ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
+              _TARGET_NODATA_FLT),
+        target_path_list=[ecosystem_risk_raster_path],
+        task_name='calculate_average_ecosystem_risk')
 
-    # # Calculate reclassified ecosystem risk
-    # task_graph.add_task(
-    #     func=pygeoprocessing.raster_calculator,
-    #     args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
-    #           _reclassify_ecosystem_risk_op,
-    #           reclass_ecosystem_risk_raster_path,
-    #           _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
-    #     target_path_list=[reclass_ecosystem_risk_raster_path],
-    #     task_name='reclassify_ecosystem_risk')
+    # Calculate reclassified ecosystem risk
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
+              _reclassify_ecosystem_risk_op,
+              reclass_ecosystem_risk_raster_path,
+              _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+        target_path_list=[reclass_ecosystem_risk_raster_path],
+        task_name='reclassify_ecosystem_risk')
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
     stats_df = _get_zonal_stats_df(
-        overlap_df, rasterized_aoi_pickle_path, max_rating, task_graph)
+        overlap_df, info_df, rasterized_aoi_pickle_path, max_rating, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -776,39 +775,38 @@ def _calc_and_pickle_zonal_stats(
     zonal_raster = gdal.OpenEx(zonal_raster_path, gdal.OF_RASTER)
     zonal_band = zonal_raster.GetRasterBand(1)
 
-    stats_dict['COUNT'] = 0.
-    stats_dict['SUM'] = 0.
+    pixel_count = 0.
+    pixel_sum = 0.
     stats_dict['MIN'] = float('inf')
     stats_dict['MAX'] = float('-inf')
     stats_dict['MEAN'] = 0
 
-    for score_offsets, zonal_offsets in zip(
-            pygeoprocessing.iterblocks(
-                (score_raster_path, 1), offset_only=True),
-            pygeoprocessing.iterblocks(
-                (zonal_raster_path, 1), offset_only=True)):
+    for score_offsets in pygeoprocessing.iterblocks(
+            (score_raster_path, 1), offset_only=True):
 
         score_block = score_band.ReadAsArray(**score_offsets)
-        zonal_block = zonal_band.ReadAsArray(**zonal_offsets)
+        zonal_block = zonal_band.ReadAsArray(**score_offsets)
 
-        valid_mask = (score_block != score_nodata and zonal_block == 1)
+        valid_mask = (score_block != score_nodata) & (zonal_block == 1)
         valid_score_block = score_block[valid_mask]
+        if valid_score_block.size == 0:
+            continue
 
-        stats_dict['COUNT'] += valid_score_block.size
-        stats_dict['SUM'] += numpy.sum(valid_score_block)
+        pixel_count += valid_score_block.size
+        pixel_sum += numpy.sum(valid_score_block)
         stats_dict['MIN'] = min(
-            stats_dict['MIN'], numpy.min(valid_score_block))
+            stats_dict['MIN'], numpy.amin(valid_score_block))
         stats_dict['MAX'] = max(
-            stats_dict['MAX'], numpy.max(valid_score_block))
+            stats_dict['MAX'], numpy.amax(valid_score_block))
 
-    if stats_dict['COUNT'] > 0:
-        stats_dict['MEAN'] = stats_dict['SUM'] / stats_dict['COUNT']
+    if pixel_count > 0:
+        stats_dict['MEAN'] = pixel_sum / pixel_count
 
     pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
 
 
 def _get_zonal_stats_df(
-        overlap_df, zonal_rasters_pickle_path, max_rating, task_graph):
+        overlap_df, info_df, zonal_rasters_pickle_path, max_rating, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -832,39 +830,9 @@ def _get_zonal_stats_df(
             there's no overlapped pixel for the habitat-stressor pair.
 
     """
-    # # Get fid and the name of each feature in the AOI vector
-    # aoi_vector = gdal.OpenEx(aoi_vector_path, gdal.OF_VECTOR)
-    # aoi_layer = aoi_vector.GetLayer()
-    # fid_name_dict = {}
-    # for aoi_feature in aoi_layer:
-    #     fid = aoi_feature.GetFID()
-    #     aoi_layer_defn = aoi_layer.GetLayerDefn()
-
-    #     # If AOI has the subregion field, use that field to get subregion names
-    #     subregion_field_idx = aoi_layer_defn.GetFieldIndex(
-    #         _SUBREGION_FIELD_NAME)
-    #     if subregion_field_idx != -1:
-    #         field_name = aoi_feature.GetField(subregion_field_idx)
-    #         if field_name:
-    #             fid_name_dict[fid] = field_name
-    #         else:
-    #             # Field name could be None sometimes
-    #             LOGGER.warning(
-    #                 'The subregion ``%s`` field of fid ``%s`` in AOI vector is '
-    #                 'missing , replaced with ``%s``' %
-    #                 (_SUBREGION_FIELD_NAME, fid, 'FID ' + str(fid)))
-    #             fid_name_dict[fid] = 'FID ' + str(fid)
-
-    #     # If AOI doesn't have subregion field, use total region key to
-    #     # represent the area of interest
-    #     else:
-    #         fid_name_dict[fid] = _TOTAL_REGION_NAME
-    # aoi_layer = None
-    # aoi_vector = None
-
     zonal_rasters = pickle.load(open(zonal_rasters_pickle_path, 'rb'))
 
-    # Compute zonal criteria scores on each habitat-stressor pair within AOI
+    # Compute zonal E and C stats on each habitat-stressor pair for each region
     for hab_str_idx, row in overlap_df.iterrows():
         for criteria_type in ['E', 'C']:
             criteria_raster_path = row[criteria_type + '_RASTER_PATH']
@@ -886,13 +854,21 @@ def _get_zonal_stats_df(
                     task_name='calc_%s_stats_on_%s' % (
                         habitat_stressor, region_name))
 
+    # Compute zonal R stats on each habitat-stressor pair for each region
+    hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
+        'TOTAL_RISK_RASTER_PATH'].tolist()
+
     # Join first to get all the result statistics
     task_graph.join()
 
     # Create a stats dataframe with just habitat and stressor index from
     # overlap dataframe
+    columns = map(
+        str.__add__,
+        ['E_']*3 + ['C_']*3, ['MEAN', 'MIN', 'MAX']*2)
+
     stats_df = pandas.DataFrame(
-        index=overlap_df.index, columns=['MEAN', 'SUM', 'COUNT', 'MIN', 'MAX'])
+        index=overlap_df.index, columns=columns)
 
     # Load zonal stats from a pickled file and write it to the dataframe
     for hab_str_idx, row in overlap_df.iterrows():
@@ -900,37 +876,8 @@ def _get_zonal_stats_df(
             stats_dict = pickle.load(
                 open(row[criteria_type + '_PICKLE_STATS_PATH'], 'rb'))
             for stats_type in stats_dict:
-                stats_df.loc[hab_str_idx, stats_type] = stats_dict[stats_type]
-
-    # # Get a list of subregion names
-    # subregion_names = fid_name_dict.values()
-    # # Add a total region key to the subregion name list
-    # if _TOTAL_REGION_NAME not in subregion_names:
-    #     subregion_names.append(_TOTAL_REGION_NAME)
-
-    # # Add a ``SUBREGION`` column to the dataframe and update it with the
-    # # corresponding E and C scores in each subregion
-    # subregion_df_list = []
-    # for subregion in subregion_names:
-    #     # Make a copy of the stats dataframe
-    #     subregion_df = stats_df.copy()
-    #     # Add the subregion name to the column
-    #     subregion_df['SUBREGION'] = subregion
-
-    #     # Reclassify E and C scores to 0 to 3 and update them to the dataframe
-    #     for criteria_type in ['E', 'C']:
-    #         subregion_df[criteria_type + '_MEAN'] = subregion_df.apply(
-    #             lambda row: row[criteria_type + '_MEAN'][subregion]/(
-    #                 max_rating/3.), axis=1)
-
-    #     subregion_df_list.append(subregion_df)
-
-    # # Merge all the subregion dataframes
-    # final_stats_df = pandas.concat(subregion_df_list)
-
-    # # Sort habitat and stressor by their names in ascending order
-    # final_stats_df.sort_values(
-    #     [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
+                header = criteria_type + '_' + stats_type
+                stats_df.loc[hab_str_idx, header] = stats_dict[stats_type]
 
     return stats_df
 
@@ -1465,8 +1412,11 @@ def _get_max_risk_score(
     return max_risk_score
 
 
-def _reclassify_risk_op(risk_arr):
+def _reclassify_risk_op(risk_arr, max_risk_score):
     """Reclassify total risk score on each pixel into 0 to 3, discretely.
+
+    Divide total risk score by (max_risk_score/3) to get a continuous risk
+    score of 0 to 3, then use numpy.ceil to get discrete score.
 
     If 0 < risk <= 1, classify the risk score to 1.
     If 1 < risk <= 2, classify the risk score to 2.
@@ -1476,7 +1426,8 @@ def _reclassify_risk_op(risk_arr):
 
     Parameters:
         risk_arr (array): an array of cumulative risk scores from all stressors
-
+        max_risk_score (float): the maximum possible risk score used for
+            reclassifying the risk score into 0 to 3 on each pixel.
     Returns:
         reclass_arr (array): an integer array of reclassified risk scores for a
             certain habitat. The values are discrete on the array.
@@ -1488,30 +1439,26 @@ def _reclassify_risk_op(risk_arr):
 
     # Return the ceiling of the continuous risk score
     reclass_arr[valid_pixel_mask] = numpy.ceil(
-        risk_arr[valid_pixel_mask]).astype(int)
+        risk_arr[valid_pixel_mask] / (max_risk_score/3.)).astype(int)
 
     return reclass_arr
 
 
-def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
-    """Calculate and reclassify cumulative risk to a habitat from all stressors.
+def _tot_risk_op(habitat_arr, *pair_risk_arrays):
+    """Calculate the cumulative risks to a habitat from all stressors.
 
     The risk score is calculated by summing up all the risk scores on each
-    valid pixel of the habitat, then divided by the (max_risk_score/3) to get
-    a continuous risk score of 0 to 3 on output tot_risk_arr.
+    valid pixel of the habitat.
 
     Parameters:
         habitat_arr (array): an integer habitat array where 1's indicates
             habitat existence and 0's non-existence.
-        max_risk_score (float): the maximum possible risk score used for
-            reclassifying the risk score into 0 to 3 on each pixel.
         *pair_risk_arrays: a list of individual risk float arrays from each
             stressor to a certain habitat.
 
     Returns:
         tot_risk_arr (array): a cumulative risk float array calculated by
-            summing up all the individual risk arrays. The values on the array
-            range from 0 to 3 continuously.
+            summing up all the individual risk arrays.
 
     """
     # Fill 0s to the total risk array on where habitat exists
@@ -1523,11 +1470,6 @@ def _tot_risk_op(habitat_arr, max_risk_score, *pair_risk_arrays):
     for pair_risk_arr in pair_risk_arrays:
         valid_pixel_mask = (pair_risk_arr != _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
-
-    # Reclassify the scores into 0 to 3 continuously.
-    final_valid_pixel_mask = (tot_risk_arr != _TARGET_NODATA_FLT)
-    tot_risk_arr[final_valid_pixel_mask] = tot_risk_arr[
-        final_valid_pixel_mask] / (max_risk_score/3.)
 
     return tot_risk_arr
 
@@ -1735,6 +1677,7 @@ def _pair_criteria_score_op(
     # Initialize output exposure or consequence score array
     score_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+    score_arr[habitat_mask] = 0
 
     score_arr[hab_stress_buff_mask] = num_arr[hab_stress_buff_mask] / denom
 
@@ -2385,12 +2328,12 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     # Generate cumulative risk raster paths with risk suffix.
     info_df['TOTAL_RISK_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
-            row, intermediate_dir, 'TOT_RISK_', suffix_end), axis=1)
+            row, output_dir, 'TOT_RISK_', suffix_end), axis=1)
 
     # Generate reclassified risk raster paths with risk suffix.
     info_df['RECLASS_RISK_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
-            row, output_dir, 'risk_', suffix_end), axis=1)
+            row, output_dir, 'RECLASS_RISK_', suffix_end), axis=1)
 
     habitat_names = info_df[info_df.TYPE == _HABITAT_TYPE].NAME.tolist()
     stressor_names = info_df[info_df.TYPE == _STRESSOR_TYPE].NAME.tolist()
@@ -2835,8 +2778,8 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
             getting rating, dq, and weight for each attribute.
         max_rating (float): a number representing the highest value that
             is represented in criteria rating.
-        inter_dir (str): a path to the folder where numerator/denominator
-            scores for recovery potential paths will be created in.
+        inter_dir (str): a path to the folder where recovery numerator score
+            paths will be created.
         output_dir (str): a path to the folder where recovery raster paths will
             be created in.
         suffix (str): a file suffix to append to the end of filenames.
