@@ -5,12 +5,12 @@ import logging
 
 import math
 import pickle
+import tempfile
 import numpy
 from osgeo import gdal, ogr, osr
 import pandas
 import shapely.ops
 import shapely.wkb
-import tempfile
 import taskgraph
 import pygeoprocessing
 
@@ -224,20 +224,6 @@ def execute(args):
         simplified_aoi_vector_path, rasterized_aoi_pickle_path, aoi_field_name,
         file_preprocessing_dir, target_pixel_size, task_graph,
         [simplify_aoi_task])
-
-    if not subregion_field_exists:
-        merged_aoi_vector_path = os.path.join(
-            file_preprocessing_dir, 'merged_aoi.gpkg')
-        LOGGER.info('Merging the geometries from the AOI vector.')
-        task_graph.add_task(
-            func=_merge_geometry,
-            args=(simplified_aoi_vector_path, merged_aoi_vector_path),
-            target_path_list=[merged_aoi_vector_path],
-            task_name='merge_aoi_vector',
-            dependent_task_list=[simplify_aoi_task])
-
-        # Use the merged AOI vector to run analysis on
-        aoi_vector_path = merged_aoi_vector_path
 
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
@@ -539,15 +525,15 @@ def execute(args):
         target_path_list=[ecosystem_risk_raster_path],
         task_name='calculate_average_ecosystem_risk')
 
-    # # Calculate reclassified ecosystem risk
-    # task_graph.add_task(
-    #     func=pygeoprocessing.raster_calculator,
-    #     args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
-    #           _reclassify_ecosystem_risk_op,
-    #           reclass_ecosystem_risk_raster_path,
-    #           _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
-    #     target_path_list=[reclass_ecosystem_risk_raster_path],
-    #     task_name='reclassify_ecosystem_risk')
+    # Calculate reclassified ecosystem risk
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([(ecosystem_risk_raster_path, 1), (max_rating, 'raw')],
+              _reclassify_ecosystem_risk_op,
+              reclass_ecosystem_risk_raster_path,
+              _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+        target_path_list=[reclass_ecosystem_risk_raster_path],
+        task_name='reclassify_ecosystem_risk')
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
@@ -568,8 +554,8 @@ def execute(args):
         info_df.TYPE == _HABITAT_TYPE].RECLASS_RISK_RASTER_PATH.tolist()
     out_stressor_raster_paths = info_df[
         info_df.TYPE == _STRESSOR_TYPE].ALIGN_RASTER_PATH.tolist()
-    out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths \
-        + [reclass_ecosystem_risk_raster_path]
+    out_raster_paths = out_risk_raster_paths + out_stressor_raster_paths + [
+        reclass_ecosystem_risk_raster_path]
 
     # Use WGS84 to convert meter coordinates back to lat/lon, since only this
     # format would be recognized by Leaflet
@@ -585,39 +571,43 @@ def execute(args):
         (float(args['resolution']), -float(args['resolution'])),
         aoi_center_lat)
 
-    # # Unproject the rasters to WGS84, and convert the unprojected rasters to
-    # # GeoJSON files for web visualization
-    # for out_raster_path in out_raster_paths:
-    #     # Get raster basename without file extension and 'aligned_' substring
-    #     layer_name = os.path.splitext(
-    #         os.path.basename(out_raster_path))[0].replace('aligned_', '')
+    # Unproject output rasters to WGS84, and convert the unprojected rasters to
+    # GeoJSON files for web visualization
+    for out_raster_path in out_raster_paths:
+        # Get raster basename without file extension or the 'aligned_' prefix
+        prefix = 'aligned_'
+        file_basename = os.path.splitext(os.path.basename(out_raster_path))[0]
+        if file_basename.startswith(prefix):
+            file_basename = file_basename[len(prefix):]
 
-    #     # Unproject raster to WGS84. Add maximum bounding box so the polar
-    #     # regions in the output raster won't be cut off
-    #     wgs84_raster_path = os.path.join(
-    #         file_preprocessing_dir, 'wgs84_' + layer_name + '.tif')
-    #     unproject_task = task_graph.add_task(
-    #         func=pygeoprocessing.warp_raster,
-    #         args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
-    #               _RESAMPLE_METHOD),
-    #         kwargs={'target_sr_wkt': wgs84_wkt},
-    #         target_path_list=[wgs84_raster_path],
-    #         task_name='unprojecting_%s_raster' % layer_name)
+        # Unproject raster to WGS84. Add maximum bounding box so the polar
+        # regions in the output raster won't be cut off
+        wgs84_raster_path = os.path.join(
+            file_preprocessing_dir, 'wgs84_' + file_basename + '.tif')
+        unproject_task = task_graph.add_task(
+            func=pygeoprocessing.warp_raster,
+            args=(out_raster_path, wgs84_pixel_size, wgs84_raster_path,
+                  _RESAMPLE_METHOD),
+            kwargs={'target_sr_wkt': wgs84_wkt},
+            target_path_list=[wgs84_raster_path],
+            task_name='unprojecting_%s_raster' % file_basename)
 
-    #     # Make a GeoJSON from the unprojected raster
-    #     if layer_name.startswith('risk_'):
-    #         field_name = 'Risk Score'
-    #     else:
-    #         # Append stressor suffix if it's not a risk layer
-    #         layer_name = 'stressor_' + layer_name
-    #         field_name = 'Stressor'
-    #     geojson_path = os.path.join(output_dir, layer_name + '.geojson')
-    #     task_graph.add_task(
-    #         func=_raster_to_geojson,
-    #         args=(wgs84_raster_path, geojson_path, layer_name, field_name),
-    #         target_path_list=[geojson_path],
-    #         task_name='create_%s_geojson' % layer_name,
-    #         dependent_task_list=[unproject_task])
+        # Make a GeoJSON from the unprojected raster with an appropriate field
+        # name
+        if file_basename.startswith('RECLASS_RISK_'):
+            field_name = 'Risk Score'
+        else:
+            # Append 'STRESSOR_' prefix if it's not a risk layer
+            file_basename = 'STRESSOR_' + file_basename
+            field_name = 'Stressor'
+
+        geojson_path = os.path.join(output_dir, file_basename + '.geojson')
+        task_graph.add_task(
+            func=_raster_to_geojson,
+            args=(wgs84_raster_path, geojson_path, file_basename, field_name),
+            target_path_list=[geojson_path],
+            task_name='create_%s_geojson' % file_basename,
+            dependent_task_list=[unproject_task])
 
     task_graph.close()
     task_graph.join()
@@ -751,6 +741,9 @@ def _calc_and_pickle_zonal_stats(
         working_dir, max_rating=None):
     """Calculate zonal stats on a score raster where zonal raster is 1.
 
+    Clip the score raster with the bounding box of zonal raster first, so
+    we only look at blocks that intersect.
+
     Parameters:
         score_raster_path (str): a path to the E/C/risk score raster to be
             analyzed.
@@ -770,20 +763,20 @@ def _calc_and_pickle_zonal_stats(
 
     """
     # Create a stats dictionary for saving zonal statistics, including
-    # mean, min, and max
+    # mean, min, and max.
     stats_dict = {}
     stats_dict['MIN'] = float('inf')
     stats_dict['MAX'] = float('-inf')
     for stats_type in ['MEAN', '%HIGH', '%MEDIUM', '%LOW']:
         stats_dict[stats_type] = 0.
 
-    # Clip score raster to the extent of zonal raster
+    # Clip score raster to the extent of zonal raster. The file will be deleted
+    # at the end.
     with tempfile.NamedTemporaryFile(
             prefix='clipped_', suffix='.tif', delete=False,
             dir=working_dir) as clipped_raster_file:
         clipped_score_raster_path = clipped_raster_file.name
-    # clipped_score_raster_path = os.path.join(
-    #     working_dir, 'clip_' + os.path.basename(score_raster_path))
+
     zonal_raster_info = pygeoprocessing.get_raster_info(zonal_raster_path)
     target_pixel_size = zonal_raster_info['pixel_size']
     target_bounding_box = zonal_raster_info['bounding_box']
@@ -793,6 +786,8 @@ def _calc_and_pickle_zonal_stats(
         _RESAMPLE_METHOD, target_bb=target_bounding_box,
         target_sr_wkt=target_sr_wkt)
 
+    # Return a dictionary with values of None, if the two input rasters
+    # don't intersect at all.
     score_raster = gdal.OpenEx(clipped_score_raster_path, gdal.OF_RASTER)
     try:
         score_band = score_raster.GetRasterBand(1)
@@ -802,6 +797,7 @@ def _calc_and_pickle_zonal_stats(
                         (score_raster_path, zonal_raster_path))
         for stats_type in stats_dict:
             stats_dict[stats_type] = None
+        score_raster = None
         pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
         os.remove(clipped_score_raster_path)
         return
@@ -817,7 +813,7 @@ def _calc_and_pickle_zonal_stats(
         med_score_count = 0.
         low_score_count = 0.
 
-    # Iterate through each data block and calculate stats
+    # Iterate through each data block and calculate stats.
     for score_offsets in pygeoprocessing.iterblocks(
             (clipped_score_raster_path, 1), offset_only=True):
         score_block = score_band.ReadAsArray(**score_offsets)
@@ -828,6 +824,7 @@ def _calc_and_pickle_zonal_stats(
         if valid_score_block.size == 0:
             continue
 
+        # Calculate min and max values, and sum and count of valid pixels.
         pixel_count += valid_score_block.size
         pixel_sum += numpy.sum(valid_score_block)
         stats_dict['MIN'] = min(
@@ -835,6 +832,7 @@ def _calc_and_pickle_zonal_stats(
         stats_dict['MAX'] = max(
             stats_dict['MAX'], numpy.amax(valid_score_block))
 
+        # Calculate percentage of high, medium, and low rating areas.
         if max_rating:
             high_score_count += valid_score_block[
                 (valid_score_block > max_rating/3*2)].size
@@ -1011,8 +1009,7 @@ def _get_zonal_stats_df(
 
 
 def _create_rasters_from_geometries(
-        geom_pickle_path, working_dir, target_pickle_path,
-        target_pixel_size):
+        geom_pickle_path, working_dir, target_pickle_path, target_pixel_size):
     """Create a blank integer raster from a list of geometries.
 
     Pixel value of 1 on the target rasters indicates the existence of the
@@ -1045,12 +1042,11 @@ def _create_rasters_from_geometries(
 
     for field_value, shapely_geoms_wkb in geom_sets_by_field.iteritems():
         # Create file basename based on field value
-        file_basename = 'rasterized_'
         if not isinstance(field_value, basestring):
             field_value = str(field_value)
 
         field_value = field_value.encode('utf-8')
-        file_basename += field_value
+        file_basename = 'rasterized_' + field_value
         target_raster_path = os.path.join(working_dir, file_basename + '.tif')
 
         # Add the field value and file path pair to dictionary
@@ -1226,12 +1222,12 @@ def _get_vector_geometries_by_field(
     Returns:
         None
 
+    Raises:
+        ValueError if a value on field name of the base vector is None.
+
     """
     LOGGER.info('Collecting geometries on field %s.' % field_name)
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    if base_vector is None:
-        raise RuntimeError(
-            'Could not open vector at %s' % base_vector_path)
     base_layer = base_vector.GetLayer()
     spat_ref = base_layer.GetSpatialRef()
 
@@ -1240,10 +1236,12 @@ def _get_vector_geometries_by_field(
         field_value = feat.GetField(field_name)
         geom = feat.GetGeometryRef()
         geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
-        # Append buffered geometry to prevent invalid geometries
         if field_value is None:
-            raise ValueError('Field value in field %s in vector %s is None.' %
-                             (field_name, base_vector_path))
+            base_vector = None
+            base_layer = None
+            raise ValueError('Field value in field "%s" in the AOI vector is '
+                             'None.' % field_name)
+        # Append buffered geometry to prevent invalid geometries
         elif field_value in geom_sets_by_field:
             geom_sets_by_field[field_value].append(geom_wkb.buffer(0))
         else:
@@ -1255,73 +1253,6 @@ def _get_vector_geometries_by_field(
     pickle.dump(
         (geom_sets_by_field, spat_ref.ExportToWkt()),
         open(target_geom_pickle_path, 'wb'))
-
-
-def _merge_geometry(base_vector_path, target_merged_vector_path):
-    """Merge geometries from base vector into target vector.
-
-    Note: for some reason this function could take a long time when merging
-    the AOI vector.
-
-    Parameters:
-        base_vector_path (str): a path to the vector with geometries going to
-            be merged.
-        target_merged_vector_path (str): a path to the target vector to write
-            merged geometries at.
-
-    Returns:
-        None
-
-    """
-
-    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
-    base_layer = base_vector.GetLayer()
-    shapely_geoms = []
-
-    for feat in base_layer:
-        geom = feat.GetGeometryRef()
-        geom_wkb = shapely.wkb.loads(geom.ExportToWkb())
-        # Buffer geometry to prevent invalid geometries
-        geom_buffered = geom_wkb.buffer(0)
-        shapely_geoms.append(geom_buffered)
-
-    # Return the union of the geometries in the list
-    merged_geom = shapely.ops.unary_union(shapely_geoms)
-
-    # Create a new geopackage
-    target_driver = gdal.GetDriverByName('GPKG')
-    target_vector = target_driver.Create(
-        target_merged_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    target_vector.StartTransaction()
-
-    # Get basename from target path as layer name
-    target_layer_name = os.path.splitext(
-        os.path.basename(target_merged_vector_path))[0].encode('utf-8')
-
-    # Get target spatial reference from base layer
-    target_sr_wkt = pygeoprocessing.get_vector_info(base_vector_path)[
-        'projection']
-    target_sr = osr.SpatialReference()
-    target_sr.ImportFromWkt(target_sr_wkt)
-
-    # Create target layer using same projection from base vector
-    LOGGER.info('Merging vector %s on projection %s.' %
-                (base_vector_path, target_sr.GetAttrValue('PROJECTION')))
-    target_layer = target_vector.CreateLayer(
-        target_layer_name, target_sr, ogr.wkbPolygon)
-
-    # Write the merged geometry to the target layer
-    target_feature = ogr.Feature(target_layer.GetLayerDefn())
-
-    # Make a geometry, from Shapely object
-    target_feature.SetGeometry(ogr.CreateGeometryFromWkb(merged_geom.wkb))
-    target_layer.CreateFeature(target_feature)
-    target_vector.CommitTransaction()
-
-    base_layer = None
-    base_vector = None
-    target_layer = None
-    target_vector = None
 
 
 def _has_field_name(base_vector_path, field_name):
@@ -1393,21 +1324,21 @@ def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
     return ecosystem_risk_arr
 
 
-def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
+def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
     """Reclassify the ecosystem risk into three categories.
 
-    If 0 < 3*(risk/max risk) <= 1, classify the risk score to 1.
-    If 1 < 3*(risk/max risk) <= 2, classify the risk score to 2.
-    If 2 < 3*(risk/max risk) <= 3 , classify the risk score to 3.
-    Note: If 3*(risk/max risk) == 0, it will remain 0, meaning that there's no
-    stressor on the ecosystem.
+    If 0 < 3*(risk/max rating) <= 1, classify the risk score to 1.
+    If 1 < 3*(risk/max rating) <= 2, classify the risk score to 2.
+    If 2 < 3*(risk/max rating) <= 3 , classify the risk score to 3.
+    Note: If 3*(risk/max rating) == 0, it will remain 0, meaning that there's
+    no stressor on the ecosystem.
 
     Parameters:
         ecosystem_risk_arr (array): an average risk score calculated by
             dividing the cumulative habitat risks by the habitat count in
             that pixel.
-        max_risk_score (float): the maximum possible risk score used for
-            reclassifying the risk score on each pixel.
+        max_rating (float): the maximum possible risk score used for
+            reclassifying the risk score into discrete categories.
 
     Returns:
         reclass_ecosystem_risk_arr (array): a reclassified ecosystem risk
@@ -1418,10 +1349,10 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_risk_score):
         ecosystem_risk_arr.shape, _TARGET_NODATA_INT, dtype=numpy.int8)
     valid_pixel_mask = (ecosystem_risk_arr != _TARGET_NODATA_FLT)
 
-    # Divide risk score by (maximum possible risk score/3) to get a value
-    # ranging from 0 to 3, then return the ceiling of the output
+    # Divide risk score by (maximum possible risk score/3) to get an integer
+    # ranging from 0 to 3, then return the ceiling of it
     reclass_ecosystem_risk_arr[valid_pixel_mask] = numpy.ceil(
-        ecosystem_risk_arr[valid_pixel_mask] / (max_risk_score/3.)).astype(int)
+        ecosystem_risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(int)
 
     return reclass_ecosystem_risk_arr
 

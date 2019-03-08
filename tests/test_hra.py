@@ -66,84 +66,6 @@ def _make_simple_vector(target_vector_path, projected=True):
     vector = None
 
 
-def _make_multipolygon_vector(target_vector_path):
-    """Make a geometry GeoJSON that has two multipolygon features.
-
-    Parameters:
-        target_vector_path (str): path to the output multipolygon shapefile.
-
-    Returns:
-        None.
-
-    """
-    # Create a new shapefile
-    driver = ogr.GetDriverByName('GeoJSON')
-    vector = driver.CreateDataSource(target_vector_path)
-    srs = osr.SpatialReference()
-    srs.ImportFromEPSG(EPSG_CODE)
-    layer = vector.CreateLayer('layer', srs, ogr.wkbMultiPolygon)
-
-    # Add a field to the layer
-    field_name = 'FID'
-    field = ogr.FieldDefn(field_name)
-    layer.CreateField(field)
-
-    multipolygon = ogr.Geometry(ogr.wkbMultiPolygon)
-
-    lon, lat = ORIGIN[0], ORIGIN[1]
-    # Create outer ring
-    out_rect = ogr.Geometry(ogr.wkbLinearRing)
-    out_rect.AddPoint(lon, lat)
-    out_rect.AddPoint(lon, lat - 20)
-    out_rect.AddPoint(lon + 20, lat - 20)
-    out_rect.AddPoint(lon + 20, lat)
-    out_rect.AddPoint(lon, lat)
-
-    # Create polygon #1
-    out_geom = ogr.Geometry(ogr.wkbPolygon)
-    out_geom.AddGeometry(out_rect)
-
-    # Create inner ring
-    inner_rect = ogr.Geometry(ogr.wkbLinearRing)
-    inner_rect.AddPoint(lon + 5, lat - 5)
-    inner_rect.AddPoint(lon + 5, lat - 10)
-    inner_rect.AddPoint(lon + 10, lat - 10)
-    inner_rect.AddPoint(lon + 10, lat - 5)
-    inner_rect.AddPoint(lon + 5, lat - 5)
-
-    # Create polygon #2
-    inner_geom = ogr.Geometry(ogr.wkbPolygon)
-    inner_geom.AddGeometry(inner_rect)
-
-    # Add the difference of the two geometries to Multipolygon
-    multipolygon.AddGeometry(out_geom.Difference(inner_geom))
-
-    # Create the feature from the geometry
-    feature = ogr.Feature(layer.GetLayerDefn())
-    feature.SetField(field_name, '1')
-    feature.SetGeometry(multipolygon)
-    layer.CreateFeature(feature)
-    feature = None
-
-    # Create another rectangular and add it to the feature
-    rect2 = ogr.Geometry(ogr.wkbLinearRing)
-    rect2.AddPoint(lon - 10, lat + 10)
-    rect2.AddPoint(lon - 10, lat + 5)
-    rect2.AddPoint(lon - 5, lat + 5)
-    rect2.AddPoint(lon - 5, lat + 10)
-    rect2.AddPoint(lon - 10, lat + 10)
-    second_geom = ogr.Geometry(ogr.wkbPolygon)
-    second_geom.AddGeometry(rect2)
-
-    feature2 = ogr.Feature(layer.GetLayerDefn())
-    feature2.SetField(field_name, '2')
-    feature2.SetGeometry(second_geom)
-    layer.CreateFeature(feature2)
-    feature2 = None
-
-    vector = None
-
-
 def _make_rating_vector(target_vector_path):
     """Make a 10x10 ogr rectangular geometry shapefile with `rating` field.
 
@@ -172,16 +94,16 @@ def _make_rating_vector(target_vector_path):
     # rating of 3
     lon, lat = ORIGIN[0], ORIGIN[1]
     for rating in [1, 3]:
-        left_rect = ogr.Geometry(ogr.wkbLinearRing)
-        left_rect.AddPoint(lon, lat)
-        left_rect.AddPoint(lon + width/2, lat)
-        left_rect.AddPoint(lon + width/2, lat - width)
-        left_rect.AddPoint(lon, lat - width)
-        left_rect.AddPoint(lon, lat)
+        rect = ogr.Geometry(ogr.wkbLinearRing)
+        rect.AddPoint(lon, lat)
+        rect.AddPoint(lon + width/2, lat)
+        rect.AddPoint(lon + width/2, lat - width)
+        rect.AddPoint(lon, lat - width)
+        rect.AddPoint(lon, lat)
 
         # Create the feature from the geometry
         poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(left_rect)
+        poly.AddGeometry(rect)
         feature = ogr.Feature(layer.GetLayerDefn())
         feature.SetField(field_name, rating)
         feature.SetGeometry(poly)
@@ -225,22 +147,21 @@ def _make_aoi_vector(target_vector_path, projected=True, subregion_field=True):
     field = ogr.FieldDefn(field_name)
     layer.CreateField(field)
 
-    # Create a left rectangle with "region A" and a right rectangle with
-    # "region B"
+    # Create three rectangles, each shift to the right by half width
     width = 20
     # Shift the origin to the left and to the top by width/4
     lon, lat = ORIGIN[0]-width/4, ORIGIN[1]+width/4
-    for region in ["region A", "region B"]:
-        left_rect = ogr.Geometry(ogr.wkbLinearRing)
-        left_rect.AddPoint(lon, lat)
-        left_rect.AddPoint(lon + width/2, lat)
-        left_rect.AddPoint(lon + width/2, lat - width)
-        left_rect.AddPoint(lon, lat - width)
-        left_rect.AddPoint(lon, lat)
+    for region in ["region A", "region B", "region C"]:
+        rect = ogr.Geometry(ogr.wkbLinearRing)
+        rect.AddPoint(lon, lat)
+        rect.AddPoint(lon + width/2, lat)
+        rect.AddPoint(lon + width/2, lat - width)
+        rect.AddPoint(lon, lat - width)
+        rect.AddPoint(lon, lat)
 
         # Create the feature from the geometry
         poly = ogr.Geometry(ogr.wkbPolygon)
-        poly.AddGeometry(left_rect)
+        poly.AddGeometry(rect)
         feature = ogr.Feature(layer.GetLayerDefn())
         feature.SetField(field_name, region)
         feature.SetGeometry(poly)
@@ -776,27 +697,6 @@ class HraUnitTests(unittest.TestCase):
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
-    def test_merge_geometry(self):
-        """HRA: test _merge_geometry function.
-
-        This function is useful when the AOI vector does not have the field
-        for making subregion statistics. Therefore we want to test if it
-        merges the AOI vector correctly.
-
-        """
-        from natcap.invest.hra import _merge_geometry
-
-        aoi_vector_path = os.path.join(self.workspace_dir, 'aoi.shp')
-        _make_aoi_vector(aoi_vector_path, subregion_field=False)
-
-        target_merged_path = os.path.join(
-            self.workspace_dir, 'target_merged_aoi.gpkg')
-        _merge_geometry(aoi_vector_path, target_merged_path)
-
-        expected_merge_vector_path = os.path.join(TEST_DATA, 'merged_aoi.gpkg')
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_merged_path, expected_merge_vector_path, 1E-6)
-
     def test_to_abspath(self):
         """HRA: test exception raised in _to_abspath function."""
         from natcap.invest.hra import _to_abspath
@@ -827,24 +727,6 @@ class HraUnitTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_vectors_equal(
             target_simplified_vector_path, expected_simplified_vector_path,
-            1E-6)
-
-    def test_merge_multipolygon_geometry(self):
-        """HRA: test _merge_geometry correctly merges a multipolygon vector."""
-        from natcap.invest.hra import _merge_geometry
-
-        multipolygon_aoi_vector_path = os.path.join(
-            self.workspace_dir, 'multipolygon_aoi.geojson')
-        target_merged_vector_path = os.path.join(
-            self.workspace_dir, 'merged_multipolygon_aoi.gpkg')
-        _make_multipolygon_vector(multipolygon_aoi_vector_path)
-        _merge_geometry(multipolygon_aoi_vector_path, target_merged_vector_path)
-
-        expected_merged_vector_path = os.path.join(
-            TEST_DATA, 'merged_multipolygon_aoi.gpkg')
-
-        pygeoprocessing.testing.assert_vectors_equal(
-            target_merged_vector_path, expected_merged_vector_path,
             1E-6)
 
 
@@ -893,11 +775,14 @@ class HraRegressionTests(unittest.TestCase):
         natcap.invest.hra.execute(args)
 
         output_rasters = [
-            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem',
-            'recovery_habitat_0', 'recovery_habitat_1']
+            'TOT_RISK_habitat_0', 'TOT_RISK_habitat_1', 'TOT_RISK_Ecosystem',
+            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
+            'RECLASS_RISK_Ecosystem']
 
         output_vectors = [
-            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem']
+            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
+            'RECLASS_RISK_Ecosystem', 'STRESSOR_stressor_0',
+            'STRESSOR_stressor_1']
 
         # Assert rasters are equal
         output_raster_paths = [
@@ -925,7 +810,7 @@ class HraRegressionTests(unittest.TestCase):
                 for vector_name in output_vectors]
         expected_vector_paths = [
             os.path.join(TEST_DATA, vector_name + '_euc_lin.geojson') for
-            vector_name in output_rasters]
+            vector_name in output_vectors]
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
@@ -936,7 +821,7 @@ class HraRegressionTests(unittest.TestCase):
         output_csv_path = os.path.join(
             self.workspace_dir, 'outputs', 'criteria_score_stats.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'stats_regression_euc_lin.csv')
+            TEST_DATA, 'criteria_score_stats_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 
@@ -961,11 +846,13 @@ class HraRegressionTests(unittest.TestCase):
         natcap.invest.hra.execute(args)
 
         output_rasters = [
-            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem',
-            'recovery_habitat_0', 'recovery_habitat_1']
+            'TOT_RISK_habitat_0', 'TOT_RISK_habitat_1', 'TOT_RISK_Ecosystem',
+            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
+            'RECLASS_RISK_Ecosystem']
 
         output_vectors = [
-            'risk_habitat_0', 'risk_habitat_1', 'risk_ecosystem']
+            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
+            'RECLASS_RISK_Ecosystem']
 
         # Assert rasters are equal
         output_raster_paths = [
@@ -993,7 +880,7 @@ class HraRegressionTests(unittest.TestCase):
                 for vector_name in output_vectors]
         expected_vector_paths = [
             os.path.join(TEST_DATA, vector_name + '_mul_exp.geojson') for
-            vector_name in output_rasters]
+            vector_name in output_vectors]
 
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
@@ -1004,7 +891,7 @@ class HraRegressionTests(unittest.TestCase):
         output_csv_path = os.path.join(
             self.workspace_dir, 'outputs', 'criteria_score_stats.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'stats_regression_mul_exp.csv')
+            TEST_DATA, 'criteria_score_stats_mul_exp.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 
