@@ -905,9 +905,11 @@ def _get_zonal_stats_df(
             # Compute pairwise E/C zonal stats
             for criteria_type in ['E', 'C']:
                 criteria_raster_path = row[criteria_type + '_RASTER_PATH']
+                # Append _[region] suffix to the generic pickle file path,
+                # used for us to locatefiles
                 target_pickle_stats_path = row[
                     criteria_type + '_PICKLE_STATS_PATH'].replace(
-                        '.tif', region_name+'.tif')
+                        '.pickle', '_'+region_name+'.pickle')
                 task_graph.add_task(
                     func=_calc_and_pickle_zonal_stats,
                     args=(criteria_raster_path, zonal_raster_path,
@@ -920,7 +922,7 @@ def _get_zonal_stats_df(
             pair_risk_path = row['PAIR_RISK_RASTER_PATH']
             target_pickle_stats_path = row[
                 'PAIR_RISK_PICKLE_STATS_PATH'].replace(
-                    '.tif', region_name+'.tif')
+                    '.pickle', '_'+region_name+'.pickle')
             task_graph.add_task(
                 func=_calc_and_pickle_zonal_stats,
                 args=(pair_risk_path, zonal_raster_path,
@@ -929,6 +931,9 @@ def _get_zonal_stats_df(
                 target_path_list=[target_pickle_stats_path],
                 task_name='calc_%s_risk_stats_in_%s' % (
                     habitat_stressor, region_name))
+
+        # Not sure if we should also calculate stats on the total E/C/risk
+        # for each habitat (i.e. from all stressors)?
 
         # # Compute zonal risk stats on each habitat
         # for _, row in info_df.iterrows():
@@ -955,13 +960,12 @@ def _get_zonal_stats_df(
     # Create a stats dataframe with habitat and stressor index from overlap
     # dataframe
     crit_stats_cols = ['MEAN', 'MIN', 'MAX']
-    risk_stats_cols = crit_stats_cols + [
-        '%HIGH', '%MEDIUM', '%LOW']
-    len_criteria = len(crit_stats_cols)
-    len_risk = len(risk_stats_cols)
+    risk_stats_cols = crit_stats_cols + ['%HIGH', '%MEDIUM', '%LOW']
+    len_crit_cols = len(crit_stats_cols)
+    len_risk_cols = len(risk_stats_cols)
     columns = map(
         str.__add__,
-        ['E_']*len_criteria + ['C_']*len_criteria + ['R_']*len_risk,
+        ['E_']*len_crit_cols + ['C_']*len_crit_cols + ['R_']*len_risk_cols,
         crit_stats_cols*2 + risk_stats_cols)
 
     stats_df = pandas.DataFrame(index=overlap_df.index, columns=columns)
@@ -969,33 +973,39 @@ def _get_zonal_stats_df(
     # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding stats in each subregion
     region_df_list = []
-    for region_name in zonal_rasters.keys():
+    for region in zonal_rasters:
         region_df = stats_df.copy()
-        region_df['SUBREGION'] = region_name
+        # Insert the new column in the beginning
+        region_df.insert(loc=0, column='SUBREGION', value=region)
 
         for hab_str_idx, row in overlap_df.iterrows():
             # Unpack pairwise criteria stats
             for criteria_type in ['E', 'C']:
                 crit_stats_dict = pickle.load(
                     open(row[criteria_type + '_PICKLE_STATS_PATH'].replace(
-                        '.tif', region_name+'.tif'), 'rb'))
-                for stats_type in crit_stats_dict:
+                        '.pickle', '_'+region+'.pickle'), 'rb'))
+                for stats_type in crit_stats_cols:
                     header = criteria_type + '_' + stats_type
-                    stats_df.loc[hab_str_idx, header] = crit_stats_dict[
+                    region_df.loc[hab_str_idx, header] = crit_stats_dict[
                         stats_type]
 
             # Unpack pairwise risk stats
             risk_stats_dict = pickle.load(
                 open(row['PAIR_RISK_PICKLE_STATS_PATH'].replace(
-                    '.tif', region_name+'.tif'), 'rb'))
-            for stats_type in risk_stats_dict:
+                    '.pickle', '_'+region+'.pickle'), 'rb'))
+            for stats_type in risk_stats_cols:
                 header = 'R_' + stats_type
-                stats_df.loc[hab_str_idx, header] = risk_stats_dict[stats_type]
+                region_df.loc[hab_str_idx, header] = risk_stats_dict[
+                    stats_type]
 
         region_df_list.append(region_df)
 
     # Merge all the subregion dataframes
     final_stats_df = pandas.concat(region_df_list)
+
+    # Sort habitat and stressor by their names in ascending order
+    final_stats_df.sort_values(
+        [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
 
     return final_stats_df
 
