@@ -17,8 +17,6 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
-import pdb
-
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables
@@ -223,9 +221,9 @@ def execute(args):
     rasterized_aoi_pickle_path = os.path.join(
         file_preprocessing_dir, 'rasterized_aoi_dictionary.pickle')
     _rasterize_vector_features(
-        simplified_aoi_vector_path, file_preprocessing_dir,
-        rasterized_aoi_pickle_path, target_pixel_size, task_graph,
-        [simplify_aoi_task], aoi_field_name)
+        simplified_aoi_vector_path, rasterized_aoi_pickle_path, aoi_field_name,
+        file_preprocessing_dir, target_pixel_size, task_graph,
+        [simplify_aoi_task])
 
     if not subregion_field_exists:
         merged_aoi_vector_path = os.path.join(
@@ -411,7 +409,7 @@ def execute(args):
                     ['E_RASTER_PATH', 'C_RASTER_PATH', 'PAIR_RISK_RASTER_PATH']]
             pair_risk_calculation_list = [
                 (pair_e_raster_path, 1), (pair_c_raster_path, 1),
-                (args['risk_eq'], 'raw')]
+                ((max_rating, 'raw')), (args['risk_eq'], 'raw')]
 
             task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
@@ -507,7 +505,7 @@ def execute(args):
         # risk score by 3, and return the ceiling
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=([(total_habitat_risk_path, 1), ((max_risk_score, 'raw'))],
+            args=([(total_habitat_risk_path, 1), (max_rating, 'raw')],
                   _reclassify_risk_op, reclass_habitat_risk_path,
                   _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
             target_path_list=[reclass_habitat_risk_path],
@@ -521,9 +519,9 @@ def execute(args):
 
     # Create input list for calculating average & reclassified ecosystem risks
     ecosystem_risk_raster_path = os.path.join(
-        intermediate_dir, 'TOT_RISK_ecosystem.tif')
+        output_dir, 'TOT_RISK_Ecosystem.tif')
     reclass_ecosystem_risk_raster_path = os.path.join(
-        output_dir, 'RECLASS_RISK_ecosystem.tif')
+        output_dir, 'RECLASS_RISK_Ecosystem.tif')
 
     # Append individual habitat risk rasters to the input list
     hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
@@ -541,21 +539,22 @@ def execute(args):
         target_path_list=[ecosystem_risk_raster_path],
         task_name='calculate_average_ecosystem_risk')
 
-    # Calculate reclassified ecosystem risk
-    task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
-              _reclassify_ecosystem_risk_op,
-              reclass_ecosystem_risk_raster_path,
-              _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
-        target_path_list=[reclass_ecosystem_risk_raster_path],
-        task_name='reclassify_ecosystem_risk')
+    # # Calculate reclassified ecosystem risk
+    # task_graph.add_task(
+    #     func=pygeoprocessing.raster_calculator,
+    #     args=([(ecosystem_risk_raster_path, 1), (max_risk_score, 'raw')],
+    #           _reclassify_ecosystem_risk_op,
+    #           reclass_ecosystem_risk_raster_path,
+    #           _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+    #     target_path_list=[reclass_ecosystem_risk_raster_path],
+    #     task_name='reclassify_ecosystem_risk')
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
     stats_df = _get_zonal_stats_df(
-        overlap_df, info_df, rasterized_aoi_pickle_path, max_rating, task_graph)
+        overlap_df, info_df, max_rating, rasterized_aoi_pickle_path,
+        file_preprocessing_dir, task_graph)
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
@@ -748,42 +747,79 @@ def _raster_to_geojson(
 
 
 def _calc_and_pickle_zonal_stats(
-        score_raster_path, zonal_raster_path, target_pickle_stats_path):
-    """Write zonal stats to the dataframe and pickle them to files.
+        score_raster_path, zonal_raster_path, target_pickle_stats_path,
+        working_dir, max_rating=None):
+    """Calculate zonal stats on a score raster where zonal raster is 1.
 
     Parameters:
-        score_raster_path (str): the path to the E/C/risk score raster to be
+        score_raster_path (str): a path to the E/C/risk score raster to be
             analyzed.
         zonal_raster_path (str): a path to the zonal raster with 1s
             representing the regional extent, used for getting statistics
             from score raster in that region.
         target_pickle_stats_path (str): a path to the pickle file for storing
             zonal statistics, including count, sum, min, max, and mean.
+        working_dir (str): a path to the working folder for saving clipped
+            score raster file.
+        max_rating (float): if exists, it's used for classifying risks into
+            three categories and calculating percentage area of high/medium/low
+            scores.
 
     Returns:
-        None.
+        None
 
     """
     # Create a stats dictionary for saving zonal statistics, including
     # mean, min, and max
     stats_dict = {}
-
-    score_raster = gdal.OpenEx(score_raster_path, gdal.OF_RASTER)
-    score_band = score_raster.GetRasterBand(1)
-    score_nodata = score_band.GetNoDataValue()
-
-    zonal_raster = gdal.OpenEx(zonal_raster_path, gdal.OF_RASTER)
-    zonal_band = zonal_raster.GetRasterBand(1)
-
-    pixel_count = 0.
-    pixel_sum = 0.
     stats_dict['MIN'] = float('inf')
     stats_dict['MAX'] = float('-inf')
-    stats_dict['MEAN'] = 0
+    for stats_type in ['MEAN', '%HIGH', '%MEDIUM', '%LOW']:
+        stats_dict[stats_type] = 0.
 
+    # Clip score raster to the extent of zonal raster
+    with tempfile.NamedTemporaryFile(
+            prefix='clipped_', suffix='.tif', delete=False,
+            dir=working_dir) as clipped_raster_file:
+        clipped_score_raster_path = clipped_raster_file.name
+    # clipped_score_raster_path = os.path.join(
+    #     working_dir, 'clip_' + os.path.basename(score_raster_path))
+    zonal_raster_info = pygeoprocessing.get_raster_info(zonal_raster_path)
+    target_pixel_size = zonal_raster_info['pixel_size']
+    target_bounding_box = zonal_raster_info['bounding_box']
+    target_sr_wkt = zonal_raster_info['projection']
+    pygeoprocessing.warp_raster(
+        score_raster_path, target_pixel_size, clipped_score_raster_path,
+        _RESAMPLE_METHOD, target_bb=target_bounding_box,
+        target_sr_wkt=target_sr_wkt)
+
+    score_raster = gdal.OpenEx(clipped_score_raster_path, gdal.OF_RASTER)
+    try:
+        score_band = score_raster.GetRasterBand(1)
+    except ValueError as e:
+        if 'Bounding boxes do not intersect' in repr(e):
+            LOGGER.info('Bounding boxes of %s and %s do not intersect.' %
+                        (score_raster_path, zonal_raster_path))
+        for stats_type in stats_dict:
+            stats_dict[stats_type] = None
+        pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
+        os.remove(clipped_score_raster_path)
+        return
+
+    score_nodata = score_band.GetNoDataValue()
+    zonal_raster = gdal.OpenEx(zonal_raster_path, gdal.OF_RASTER)
+    zonal_band = zonal_raster.GetRasterBand(1)
+    pixel_count = 0.
+    pixel_sum = 0.
+
+    if max_rating:
+        high_score_count = 0.
+        med_score_count = 0.
+        low_score_count = 0.
+
+    # Iterate through each data block and calculate stats
     for score_offsets in pygeoprocessing.iterblocks(
-            (score_raster_path, 1), offset_only=True):
-
+            (clipped_score_raster_path, 1), offset_only=True):
         score_block = score_band.ReadAsArray(**score_offsets)
         zonal_block = zonal_band.ReadAsArray(**score_offsets)
 
@@ -799,14 +835,37 @@ def _calc_and_pickle_zonal_stats(
         stats_dict['MAX'] = max(
             stats_dict['MAX'], numpy.amax(valid_score_block))
 
+        if max_rating:
+            high_score_count += valid_score_block[
+                (valid_score_block > max_rating/3*2)].size
+            med_score_count += valid_score_block[
+                (valid_score_block <= max_rating/3*2) &
+                (valid_score_block > max_rating/3)].size
+            low_score_count += valid_score_block[
+                (valid_score_block <= max_rating/3)].size
+
     if pixel_count > 0:
         stats_dict['MEAN'] = pixel_sum / pixel_count
+        if max_rating:
+            stats_dict['%HIGH'] = high_score_count/pixel_count*100.
+            stats_dict['%MEDIUM'] = med_score_count/pixel_count*100.
+            stats_dict['%LOW'] = low_score_count/pixel_count*100.
+    else:
+        for stats_type in stats_dict:
+            stats_dict[stats_type] = None
+
+    score_raster = None
+    zonal_raster = None
+    zonal_band = None
+    score_band = None
 
     pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
+    os.remove(clipped_score_raster_path)
 
 
 def _get_zonal_stats_df(
-        overlap_df, info_df, zonal_rasters_pickle_path, max_rating, task_graph):
+        overlap_df, info_df, max_rating, zonal_rasters_pickle_path,
+        working_dir, task_graph):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -821,6 +880,8 @@ def _get_zonal_stats_df(
             paths with 1s representing their extent.
         max_rating (float): the maximum score defined by user. It's used for
             reclassifying the average E and C scores into 0 to 3.
+        working_dir (str): a path to the working folder for saving intermediate
+            files.
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
 
@@ -832,54 +893,111 @@ def _get_zonal_stats_df(
     """
     zonal_rasters = pickle.load(open(zonal_rasters_pickle_path, 'rb'))
 
-    # Compute zonal E and C stats on each habitat-stressor pair for each region
-    for hab_str_idx, row in overlap_df.iterrows():
-        for criteria_type in ['E', 'C']:
-            criteria_raster_path = row[criteria_type + '_RASTER_PATH']
-            target_pickle_stats_path = row[criteria_type + '_PICKLE_STATS_PATH']
-
+    # Calculate and pickle zonal stats to files
+    for region_name, zonal_raster_path in zonal_rasters.iteritems():
+        # Compute zonal E and C stats on each habitat-stressor pair
+        for hab_str_idx, row in overlap_df.iterrows():
             # Get habitat-stressor name without extension
             habitat_stressor = '_'.join(hab_str_idx)
+            LOGGER.info('Calculating zonal stats of %s in %s.' %
+                        (habitat_stressor, region_name))
 
-            for region_name, zonal_raster_path in zonal_rasters.iteritems():
-                # Calculate and pickle zonal stats to files
-                LOGGER.info('Calculating %s zonal stats of %s on %s.' %
-                            (criteria_type, habitat_stressor, region_name))
-
+            # Compute pairwise E/C zonal stats
+            for criteria_type in ['E', 'C']:
+                criteria_raster_path = row[criteria_type + '_RASTER_PATH']
+                target_pickle_stats_path = row[
+                    criteria_type + '_PICKLE_STATS_PATH'].replace(
+                        '.tif', region_name+'.tif')
                 task_graph.add_task(
                     func=_calc_and_pickle_zonal_stats,
                     args=(criteria_raster_path, zonal_raster_path,
-                          target_pickle_stats_path),
+                          target_pickle_stats_path, working_dir),
                     target_path_list=[target_pickle_stats_path],
-                    task_name='calc_%s_stats_on_%s' % (
-                        habitat_stressor, region_name))
+                    task_name='calc_%s_%s_stats_in_%s' % (
+                        habitat_stressor, criteria_type, region_name))
 
-    # Compute zonal R stats on each habitat-stressor pair for each region
-    hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
-        'TOTAL_RISK_RASTER_PATH'].tolist()
+            # Compute pairwise risk zonal stats
+            pair_risk_path = row['PAIR_RISK_RASTER_PATH']
+            target_pickle_stats_path = row[
+                'PAIR_RISK_PICKLE_STATS_PATH'].replace(
+                    '.tif', region_name+'.tif')
+            task_graph.add_task(
+                func=_calc_and_pickle_zonal_stats,
+                args=(pair_risk_path, zonal_raster_path,
+                      target_pickle_stats_path, working_dir),
+                kwargs={'max_rating': max_rating},
+                target_path_list=[target_pickle_stats_path],
+                task_name='calc_%s_risk_stats_in_%s' % (
+                    habitat_stressor, region_name))
+
+        # # Compute zonal risk stats on each habitat
+        # for _, row in info_df.iterrows():
+        #     if row['TYPE'] != _HABITAT_TYPE:
+        #         continue
+        #     habitat_name = row['NAME']
+        #     total_risk_raster_path = row['TOTAL_RISK_RASTER_PATH']
+        #     target_pickle_stats_path = row['RISK_PICKLE_STATS_PATH']
+
+        #     LOGGER.info('Calculating risk zonal stats of %s in %s.' %
+        #                 (habitat_name, region_name))
+
+        #     task_graph.add_task(
+        #         func=_calc_and_pickle_zonal_stats,
+        #         args=(total_risk_raster_path, zonal_raster_path,
+        #               target_pickle_stats_path, working_dir),
+        #         target_path_list=[target_pickle_stats_path],
+        #         task_name='calc_%s_risk_stats_in_%s' % (
+        #             habitat_name, region_name))
 
     # Join first to get all the result statistics
     task_graph.join()
 
-    # Create a stats dataframe with just habitat and stressor index from
-    # overlap dataframe
+    # Create a stats dataframe with habitat and stressor index from overlap
+    # dataframe
+    crit_stats_cols = ['MEAN', 'MIN', 'MAX']
+    risk_stats_cols = crit_stats_cols + [
+        '%HIGH', '%MEDIUM', '%LOW']
+    len_criteria = len(crit_stats_cols)
+    len_risk = len(risk_stats_cols)
     columns = map(
         str.__add__,
-        ['E_']*3 + ['C_']*3, ['MEAN', 'MIN', 'MAX']*2)
+        ['E_']*len_criteria + ['C_']*len_criteria + ['R_']*len_risk,
+        crit_stats_cols*2 + risk_stats_cols)
 
-    stats_df = pandas.DataFrame(
-        index=overlap_df.index, columns=columns)
+    stats_df = pandas.DataFrame(index=overlap_df.index, columns=columns)
 
-    # Load zonal stats from a pickled file and write it to the dataframe
-    for hab_str_idx, row in overlap_df.iterrows():
-        for criteria_type in ['E', 'C']:
-            stats_dict = pickle.load(
-                open(row[criteria_type + '_PICKLE_STATS_PATH'], 'rb'))
-            for stats_type in stats_dict:
-                header = criteria_type + '_' + stats_type
-                stats_df.loc[hab_str_idx, header] = stats_dict[stats_type]
+    # Add a ``SUBREGION`` column to the dataframe and update it with the
+    # corresponding stats in each subregion
+    region_df_list = []
+    for region_name in zonal_rasters.keys():
+        region_df = stats_df.copy()
+        region_df['SUBREGION'] = region_name
 
-    return stats_df
+        for hab_str_idx, row in overlap_df.iterrows():
+            # Unpack pairwise criteria stats
+            for criteria_type in ['E', 'C']:
+                crit_stats_dict = pickle.load(
+                    open(row[criteria_type + '_PICKLE_STATS_PATH'].replace(
+                        '.tif', region_name+'.tif'), 'rb'))
+                for stats_type in crit_stats_dict:
+                    header = criteria_type + '_' + stats_type
+                    stats_df.loc[hab_str_idx, header] = crit_stats_dict[
+                        stats_type]
+
+            # Unpack pairwise risk stats
+            risk_stats_dict = pickle.load(
+                open(row['PAIR_RISK_PICKLE_STATS_PATH'].replace(
+                    '.tif', region_name+'.tif'), 'rb'))
+            for stats_type in risk_stats_dict:
+                header = 'R_' + stats_type
+                stats_df.loc[hab_str_idx, header] = risk_stats_dict[stats_type]
+
+        region_df_list.append(region_df)
+
+    # Merge all the subregion dataframes
+    final_stats_df = pandas.concat(region_df_list)
+
+    return final_stats_df
 
 
 def _create_rasters_from_geometries(
@@ -891,9 +1009,10 @@ def _create_rasters_from_geometries(
     geometry collection, and everywhere else is nodata.
 
     Parameters:
-        geom_pickle_path (str): a path to a tuple of pickled geom_sets_by_field
-            and target spatial reference. geom_sets_by_field is a list of
-            shapely geometry objects in Well Known Binary (WKB) format.
+        geom_pickle_path (str): a path to a tuple of pickled
+            geom_sets_by_field, a list of shapely geometry objects in Well
+            Known Binary (WKB) format, and target spatial reference in Well
+            Known Text (WKT) format.
         working_dir (str): a path indicating where raster files should be
             created.
         target_pickle_path (str): path to location of generated geotiff;
@@ -910,7 +1029,7 @@ def _create_rasters_from_geometries(
 
     """
     # Get the geometry collections and desired projection for target rasters
-    geom_sets_by_field, target_spat_ref = pickle.load(
+    geom_sets_by_field, target_sr_wkt = pickle.load(
         open(geom_pickle_path, 'rb'))
     raster_paths_by_field = {}
 
@@ -967,12 +1086,14 @@ def _create_rasters_from_geometries(
         target_raster.SetGeoTransform(raster_transform)
 
         # Set target projection
-        target_raster.SetProjection(target_spat_ref.ExportToWkt())
+        target_raster.SetProjection(target_sr_wkt)
 
         # Make a temporary vector so we can create layer and add the geometry
         # to it
         vector_driver = gdal.GetDriverByName('MEMORY')
         temp_vector = vector_driver.Create('temp', 0, 0, 0, gdal.GDT_Unknown)
+        target_spat_ref = osr.SpatialReference()
+        target_spat_ref.ImportFromWkt(target_sr_wkt)
         temp_layer = temp_vector.CreateLayer(
             'temp', target_spat_ref, ogr.wkbPolygon)
         layer_defn = temp_layer.GetLayerDefn()
@@ -999,9 +1120,9 @@ def _create_rasters_from_geometries(
 
 
 def _rasterize_vector_features(
-        base_vector_path, working_dir, target_pickle_path, target_pixel_size,
-        task_graph, dependent_task_list, field_name):
-    """Rasterize geometries from a vector into a raster.
+        base_vector_path, target_pickle_path, field_name, working_dir,
+        target_pixel_size, task_graph, dependent_task_list):
+    """Rasterize geometries with same field value from a vector into rasters.
 
     If field_name is not None, merge and rasterize geometries with same field
     value on that field into a raster.
@@ -1009,20 +1130,20 @@ def _rasterize_vector_features(
     Parameters:
         base_vector_path (str): a path to the vector with a set of features
             to be rasterized.
-        working_dir (str): a path indicating where raster files should be
-            created.
         target_pickle_path (str): a path to the pickle file that contains a
             dictionary of field names to their corresponding output raster
             paths rasterized from base vector.
+        field_name (str): same values on this field will be merged and
+            rasterized into an individual raster. If None, the entire vector
+            will be rasterized into a single raster.
+        working_dir (str): a path indicating where raster files should be
+            created.
         target_pixel_size (list/tuple): the x/y pixel size as a sequence in the
             projection of base vector. ex: [30.0, -30.0], unit: meters.
         task_graph (Taskgraph object): an object for building task graphs and
             parallelizing independent tasks.
         dependent_task_list (list): a list of tasks that the upcoming tasks
             will be dependent upon.
-        field_name (str): same values on this field will be merged and
-            rasterized into an individual raster. If None, the entire vector
-            will be rasterized into a single raster.
 
     Returns:
         None
@@ -1065,7 +1186,7 @@ def _rasterize_vector_features(
         func=_get_vector_geometries_by_field,
         args=(base_vector_path, field_name, geom_pickle_path),
         target_path_list=[geom_pickle_path],
-        task_name='get_vector_geoms_by_field_%s' % field_name,
+        task_name='get_vector_geoms_by_field_"%s"' % field_name,
         dependent_task_list=dependent_task_list)
     dependent_task_list.append(get_vector_geoms_task)
 
@@ -1122,7 +1243,8 @@ def _get_vector_geometries_by_field(
     base_layer = None
 
     pickle.dump(
-        (geom_sets_by_field, spat_ref), open(target_geom_pickle_path, 'wb'))
+        (geom_sets_by_field, spat_ref.ExportToWkt()),
+        open(target_geom_pickle_path, 'wb'))
 
 
 def _merge_geometry(base_vector_path, target_merged_vector_path):
@@ -1398,13 +1520,12 @@ def _get_max_risk_score(
     # Calculate the maximum risk score for a habitat from all stressors
     if risk_eq == 'Multiplicative':
         # The maximum score for a single stressor is max_rating*max_rating
-        max_risk_score = max_overlap_stressors*(max_rating*max_rating)
+        max_risk_score = max_rating*max_rating
     else:  # risk_eq is 'Euclidean'
         # The maximum risk score for a habitat from a single stressor is
         # sqrt( (max_rating-1)^2 + (max_rating-1)^2 ). Therefore multiply that
         # by the number of stressors to get maximum possible risk scores.
-        max_risk_score = max_overlap_stressors*numpy.sqrt(
-            numpy.power((max_rating-1), 2)*2)
+        max_risk_score = numpy.sqrt(numpy.power((max_rating-1), 2)*2)
 
     LOGGER.info('max_overlap_stressors: %s. max_risk_score: %s.' %
                 (max_overlap_stressors, max_risk_score))
@@ -1412,7 +1533,7 @@ def _get_max_risk_score(
     return max_risk_score
 
 
-def _reclassify_risk_op(risk_arr, max_risk_score):
+def _reclassify_risk_op(risk_arr, max_rating):
     """Reclassify total risk score on each pixel into 0 to 3, discretely.
 
     Divide total risk score by (max_risk_score/3) to get a continuous risk
@@ -1426,7 +1547,7 @@ def _reclassify_risk_op(risk_arr, max_risk_score):
 
     Parameters:
         risk_arr (array): an array of cumulative risk scores from all stressors
-        max_risk_score (float): the maximum possible risk score used for
+        max_rating (float): the maximum possible risk score used for
             reclassifying the risk score into 0 to 3 on each pixel.
     Returns:
         reclass_arr (array): an integer array of reclassified risk scores for a
@@ -1439,7 +1560,7 @@ def _reclassify_risk_op(risk_arr, max_risk_score):
 
     # Return the ceiling of the continuous risk score
     reclass_arr[valid_pixel_mask] = numpy.ceil(
-        risk_arr[valid_pixel_mask] / (max_risk_score/3.)).astype(int)
+        risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(int)
 
     return reclass_arr
 
@@ -1471,10 +1592,14 @@ def _tot_risk_op(habitat_arr, *pair_risk_arrays):
         valid_pixel_mask = (pair_risk_arr != _TARGET_NODATA_FLT)
         tot_risk_arr[valid_pixel_mask] += pair_risk_arr[valid_pixel_mask]
 
+    # Rescale total risk to 0 to max_rating
+    final_valid_mask = (tot_risk_arr != _TARGET_NODATA_FLT)
+    tot_risk_arr[final_valid_mask] /= len(pair_risk_arrays)
+
     return tot_risk_arr
 
 
-def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
+def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     """Calculate habitat-stressor risk array based on the risk equation.
 
     Euclidean risk equation: R = sqrt((E-1)^2 + (C-1)^2)
@@ -1483,6 +1608,9 @@ def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
     Parameters:
         exosure_arr (array): a float array with total exposure scores.
         consequence_arr (array): a float array with total consequence scores.
+        max_rating (float): a number representing the highest potential value
+            that should be represented in rating in the criteria table,
+            used for calculating the maximum possible risk score.
         risk_eq (str): a string identifying the equation that should be
             used in calculating risk scores. It could be either 'Euclidean' or
             'Multiplicative'.
@@ -1492,6 +1620,15 @@ def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
             equation.
 
     """
+    # Calculate the maximum possible risk score
+    if risk_eq == 'Multiplicative':
+        # The maximum risk from a single stressor is max_rating*max_rating
+        max_risk_score = max_rating*max_rating
+    else:  # risk_eq is 'Euclidean'
+        # The maximum risk score for a habitat from a single stressor is
+        # sqrt( (max_rating-1)^2 + (max_rating-1)^2 )
+        max_risk_score = numpy.sqrt(numpy.power((max_rating-1), 2)*2)
+
     risk_arr = numpy.full(
         exposure_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     zero_pixel_mask = (exposure_arr == 0) | (consequence_arr == 0)
@@ -1516,6 +1653,8 @@ def _pair_risk_op(exposure_arr, consequence_arr, risk_eq):
         risk_arr[nonzero_valid_pixel_mask] = numpy.multiply(
             exposure_arr[nonzero_valid_pixel_mask],
             consequence_arr[nonzero_valid_pixel_mask])
+
+    risk_arr[nonzero_valid_pixel_mask] *= (max_rating/max_risk_score)
 
     return risk_arr
 
@@ -2124,15 +2263,13 @@ def _label_raster(path):
 
 
 def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
-    """Generate a raster file path with suffixes to the output folder.
-
-    Also append suffix to the raster file name.
+    """Generate a raster file path with suffixes in dir_path.
 
     Parameters:
         row (pandas.Series): a row on the dataframe to get path value from.
         dir_path (str): a path to the folder which raster paths will be
             created based on.
-        suffix (str): a suffix appended to the end of the raster file name.
+        suffix_end (str): a file suffix to append to the front of filenames.
         suffix_end (str): a file suffix to append to the end of filenames.
 
     Returns:
@@ -2159,20 +2296,18 @@ def _generate_raster_path(row, dir_path, suffix_front, suffix_end):
 
 
 def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
-    """Generate a vector file path with suffixes to the output folder.
-
-    Also append suffix to the raster file name.
+    """Generate a vector file path with suffixes in dir_path for vector types.
 
     Parameters:
         row (pandas.Series): a row on the dataframe to get path value from.
-        dir_path (str): a path to the folder which raster paths will be
+        dir_path (str): a path to the folder which vector paths will be
             created based on.
-        suffix (str): a suffix appended to the end of the raster file name.
+        suffix_end (str): a file suffix to append to the front of filenames.
         suffix_end (str): a file suffix to append to the end of filenames.
 
     Returns:
-        Original path if path is already a raster, or a raster path within
-        dir_path if it's a vector.
+        A vector path on dir_path if PATH doesn't contain a raster
+        (i.e. a vector), or None if PATH contains a raster.
 
     """
     if not row['IS_RASTER']:
@@ -2182,6 +2317,31 @@ def _generate_vector_path(row, dir_path, suffix_front, suffix_end):
             dir_path,
             suffix_front + basename + suffix_end + '.gpkg')
         return target_vector_path
+
+    return None
+
+
+def _generate_pickle_path(row, dir_path, suffix_front, suffix_end):
+    """Generate a pickle file path with suffixes in dir_path for habitat types.
+
+    Parameters:
+        row (pandas.Series): a row on the dataframe to get path value from.
+        dir_path (str): a path to the folder which raster paths will be
+            created based on.
+        suffix_end (str): a file suffix to append to the front of filenames.
+        suffix_end (str): a file suffix to append to the end of filenames.
+
+    Returns:
+        A pickle path on dir_path if TYPE is habitat, or None if not a habitat.
+
+    """
+    if row['TYPE'] == _HABITAT_TYPE:
+        # Get file base name from the NAME column
+        basename = row['NAME']
+        target_pickle_path = os.path.join(
+            dir_path,
+            suffix_front + basename + suffix_end + '.pickle')
+        return target_pickle_path
 
     return None
 
@@ -2316,6 +2476,10 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     info_df['DIST_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
             row, file_preprocessing_dir, 'dist_', suffix_end), axis=1)
+    # Generate pickled statistics for habitat risks
+    info_df['RISK_PICKLE_STATS_PATH'] = info_df.apply(
+        lambda row: _generate_pickle_path(
+            row, file_preprocessing_dir, 'risk_stats_', suffix_end), axis=1)
 
     # Generate raster paths with exposure and consequence suffixes.
     for column_name, suffix_front in {
@@ -2628,13 +2792,12 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
             criteria rating.
 
     """
-    # Create column headers to keep track of data needed to calculate
-    # exposure and consequence scores
-    column_headers = ['_NUM', '_DENOM', '_SPATIAL', '_RASTER_PATH',
-                      '_NUM_RASTER_PATH', '_PICKLE_STATS_PATH']
+    # Create column headers and initialize default values in numerator,
+    # denominator, and spatial columns
+    column_headers = ['_NUM', '_DENOM', '_SPATIAL']
+    len_header = len(column_headers)
     overlap_column_headers = map(
-        str.__add__,
-        ['E']*6 + ['C']*6, column_headers*2)
+        str.__add__, ['E']*len_header + ['C']*len_header, column_headers*2)
 
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
@@ -2646,8 +2809,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # Create a multi-index dataframe and fill in default cell values
     overlap_df = pandas.DataFrame(
         # Data values on each row corresponds to each column header
-        data=[[0, 0, {}, None, None, None,
-               0, 0, {}, None, None, None]
+        data=[[0, 0, {}, 0, 0, {}]
               for _ in xrange(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
@@ -2700,6 +2862,11 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                             (habitat, stressor), criteria_type +
                             '_PICKLE_STATS_PATH'] = os.path.join(
                                 inter_dir, criteria_type + '_' +
+                                habitat + '_' + stressor + suffix + '.pickle')
+                        overlap_df.loc[
+                            (habitat, stressor),
+                            'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
+                                inter_dir, 'risk_' +
                                 habitat + '_' + stressor + suffix + '.pickle')
 
                         # If rating is less than 1, skip this criteria row
@@ -2818,7 +2985,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
                 inter_dir, 'RECOV_num_' + habitat + suffix + '.tif')
 
             recovery_df.loc[habitat, 'R_RASTER_PATH'] = os.path.join(
-                output_dir, 'recovery_' + habitat + suffix + '.tif')
+                output_dir, 'RECOVERY_' + habitat + suffix + '.tif')
 
             # Calculate cumulative numerator and denominator scores based on
             # each habitat's resilience rating, dq, and weight
