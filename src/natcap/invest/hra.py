@@ -517,7 +517,7 @@ def execute(args):
         hab_risk_path_band_list.append((hab_risk_raster_path, 1))
 
     # Calculate average ecosystem risk
-    task_graph.add_task(
+    ecosystem_risk_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(hab_risk_path_band_list, _ecosystem_risk_op,
               ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
@@ -533,7 +533,8 @@ def execute(args):
               reclass_ecosystem_risk_raster_path,
               _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
         target_path_list=[reclass_ecosystem_risk_raster_path],
-        task_name='reclassify_ecosystem_risk')
+        task_name='reclassify_ecosystem_risk',
+        dependent_task_list=[ecosystem_risk_task])
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
