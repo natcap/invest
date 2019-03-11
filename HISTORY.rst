@@ -6,10 +6,17 @@ Unreleased Changes
 ------------------
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
+* Adding bitbucket pipelines and AppVeyor build configurations.
 * Carbon Model and Crop Production models no longer crash if user-input rasters
-  do not have a nodata value defined. In this case these models treat all pixel values as valid data.
+  do not have a nodata value defined. In this case these models treat all pixel
+  values as valid data.
 * Refactoring Recreation Model client to use taskgraph and the latest
-  pygeoprocessing. Avoided re-computation from taskgraph means that successive model runs with the same AOI and gridding option can re-use PUD results and avoid server communication entirely. Successive runs with the same predictor data will re-use intermediate geoprocessing results. Multiprocessing offered by taskgraph means server-side PUD calculations and client-side predictor data processing can happen in parallel. Some output filenames have changed.
+  pygeoprocessing. Avoided re-computation from taskgraph means that successive
+  model runs with the same AOI and gridding option can re-use PUD results and
+  avoid server communication entirely. Successive runs with the same predictor
+  data will re-use intermediate geoprocessing results. Multiprocessing offered
+  by taskgraph means server-side PUD calculations and client-side predictor
+  data processing can happen in parallel. Some output filenames have changed.
 
 3.6.0 (2019-01-30)
 ------------------
