@@ -505,9 +505,9 @@ def execute(args):
 
     # Create input list for calculating average & reclassified ecosystem risks
     ecosystem_risk_raster_path = os.path.join(
-        output_dir, 'TOT_RISK_Ecosystem.tif')
+        output_dir, 'TOT_RISK_Ecosystem%s.tif' % file_suffix)
     reclass_ecosystem_risk_raster_path = os.path.join(
-        output_dir, 'RECLASS_RISK_Ecosystem.tif')
+        output_dir, 'RECLASS_RISK_Ecosystem%s.tif' % file_suffix)
 
     # Append individual habitat risk rasters to the input list
     hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
