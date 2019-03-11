@@ -7,19 +7,17 @@ import re
 
 import numpy
 import numpy.testing
+from osgeo import gdal
+from osgeo import osr, ogr
 from shapely.geometry import Polygon
 from shapely.geometry import Point
+
 import pygeoprocessing.testing
 from pygeoprocessing.testing import sampledata
 
-from osgeo import gdal
-from osgeo import osr, ogr
-
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy',
-    'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'wave_energy')
+SAMPLE_DATA = os.path.join(REGRESSION_DATA, 'input')
 
 
 def _make_empty_files(workspace_dir):
@@ -30,6 +28,7 @@ def _make_empty_files(workspace_dir):
 
     Returns:
         None.
+
     """
     intermediate_files = [
         'WEM_InputOutput_Pts.shp', 'aoi_clipped_to_extract_path.shp'
@@ -67,11 +66,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_pixel_size_transform(self):
-        """WaveEnergy: testing pixel size transform helper function.
-
-        Function name is : '_pixel_size_based_on_coordinate_transform'.
-        """
+    def test_pixel_size_based_on_coordinate_transform(self):
+        """WaveEnergy: testing '_pixel_size_based_on_coordinate_transform' fn"""
         from natcap.invest import wave_energy
 
         srs = sampledata.SRS_WILLAMETTE
@@ -82,7 +78,7 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Define a Lat/Long WGS84 projection
         epsg_id = 4326
         reference = osr.SpatialReference()
-        proj_result = reference.ImportFromEPSG(epsg_id)
+        reference.ImportFromEPSG(epsg_id)
         # Get projection as WKT
         latlong_proj = reference.ExportToWkt()
         # Set origin to use for setting up geometries / geotransforms
@@ -212,8 +208,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         from natcap.invest import wave_energy
 
         aoi_path = os.path.join(REGRESSION_DATA, 'aoi_proj_to_extract.shp')
-        extract_path = os.path.join(SAMPLE_DATA, 'WaveData',
-                                    'Global_extract.shp')
+        extract_path = os.path.join(
+            SAMPLE_DATA, 'WaveData', 'Global_extract.shp')
 
         result_path = os.path.join(self.workspace_dir, 'aoi_proj_clipped.shp')
         target_projection = pygeoprocessing.get_vector_info(
@@ -223,8 +219,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
             self.workspace_dir)
 
         expected_path = os.path.join(REGRESSION_DATA, 'aoi_proj_clipped.shp')
-        pygeoprocessing.testing.assert_vectors_equal(result_path,
-                                                     expected_path, 1e-6)
+        WaveEnergyRegressionTests._assert_point_vectors_equal(
+            result_path, expected_path)
 
     def test_clip_vector_by_vector_points(self):
         """WaveEnergy: testing clipping points from polygons."""
@@ -257,8 +253,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Create geometry for the polygons, which will be used to clip
         geom_two = [
             Polygon([(pos_x, pos_y), (pos_x + 60, pos_y),
-                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60), (pos_x,
-                                                                     pos_y)])
+                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60),
+                     (pos_x, pos_y)])
         ]
 
         shape_to_clip_path = os.path.join(self.workspace_dir,
@@ -312,8 +308,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
             vector_format='ESRI Shapefile',
             filename=expected_path)
 
-        pygeoprocessing.testing.assert_vectors_equal(output_path,
-                                                     expected_shape, 1e-6)
+        WaveEnergyRegressionTests._assert_point_vectors_equal(
+            output_path, expected_shape)
 
     def test_clip_vector_by_vector_no_intersection(self):
         """WaveEnergy: testing '_clip_vector_by_vector' w/ no intersection."""
@@ -333,8 +329,8 @@ class WaveEnergyUnitTests(unittest.TestCase):
         # Create geometry for the polygons, which will be used to clip
         geom_two = [
             Polygon([(pos_x, pos_y), (pos_x + 60, pos_y),
-                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60), (pos_x,
-                                                                     pos_y)])
+                     (pos_x + 60, pos_y - 60), (pos_x, pos_y - 60),
+                     (pos_x, pos_y)])
         ]
 
         shape_to_clip_path = os.path.join(self.workspace_dir,
@@ -362,12 +358,15 @@ class WaveEnergyUnitTests(unittest.TestCase):
         output_path = os.path.join(self.workspace_dir, 'vector.shp')
         # Call the function to test
         self.assertRaises(wave_energy.IntersectionError,
-                          wave_energy._clip_vector_by_vector, shape_to_clip_path,
-                          binding_shape_path, output_path, srs.projection,
+                          wave_energy._clip_vector_by_vector,
+                          shape_to_clip_path,
+                          binding_shape_path,
+                          output_path,
+                          srs.projection,
                           self.workspace_dir)
 
     def test_binary_wave_data_to_dict(self):
-        """WaveEnergy: testing 'load_binary_wave_data_to_dict' function."""
+        """WaveEnergy: testing '_binary_wave_data_to_dict' function."""
         from natcap.invest import wave_energy
 
         wave_file_path = os.path.join(REGRESSION_DATA, 'example_ww3_binary.bin')
@@ -423,7 +422,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             'machine_param_path':
             os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
             'dem_path':
-            os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif')
+            os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif'),
+            'n_workers': -1
         }
         return args
 
@@ -434,8 +434,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
         args['aoi_path'] = os.path.join(SAMPLE_DATA, 'AOI_WCVI.shp')
         args['valuation_container'] = True
-        args['land_gridPts_path'] = os.path.join(SAMPLE_DATA,
-                                                 'LandGridPts_WCVI.csv')
+        args['land_gridPts_path'] = os.path.join(
+            SAMPLE_DATA, 'LandGridPts_WCVI.csv')
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
@@ -559,6 +559,65 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(args['workspace_dir'], 'output', table_path)))
+
+    def test_missing_required_keys(self):
+        """WaveEnergy: testing missing required keys from args."""
+        from natcap.invest import wave_energy
+
+        args = {}
+        with self.assertRaises(KeyError) as cm:
+            wave_energy.execute(args)
+        expected_message = (
+            "Keys are missing from args: ['workspace_dir', " +
+            "'wave_base_data_path', 'analysis_area_path', " +
+            "'machine_perf_path', 'machine_param_path', 'dem_path']")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_incorrect_analysis_area_path_value(self):
+        """WaveEnergy: testing incorrect analysis_area_path value."""
+        from natcap.invest import wave_energy
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['analysis_area_path'] = 'Incorrect Analysis Area'
+        with self.assertRaises(ValueError) as cm:
+            wave_energy.execute(args)
+        expected_message = (
+            "'analysis_area_path'], 'Parameter must be a known analysis area.")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    def test_validate_keys_missing_values(self):
+        """WaveEnergy: testing validate when keys are missing values."""
+        from natcap.invest import wave_energy
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['wave_base_data_path'] = None
+        args['dem_path'] = None
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['wave_base_data_path'],
+             'Parameter not found or is not a folder.'),
+            (['dem_path'],
+             'Parameter must be a filepath to a GDAL-compatible raster file.')]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_bad_aoi_format(self):
+        """WaveEnergy: testing bad AOI vector format with validate."""
+        from natcap.invest import wave_energy
+
+        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['aoi_path'], 'Vector must contain only polygons.'),
+            (['aoi_path'], 'Vector must be projected in meters.'),
+            (['aoi_path'], 'Vector must use the WGS_1984 datum.'),]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod
     def _assert_point_vectors_equal(a_path, b_path):
