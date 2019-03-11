@@ -183,6 +183,7 @@ def execute(args):
                   flow_dir_path,
                   args['workspace_dir']),
             target_path_list=[flow_dir_path],
+            dependent_task_list=[filled_pits_task],
             task_name='flow_dir_%s' % algorithm)
 
         if ('calculate_flow_accumulation' in args and

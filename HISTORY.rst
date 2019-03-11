@@ -4,6 +4,8 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with RouteDEM where runs of the tool with Flow Direction
+  enabled would cause the tool to crash if ``n_workers > 0``.
 * Carbon Model and Crop Production models no longer crash if user-input rasters
   do not have a nodata value defined. In this case these models treat all pixel values as valid data.
 * Refactoring Recreation Model client to use taskgraph and the latest
