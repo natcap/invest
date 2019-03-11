@@ -329,19 +329,21 @@ def execute(args):
             kwargs={'sampling_distance': sampling_distance,
                     'working_dir': intermediate_dir},
             target_path_list=[dist_raster_path],
-            task_name='distance_transform_%s' % stressor_name))
+            task_name='distance_transform_on_%s' % stressor_name))
 
-    LOGGER.info('Calculating maximum overlapping stressors on the ecosystem.')
+    LOGGER.info('Calculating number of habitats on each pixel.')
     align_habitat_raster_list = info_df[
         info_df.TYPE == _HABITAT_TYPE].ALIGN_RASTER_PATH.tolist()
-    overlap_stressor_raster_path = os.path.join(
-        file_preprocessing_dir, 'stressor_overlap%s.tif' % file_suffix)
+    habitat_path_band_list = [
+        (raster_path, 1) for raster_path in align_habitat_raster_list]
     habitat_count_raster_path = os.path.join(
         file_preprocessing_dir, 'habitat_count%s.tif' % file_suffix)
-    max_risk_score = _get_max_risk_score(
-        align_stressor_raster_list, align_habitat_raster_list,
-        overlap_stressor_raster_path, habitat_count_raster_path, max_rating,
-        args['risk_eq'])
+    task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=(habitat_path_band_list, _count_habitats_op,
+              habitat_count_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT),
+        target_path_list=[habitat_count_raster_path],
+        task_name='counting_habitats')
 
     # For each habitat, calculate the individual and cumulative exposure,
     # consequence, and risk scores from each stressor.
@@ -1379,100 +1381,6 @@ def _count_habitats_op(*habitat_arrays):
         habitat_count_arr[habiat_mask] += habitat_arr.astype(int)[habiat_mask]
 
     return habitat_count_arr
-
-
-def _stressor_overlap_op(habitat_count_arr, *stressor_arrays):
-    """Adding pixel values together from multiple arrays.
-
-    Parameters:
-        habitat_count_arr (array): an array with each pixel indicating the
-            summation value of input habitat arrays.
-        *stressor_arrays: a list of arrays with 1s and 0s values.
-
-    Returns:
-        overlap_arr (array): an integer array with each pixel indicating the
-            summation value of input arrays.
-
-    """
-    overlap_arr = numpy.full(
-        habitat_count_arr.shape, 0, dtype=numpy.int8)
-
-    # Sum up the pixel values of each stressor array
-    for stressor_arr in stressor_arrays:
-        valid_pixel_mask = (stressor_arr != _TARGET_NODATA_INT)
-        overlap_arr[valid_pixel_mask] += stressor_arr.astype(int)[
-            valid_pixel_mask]
-
-    # Convert the values outside of the ecosystem to nodata, since they won't
-    # affect the risk of any habitats in the ecosystem
-    non_ecosystem_mask = (habitat_count_arr < 1) | (
-        habitat_count_arr == _TARGET_NODATA_INT)
-    overlap_arr[non_ecosystem_mask] = _TARGET_NODATA_INT
-
-    return overlap_arr
-
-
-def _get_max_risk_score(
-        stressor_path_list, habitat_path_list, target_overlap_stressor_path,
-        target_habitat_count_raster_path, max_rating, risk_eq):
-    """Calculate the maximum risk score based on stressor number and ratings.
-
-    The maximum possible risk score is calculated by either multiplying the
-    number of stressors and maximum rating (Multiplicative), or multiplying the
-    number of stressors and the euclidean distance of the maximum ratings
-    (Euclidean).
-
-    Parameters:
-        stressor_path_list (list): a list of stressor raster paths with pixel
-            values of 1 representing stressor existence and 0 non-existence.
-        habitat_path_list (list): a list of habitat raster paths with pixel
-            values of 1 representing stressor existence and 0 non-existence.
-        target_overlap_stressor_path (str): a path to the output raster that
-            has number of overlapping stressors on each pixel.
-        target_habitat_count_raster_path (str): a path to the output raster that
-            has 1s indicating habitat existence and 0s non-existence.
-        max_rating (float): a number representing the highest potential value
-            that should be represented in rating in the criteria table.
-        risk_eq (str): a string identifying the equation that should be
-            used in calculating risk scores for each H-S overlap cell. This
-            will be either 'Euclidean' or 'Multiplicative'.
-
-    Returns:
-        max_risk_score (float): the maximum possible risk score that is likely
-            occur to a single habitat pixel.
-
-    """
-    habitat_path_band_list = [(path, 1) for path in habitat_path_list]
-    pygeoprocessing.raster_calculator(
-        habitat_path_band_list, _count_habitats_op,
-        target_habitat_count_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT)
-
-    stressor_path_band_list = [(path, 1) for path in stressor_path_list]
-    stressor_path_band_list.insert(0, (target_habitat_count_raster_path, 1))
-    pygeoprocessing.raster_calculator(
-        stressor_path_band_list, _stressor_overlap_op,
-        target_overlap_stressor_path, gdal.GDT_Byte, _TARGET_NODATA_INT)
-
-    # Get maximum overlapping stressors from the output band statistics
-    raster = gdal.OpenEx(target_overlap_stressor_path, gdal.OF_RASTER)
-    band = raster.GetRasterBand(1)
-    max_overlap_stressors = band.GetMaximum()
-    raster = None
-
-    # Calculate the maximum risk score for a habitat from all stressors
-    if risk_eq == 'Multiplicative':
-        # The maximum score for a single stressor is max_rating*max_rating
-        max_risk_score = max_rating*max_rating
-    else:  # risk_eq is 'Euclidean'
-        # The maximum risk score for a habitat from a single stressor is
-        # sqrt( (max_rating-1)^2 + (max_rating-1)^2 ). Therefore multiply that
-        # by the number of stressors to get maximum possible risk scores.
-        max_risk_score = numpy.sqrt(numpy.power((max_rating-1), 2)*2)
-
-    LOGGER.info('max_overlap_stressors: %s. max_risk_score: %s.' %
-                (max_overlap_stressors, max_risk_score))
-
-    return max_risk_score
 
 
 def _reclassify_risk_op(risk_arr, max_rating):
