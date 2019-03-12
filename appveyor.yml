@@ -49,6 +49,7 @@ cache:
   # Cache downloaded pip packages and built wheels.
   - '%LOCALAPPDATA%\pip\Cache\http'
   - '%LOCALAPPDATA%\pip\Cache\wheels'
+  - '%HOMEPATH%\pipwin'
 
 on_finish:
   # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.
