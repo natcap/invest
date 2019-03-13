@@ -4,6 +4,8 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with Habitat Quality's error checking where nodata values
+  in landcover rasters were not being taken into account.
 * Carbon Model and Crop Production models no longer crash if user-input rasters
   do not have a nodata value defined. In this case these models treat all pixel values as valid data.
 * Refactoring Recreation Model client to use taskgraph and the latest
