@@ -2911,6 +2911,7 @@ def validate(args, limit_to=None):
     validation_error_list = []
     max_rating_key = 'max_rating'
     aoi_vector_key = 'aoi_vector_path'
+    resolution_key = 'resolution'
 
     for key in [
             'workspace_dir',
@@ -2936,6 +2937,20 @@ def validate(args, limit_to=None):
     if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
+
+    # Check if resolution is a positive number
+    if limit_to is None or limit_to == resolution_key:
+        resolution_value = args[resolution_key]
+        resolution_is_valid = True
+        if isinstance(resolution_value, basestring):
+            if not resolution_value.isdigit() or float(resolution_value) <= 0:
+                resolution_is_valid = False
+        elif (isinstance(resolution_value, (int, float))):
+            if resolution_value <= 0:
+                resolution_is_valid = False
+        if not resolution_is_valid:
+            validation_error_list.append(
+                ([resolution_key], 'should be a positive number'))
 
     for key in [
             'criteria_table_path', 'info_table_path']:
