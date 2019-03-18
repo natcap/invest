@@ -1199,23 +1199,15 @@ def _has_field_name(base_vector_path, field_name):
     """
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
     base_layer = base_vector.GetLayer()
-    base_layer_defn = base_layer.GetLayerDefn()
-    field_count = base_layer_defn.GetFieldCount()
 
-    for fld_index in range(field_count):
-        field = base_layer_defn.GetFieldDefn(fld_index)
-        base_field_name = field.GetName()
-        # Find the first field name, case-insensitive
-        if base_field_name.lower() == field_name.lower():
-            LOGGER.info('The %s field is provided in the vector.' % field_name)
-            base_vector = None
-            base_layer = None
-            return True
+    fields = [field.GetName().lower() for field in base_layer.schema]
     base_vector = None
     base_layer = None
-
-    LOGGER.info('The %s field is not provided in the vector.' % field_name)
-    return False
+    if field_name not in fields:
+        LOGGER.info('The %s field is not provided in the vector.' % field_name)
+        return False
+    else:
+        return True
 
 
 def _ecosystem_risk_op(habitat_count_arr, *hab_risk_arrays):
