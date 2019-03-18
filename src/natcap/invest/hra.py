@@ -2191,7 +2191,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     required_buffer_type = _STRESSOR_TYPE
 
     # Read file with pandas based on its type
-    file_ext = os.path.splitext(base_info_table_path)[1]
+    file_ext = os.path.splitext(base_info_table_path)[1].lower()
     if file_ext == '.csv':
         info_df = pandas.read_csv(base_info_table_path)
     elif file_ext in ['.xlsx', '.xls']:
@@ -2301,7 +2301,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
     """
     # Read the table into dataframe based on its type, with first column as
     # index. Column names are auto-generated ordinal values
-    file_ext = os.path.splitext(base_criteria_table_path)[1]
+    file_ext = os.path.splitext(base_criteria_table_path)[1].lower()
     if file_ext == '.csv':
         criteria_df = pandas.read_csv(
             base_criteria_table_path, index_col=0, header=None)
@@ -2945,7 +2945,7 @@ def validate(args, limit_to=None):
                 validation_error_list.append(([key], 'not found on disk'))
 
             # Validate file type
-            file_ext = os.path.splitext(args[key])[1]
+            file_ext = os.path.splitext(args[key])[1].lower()
             if file_ext not in ['.csv', '.xlsx', '.xls']:
                 validation_error_list.append(
                     ([key], 'not a CSV or an Excel file'))
