@@ -2416,7 +2416,7 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
     # Enumerate from the overlap header
     stressor_overlap_indexes = criteria_df.index.values[(last_idx+1):]
     current_stressor = None
-    for idx, field in enumerate(stressor_overlap_indexes):
+    for field in stressor_overlap_indexes:
         if field is not None:
             if field in stressor_names:
                 # Set the current stressor to the encountered stressor and
