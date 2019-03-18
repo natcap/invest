@@ -2409,7 +2409,7 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
                 last_idx = idx
                 break
 
-    LOGGER.info('resilience_attributes: %s' % resilience_attributes)
+    LOGGER.debug('resilience_attributes: %s' % resilience_attributes)
 
     # Make a dictionary of stressor (key) with its attributes (value)
     stressor_attributes = {}
@@ -2435,7 +2435,7 @@ def _get_attributes_from_df(criteria_df, habitat_names, stressor_names):
                                  'stressors. Please check your criteria table.'
                                  % field)
 
-    LOGGER.info('stressor_attributes: %s' % stressor_attributes)
+    LOGGER.debug('stressor_attributes: %s' % stressor_attributes)
 
     return resilience_attributes, stressor_attributes
 
