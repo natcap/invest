@@ -16,8 +16,7 @@ Unreleased Changes
 * Refactoring Habitat Risk Assessment (HRA) Model to use TaskGraph and
   Pygeoprocessing 1.x. The HRA Proprocessor is removed and its previous
   functionality was simplified and merged into the HRA model itself.
-  The model will no longer generate HTML plots and tables, since we're
-  planning to use Node.js for the visualization.
+  The model will no longer generate HTML plots and tables.
 
 3.6.0 (2019-01-30)
 ------------------
