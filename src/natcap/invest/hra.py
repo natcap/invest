@@ -2,10 +2,9 @@
 from __future__ import absolute_import
 import os
 import logging
-
-import math
 import pickle
 import tempfile
+
 import numpy
 from osgeo import gdal, ogr, osr
 import pandas
