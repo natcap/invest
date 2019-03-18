@@ -143,7 +143,6 @@ def execute(args):
         output_dir, file_suffix)
     resilience_attributes, stressor_attributes = \
         _get_attributes_from_df(criteria_df, habitat_names, stressor_names)
-    stressor_names = stressor_attributes.keys()
     max_rating = float(args['max_rating'])
     recovery_df = _get_recovery_dataframe(
         criteria_df, habitat_names, resilience_attributes, max_rating,
