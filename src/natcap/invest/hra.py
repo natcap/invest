@@ -1246,7 +1246,8 @@ def _reclassify_ecosystem_risk_op(ecosystem_risk_arr, max_rating):
     # Divide risk score by (maximum possible risk score/3) to get an integer
     # ranging from 0 to 3, then return the ceiling of it
     reclass_ecosystem_risk_arr[valid_pixel_mask] = numpy.ceil(
-        ecosystem_risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(int)
+        ecosystem_risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(
+            numpy.int8)
 
     return reclass_ecosystem_risk_arr
 
@@ -1269,7 +1270,8 @@ def _count_habitats_op(*habitat_arrays):
 
     for habitat_arr in habitat_arrays:
         habiat_mask = (habitat_arr != _TARGET_NODATA_INT)
-        habitat_count_arr[habiat_mask] += habitat_arr.astype(int)[habiat_mask]
+        habitat_count_arr[habiat_mask] += habitat_arr.astype(
+            numpy.int8)[habiat_mask]
 
     return habitat_count_arr
 
@@ -1301,7 +1303,7 @@ def _reclassify_risk_op(risk_arr, max_rating):
 
     # Return the ceiling of the continuous risk score
     reclass_arr[valid_pixel_mask] = numpy.ceil(
-        risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(int)
+        risk_arr[valid_pixel_mask] / (max_rating/3.)).astype(numpy.int8)
 
     return reclass_arr
 
@@ -1768,7 +1770,8 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
     # Calculate the recovery score by dividing numerator by denominator
     # and then convert it to reclassified by using max_rating
     recov_reclass_arr[habitat_mask] = numpy.ceil(
-        3. - num_arr[habitat_mask] / denom / max_rating * 3.).astype(int)
+        3. - num_arr[habitat_mask] / denom / max_rating * 3.).astype(
+            numpy.int8)
 
     return recov_reclass_arr
 
@@ -2103,7 +2106,9 @@ def _label_linear_unit(row):
     """
     if row['IS_RASTER']:
         raster = gdal.OpenEx(row['PATH'], gdal.OF_RASTER)
-        spat_ref = raster.GetProjection()
+        sr_wkt = raster.GetProjection()
+        spat_ref = osr.SpatialReference()
+        spat_ref.ImportFromWkt(sr_wkt)
         raster = None
     else:
         vector = gdal.OpenEx(row['PATH'], gdal.OF_VECTOR)

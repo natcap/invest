@@ -772,6 +772,7 @@ class HraRegressionTests(unittest.TestCase):
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
+        args['workspace_dir'] = r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\synthetic_input"
         natcap.invest.hra.execute(args)
 
         output_rasters = [
