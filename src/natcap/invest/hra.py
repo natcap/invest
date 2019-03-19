@@ -211,7 +211,7 @@ def execute(args):
         target_path_list=[simplified_aoi_vector_path],
         task_name='simplify_aoi_vector')
 
-    # Use the simplified AOI vector to run analysis on
+    # Use the simplified AOI vector to run analyses
     aoi_vector_path = simplified_aoi_vector_path
 
     # Rasterize AOI vector for later risk statistics calculation
@@ -219,10 +219,61 @@ def execute(args):
     rasterized_aoi_pickle_path = os.path.join(
         file_preprocessing_dir, 'rasterized_aoi_dictionary%s.pickle' %
         file_suffix)
-    _rasterize_vector_features(
-        simplified_aoi_vector_path, rasterized_aoi_pickle_path, aoi_field_name,
-        file_preprocessing_dir, target_pixel_size, task_graph,
-        [simplify_aoi_task])
+
+    rasterize_aoi_dependent_task_list = [simplify_aoi_task]
+    # Rasterize AOI vector geometries. If field name doesn't exist, rasterize
+    # the entire vector onto a raster with values of 1
+    if aoi_field_name is None:
+        # Fill the raster with 1s on where a vector geometry touches any pixel
+        # on the raster
+        target_raster_path = os.path.join(
+            file_preprocessing_dir, 'rasterized_simplified_aoi%s.tif' %
+            file_suffix)
+        create_raster_task = task_graph.add_task(
+            func=pygeoprocessing.create_raster_from_vector_extents,
+            args=(aoi_vector_path, target_raster_path,
+                  target_pixel_size, _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
+            target_path_list=[target_raster_path],
+            task_name='rasterize_single_AOI_vector',
+            dependent_task_list=rasterize_aoi_dependent_task_list)
+        rasterize_aoi_dependent_task_list.append(create_raster_task)
+
+        # Fill the raster with 1s on where a vector geometry exists
+        rasterize_kwargs = {'burn_values': [1],
+                            'option_list': ["ALL_TOUCHED=TRUE"]}
+        task_graph.add_task(
+            func=pygeoprocessing.rasterize,
+            args=(aoi_vector_path, target_raster_path),
+            kwargs=rasterize_kwargs,
+            target_path_list=[target_raster_path],
+            task_name='rasterize_single_vector',
+            dependent_task_list=rasterize_aoi_dependent_task_list)
+
+        pickle.dump(
+            {_TOTAL_REGION_NAME: target_raster_path},
+            open(rasterized_aoi_pickle_path, 'wb'))
+
+    # If field name exists., rasterize AOI geometries with same field value
+    # onto separate rasters
+    else:
+        geom_pickle_path = os.path.join(
+            file_preprocessing_dir, 'aoi_geometries%s.pickle' % file_suffix)
+
+        get_vector_geoms_task = task_graph.add_task(
+            func=_get_vector_geometries_by_field,
+            args=(aoi_vector_path, aoi_field_name, geom_pickle_path),
+            target_path_list=[geom_pickle_path],
+            task_name='get_AOI_vector_geoms_by_field_"%s"' % aoi_field_name,
+            dependent_task_list=rasterize_aoi_dependent_task_list)
+        rasterize_aoi_dependent_task_list.append(get_vector_geoms_task)
+
+        task_graph.add_task(
+            func=_create_rasters_from_geometries,
+            args=(geom_pickle_path, file_preprocessing_dir,
+                  rasterized_aoi_pickle_path, target_pixel_size),
+            target_path_list=[rasterized_aoi_pickle_path],
+            task_name='create_rasters_from_AOI_geometries',
+            dependent_task_list=rasterize_aoi_dependent_task_list)
 
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
@@ -1054,86 +1105,6 @@ def _create_rasters_from_geometries(
         temp_vector = None
 
     pickle.dump(raster_paths_by_field, open(target_pickle_path, 'wb'))
-
-
-def _rasterize_vector_features(
-        base_vector_path, target_pickle_path, field_name, working_dir,
-        target_pixel_size, task_graph, dependent_task_list):
-    """Rasterize geometries with same field value from a vector into rasters.
-
-    If field_name is not None, merge and rasterize geometries with same field
-    value on that field into a raster.
-
-    Parameters:
-        base_vector_path (str): a path to the vector with a set of features
-            to be rasterized.
-        target_pickle_path (str): a path to the pickle file that contains a
-            dictionary of field names to their corresponding output raster
-            paths rasterized from base vector.
-        field_name (str): same values on this field will be merged and
-            rasterized into an individual raster. If None, the entire vector
-            will be rasterized into a single raster.
-        working_dir (str): a path indicating where raster files should be
-            created.
-        target_pixel_size (list/tuple): the x/y pixel size as a sequence in the
-            projection of base vector. ex: [30.0, -30.0], unit: meters.
-        task_graph (Taskgraph object): an object for building task graphs and
-            parallelizing independent tasks.
-        dependent_task_list (list): a list of tasks that the upcoming tasks
-            will be dependent upon.
-
-    Returns:
-        None
-
-    """
-    # Rasterize the entire vector onto a raster with values of 1
-    if field_name is None:
-        # Fill the raster with 1s on where a vector geometry touches any pixel
-        # on the raster
-        target_raster_path = os.path.join(
-            working_dir, 'rasterized_simplified_aoi.tif')
-        create_raster_task = task_graph.add_task(
-            func=pygeoprocessing.create_raster_from_vector_extents,
-            args=(base_vector_path, target_raster_path, target_pixel_size,
-                  _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
-            target_path_list=[target_raster_path],
-            task_name='rasterize_single_vector',
-            dependent_task_list=dependent_task_list)
-        dependent_task_list.append(create_raster_task)
-
-        # Fill the raster with 1s on where a vector geometry exists
-        rasterize_kwargs = {'burn_values': [1],
-                            'option_list': ["ALL_TOUCHED=TRUE"]}
-        task_graph.add_task(
-            func=pygeoprocessing.rasterize,
-            args=(base_vector_path, target_raster_path),
-            kwargs=rasterize_kwargs,
-            target_path_list=[target_raster_path],
-            task_name='rasterize_single_vector',
-            dependent_task_list=dependent_task_list)
-
-        pickle.dump(
-            {_TOTAL_REGION_NAME: target_raster_path},
-            open(target_pickle_path, 'wb'))
-        return
-
-    geom_pickle_path = os.path.join(working_dir, 'aoi_geometries.pickle')
-
-    get_vector_geoms_task = task_graph.add_task(
-        func=_get_vector_geometries_by_field,
-        args=(base_vector_path, field_name, geom_pickle_path),
-        target_path_list=[geom_pickle_path],
-        task_name='get_vector_geoms_by_field_"%s"' % field_name,
-        dependent_task_list=dependent_task_list)
-    dependent_task_list.append(get_vector_geoms_task)
-
-    task_graph.add_task(
-        func=_create_rasters_from_geometries,
-        args=(geom_pickle_path, working_dir, target_pickle_path,
-              target_pixel_size),
-        target_path_list=[target_pickle_path],
-        task_name='create_rasters_from_geometries',
-        dependent_task_list=dependent_task_list)
 
 
 def _get_vector_geometries_by_field(
