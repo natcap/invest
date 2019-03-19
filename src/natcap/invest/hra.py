@@ -220,7 +220,7 @@ def execute(args):
         file_preprocessing_dir, 'rasterized_aoi_dictionary%s.pickle' %
         file_suffix)
 
-    rasterize_aoi_dependent_task_list = [simplify_aoi_task]
+    rasterize_aoi_dependent_tasks = [simplify_aoi_task]
     # Rasterize AOI vector geometries. If field name doesn't exist, rasterize
     # the entire vector onto a raster with values of 1
     if aoi_field_name is None:
@@ -235,8 +235,8 @@ def execute(args):
                   target_pixel_size, _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
             target_path_list=[target_raster_path],
             task_name='rasterize_single_AOI_vector',
-            dependent_task_list=rasterize_aoi_dependent_task_list)
-        rasterize_aoi_dependent_task_list.append(create_raster_task)
+            dependent_task_list=rasterize_aoi_dependent_tasks)
+        rasterize_aoi_dependent_tasks.append(create_raster_task)
 
         # Fill the raster with 1s on where a vector geometry exists
         rasterize_kwargs = {'burn_values': [1],
@@ -247,7 +247,7 @@ def execute(args):
             kwargs=rasterize_kwargs,
             target_path_list=[target_raster_path],
             task_name='rasterize_single_vector',
-            dependent_task_list=rasterize_aoi_dependent_task_list)
+            dependent_task_list=rasterize_aoi_dependent_tasks)
 
         pickle.dump(
             {_TOTAL_REGION_NAME: target_raster_path},
@@ -264,8 +264,8 @@ def execute(args):
             args=(aoi_vector_path, aoi_field_name, geom_pickle_path),
             target_path_list=[geom_pickle_path],
             task_name='get_AOI_vector_geoms_by_field_"%s"' % aoi_field_name,
-            dependent_task_list=rasterize_aoi_dependent_task_list)
-        rasterize_aoi_dependent_task_list.append(get_vector_geoms_task)
+            dependent_task_list=rasterize_aoi_dependent_tasks)
+        rasterize_aoi_dependent_tasks.append(get_vector_geoms_task)
 
         task_graph.add_task(
             func=_create_rasters_from_geometries,
@@ -273,7 +273,7 @@ def execute(args):
                   rasterized_aoi_pickle_path, target_pixel_size),
             target_path_list=[rasterized_aoi_pickle_path],
             task_name='create_rasters_from_AOI_geometries',
-            dependent_task_list=rasterize_aoi_dependent_task_list)
+            dependent_task_list=rasterize_aoi_dependent_tasks)
 
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
@@ -632,7 +632,7 @@ def execute(args):
             field_name = 'Stressor'
 
         geojson_path = os.path.join(
-            output_dir, file_basename + '.geojson')
+            output_dir, file_basename + '%s.geojson' % file_suffix)
         task_graph.add_task(
             func=_raster_to_geojson,
             args=(out_raster_path, geojson_path, file_basename, field_name),
@@ -2098,22 +2098,25 @@ def _label_linear_unit(row):
             to transform them to meters
 
     Raises:
-        ValueError if any of the file projections is missing.
+        ValueError if any of the file's spatial reference is missing.
 
     """
     if row['IS_RASTER']:
-        sr_wkt = pygeoprocessing.get_raster_info(row['PATH'])['projection']
+        raster = gdal.OpenEx(row['PATH'], gdal.OF_RASTER)
+        spat_ref = raster.GetProjection()
+        raster = None
     else:
-        sr_wkt = pygeoprocessing.get_vector_info(row['PATH'])['projection']
+        vector = gdal.OpenEx(row['PATH'], gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        spat_ref = layer.GetSpatialRef()
+        layer = None
+        vector = None
 
-    if not sr_wkt:
+    if not spat_ref:
         raise ValueError('The following layer does not have a projection: %s' %
                          row['PATH'])
     else:
-        spat_ref = osr.SpatialReference()
-        spat_ref.ImportFromWkt(sr_wkt)
-        linear_unit = spat_ref.GetLinearUnits()
-        return linear_unit
+        return spat_ref.GetLinearUnits()
 
 
 def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
