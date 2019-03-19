@@ -217,7 +217,8 @@ def execute(args):
     # Rasterize AOI vector for later risk statistics calculation
     LOGGER.info('Rasterizing AOI vector.')
     rasterized_aoi_pickle_path = os.path.join(
-        file_preprocessing_dir, 'rasterized_aoi_dictionary.pickle')
+        file_preprocessing_dir, 'rasterized_aoi_dictionary%s.pickle' %
+        file_suffix)
     _rasterize_vector_features(
         simplified_aoi_vector_path, rasterized_aoi_pickle_path, aoi_field_name,
         file_preprocessing_dir, target_pixel_size, task_graph,
