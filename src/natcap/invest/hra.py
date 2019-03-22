@@ -908,7 +908,7 @@ def _calc_and_pickle_zonal_stats(
             LOGGER.info('Bounding boxes of %s and %s do not intersect.' %
                         (score_raster_path, zonal_raster_path))
         for stats_type in stats_dict:
-            stats_dict[stats_type] = None
+            stats_dict[stats_type] = None  # This will leave blank in CSV table
         score_raster = None
         pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
         os.remove(clipped_score_raster_path)
@@ -962,7 +962,7 @@ def _calc_and_pickle_zonal_stats(
             stats_dict['%LOW'] = low_score_count/pixel_count*100.
     else:
         for stats_type in stats_dict:
-            stats_dict[stats_type] = None
+            stats_dict[stats_type] = None  # This will leave blank in CSV table
 
     score_raster = None
     zonal_raster = None
@@ -973,7 +973,8 @@ def _calc_and_pickle_zonal_stats(
     os.remove(clipped_score_raster_path)
 
 
-def _zonal_stats_to_csv(overlap_df, info_df, region_list, target_stats_csv_path):
+def _zonal_stats_to_csv(
+        overlap_df, info_df, region_list, target_stats_csv_path):
     """Unpickle zonal stats from files and concatenate the dataframe into CSV.
 
     Parameters:

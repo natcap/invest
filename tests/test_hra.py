@@ -782,8 +782,7 @@ class HraRegressionTests(unittest.TestCase):
 
         output_vectors = [
             'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
-            'RECLASS_RISK_Ecosystem', 'STRESSOR_stressor_0',
-            'STRESSOR_stressor_1']
+            'RECLASS_RISK_Ecosystem']
 
         # Assert rasters are equal
         output_raster_paths = [
