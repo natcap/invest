@@ -399,10 +399,12 @@ def execute(args):
     # consequence, and risk scores from each stressor.
     for habitat in habitat_names:
         LOGGER.info('Calculating recovery scores on habitat %s.' % habitat)
+        # Get a dataframe with information on raster paths for the habitat.
+        habitat_info_df = info_df.loc[info_df.NAME == habitat]
+
         # On a habitat raster, a pixel value of 0 indicates the existence of
         # habitat, whereas 1 means non-existence.
-        habitat_raster_path = info_df.loc[
-            info_df.NAME == habitat, 'ALIGN_RASTER_PATH'].item()
+        habitat_raster_path = habitat_info_df['ALIGN_RASTER_PATH'].item()
         task_graph.add_task(
             func=_calc_habitat_recovery,
             args=(habitat_raster_path, habitat, recovery_df, max_rating),
@@ -417,18 +419,24 @@ def execute(args):
                         'from stressor %s to habitat %s.' %
                         (stressor, habitat))
 
-            stressor_dist_raster_path = info_df.loc[
-                info_df.NAME == stressor, 'DIST_RASTER_PATH'].item()
+            # Get a dataframe with information on distance raster path,
+            # buffer distance, and linear unit for the stressor
+            stressor_info_df = info_df.loc[info_df.NAME == stressor]
+
+            # Get habitat-stressor overlap dataframe
+            habitat_stressor_overlap_df = overlap_df.loc[(habitat, stressor)]
+
+            stressor_dist_raster_path = stressor_info_df[
+                'DIST_RASTER_PATH'].item()
 
             # Convert stressor buffer from meters to projection unit
-            stressor_buffer = info_df.loc[
-                info_df.NAME == stressor, _BUFFER_HEADER].item() / float(
-                    info_df.loc[info_df.NAME == stressor, 'LINEAR_UNIT'].item())
+            stressor_buffer = stressor_info_df[_BUFFER_HEADER].item() / float(
+                    stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
             expo_dependent_task_list = [distance_transform_task_list[j]]
             _calc_pair_criteria_score(
-                overlap_df.loc[(habitat, stressor)], habitat_raster_path,
+                habitat_stressor_overlap_df, habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
                 'E', task_graph, expo_dependent_task_list)
 
@@ -436,14 +444,14 @@ def execute(args):
             # Add recovery numerator and denominator to the scores
             conseq_dependent_task_list = [distance_transform_task_list[j]]
             _calc_pair_criteria_score(
-                overlap_df.loc[(habitat, stressor)], habitat_raster_path,
+                habitat_stressor_overlap_df, habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
                 'C', task_graph, conseq_dependent_task_list)
 
             # Calculate pairwise habitat-stressor risks.
             pair_e_raster_path, pair_c_raster_path, \
                 target_pair_risk_raster_path = [
-                    overlap_df.loc[(habitat, stressor), path] for path in
+                    habitat_stressor_overlap_df.loc[path] for path in
                     ['E_RASTER_PATH', 'C_RASTER_PATH', 'PAIR_RISK_RASTER_PATH']]
             pair_risk_calculation_list = [
                 (pair_e_raster_path, 1), (pair_c_raster_path, 1),
@@ -462,21 +470,20 @@ def execute(args):
         task_graph.join()
 
         # Calculate cumulative E, C & risk scores on each habitat
-        final_e_habitat_path, final_c_habitat_path = [
-            info_df.loc[info_df.NAME == habitat, column_header].item() for
-            column_header in ['FINAL_E_RASTER_PATH', 'FINAL_C_RASTER_PATH']]
+        final_e_habitat_path = habitat_info_df['FINAL_E_RASTER_PATH'].item()
+        final_c_habitat_path = habitat_info_df['FINAL_C_RASTER_PATH'].item()
 
         LOGGER.info(
             'Calculating total exposure scores on habitat %s.' % habitat)
+        habitat_overlap_df = overlap_df.loc[habitat]
         e_num_path_const_list = [
             (path, 1) for path in
-            overlap_df.loc[habitat, 'E_NUM_RASTER_PATH'].tolist()]
+            habitat_overlap_df['E_NUM_RASTER_PATH'].tolist()]
         e_denom_list = [
-            (denom, 'raw') for denom in
-            overlap_df.loc[habitat, 'E_DENOM'].tolist()]
+            (denom, 'raw') for denom in habitat_overlap_df['E_DENOM'].tolist()]
 
-        final_e_path_band_list = [(habitat_raster_path, 1)] + \
-            e_num_path_const_list + e_denom_list
+        final_e_path_band_list = list(
+            [(habitat_raster_path, 1)] + e_num_path_const_list + e_denom_list)
 
         # Calculate total exposure on the habitat
         task_graph.add_task(
@@ -494,15 +501,14 @@ def execute(args):
         recov_num_raster_path = recovery_df.loc[habitat, 'R_NUM_RASTER_PATH']
         c_num_path_const_list = [
             (path, 1) for path in
-            overlap_df.loc[habitat, 'C_NUM_RASTER_PATH'].tolist()]
+            habitat_overlap_df['C_NUM_RASTER_PATH'].tolist()]
         c_denom_list = [
-            (denom, 'raw') for denom in
-            overlap_df.loc[habitat, 'C_DENOM'].tolist()]
+            (denom, 'raw') for denom in habitat_overlap_df['C_DENOM'].tolist()]
         c_denom_list.append((recovery_df.loc[habitat, 'R_DENOM'], 'raw'))
 
-        final_c_path_const_list = [
-            (habitat_raster_path, 1), (recov_num_raster_path, 1)] + \
-            c_num_path_const_list + c_denom_list
+        final_c_path_const_list = list([
+            (habitat_raster_path, 1), (recov_num_raster_path, 1)] +
+            c_num_path_const_list + c_denom_list)
 
         # Calculate total consequence on the habitat
         task_graph.add_task(
@@ -517,16 +523,16 @@ def execute(args):
 
         LOGGER.info('Calculating total risk score and reclassified risk scores'
                     ' on habitat %s.' % habitat)
+
         total_habitat_risk_path, reclass_habitat_risk_path = [
-            info_df.loc[info_df.NAME == habitat, column_header].item() for
-            column_header in [
+            habitat_info_df[column_header].item() for column_header in [
                 'TOTAL_RISK_RASTER_PATH', 'RECLASS_RISK_RASTER_PATH']]
 
         # Get a list of habitat path and individual risk paths on that habitat
         # for the final risk calculation
         total_risk_path_band_list = [(habitat_raster_path, 1)]
-        pair_risk_path_list = overlap_df.loc[
-            habitat, 'PAIR_RISK_RASTER_PATH'].tolist()
+        pair_risk_path_list = habitat_overlap_df[
+            'PAIR_RISK_RASTER_PATH'].tolist()
         total_risk_path_band_list = total_risk_path_band_list + [
             (path, 1) for path in pair_risk_path_list]
 
@@ -2121,7 +2127,7 @@ def _label_linear_unit(row):
         raise ValueError('The following layer does not have a projection: %s' %
                          row['PATH'])
     else:
-        return spat_ref.GetLinearUnits()
+        return float(spat_ref.GetLinearUnits())
 
 
 def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
