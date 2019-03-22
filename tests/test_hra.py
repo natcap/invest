@@ -772,6 +772,7 @@ class HraRegressionTests(unittest.TestCase):
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
+        args['workspace_dir'] = r"C:\Users\Joanna Lin\Documents\hra_nodejs_experiment\hra-workspace\synthetic_output"
         natcap.invest.hra.execute(args)
 
         output_rasters = [
@@ -819,9 +820,9 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'summary_statistics.csv')
+            self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'summary_statistics_euc_lin.csv')
+            TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 
@@ -889,9 +890,9 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'summary_statistics.csv')
+            self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'summary_statistics_mul_exp.csv')
+            TEST_DATA, 'SUMMARY_STATISTICS_mul_exp.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 

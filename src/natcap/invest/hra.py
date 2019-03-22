@@ -721,7 +721,7 @@ def execute(args):
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
-        output_dir, 'summary_statistics%s.csv' % file_suffix)
+        output_dir, 'SUMMARY_STATISTICS%s.csv' % file_suffix)
 
     task_graph.add_task(
         func=_zonal_stats_to_csv,
@@ -908,7 +908,7 @@ def _calc_and_pickle_zonal_stats(
             LOGGER.info('Bounding boxes of %s and %s do not intersect.' %
                         (score_raster_path, zonal_raster_path))
         for stats_type in stats_dict:
-            stats_dict[stats_type] = 0
+            stats_dict[stats_type] = None
         score_raster = None
         pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
         os.remove(clipped_score_raster_path)
