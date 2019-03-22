@@ -819,9 +819,9 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'criteria_score_stats.csv')
+            self.workspace_dir, 'outputs', 'summary_statistics.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'criteria_score_stats_euc_lin.csv')
+            TEST_DATA, 'summary_statistics_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 
@@ -889,9 +889,9 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'criteria_score_stats.csv')
+            self.workspace_dir, 'outputs', 'summary_statistics.csv')
         expected_csv_path = os.path.join(
-            TEST_DATA, 'criteria_score_stats_mul_exp.csv')
+            TEST_DATA, 'summary_statistics_mul_exp.csv')
         pygeoprocessing.testing.assert_csv_equal(
             output_csv_path, expected_csv_path)
 

@@ -721,7 +721,7 @@ def execute(args):
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
-        output_dir, 'criteria_score_stats%s.csv' % file_suffix)
+        output_dir, 'summary_statistics%s.csv' % file_suffix)
 
     task_graph.add_task(
         func=_zonal_stats_to_csv,
@@ -974,15 +974,12 @@ def _calc_and_pickle_zonal_stats(
 
 
 def _zonal_stats_to_csv(overlap_df, info_df, region_list, target_stats_csv_path):
-    """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
-
-    Add each zonal stats calculation to Taskgraph to allow parallel processing,
-    and pickle the stats dictionary to the output_dir.
+    """Unpickle zonal stats from files and concatenate the dataframe into CSV.
 
     Parameters:
         overlap_df (dataframe): a multi-index dataframe with exposure and
-            consequence raster paths, as well as stats columns for writing
-            zonal statistics dictionary on.
+            consequence raster paths, as well as pickle path columns for
+            getting zonal statistics dictionary from.
         habitat_info_df (dataframe): a dataframe with information on total
             exposure, consequence, and risk raster/pickle file paths for each
             habitat.
@@ -992,9 +989,7 @@ def _zonal_stats_to_csv(overlap_df, info_df, region_list, target_stats_csv_path)
             merged zonal stats dataframe.
 
     Returns:
-        final_stats_df (dataframe): a multi-index dataframe with exposure and
-            consequence mean score, and subregion columns. A score of 0 means
-            there's no overlapped pixel for the habitat-stressor pair.
+        None
 
     """
     # Create a stats dataframe with habitat and stressor index from overlap
