@@ -414,7 +414,8 @@ def execute(args):
             task_name='calculate_%s_recovery' % habitat)
 
         # Calculate exposure/consequence scores on each stressor-habitat pair
-        for j, stressor in enumerate(stressor_names):
+        for (dependent_distance_transform_task, stressor) in zip(
+                distance_transform_task_list, stressor_names):
             LOGGER.info('Calculating exposure, consequence, and risk scores '
                         'from stressor %s to habitat %s.' %
                         (stressor, habitat))
@@ -434,7 +435,7 @@ def execute(args):
                     stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
-            expo_dependent_task_list = [distance_transform_task_list[j]]
+            expo_dependent_task_list = [dependent_distance_transform_task]
             _calc_pair_criteria_score(
                 habitat_stressor_overlap_df, habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
@@ -442,7 +443,7 @@ def execute(args):
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
-            conseq_dependent_task_list = [distance_transform_task_list[j]]
+            conseq_dependent_task_list = [dependent_distance_transform_task]
             _calc_pair_criteria_score(
                 habitat_stressor_overlap_df, habitat_raster_path,
                 stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
