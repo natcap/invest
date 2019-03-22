@@ -405,16 +405,19 @@ def execute(args):
         # On a habitat raster, a pixel value of 0 indicates the existence of
         # habitat, whereas 1 means non-existence.
         habitat_raster_path = habitat_info_df['ALIGN_RASTER_PATH'].item()
+        habitat_recovery_df = recovery_df.loc[habitat]
+
         task_graph.add_task(
             func=_calc_habitat_recovery,
-            args=(habitat_raster_path, habitat, recovery_df, max_rating),
+            args=(habitat_raster_path, habitat, habitat_recovery_df,
+                  max_rating),
             target_path_list=[
-                recovery_df.loc[habitat, path] for path in [
+                habitat_recovery_df[path] for path in [
                     'R_RASTER_PATH', 'R_NUM_RASTER_PATH']],
             task_name='calculate_%s_recovery' % habitat)
 
         # Calculate exposure/consequence scores on each stressor-habitat pair
-        for (dependent_distance_transform_task, stressor) in zip(
+        for (distance_transform_task, stressor) in zip(
                 distance_transform_task_list, stressor_names):
             LOGGER.info('Calculating exposure, consequence, and risk scores '
                         'from stressor %s to habitat %s.' %
@@ -435,19 +438,30 @@ def execute(args):
                     stressor_info_df['LINEAR_UNIT'].item())
 
             # Calculate exposure scores on each habitat-stressor pair
-            expo_dependent_task_list = [dependent_distance_transform_task]
-            _calc_pair_criteria_score(
-                habitat_stressor_overlap_df, habitat_raster_path,
-                stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
-                'E', task_graph, expo_dependent_task_list)
+            pair_expo_target_path_list = [
+                habitat_stressor_overlap_df.loc[raster_path] for
+                raster_path in ['E_NUM_RASTER_PATH', 'E_RASTER_PATH']]
+
+            pair_expo_task = task_graph.add_task(
+                func=_calc_pair_criteria_score,
+                args=(habitat_stressor_overlap_df, habitat_raster_path,
+                      stressor_dist_raster_path, stressor_buffer,
+                      args['decay_eq'], 'E'),
+                target_path_list=pair_expo_target_path_list,
+                dependent_task_list=[distance_transform_task])
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
-            conseq_dependent_task_list = [dependent_distance_transform_task]
-            _calc_pair_criteria_score(
-                habitat_stressor_overlap_df, habitat_raster_path,
-                stressor_dist_raster_path, stressor_buffer, args['decay_eq'],
-                'C', task_graph, conseq_dependent_task_list)
+            pair_expo_target_path_list = [
+                habitat_stressor_overlap_df.loc[raster_path] for
+                raster_path in ['E_NUM_RASTER_PATH', 'E_RASTER_PATH']]
+            pair_conseq_task = task_graph.add_task(
+                func=_calc_pair_criteria_score,
+                args=(habitat_stressor_overlap_df, habitat_raster_path,
+                      stressor_dist_raster_path, stressor_buffer,
+                      args['decay_eq'], 'C'),
+                target_path_list=pair_expo_target_path_list,
+                dependent_task_list=[distance_transform_task])
 
             # Calculate pairwise habitat-stressor risks.
             pair_e_raster_path, pair_c_raster_path, \
@@ -465,8 +479,7 @@ def execute(args):
                       _TARGET_NODATA_FLT),
                 target_path_list=[target_pair_risk_raster_path],
                 task_name='calculate_%s_%s_risk' % (habitat, stressor),
-                dependent_task_list=conseq_dependent_task_list +
-                expo_dependent_task_list)
+                dependent_task_list=[pair_expo_task, pair_conseq_task])
 
         task_graph.join()
 
@@ -499,13 +512,13 @@ def execute(args):
 
         LOGGER.info(
             'Calculating total consequence scores on habitat %s.' % habitat)
-        recov_num_raster_path = recovery_df.loc[habitat, 'R_NUM_RASTER_PATH']
+        recov_num_raster_path = habitat_recovery_df['R_NUM_RASTER_PATH']
         c_num_path_const_list = [
             (path, 1) for path in
             habitat_overlap_df['C_NUM_RASTER_PATH'].tolist()]
         c_denom_list = [
             (denom, 'raw') for denom in habitat_overlap_df['C_DENOM'].tolist()]
-        c_denom_list.append((recovery_df.loc[habitat, 'R_DENOM'], 'raw'))
+        c_denom_list.append((habitat_recovery_df['R_DENOM'], 'raw'))
 
         final_c_path_const_list = list([
             (habitat_raster_path, 1), (recov_num_raster_path, 1)] +
@@ -1656,8 +1669,7 @@ def _pair_criteria_num_op(
 
 def _calc_pair_criteria_score(
         habitat_stressor_overlap_df, habitat_raster_path,
-        stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type,
-        task_graph, dependent_task_list):
+        stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type):
     """Calculate exposure or consequence scores for a habitat-stressor pair.
 
     Parameters:
@@ -1676,10 +1688,6 @@ def _calc_pair_criteria_score(
         criteria_type (str): a string indicating that this function calculates
             exposure or consequence scores. Could be ``C`` or ``E``. If ``C``,
             recov_score_paths needs to be added.
-        task_graph (Taskgraph object): an object for building task graphs and
-            parallelizing independent tasks.
-        dependent_task_list (list): a list of tasks that the tasks for
-            calculating numerators and criteria scores will be dependent upon.
         recov_num_path (str): a path to the recovery numerator raster
             calculated based on habitat resilience attribute. The array values
             will be added to consequence scores.
@@ -1722,26 +1730,33 @@ def _calc_pair_criteria_score(
     task_name = 'exposure' if criteria_type == 'E' else 'consequence'
 
     # Calculate numerator raster for the habitat-stressor pair
-    calc_criteria_num_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=(num_list, _pair_criteria_num_op, target_criteria_num_path,
-              _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT),
-        target_path_list=[target_criteria_num_path],
-        task_name='calculate_%s_num_scores' % task_name,
-        dependent_task_list=dependent_task_list)
-    dependent_task_list.append(calc_criteria_num_task)
+    pygeoprocessing.raster_calculator(
+        num_list, _pair_criteria_num_op, target_criteria_num_path,
+        _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT)
+    # calc_criteria_num_task = task_graph.add_task(
+    #     func=pygeoprocessing.raster_calculator,
+    #     args=(num_list, _pair_criteria_num_op, target_criteria_num_path,
+    #           _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT),
+    #     target_path_list=[target_criteria_num_path],
+    #     task_name='calculate_%s_num_scores' % task_name,
+    #     dependent_task_list=dependent_task_list)
+    # dependent_task_list.append(calc_criteria_num_task)
 
     # Calculate E or C raster for the habitat-stressor pair. This task is
     # dependent upon the numerator calculation task
-    calc_criteria_score_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=(final_score_list, _pair_criteria_score_op,
-              target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
-              _TARGET_NODATA_FLT),
-        target_path_list=[target_pair_criteria_raster_path],
-        task_name='calculate_%s_scores' % task_name,
-        dependent_task_list=dependent_task_list)
-    dependent_task_list.append(calc_criteria_score_task)
+    pygeoprocessing.raster_calculator(
+        final_score_list, _pair_criteria_score_op,
+        target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
+        _TARGET_NODATA_FLT)
+    # calc_criteria_score_task = task_graph.add_task(
+    #     func=pygeoprocessing.raster_calculator,
+    #     args=(final_score_list, _pair_criteria_score_op,
+    #           target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
+    #           _TARGET_NODATA_FLT),
+    #     target_path_list=[target_pair_criteria_raster_path],
+    #     task_name='calculate_%s_scores' % task_name,
+    #     dependent_task_list=dependent_task_list)
+    # dependent_task_list.append(calc_criteria_score_task)
 
 
 def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
@@ -1830,7 +1845,7 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
 
 
 def _calc_habitat_recovery(
-        habitat_raster_path, habitat_name, recovery_df, max_rating):
+        habitat_raster_path, habitat_name, habitat_recovery_df, max_rating):
     """Calculate habitat raster recovery potential based on recovery scores.
 
     Parameters:
@@ -1841,7 +1856,8 @@ def _calc_habitat_recovery(
             recovery potential from recovery_df.
         recovery_df (dataframe): the dataframe with recovery information such
             as numerator and denominator scores, spatially explicit criteria
-            dictionary, and target habitat recovery raster paths.
+            dictionary, and target habitat recovery raster paths for a
+            particular habitat.
         max_rating (float): the rating used to reclassify the recovery score.
 
     Returns:
@@ -1853,7 +1869,7 @@ def _calc_habitat_recovery(
     # path, DQ and weight as values, and an output file paths
     num, denom, spatial_explicit_dict, target_r_num_raster_path, \
         target_recov_raster_path = [
-            recovery_df.loc[habitat_name, column_header] for column_header in [
+            habitat_recovery_df[column_header] for column_header in [
                 'R_NUM', 'R_DENOM', 'R_SPATIAL', 'R_NUM_RASTER_PATH',
                 'R_RASTER_PATH']]
 
