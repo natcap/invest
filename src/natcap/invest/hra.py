@@ -422,8 +422,8 @@ def execute(args):
             task_name='calculate_%s_recovery' % habitat,
             dependent_task_list=[align_and_resize_rasters_task])
 
-        final_expo_dependent_tasks = []
-        final_conseq_dependent_tasks = []
+        total_expo_dependent_tasks = []
+        total_conseq_dependent_tasks = []
         total_risk_dependent_tasks = []
 
         # Calculate exposure/consequence scores on each stressor-habitat pair
@@ -460,9 +460,10 @@ def execute(args):
                       stressor_dist_raster_path, stressor_buffer,
                       args['decay_eq'], 'E'),
                 target_path_list=pair_expo_target_path_list,
+                task_name='calculate_%s_%s_exposure' % (habitat, stressor),
                 dependent_task_list=[
                     align_and_resize_rasters_task, distance_transform_task])
-            final_expo_dependent_tasks.append(pair_expo_task)
+            total_expo_dependent_tasks.append(pair_expo_task)
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
@@ -477,9 +478,10 @@ def execute(args):
                 kwargs={'recov_num_path': recovery_num_raster_path,
                         'recov_denom': habitat_recovery_denom},
                 target_path_list=pair_conseq_target_path_list,
+                task_name='calculate_%s_%s_consequence' % (habitat, stressor),
                 dependent_task_list=[
                     align_and_resize_rasters_task, distance_transform_task])
-            final_conseq_dependent_tasks.append(pair_conseq_task)
+            total_conseq_dependent_tasks.append(pair_conseq_task)
 
             # Calculate pairwise habitat-stressor risks.
             pair_e_raster_path, pair_c_raster_path, \
@@ -500,8 +502,8 @@ def execute(args):
             total_risk_dependent_tasks.append(pair_risk_task)
 
         # Calculate cumulative E, C & risk scores on each habitat
-        final_e_habitat_path = habitat_info_df['FINAL_E_RASTER_PATH'].item()
-        final_c_habitat_path = habitat_info_df['FINAL_C_RASTER_PATH'].item()
+        total_e_habitat_path = habitat_info_df['TOTAL_E_RASTER_PATH'].item()
+        total_c_habitat_path = habitat_info_df['TOTAL_C_RASTER_PATH'].item()
 
         LOGGER.info(
             'Calculating total exposure scores on habitat %s.' % habitat)
@@ -512,20 +514,20 @@ def execute(args):
         e_denom_list = [
             (denom, 'raw') for denom in habitat_overlap_df['E_DENOM'].tolist()]
 
-        final_e_path_band_list = list(
+        total_e_path_band_list = list(
             [(habitat_raster_path, 1)] + e_num_path_const_list + e_denom_list)
 
         # Calculate total exposure on the habitat
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=(final_e_path_band_list,
-                  _final_expo_score_op,
-                  final_e_habitat_path,
+            args=(total_e_path_band_list,
+                  _total_expo_score_op,
+                  total_e_habitat_path,
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
-            target_path_list=[final_e_habitat_path],
+            target_path_list=[total_e_habitat_path],
             task_name='calculate_total_exposure_%s' % habitat,
-            dependent_task_list=final_expo_dependent_tasks)
+            dependent_task_list=total_expo_dependent_tasks)
 
         LOGGER.info(
             'Calculating total consequence scores on habitat %s.' % habitat)
@@ -535,7 +537,7 @@ def execute(args):
         c_denom_list = [(denom, 'raw') for denom in habitat_overlap_df[
             'C_DENOM'].tolist()]
 
-        final_c_path_const_list = list(
+        total_c_path_const_list = list(
             [(habitat_raster_path, 1), (recov_num_raster_path, 1),
              (habitat_recovery_denom, 'raw')] +
             c_num_path_const_list + c_denom_list)
@@ -543,14 +545,14 @@ def execute(args):
         # Calculate total consequence on the habitat
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
-            args=(final_c_path_const_list,
-                  _final_conseq_score_op,
-                  final_c_habitat_path,
+            args=(total_c_path_const_list,
+                  _total_conseq_score_op,
+                  total_c_habitat_path,
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
-            target_path_list=[final_c_habitat_path],
+            target_path_list=[total_c_habitat_path],
             task_name='calculate_total_consequence_%s' % habitat,
-            dependent_task_list=final_conseq_dependent_tasks)
+            dependent_task_list=total_conseq_dependent_tasks)
 
         LOGGER.info('Calculating total risk score and reclassified risk scores'
                     ' on habitat %s.' % habitat)
@@ -595,7 +597,7 @@ def execute(args):
 
     # Create input list for calculating average & reclassified ecosystem risks
     ecosystem_risk_raster_path = os.path.join(
-        output_dir, 'TOT_RISK_Ecosystem%s.tif' % file_suffix)
+        output_dir, 'TOTAL_RISK_Ecosystem%s.tif' % file_suffix)
     reclass_ecosystem_risk_raster_path = os.path.join(
         output_dir, 'RECLASS_RISK_Ecosystem%s.tif' % file_suffix)
 
@@ -627,21 +629,106 @@ def execute(args):
         task_name='reclassify_ecosystem_risk',
         dependent_task_list=[ecosystem_risk_task])
 
-    # Temporary join graph here because _get_zonal_stats_df() will be modified
-    # later
-    task_graph.join()
-
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
     LOGGER.info('Calculating zonal statistics.')
-    stats_df = _get_zonal_stats_df(
-        overlap_df, info_df, max_rating, rasterized_aoi_pickle_path,
-        file_preprocessing_dir, task_graph)
+
+    # Join here because zonal_rasters needs to be loaded from the pickle file
+    task_graph.join()
+    zonal_rasters = pickle.load(open(rasterized_aoi_pickle_path, 'rb'))
+    region_list = zonal_rasters.keys()
+
+    # Dependent task list used when converting all the calculated stats to CSV
+    zonal_stats_dependent_tasks = []
+
+    # Filter habitat rows from the information dataframe
+    habitats_info_df = info_df.loc[info_df.TYPE == _HABITAT_TYPE]
+
+    # Calculate and pickle zonal stats to files
+    for region_name, zonal_raster_path in zonal_rasters.iteritems():
+        # Compute zonal E and C stats on each habitat-stressor pair
+        for hab_str_idx, row in overlap_df.iterrows():
+            # Get habitat-stressor name without extension
+            habitat_stressor = '_'.join(hab_str_idx)
+            LOGGER.info('Calculating zonal stats of %s in %s.' %
+                        (habitat_stressor, region_name))
+
+            # Compute pairwise E/C zonal stats
+            for criteria_type in ['E', 'C']:
+                criteria_raster_path = row[criteria_type + '_RASTER_PATH']
+                # Append _[region] suffix to the generic pickle file path
+                target_pickle_stats_path = row[
+                    criteria_type + '_PICKLE_STATS_PATH'].replace(
+                        '.pickle', region_name + '.pickle')
+                zonal_stats_dependent_tasks.append(task_graph.add_task(
+                    func=_calc_and_pickle_zonal_stats,
+                    args=(criteria_raster_path, zonal_raster_path,
+                          target_pickle_stats_path, file_preprocessing_dir),
+                    target_path_list=[target_pickle_stats_path],
+                    task_name='calc_%s_%s_stats_in_%s' % (
+                        habitat_stressor, criteria_type, region_name)))
+
+            # Compute pairwise risk zonal stats
+            pair_risk_path = row['PAIR_RISK_RASTER_PATH']
+            target_pickle_stats_path = row[
+                'PAIR_RISK_PICKLE_STATS_PATH'].replace(
+                    '.pickle', region_name + '.pickle')
+            zonal_stats_dependent_tasks.append(task_graph.add_task(
+                func=_calc_and_pickle_zonal_stats,
+                args=(pair_risk_path, zonal_raster_path,
+                      target_pickle_stats_path, file_preprocessing_dir),
+                kwargs={'max_rating': max_rating},
+                target_path_list=[target_pickle_stats_path],
+                task_name='calc_%s_risk_stats_in_%s' % (
+                    habitat_stressor, region_name)))
+
+        # Calculate the overall stats of exposure, consequence, and risk for
+        # each habitat from all stressors
+        for _, row in habitats_info_df.iterrows():
+            habitat_name = row['NAME']
+            total_risk_raster_path = row['TOTAL_RISK_RASTER_PATH']
+            target_pickle_stats_path = row[
+                'TOT_RISK_PICKLE_STATS_PATH'].replace(
+                    '.pickle', region_name + '.pickle')
+
+            LOGGER.info('Calculating overall zonal stats of %s in %s.' %
+                        (habitat_name, region_name))
+
+            zonal_stats_dependent_tasks.append(task_graph.add_task(
+                func=_calc_and_pickle_zonal_stats,
+                args=(total_risk_raster_path, zonal_raster_path,
+                      target_pickle_stats_path, file_preprocessing_dir),
+                kwargs={'max_rating': max_rating},
+                target_path_list=[target_pickle_stats_path],
+                task_name='calc_%s_risk_stats_in_%s' % (
+                    habitat_name, region_name)))
+
+            # Compute pairwise E/C zonal stats
+            for criteria_type in ['E', 'C']:
+                total_criteria_raster_path = row[
+                    'TOTAL_' + criteria_type + '_RASTER_PATH']
+                target_pickle_stats_path = row[
+                    'TOT_' + criteria_type + '_PICKLE_STATS_PATH'].replace(
+                        '.pickle', region_name + '.pickle')
+
+                zonal_stats_dependent_tasks.append(task_graph.add_task(
+                    func=_calc_and_pickle_zonal_stats,
+                    args=(total_criteria_raster_path, zonal_raster_path,
+                          target_pickle_stats_path, file_preprocessing_dir),
+                    target_path_list=[target_pickle_stats_path],
+                    task_name='calc_%s_%s_stats_in_%s' % (
+                        habitat_name, criteria_type, region_name)))
 
     # Convert the statistics dataframe to a CSV file
     stats_csv_path = os.path.join(
         output_dir, 'criteria_score_stats%s.csv' % file_suffix)
-    stats_df.to_csv(stats_csv_path)
+
+    task_graph.add_task(
+        func=_zonal_stats_to_csv,
+        args=(overlap_df, habitats_info_df, region_list, stats_csv_path),
+        target_path_list=[stats_csv_path],
+        task_name='zonal_stats_to_csv',
+        dependent_task_list=zonal_stats_dependent_tasks)
 
     # Unproject output rasters to WGS84 (World Mercator), and then convert
     # the rasters to GeoJSON files for visualization
@@ -811,8 +898,8 @@ def _calc_and_pickle_zonal_stats(
         _RESAMPLE_METHOD, target_bb=target_bounding_box,
         target_sr_wkt=target_sr_wkt)
 
-    # Return a dictionary with values of None, if the two input rasters
-    # don't intersect at all.
+    # Return a dictionary with values of 0, if the two input rasters do not
+    # intersect at all.
     score_raster = gdal.OpenEx(clipped_score_raster_path, gdal.OF_RASTER)
     try:
         score_band = score_raster.GetRasterBand(1)
@@ -821,7 +908,7 @@ def _calc_and_pickle_zonal_stats(
             LOGGER.info('Bounding boxes of %s and %s do not intersect.' %
                         (score_raster_path, zonal_raster_path))
         for stats_type in stats_dict:
-            stats_dict[stats_type] = None
+            stats_dict[stats_type] = 0
         score_raster = None
         pickle.dump(stats_dict, open(target_pickle_stats_path, 'wb'))
         os.remove(clipped_score_raster_path)
@@ -886,9 +973,7 @@ def _calc_and_pickle_zonal_stats(
     os.remove(clipped_score_raster_path)
 
 
-def _get_zonal_stats_df(
-        overlap_df, info_df, max_rating, zonal_rasters_pickle_path,
-        working_dir, task_graph):
+def _zonal_stats_to_csv(overlap_df, info_df, region_list, target_stats_csv_path):
     """Get zonal stats for stressor-habitat pair and ecosystem as dataframe.
 
     Add each zonal stats calculation to Taskgraph to allow parallel processing,
@@ -898,15 +983,13 @@ def _get_zonal_stats_df(
         overlap_df (dataframe): a multi-index dataframe with exposure and
             consequence raster paths, as well as stats columns for writing
             zonal statistics dictionary on.
-        zonal_rasters_pickle_path (str): a path to the pickle file that
-            contains a dictionary of region names to their corresponding raster
-            paths with 1s representing their extent.
-        max_rating (float): the maximum score defined by user. It's used for
-            reclassifying the average E and C scores into 0 to 3.
-        working_dir (str): a path to the working folder for saving intermediate
-            files.
-        task_graph (Taskgraph object): an object for building task graphs and
-            parallelizing independent tasks.
+        habitat_info_df (dataframe): a dataframe with information on total
+            exposure, consequence, and risk raster/pickle file paths for each
+            habitat.
+        region_list (list): a list of subregion names used as column values of
+            the ``SUBREGION`` column in the zonal stats dataframe.
+        target_stats_csv_path (str): path to the CSV file for saving the final
+            merged zonal stats dataframe.
 
     Returns:
         final_stats_df (dataframe): a multi-index dataframe with exposure and
@@ -914,72 +997,6 @@ def _get_zonal_stats_df(
             there's no overlapped pixel for the habitat-stressor pair.
 
     """
-    zonal_rasters = pickle.load(open(zonal_rasters_pickle_path, 'rb'))
-
-    # Calculate and pickle zonal stats to files
-    for region_name, zonal_raster_path in zonal_rasters.iteritems():
-        # Compute zonal E and C stats on each habitat-stressor pair
-        for hab_str_idx, row in overlap_df.iterrows():
-            # Get habitat-stressor name without extension
-            habitat_stressor = '_'.join(hab_str_idx)
-            LOGGER.info('Calculating zonal stats of %s in %s.' %
-                        (habitat_stressor, region_name))
-
-            # Compute pairwise E/C zonal stats
-            for criteria_type in ['E', 'C']:
-                criteria_raster_path = row[criteria_type + '_RASTER_PATH']
-                # Append _[region] suffix to the generic pickle file path,
-                # used for us to locatefiles
-                target_pickle_stats_path = row[
-                    criteria_type + '_PICKLE_STATS_PATH'].replace(
-                        '.pickle', '_'+region_name+'.pickle')
-                task_graph.add_task(
-                    func=_calc_and_pickle_zonal_stats,
-                    args=(criteria_raster_path, zonal_raster_path,
-                          target_pickle_stats_path, working_dir),
-                    target_path_list=[target_pickle_stats_path],
-                    task_name='calc_%s_%s_stats_in_%s' % (
-                        habitat_stressor, criteria_type, region_name))
-
-            # Compute pairwise risk zonal stats
-            pair_risk_path = row['PAIR_RISK_RASTER_PATH']
-            target_pickle_stats_path = row[
-                'PAIR_RISK_PICKLE_STATS_PATH'].replace(
-                    '.pickle', '_'+region_name+'.pickle')
-            task_graph.add_task(
-                func=_calc_and_pickle_zonal_stats,
-                args=(pair_risk_path, zonal_raster_path,
-                      target_pickle_stats_path, working_dir),
-                kwargs={'max_rating': max_rating},
-                target_path_list=[target_pickle_stats_path],
-                task_name='calc_%s_risk_stats_in_%s' % (
-                    habitat_stressor, region_name))
-
-        # Not sure if we should also calculate stats on the total E/C/risk
-        # for each habitat (i.e. from all stressors)?
-
-        # # Compute zonal risk stats on each habitat
-        # for _, row in info_df.iterrows():
-        #     if row['TYPE'] != _HABITAT_TYPE:
-        #         continue
-        #     habitat_name = row['NAME']
-        #     total_risk_raster_path = row['TOTAL_RISK_RASTER_PATH']
-        #     target_pickle_stats_path = row['RISK_PICKLE_STATS_PATH']
-
-        #     LOGGER.info('Calculating risk zonal stats of %s in %s.' %
-        #                 (habitat_name, region_name))
-
-        #     task_graph.add_task(
-        #         func=_calc_and_pickle_zonal_stats,
-        #         args=(total_risk_raster_path, zonal_raster_path,
-        #               target_pickle_stats_path, working_dir),
-        #         target_path_list=[target_pickle_stats_path],
-        #         task_name='calc_%s_risk_stats_in_%s' % (
-        #             habitat_name, region_name))
-
-    # Join first to get all the result statistics
-    task_graph.join()
-
     # Create a stats dataframe with habitat and stressor index from overlap
     # dataframe
     crit_stats_cols = ['MEAN', 'MIN', 'MAX']
@@ -996,7 +1013,7 @@ def _get_zonal_stats_df(
     # Add a ``SUBREGION`` column to the dataframe and update it with the
     # corresponding stats in each subregion
     region_df_list = []
-    for region in zonal_rasters:
+    for region in region_list:
         region_df = stats_df.copy()
         # Insert the new column in the beginning
         region_df.insert(loc=0, column='SUBREGION', value=region)
@@ -1006,7 +1023,7 @@ def _get_zonal_stats_df(
             for criteria_type in ['E', 'C']:
                 crit_stats_dict = pickle.load(
                     open(row[criteria_type + '_PICKLE_STATS_PATH'].replace(
-                        '.pickle', '_'+region+'.pickle'), 'rb'))
+                        '.pickle', region + '.pickle'), 'rb'))
                 for stats_type in crit_stats_cols:
                     header = criteria_type + '_' + stats_type
                     region_df.loc[hab_str_idx, header] = crit_stats_dict[
@@ -1015,10 +1032,37 @@ def _get_zonal_stats_df(
             # Unpack pairwise risk stats
             risk_stats_dict = pickle.load(
                 open(row['PAIR_RISK_PICKLE_STATS_PATH'].replace(
-                    '.pickle', '_'+region+'.pickle'), 'rb'))
+                    '.pickle', region + '.pickle'), 'rb'))
             for stats_type in risk_stats_cols:
                 header = 'R_' + stats_type
                 region_df.loc[hab_str_idx, header] = risk_stats_dict[
+                    stats_type]
+
+        for _, row in info_df.iterrows():
+            habitat_name = row['NAME']
+
+            # An index used as values for HABITAT and STRESSOR columns
+            hab_only_idx = (habitat_name, '(FROM ALL STRESSORS)')
+            region_df.loc[hab_only_idx, 'SUBREGION'] = region
+
+            # Unpack total criteria stats
+            for criteria_type in ['E', 'C']:
+                crit_stats_dict = pickle.load(
+                    open(row[
+                        'TOT_' + criteria_type + '_PICKLE_STATS_PATH'].replace(
+                        '.pickle', region + '.pickle'), 'rb'))
+                for stats_type in crit_stats_cols:
+                    header = criteria_type + '_' + stats_type
+                    region_df.loc[hab_only_idx, header] = crit_stats_dict[
+                        stats_type]
+
+            # Unpack total risk stats
+            risk_stats_dict = pickle.load(
+                open(row['TOT_RISK_PICKLE_STATS_PATH'].replace(
+                    '.pickle', region + '.pickle'), 'rb'))
+            for stats_type in risk_stats_cols:
+                header = 'R_' + stats_type
+                region_df.loc[hab_only_idx, header] = risk_stats_dict[
                     stats_type]
 
         region_df_list.append(region_df)
@@ -1030,7 +1074,7 @@ def _get_zonal_stats_df(
     final_stats_df.sort_values(
         [_HABITAT_HEADER, _STRESSOR_HEADER], inplace=True)
 
-    return final_stats_df
+    final_stats_df.to_csv(target_stats_csv_path)
 
 
 def _create_rasters_from_geometries(
@@ -1445,7 +1489,7 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     return risk_arr
 
 
-def _final_expo_score_op(habitat_arr, *num_denom_list):
+def _total_expo_score_op(habitat_arr, *num_denom_list):
     """Calculate the exposure score for a habitat layer from all stressors.
 
     Add up all the numerators and denominators respectively, then divide
@@ -1460,7 +1504,7 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
             (float) in the second half.
 
     Returns:
-        final_expo_arr (array): an exposure float array calculated by dividing
+        total_expo_arr (array): an exposure float array calculated by dividing
             the total numerator by the total denominator. Pixel values are
             nodata outside of habitat, and will be 0 if there is no valid
             numerator value on that pixel.
@@ -1474,9 +1518,9 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     tot_num_arr[habitat_mask] = 0
 
-    final_expo_arr = numpy.full(
+    total_expo_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    final_expo_arr[habitat_mask] = 0
+    total_expo_arr[habitat_mask] = 0
 
     tot_denom = 0
 
@@ -1495,13 +1539,13 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
     # If the numerator is nodata, do not divide the arrays
     final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
 
-    final_expo_arr[final_valid_mask] = tot_num_arr[
+    total_expo_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
 
-    return final_expo_arr
+    return total_expo_arr
 
 
-def _final_conseq_score_op(
+def _total_conseq_score_op(
         habitat_arr, recov_num_arr, recov_denom, *num_denom_list):
     """Calculate the consequence score for a habitat layer from all stressors.
 
@@ -1521,7 +1565,7 @@ def _final_conseq_score_op(
             (float) in the second half.
 
     Returns:
-        final_conseq_arr (array): a consequence float array calculated by
+        total_conseq_arr (array): a consequence float array calculated by
             dividing the total numerator by the total denominator. Pixel values
             are nodata outside of habitat, and will be 0 if there is no valid
             numerator value on that pixel.
@@ -1533,9 +1577,9 @@ def _final_conseq_score_op(
 
     # Fill each array with value of 0 on the habitat pixels, assuming that
     # criteria score is 0 before adding numerator/denominator
-    final_conseq_arr = numpy.full(
+    total_conseq_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    final_conseq_arr[habitat_mask] = 0
+    total_conseq_arr[habitat_mask] = 0
 
     tot_denom = recov_denom
 
@@ -1554,10 +1598,10 @@ def _final_conseq_score_op(
     # If the numerator is nodata, do not divide the arrays
     final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
 
-    final_conseq_arr[final_valid_mask] = tot_num_arr[
+    total_conseq_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
 
-    return final_conseq_arr
+    return total_conseq_arr
 
 
 def _pair_expo_score_op(
@@ -1798,7 +1842,7 @@ def _calc_pair_criteria_score(
         (stressor_buffer, 'raw'), (decay_eq, 'raw'), (num, 'raw')]
 
     # A path and/or constant list for calculating final E or C score
-    final_score_list = [
+    pair_score_list = [
         (habitat_raster_path, 1), (stressor_dist_raster_path, 1),
         (stressor_buffer, 'raw'), (target_criteria_num_path, 1),
         (denom, 'raw')]
@@ -1824,20 +1868,20 @@ def _calc_pair_criteria_score(
     # dependent upon the numerator calculation task
     if criteria_type == 'E':
         pygeoprocessing.raster_calculator(
-            final_score_list, _pair_expo_score_op,
+            pair_score_list, _pair_expo_score_op,
             target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
             _TARGET_NODATA_FLT)
     else:
         # Add recovery numerator raster and denominator scores when calculating
         # consequence score
-        final_score_list.extend([(recov_num_path, 1), (recov_denom, 'raw')])
+        pair_score_list.extend([(recov_num_path, 1), (recov_denom, 'raw')])
         pygeoprocessing.raster_calculator(
-            final_score_list, _pair_conseq_score_op,
+            pair_score_list, _pair_conseq_score_op,
             target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
             _TARGET_NODATA_FLT)
 
 
-def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
+def _total_recovery_op(habitat_arr, num_arr, denom, max_rating):
     """Calculate and reclassify habitat recovery scores to 1 to 3.
 
     The equation for calculating reclassified recovery score is:
@@ -1856,7 +1900,7 @@ def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
             reclassified.
 
     Returns:
-        output_recovery_arr (array): a integer array of the reclassified
+        recov_reclass_arr (array): a integer array of the reclassified
             recovery potential scores.
 
     """
@@ -1976,7 +2020,7 @@ def _calc_habitat_recovery(
 
     # Finally calculate recovery potential for the habitat
     pygeoprocessing.raster_calculator(
-        recov_potential_list, _final_recovery_op, target_recov_raster_path,
+        recov_potential_list, _total_recovery_op, target_recov_raster_path,
         _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
 
 
@@ -2183,7 +2227,7 @@ def _generate_pickle_path(row, dir_path, suffix_front, suffix_end):
         basename = row['NAME']
         target_pickle_path = os.path.join(
             dir_path,
-            suffix_front + basename + suffix_end + '.pickle')
+            suffix_front + basename + suffix_end + '_.pickle')
         return target_pickle_path
 
     return None
@@ -2324,23 +2368,27 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     info_df['DIST_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
             row, file_preprocessing_dir, 'dist_', suffix_end), axis=1)
-    # Generate pickled statistics for habitat risks
-    info_df['RISK_PICKLE_STATS_PATH'] = info_df.apply(
-        lambda row: _generate_pickle_path(
-            row, file_preprocessing_dir, 'risk_stats_', suffix_end), axis=1)
 
-    # Generate raster paths with exposure and consequence suffixes.
     for column_name, suffix_front in {
-            'FINAL_E_RASTER_PATH': 'TOT_E_',
-            'FINAL_C_RASTER_PATH': 'TOT_C_'}.iteritems():
+            'TOTAL_E_RASTER_PATH': 'TOT_E_',
+            'TOTAL_C_RASTER_PATH': 'TOT_C_'}.iteritems():
+        # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
                 row, intermediate_dir, suffix_front, suffix_end), axis=1)
+        # Generate pickle path to storing criteria score stats
+        info_df[suffix_front+'PICKLE_STATS_PATH'] = info_df.apply(
+            lambda row: _generate_pickle_path(
+                row, file_preprocessing_dir, suffix_front, suffix_end), axis=1)
 
     # Generate cumulative risk raster paths with risk suffix.
     info_df['TOTAL_RISK_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
-            row, output_dir, 'TOT_RISK_', suffix_end), axis=1)
+            row, output_dir, 'TOTAL_RISK_', suffix_end), axis=1)
+    # Generate pickled statistics for habitat risks
+    info_df['TOT_RISK_PICKLE_STATS_PATH'] = info_df.apply(
+        lambda row: _generate_pickle_path(
+            row, file_preprocessing_dir, 'total_risk_', suffix_end), axis=1)
 
     # Generate reclassified risk raster paths with risk suffix.
     info_df['RECLASS_RISK_RASTER_PATH'] = info_df.apply(
@@ -2710,12 +2758,12 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                             (habitat, stressor), criteria_type +
                             '_PICKLE_STATS_PATH'] = os.path.join(
                                 inter_dir, criteria_type + '_' +
-                                habitat + '_' + stressor + suffix + '.pickle')
+                                habitat + '_' + stressor + suffix + '_.pickle')
                         overlap_df.loc[
                             (habitat, stressor),
                             'PAIR_RISK_PICKLE_STATS_PATH'] = os.path.join(
                                 inter_dir, 'risk_' +
-                                habitat + '_' + stressor + suffix + '.pickle')
+                                habitat + '_' + stressor + suffix + '_.pickle')
 
                         # If rating is less than 1, skip this criteria row
                         rating = row_value

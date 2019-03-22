@@ -775,9 +775,9 @@ class HraRegressionTests(unittest.TestCase):
         natcap.invest.hra.execute(args)
 
         output_rasters = [
-            'TOT_RISK_habitat_0', 'TOT_RISK_habitat_1', 'TOT_RISK_Ecosystem',
-            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
-            'RECLASS_RISK_Ecosystem']
+            'TOTAL_RISK_habitat_0', 'TOTAL_RISK_habitat_1',
+            'TOTAL_RISK_Ecosystem', 'RECLASS_RISK_habitat_0',
+            'RECLASS_RISK_habitat_1', 'RECLASS_RISK_Ecosystem']
 
         output_vectors = [
             'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
@@ -846,9 +846,9 @@ class HraRegressionTests(unittest.TestCase):
         natcap.invest.hra.execute(args)
 
         output_rasters = [
-            'TOT_RISK_habitat_0', 'TOT_RISK_habitat_1', 'TOT_RISK_Ecosystem',
-            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
-            'RECLASS_RISK_Ecosystem']
+            'TOTAL_RISK_habitat_0', 'TOTAL_RISK_habitat_1',
+            'TOTAL_RISK_Ecosystem', 'RECLASS_RISK_habitat_0',
+            'RECLASS_RISK_habitat_1', 'RECLASS_RISK_Ecosystem']
 
         output_vectors = [
             'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
