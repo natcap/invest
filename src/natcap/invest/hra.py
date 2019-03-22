@@ -406,14 +406,15 @@ def execute(args):
         # habitat, whereas 1 means non-existence.
         habitat_raster_path = habitat_info_df['ALIGN_RASTER_PATH'].item()
         habitat_recovery_df = recovery_df.loc[habitat]
+        recovery_raster_path = habitat_recovery_df['R_RASTER_PATH']
+        recovery_num_raster_path = habitat_recovery_df[
+            'R_NUM_RASTER_PATH']
+        habitat_recovery_denom = habitat_recovery_df['R_DENOM']
 
         task_graph.add_task(
             func=_calc_habitat_recovery,
-            args=(habitat_raster_path, habitat, habitat_recovery_df,
-                  max_rating),
-            target_path_list=[
-                habitat_recovery_df[path] for path in [
-                    'R_RASTER_PATH', 'R_NUM_RASTER_PATH']],
+            args=(habitat_raster_path, habitat_recovery_df, max_rating),
+            target_path_list=[recovery_raster_path, recovery_num_raster_path],
             task_name='calculate_%s_recovery' % habitat)
 
         # Calculate exposure/consequence scores on each stressor-habitat pair
@@ -452,15 +453,17 @@ def execute(args):
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
-            pair_expo_target_path_list = [
+            pair_conseq_target_path_list = [
                 habitat_stressor_overlap_df.loc[raster_path] for
-                raster_path in ['E_NUM_RASTER_PATH', 'E_RASTER_PATH']]
+                raster_path in ['C_NUM_RASTER_PATH', 'C_RASTER_PATH']]
             pair_conseq_task = task_graph.add_task(
                 func=_calc_pair_criteria_score,
                 args=(habitat_stressor_overlap_df, habitat_raster_path,
                       stressor_dist_raster_path, stressor_buffer,
                       args['decay_eq'], 'C'),
-                target_path_list=pair_expo_target_path_list,
+                kwargs={'recov_num_path': recovery_num_raster_path,
+                        'recov_denom': habitat_recovery_denom},
+                target_path_list=pair_conseq_target_path_list,
                 dependent_task_list=[distance_transform_task])
 
             # Calculate pairwise habitat-stressor risks.
@@ -513,15 +516,14 @@ def execute(args):
         LOGGER.info(
             'Calculating total consequence scores on habitat %s.' % habitat)
         recov_num_raster_path = habitat_recovery_df['R_NUM_RASTER_PATH']
-        c_num_path_const_list = [
-            (path, 1) for path in
-            habitat_overlap_df['C_NUM_RASTER_PATH'].tolist()]
-        c_denom_list = [
-            (denom, 'raw') for denom in habitat_overlap_df['C_DENOM'].tolist()]
-        c_denom_list.append((habitat_recovery_df['R_DENOM'], 'raw'))
+        c_num_path_const_list = [(path, 1) for path in habitat_overlap_df[
+            'C_NUM_RASTER_PATH'].tolist()]
+        c_denom_list = [(denom, 'raw') for denom in habitat_overlap_df[
+            'C_DENOM'].tolist()]
 
-        final_c_path_const_list = list([
-            (habitat_raster_path, 1), (recov_num_raster_path, 1)] +
+        final_c_path_const_list = list(
+            [(habitat_raster_path, 1), (recov_num_raster_path, 1),
+             (habitat_recovery_denom, 'raw')] +
             c_num_path_const_list + c_denom_list)
 
         # Calculate total consequence on the habitat
@@ -1478,22 +1480,24 @@ def _final_expo_score_op(habitat_arr, *num_denom_list):
     return final_expo_arr
 
 
-def _final_conseq_score_op(habitat_arr, recov_num_arr, *num_denom_list):
+def _final_conseq_score_op(
+        habitat_arr, recov_num_arr, recov_denom, *num_denom_list):
     """Calculate the consequence score for a habitat layer from all stressors.
 
-    Add up all the numerators and denominators respectively, then divide
-    the total numerator by the total denominator on habitat pixels, to get
-    the final exposure or consequence score.
+    Add up all the numerators and denominators (including ones from recovery)
+    respectively, then divide the total numerator by the total denominator on
+    habitat pixels, to get the final consequence score.
 
     Parameters:
         habitat_arr (array): a habitat integer array where 1's indicates
             habitat existence and 0's non-existence.
         recov_num_arr (array): a float array of the numerator score from
             recovery potential, to be added to the consequence numerator scores
+        recov_denom (float): the precalculated cumulative recovery denominator
+            score.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half, in addition there's a last denominator
-            score (float) from recovery potential.
+            (float) in the second half.
 
     Returns:
         final_conseq_arr (array): a consequence float array calculated by
@@ -1512,11 +1516,11 @@ def _final_conseq_score_op(habitat_arr, recov_num_arr, *num_denom_list):
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     final_conseq_arr[habitat_mask] = 0
 
-    tot_denom = 0
+    tot_denom = recov_denom
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:(len(num_denom_list)-1)/2]
-    denom_list = num_denom_list[(len(num_denom_list)-1)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)/2]
+    denom_list = num_denom_list[len(num_denom_list)/2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -1535,7 +1539,7 @@ def _final_conseq_score_op(habitat_arr, recov_num_arr, *num_denom_list):
     return final_conseq_arr
 
 
-def _pair_criteria_score_op(
+def _pair_expo_score_op(
         habitat_arr, stressor_dist_arr, stressor_buffer, num_arr, denom):
     """Calculate individual E/C scores by dividing num by denom arrays.
 
@@ -1586,6 +1590,64 @@ def _pair_criteria_score_op(
     return score_arr
 
 
+def _pair_conseq_score_op(
+        habitat_arr, stressor_dist_arr, stressor_buffer, conseq_num_arr,
+        conseq_denom, recov_num_arr, recov_denom):
+    """Calculate individual E/C scores by dividing num by denom arrays.
+
+    The equation for calculating the score is numerator/denominator. This
+    function will only calculate the score on pixels where both habitat
+    and stressor (including buffer zone) exist.
+
+    Parameters:
+        habitat_arr (array): a habitat integer array where 1's indicates
+            habitat existence and 0's non-existence.
+        stressor_dist_arr (array): a stressor distance float array where pixel
+            values represent the distance of that pixel to a stressor
+            pixel.
+        stressor_buffor (float): a number representing how far down the
+            influence is from the stressor pixel.
+        conseq_num_arr (array): a float array of the numerator scores
+            calculated by rating/(dq*weight).
+        conseq_denom (float): a cumulative value pre-calculated based on the
+            criteria table. It will be used to divide the numerator.
+        recov_num_arr (array): a float array of the recovery numerator scores
+            calculated based on habitat resilience attribute.
+        recov_denom (float): the precalculated cumulative recovery denominator
+            score.
+
+    Returns:
+        score_arr (array): a float array of the scores calculated based on
+            the E/C equation in users guide.
+
+    """
+    habitat_mask = (habitat_arr == 1)
+    stressor_mask = (stressor_dist_arr == 0)
+    # Habitat-stressor overlap mask that excludes stressor buffer
+    hab_stress_overlap_mask = (habitat_mask & stressor_mask)
+
+    # Mask stressor buffer zone
+    stressor_buff_mask = (
+        (stressor_dist_arr > 0) & (stressor_dist_arr < stressor_buffer))
+    hab_buff_overlap_mask = (habitat_mask & stressor_buff_mask)
+
+    # Denominator would always be unaffected by ratings in the area where
+    # habitat and stressor + stressor buffer overlap
+    hab_stress_buff_mask = (hab_stress_overlap_mask |
+                            hab_buff_overlap_mask)
+
+    # Initialize output exposure or consequence score array
+    score_arr = numpy.full(
+        habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
+    score_arr[habitat_mask] = 0
+
+    score_arr[hab_stress_buff_mask] = (
+        conseq_num_arr[hab_stress_buff_mask] +
+        recov_num_arr[hab_stress_buff_mask]) / (conseq_denom + recov_denom)
+
+    return score_arr
+
+
 def _pair_criteria_num_op(
         habitat_arr, stressor_dist_arr, stressor_buffer, decay_eq, num,
         *spatial_explicit_arr_const):
@@ -1605,8 +1667,8 @@ def _pair_criteria_num_op(
         stressor_buffer (float): a number representing how far down the
             influence is from the stressor pixel.
         decay_eq (str): a string representing the decay format of the
-            stressor in the buffer zone. Could be ````None````, ````Linear````, or
-            ````Exponential````.
+            stressor in the buffer zone. Could be ``None``, ``Linear``
+            or ``Exponential``
         num (float): a cumulative value pre-calculated based on the criteria
             table. It will be divided by denominator to get exposure score.
         *spatial_explicit_arr_const: if exists, it is a list of variables
@@ -1669,7 +1731,8 @@ def _pair_criteria_num_op(
 
 def _calc_pair_criteria_score(
         habitat_stressor_overlap_df, habitat_raster_path,
-        stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type):
+        stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type,
+        recov_num_path=None, recov_denom=None):
     """Calculate exposure or consequence scores for a habitat-stressor pair.
 
     Parameters:
@@ -1690,7 +1753,11 @@ def _calc_pair_criteria_score(
             recov_score_paths needs to be added.
         recov_num_path (str): a path to the recovery numerator raster
             calculated based on habitat resilience attribute. The array values
-            will be added to consequence scores.
+            will be added to consequence scores. Required when criteria_type is
+            ``C``.
+        recov_denom (float): the precalculated cumulative recovery denominator
+            score. Required when criteria_type is ``C``.
+
 
     Returns:
         None.
@@ -1727,36 +1794,26 @@ def _calc_pair_criteria_score(
         num_list.append((float(weight), 'raw'))
         num_list.append((attr_nodata, 'raw'))
 
-    task_name = 'exposure' if criteria_type == 'E' else 'consequence'
-
     # Calculate numerator raster for the habitat-stressor pair
     pygeoprocessing.raster_calculator(
         num_list, _pair_criteria_num_op, target_criteria_num_path,
         _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT)
-    # calc_criteria_num_task = task_graph.add_task(
-    #     func=pygeoprocessing.raster_calculator,
-    #     args=(num_list, _pair_criteria_num_op, target_criteria_num_path,
-    #           _TARGET_PIXEL_FLT, _TARGET_NODATA_FLT),
-    #     target_path_list=[target_criteria_num_path],
-    #     task_name='calculate_%s_num_scores' % task_name,
-    #     dependent_task_list=dependent_task_list)
-    # dependent_task_list.append(calc_criteria_num_task)
 
     # Calculate E or C raster for the habitat-stressor pair. This task is
     # dependent upon the numerator calculation task
-    pygeoprocessing.raster_calculator(
-        final_score_list, _pair_criteria_score_op,
-        target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
-        _TARGET_NODATA_FLT)
-    # calc_criteria_score_task = task_graph.add_task(
-    #     func=pygeoprocessing.raster_calculator,
-    #     args=(final_score_list, _pair_criteria_score_op,
-    #           target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
-    #           _TARGET_NODATA_FLT),
-    #     target_path_list=[target_pair_criteria_raster_path],
-    #     task_name='calculate_%s_scores' % task_name,
-    #     dependent_task_list=dependent_task_list)
-    # dependent_task_list.append(calc_criteria_score_task)
+    if criteria_type == 'E':
+        pygeoprocessing.raster_calculator(
+            final_score_list, _pair_expo_score_op,
+            target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
+            _TARGET_NODATA_FLT)
+    else:
+        # Add recovery numerator raster and denominator scores when calculating
+        # consequence score
+        final_score_list.extend([(recov_num_path, 1), (recov_denom, 'raw')])
+        pygeoprocessing.raster_calculator(
+            final_score_list, _pair_conseq_score_op,
+            target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
+            _TARGET_NODATA_FLT)
 
 
 def _final_recovery_op(habitat_arr, num_arr, denom, max_rating):
@@ -1845,15 +1902,13 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
 
 
 def _calc_habitat_recovery(
-        habitat_raster_path, habitat_name, habitat_recovery_df, max_rating):
+        habitat_raster_path, habitat_recovery_df, max_rating):
     """Calculate habitat raster recovery potential based on recovery scores.
 
     Parameters:
         habitat_raster_path (str): a path to the habitat raster where 0's
             indicate no habitat and 1's indicate habitat existence. 1's will be
             used for calculating recovery potential output raster.
-        habitat_name (str): the habitat name for finding the information on
-            recovery potential from recovery_df.
         recovery_df (dataframe): the dataframe with recovery information such
             as numerator and denominator scores, spatially explicit criteria
             dictionary, and target habitat recovery raster paths for a
