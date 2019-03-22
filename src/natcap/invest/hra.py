@@ -344,7 +344,7 @@ def execute(args):
     align_raster_list = info_df.ALIGN_RASTER_PATH.tolist()
 
     LOGGER.info('Starting align_and_resize_raster_task.')
-    task_graph.add_task(
+    align_and_resize_rasters_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(base_raster_list, align_raster_list,
               [_RESAMPLE_METHOD] * len(base_raster_list),
@@ -353,9 +353,6 @@ def execute(args):
         target_path_list=align_raster_list,
         task_name='align_and_resize_raster_task',
         dependent_task_list=align_and_resize_dependent_tasks)
-
-    # Join here since everything below requires aligned and resized rasters
-    task_graph.join()
 
     # Make buffer stressors based on their impact distance and decay function
     align_stressor_raster_list = info_df[
@@ -368,18 +365,20 @@ def execute(args):
     # Convert pixel size from meters to projection unit
     sampling_distance = (float(args['resolution'])/linear_unit,
                          float(args['resolution'])/linear_unit)
-    distance_transform_task_list = []
+    distance_transform_tasks = []
     for (align_raster_path, dist_raster_path, stressor_name) in zip(
          align_stressor_raster_list, dist_stressor_raster_list,
          stressor_names):
 
-        distance_transform_task_list.append(task_graph.add_task(
+        distance_transform_task = task_graph.add_task(
             func=pygeoprocessing.distance_transform_edt,
             args=((align_raster_path, 1), dist_raster_path),
             kwargs={'sampling_distance': sampling_distance,
                     'working_dir': intermediate_dir},
             target_path_list=[dist_raster_path],
-            task_name='distance_transform_on_%s' % stressor_name))
+            task_name='distance_transform_on_%s' % stressor_name,
+            dependent_task_list=[align_and_resize_rasters_task])
+        distance_transform_tasks.append(distance_transform_task)
 
     LOGGER.info('Calculating number of habitats on each pixel.')
     align_habitat_raster_list = info_df[
@@ -388,12 +387,17 @@ def execute(args):
         (raster_path, 1) for raster_path in align_habitat_raster_list]
     habitat_count_raster_path = os.path.join(
         file_preprocessing_dir, 'habitat_count%s.tif' % file_suffix)
-    task_graph.add_task(
+    count_habitat_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(habitat_path_band_list, _count_habitats_op,
               habitat_count_raster_path, gdal.GDT_Byte, _TARGET_NODATA_INT),
         target_path_list=[habitat_count_raster_path],
-        task_name='counting_habitats')
+        task_name='counting_habitats',
+        dependent_task_list=[align_and_resize_rasters_task])
+
+    # A dependent task list for calculating ecosystem risk from all habitat
+    # risk rasters
+    ecosystem_risk_dependent_tasks = [count_habitat_task]
 
     # For each habitat, calculate the individual and cumulative exposure,
     # consequence, and risk scores from each stressor.
@@ -415,11 +419,16 @@ def execute(args):
             func=_calc_habitat_recovery,
             args=(habitat_raster_path, habitat_recovery_df, max_rating),
             target_path_list=[recovery_raster_path, recovery_num_raster_path],
-            task_name='calculate_%s_recovery' % habitat)
+            task_name='calculate_%s_recovery' % habitat,
+            dependent_task_list=[align_and_resize_rasters_task])
+
+        final_expo_dependent_tasks = []
+        final_conseq_dependent_tasks = []
+        total_risk_dependent_tasks = []
 
         # Calculate exposure/consequence scores on each stressor-habitat pair
         for (distance_transform_task, stressor) in zip(
-                distance_transform_task_list, stressor_names):
+                distance_transform_tasks, stressor_names):
             LOGGER.info('Calculating exposure, consequence, and risk scores '
                         'from stressor %s to habitat %s.' %
                         (stressor, habitat))
@@ -428,7 +437,9 @@ def execute(args):
             # buffer distance, and linear unit for the stressor
             stressor_info_df = info_df.loc[info_df.NAME == stressor]
 
-            # Get habitat-stressor overlap dataframe
+            # Get habitat-stressor overlap dataframe with information on
+            # numerator, denominator, spatially explicit criteria files, and
+            # target paths
             habitat_stressor_overlap_df = overlap_df.loc[(habitat, stressor)]
 
             stressor_dist_raster_path = stressor_info_df[
@@ -449,7 +460,9 @@ def execute(args):
                       stressor_dist_raster_path, stressor_buffer,
                       args['decay_eq'], 'E'),
                 target_path_list=pair_expo_target_path_list,
-                dependent_task_list=[distance_transform_task])
+                dependent_task_list=[
+                    align_and_resize_rasters_task, distance_transform_task])
+            final_expo_dependent_tasks.append(pair_expo_task)
 
             # Calculate consequence scores on each habitat-stressor pair.
             # Add recovery numerator and denominator to the scores
@@ -464,7 +477,9 @@ def execute(args):
                 kwargs={'recov_num_path': recovery_num_raster_path,
                         'recov_denom': habitat_recovery_denom},
                 target_path_list=pair_conseq_target_path_list,
-                dependent_task_list=[distance_transform_task])
+                dependent_task_list=[
+                    align_and_resize_rasters_task, distance_transform_task])
+            final_conseq_dependent_tasks.append(pair_conseq_task)
 
             # Calculate pairwise habitat-stressor risks.
             pair_e_raster_path, pair_c_raster_path, \
@@ -474,8 +489,7 @@ def execute(args):
             pair_risk_calculation_list = [
                 (pair_e_raster_path, 1), (pair_c_raster_path, 1),
                 ((max_rating, 'raw')), (args['risk_eq'], 'raw')]
-
-            task_graph.add_task(
+            pair_risk_task = task_graph.add_task(
                 func=pygeoprocessing.raster_calculator,
                 args=(pair_risk_calculation_list, _pair_risk_op,
                       target_pair_risk_raster_path, _TARGET_PIXEL_FLT,
@@ -483,8 +497,7 @@ def execute(args):
                 target_path_list=[target_pair_risk_raster_path],
                 task_name='calculate_%s_%s_risk' % (habitat, stressor),
                 dependent_task_list=[pair_expo_task, pair_conseq_task])
-
-        task_graph.join()
+            total_risk_dependent_tasks.append(pair_risk_task)
 
         # Calculate cumulative E, C & risk scores on each habitat
         final_e_habitat_path = habitat_info_df['FINAL_E_RASTER_PATH'].item()
@@ -511,7 +524,8 @@ def execute(args):
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[final_e_habitat_path],
-            task_name='calculate_total_exposure_%s' % habitat)
+            task_name='calculate_total_exposure_%s' % habitat,
+            dependent_task_list=final_expo_dependent_tasks)
 
         LOGGER.info(
             'Calculating total consequence scores on habitat %s.' % habitat)
@@ -535,7 +549,8 @@ def execute(args):
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[final_c_habitat_path],
-            task_name='calculate_total_consequence_%s' % habitat)
+            task_name='calculate_total_consequence_%s' % habitat,
+            dependent_task_list=final_conseq_dependent_tasks)
 
         LOGGER.info('Calculating total risk score and reclassified risk scores'
                     ' on habitat %s.' % habitat)
@@ -559,7 +574,9 @@ def execute(args):
                   total_habitat_risk_path, _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[total_habitat_risk_path],
-            task_name='calculate_%s_risk' % habitat)
+            task_name='calculate_%s_risk' % habitat,
+            dependent_task_list=total_risk_dependent_tasks)
+        ecosystem_risk_dependent_tasks.append(calc_risk_task)
 
         # Reclassify the risk score into three categories by dividing the total
         # risk score by 3, and return the ceiling
@@ -574,7 +591,6 @@ def execute(args):
 
     # Calculate ecosystem risk scores. This task depends on every task above,
     # so join the graph first.
-    task_graph.join()
     LOGGER.info('Calculating average and reclassified ecosystem risks.')
 
     # Create input list for calculating average & reclassified ecosystem risks
@@ -597,7 +613,8 @@ def execute(args):
               ecosystem_risk_raster_path, _TARGET_PIXEL_FLT,
               _TARGET_NODATA_FLT),
         target_path_list=[ecosystem_risk_raster_path],
-        task_name='calculate_average_ecosystem_risk')
+        task_name='calculate_average_ecosystem_risk',
+        dependent_task_list=ecosystem_risk_dependent_tasks)
 
     # Calculate reclassified ecosystem risk
     task_graph.add_task(
@@ -609,6 +626,10 @@ def execute(args):
         target_path_list=[reclass_ecosystem_risk_raster_path],
         task_name='reclassify_ecosystem_risk',
         dependent_task_list=[ecosystem_risk_task])
+
+    # Temporary join graph here because _get_zonal_stats_df() will be modified
+    # later
+    task_graph.join()
 
     # Calculate the mean criteria scores on the habitat pixels within the
     # polygons in the AOI vector
