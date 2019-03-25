@@ -1,0 +1,102 @@
+pipelines:
+    options:
+        max-time: 20
+    custom:
+        appveyor-trigger:
+          - step:
+              # NOTE: this step should not normally be needed if hooks are running
+              # as expected with appveyor.  It's added here in case we need to retrigger
+              # an appveyor build after-the-fact.
+              name: "Retrigger AppVeyor"
+              image: debian:9.7
+              script:
+                - apt-get update && apt-get install -y curl mercurial
+                - |
+                  curl --header "Authorization: Bearer $APPVEYOR_API_KEY" \
+                    --header "Content-Type: application/json" \
+                    --data "{'accountName': '$APPVEYOR_ACC_NAME',
+                             'projectSlug': '$APPVEYOR_PROJ_SLUG',
+                             'branch': '$(hg branch)',
+                             'commitID': '$(hg log -r . -T \"{node}\")'}" \
+                    "https://ci.appveyor.com/api/builds"
+                - echo "Build history at "
+                - echo "    https://ci.appveyor.com/project/$APPVEYOR_ACC_NAME/$APPVEYOR_PROJ_SLUG/history"
+        win32-installer:
+            - parallel:
+                - step:
+                    name: User's Guide
+                    image: natcap/userguide-build:fba743220031e1ba99b528a8939a86c8201da949
+                    script:
+                        # If setup.py --version fails, we'll get bad version
+                        # info in the UG build.
+                        - python setup.py --version
+                        - make userguide
+                    artifacts:
+                        - dist/userguide/**
+                        - dist/*.pdf
+                        - dist/*.zip
+                - step:
+                    name: Sample Data
+                    image: debian:9.7
+                    script:
+                        - apt-get update && apt-get install -y subversion
+                            mercurial build-essential zip python-setuptools
+                            python-numpy python-setuptools-scm cython
+                        - make sampledata
+                    artifacts:
+                        - dist/data/*
+                        - data/invest-data/*.json
+                - step:
+                    name: Python Binaries
+                    image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
+                    caches:
+                        - pip
+                    script:
+                        # The Atlassian image assumes that the pip cache is at ~/.cache/pip.
+                        # Since we're using pip under WINE, we need to tell the WINE pip to
+                        # use the cache directory (which speeds up this step by about 4
+                        # minutes per run.
+                        - export PIP_CACHE_DIR=$HOME/.cache/pip
+                        - wine make env
+                        - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install --upgrade .
+                        - wine env/scripts/python.exe -m pip --cache-dir=$PIP_CACHE_DIR install
+                            -r requirements-gui.txt
+                            -r requirements-dev.txt
+                            -r requirements.txt
+                        - wine make PYTHON=env/scripts/python.exe binaries
+                    artifacts:
+                        - dist/invest/**
+                        - dist/*.whl
+            - step:
+                name: NSIS Installer
+                image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
+                script:
+                    # First, need to put the vcredist into the right place (no powershell under WINE)
+                    - make build
+                    - wget -nv -O build/vcredist_x86.exe
+                        https://download.microsoft.com/download/5/D/8/5D8C65CB-C849-4025-8E95-C3966CAFD8AE/vcredist_x86.exe
+
+                    # Make relies on timestamps to check whether the targets need to be rebuilt,
+                    # so touching the needed artifacts will make sure that Make uses these
+                    # artifacts instead of rebuilding.
+                    - mkdir doc/users-guide
+                    - touch dist/*.pdf dist/userguide data/invest-data
+
+                    # Now we can run make.
+                    # Need to set PYTHON_ARCH because for some reason the
+                    # string isn't being correctly set.
+                    - wine make PYTHON_ARCH=x86 windows_installer
+                artifacts:
+                    - dist/*.exe
+            - step:
+                name: Deploy to bucket
+                image: google/cloud-sdk:latest
+                script:
+                    # Build tools needed for running setup.py
+                    - apt-get update && apt-get install -y make python-numpy cython python-pip mercurial
+                    - pip install setuptools_scm
+
+                    # Authenticate with the service account key and upload files to bucket.
+                    - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
+                    - gcloud auth activate-service-account --key-file=client-secret.json
+                    - make PYTHON_ARCH=x86 deploy

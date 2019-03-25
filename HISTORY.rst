@@ -7,6 +7,7 @@ Unreleased Changes
 * Carbon Model and Crop Production models no longer crash if user-input
   rasters do not have a nodata value defined. In this case these models
   treat all pixel values as valid data.
+* Adding bitbucket pipelines and AppVeyor build configurations.
 * Refactoring Recreation Model client to use taskgraph and the latest
   pygeoprocessing. Avoided re-computation from taskgraph means that
   successive model runs with the same AOI and gridding option can re-use PUD
