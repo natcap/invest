@@ -2338,6 +2338,10 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
             'The %s attribute in Info table should be a number for stressors, '
             'and empty for habitats.' % _BUFFER_HEADER)
 
+    # Decode UTF-8 strings into Unicode. This is useful when the file is Excel,
+    # whose encoding is usually UTF-8
+    info_df['NAME'] = info_df.apply(
+        lambda row: row['NAME'].decode('utf-8'), axis=1)
     # Convert all relative paths to absolute paths
     info_df['PATH'] = info_df.apply(
         lambda row: _to_abspath(
@@ -2391,8 +2395,13 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         lambda row: _generate_raster_path(
             row, output_dir, 'RECLASS_RISK_', suffix_end), axis=1)
 
+    # Get lists of habitat and stressor names, and decode them to Unicode
+    # so they can be used as task names in Taskgrpah
     habitat_names = info_df[info_df.TYPE == _HABITAT_TYPE].NAME.tolist()
+    habitat_names = [name.decode('utf-8') for name in habitat_names]
     stressor_names = info_df[info_df.TYPE == _STRESSOR_TYPE].NAME.tolist()
+    stressor_names = [name.decode('utf-8') for name in stressor_names]
+
     return info_df, habitat_names, stressor_names
 
 
