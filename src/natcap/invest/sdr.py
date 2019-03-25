@@ -518,8 +518,6 @@ def execute(args):
             args['watersheds_path'], f_reg['usle_path'],
             f_reg['sed_export_path'], f_reg['sed_retention_path'],
             f_reg['watershed_results_sdr_path']),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
             usle_task, sed_export_task, sed_retention_task],
