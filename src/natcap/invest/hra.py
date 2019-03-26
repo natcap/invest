@@ -503,8 +503,8 @@ def execute(args):
             total_risk_dependent_tasks.append(pair_risk_task)
 
         # Calculate cumulative E, C & risk scores on each habitat
-        total_e_habitat_path = habitat_info_df['TOTAL_E_RASTER_PATH'].item()
-        total_c_habitat_path = habitat_info_df['TOTAL_C_RASTER_PATH'].item()
+        total_e_habitat_path = habitat_info_df['TOT_E_RASTER_PATH'].item()
+        total_c_habitat_path = habitat_info_df['TOT_C_RASTER_PATH'].item()
 
         LOGGER.info(
             'Calculating total exposure scores on habitat %s.' % habitat)
@@ -522,7 +522,7 @@ def execute(args):
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(total_e_path_band_list,
-                  _total_expo_score_op,
+                  _total_exposure_op,
                   total_e_habitat_path,
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
@@ -547,7 +547,7 @@ def execute(args):
         task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(total_c_path_const_list,
-                  _total_conseq_score_op,
+                  _total_consequence_op,
                   total_c_habitat_path,
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
@@ -560,7 +560,7 @@ def execute(args):
 
         total_habitat_risk_path, reclass_habitat_risk_path = [
             habitat_info_df[column_header].item() for column_header in [
-                'TOTAL_RISK_RASTER_PATH', 'RECLASS_RISK_RASTER_PATH']]
+                'TOT_RISK_RASTER_PATH', 'RECLASS_RISK_RASTER_PATH']]
 
         # Get a list of habitat path and individual risk paths on that habitat
         # for the final risk calculation
@@ -604,7 +604,7 @@ def execute(args):
 
     # Append individual habitat risk rasters to the input list
     hab_risk_raster_path_list = info_df.loc[info_df.TYPE == _HABITAT_TYPE][
-        'TOTAL_RISK_RASTER_PATH'].tolist()
+        'TOT_RISK_RASTER_PATH'].tolist()
     hab_risk_path_band_list = [(habitat_count_raster_path, 1)]
     for hab_risk_raster_path in hab_risk_raster_path_list:
         hab_risk_path_band_list.append((hab_risk_raster_path, 1))
@@ -687,7 +687,7 @@ def execute(args):
         # each habitat from all stressors
         for _, row in habitats_info_df.iterrows():
             habitat_name = row['NAME']
-            total_risk_raster_path = row['TOTAL_RISK_RASTER_PATH']
+            TOT_RISK_RASTER_PATH = row['TOT_RISK_RASTER_PATH']
             target_pickle_stats_path = row[
                 'TOT_RISK_PICKLE_STATS_PATH'].replace(
                     '.pickle', region_name + '.pickle')
@@ -697,7 +697,7 @@ def execute(args):
 
             zonal_stats_dependent_tasks.append(task_graph.add_task(
                 func=_calc_and_pickle_zonal_stats,
-                args=(total_risk_raster_path, zonal_raster_path,
+                args=(TOT_RISK_RASTER_PATH, zonal_raster_path,
                       target_pickle_stats_path, file_preprocessing_dir),
                 kwargs={'max_rating': max_rating},
                 target_path_list=[target_pickle_stats_path],
@@ -707,7 +707,7 @@ def execute(args):
             # Compute pairwise E/C zonal stats
             for criteria_type in ['E', 'C']:
                 total_criteria_raster_path = row[
-                    'TOTAL_' + criteria_type + '_RASTER_PATH']
+                    'TOT_' + criteria_type + '_RASTER_PATH']
                 target_pickle_stats_path = row[
                     'TOT_' + criteria_type + '_PICKLE_STATS_PATH'].replace(
                         '.pickle', region_name + '.pickle')
@@ -1486,7 +1486,7 @@ def _pair_risk_op(exposure_arr, consequence_arr, max_rating, risk_eq):
     return risk_arr
 
 
-def _total_expo_score_op(habitat_arr, *num_denom_list):
+def _total_exposure_op(habitat_arr, *num_denom_list):
     """Calculate the exposure score for a habitat layer from all stressors.
 
     Add up all the numerators and denominators respectively, then divide
@@ -1501,7 +1501,7 @@ def _total_expo_score_op(habitat_arr, *num_denom_list):
             (float) in the second half.
 
     Returns:
-        total_expo_arr (array): an exposure float array calculated by dividing
+        tot_expo_arr (array): an exposure float array calculated by dividing
             the total numerator by the total denominator. Pixel values are
             nodata outside of habitat, and will be 0 if there is no valid
             numerator value on that pixel.
@@ -1515,9 +1515,9 @@ def _total_expo_score_op(habitat_arr, *num_denom_list):
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
     tot_num_arr[habitat_mask] = 0
 
-    total_expo_arr = numpy.full(
+    tot_expo_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    total_expo_arr[habitat_mask] = 0
+    tot_expo_arr[habitat_mask] = 0
 
     tot_denom = 0
 
@@ -1536,13 +1536,13 @@ def _total_expo_score_op(habitat_arr, *num_denom_list):
     # If the numerator is nodata, do not divide the arrays
     final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
 
-    total_expo_arr[final_valid_mask] = tot_num_arr[
+    tot_expo_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
 
-    return total_expo_arr
+    return tot_expo_arr
 
 
-def _total_conseq_score_op(
+def _total_consequence_op(
         habitat_arr, recov_num_arr, recov_denom, *num_denom_list):
     """Calculate the consequence score for a habitat layer from all stressors.
 
@@ -1562,7 +1562,7 @@ def _total_conseq_score_op(
             (float) in the second half.
 
     Returns:
-        total_conseq_arr (array): a consequence float array calculated by
+        tot_conseq_arr (array): a consequence float array calculated by
             dividing the total numerator by the total denominator. Pixel values
             are nodata outside of habitat, and will be 0 if there is no valid
             numerator value on that pixel.
@@ -1574,9 +1574,9 @@ def _total_conseq_score_op(
 
     # Fill each array with value of 0 on the habitat pixels, assuming that
     # criteria score is 0 before adding numerator/denominator
-    total_conseq_arr = numpy.full(
+    tot_conseq_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    total_conseq_arr[habitat_mask] = 0
+    tot_conseq_arr[habitat_mask] = 0
 
     tot_denom = recov_denom
 
@@ -1595,13 +1595,13 @@ def _total_conseq_score_op(
     # If the numerator is nodata, do not divide the arrays
     final_valid_mask = (tot_num_arr != _TARGET_NODATA_FLT)
 
-    total_conseq_arr[final_valid_mask] = tot_num_arr[
+    tot_conseq_arr[final_valid_mask] = tot_num_arr[
         final_valid_mask] / tot_denom
 
-    return total_conseq_arr
+    return tot_conseq_arr
 
 
-def _pair_expo_score_op(
+def _pair_exposure_op(
         habitat_arr, stressor_dist_arr, stressor_buffer, num_arr, denom):
     """Calculate individual E/C scores by dividing num by denom arrays.
 
@@ -1623,7 +1623,7 @@ def _pair_expo_score_op(
             table. It will be used to divide the numerator.
 
     Returns:
-        score_arr (array): a float array of the scores calculated based on
+        exposure_arr (array): a float array of the scores calculated based on
             the E/C equation in users guide.
 
     """
@@ -1643,16 +1643,16 @@ def _pair_expo_score_op(
                             hab_buff_overlap_mask)
 
     # Initialize output exposure or consequence score array
-    score_arr = numpy.full(
+    exposure_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    score_arr[habitat_mask] = 0
+    exposure_arr[habitat_mask] = 0
 
-    score_arr[hab_stress_buff_mask] = num_arr[hab_stress_buff_mask] / denom
+    exposure_arr[hab_stress_buff_mask] = num_arr[hab_stress_buff_mask] / denom
 
-    return score_arr
+    return exposure_arr
 
 
-def _pair_conseq_score_op(
+def _pair_consequence_op(
         habitat_arr, stressor_dist_arr, stressor_buffer, conseq_num_arr,
         conseq_denom, recov_num_arr, recov_denom):
     """Calculate individual E/C scores by dividing num by denom arrays.
@@ -1679,8 +1679,8 @@ def _pair_conseq_score_op(
             score.
 
     Returns:
-        score_arr (array): a float array of the scores calculated based on
-            the E/C equation in users guide.
+        consequence_arr (array): a float array of the scores calculated based
+            on the E/C equation in users guide.
 
     """
     habitat_mask = (habitat_arr == 1)
@@ -1699,15 +1699,15 @@ def _pair_conseq_score_op(
                             hab_buff_overlap_mask)
 
     # Initialize output exposure or consequence score array
-    score_arr = numpy.full(
+    consequence_arr = numpy.full(
         habitat_arr.shape, _TARGET_NODATA_FLT, dtype=numpy.float32)
-    score_arr[habitat_mask] = 0
+    consequence_arr[habitat_mask] = 0
 
-    score_arr[hab_stress_buff_mask] = (
+    consequence_arr[hab_stress_buff_mask] = (
         conseq_num_arr[hab_stress_buff_mask] +
         recov_num_arr[hab_stress_buff_mask]) / (conseq_denom + recov_denom)
 
-    return score_arr
+    return consequence_arr
 
 
 def _pair_criteria_num_op(
@@ -1865,7 +1865,7 @@ def _calc_pair_criteria_score(
     # dependent upon the numerator calculation task
     if criteria_type == 'E':
         pygeoprocessing.raster_calculator(
-            pair_score_list, _pair_expo_score_op,
+            pair_score_list, _pair_exposure_op,
             target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
             _TARGET_NODATA_FLT)
     else:
@@ -1873,12 +1873,12 @@ def _calc_pair_criteria_score(
         # consequence score
         pair_score_list.extend([(recov_num_path, 1), (recov_denom, 'raw')])
         pygeoprocessing.raster_calculator(
-            pair_score_list, _pair_conseq_score_op,
+            pair_score_list, _pair_consequence_op,
             target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
             _TARGET_NODATA_FLT)
 
 
-def _total_recovery_op(habitat_arr, num_arr, denom, max_rating):
+def _tot_recovery_op(habitat_arr, num_arr, denom, max_rating):
     """Calculate and reclassify habitat recovery scores to 1 to 3.
 
     The equation for calculating reclassified recovery score is:
@@ -2017,7 +2017,7 @@ def _calc_habitat_recovery(
 
     # Finally calculate recovery potential for the habitat
     pygeoprocessing.raster_calculator(
-        recov_potential_list, _total_recovery_op, target_recov_raster_path,
+        recov_potential_list, _tot_recovery_op, target_recov_raster_path,
         _TARGET_PIXEL_INT, _TARGET_NODATA_INT)
 
 
@@ -2366,26 +2366,27 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         lambda row: _generate_raster_path(
             row, file_preprocessing_dir, 'dist_', suffix_end), axis=1)
 
-    for column_name, suffix_front in {
-            'TOTAL_E_RASTER_PATH': 'TOT_E_',
-            'TOTAL_C_RASTER_PATH': 'TOT_C_'}.iteritems():
+    for column_name, criteria_type in {
+            'TOT_E_RASTER_PATH': '_E_',
+            'TOT_C_RASTER_PATH': '_C_'}.iteritems():
+        suffix_front = 'TOTAL'+criteria_type
         # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
                 row, intermediate_dir, suffix_front, suffix_end), axis=1)
         # Generate pickle path to storing criteria score stats
-        info_df[suffix_front+'PICKLE_STATS_PATH'] = info_df.apply(
+        info_df['TOT'+criteria_type+'PICKLE_STATS_PATH'] = info_df.apply(
             lambda row: _generate_pickle_path(
                 row, file_preprocessing_dir, suffix_front, suffix_end), axis=1)
 
     # Generate cumulative risk raster paths with risk suffix.
-    info_df['TOTAL_RISK_RASTER_PATH'] = info_df.apply(
+    info_df['TOT_RISK_RASTER_PATH'] = info_df.apply(
         lambda row: _generate_raster_path(
             row, output_dir, 'TOTAL_RISK_', suffix_end), axis=1)
     # Generate pickled statistics for habitat risks
     info_df['TOT_RISK_PICKLE_STATS_PATH'] = info_df.apply(
         lambda row: _generate_pickle_path(
-            row, file_preprocessing_dir, 'total_risk_', suffix_end), axis=1)
+            row, file_preprocessing_dir, 'TOTAL_RISK_', suffix_end), axis=1)
 
     # Generate reclassified risk raster paths with risk suffix.
     info_df['RECLASS_RISK_RASTER_PATH'] = info_df.apply(
