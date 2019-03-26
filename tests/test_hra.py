@@ -958,7 +958,7 @@ class HraRegressionTests(unittest.TestCase):
         # Two layers that are expected to be missing from criteria CSV
         for missing_layer in ['habitat_0', 'stressor_1']:
             expected_message = (
-                "missing from the criteria table: [u'" + missing_layer)
+                "missing from the criteria table: ['" + missing_layer)
             actual_message = str(cm.exception)
             self.assertTrue(expected_message in actual_message, actual_message)
 
