@@ -18,7 +18,7 @@ REGRESSION_DATA = os.path.join(
 
 def assert_expected_results_in_vector(expected_results, vector_path):
     """Assert one feature vector maps to expected_results key/value pairs."""
-    watershed_results_vector = gdal.OpenEx(vector_path)
+    watershed_results_vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     watershed_results_layer = watershed_results_vector.GetLayer()
     watershed_results_feature = watershed_results_layer.GetFeature(0)
     actual_results = {}
