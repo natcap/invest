@@ -21,7 +21,7 @@ scipy>=0.16.1
 Shapely>=1.6.4
 six
 pygeoprocessing>=1.6.1
-taskgraph[niced_processes]>=0.8.1
+-e hg+https://bitbucket.org/chiayilin/taskgraph/@cd9258d6afcb#egg=taskgraph
 psutil<5.6.0
 chardet>=3.0.4
 matplotlib

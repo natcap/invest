@@ -2369,7 +2369,7 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     for column_name, criteria_type in {
             'TOT_E_RASTER_PATH': '_E_',
             'TOT_C_RASTER_PATH': '_C_'}.iteritems():
-        suffix_front = 'TOTAL'+criteria_type
+        suffix_front = 'TOTAL'+criteria_type  # front suffix for file names
         # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
