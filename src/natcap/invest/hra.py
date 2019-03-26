@@ -264,7 +264,7 @@ def execute(args):
             func=_get_vector_geometries_by_field,
             args=(aoi_vector_path, aoi_field_name, geom_pickle_path),
             target_path_list=[geom_pickle_path],
-            task_name=u'get_AOI_vector_geoms_by_field_"%s"' % aoi_field_name,
+            task_name='get_AOI_vector_geoms_by_field_"%s"' % aoi_field_name,
             dependent_task_list=rasterize_aoi_dependent_tasks)
         rasterize_aoi_dependent_tasks.append(get_vector_geoms_task)
 
@@ -296,7 +296,7 @@ def execute(args):
                 args=(vector_path, tolerance, simplified_vector_path),
                 kwargs={'preserved_field': (_RATING_FIELD, ogr.OFTReal)},
                 target_path_list=[simplified_vector_path],
-                task_name=u'simplify_%s_vector' % vector_name)
+                task_name='simplify_%s_vector' % vector_name)
 
             if vector_type == _SPATIAL_CRITERIA_TYPE:
                 # Fill value for the target raster should be nodata float,
@@ -328,7 +328,7 @@ def execute(args):
                       target_pixel_size, rasterize_pixel_type, rasterize_nodata),
                 kwargs={'fill_value': fill_value},
                 target_path_list=[target_raster_path],
-                task_name=u'create_raster_from_%s' % vector_name,
+                task_name='create_raster_from_%s' % vector_name,
                 dependent_task_list=[simplify_geometry_task])
 
             align_and_resize_dependent_tasks.append(task_graph.add_task(
@@ -336,7 +336,7 @@ def execute(args):
                 args=(simplified_vector_path, target_raster_path),
                 kwargs=rasterize_kwargs,
                 target_path_list=[target_raster_path],
-                task_name=u'rasterize_%s' % vector_name,
+                task_name='rasterize_%s' % vector_name,
                 dependent_task_list=[create_raster_task]))
 
     # Align and resize all the rasters, including rasters provided by the user,
@@ -377,7 +377,7 @@ def execute(args):
             kwargs={'sampling_distance': sampling_distance,
                     'working_dir': intermediate_dir},
             target_path_list=[dist_raster_path],
-            task_name=u'distance_transform_on_%s' % stressor_name,
+            task_name='distance_transform_on_%s' % stressor_name,
             dependent_task_list=[align_and_resize_rasters_task])
         distance_transform_tasks.append(distance_transform_task)
 
@@ -420,7 +420,7 @@ def execute(args):
             func=_calc_habitat_recovery,
             args=(habitat_raster_path, habitat_recovery_df, max_rating),
             target_path_list=[recovery_raster_path, recovery_num_raster_path],
-            task_name=u'calculate_%s_recovery' % habitat,
+            task_name='calculate_%s_recovery' % habitat,
             dependent_task_list=[align_and_resize_rasters_task])
 
         total_expo_dependent_tasks = []
@@ -461,7 +461,7 @@ def execute(args):
                       stressor_dist_raster_path, stressor_buffer,
                       args['decay_eq'], 'E'),
                 target_path_list=pair_expo_target_path_list,
-                task_name=u'calculate_%s_%s_exposure' % (habitat, stressor),
+                task_name='calculate_%s_%s_exposure' % (habitat, stressor),
                 dependent_task_list=[
                     align_and_resize_rasters_task, distance_transform_task])
             total_expo_dependent_tasks.append(pair_expo_task)
@@ -479,7 +479,7 @@ def execute(args):
                 kwargs={'recov_num_path': recovery_num_raster_path,
                         'recov_denom': habitat_recovery_denom},
                 target_path_list=pair_conseq_target_path_list,
-                task_name=u'calculate_%s_%s_consequence' % (habitat, stressor),
+                task_name='calculate_%s_%s_consequence' % (habitat, stressor),
                 dependent_task_list=[
                     align_and_resize_rasters_task, distance_transform_task])
             total_conseq_dependent_tasks.append(pair_conseq_task)
@@ -498,7 +498,7 @@ def execute(args):
                       target_pair_risk_raster_path, _TARGET_PIXEL_FLT,
                       _TARGET_NODATA_FLT),
                 target_path_list=[target_pair_risk_raster_path],
-                task_name=u'calculate_%s_%s_risk' % (habitat, stressor),
+                task_name='calculate_%s_%s_risk' % (habitat, stressor),
                 dependent_task_list=[pair_expo_task, pair_conseq_task])
             total_risk_dependent_tasks.append(pair_risk_task)
 
@@ -527,7 +527,7 @@ def execute(args):
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[total_e_habitat_path],
-            task_name=u'calculate_total_exposure_%s' % habitat,
+            task_name='calculate_total_exposure_%s' % habitat,
             dependent_task_list=total_expo_dependent_tasks)
 
         LOGGER.info(
@@ -552,7 +552,7 @@ def execute(args):
                   _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[total_c_habitat_path],
-            task_name=u'calculate_total_consequence_%s' % habitat,
+            task_name='calculate_total_consequence_%s' % habitat,
             dependent_task_list=total_conseq_dependent_tasks)
 
         LOGGER.info('Calculating total risk score and reclassified risk scores'
@@ -577,7 +577,7 @@ def execute(args):
                   total_habitat_risk_path, _TARGET_PIXEL_FLT,
                   _TARGET_NODATA_FLT),
             target_path_list=[total_habitat_risk_path],
-            task_name=u'calculate_%s_risk' % habitat,
+            task_name='calculate_%s_risk' % habitat,
             dependent_task_list=total_risk_dependent_tasks)
         ecosystem_risk_dependent_tasks.append(calc_risk_task)
 
@@ -589,7 +589,7 @@ def execute(args):
                   _reclassify_risk_op, reclass_habitat_risk_path,
                   _TARGET_PIXEL_INT, _TARGET_NODATA_INT),
             target_path_list=[reclass_habitat_risk_path],
-            task_name=u'reclassify_%s_risk' % habitat,
+            task_name='reclassify_%s_risk' % habitat,
             dependent_task_list=[calc_risk_task])
 
     # Calculate ecosystem risk scores. This task depends on every task above,
@@ -666,7 +666,7 @@ def execute(args):
                     args=(criteria_raster_path, zonal_raster_path,
                           target_pickle_stats_path, file_preprocessing_dir),
                     target_path_list=[target_pickle_stats_path],
-                    task_name=u'calc_%s_%s_stats_in_%s' % (
+                    task_name='calc_%s_%s_stats_in_%s' % (
                         habitat_stressor, criteria_type, region_name)))
 
             # Compute pairwise risk zonal stats
@@ -680,7 +680,7 @@ def execute(args):
                       target_pickle_stats_path, file_preprocessing_dir),
                 kwargs={'max_rating': max_rating},
                 target_path_list=[target_pickle_stats_path],
-                task_name=u'calc_%s_risk_stats_in_%s' % (
+                task_name='calc_%s_risk_stats_in_%s' % (
                     habitat_stressor, region_name)))
 
         # Calculate the overall stats of exposure, consequence, and risk for
@@ -701,7 +701,7 @@ def execute(args):
                       target_pickle_stats_path, file_preprocessing_dir),
                 kwargs={'max_rating': max_rating},
                 target_path_list=[target_pickle_stats_path],
-                task_name=u'calc_%s_risk_stats_in_%s' % (
+                task_name='calc_%s_risk_stats_in_%s' % (
                     habitat_name, region_name)))
 
             # Compute pairwise E/C zonal stats
@@ -717,7 +717,7 @@ def execute(args):
                     args=(total_criteria_raster_path, zonal_raster_path,
                           target_pickle_stats_path, file_preprocessing_dir),
                     target_path_list=[target_pickle_stats_path],
-                    task_name=u'calc_%s_%s_stats_in_%s' % (
+                    task_name='calc_%s_%s_stats_in_%s' % (
                         habitat_name, criteria_type, region_name)))
 
     # Convert the statistics dataframe to a CSV file
@@ -769,7 +769,7 @@ def execute(args):
             args=(out_raster_path, geojson_path, file_basename, field_name),
             kwargs={'target_sr_wkt': wgs84_wkt},
             target_path_list=[geojson_path],
-            task_name=u'create_%s_geojson' % file_basename)
+            task_name='create_%s_geojson' % file_basename)
 
     task_graph.close()
     task_graph.join()
@@ -1954,7 +1954,7 @@ def _recovery_num_op(habitat_arr, num, *spatial_explicit_arr_const):
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat and resilience score exist
-        hab_res_overlap_mask = [habitat_mask & (resilience_arr != nodata)]
+        hab_res_overlap_mask = habitat_mask & (resilience_arr != nodata)
 
         # Compute cumulative numerator score
         num_arr[hab_res_overlap_mask] += resilience_arr[
