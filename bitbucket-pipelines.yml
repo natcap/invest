@@ -2,6 +2,25 @@ pipelines:
     options:
         max-time: 20
     custom:
+        appveyor-trigger:
+          - step:
+              # NOTE: this step should not normally be needed if hooks are running
+              # as expected with appveyor.  It's added here in case we need to retrigger
+              # an appveyor build after-the-fact.
+              name: "Retrigger AppVeyor"
+              image: debian:9.7
+              script:
+                - apt-get update && apt-get install -y curl mercurial
+                - |
+                  curl --header "Authorization: Bearer $APPVEYOR_API_KEY" \
+                    --header "Content-Type: application/json" \
+                    --data "{'accountName': '$APPVEYOR_ACC_NAME',
+                             'projectSlug': '$APPVEYOR_PROJ_SLUG',
+                             'branch': '$(hg branch)',
+                             'commitID': '$(hg log -r . -T \"{node}\")'}" \
+                    "https://ci.appveyor.com/api/builds"
+                - echo "Build history at "
+                - echo "    https://ci.appveyor.com/project/$APPVEYOR_ACC_NAME/$APPVEYOR_PROJ_SLUG/history"
         win32-installer:
             - parallel:
                 - step:
