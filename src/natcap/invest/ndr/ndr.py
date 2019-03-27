@@ -6,10 +6,9 @@ import os
 from osgeo import gdal
 from osgeo import ogr
 import numpy
-
-import natcap.invest.pygeoprocessing_0_3_3
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+import taskgraph
+import pygeoprocessing
+import pygeoprocessing.routing
 
 from .. import validation
 from .. import utils
@@ -101,13 +100,14 @@ def execute(args):
             all output files
         args['threshold_flow_accumulation']: a number representing the flow
             accumulation in terms of upstream pixels.
-        args['_prepare']: (optional) The preprocessed set of data created by
-            the ndr._prepare call.  This argument could be used in cases where
-            the call to this function is scripted and can save a significant
-            amount DEM processing runtime.
+        args['n_workers'] (int): if present, indicates how many worker
+            processes should be used in parallel processing. -1 indicates
+            single process mode, 0 is single process but non-blocking mode,
+            and >= 1 is number of processes.
 
     Returns:
         None
+
     """
     def _validate_inputs(nutrients_to_process, lucode_to_parameters):
         """Validate common errors in inputs.
@@ -124,6 +124,7 @@ def execute(args):
         Raises:
             ValueError whenever a missing field in the parameter table is
             detected along with a message describing every missing field.
+
         """
         # Make sure all the nutrient inputs are good
         if len(nutrients_to_process) == 0:
@@ -166,8 +167,18 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    natcap.invest.pygeoprocessing_0_3_3.create_directories(
-        [output_dir, intermediate_output_dir])
+    cache_dir = os.path.join(intermediate_output_dir, 'cache_dir')
+    for dir_path in [output_dir, intermediate_output_dir, cache_dir]:
+        try:
+            os.makedirs(dir_path)
+        except OSError:
+            pass
+
+    n_workers = -1  # single process mode, but adjust if in args
+    if 'n_workers' in args:
+        n_workers = int(args['n_workers'])
+    task_graph = taskgraph.TaskGraph(
+        cache_dir, n_workers, reporting_interval=5.0)
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     f_reg = utils.build_file_registry(
@@ -180,18 +191,28 @@ def execute(args):
     for nutrient_id in ['n', 'p']:
         if args['calc_' + nutrient_id]:
             nutrients_to_process.append(nutrient_id)
-    lucode_to_parameters = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
+
+    lucode_to_parameters = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
-    dem_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-        args['dem_path'])
+    dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
     # Align all the input rasters
-    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
-        [args['dem_path']], [f_reg['aligned_dem_path']], ['nearest'],
-        dem_pixel_size, 'intersection', dataset_to_align_index=0,
-        aoi_uri=args['watersheds_path'])
+    align_dem_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            [args['dem_path']], [f_reg['aligned_dem_path']], ['near'],
+            dem_info['pixel_size'], 'intersection'),
+        kwargs={
+            'base_vector_path_list': [args['watersheds_path']],
+            'vector_mask_options': {
+                'mask_vector_path': args['watersheds_path']}},
+        task_name='align dem')
+
+    task_graph.close()
+    task_graph.join()
+    return
 
     # Calculate flow accumulation
     LOGGER.info("calculating flow accumulation")
