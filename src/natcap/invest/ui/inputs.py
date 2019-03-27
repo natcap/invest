@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import functools
 import os
-import threading
 import logging
 import platform
 import subprocess
@@ -23,6 +22,7 @@ from qtpy import QtGui
 import six
 import qtawesome
 import chardet
+from .. import utils
 
 try:
     import faulthandler
@@ -238,8 +238,7 @@ class QLogHandler(logging.StreamHandler):
         self.setLevel(logging.NOTSET)  # capture everything
 
         self.formatter = logging.Formatter(
-            fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-            datefmt='%m/%d/%Y %H:%M:%S ')
+            fmt=utils.LOG_FMT)
         self.setFormatter(self.formatter)
 
 
