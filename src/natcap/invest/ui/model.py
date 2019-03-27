@@ -421,6 +421,17 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
+        self.taskgraph_logging_level = inputs.Dropdown(
+            label='Taskgraph logging threshold',
+            helptext=('The minimum logging level for taskgraph messages to be '
+                      'displayed in either the logfile or the UI.  Log '
+                      'messages with a level lower than this will not be '
+                      'written to the logfile. Default: ERROR'),
+            options=logging_options)
+        self.taskgraph_logging_level.set_value(inputs.INVEST_SETTINGS.value(
+            'logging/taskgraph', 'ERROR', unicode))
+        self._global_opts_container.add_input(self.taskgraph_logging_level)
+
         # Taskgraph n_workers settings.
         # Using a dropdown to avoid the need to validate.
         n_workers_values = {
@@ -472,6 +483,9 @@ class SettingsDialog(OptionsDialog):
             inputs.INVEST_SETTINGS.setValue(
                 'logging/logfile',
                 self.logfile_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'logging/taskgraph',
+                self.taskgraph_logging_level.value())
             inputs.INVEST_SETTINGS.setValue(
                 'taskgraph/n_workers',
                 self.taskgraph_n_workers.value())
@@ -1539,14 +1553,17 @@ class InVESTModel(QtWidgets.QMainWindow):
                     'n_workers defined in args. It should not be defined.')
 
             args['n_workers'] = inputs.INVEST_SETTINGS.value(
-                'taskgraph/n_workers', -1)
+                'taskgraph/n_workers', '-1', unicode)
 
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
 
-            threads_to_exclude = [ui_thread_name,
-                                  usage._USAGE_LOGGING_THREAD_NAME]
+            taskgraph_log_level = getattr(
+                logging, inputs.INVEST_SETTINGS.value('logging/taskgraph', 'ERROR'))
+            logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
+
+            threads_to_exclude = [usage._USAGE_LOGGING_THREAD_NAME]
 
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,

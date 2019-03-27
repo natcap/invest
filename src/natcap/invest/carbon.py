@@ -1,5 +1,7 @@
+# coding=UTF-8
 """Carbon Storage and Sequestration."""
 from __future__ import absolute_import
+import codecs
 import collections
 import logging
 import os
@@ -272,7 +274,7 @@ def _accumulate_totals(raster_path):
     """Sum all non-nodata pixels in `raster_path` and return result."""
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     raster_sum = 0.0
-    for _, block in pygeoprocessing.iterblocks(raster_path):
+    for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
         raster_sum += numpy.sum(block[block != nodata])
     return raster_sum
 
@@ -292,13 +294,10 @@ def _generate_carbon_map(
         None.
     """
     lulc_info = pygeoprocessing.get_raster_info(lulc_path)
-    nodata = lulc_info['nodata'][0]
     pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
         (lulcid, stock * pixel_area / 10**4)
         for lulcid, stock in carbon_pool_by_type.iteritems()])
-
-    carbon_stock_by_type[nodata] = _CARBON_NODATA
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
@@ -405,21 +404,21 @@ def _generate_report(raster_file_set, model_args, file_registry):
         None.
     """
     html_report_path = file_registry['html_report']
-    with open(html_report_path, 'w') as report_doc:
+    with codecs.open(html_report_path, 'w', encoding='utf-8') as report_doc:
         # Boilerplate header that defines style and intro header.
         header = (
-            '<!DOCTYPE html><html><head><title>Carbon Results</title><style t'
-            'ype="text/css">body { background-color: #EFECCA; color: #002F2F '
-            '} h1 { text-align: center } h1, h2, h3, h4, strong, th { color: '
-            '#046380; } h2 { border-bottom: 1px solid #A7A37E; } table { bord'
-            'er: 5px solid #A7A37E; margin-bottom: 50px; background-color: #E'
-            '6E2AF; } td, th { margin-left: 0px; margin-right: 0px; padding-l'
-            'eft: 8px; padding-right: 8px; padding-bottom: 2px; padding-top: '
-            '2px; text-align:left; } td { border-top: 5px solid #EFECCA; } .n'
-            'umber {text-align: right; font-family: monospace;} img { margin:'
-            ' 20px; }</style></head><body><h1>InVEST Carbon Model Results</h1'
-            '><p>This document summarizes the results from running the InVEST'
-            ' carbon model with the following data.</p>')
+            '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Carbon R'
+            'esults</title><style type="text/css">body { background-color: #E'
+            'FECCA; color: #002F2F} h1 { text-align: center } h1, h2, h3, h4,'
+            'strong, th { color: #046380; } h2 { border-bottom: 1px solid #A7'
+            'A37E; } table { border: 5px solid #A7A37E; margin-bottom: 50px; '
+            'background-color: #E6E2AF; } td, th { margin-left: 0px; margin-r'
+            'ight: 0px; padding-left: 8px; padding-right: 8px; padding-bottom'
+            ': 2px; padding-top: 2px; text-align:left; } td { border-top: 5px'
+            'solid #EFECCA; } .number {text-align: right; font-family: monosp'
+            'ace;} img { margin: 20px; }</style></head><body><h1>InVEST Carbo'
+            'n Model Results</h1><p>This document summarizes the results from'
+            'running the InVEST carbon model with the following data.</p>')
 
         report_doc.write(header)
         report_doc.write('<p>Report generated at %s</p>' % (
@@ -428,7 +427,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
         # Report input arguments
         report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
         for key, value in model_args.iteritems():
-            report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
+            report_doc.write(u'<tr><td>%s</td><td>%s</td></tr>' % (key, value))
         report_doc.write('</table>')
 
         # Report aggregate results
@@ -484,7 +483,6 @@ def validate(args, limit_to=None):
         'workspace_dir',
         'lulc_cur_path',
         'carbon_pools_path',
-        'calc_sequestration',
         'do_valuation']
 
     if 'calc_sequestration' in args and args['calc_sequestration']:
@@ -508,7 +506,7 @@ def validate(args, limit_to=None):
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
         raise KeyError(
-            "The following keys were expected in `args` but were missing " +
+            "The following keys were expected in `args` but were missing: " +
             ', '.join(missing_key_list))
 
     if len(no_value_list) > 0:
