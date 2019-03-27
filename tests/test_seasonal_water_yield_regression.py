@@ -669,7 +669,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = 'cz'
 
-        args['workspace_dir'] = 'test_climate_zones_regression_workspace'
         seasonal_water_yield.execute(args)
 
         # generate aggregated results csv table for assertion

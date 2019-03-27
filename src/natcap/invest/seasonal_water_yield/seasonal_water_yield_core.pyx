@@ -42,24 +42,9 @@ cdef extern from "LRUCache.h":
         VAL_T get(KEY_T &)
 
 
-# exposing stl::priority_queue so we can have all 3 template arguments so
-# we can pass a different Compare functor
-cdef extern from "<queue>" namespace "std":
-    cdef cppclass priority_queue[T, Container, Compare]:
-        priority_queue() except +
-        priority_queue(priority_queue&) except +
-        priority_queue(Container&)
-        bint empty()
-        void pop()
-        void push(T&)
-        size_t size()
-        T& top()
-
-
 LOGGER = logging.getLogger(__name__)
 
 cdef int N_MONTHS = 12
-
 cdef double PI = 3.141592653589793238462643383279502884
 cdef double INF = numpy.inf
 cdef double IMPROBABLE_FLOAT_NOATA = -1.23789789e29

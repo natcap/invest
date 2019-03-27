@@ -667,7 +667,6 @@ def _calculate_vri(l_path, target_vri_path):
         None.
 
     """
-    # TODO: I saw this 'qb_result' thing stuck in here, what's it for?
     qb_sum = 0.0
     qb_valid_count = 0
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
@@ -676,12 +675,6 @@ def _calculate_vri(l_path, target_vri_path):
         valid_mask = block != l_nodata
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
-    """
-    qb_result = 0.0
-    if qb_valid_count > 0:
-        qb_result = qb_sum / qb_valid_count
-    """
-
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     def vri_op(li_array):
