@@ -130,6 +130,7 @@ class ScenicQualityTests(unittest.TestCase):
             'structure_path': viewpoints_path,
             'dem_path': dem_path,
             'refraction': 0.13,
+            'do_valuation': True,
             'valuation_function': 'INVALID FUNCTION',
             'a_coef': 1,
             'b_coef': 0,
@@ -219,6 +220,7 @@ class ScenicQualityTests(unittest.TestCase):
             'dem_path': dem_path,
             'refraction': 0.13,
             'valuation_function': 'linear',
+            'do_valuation': True,
             'a_coef': 1,
             'b_coef': 0,
             'max_valuation_radius': 10.0,
@@ -238,8 +240,6 @@ class ScenicQualityTests(unittest.TestCase):
 
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
         # from 3 viewsheds.
-        self.assertEqual(len(glob.glob(os.path.join(
-            args['workspace_dir'], 'intermediate', 'auxiliary*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
             args['workspace_dir'], 'intermediate', 'visibility*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
@@ -315,6 +315,7 @@ class ScenicQualityTests(unittest.TestCase):
             'structure_path': viewpoints_path,
             'dem_path': dem_path,
             'refraction': 0.13,
+            'do_valuation': True,
             'valuation_function': 'linear',
             'a_coef': 0,
             'b_coef': 1,
@@ -393,6 +394,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
+            'do_valuation': True,
             'n_workers': -1,
         }
 
@@ -408,8 +410,8 @@ class ScenicQualityTests(unittest.TestCase):
              [0.01831564, 0.13533528, 1., 0.13533528, 0.03663128]])
 
         value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value.tif'), gdal.OF_RASTER)
+            os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'),
+            gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -436,6 +438,7 @@ class ScenicQualityTests(unittest.TestCase):
             'dem_path': dem_path,
             'refraction': 0.13,
             'valuation_function': 'logarithmic',
+            'do_valuation': True,
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
