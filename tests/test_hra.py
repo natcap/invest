@@ -816,7 +816,7 @@ class HraRegressionTests(unittest.TestCase):
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
             HraRegressionTests._assert_vectors_equal(
-                output_vector, expected_vector)
+                output_vector, expected_vector, precision=6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
@@ -824,7 +824,7 @@ class HraRegressionTests(unittest.TestCase):
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path)
+            output_csv_path, expected_csv_path, rel_tol=1E-6)
 
     def test_hra_no_subregion_multiplicative_exponential(self):
         """HRA: regression testing with exponential, multiplicative eqn."""
@@ -886,7 +886,7 @@ class HraRegressionTests(unittest.TestCase):
         for output_vector, expected_vector in zip(
                 output_vector_paths, expected_vector_paths):
             HraRegressionTests._assert_vectors_equal(
-                output_vector, expected_vector)
+                output_vector, expected_vector, precision=6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
@@ -894,7 +894,7 @@ class HraRegressionTests(unittest.TestCase):
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_mul_exp.csv')
         pygeoprocessing.testing.assert_csv_equal(
-            output_csv_path, expected_csv_path)
+            output_csv_path, expected_csv_path, rel_tol=1E-6)
 
     def test_aoi_no_projection(self):
         """HRA: testing AOI vector without projection."""
@@ -1055,7 +1055,7 @@ class HraRegressionTests(unittest.TestCase):
         self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod
-    def _assert_vectors_equal(a_vector_path, b_vector_path):
+    def _assert_vectors_equal(a_vector_path, b_vector_path, precision=6):
         """Assert that geometries in two vectors are equal, order-insensitive.
 
         Parameters:
@@ -1067,7 +1067,7 @@ class HraRegressionTests(unittest.TestCase):
 
         Raises:
             AssertionError when the two point geometries are not equal up to
-            desired precision (default is 1E-6).
+                desired precision (default is 1E-6).
 
         """
         a_vector = gdal.OpenEx(a_vector_path, gdal.OF_VECTOR)
@@ -1090,7 +1090,7 @@ class HraRegressionTests(unittest.TestCase):
 
             try:
                 numpy.testing.assert_array_almost_equal(
-                    a_geom_list, b_geom_list)
+                    a_geom_list, b_geom_list, decimal=precision)
             except AssertionError:
                 a_feature_fid = a_feat.GetFID()
                 b_feature_fid = b_feat.GetFID()
