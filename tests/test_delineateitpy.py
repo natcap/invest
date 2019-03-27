@@ -4,13 +4,9 @@ import tempfile
 import shutil
 import os
 
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest.pygeoprocessing_0_3_3.testing import scm
+import pygeoprocessing.testing
 
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data', 'Base_Data',
-    'Freshwater')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data',
     'delineateit')
@@ -29,16 +25,15 @@ class DelineateItTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    @scm.skip_if_data_missing(SAMPLE_DATA)
-    @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_routedem_multi_threshold(self):
         """DelineateIt: regression testing full run."""
         import natcap.invest.routing.delineateit
 
         args = {
-            'dem_uri': os.path.join(SAMPLE_DATA, 'dem'),
+            'dem_uri': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
             'flow_threshold': '500',
-            'outlet_shapefile_uri': os.path.join(SAMPLE_DATA, 'outlets.shp'),
+            'outlet_shapefile_uri': os.path.join(
+                REGRESSION_DATA, 'input', 'outlets.shp'),
             'snap_distance': '20',
             'workspace_dir': self.workspace_dir,
         }
@@ -47,9 +42,9 @@ class DelineateItTests(unittest.TestCase):
         DelineateItTests._test_same_files(
             os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
             args['workspace_dir'])
-        natcap.invest.pygeoprocessing_0_3_3.testing.assert_vectors_equal(
+        pygeoprocessing.testing.assert_vectors_equal(
             os.path.join(REGRESSION_DATA, 'watersheds.shp'),
-            os.path.join(self.workspace_dir, 'watersheds.shp'))
+            os.path.join(self.workspace_dir, 'watersheds.shp'), 1e-6)
 
     @staticmethod
     def _test_same_files(base_list_path, directory_path):

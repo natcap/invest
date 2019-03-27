@@ -16,13 +16,13 @@ import functools
 import datetime
 import codecs
 import multiprocessing
-import importlib
+import threading
 
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
-import natcap.invest
 import qtawesome
+import natcap.invest
 
 from . import inputs
 from . import usage
@@ -421,6 +421,50 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
+        self.taskgraph_logging_level = inputs.Dropdown(
+            label='Taskgraph logging threshold',
+            helptext=('The minimum logging level for taskgraph messages to be '
+                      'displayed in either the logfile or the UI.  Log '
+                      'messages with a level lower than this will not be '
+                      'written to the logfile. Default: ERROR'),
+            options=logging_options)
+        self.taskgraph_logging_level.set_value(inputs.INVEST_SETTINGS.value(
+            'logging/taskgraph', 'ERROR', unicode))
+        self._global_opts_container.add_input(self.taskgraph_logging_level)
+
+        # Taskgraph n_workers settings.
+        # Using a dropdown to avoid the need to validate.
+        n_workers_values = {
+            'Synchronous (-1)': '-1',
+            'Threaded task management (0)': '0'}
+        n_workers_values.update(dict(('%s CPUs' % n, str(n)) for n in range(
+            1, multiprocessing.cpu_count()*2)))
+        self.taskgraph_n_workers = inputs.Dropdown(
+            label='Taskgraph n_workers parameter',
+            helptext=('For models that are implemented with taskgraph, this '
+                      'is provided to the graph at creation.  The default '
+                      'value of -1 is best for most users, as this will '
+                      'eliminate the risk of deadlocks and improve the '
+                      'coherency of the logfile. Allowed values are<ul> '
+                      '<li>-1: Synchronous task execution (most reliable) </li>'
+                      '<li>0: Tasks execute in the main process, but use '
+                      'threaded task management. </li>'
+                      '<li><em>n</em>: Where <em>n</em> is a positive integer, '
+                      'taskgraph will execute tasks in <em>n</em> processes. '
+                      'This can yield a nice speedup, but incurs a risk of '
+                      'deadlock.</li>'
+                      '</ul>Regardless of this value, all models that are '
+                      'taskgraph-enabled take advantage of '
+                      'avoided recomputation. To see if a model uses '
+                      "taskgraph, take a look at the User's Guide chapter "
+                      'for the model, or inspect the source code.'),
+            options=[pair[0] for pair in sorted(
+                n_workers_values.items(), key=lambda x: int(x[1]))],
+            return_value_map=n_workers_values)
+        self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', '-1', unicode))
+        self._global_opts_container.add_input(self.taskgraph_n_workers)
+
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
@@ -439,6 +483,12 @@ class SettingsDialog(OptionsDialog):
             inputs.INVEST_SETTINGS.setValue(
                 'logging/logfile',
                 self.logfile_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'logging/taskgraph',
+                self.taskgraph_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'taskgraph/n_workers',
+                self.taskgraph_n_workers.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1186,29 +1236,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.add_input(self.workspace)
         self.add_input(self.suffix)
-
-        # If the model has a documented input for the number of taskgraph
-        # workers, add an input for it.
-        try:
-            if 'n_workers' in self.target.__doc__:
-                n_cpus = max(1, multiprocessing.cpu_count())
-                self.n_workers = inputs.Text(
-                    args_key='n_workers',
-                    helptext=(
-                        u'The number of workers to spawn for executing tasks. '
-                        u'If this input is not provided, the model will be '
-                        u'executed in the current process.  <br/><br/>'
-                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
-                    label='Number of parallel workers (optional)',
-                    validator=self.validator)
-                self.n_workers.textfield.setMaximumWidth(150)
-                self.add_input(self.n_workers)
-                self.n_workers.set_value(n_cpus)
-        except TypeError:
-            # When self.target doesn't have __doc__, assume that there's no
-            # n_workers parameter.
-            pass
-
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
@@ -1517,25 +1544,36 @@ class InVESTModel(QtWidgets.QMainWindow):
             if button_pressed != QtWidgets.QMessageBox.Yes:
                 return
 
+        # This is the thread that the UI is executing within.
+        ui_thread_name = threading.current_thread().name
+
         def _logged_target():
+            if 'n_workers' in args:
+                raise RuntimeError(
+                    'n_workers defined in args. It should not be defined.')
+
+            args['n_workers'] = inputs.INVEST_SETTINGS.value(
+                'taskgraph/n_workers', '-1', unicode)
+
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
 
+            taskgraph_log_level = getattr(
+                logging, inputs.INVEST_SETTINGS.value('logging/taskgraph', 'ERROR'))
+            logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
+
+            threads_to_exclude = [usage._USAGE_LOGGING_THREAD_NAME]
+
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
-                                         logging_level=logfile_log_level):
+                                         logging_level=logfile_log_level,
+                                         exclude_threads=threads_to_exclude):
                 with usage.log_run(self.target.__module__, args):
                     LOGGER.log(datastack.ARGS_LOG_LEVEL,
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
-
-                    try:
-                        args['n_workers'] = self.n_workers.value()
-                    except AttributeError:
-                        # When we don't have n_workers defined
-                        pass
 
                     try:
                         return self.target(args=args)

@@ -309,18 +309,12 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
     !insertmacro StartMenuLink "${SMPATH}\SDR" "sdr"
     !insertmacro StartMenuLink "${SMPATH}\NDR" "ndr"
-    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Rule Based" "sg"
     !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
     !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
     !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
-
-    !define OVERLAP "${SMPATH}\Overlap Analysis"
-    CreateDirectory "${OVERLAP}"
-    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis (Management Zones)" "oa_mz"
-    !insertmacro StartMenuLink "${OVERLAP}\Overlap Analysis" "oa"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
@@ -352,33 +346,33 @@ Section "InVEST Tools" Section_InVEST_Tools
     WriteRegStr HKLM "${REGISTRY_PATH}" "DisplayVersion"       "${PRODUCT_VERSION}"
     WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoModify" 1
     WriteRegDWORD HKLM "${REGISTRY_PATH}" "NoRepair" 1
-  
-  
+
+
     ; Actually install the information we want to disk.
     SetOutPath "$INSTDIR"
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
-  
+
     ; Copy over all the sample parameter files
     File ..\..\data\invest-data\*.invs.json
     File ..\..\data\invest-data\*.invest.json
-  
+
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
     ; invest-autotest.bat is here to help automate testing the UIs.
     File invest-autotest.bat
     File ..\..\scripts\invest-autotest.py
     File InVEST-2.ico
-  
+
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
     File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
-  
+
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
       nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
     ${EndIf}
-  
+
     ; Write the install log to a text file on disk.
     StrCpy $0 "$INSTDIR\install_log.txt"
     Push $0
@@ -477,7 +471,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 191156
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
-    !insertmacro downloadData "Overlap Analysis (optional)" "OverlapAnalysis.zip" 3680
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831616
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 8056
@@ -492,7 +485,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 4656
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
-    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 1452
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
   SectionGroupEnd
 SectionGroupEnd

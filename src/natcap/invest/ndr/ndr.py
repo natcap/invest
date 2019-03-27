@@ -294,6 +294,10 @@ def execute(args):
             for lucode in numpy.unique(lucode_array):
                 if lucode != nodata_landuse:
                     if subsurface_proportion_type is not None:
+                        if lucode not in lucode_to_parameters:
+                            raise KeyError(
+                                "The LULC code %s can\'t be found in the"
+                                " biophysical table." % lucode)
                         result[lucode_array == lucode] = (
                             lucode_to_parameters[lucode][load_type] *
                             (1 - lucode_to_parameters[lucode]

@@ -6,15 +6,17 @@ import logging
 
 import numpy
 from osgeo import gdal
-from osgeo import ogr
 from osgeo import osr
-import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 
 from . import utils
 from . import validation
 
-
 LOGGER = logging.getLogger('natcap.invest.habitat_quality')
+
+_OUT_NODATA = -1.0
+_RARITY_NODATA = -64329.0
+_SCALING_PARAM = 2.5
 
 
 def execute(args):
@@ -24,42 +26,42 @@ def execute(args):
     model.
 
     Args:
-        workspace_dir (string): a uri to the directory that will write output
-            and other temporary files during calculation (required)
-        landuse_cur_uri (string): a uri to an input land use/land cover raster
+        workspace_dir (string): a path to the directory that will write output
+            and other temporary files (required)
+        lulc_cur_path (string): a path to an input land use/land cover raster
             (required)
-        landuse_fut_uri (string): a uri to an input land use/land cover raster
+        lulc_fut_path (string): a path to an input land use/land cover raster
             (optional)
-        landuse_bas_uri (string): a uri to an input land use/land cover raster
+        lulc_bas_path (string): a path to an input land use/land cover raster
             (optional, but required for rarity calculations)
-        threat_folder (string): a uri to the directory that will contain all
+        threat_folder (string): a path to the directory that will contain all
             threat rasters (required)
-        threats_uri (string): a uri to an input CSV containing data
+        threats_table_path (string): a path to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
             following names: 'THREAT','MAX_DIST','WEIGHT' (required).
-        access_uri (string): a uri to an input polygon shapefile containing
-            data on the relative protection against threats (optional)
-        sensitivity_uri (string): a uri to an input CSV file of LULC types,
-            whether they are considered habitat, and their sensitivity to each
-            threat (required)
+        access_vector_path (string): a path to an input polygon shapefile
+            containing data on the relative protection against threats (optional)
+        sensitivity_table_path (string): a path to an input CSV file of LULC
+            types, whether they are considered habitat, and their sensitivity
+            to each threat (required)
         half_saturation_constant (float): a python float that determines
             the spread and central tendency of habitat quality scores
             (required)
         suffix (string): a python string that will be inserted into all
-            raster uri paths just before the file extension.
+            raster path paths just before the file extension.
 
     Example Args Dictionary::
 
         {
             'workspace_dir': 'path/to/workspace_dir',
-            'landuse_cur_uri': 'path/to/landuse_cur_raster',
-            'landuse_fut_uri': 'path/to/landuse_fut_raster',
-            'landuse_bas_uri': 'path/to/landuse_bas_raster',
+            'lulc_cur_path': 'path/to/lulc_cur_raster',
+            'lulc_fut_path': 'path/to/lulc_fut_raster',
+            'lulc_bas_path': 'path/to/lulc_bas_raster',
             'threat_raster_folder': 'path/to/threat_rasters/',
-            'threats_uri': 'path/to/threats_csv',
-            'access_uri': 'path/to/access_shapefile',
-            'sensitivity_uri': 'path/to/sensitivity_csv',
+            'threats_table_path': 'path/to/threats_csv',
+            'access_vector_path': 'path/to/access_shapefile',
+            'sensitivity_table_path': 'path/to/sensitivity_csv',
             'half_saturation_constant': 0.5,
             'suffix': '_results',
         }
@@ -76,122 +78,179 @@ def execute(args):
     # folder in the filesystem.
     inter_dir = os.path.join(workspace, 'intermediate')
     out_dir = os.path.join(workspace, 'output')
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([inter_dir, out_dir])
+    kernel_dir = os.path.join(inter_dir, 'kernels')
+    utils.make_directories([inter_dir, out_dir, kernel_dir])
 
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
-    threat_dict = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
-        args['threats_uri'], 'THREAT')
-    sensitivity_dict = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
-        args['sensitivity_uri'], 'LULC')
+    threat_dict = utils.build_lookup_from_csv(
+        args['threats_table_path'], 'THREAT', to_lower=False)
+    sensitivity_dict = utils.build_lookup_from_csv(
+        args['sensitivity_table_path'], 'LULC', to_lower=False)
+
+    # check that the required headers exist in the sensitivity table.
+    # Raise exception if they don't.
+    sens_header_list = sensitivity_dict.items()[0][1].keys()
+    required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
+    missing_sens_header_list = [
+        h for h in required_sens_header_list if h not in sens_header_list]
+    if missing_sens_header_list:
+        raise ValueError(
+            'Column(s) %s are missing in the sensitivity table' %
+            (', '.join(missing_sens_header_list)))
 
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
-    sens_row = sensitivity_dict.itervalues().next()
     for threat in threat_dict:
-        if 'L_' + threat not in sens_row:
+        if 'L_' + threat not in sens_header_list:
+            missing_threat_header_list = (
+                set(sens_header_list) - set(required_sens_header_list))
             raise ValueError(
-                'Threat "L_%s" does not match any column in the sensitivity '
-                'table. Possible columns: %s' % (
-                    threat, str(sens_row.keys())))
+                'Threat "%s" does not match any column in the sensitivity '
+                'table. Possible columns: %s' %
+                (threat, missing_threat_header_list))
 
     # get the half saturation constant
-    half_saturation = float(args['half_saturation_constant'])
-
-    # Determine which land cover scenarios we should run, and append the
-    # appropriate suffix to the landuser_scenarios list as necessary for the
-    # scenario.
-    landuse_scenarios = {'cur': '_c'}
-    scenario_constants = [('landuse_fut_uri', 'fut', '_f'),
-                          ('landuse_bas_uri', 'bas', '_b')]
-    for lu_uri, lu_time, lu_ext in scenario_constants:
-        if lu_uri in args:
-            landuse_scenarios[lu_time] = lu_ext
-
-    # declare dictionaries to store the land cover rasters and the density
-    # rasters pertaining to the different threats
-    landuse_uri_dict = {}
-    density_uri_dict = {}
-
-    # for each possible land cover that was provided try opening the raster and
-    # adding it to the dictionary. Also compile all the threat/density rasters
-    # associated with the land cover
-    for scenario, ext in landuse_scenarios.iteritems():
-        landuse_uri_dict[ext] = args['landuse_' + scenario + '_uri']
-
-        # add a key to the density dictionary that associates all density/threat
-        # rasters with this land cover
-        density_uri_dict['density' + ext] = {}
-
-        # for each threat given in the CSV file try opening the associated
-        # raster which should be found in threat_raster_folder
-        for threat in threat_dict:
-            if ext == '_b':
-                density_uri_dict['density' + ext][threat] = (
-                    resolve_ambiguous_raster_path(
-                        os.path.join(threat_raster_dir, threat + ext),
-                        raise_error=False))
-            else:
-                density_uri_dict['density' + ext][threat] = (
-                    resolve_ambiguous_raster_path(
-                        os.path.join(threat_raster_dir, threat + ext)))
-
-    # checking to make sure the land covers have the same projections.
-    # using natcap.invest.pygeoprocessing_0_3_3's routine that prints warnings in case projections
-    # are identical but don't test that way
-    natcap.invest.pygeoprocessing_0_3_3.assert_datasets_in_same_projection(
-        landuse_uri_dict.values())
-
-    LOGGER.debug('Starting habitat_quality biophysical calculations')
-
-    cur_landuse_uri = landuse_uri_dict['_c']
-
-    out_nodata = -1.0
-
-    # If access_lyr: convert to raster, if value is null set to 1,
-    # else set to value
     try:
-        LOGGER.debug('Handling Access Shape')
-        access_dataset_uri = os.path.join(
-            inter_dir, 'access_layer%s.tif' % suffix)
-        natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-            cur_landuse_uri, access_dataset_uri, 'GTiff', out_nodata,
-            gdal.GDT_Float32, fill_value=1.0)
-        # Fill raster to all 1's (fully accessible) incase polygons do not cover
-        # land area
+        half_saturation = float(args['half_saturation_constant'])
+    except ValueError:
+        raise ValueError('Half-saturation constant is not a numeric number.'
+                         'It is: %s' % args['half_saturation_constant'])
 
-        natcap.invest.pygeoprocessing_0_3_3.rasterize_layer_uri(
-            access_dataset_uri, args['access_uri'],
+    # declare dictionaries to store the land cover and the threat rasters
+    # pertaining to the different threats
+    lulc_path_dict = {}
+    threat_path_dict = {}
+    # also store land cover and threat rasters in a list
+    lulc_and_threat_raster_list = []
+    aligned_raster_list = []
+    # declare a set to store unique codes from lulc rasters
+    raster_unique_lucodes = set()
+
+    # compile all the threat rasters associated with the land cover
+    for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
+                                ('_f', 'lulc_fut_path'),
+                                ('_b', 'lulc_bas_path')):
+        if lulc_args in args:
+            lulc_path = args[lulc_args]
+            lulc_path_dict[lulc_key] = lulc_path
+            # save land cover paths in a list for alignment and resize
+            lulc_and_threat_raster_list.append(lulc_path)
+            aligned_raster_list.append(
+                os.path.join(
+                    inter_dir, os.path.basename(lulc_path).replace(
+                        '.tif', '_aligned.tif')))
+
+            # save unique codes to check if it's missing in sensitivity table
+            for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
+                raster_unique_lucodes.update(numpy.unique(lulc_block))
+
+            # add a key to the threat dictionary that associates all threat
+            # rasters with this land cover
+            threat_path_dict['threat' + lulc_key] = {}
+
+            # for each threat given in the CSV file try opening the associated
+            # raster which should be found in threat_raster_folder
+            for threat in threat_dict:
+                # it's okay to have no threat raster for baseline scenario
+                threat_path_dict['threat' + lulc_key][threat] = (
+                    resolve_ambiguous_raster_path(
+                        os.path.join(threat_raster_dir, threat + lulc_key),
+                        raise_error=(lulc_key != '_b')))
+
+                # save threat paths in a list for alignment and resize
+                threat_path = threat_path_dict['threat' + lulc_key][threat]
+                if threat_path:
+                    lulc_and_threat_raster_list.append(threat_path)
+                    aligned_raster_list.append(
+                        os.path.join(
+                            inter_dir, os.path.basename(lulc_path).replace(
+                                '.tif', '_aligned.tif')))
+    # check if there's any lucode from the LULC rasters missing in the
+    # sensitivity table
+    table_unique_lucodes = set(sensitivity_dict.keys())
+    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
+    if missing_lucodes:
+        raise ValueError(
+            'The following land cover codes were found in the sensitivity '
+            'table. Check your sensitivity table to see if they are missing: '
+            '%s. \n\n' % ', '.join([str(x) for x in sorted(missing_lucodes)]))
+
+    # Align and resize all the land cover and threat rasters,
+    # and tore them in the intermediate folder
+    LOGGER.info('Starting aligning and resizing land cover and threat rasters')
+
+    lulc_pixel_size = (
+        pygeoprocessing.get_raster_info(args['lulc_cur_path']))['pixel_size']
+
+    aligned_raster_list = [
+        os.path.join(inter_dir, os.path.basename(path).replace(
+            '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
+
+    pygeoprocessing.align_and_resize_raster_stack(
+        lulc_and_threat_raster_list, aligned_raster_list,
+        ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
+        'intersection')
+
+    LOGGER.info('Finished aligning and resizing land cover and threat rasters')
+
+    # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
+    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+        lulc_path_dict[lulc_key] = os.path.join(
+            inter_dir, os.path.basename(lulc_path).replace(
+                '.tif', '_aligned.tif'))
+        for threat in threat_dict:
+            threat_path = threat_path_dict['threat' + lulc_key][threat]
+            if threat_path in lulc_and_threat_raster_list:
+                threat_path_dict['threat' + lulc_key][threat] = os.path.join(
+                    inter_dir, os.path.basename(threat_path).replace(
+                        '.tif', '_aligned.tif'))
+
+    LOGGER.info('Starting habitat_quality biophysical calculations')
+
+    # Rasterize access vector, if value is null set to 1 (fully accessible),
+    # else set to the value according to the ACCESS attribute
+    cur_lulc_path = lulc_path_dict['_c']
+    fill_value = 1.0
+    try:
+        LOGGER.info('Handling Access Shape')
+        access_raster_path = os.path.join(
+            inter_dir, 'access_layer%s.tif' % suffix)
+        # create a new raster based on the raster info of current land cover
+        pygeoprocessing.new_raster_from_base(
+            cur_lulc_path, access_raster_path, gdal.GDT_Float32,
+            [_OUT_NODATA], fill_value_list=[fill_value])
+        pygeoprocessing.rasterize(
+            args['access_vector_path'], access_raster_path, burn_values=None,
             option_list=['ATTRIBUTE=ACCESS'])
 
     except KeyError:
-        LOGGER.debug(
+        LOGGER.info(
             'No Access Shape Provided, access raster filled with 1s.')
 
-    # calculate the weight sum which is the sum of all the threats weights
+    # calculate the weight sum which is the sum of all the threats' weights
     weight_sum = 0.0
     for threat_data in threat_dict.itervalues():
         # Sum weight of threats
-        weight_sum = weight_sum + float(threat_data['WEIGHT'])
+        weight_sum = weight_sum + threat_data['WEIGHT']
 
-    LOGGER.debug('landuse_uri_dict : %s', landuse_uri_dict)
+    LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_ds_uri in landuse_uri_dict.iteritems():
-        LOGGER.debug('Calculating results for landuse : %s', lulc_key)
+    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+        LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
-        habitat_uri = os.path.join(
-            inter_dir, 'habitat_%s%s.tif' % (lulc_key, suffix))
-
+        habitat_raster_path = os.path.join(
+            inter_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
         map_raster_to_dict_values(
-            lulc_ds_uri, habitat_uri, sensitivity_dict, 'HABITAT', out_nodata,
-            'none')
+            lulc_path, habitat_raster_path, sensitivity_dict, 'HABITAT',
+            _OUT_NODATA, values_required=False)
 
-        # initialize a list that will store all the density/threat rasters
+        # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
-        degradation_rasters = []
+        deg_raster_list = []
 
         # a list to keep track of the normalized weight for each threat
         weight_list = numpy.array([])
@@ -200,77 +259,75 @@ def execute(args):
         # for a land cover because a threat raster was not found
         exit_landcover = False
 
-        # adjust each density/threat raster for distance, weight, and access
+        # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.iteritems():
+            LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
+                        (threat, threat_data))
 
-            LOGGER.debug('Calculating threat : %s', threat)
-            LOGGER.debug('Threat Data : %s', threat_data)
-
-            # get the density raster for the specific threat
-            threat_dataset_uri = density_uri_dict['density' + lulc_key][threat]
-            LOGGER.debug('threat_dataset_uri %s', threat_dataset_uri)
-            if threat_dataset_uri is None:
+            # get the threat raster for the specific threat
+            threat_raster_path = threat_path_dict['threat' + lulc_key][threat]
+            LOGGER.info('threat_raster_path %s', threat_raster_path)
+            if threat_raster_path is None:
                 LOGGER.info(
-                    'A certain threat raster could not be found for the '
-                    'Baseline Land Cover. Skipping Habitat Quality '
-                    'calculation for this land cover.')
+                    'The threat raster for %s could not be found for the land '
+                    'cover %s. Skipping Habitat Quality calculation for this '
+                    'land cover.' % (threat, lulc_key))
                 exit_landcover = True
                 break
 
-            # get the cell size from LULC to use for intermediate / output
-            # rasters
-            lulc_cell_size = (
-                natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-                    args['landuse_cur_uri']))
-
-            # need the cell size for the threat raster so we can create
+            # need the pixel size for the threat raster so we can create
             # an appropriate kernel for convolution
-            threat_cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-                threat_dataset_uri)
+            threat_pixel_size = pygeoprocessing.get_raster_info(
+                threat_raster_path)['pixel_size']
+            # pixel size tuple could have negative value
+            mean_threat_pixel_size = (
+                abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
 
             # convert max distance (given in KM) to meters
-            dr_max = float(threat_data['MAX_DIST']) * 1000.0
+            max_dist_m = threat_data['MAX_DIST'] * 1000.0
 
             # convert max distance from meters to the number of pixels that
             # represents on the raster
-            dr_pixel = dr_max / threat_cell_size
-            LOGGER.debug('Max distance in pixels: %f', dr_pixel)
-
-            filtered_threat_uri = os.path.join(
-                inter_dir, threat + '_filtered_%s%s.tif' % (lulc_key, suffix))
+            max_dist_pixel = max_dist_m / mean_threat_pixel_size
+            LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
 
             # blur the threat raster based on the effect of the threat over
             # distance
             decay_type = threat_data['DECAY']
-            kernel_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+            kernel_path = os.path.join(
+                kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
             if decay_type == 'linear':
-                make_linear_decay_kernel_uri(dr_pixel, kernel_uri)
+                make_linear_decay_kernel_path(max_dist_pixel, kernel_path)
             elif decay_type == 'exponential':
-                utils.exponential_decay_kernel_raster(dr_pixel, kernel_uri)
+                utils.exponential_decay_kernel_raster(
+                    max_dist_pixel, kernel_path)
             else:
                 raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
-                    "either 'linear' or 'exponential' input was %s" % (
-                        decay_type))
-            natcap.invest.pygeoprocessing_0_3_3.convolve_2d_uri(
-                threat_dataset_uri, kernel_uri, filtered_threat_uri)
-            os.remove(kernel_uri)
-            # create sensitivity raster based on threat
-            sens_uri = os.path.join(
-                inter_dir, 'sens_' + threat + lulc_key + suffix + '.tif')
+                    "either 'linear' or 'exponential'. Input was %s for threat"
+                    " %s." % (decay_type, threat))
 
+            filtered_threat_raster_path = os.path.join(
+                inter_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
+            pygeoprocessing.convolve_2d(
+                (threat_raster_path, 1), (kernel_path, 1),
+                filtered_threat_raster_path)
+
+            # create sensitivity raster based on threat
+            sens_raster_path = os.path.join(
+                inter_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
             map_raster_to_dict_values(
-                lulc_ds_uri, sens_uri, sensitivity_dict,
-                'L_' + threat, out_nodata, 'values_required')
+                lulc_path, sens_raster_path, sensitivity_dict, 'L_' + threat,
+                _OUT_NODATA, values_required=True)
 
             # get the normalized weight for each threat
-            weight_avg = float(threat_data['WEIGHT']) / weight_sum
+            weight_avg = threat_data['WEIGHT'] / weight_sum
 
             # add the threat raster adjusted by distance and the raster
             # representing sensitivity to the list to be past to
             # vectorized_rasters below
-            degradation_rasters.append(filtered_threat_uri)
-            degradation_rasters.append(sens_uri)
+            deg_raster_list.append(filtered_threat_raster_path)
+            deg_raster_list.append(sens_raster_path)
 
             # store the normalized weight for each threat in a list that
             # will be used below in total_degradation
@@ -309,36 +366,32 @@ def execute(args):
             nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
             nodata_mask[:] = 0
             for array in raster:
-                nodata_mask = nodata_mask | (array == out_nodata)
+                nodata_mask = nodata_mask | (array == _OUT_NODATA)
 
-            #the last element in raster is access
+            # the last element in raster is access
             return numpy.where(
-                    nodata_mask, out_nodata, sum_degradation * raster[-1])
+                    nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
 
         # add the access_raster onto the end of the collected raster list. The
         # access_raster will be values from the shapefile if provided or a
         # raster filled with all 1's if not
-        degradation_rasters.append(access_dataset_uri)
+        deg_raster_list.append(access_raster_path)
 
-        deg_sum_uri = os.path.join(
-            out_dir, 'deg_sum_out' + lulc_key + suffix + '.tif')
+        deg_sum_raster_path = os.path.join(
+            out_dir, 'deg_sum' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting vectorize on total_degradation')
+        LOGGER.info('Starting raster calculation on total_degradation')
 
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            degradation_rasters, total_degradation, deg_sum_uri,
-            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-            vectorize_op=False)
+        deg_raster_band_list = [(path, 1) for path in deg_raster_list]
+        pygeoprocessing.raster_calculator(
+            deg_raster_band_list, total_degradation,
+            deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
-        LOGGER.debug('Finished vectorize on total_degradation')
+        LOGGER.info('Finished raster calculation on total_degradation')
 
-        #Compute habitat quality
-        # scaling_param is a scaling parameter set to 2.5 as noted in the users
-        # guide
-        scaling_param = 2.5
-
-        # a term used below to compute habitat quality
-        ksq = half_saturation**scaling_param
+        # Compute habitat quality
+        # ksq: a term used below to compute habitat quality
+        ksq = half_saturation**_SCALING_PARAM
 
         def quality_op(degradation, habitat):
             """Vectorized function that computes habitat quality given
@@ -355,49 +408,55 @@ def execute(args):
             degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
 
             return numpy.where(
-                    (degradation == out_nodata) | (habitat == out_nodata),
-                    out_nodata,
-                    (habitat * (1.0 - ((degredataion_clamped**scaling_param) /
-                        (degredataion_clamped**scaling_param + ksq)))))
+                    (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
+                    _OUT_NODATA,
+                    (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
+                     (degredataion_clamped**_SCALING_PARAM + ksq)))))
 
-        quality_uri = os.path.join(
-            out_dir, 'quality_out' + lulc_key + suffix + '.tif')
+        quality_path = os.path.join(
+            out_dir, 'quality' + lulc_key + suffix + '.tif')
 
-        LOGGER.debug('Starting vectorize on quality_op')
+        LOGGER.info('Starting raster calculation on quality_op')
 
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [deg_sum_uri, habitat_uri], quality_op, quality_uri,
-            gdal.GDT_Float32, out_nodata, lulc_cell_size, "intersection",
-            vectorize_op=False)
+        deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
 
-        LOGGER.debug('Finished vectorize on quality_op')
+        deg_hab_raster_band_list = [
+            (path, 1) for path in deg_hab_raster_list]
+        pygeoprocessing.raster_calculator(
+            deg_hab_raster_band_list, quality_op, quality_path,
+            gdal.GDT_Float32, _OUT_NODATA)
+
+        LOGGER.info('Finished raster calculation on quality_op')
 
     # Compute Rarity if user supplied baseline raster
-    if '_b' not in landuse_uri_dict:
+    if '_b' not in lulc_path_dict:
         LOGGER.info('Baseline not provided to compute Rarity')
     else:
-        lulc_base_uri = landuse_uri_dict['_b']
+        lulc_base_path = lulc_path_dict['_b']
 
         # get the area of a base pixel to use for computing rarity where the
         # pixel sizes are different between base and cur/fut rasters
-        base_area = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(lulc_base_uri) ** 2
-        base_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(lulc_base_uri)
-        rarity_nodata = -64329.0
+        base_pixel_size = pygeoprocessing.get_raster_info(
+            lulc_base_path)['pixel_size']
+        base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
+        base_nodata = pygeoprocessing.get_raster_info(
+            lulc_base_path)['nodata'][0]
 
-        lulc_code_count_b = raster_pixel_count(lulc_base_uri)
+        lulc_code_count_b = raster_pixel_count(lulc_base_path)
 
         # compute rarity for current landscape and future (if provided)
-        lulc_nodata = None
-        for lulc_cover in ['_c', '_f']:
-            if lulc_cover not in landuse_uri_dict:
+        for lulc_key in ['_c', '_f']:
+            if lulc_key not in lulc_path_dict:
                 continue
-            lulc_cover_path = landuse_uri_dict[lulc_cover]
+            lulc_path = lulc_path_dict[lulc_key]
+            lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             # get the area of a cur/fut pixel
-            lulc_area = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
-                lulc_cover_path) ** 2
-            lulc_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-                lulc_cover_path)
+            lulc_pixel_size = pygeoprocessing.get_raster_info(
+                lulc_path)['pixel_size']
+            lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
+            lulc_nodata = pygeoprocessing.get_raster_info(
+                lulc_path)['nodata'][0]
 
             def trim_op(base, cover_x):
                 """Trim cover_x to the mask of base.
@@ -405,29 +464,35 @@ def execute(args):
                 Parameters:
                     base (numpy.ndarray): base raster from 'lulc_base'
                     cover_x (numpy.ndarray): either future or current land
-                        cover raster from 'lulc_cover_path' above
+                        cover raster from 'lulc_path' above
 
                 Returns:
-                    out_nodata where either array has nodata, otherwise
+                    _OUT_NODATA where either array has nodata, otherwise
                     cover_x.
                 """
                 return numpy.where(
                     (base == base_nodata) | (cover_x == lulc_nodata),
                     base_nodata, cover_x)
 
-            LOGGER.debug('Create new cover for %s', lulc_cover)
+            LOGGER.info('Create new cover for %s', lulc_path)
 
-            new_cover_uri = os.path.join(
-                inter_dir, 'new_cover' + lulc_cover + suffix + '.tif')
+            new_cover_path = os.path.join(
+                inter_dir, 'new_cover' + lulc_key + suffix + '.tif')
 
-            # set the current/future land cover to be masked to the base
-            # land cover
-            natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-                [lulc_base_uri, lulc_cover_path], trim_op, new_cover_uri,
-                gdal.GDT_Int32, base_nodata, lulc_cell_size,
-                "intersection", vectorize_op=False)
+            LOGGER.info('Starting masking %s land cover to base land cover.'
+                        % lulc_time)
 
-            lulc_code_count_x = raster_pixel_count(new_cover_uri)
+            pygeoprocessing.raster_calculator(
+                [(lulc_base_path, 1), (lulc_path, 1)], trim_op, new_cover_path,
+                gdal.GDT_Float32, _OUT_NODATA)
+
+            LOGGER.info('Finished masking %s land cover to base land cover.'
+                        % lulc_time)
+
+            LOGGER.info('Starting rarity computation on %s land cover.'
+                        % lulc_time)
+
+            lulc_code_count_x = raster_pixel_count(new_cover_path)
 
             # a dictionary to map LULC types to a number that depicts how
             # rare they are considered
@@ -438,23 +503,23 @@ def execute(args):
             # but not the baseline
             for code in lulc_code_count_x.iterkeys():
                 if code in lulc_code_count_b:
-                    numerator = float(lulc_code_count_x[code] * lulc_area)
-                    denominator = float(
-                        lulc_code_count_b[code] * base_area)
+                    numerator = lulc_code_count_x[code] * lulc_area
+                    denominator = lulc_code_count_b[code] * base_area
                     ratio = 1.0 - (numerator / denominator)
                     code_index[code] = ratio
                 else:
                     code_index[code] = 0.0
 
-            rarity_uri = os.path.join(
-                out_dir, 'rarity' + lulc_cover + suffix + '.tif')
+            rarity_path = os.path.join(
+                out_dir, 'rarity' + lulc_key + suffix + '.tif')
 
-            natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-                new_cover_uri, code_index, rarity_uri, gdal.GDT_Float32,
-                rarity_nodata)
+            pygeoprocessing.reclassify_raster(
+                (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
+                _RARITY_NODATA)
 
-            LOGGER.debug('Finished vectorize on map_ratio')
-    LOGGER.debug('Finished habitat_quality biophysical calculations')
+            LOGGER.info('Finished rarity computation on %s land cover.'
+                        % lulc_time)
+    LOGGER.info('Finished habitat_quality biophysical calculations')
 
 
 def resolve_ambiguous_raster_path(path, raise_error=True):
@@ -478,14 +543,14 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
         raise ValueError()
     gdal.PushErrorHandler(_error_handler)
 
-    # a list of possible suffixes for raster datasets. We currently can handle
-    # .tif and directory paths
-    possible_suffixes = ['', '.tif', '.img']
+    # a list of possible extensions for raster datasets. We currently can
+    # handle .tif and directory paths
+    possible_ext = ['', '.tif', '.img']
 
     # initialize dataset to None in the case that all paths do not exist
     dataset = None
-    for suffix in possible_suffixes:
-        full_path = path + suffix
+    for ext in possible_ext:
+        full_path = path + ext
         if not os.path.exists(full_path):
             continue
         try:
@@ -524,11 +589,11 @@ def raster_pixel_count(raster_path):
     Returns:
         dict of pixel values to frequency.
     """
-    nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(raster_path)
+    nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     counts = collections.defaultdict(int)
-    for _, data_block in natcap.invest.pygeoprocessing_0_3_3.iterblocks(raster_path):
+    for _, raster_block in pygeoprocessing.iterblocks((raster_path, 1)):
         for value, count in zip(
-                *numpy.unique(data_block, return_counts=True)):
+                *numpy.unique(raster_block, return_counts=True)):
             if value == nodata:
                 continue
             counts[value] += count
@@ -536,7 +601,7 @@ def raster_pixel_count(raster_path):
 
 
 def map_raster_to_dict_values(
-        key_raster_uri, out_uri, attr_dict, field, out_nodata, raise_error):
+        key_raster_path, out_path, attr_dict, field, out_nodata, values_required):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
        corresponding to those keys is what is written to the new raster. If a
@@ -544,9 +609,9 @@ def map_raster_to_dict_values(
        raise an Exception if 'raise_error' is True, otherwise return a
        'out_nodata'
 
-       key_raster_uri - a GDAL raster uri dataset whose pixel values relate to
+       key_raster_path - a GDAL raster path dataset whose pixel values relate to
                      the keys in 'attr_dict'
-       out_uri - a string for the output path of the created raster
+       out_path - a string for the output path of the created raster
        attr_dict - a dictionary representing a table of values we are interested
                    in making into a raster
        field - a string of which field in the table or key in the dictionary
@@ -561,17 +626,17 @@ def map_raster_to_dict_values(
            2) the value from 'key_raster' is not a key in 'attr_dict'
     """
 
-    LOGGER.debug('Starting map_raster_to_dict_values')
+    LOGGER.info('Starting map_raster_to_dict_values')
     int_attr_dict = {}
     for key in attr_dict:
         int_attr_dict[int(key)] = float(attr_dict[key][field])
 
-    natcap.invest.pygeoprocessing_0_3_3.reclassify_dataset_uri(
-        key_raster_uri, int_attr_dict, out_uri, gdal.GDT_Float32, out_nodata,
-        exception_flag=raise_error)
+    pygeoprocessing.reclassify_raster(
+        (key_raster_path, 1), int_attr_dict, out_path, gdal.GDT_Float32,
+        out_nodata, values_required)
 
 
-def make_linear_decay_kernel_uri(max_distance, kernel_uri):
+def make_linear_decay_kernel_path(max_distance, kernel_path):
     """Create a linear decay kernel as a raster.
 
     Pixels in raster are equal to d / max_distance where d is the distance to
@@ -579,7 +644,7 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
 
     Parameters:
         max_distance (int): number of pixels out until the decay is 0.
-        kernel_uri (string): path to output raster whose values are in (0,1)
+        kernel_path (string): path to output raster whose values are in (0,1)
             representing distance to edge.  Size is (max_distance * 2 + 1)^2
 
     Returns:
@@ -589,7 +654,7 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
 
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
-        kernel_uri.encode('utf-8'), kernel_size, kernel_size, 1,
+        kernel_path.encode('utf-8'), kernel_size, kernel_size, 1,
         gdal.GDT_Float32, options=['BIGTIFF=IF_SAFER'])
 
     # Make some kind of geotransform, it doesn't matter what but
@@ -607,9 +672,11 @@ def make_linear_decay_kernel_uri(max_distance, kernel_uri):
     integration = 0.0
     for row_index in xrange(kernel_size):
         distance_kernel_row = numpy.sqrt(
-            (row_index - max_distance) ** 2 + (col_index - max_distance) ** 2).reshape(1,kernel_size)
+            (row_index - max_distance) ** 2 +
+            (col_index - max_distance) ** 2).reshape(1, kernel_size)
         kernel = numpy.where(
-            distance_kernel_row > max_distance, 0.0, (max_distance - distance_kernel_row) / max_distance)
+            distance_kernel_row > max_distance, 0.0,
+            (max_distance - distance_kernel_row) / max_distance)
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
@@ -645,10 +712,10 @@ def validate(args, limit_to=None):
     # required args
     for key in [
             'workspace_dir',
-            'landuse_cur_uri',
+            'lulc_cur_path',
             'threat_raster_folder',
-            'threats_uri',
-            'sensitivity_uri',
+            'threats_table_path',
+            'sensitivity_table_path',
             'half_saturation_constant']:
         if limit_to is None or limit_to == key:
             if key not in args:
@@ -664,10 +731,10 @@ def validate(args, limit_to=None):
 
     # check for required file existence:
     for key in [
-            'landuse_cur_uri',
+            'lulc_cur_path',
             'threat_raster_folder',
-            'threats_uri',
-            'sensitivity_uri']:
+            'threats_table_path',
+            'sensitivity_table_path']:
         if (limit_to is None or limit_to == key) and (
                 not os.path.exists(args[key])):
             validation_error_list.append(
@@ -676,10 +743,10 @@ def validate(args, limit_to=None):
     # check that existing/optional files are the correct types
     with utils.capture_gdal_logging():
         for key, key_type in [
-                ('landuse_cur_uri', 'raster'),
-                ('landuse_fut_uri', 'raster'),
-                ('landuse_bas_uri', 'raster'),
-                ('access_uri', 'vector')]:
+                ('lulc_cur_path', 'raster'),
+                ('lulc_fut_path', 'raster'),
+                ('lulc_bas_path', 'raster'),
+                ('access_vector_path', 'vector')]:
             if (limit_to is None or limit_to == key) and key in args:
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
