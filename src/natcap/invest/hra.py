@@ -1,5 +1,5 @@
 """Habitat risk assessment (HRA) model for InVEST."""
-# encoding=utf8
+# -*- coding: UTF-8 -*-
 from __future__ import absolute_import
 import os
 import logging
@@ -476,8 +476,8 @@ def execute(args):
                 args=(habitat_stressor_overlap_df, habitat_raster_path,
                       stressor_dist_raster_path, stressor_buffer,
                       args['decay_eq'], 'C'),
-                kwargs={'recov_num_path': recovery_num_raster_path,
-                        'recov_denom': habitat_recovery_denom},
+                kwargs={'recov_params':
+                        (recovery_num_raster_path, habitat_recovery_denom)},
                 target_path_list=pair_conseq_target_path_list,
                 task_name='calculate_%s_%s_consequence' % (habitat, stressor),
                 dependent_task_list=[
@@ -1794,7 +1794,7 @@ def _pair_criteria_num_op(
 def _calc_pair_criteria_score(
         habitat_stressor_overlap_df, habitat_raster_path,
         stressor_dist_raster_path, stressor_buffer, decay_eq, criteria_type,
-        recov_num_path=None, recov_denom=None):
+        recov_params=None):
     """Calculate exposure or consequence scores for a habitat-stressor pair.
 
     Parameters:
@@ -1813,13 +1813,12 @@ def _calc_pair_criteria_score(
         criteria_type (str): a string indicating that this function calculates
             exposure or consequence scores. Could be ``C`` or ``E``. If ``C``,
             recov_score_paths needs to be added.
-        recov_num_path (str): a path to the recovery numerator raster
-            calculated based on habitat resilience attribute. The array values
-            will be added to consequence scores. Required when criteria_type is
-            ``C``.
-        recov_denom (float): the precalculated cumulative recovery denominator
-            score. Required when criteria_type is ``C``.
-
+        recov_params (tuple): a tuple of recovery numerator path and
+            denominator score. The former is a path to a raster calculated
+            based on habitat resilience attribute. The array  values will be
+            added to consequence scores. The later is a precalculated
+            cumulative recovery denominator score. Required when criteria_type
+            is ``C``.
 
     Returns:
         None.
@@ -1869,6 +1868,7 @@ def _calc_pair_criteria_score(
             target_pair_criteria_raster_path, _TARGET_PIXEL_FLT,
             _TARGET_NODATA_FLT)
     else:
+        recov_num_path, recov_denom = recov_params
         # Add recovery numerator raster and denominator scores when calculating
         # consequence score
         pair_score_list.extend([(recov_num_path, 1), (recov_denom, 'raw')])
