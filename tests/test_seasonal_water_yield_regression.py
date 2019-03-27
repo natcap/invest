@@ -5,6 +5,7 @@ import shutil
 import os
 
 import numpy
+from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import pygeoprocessing.testing
@@ -608,7 +609,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
@@ -643,7 +643,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
@@ -682,7 +681,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_cz.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results_cz.shp'),
             agg_results_csv_path)
 
@@ -715,20 +713,17 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_user_recharge.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
     @staticmethod
-    def _assert_regression_results_equal(workspace_dir, file_list_path,
-                                         result_vector_path, agg_results_path):
+    def _assert_regression_results_equal(
+            workspace_dir, result_vector_path, agg_results_path):
         """Test the state of the workspace against the expected list of files
         and aggregated results.
 
         Parameters:
             workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
@@ -742,13 +737,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-
-        # Test that the workspace has the same files as we expect
-        SeasonalWaterYieldRegressionTests._test_same_files(
-            file_list_path, workspace_dir)
-
         # we expect a file called 'aggregated_results.shp'
-        result_vector = ogr.Open(result_vector_path)
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
         # The tolerance of 3 digits after the decimal was determined by
@@ -774,34 +764,3 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         result_layer = None
         ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
-
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert that the files listed in `base_list_path` are also in the
-        directory pointed to by `directory_path`.
-
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
-
-        Returns:
-            None
-
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`"""
-
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':  # skip blank lines
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))
