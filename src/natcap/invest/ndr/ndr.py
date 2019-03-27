@@ -62,9 +62,10 @@ _INTERMEDIATE_BASE_FILES = {
     'processed_cell_path': 'processed_cell.tif',
     }
 
-_TMP_BASE_FILES = {
-    'loss_path': 'loss.tif',
+_CACHE_BASE_FILES = {
+    'filled_dem_path': 'filled_dem.tif',
     'aligned_dem_path': 'aligned_dem.tif',
+    'loss_path': 'loss.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
@@ -184,7 +185,7 @@ def execute(args):
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_CACHE_BASE_FILES, cache_dir)], file_suffix)
 
     # Build up a list of nutrients to process based on what's checked on
     nutrients_to_process = []
@@ -208,7 +209,17 @@ def execute(args):
             'base_vector_path_list': [args['watersheds_path']],
             'vector_mask_options': {
                 'mask_vector_path': args['watersheds_path']}},
+        target_path_list=[f_reg['aligned_dem_path']],
         task_name='align dem')
+
+    fill_pits_task = task_graph.add_task(
+        func=pygeoprocessing.routing.fill_pits,
+        args=(
+            (f_reg['aligned_dem_path'], 1), f_reg['filled_dem_path']),
+        kwargs={'working_dir': cache_dir},
+        dependent_task_list=[align_dem_task],
+        target_path_list=[f_reg['filled_dem_path']],
+        task_name='fill pits')
 
     task_graph.close()
     task_graph.join()
@@ -707,15 +718,6 @@ def execute(args):
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
         'ws_id', field_summaries, output_layer, field_header_order)
-
-    LOGGER.info('cleaning up temp files')
-    for tmp_filename_key in _TMP_BASE_FILES:
-        try:
-            os.remove(f_reg[tmp_filename_key])
-        except OSError as os_error:
-            LOGGER.warn(
-                "Can't remove temporary file: %s\nOriginal Exception:\n%s",
-                f_reg[tmp_filename_key], os_error)
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
