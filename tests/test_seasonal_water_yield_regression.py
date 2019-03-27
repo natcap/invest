@@ -273,13 +273,13 @@ def make_agg_results_csv(result_csv_path,
     """
     with open(result_csv_path, 'wb') as open_table:
         if climate_zones:
-            open_table.write('0,0.99999,155.09967\n')
+            open_table.write('0,1.0,54.4764\n')
         elif recharge:
             open_table.write('0,0.00000,200.00000')
         elif vector_exists:
             open_table.write('0,2000000.00000,200.00000')
         else:
-            open_table.write('0,0.99999,148.72562\n')
+            open_table.write('0,1.0,51.359875\n')
 
 
 class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
@@ -599,16 +599,14 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = ''
 
-        args['workspace_dir'] = 'swy_test_workspace'
         seasonal_water_yield.execute(args)
 
         # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(args['workspace_dir'],
-                                            'agg_results_base.csv')
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
@@ -642,7 +640,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
@@ -672,6 +669,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         args['monthly_alpha'] = False
         args['results_suffix'] = 'cz'
 
+        args['workspace_dir'] = 'test_climate_zones_regression_workspace'
         seasonal_water_yield.execute(args)
 
         # generate aggregated results csv table for assertion
@@ -680,7 +678,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
             os.path.join(args['workspace_dir'], 'aggregated_results_cz.shp'),
             agg_results_csv_path)
 
@@ -712,18 +709,16 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
     @staticmethod
     def _assert_regression_results_equal(
-            workspace_dir, result_vector_path, agg_results_path):
+            result_vector_path, agg_results_path):
         """Test the state of the workspace against the expected list of files
         and aggregated results.
 
         Parameters:
-            workspace_dir (string): path to the completed model workspace
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
@@ -762,5 +757,4 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 feature = None
 
         result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
