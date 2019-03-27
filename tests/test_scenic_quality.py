@@ -490,6 +490,42 @@ class ScenicQualityTests(unittest.TestCase):
         numpy.testing.assert_almost_equal(expected_visual_quality,
                                           visual_quality_matrix)
 
+    def test_visual_quality_large_blocks(self):
+        """SQ: verify visual quality on large blocks."""
+        # This is a regression test for an issue encountered in the
+        # percentiles algorithm.  To exercise the fix, we need to
+        # calculate percentiles on a raster that does not fit completely into
+        # memory in a single percentile buffer.
+        from natcap.invest.scenic_quality import scenic_quality
+        shape = (512, 512)
+        n_blocks = 5
+        visible_structures = numpy.concatenate(
+            [numpy.full(shape, n*2) for n in range(n_blocks)])
+
+        n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
+        visual_quality_raster = os.path.join(self.workspace_dir,
+                                             'visual_quality.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(n_visible, shape[0], shape[1]*n_blocks,
+                               1, gdal.GDT_Int32)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(-1)
+        band.WriteArray(visible_structures)
+        band = None
+        raster = None
+
+        scenic_quality._calculate_visual_quality(n_visible,
+                                                 self.workspace_dir,
+                                                 visual_quality_raster)
+
+        expected_visual_quality = numpy.concatenate(
+            [numpy.full(shape, n) for n in range(n_blocks)])
+
+        visual_quality_matrix = gdal.OpenEx(
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          visual_quality_matrix)
+
     def test_visual_quality_low_count(self):
         """SQ: verify visual quality calculations for low pixel counts."""
         from natcap.invest.scenic_quality import scenic_quality
