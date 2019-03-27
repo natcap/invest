@@ -221,12 +221,39 @@ def execute(args):
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
+    flow_dir_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_dir_mfd,
+        args=(
+            (f_reg['filled_dem_path'], 1), f_reg['flow_direction_path']),
+        kwargs={'working_dir': cache_dir},
+        dependent_task_list=[fill_pits_task],
+        target_path_list=[f_reg['flow_direction_path']],
+        task_name='flow dir')
+
+    flow_accum_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            f_reg['flow_accumulation_path']),
+        target_path_list=[f_reg['flow_accumulation_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='flow accum')
+
+    stream_extraction_task = task_graph.add_task(
+        func=pygeoprocessing.routing.extract_streams_mfd,
+        args=(
+            (f_reg['flow_accumulation_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            float(args['threshold_flow_accumulation']), f_reg['stream_path']),
+        target_path_list=[f_reg['stream_path']],
+        dependent_task_list=[flow_accum_task],
+        task_name='stream extraction')
+
     task_graph.close()
     task_graph.join()
     return
 
     # Calculate flow accumulation
-    LOGGER.info("calculating flow accumulation")
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
         f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
     natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
