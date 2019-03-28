@@ -668,14 +668,10 @@ class ScenicQualityValidationTests(unittest.TestCase):
         except KeyError as error_raised:
             missing_keys = sorted(error_raised.args)
             expected_missing_keys = [
-                'a_coef',
                 'aoi_path',
-                'b_coef',
                 'dem_path',
-                'max_valuation_radius',
                 'refraction',
                 'structure_path',
-                'valuation_function',
                 'workspace_dir',
             ]
             self.assertEqual(missing_keys, expected_missing_keys)
@@ -684,7 +680,10 @@ class ScenicQualityValidationTests(unittest.TestCase):
         """SQ Validate: assert polynomial required keys."""
         from natcap.invest.scenic_quality import scenic_quality
         try:
-            args = {'valuation_function': 'polynomial'}
+            args = {
+                'valuation_function': 'polynomial',
+                'do_valuation': True,
+            }
             scenic_quality.validate(args)
             self.fail('KeyError expected but not found')
         except KeyError as error_raised:
@@ -700,6 +699,24 @@ class ScenicQualityValidationTests(unittest.TestCase):
                 'workspace_dir',
                 # This list doesn't contain key ``valuation_function`` because
                 # the key was provided in args.
+            ]
+            self.assertEqual(missing_keys, expected_missing_keys)
+
+    def test_novaluation_required_keys(self):
+        """SQ Validate: assert required keys without valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+        try:
+            args = {}
+            scenic_quality.validate(args)
+            self.fail('KeyError expected but not found')
+        except KeyError as error_raised:
+            missing_keys = sorted(error_raised.args)
+            expected_missing_keys = [
+                'aoi_path',
+                'dem_path',
+                'refraction',
+                'structure_path',
+                'workspace_dir',
             ]
             self.assertEqual(missing_keys, expected_missing_keys)
 
@@ -761,6 +778,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
         self.assertEqual(len(validation_errors), 1)
         self.assertTrue('Must be projected in meters' in
                         validation_errors[0][1])
+
 
 
 class ViewshedTests(unittest.TestCase):

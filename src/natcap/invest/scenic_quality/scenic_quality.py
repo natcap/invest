@@ -917,10 +917,17 @@ def validate(args, limit_to=None):
         'structure_path',
         'dem_path',
         'refraction',
-        'max_valuation_radius',
-        'valuation_function',
-        'a_coef',
-        'b_coef']
+    ]
+
+    if (limit_to is None and
+            'do_valuation' in args and
+            bool(args['do_valuation'])):
+        required_keys.extend([
+            'a_coef',
+            'b_coef',
+            'max_valuation_radius',
+            'valuation_function'
+        ])
 
     for key in required_keys:
         if limit_to in (None, key):
