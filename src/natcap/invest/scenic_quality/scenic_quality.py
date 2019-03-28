@@ -679,10 +679,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
         _mask_op, target_path, gdal.GDT_Float32, dem_nodata,
         gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
-    try:
-        shutil.rmtree(temp_dir)
-    except OSError:
-        LOGGER.exception('Could not remove temp directory %s', temp_dir)
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
