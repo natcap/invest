@@ -670,13 +670,13 @@ def execute(args):
                         habitat_stressor, criteria_type, region_name)))
 
             # Compute pairwise risk zonal stats
-            pair_risk_path = row['PAIR_RISK_RASTER_PATH']
+            pair_risk_raster_path = row['PAIR_RISK_RASTER_PATH']
             target_pickle_stats_path = row[
                 'PAIR_RISK_PICKLE_STATS_PATH'].replace(
                     '.pickle', region_name + '.pickle')
             zonal_stats_dependent_tasks.append(task_graph.add_task(
                 func=_calc_and_pickle_zonal_stats,
-                args=(pair_risk_path, zonal_raster_path,
+                args=(pair_risk_raster_path, zonal_raster_path,
                       target_pickle_stats_path, file_preprocessing_dir),
                 kwargs={'max_rating': max_rating},
                 target_path_list=[target_pickle_stats_path],
@@ -687,7 +687,7 @@ def execute(args):
         # each habitat from all stressors
         for _, row in habitats_info_df.iterrows():
             habitat_name = row['NAME']
-            TOT_RISK_RASTER_PATH = row['TOT_RISK_RASTER_PATH']
+            total_risk_raster_path = row['TOT_RISK_RASTER_PATH']
             target_pickle_stats_path = row[
                 'TOT_RISK_PICKLE_STATS_PATH'].replace(
                     '.pickle', region_name + '.pickle')
@@ -697,7 +697,7 @@ def execute(args):
 
             zonal_stats_dependent_tasks.append(task_graph.add_task(
                 func=_calc_and_pickle_zonal_stats,
-                args=(TOT_RISK_RASTER_PATH, zonal_raster_path,
+                args=(total_risk_raster_path, zonal_raster_path,
                       target_pickle_stats_path, file_preprocessing_dir),
                 kwargs={'max_rating': max_rating},
                 target_path_list=[target_pickle_stats_path],

@@ -1059,8 +1059,8 @@ class HraRegressionTests(unittest.TestCase):
         """Assert that geometries in two vectors are equal, order-insensitive.
 
         Parameters:
-            a_path (str): a path to an OGR vector.
-            b_path (str): a path to an OGR vector.
+            a_vector_path (str): a path to a valid OGR vector.
+            b_vector_path (str): a path to a valid OGR vector.
 
         Returns:
             None.
@@ -1102,5 +1102,7 @@ class HraRegressionTests(unittest.TestCase):
             a_feat = a_layer.GetNextFeature()
             b_feat = b_layer.GetNextFeature()
 
+        a_layer = None
+        b_layer = None
         a_vector = None
         b_vector = None
