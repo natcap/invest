@@ -88,17 +88,17 @@ class ScenicQuality(model.InVESTModel):
                      u'exponential: a * e^(-bx)'])
         self.valuation_container.add_input(self.valuation_function)
         self.a_coefficient = inputs.Text(
-            args_key=u'a_coef (Required)',
+            args_key=u'a_coef',
             helptext=(
                 u"First coefficient used by the valuation function"),
-            label=u"'a' Coefficient",
+            label=u"'a' Coefficient (Required)",
             validator=self.validator)
         self.valuation_container.add_input(self.a_coefficient)
         self.b_coefficient = inputs.Text(
-            args_key=u'b_coef (Required)',
+            args_key=u'b_coef',
             helptext=(
                 u"Second coefficient used by the valuation function"),
-            label=u"'b' Coefficient",
+            label=u"'b' Coefficient (Required)",
             validator=self.validator)
         self.valuation_container.add_input(self.b_coefficient)
         self.max_valuation_radius = inputs.Text(
