@@ -1,5 +1,6 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 from __future__ import absolute_import
+import pickle
 import logging
 import os
 
@@ -69,6 +70,7 @@ _CACHE_BASE_FILES = {
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
+    'runoff_mean_pickle_path': 'runoff_mean.pickle',
     }
 
 
@@ -268,6 +270,14 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
+    runoff_proxy_mean_task = task_graph.add_task(
+        func=calculate_raster_mean,
+        args=((f_reg['aligned_runoff_proxy_path'], 1),
+              f_reg['runoff_mean_pickle_path']),
+        target_path_list=[f_reg['runoff_mean_pickle_path']],
+        dependent_task_list=[align_raster_task],
+        task_name='runoff proxy mean')
+
     task_graph.close()
     task_graph.join()
     return
@@ -277,15 +287,6 @@ def execute(args):
     # pixel size is m, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
-
-    # align all the input rasters
-    LOGGER.info("Aligning rasters")
-    natcap.invest.pygeoprocessing_0_3_3.align_dataset_list(
-        [args['dem_path'], args['lulc_path'], args['runoff_proxy_path']],
-        [f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
-         f_reg['aligned_runoff_proxy_path']], ['nearest'] * 3, out_pixel_size,
-        'dataset', dataset_to_align_index=0, dataset_to_bound_index=0,
-        aoi_uri=args['watersheds_path'])
 
     LOGGER.info("Aggregating runoff proxy to watersheds")
     runoff_proxy_mean = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
@@ -903,3 +904,32 @@ def validate(args, limit_to=None):
                     del vector
 
     return validation_error_list
+
+
+def calculate_raster_mean(base_raster_path_band, target_mean_pickle_path):
+    """Calculate raster mean and pickle result.
+
+    Parameters:
+        base_raster_path (tuple): raster path/band tuple to calculate mean.
+        tearget_mean_pickle_path (string): pickled float that's the non-nodata
+            mean value of `base_raster_path`
+
+    Returns:
+        None.
+
+    """
+    value_sum = 0.0
+    value_count = 0.0
+    base_nodata = pygeoprocessing.get_raster_info(
+        base_raster_path_band[0])['nodata'][base_raster_path_band[1]-1]
+    for _, raster_block in pygeoprocessing.iterblocks(
+            base_raster_path_band):
+        valid_block = raster_block[~numpy.isclose(raster_block, base_nodata)]
+        value_sum = numpy.sum(valid_block)
+        value_count += valid_block.size
+
+    value_mean = value_sum
+    if value_count > 0.0:
+        value_mean /= value_count
+    with open(target_mean_pickle_path, 'w') as pickle_file:
+        pickle.dump(float(value_mean), pickle_file)
