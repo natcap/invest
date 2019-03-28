@@ -249,41 +249,23 @@ def execute(args):
         dependent_task_list=[flow_accum_task],
         task_name='stream extraction')
 
+    calculate_slope_task = task_graph.add_task(
+        func=pygeoprocessing.calculate_slope,
+        args=((f_reg['filled_dem_path'], 1), f_reg['slope_path']),
+        target_path_list=[f_reg['slope_path']],
+        dependent_task_list=[stream_extraction_task],
+        task_name='calculate slope')
+
+    threshold_slope_task = task_graph.add_task(
+        func=_slope_proportion_and_threshold,
+        args=(f_reg['slope_path'], f_reg['thresholded_slope_path']),
+        target_path_list=[f_reg['thresholded_slope_path']],
+        dependent_task_list=[calculate_slope_task],
+        task_name='threshold slope')
+
     task_graph.close()
     task_graph.join()
     return
-
-    # Calculate flow accumulation
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
-        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
-        f_reg['flow_accumulation_path'])
-
-    # Calculate slope
-    LOGGER.info("Calculating slope")
-    natcap.invest.pygeoprocessing_0_3_3.calculate_slope(
-        f_reg['aligned_dem_path'], f_reg['slope_path'])
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['slope_path'])
-
-    def threshold_slope(slope):
-        """Threshold slope between 0.001 and 1.0."""
-        valid_mask = slope != slope_nodata
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = slope_nodata
-        slope_fraction = slope[valid_mask] / 100
-        slope_fraction[slope_fraction < 0.005] = 0.005
-        slope_fraction[slope_fraction > 1.0] = 1.0
-        result[valid_mask] = slope_fraction
-        return result
-
-    LOGGER.info("Thresholding slope")
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['slope_path']], threshold_slope,
-        f_reg['thresholded_slope_path'], gdal.GDT_Float32, slope_nodata,
-        dem_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
 
     dem_pixel_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(
         args['dem_path'])
@@ -754,6 +736,37 @@ def execute(args):
     LOGGER.info(r' |_| \_|  |____/ u|_| \_\   ')
     LOGGER.info(r' ||   \\,-.|||_   //   \\_  ')
     LOGGER.info(r' (_")  (_/(__)_) (__)  (__) ')
+
+
+def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
+    """Rescale slope to proportion and threshold to between 0.005 and 1.0.
+
+    Parameters:
+        slope_path (string): a raster with slope values in percent.
+        target_threshold_slope_path (string): generated raster with slope
+            values as a proportion (100% is 1.0) and thresholded to values
+            between 0.005 and 1.0.
+
+    Returns:
+        None.
+
+    """
+    slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
+
+    def _slope_proportion_and_threshold_op(slope):
+        """Rescale and threshold slope between 0.005 and 1.0."""
+        valid_mask = slope != slope_nodata
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = slope_nodata
+        slope_fraction = slope[valid_mask] / 100
+        slope_fraction[slope_fraction < 0.005] = 0.005
+        slope_fraction[slope_fraction > 1.0] = 1.0
+        result[valid_mask] = slope_fraction
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(slope_path, 1)], _slope_proportion_and_threshold_op,
+        target_threshold_slope_path, gdal.GDT_Float32, slope_nodata)
 
 
 def _add_fields_to_shapefile(
