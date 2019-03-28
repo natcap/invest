@@ -109,6 +109,38 @@ class ScenicQualityTests(unittest.TestCase):
             attributes=attributes,
             filename=viewpoints_path)
 
+    def test_exception_when_no_structures_aoi_overlap(self):
+        """SQ: model raises exception when AOI does not overlap structures."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
+
+        # AOI DEFINITELY doesn't overlap with the viewpoints.
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(2, 2), (2, 12), (12, 12), (12, 2), (2, 2)])],
+            WKT, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            # Valuation parameter defaults to False, so leaving it off here.
+            'n_workers': -1,
+        }
+
+        with self.assertRaises(ValueError) as cm:
+            scenic_quality.execute(args)
+
+        self.assertTrue('found no intersection between' in str(cm.exception))
+
     def test_no_valuation(self):
         """SQ: model works as expected without valuation."""
         from natcap.invest.scenic_quality import scenic_quality
