@@ -57,7 +57,6 @@ _INTERMEDIATE_BASE_FILES = {
     'effective_retention_p_path': 'effective_retention_p.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
-    'slope_path': 'slope.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'processed_cell_path': 'processed_cell.tif',
     }
@@ -66,6 +65,7 @@ _CACHE_BASE_FILES = {
     'filled_dem_path': 'filled_dem.tif',
     'aligned_dem_path': 'aligned_dem.tif',
     'loss_path': 'loss.tif',
+    'slope_path': 'slope.tif',
     'aligned_lulc_path': 'aligned_lulc.tif',
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
@@ -199,25 +199,30 @@ def execute(args):
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
     dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
-    # Align all the input rasters
-    align_dem_task = task_graph.add_task(
+    base_raster_list = [
+        args['dem_path'], args['lulc_path'], args['runoff_proxy_path']]
+    aligned_raster_list = [
+        f_reg['aligned_dem_path'], f_reg['aligned_lulc_path'],
+        f_reg['aligned_runoff_proxy_path']]
+    align_raster_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['dem_path']], [f_reg['aligned_dem_path']], ['near'],
-            dem_info['pixel_size'], 'intersection'),
+            base_raster_list, aligned_raster_list,
+            ['near']*len(base_raster_list), dem_info['pixel_size'],
+            'intersection'),
         kwargs={
             'base_vector_path_list': [args['watersheds_path']],
             'vector_mask_options': {
                 'mask_vector_path': args['watersheds_path']}},
-        target_path_list=[f_reg['aligned_dem_path']],
-        task_name='align dem')
+        target_path_list=aligned_raster_list,
+        task_name='align rasters')
 
     fill_pits_task = task_graph.add_task(
         func=pygeoprocessing.routing.fill_pits,
         args=(
             (f_reg['aligned_dem_path'], 1), f_reg['filled_dem_path']),
         kwargs={'working_dir': cache_dir},
-        dependent_task_list=[align_dem_task],
+        dependent_task_list=[align_raster_task],
         target_path_list=[f_reg['filled_dem_path']],
         task_name='fill pits')
 
