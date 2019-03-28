@@ -109,6 +109,69 @@ class ScenicQualityTests(unittest.TestCase):
             attributes=attributes,
             filename=viewpoints_path)
 
+    def test_no_valuation(self):
+        """SQ: model works as expected without valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        # Using weighted viewpoints here to make the visual quality output more
+        # interesting.
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        ScenicQualityTests.create_viewpoints(
+            viewpoints_path,
+            fields={'RADIUS': 'real',
+                    'HEIGHT': 'real',
+                    'WEIGHT': 'real'},
+            attributes=[
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5}])
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        ScenicQualityTests.create_aoi(aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            # Valuation parameter defaults to False, so leaving it off here.
+            'n_workers': -1,
+        }
+
+        scenic_quality.execute(args)
+
+        # vshed.tif and vshed_qual.tif are still created by the model,
+        # vshed_value.tif is not when we are not doing valuation.
+        for output_filename, should_exist in (
+                ('vshed_value.tif', False),
+                ('vshed.tif', True),
+                ('vshed_qual.tif', True)):
+            full_filepath = os.path.join(
+                args['workspace_dir'], 'output', output_filename)
+            self.assertEqual(os.path.exists(full_filepath), should_exist)
+
+        # In a non-valuation run, vshed_qual.tif is based on the number of
+        # visible structures rather than the valuation, so we need to make sure
+        # that the raster has the expected values.
+        expected_visual_quality = numpy.array(
+            [[1, 1, 1, 1, 4],
+             [0, 1, 1, 4, 3],
+             [0, 0, 4, 3, 3],
+             [0, 3, 3, 4, 3],
+             [3, 3, 3, 3, 4]])
+        visual_quality_raster = os.path.join(
+            args['workspace_dir'], 'output', 'vshed_qual.tif')
+        quality_matrix = gdal.OpenEx(
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          quality_matrix)
+
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
         from natcap.invest.scenic_quality import scenic_quality
