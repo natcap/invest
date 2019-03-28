@@ -103,6 +103,8 @@ def execute(args):
             raise ValueError('Valuation function type %s not recognized' %
                              args['valuation_function'])
 
+        max_valuation_radius = float(args['max_valuation_radius'])
+
     # Create output and intermediate directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
     intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
@@ -116,8 +118,6 @@ def execute(args):
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
-
-    max_valuation_radius = float(args['max_valuation_radius'])
 
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     try:
@@ -297,6 +297,9 @@ def execute(args):
         dependent_task_list=sorted(viewshed_tasks),
         task_name='sum_visibility_for_all_structures')
 
+    # If we're not doing valuation, we can still compute visual quality,
+    # we'll just use the weighted visible structures raster instead of the
+    # sum of the valuation rasters.
     if not do_valuation:
         parent_visual_quality_task = weighted_visible_structures_task
         parent_visual_quality_raster_path = (
