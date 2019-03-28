@@ -383,7 +383,8 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 0,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
-            'n_workers': -1,
+            # n_workers is explicitly excluded here to trigger the model
+            # default.
         }
 
         scenic_quality.execute(args)

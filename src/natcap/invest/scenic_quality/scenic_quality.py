@@ -126,7 +126,7 @@ def execute(args):
         # KeyError when n_workers is not present in args
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
+        n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     reprojected_aoi_task = graph.add_task(
