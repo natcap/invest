@@ -1051,9 +1051,10 @@ def map_subsurface_load(
     keys = sorted(numpy.array(lucode_to_parameters.keys()))
     surface_values = numpy.array(
         [lucode_to_parameters[x][load_id] for x in keys])
-    subsurface_values = numpy.array(
-        [lucode_to_parameters[x][subsurface_proportion_type]
-         for x in keys])
+    if subsurface_proportion_type is not None:
+        subsurface_values = numpy.array(
+            [lucode_to_parameters[x][subsurface_proportion_type]
+             for x in keys])
 
     def map_subsurface_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
