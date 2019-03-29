@@ -351,6 +351,15 @@ def execute(args):
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name='ret eff %s' % nutrient)
 
+    s_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+        kwargs={
+            'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+        target_path_list=[f_reg['s_accumulation_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='route s')
+
     task_graph.close()
     task_graph.join()
     return
