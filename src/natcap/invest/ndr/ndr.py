@@ -16,6 +16,7 @@ from .. import utils
 from natcap.invest.ndr import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
+logging.getLogger('taskgraph').setLevel(logging.INFO)
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
@@ -310,26 +311,24 @@ def execute(args):
         sub_load_path = f_reg['sub_load_%s_path' % nutrient]
         subsurface_load_task = task_graph.add_task(
             func=map_subsurface_load,
-            args=(f_reg['aligned_lulc_path'], 'load_%s' % nutrient,
-                  subsurface_proportion_type, sub_load_path),
+            args=(f_reg['aligned_lulc_path'], lucode_to_parameters,
+                  'load_%s' % nutrient, subsurface_proportion_type,
+                  sub_load_path),
             target_path_list=[sub_load_path],
             dependent_task_list=[align_raster_task],
             task_name='map subsurface load %s' % nutrient)
 
-        return
-
         modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        LOGGER.info("Mapping %s subsurface load to LULC", nutrient)
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [f_reg['aligned_lulc_path']], map_subsurface_load_function(
-                'load_%s' % nutrient, subsurface_proportion_type),
-            sub_load_path, gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection", vectorize_op=False)
+        modified_subsurface_load_task = task_graph.add_task(
+            func=multiply_rasters,
+            args=(
+                [sub_load_path, f_reg['runoff_proxy_index_path']],
+                _TARGET_NODATA, modified_sub_load_path),
+            target_path_list=[modified_sub_load_path],
+            dependent_task_list=[subsurface_load_task],
+            task_name='modified subsurface load %s' % nutrient)
 
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [sub_load_path, f_reg['runoff_proxy_index_path']], modified_load,
-            modified_sub_load_path, gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection", vectorize_op=False)
+        return
 
         sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
