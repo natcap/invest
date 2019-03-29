@@ -376,6 +376,13 @@ def execute(args):
         dependent_task_list=[s_bar_task, flow_accum_task],
         task_name='d up')
 
+    s_inv_task = task_graph.add_task(
+        func=invert_raster_values,
+        args=(f_reg['threshold_slope_task'], f_reg['s_factor_inverse_path']),
+        target_path_list=[f_reg['s_factor_inverse_path']],
+        dependent_task_list=[threshold_slope_task],
+        task_name='s inv')
+
     task_graph.close()
     task_graph.join()
     return
@@ -391,39 +398,6 @@ def execute(args):
     output_datasource = driver.CreateCopy(
         watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
-
-    # need this for low level route_flux function
-    natcap.invest.pygeoprocessing_0_3_3.make_constant_raster_from_base_uri(
-        f_reg['aligned_dem_path'], 0.0, f_reg['zero_absorption_source_path'])
-
-    flow_accumulation_nodata = (
-        natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['flow_accumulation_path']))
-
-    s_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['s_accumulation_path'])
-    LOGGER.info("calculating %s", f_reg['s_bar_path'])
-
-    LOGGER.info('calculating d_up')
-    cell_area = out_pixel_size ** 2
-    d_up_nodata = -1.0
-
-    LOGGER.info('calculate inverse S factor')
-    s_nodata = -1.0
-    slope_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['thresholded_slope_path'])
-
-    def s_inverse_op(s_factor):
-        """Calculate inverse of S factor."""
-        valid_mask = s_factor != slope_nodata
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[valid_mask] = 1.0 / s_factor[valid_mask]
-        return result
-
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['thresholded_slope_path']], s_inverse_op,
-        f_reg['s_factor_inverse_path'], gdal.GDT_Float32, s_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
 
     LOGGER.info('calculating d_dn')
     natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
@@ -1066,3 +1040,34 @@ def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
     pygeoprocessing.raster_calculator(
         [(s_bar_path, 1), (flow_accum_path, 1)], d_up_op,
         target_d_up_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def invert_raster_values(base_raster_path, target_raster_path):
+    """Invert (1/x) the values in `base`.
+
+    Parameters:
+        base_raster_path (string): path to floating point raster.
+        target_raster_path (string): path to created output raster whose
+            values are 1/x of base.
+
+    Returns:
+        None.
+
+    """
+    base_nodata = pygeoprocessing.get_raster_info(
+        base_raster_path)['nodata'][0]
+
+    def inverse_op(base_val):
+        """Calculate inverse of S factor."""
+        result = numpy.empty(base_val.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        valid_mask = ~numpy.isclose(base_val, base_nodata)
+        zero_mask = base_val == 0.0
+        result[valid_mask & ~zero_mask] = (
+            1.0 / base_val[valid_mask & ~zero_mask])
+        result[zero_mask] = 0.0
+        return result
+
+    pygeoprocessing.raster_calculator(
+        ((base_raster_path, 1),), inverse_op,
+        target_raster_path, gdal.GDT_Float32, _TARGET_NODATA)
