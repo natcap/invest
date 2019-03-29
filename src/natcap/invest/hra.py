@@ -2944,20 +2944,21 @@ def _simplify_geometry(
     """
     base_vector = ogr.Open(base_vector_path)
     base_layer = base_vector.GetLayer()
-    base_layer_defn = base_layer.GetLayerDefn()
     target_field_name = None
     if preserved_field:
-        for i in range(base_layer_defn.GetFieldCount()):
-            base_field_name = base_layer_defn.GetFieldDefn(i).GetName()
+        # Convert the field name to lowercase
+        preserved_field_name = preserved_field[0].lower()
+        for base_field in base_layer.schema:
+            base_field_name = base_field.GetName().lower()
             # Find the first field name, case-insensitive
-            if base_field_name.lower() == preserved_field[0].lower():
+            if base_field_name == preserved_field_name:
                 # Create a target field definition with lowercased field name
-                target_field_name = preserved_field[0].lower().encode('utf-8')
+                target_field_name = preserved_field_name.encode('utf-8')
                 target_field = ogr.FieldDefn(
                     target_field_name, preserved_field[1])
                 break
 
-    # Convert a unicode string into UTF-8 standard to avoid TypeError when
+    # Convert a Unicode string into UTF-8 standard to avoid TypeError when
     # creating layer with the basename
     target_layer_name = os.path.splitext(
         os.path.basename(target_simplified_vector_path))[0]
