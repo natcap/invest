@@ -360,6 +360,22 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='route s')
 
+    s_bar_task = task_graph.add_task(
+        func=s_bar_calculate,
+        args=(f_reg['s_accumulation_path'], f_reg['flow_accumulation_path'],
+              f_reg['s_bar_path']),
+        target_path_list=[f_reg['s_bar_path']],
+        dependent_task_list=[s_task, flow_accum_task],
+        task_name='calculate s bar')
+
+    d_up_task = task_graph.add_task(
+        func=d_up_calculation,
+        args=(f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
+              f_reg['d_up_path']),
+        target_path_list=[f_reg['d_up_path']],
+        dependent_task_list=[s_bar_task, flow_accum_task],
+        task_name='d up')
+
     task_graph.close()
     task_graph.join()
     return
@@ -383,54 +399,13 @@ def execute(args):
     flow_accumulation_nodata = (
         natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['flow_accumulation_path']))
 
-    LOGGER.info("calculating %s", f_reg['s_accumulation_path'])
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
-        f_reg['thresholded_slope_path'], f_reg['zero_absorption_source_path'],
-        f_reg['loss_path'], f_reg['s_accumulation_path'], 'flux_only',
-        aoi_uri=args['watersheds_path'])
-
     s_bar_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
         f_reg['s_accumulation_path'])
     LOGGER.info("calculating %s", f_reg['s_bar_path'])
 
-    def bar_op(base_accumulation, flow_accumulation):
-        """Calculate bar operation."""
-        valid_mask = (
-            (base_accumulation != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = s_bar_nodata
-        result[valid_mask] = (
-            base_accumulation[valid_mask] / flow_accumulation[valid_mask])
-        return result
-
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['s_accumulation_path'], f_reg['flow_accumulation_path']],
-        bar_op, f_reg['s_bar_path'], gdal.GDT_Float32, s_bar_nodata,
-        out_pixel_size, "intersection", dataset_to_align_index=0,
-        vectorize_op=False)
-
     LOGGER.info('calculating d_up')
     cell_area = out_pixel_size ** 2
     d_up_nodata = -1.0
-
-    def d_up(s_bar, flow_accumulation):
-        """Calculate d_up index."""
-        valid_mask = (
-            (s_bar != s_bar_nodata) &
-            (flow_accumulation != flow_accumulation_nodata))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = d_up_nodata
-        result[valid_mask] = (
-            s_bar[valid_mask] * numpy.sqrt(
-                flow_accumulation[valid_mask] * cell_area))
-        return result
-
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['s_bar_path'], f_reg['flow_accumulation_path']], d_up,
-        f_reg['d_up_path'], gdal.GDT_Float32, d_up_nodata, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     LOGGER.info('calculate inverse S factor')
     s_nodata = -1.0
@@ -1042,3 +1017,52 @@ def calculate_ret_eff(
     pygeoprocessing.raster_calculator(
         ((lulc_raster_path, 1), (stream_path, 1)), map_eff_op,
         target_eff_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def s_bar_calculate(
+        s_accumulation_path, flow_accumulation_path, target_s_bar_path):
+    """Calculate bar op which is s/flow."""
+    s_nodata = pygeoprocessing.get_raster_info(
+        s_accumulation_path)['nodata'][0]
+    flow_nodata = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)['nodata'][0]
+
+    def bar_op(s_accumulation, flow_accumulation):
+        """Calculate bar operation of s_accum / flow_accum."""
+        valid_mask = (
+            (s_accumulation != s_nodata) &
+            (flow_accumulation != flow_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = (
+            s_accumulation[valid_mask] / flow_accumulation[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        ((s_accumulation_path, 1), (flow_accumulation_path, 1)), bar_op,
+        target_s_bar_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def d_up_calculation(s_bar_path, flow_accum_path, target_d_up_path):
+    """Calculate d_up = s_bar * sqrt(upstream area)."""
+    s_bar_info = pygeoprocessing.get_raster_info(s_bar_path)
+    s_bar_nodata = s_bar_info['nodata'][0]
+    flow_accum_nodata = pygeoprocessing.get_raster_info(
+        flow_accum_path)['nodata'][0]
+    cell_area_m2 = abs(numpy.prod(s_bar_info['pixel_size']))
+
+    def d_up_op(s_bar, flow_accumulation):
+        """Calculate d_up index."""
+        valid_mask = (
+            (s_bar != s_bar_nodata) &
+            (flow_accumulation != flow_accum_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = (
+            s_bar[valid_mask] * numpy.sqrt(
+                flow_accumulation[valid_mask] * cell_area_m2))
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(s_bar_path, 1), (flow_accum_path, 1)], d_up_op,
+        target_d_up_path, gdal.GDT_Float32, _TARGET_NODATA)
