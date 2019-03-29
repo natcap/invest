@@ -1,6 +1,6 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 from __future__ import absolute_import
-import pickle
+import itertools
 import logging
 import os
 
@@ -72,6 +72,8 @@ _CACHE_BASE_FILES = {
     'zero_absorption_source_path': 'zero_absorption_source.tif',
     'runoff_mean_pickle_path': 'runoff_mean.pickle',
     }
+
+_TARGET_NODATA = -1
 
 
 def execute(args):
@@ -270,13 +272,82 @@ def execute(args):
         dependent_task_list=[calculate_slope_task],
         task_name='threshold slope')
 
-    runoff_proxy_mean_task = task_graph.add_task(
-        func=calculate_raster_mean,
+    runoff_proxy_index_task = task_graph.add_task(
+        func=normalize_raster,
         args=((f_reg['aligned_runoff_proxy_path'], 1),
-              f_reg['runoff_mean_pickle_path']),
-        target_path_list=[f_reg['runoff_mean_pickle_path']],
+              f_reg['runoff_proxy_index_path']),
+        target_path_list=[f_reg['runoff_proxy_index_path']],
         dependent_task_list=[align_raster_task],
         task_name='runoff proxy mean')
+
+    for nutrient in nutrients_to_process:
+        load_path = f_reg['load_%s_path' % nutrient]
+        modified_load_path = f_reg['modified_load_%s_path' % nutrient]
+        # Perrine says that 'n' is the only case where we could consider a
+        # prop subsurface component.  So there's a special case for that.
+        if nutrient == 'n':
+            subsurface_proportion_type = 'proportion_subsurface_n'
+        else:
+            subsurface_proportion_type = None
+        LOGGER.info("Mapping %s load to LULC", nutrient)
+        load_task = task_graph.add_task(
+            func=calculate_load,
+            args=(
+                f_reg['aligned_lulc_path'], lucode_to_parameters, nutrient,
+                subsurface_proportion_type, load_path),
+            dependent_task_list=[align_raster_task],
+            target_path_list=[load_path],
+            task_name='%s load calc' % nutrient)
+
+        modified_load_task = task_graph.add_task(
+            func=multiply_rasters,
+            args=([load_path, f_reg['runoff_proxy_index_path']],
+                  _TARGET_NODATA, modified_load_path),
+            target_path_list=[f_reg['runoff_proxy_index_path']],
+            dependent_task_list=[load_task, runoff_proxy_index_task],
+            task_name='modified load %s' % nutrient)
+
+        sub_load_path = f_reg['sub_load_%s_path' % nutrient]
+        modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
+        LOGGER.info("Mapping %s subsurface load to LULC", nutrient)
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [f_reg['aligned_lulc_path']], map_subsurface_load_function(
+                'load_%s' % nutrient, subsurface_proportion_type),
+            sub_load_path, gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
+
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [sub_load_path, f_reg['runoff_proxy_index_path']], modified_load,
+            modified_sub_load_path, gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
+
+        sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [f_reg['aligned_lulc_path']], map_const_value(
+                args['subsurface_eff_%s' % nutrient], nodata_load),
+            sub_eff_path, gdal.GDT_Float32, nodata_load,
+            out_pixel_size,
+            "intersection", vectorize_op=False)
+
+        sub_crit_len_path = f_reg['sub_crit_len_%s_path' % nutrient]
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [f_reg['aligned_lulc_path']], map_const_value(
+                args['subsurface_critical_length_%s' % nutrient], nodata_load),
+            sub_crit_len_path, gdal.GDT_Float32, nodata_load,
+            out_pixel_size, "intersection", vectorize_op=False)
+
+        eff_path = f_reg['eff_%s_path' % nutrient]
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
+            map_eff_function('eff_%s' % nutrient), eff_path, gdal.GDT_Float32,
+            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
+
+        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
+        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
+            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
+            map_eff_function('crit_len_%s' % nutrient), crit_len_path,
+            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection",
+            vectorize_op=False)
 
     task_graph.close()
     task_graph.join()
@@ -287,75 +358,6 @@ def execute(args):
     # pixel size is m, so square and divide by 10000 to get cell size in Ha
     cell_area_ha = dem_pixel_size ** 2 / 10000.0
     out_pixel_size = dem_pixel_size
-
-    LOGGER.info("Aggregating runoff proxy to watersheds")
-    runoff_proxy_mean = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-        f_reg['aligned_runoff_proxy_path'],
-        args['watersheds_path']).pixel_mean[9999]
-    runoff_proxy_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['aligned_runoff_proxy_path'])
-
-    def normalize_runoff_proxy_op(val):
-        """Divide val by average runoff."""
-        valid_mask = val != runoff_proxy_nodata
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = runoff_proxy_nodata
-        result[valid_mask] = val[valid_mask] / runoff_proxy_mean
-        return result
-
-    LOGGER.info("Nromalizing runoff proxy")
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['aligned_runoff_proxy_path']], normalize_runoff_proxy_op,
-        f_reg['runoff_proxy_index_path'], gdal.GDT_Float32,
-        runoff_proxy_nodata, out_pixel_size, "intersection",
-        vectorize_op=False)
-
-    nodata_landuse = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['aligned_lulc_path'])
-    nodata_load = -1.0
-
-    # classify streams from the flow accumulation raster
-    LOGGER.info("Classifying streams from flow accumulation raster")
-    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
-        f_reg['flow_accumulation_path'],
-        float(args['threshold_flow_accumulation']), f_reg['stream_path'])
-    nodata_stream = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        f_reg['stream_path'])
-
-    def map_load_function(load_type, subsurface_proportion_type=None):
-        """Function generator to map arbitrary nutrient type to surface load.
-
-        Parameters:
-            load_type (string): either 'n' or 'p', used for indexing headers
-            subsurface_proportion_type (string): if None no subsurface transfer
-                is mapped.  Otherwise indexed from lucode_to_parameters
-
-        Returns:
-            map_load (function(lucode_array)): a function that can be passed to
-                vectorize_datasets.
-        """
-        def map_load(lucode_array):
-            """Convert unit load to total load & handle nodata."""
-            result = numpy.empty(lucode_array.shape)
-            result[:] = nodata_load
-            for lucode in numpy.unique(lucode_array):
-                if lucode != nodata_landuse:
-                    if subsurface_proportion_type is not None:
-                        if lucode not in lucode_to_parameters:
-                            raise KeyError(
-                                "The LULC code %s can\'t be found in the"
-                                " biophysical table." % lucode)
-                        result[lucode_array == lucode] = (
-                            lucode_to_parameters[lucode][load_type] *
-                            (1 - lucode_to_parameters[lucode]
-                             [subsurface_proportion_type]) *
-                            cell_area_ha)
-                    else:
-                        result[lucode_array == lucode] = (
-                            lucode_to_parameters[lucode][load_type] *
-                            cell_area_ha)
-            return result
-        return map_load
 
     def map_subsurface_load_function(
             load_type, subsurface_proportion_type=None):
@@ -906,13 +908,14 @@ def validate(args, limit_to=None):
     return validation_error_list
 
 
-def calculate_raster_mean(base_raster_path_band, target_mean_pickle_path):
-    """Calculate raster mean and pickle result.
+def normalize_raster(base_raster_path_band, target_normalized_raster_path):
+    """Calculate normalize raster by dividing by the mean value.
 
     Parameters:
-        base_raster_path (tuple): raster path/band tuple to calculate mean.
-        tearget_mean_pickle_path (string): pickled float that's the non-nodata
-            mean value of `base_raster_path`
+        base_raster_path_band (tuple): raster path/band tuple to calculate
+            mean.
+        target_normalized_raster_path (string): path to target normalized
+            raster from base_raster_path_band.
 
     Returns:
         None.
@@ -931,5 +934,147 @@ def calculate_raster_mean(base_raster_path_band, target_mean_pickle_path):
     value_mean = value_sum
     if value_count > 0.0:
         value_mean /= value_count
-    with open(target_mean_pickle_path, 'w') as pickle_file:
-        pickle.dump(float(value_mean), pickle_file)
+
+    def normalize_raster_op(array):
+        """Divide values by mean."""
+        valid_mask = ~numpy.isclose(array, base_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = base_nodata
+        result[valid_mask] = array[valid_mask]
+        if value_mean != 0:
+            result[valid_mask] /= value_mean
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [base_raster_path_band], normalize_raster_op,
+        target_normalized_raster_path, gdal.GDT_Float32, base_nodata)
+
+
+def map_load_function(
+        lucode_to_parameters, load_type, subsurface_proportion_type=None):
+    """Function generator to map arbitrary nutrient type to surface load.
+
+    Parameters:
+        lucode_to_parameters (dict): maps an integer code to a dictionary
+            that contains at least the key `load_type` which maps to a
+            float.
+        load_type (string): either 'n' or 'p', used for indexing headers
+        subsurface_proportion_type (string): if None no subsurface transfer
+            is mapped.  Otherwise indexed from lucode_to_parameters
+
+    Returns:
+        map_load (function(lucode_array)): a function that can be passed to
+            vectorize_datasets.
+    """
+    def map_load(lucode_array):
+        """Convert unit load to total load & handle nodata."""
+        result = numpy.empty(lucode_array.shape)
+        result[:] = nodata_load
+        for lucode in numpy.unique(lucode_array):
+            if lucode != nodata_landuse:
+                if subsurface_proportion_type is not None:
+                    if lucode not in lucode_to_parameters:
+                        raise KeyError(
+                            "The LULC code %s can\'t be found in the"
+                            " biophysical table." % lucode)
+                    result[lucode_array == lucode] = (
+                        lucode_to_parameters[lucode][load_type] *
+                        (1 - lucode_to_parameters[lucode]
+                         [subsurface_proportion_type]) *
+                        cell_area_ha)
+                else:
+                    result[lucode_array == lucode] = (
+                        lucode_to_parameters[lucode][load_type] *
+                        cell_area_ha)
+        return result
+    return map_load
+
+
+def calculate_load(
+        lulc_raster_path, lucode_to_parameters, nutrient_id,
+        subsurface_proportion_type, target_load_raster):
+    """Calculate load raster.
+
+    Returns:
+        None.
+
+    """
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+    nodata_landuse = lulc_raster_info['nodata'][0]
+    cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
+
+    def map_load_function(load_type, subsurface_proportion_type=None):
+        """Function generator to map arbitrary nutrient type to surface load.
+
+        Parameters:
+            load_type (string): either 'n' or 'p', used for indexing headers
+            subsurface_proportion_type (string): if None no subsurface transfer
+                is mapped.  Otherwise indexed from lucode_to_parameters
+
+        Returns:
+            map_load (function(lucode_array)): a function that can be passed to
+                vectorize_datasets.
+        """
+        def map_load(lucode_array):
+            """Convert unit load to total load & handle nodata."""
+            result = numpy.empty(lucode_array.shape)
+            result[:] = _TARGET_NODATA
+            for lucode in numpy.unique(lucode_array):
+                if lucode != nodata_landuse:
+                    if subsurface_proportion_type is not None:
+                        if lucode not in lucode_to_parameters:
+                            raise KeyError(
+                                "The LULC code %s can\'t be found in the"
+                                " biophysical table." % lucode)
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            (1 - lucode_to_parameters[lucode]
+                             [subsurface_proportion_type]) *
+                            cell_area_ha)
+                    else:
+                        result[lucode_array == lucode] = (
+                            lucode_to_parameters[lucode][load_type] *
+                            cell_area_ha)
+            return result
+        return map_load
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_raster_path, 1)], map_load_function(
+            'load_%s' % nutrient_id, subsurface_proportion_type),
+        target_load_raster, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def multiply_rasters(raster_path_list, target_nodata, target_result_path):
+    """Multiply the rasters in `raster_path_list`.
+
+    Parameters:
+        raster_path_list (list): list of single band raster paths.
+        target_nodata (float): desired target nodata value.
+        target_result_path (string): path to float 32 target raster
+            multiplied where all rasters are not nodata.
+
+    Returns:
+        None.
+
+    """
+    def mult_op(*array_nodata_list):
+        """Multiply non-nodata stacks."""
+        result = numpy.empty(array_nodata_list[0].shape)
+        result[:] = target_nodata
+        valid_mask = ~numpy.isclose(
+            array_nodata_list[0], array_nodata_list[1])
+        for array, nodata in zip(*[iter(array_nodata_list[2:])]*2):
+            valid_mask &= ~numpy.isclose(array, nodata)
+        result[valid_mask] = array_nodata_list[0][valid_mask]
+        for array in array_nodata_list[2::2]:
+            result[valid_mask] *= array[valid_mask]
+        return result
+
+    # make a list of (raster_path_band, nodata) tuples, then flatten it
+    path_nodata_list = list(itertools.chain(*[
+        ((path, 1),
+         (pygeoprocessing.get_raster_info(path)['nodata'][0], 'raw'))
+        for path in raster_path_list]))
+    pygeoprocessing.raster_calculator(
+        path_nodata_list, mult_op, target_result_path,
+        gdal.GDT_Float32, target_nodata)
