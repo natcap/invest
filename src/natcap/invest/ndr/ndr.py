@@ -328,35 +328,28 @@ def execute(args):
             dependent_task_list=[subsurface_load_task],
             task_name='modified subsurface load %s' % nutrient)
 
-        return
-
-        sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [f_reg['aligned_lulc_path']], map_const_value(
-                args['subsurface_eff_%s' % nutrient], nodata_load),
-            sub_eff_path, gdal.GDT_Float32, nodata_load,
-            out_pixel_size,
-            "intersection", vectorize_op=False)
-
-        sub_crit_len_path = f_reg['sub_crit_len_%s_path' % nutrient]
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [f_reg['aligned_lulc_path']], map_const_value(
-                args['subsurface_critical_length_%s' % nutrient], nodata_load),
-            sub_crit_len_path, gdal.GDT_Float32, nodata_load,
-            out_pixel_size, "intersection", vectorize_op=False)
+        sub_eff_val = args['subsurface_eff_%s' % nutrient]
+        sub_crit_len = args['subsurface_critical_length_%s' % nutrient]
 
         eff_path = f_reg['eff_%s_path' % nutrient]
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
-            map_eff_function('eff_%s' % nutrient), eff_path, gdal.GDT_Float32,
-            nodata_load, out_pixel_size, "intersection", vectorize_op=False)
+        eff_task = task_graph.add_task(
+            func=calculate_ret_eff,
+            args=(
+                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                lucode_to_parameters, 'eff_%s' % nutrient, eff_path),
+            target_path_list=[eff_path],
+            dependent_task_list=[align_raster_task, stream_extraction_task],
+            task_name='ret eff %s' % nutrient)
 
         crit_len_path = f_reg['crit_len_%s_path' % nutrient]
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [f_reg['aligned_lulc_path'], f_reg['stream_path']],
-            map_eff_function('crit_len_%s' % nutrient), crit_len_path,
-            gdal.GDT_Float32, nodata_load, out_pixel_size, "intersection",
-            vectorize_op=False)
+        crit_len_task = task_graph.add_task(
+            func=calculate_ret_eff,
+            args=(
+                f_reg['aligned_lulc_path'], f_reg['stream_path'],
+                lucode_to_parameters, 'crit_len_%s' % nutrient, crit_len_path),
+            target_path_list=[eff_path],
+            dependent_task_list=[align_raster_task, stream_extraction_task],
+            task_name='ret eff %s' % nutrient)
 
     task_graph.close()
     task_graph.join()
@@ -375,26 +368,6 @@ def execute(args):
             return numpy.where(
                 lucode_array == nodata_landuse, nodata, const_value)
         return map_const
-
-    def map_eff_function(load_type):
-        """Function generator to map arbitrary efficiency type."""
-        keys = sorted(numpy.array(lucode_to_parameters.keys()))
-        values = numpy.array(
-            [lucode_to_parameters[x][load_type] for x in keys])
-
-        def map_eff(lucode_array, stream_array):
-            """Map efficiency from LULC and handle nodata/streams."""
-            valid_mask = (
-                (lucode_array != nodata_landuse) &
-                (stream_array != nodata_stream))
-            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-            result[:] = nodata_load
-            index = numpy.digitize(
-                lucode_array[valid_mask].ravel(), keys, right=True)
-            result[valid_mask] = (
-                values[index] * (1 - stream_array[valid_mask]))
-            return result
-        return map_eff
 
     for nutrient in nutrients_to_process:
         load_path = f_reg['load_%s_path' % nutrient]
@@ -1082,7 +1055,7 @@ def map_subsurface_load(
         [lucode_to_parameters[x][subsurface_proportion_type]
          for x in keys])
 
-    def map_load(lucode_array):
+    def map_subsurface_load_op(lucode_array):
         """Convert unit load to total load & handle nodata."""
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
@@ -1100,5 +1073,51 @@ def map_subsurface_load(
         return result
 
     pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1)], map_load, target_sub_load_path,
+        [(lulc_raster_path, 1)], map_subsurface_load_op, target_sub_load_path,
         gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def calculate_ret_eff(
+        lulc_raster_path, stream_path, lucode_to_parameters, eff_id,
+        target_eff_path):
+    """Make retention efficiency raster from landcover.
+
+    Parameters:
+        lulc_raster_path (string): path to landcover raster.
+        stream_path (string) path to stream layer 0, no stream 1 stream.
+        lucode_to_parameters (dict) mapping of landcover code to a dictionary
+            that contains the key in `eff_id`
+        eff_id (string): the id in the lookup table with values to map
+            landcover to efficiency.
+        target_eff_path (string): target raster that contains the mapping of
+            landcover codes to retention efficiency values except where there
+            is a stream in which case the retention efficiency is 0.
+
+    Returns:
+        None.
+
+    """
+    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    values = numpy.array(
+        [lucode_to_parameters[x][eff_id] for x in keys])
+
+    nodata_landuse = pygeoprocessing.get_raster_info(
+        lulc_raster_path)['nodata'][0]
+    nodata_stream = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
+
+    def map_eff_op(lucode_array, stream_array):
+        """Map efficiency from LULC and handle nodata/streams."""
+        valid_mask = (
+            (lucode_array != nodata_landuse) &
+            (stream_array != nodata_stream))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        index = numpy.digitize(
+            lucode_array[valid_mask].ravel(), keys, right=True)
+        result[valid_mask] = (
+            values[index] * (1 - stream_array[valid_mask]))
+        return result
+
+    pygeoprocessing.raster_calculator(
+        ((lulc_raster_path, 1), (stream_path, 1)), map_eff_op,
+        target_eff_path, gdal.GDT_Float32, _TARGET_NODATA)
