@@ -351,6 +351,18 @@ def execute(args):
             dependent_task_list=[align_raster_task, stream_extraction_task],
             task_name='ret eff %s' % nutrient)
 
+        effective_retention_path = (
+            f_reg['effective_retention_%s_path' % nutrient])
+        ndr_eff_task = task_graph.add_task(
+            func=ndr_core.ndr_eff_calculation,
+            args=(
+                f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+                crit_len_path, effective_retention_path),
+            target_path_list=[effective_retention_path],
+            dependent_task_list=[
+                stream_extraction_task, eff_task, crit_len_task],
+            task_name='eff ret %s' % nutrient)
+
     s_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
         args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
@@ -401,15 +413,6 @@ def execute(args):
         target_path_list=[f_reg['ic_factor_path']],
         dependent_task_list=[d_dn_task, d_up_task],
         task_name='calc ic')
-
-    for nutrient in nutrients_to_process:
-        effective_retention_path = (
-            f_reg['effective_retention_%s_path' % nutrient])
-        eff_path = f_reg['eff_%s_path' % nutrient]
-        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
-        ndr_core.ndr_eff_calculation(
-            f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
-            crit_len_path, effective_retention_path)
 
     task_graph.close()
     task_graph.join()

@@ -1,17 +1,22 @@
 # cython: profile=False
-
+import tempfile
 import logging
 import os
 import collections
 
 import numpy
+import pygeoprocessing
 cimport numpy
 cimport cython
-import osgeo
 from osgeo import gdal
 from cython.operator cimport dereference as deref
 
-from libcpp.set cimport set as c_set
+from cpython.mem cimport PyMem_Malloc, PyMem_Free
+from cython.operator cimport dereference as deref
+from cython.operator cimport preincrement as inc
+from libcpp.pair cimport pair
+from libcpp.set cimport set as cset
+from libcpp.list cimport list as clist
 from libcpp.deque cimport deque
 from libcpp.map cimport map
 from libc.math cimport atan
@@ -25,240 +30,388 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-import natcap.invest.pygeoprocessing_0_3_3
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
-
-
 LOGGER = logging.getLogger('ndr core')
 
 cdef double PI = 3.141592653589793238462643383279502884
-cdef int N_BLOCK_ROWS = 8
-cdef int N_BLOCK_COLS = 8
+# This module creates rasters with a memory xy block size of 2**BLOCK_BITS
+cdef int BLOCK_BITS = 8
+# Number of raster blocks to hold in memory at once per Managed Raster
+cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
-cdef class BlockCache:
-    cdef numpy.int32_t[:,:] row_tag_cache
-    cdef numpy.int32_t[:,:] col_tag_cache
-    cdef numpy.int8_t[:,:] cache_dirty
-    cdef int n_block_rows
-    cdef int n_block_cols
-    cdef int block_col_size
-    cdef int block_row_size
-    cdef int n_rows
-    cdef int n_cols
-    band_list = []
-    block_list = []
-    update_list = []
 
-    def __cinit__(
-            self, int n_block_rows, int n_block_cols, int n_rows, int n_cols,
-            int block_row_size, int block_col_size, band_list, block_list,
-            update_list, numpy.int8_t[:,:] cache_dirty):
-        self.n_block_rows = n_block_rows
-        self.n_block_cols = n_block_cols
-        self.block_col_size = block_col_size
-        self.block_row_size = block_row_size
-        self.n_rows = n_rows
-        self.n_cols = n_cols
-        self.row_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.col_tag_cache = numpy.zeros((n_block_rows, n_block_cols), dtype=numpy.int32)
-        self.cache_dirty = cache_dirty
-        self.row_tag_cache[:] = -1
-        self.col_tag_cache[:] = -1
-        self.band_list[:] = band_list
-        self.block_list[:] = block_list
-        self.update_list[:] = update_list
-        list_lengths = [len(x) for x in [band_list, block_list, update_list]]
-        if len(set(list_lengths)) > 1:
-            raise ValueError(
-                "lengths of band_list, block_list, update_list should be equal."
-                " instead they are %s", list_lengths)
-        raster_dimensions_list = [(b.YSize, b.XSize) for b in band_list]
-        for raster_n_rows, raster_n_cols in raster_dimensions_list:
-            if raster_n_rows != n_rows or raster_n_cols != n_cols:
-                raise ValueError(
-                    "A band was passed in that has a different dimension than "
-                    "the memory block was specified as.\n"
-                    "raster_dimensions_list=%s\n" % str(raster_dimensions_list)
-                    + "bands=%s" % str([b.GetDescription() for b in band_list]))
+# this is a least recently used cache written in C++ in an external file,
+# exposing here so _ManagedRaster can use it
+cdef extern from "LRUCache.h" nogil:
+    cdef cppclass LRUCache[KEY_T, VAL_T]:
+        LRUCache(int)
+        void put(KEY_T&, VAL_T&, clist[pair[KEY_T,VAL_T]]&)
+        clist[pair[KEY_T,VAL_T]].iterator begin()
+        clist[pair[KEY_T,VAL_T]].iterator end()
+        bint exist(KEY_T &)
+        VAL_T get(KEY_T &)
 
-        for band in band_list:
-            block_col_size, block_row_size = band.GetBlockSize()
-            if block_col_size == 1 or block_row_size == 1:
-                LOGGER.warn(
-                    'a band in BlockCache is not memory blocked, this might '
-                    'make the runtime slow for other algorithms. %s',
-                    band.GetDescription())
+# this ctype is used to store the block ID and the block buffer as one object
+# inside Managed Raster
+ctypedef pair[int, double*] BlockBufferPair
+
+# a class to allow fast random per-pixel access to a raster for both setting
+# and reading pixels.  Copied from src/pygeoprocessing/routing/routing.pyx,
+# revision 891288683889237cfd3a3d0a1f09483c23489fca.
+cdef class _ManagedRaster:
+    cdef LRUCache[int, double*]* lru_cache
+    cdef cset[int] dirty_blocks
+    cdef int block_xsize
+    cdef int block_ysize
+    cdef int block_xmod
+    cdef int block_ymod
+    cdef int block_xbits
+    cdef int block_ybits
+    cdef long raster_x_size
+    cdef long raster_y_size
+    cdef int block_nx
+    cdef int block_ny
+    cdef int write_mode
+    cdef bytes raster_path
+    cdef int band_id
+    cdef int closed
+
+    def __cinit__(self, raster_path, band_id, write_mode):
+        """Create new instance of Managed Raster.
+
+        Parameters:
+            raster_path (char*): path to raster that has block sizes that are
+                powers of 2. If not, an exception is raised.
+            band_id (int): which band in `raster_path` to index. Uses GDAL
+                notation that starts at 1.
+            write_mode (boolean): if true, this raster is writable and dirty
+                memory blocks will be written back to the raster as blocks
+                are swapped out of the cache or when the object deconstructs.
+
+        Returns:
+            None.
+        """
+        raster_info = pygeoprocessing.get_raster_info(raster_path)
+        self.raster_x_size, self.raster_y_size = raster_info['raster_size']
+        self.block_xsize, self.block_ysize = raster_info['block_size']
+        self.block_xmod = self.block_xsize-1
+        self.block_ymod = self.block_ysize-1
+
+        if not (1 <= band_id <= raster_info['n_bands']):
+            err_msg = (
+                "Error: band ID (%s) is not a valid band number. "
+                "This exception is happening in Cython, so it will cause a "
+                "hard seg-fault, but it's otherwise meant to be a "
+                "ValueError." % (band_id))
+            print(err_msg)
+            raise ValueError(err_msg)
+        self.band_id = band_id
+
+        if (self.block_xsize & (self.block_xsize - 1) != 0) or (
+                self.block_ysize & (self.block_ysize - 1) != 0):
+            # If inputs are not a power of two, this will at least print
+            # an error message. Unfortunately with Cython, the exception will
+            # present itself as a hard seg-fault, but I'm leaving the
+            # ValueError in here at least for readability.
+            err_msg = (
+                "Error: Block size is not a power of two: "
+                "block_xsize: %d, %d, %s. This exception is happening"
+                "in Cython, so it will cause a hard seg-fault, but it's"
+                "otherwise meant to be a ValueError." % (
+                    self.block_xsize, self.block_ysize, raster_path))
+            print(err_msg)
+            raise ValueError(err_msg)
+
+        self.block_xbits = numpy.log2(self.block_xsize)
+        self.block_ybits = numpy.log2(self.block_ysize)
+        self.block_nx = (
+            self.raster_x_size + (self.block_xsize) - 1) / self.block_xsize
+        self.block_ny = (
+            self.raster_y_size + (self.block_ysize) - 1) / self.block_ysize
+
+        self.lru_cache = new LRUCache[int, double*](MANAGED_RASTER_N_BLOCKS)
+        self.raster_path = <bytes> raster_path
+        self.write_mode = write_mode
+        self.closed = 0
 
     def __dealloc__(self):
-        self.band_list[:] = []
-        self.block_list[:] = []
-        self.update_list[:] = []
-        self.row_tag_cache = None
-        self.col_tag_cache = None
-        self.cache_dirty = None
+        """Deallocate _ManagedRaster.
 
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.cdivision(True)
-    cdef void update_cache(self, int global_row, int global_col, int *row_index, int *col_index, int *row_block_offset, int *col_block_offset):
-        cdef int cache_row_size, cache_col_size
-        cdef int global_row_offset, global_col_offset
-        cdef int row_tag, col_tag
+        This operation manually frees memory from the LRUCache and writes any
+        dirty memory blocks back to the raster if `self.write_mode` is True.
+        """
+        self.close()
 
-        row_block_offset[0] = global_row % self.block_row_size
-        row_index[0] = (global_row // self.block_row_size) % self.n_block_rows
-        row_tag = (global_row // self.block_row_size) // self.n_block_rows
+    def close(self):
+        """Close the _ManagedRaster and free up resources.
 
-        col_block_offset[0] = global_col % self.block_col_size
-        col_index[0] = (global_col // self.block_col_size) % self.n_block_cols
-        col_tag = (global_col // self.block_col_size) // self.n_block_cols
+            This call writes any dirty blocks to disk, frees up the memory
+            allocated as part of the cache, and frees all GDAL references.
 
-        cdef int current_row_tag = self.row_tag_cache[row_index[0], col_index[0]]
-        cdef int current_col_tag = self.col_tag_cache[row_index[0], col_index[0]]
+            Any subsequent calls to any other functions in _ManagedRaster will
+            have undefined behavior.
+        """
+        if self.closed:
+            return
+        self.closed = 1
+        cdef int xi_copy, yi_copy
+        cdef numpy.ndarray[double, ndim=2] block_array = numpy.empty(
+            (self.block_ysize, self.block_xsize))
+        cdef double *double_buffer
+        cdef int block_xi
+        cdef int block_yi
+        # initially the win size is the same as the block size unless
+        # we're at the edge of a raster
+        cdef int win_xsize
+        cdef int win_ysize
 
-        if current_row_tag != row_tag or current_col_tag != col_tag:
-            if self.cache_dirty[row_index[0], col_index[0]]:
-                global_col_offset = (current_col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-                cache_col_size = self.n_cols - global_col_offset
-                if cache_col_size > self.block_col_size:
-                    cache_col_size = self.block_col_size
+        # we need the offsets to subtract from global indexes for cached array
+        cdef int xoff
+        cdef int yoff
 
-                global_row_offset = (current_row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
-                cache_row_size = self.n_rows - global_row_offset
-                if cache_row_size > self.block_row_size:
-                    cache_row_size = self.block_row_size
+        cdef clist[BlockBufferPair].iterator it = self.lru_cache.begin()
+        cdef clist[BlockBufferPair].iterator end = self.lru_cache.end()
+        if not self.write_mode:
+            while it != end:
+                # write the changed value back if desired
+                PyMem_Free(deref(it).second)
+                inc(it)
+            return
 
-                for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                    if update:
-                        band.WriteArray(block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size],
-                            yoff=global_row_offset, xoff=global_col_offset)
-                self.cache_dirty[row_index[0], col_index[0]] = 0
-            self.row_tag_cache[row_index[0], col_index[0]] = row_tag
-            self.col_tag_cache[row_index[0], col_index[0]] = col_tag
+        raster = gdal.OpenEx(
+            self.raster_path, gdal.GA_Update | gdal.OF_RASTER)
+        raster_band = raster.GetRasterBand(self.band_id)
 
-            global_col_offset = (col_tag * self.n_block_cols + col_index[0]) * self.block_col_size
-            global_row_offset = (row_tag * self.n_block_rows + row_index[0]) * self.block_row_size
+        # if we get here, we're in write_mode
+        cdef cset[int].iterator dirty_itr
+        while it != end:
+            double_buffer = deref(it).second
+            block_index = deref(it).first
 
-            cache_col_size = self.n_cols - global_col_offset
-            if cache_col_size > self.block_col_size:
-                cache_col_size = self.block_col_size
-            cache_row_size = self.n_rows - global_row_offset
-            if cache_row_size > self.block_row_size:
-                cache_row_size = self.block_row_size
+            # write to disk if block is dirty
+            dirty_itr = self.dirty_blocks.find(block_index)
+            if dirty_itr != self.dirty_blocks.end():
+                self.dirty_blocks.erase(dirty_itr)
+                block_xi = block_index % self.block_nx
+                block_yi = block_index / self.block_nx
 
-            for band, block in zip(self.band_list, self.block_list):
-                band.ReadAsArray(
-                    xoff=global_col_offset, yoff=global_row_offset,
-                    win_xsize=cache_col_size, win_ysize=cache_row_size,
-                    buf_obj=block[row_index[0], col_index[0], 0:cache_row_size, 0:cache_col_size])
+                # we need the offsets to subtract from global indexes for
+                # cached array
+                xoff = block_xi << self.block_xbits
+                yoff = block_yi << self.block_ybits
 
-    cdef void flush_cache(self):
-        cdef int global_row_offset, global_col_offset
-        cdef int cache_row_size, cache_col_size
-        cdef int row_index, col_index
-        for row_index in xrange(self.n_block_rows):
-            for col_index in xrange(self.n_block_cols):
-                row_tag = self.row_tag_cache[row_index, col_index]
-                col_tag = self.col_tag_cache[row_index, col_index]
+                win_xsize = self.block_xsize
+                win_ysize = self.block_ysize
 
-                if self.cache_dirty[row_index, col_index]:
-                    global_col_offset = (col_tag * self.n_block_cols + col_index) * self.block_col_size
-                    cache_col_size = self.n_cols - global_col_offset
-                    if cache_col_size > self.block_col_size:
-                        cache_col_size = self.block_col_size
+                # clip window sizes if necessary
+                if xoff+win_xsize > self.raster_x_size:
+                    win_xsize = win_xsize - (
+                        xoff+win_xsize - self.raster_x_size)
+                if yoff+win_ysize > self.raster_y_size:
+                    win_ysize = win_ysize - (
+                        yoff+win_ysize - self.raster_y_size)
 
-                    global_row_offset = (row_tag * self.n_block_rows + row_index) * self.block_row_size
-                    cache_row_size = self.n_rows - global_row_offset
-                    if cache_row_size > self.block_row_size:
-                        cache_row_size = self.block_row_size
+                for xi_copy in xrange(win_xsize):
+                    for yi_copy in xrange(win_ysize):
+                        block_array[yi_copy, xi_copy] = (
+                            double_buffer[
+                                (yi_copy << self.block_xbits) + xi_copy])
+                raster_band.WriteArray(
+                    block_array[0:win_ysize, 0:win_xsize],
+                    xoff=xoff, yoff=yoff)
+            PyMem_Free(double_buffer)
+            inc(it)
+        raster_band.FlushCache()
+        raster_band = None
+        raster = None
 
-                    for band, block, update in zip(self.band_list, self.block_list, self.update_list):
-                        if update:
-                            band.WriteArray(block[row_index, col_index, 0:cache_row_size, 0:cache_col_size],
-                                yoff=global_row_offset, xoff=global_col_offset)
-        for band in self.band_list:
-            band.FlushCache()
+    cdef inline void set(self, long xi, long yi, double value):
+        """Set the pixel at `xi,yi` to `value`."""
+        cdef int block_xi = xi >> self.block_xbits
+        cdef int block_yi = yi >> self.block_ybits
+        # this is the flat index for the block
+        cdef int block_index = block_yi * self.block_nx + block_xi
+        if not self.lru_cache.exist(block_index):
+            self._load_block(block_index)
+        self.lru_cache.get(
+            block_index)[
+                ((yi & (self.block_ymod))<<self.block_xbits) +
+                (xi & (self.block_xmod))] = value
+        if self.write_mode:
+            dirty_itr = self.dirty_blocks.find(block_index)
+            if dirty_itr == self.dirty_blocks.end():
+                self.dirty_blocks.insert(block_index)
+
+    cdef inline double get(self, long xi, long yi):
+        """Return the value of the pixel at `xi,yi`."""
+        cdef int block_xi = xi >> self.block_xbits
+        cdef int block_yi = yi >> self.block_ybits
+        # this is the flat index for the block
+        cdef int block_index = block_yi * self.block_nx + block_xi
+        if not self.lru_cache.exist(block_index):
+            self._load_block(block_index)
+        return self.lru_cache.get(
+            block_index)[
+                ((yi & (self.block_ymod))<<self.block_xbits) +
+                (xi & (self.block_xmod))]
+
+    cdef void _load_block(self, int block_index) except *:
+        cdef int block_xi = block_index % self.block_nx
+        cdef int block_yi = block_index / self.block_nx
+
+        # we need the offsets to subtract from global indexes for cached array
+        cdef int xoff = block_xi << self.block_xbits
+        cdef int yoff = block_yi << self.block_ybits
+
+        cdef int xi_copy, yi_copy
+        cdef numpy.ndarray[double, ndim=2] block_array
+        cdef double *double_buffer
+        cdef clist[BlockBufferPair] removed_value_list
+
+        # determine the block aligned xoffset for read as array
+
+        # initially the win size is the same as the block size unless
+        # we're at the edge of a raster
+        cdef int win_xsize = self.block_xsize
+        cdef int win_ysize = self.block_ysize
+
+        # load a new block
+        if xoff+win_xsize > self.raster_x_size:
+            win_xsize = win_xsize - (xoff+win_xsize - self.raster_x_size)
+        if yoff+win_ysize > self.raster_y_size:
+            win_ysize = win_ysize - (yoff+win_ysize - self.raster_y_size)
+
+        raster = gdal.OpenEx(self.raster_path, gdal.OF_RASTER)
+        raster_band = raster.GetRasterBand(self.band_id)
+        block_array = raster_band.ReadAsArray(
+            xoff=xoff, yoff=yoff, win_xsize=win_xsize,
+            win_ysize=win_ysize).astype(
+            numpy.float64)
+        raster_band = None
+        raster = None
+        double_buffer = <double*>PyMem_Malloc(
+            (sizeof(double) << self.block_xbits) * win_ysize)
+        for xi_copy in xrange(win_xsize):
+            for yi_copy in xrange(win_ysize):
+                double_buffer[(yi_copy<<self.block_xbits)+xi_copy] = (
+                    block_array[yi_copy, xi_copy])
+        self.lru_cache.put(
+            <int>block_index, <double*>double_buffer, removed_value_list)
+
+        if self.write_mode:
+            raster = gdal.OpenEx(
+                self.raster_path, gdal.GA_Update | gdal.OF_RASTER)
+            raster_band = raster.GetRasterBand(self.band_id)
+
+        block_array = numpy.empty(
+            (self.block_ysize, self.block_xsize), dtype=numpy.double)
+        while not removed_value_list.empty():
+            # write the changed value back if desired
+            double_buffer = removed_value_list.front().second
+
+            if self.write_mode:
+                block_index = removed_value_list.front().first
+
+                # write back the block if it's dirty
+                dirty_itr = self.dirty_blocks.find(block_index)
+                if dirty_itr != self.dirty_blocks.end():
+                    self.dirty_blocks.erase(dirty_itr)
+
+                    block_xi = block_index % self.block_nx
+                    block_yi = block_index / self.block_nx
+
+                    xoff = block_xi << self.block_xbits
+                    yoff = block_yi << self.block_ybits
+
+                    win_xsize = self.block_xsize
+                    win_ysize = self.block_ysize
+
+                    if xoff+win_xsize > self.raster_x_size:
+                        win_xsize = win_xsize - (
+                            xoff+win_xsize - self.raster_x_size)
+                    if yoff+win_ysize > self.raster_y_size:
+                        win_ysize = win_ysize - (
+                            yoff+win_ysize - self.raster_y_size)
+
+                    for xi_copy in xrange(win_xsize):
+                        for yi_copy in xrange(win_ysize):
+                            block_array[yi_copy, xi_copy] = double_buffer[
+                                (yi_copy << self.block_xbits) + xi_copy]
+                    raster_band.WriteArray(
+                        block_array[0:win_ysize, 0:win_xsize],
+                        xoff=xoff, yoff=yoff)
+            PyMem_Free(double_buffer)
+            removed_value_list.pop_front()
+
+        if self.write_mode:
+            raster_band = None
+            raster = None
 
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
 def ndr_eff_calculation(
-    flow_direction_uri, stream_uri, retention_eff_lulc_uri, crit_len_uri,
-    effective_retention_uri):
+        flow_direction_path, stream_path, retention_eff_lulc_path,
+        crit_len_path, effective_retention_path):
+    """Calculate flow downhill effective_retention to the channel.
 
-    """This function calculates the flow downhill effective_retention to the stream layers
-
-        Args:
-            flow_direction_uri (string) - (input) a path to a raster with
+        Parameters:
+            flow_direction_path (string) - (input) a path to a raster with
                 d-infinity flow directions.
-            stream_uri (string) - (input) a raster where 1 indicates a stream
+            stream_path (string) - (input) a raster where 1 indicates a stream
                 all other values ignored must be same dimensions and projection
-                as flow_direction_uri.
-            retention_eff_lulc_uri (string) - (input) a raster indicating the
+                as flow_direction_path.
+            retention_eff_lulc_path (string) - (input) a raster indicating the
                 maximum retention efficiency that the landcover on that pixel
                 can accumulate.
-            crit_len_uri (string) - (input) a raster indicating the critical length
+            crit_len_path (string) - (input) a raster indicating the critical length
                 of the retention efficiency that the landcover on this pixel.
 
-            effective_retention_uri (string) - (output) a raster showing
+            effective_retention_path (string) - (output) a raster showing
                 the effective retention on that pixel to the stream.
 
         Returns:
             nothing"""
 
-    cdef float effective_retention_nodata = -9999
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        flow_direction_uri, effective_retention_uri, 'GTiff', effective_retention_nodata,
-        gdal.GDT_Float32, fill_value=effective_retention_nodata)
-
-    cdef float processed_cell_nodata = 127
-    processed_cell_uri = (
-        os.path.join(os.path.dirname(flow_direction_uri), 'processed_cell.tif'))
-    natcap.invest.pygeoprocessing_0_3_3.new_raster_from_base_uri(
-        flow_direction_uri, processed_cell_uri, 'GTiff', processed_cell_nodata,
-        gdal.GDT_Byte, fill_value=0)
-
-    processed_cell_ds = gdal.OpenEx(processed_cell_uri, gdal.GA_Update)
-    processed_cell_band = processed_cell_ds.GetRasterBand(1)
+    cdef float effective_retention_nodata = -1.0
+    pygeoprocessing.new_raster_from_base(
+        flow_direction_path, effective_retention_path, gdal.GDT_Float32,
+        [effective_retention_nodata])
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_rows, n_cols
-    n_rows, n_cols = natcap.invest.pygeoprocessing_0_3_3.get_row_col_from_uri(
-        flow_direction_uri)
+    flow_dir_info = pygeoprocessing.get_raster_info(flow_direction_path)
+    n_rows, n_cols = flow_dir_info['raster_size']
 
     cdef deque[int] visit_stack
+    stream_info = pygeoprocessing.get_raster_info(stream_path)
+    cdef float stream_nodata = stream_info['nodata'][0]
+    # cell sizes must be square, so no reason to test at this point.
+    cdef float cell_size = abs(stream_info['pixel_size'][0])
 
-    stream_ds = gdal.OpenEx(stream_uri)
-    stream_band = stream_ds.GetRasterBand(1)
-    cdef float stream_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        stream_uri)
-    cdef float cell_size = natcap.invest.pygeoprocessing_0_3_3.get_cell_size_from_uri(stream_uri)
+    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
+    cdef _ManagedRaster crit_len_raster = _ManagedRaster(
+        crit_len_path, 1, False)
+    cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
+        retention_eff_lulc_path, 1, False)
+    cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
+        effective_retention_path, 1, True)
 
-    effective_retention_ds = gdal.OpenEx(effective_retention_uri, gdal.GA_Update)
-    effective_retention_band = effective_retention_ds.GetRasterBand(1)
-
-    retention_eff_lulc_ds = gdal.OpenEx(retention_eff_lulc_uri)
-    retention_eff_lulc_band = retention_eff_lulc_ds.GetRasterBand(1)
-
-    crit_len_ds = gdal.OpenEx(crit_len_uri)
-    crit_len_band = crit_len_ds.GetRasterBand(1)
-
-    outflow_weights_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
-    outflow_direction_uri = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    return
+    ####################
+    """
+    outflow_weights_path = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
+    outflow_direction_path = natcap.invest.pygeoprocessing_0_3_3.temporary_filename()
     natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
-        flow_direction_uri, outflow_weights_uri, outflow_direction_uri)
-    outflow_weights_ds = gdal.OpenEx(outflow_weights_uri)
+        flow_direction_path, outflow_weights_path, outflow_direction_path)
+    outflow_weights_ds = gdal.OpenEx(outflow_weights_path)
     outflow_weights_band = outflow_weights_ds.GetRasterBand(1)
     cdef float outflow_weights_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        outflow_weights_uri)
-    outflow_direction_ds = gdal.OpenEx(outflow_direction_uri)
+        outflow_weights_path)
+    outflow_direction_ds = gdal.OpenEx(outflow_direction_path)
     outflow_direction_band = outflow_direction_ds.GetRasterBand(1)
     cdef int outflow_direction_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-        outflow_direction_uri)
+        outflow_direction_path)
     cdef int block_col_size, block_row_size
     block_col_size, block_row_size = stream_band.GetBlockSize()
     cdef int n_global_block_rows = int(ceil(float(n_rows) / block_row_size))
@@ -565,5 +718,6 @@ def ndr_eff_calculation(
 
     for dataset in [outflow_weights_ds, outflow_direction_ds]:
         gdal.Dataset.__swig_destroy__(dataset)
-    for dataset_uri in [outflow_weights_uri, outflow_direction_uri]:
+    for dataset_uri in [outflow_weights_path, outflow_direction_path]:
         os.remove(dataset_uri)
+    """
