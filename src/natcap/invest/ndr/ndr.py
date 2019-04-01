@@ -378,10 +378,21 @@ def execute(args):
 
     s_inv_task = task_graph.add_task(
         func=invert_raster_values,
-        args=(f_reg['threshold_slope_task'], f_reg['s_factor_inverse_path']),
+        args=(f_reg['thresholded_slope_path'], f_reg['s_factor_inverse_path']),
         target_path_list=[f_reg['s_factor_inverse_path']],
         dependent_task_list=[threshold_slope_task],
         task_name='s inv')
+
+    d_dn_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            f_reg['d_dn_path']),
+        kwargs={'weight_raster_path_band': (
+            f_reg['s_factor_inverse_path'], 1)},
+        dependent_task_list=[stream_extraction_task, s_inv_task],
+        target_path_list=[f_reg['d_dn_path']],
+        task_name='d dn')
 
     task_graph.close()
     task_graph.join()
@@ -398,11 +409,6 @@ def execute(args):
     output_datasource = driver.CreateCopy(
         watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
-
-    LOGGER.info('calculating d_dn')
-    natcap.invest.pygeoprocessing_0_3_3.routing.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['stream_path'], f_reg['d_dn_path'],
-        factor_uri=f_reg['s_factor_inverse_path'])
 
     LOGGER.info('calculate ic')
     ic_nodata = -9999.0
