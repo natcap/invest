@@ -402,6 +402,15 @@ def execute(args):
         dependent_task_list=[d_dn_task, d_up_task],
         task_name='calc ic')
 
+    for nutrient in nutrients_to_process:
+        effective_retention_path = (
+            f_reg['effective_retention_%s_path' % nutrient])
+        eff_path = f_reg['eff_%s_path' % nutrient]
+        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
+        ndr_core.ndr_eff_calculation(
+            f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
+            crit_len_path, effective_retention_path)
+
     task_graph.close()
     task_graph.join()
     return
