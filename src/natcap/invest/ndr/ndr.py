@@ -394,6 +394,14 @@ def execute(args):
         target_path_list=[f_reg['d_dn_path']],
         task_name='d dn')
 
+    ic_task = task_graph.add_task(
+        func=calculate_ic,
+        args=(
+            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_factor_path']),
+        target_path_list=[f_reg['ic_factor_path']],
+        dependent_task_list=[d_dn_task, d_up_task],
+        task_name='calc ic')
+
     task_graph.close()
     task_graph.join()
     return
@@ -409,26 +417,6 @@ def execute(args):
     output_datasource = driver.CreateCopy(
         watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
-
-    LOGGER.info('calculate ic')
-    ic_nodata = -9999.0
-    d_up_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['d_up_path'])
-    d_dn_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(f_reg['d_dn_path'])
-
-    def ic_op(d_up, d_dn):
-        """Calculate IC0."""
-        valid_mask = (
-            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
-            (d_dn != 0))
-        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-        result[:] = ic_nodata
-        result[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
-        return result
-
-    natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-        [f_reg['d_up_path'], f_reg['d_dn_path']], ic_op,
-        f_reg['ic_factor_path'], gdal.GDT_Float32, ic_nodata, out_pixel_size,
-        "intersection", dataset_to_align_index=0, vectorize_op=False)
 
     ic_min, ic_max, _, _ = (
         natcap.invest.pygeoprocessing_0_3_3.get_statistics_from_uri(f_reg['ic_factor_path']))
@@ -1077,3 +1065,25 @@ def invert_raster_values(base_raster_path, target_raster_path):
     pygeoprocessing.raster_calculator(
         ((base_raster_path, 1),), inverse_op,
         target_raster_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def calculate_ic(d_up_path, d_dn_path, target_ic_path):
+    """Calculate IC as log_10(d_up/d_dn)."""
+    LOGGER.info('calculate ic')
+    ic_nodata = float(numpy.finfo(numpy.float32).min)
+    d_up_nodata = pygeoprocessing.get_raster_info(d_up_path)['nodata'][0]
+    d_dn_nodata = pygeoprocessing.get_raster_info(d_dn_path)['nodata'][0]
+
+    def ic_op(d_up, d_dn):
+        """Calculate IC0."""
+        valid_mask = (
+            (d_up != d_up_nodata) & (d_dn != d_dn_nodata) & (d_up != 0) &
+            (d_dn != 0))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = ic_nodata
+        result[valid_mask] = numpy.log10(d_up[valid_mask] / d_dn[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(d_up_path, 1), (d_dn_path, 1)], ic_op,
+        target_ic_path, gdal.GDT_Float32, ic_nodata)
