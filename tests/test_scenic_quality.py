@@ -813,7 +813,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
                         validation_errors[0][1])
 
 
-
 class ViewshedTests(unittest.TestCase):
     """Tests for pygeoprocessing's viewshed."""
 
