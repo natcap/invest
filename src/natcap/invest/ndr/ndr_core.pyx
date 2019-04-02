@@ -17,7 +17,7 @@ from cython.operator cimport preincrement as inc
 from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
-from libcpp.deque cimport deque
+from libcpp.stack cimport stack
 from libcpp.map cimport map
 from libc.math cimport atan
 from libc.math cimport atan2
@@ -348,16 +348,16 @@ cdef class _ManagedRaster:
 
 
 def ndr_eff_calculation(
-        flow_direction_path, stream_path, retention_eff_lulc_path,
+        mfd_flow_direction_path, stream_path, retention_eff_lulc_path,
         crit_len_path, effective_retention_path):
     """Calculate flow downhill effective_retention to the channel.
 
         Parameters:
-            flow_direction_path (string) - (input) a path to a raster with
-                d-infinity flow directions.
+            mfd_flow_direction_path (string) - (input) a path to a raster with
+                pygeoprocessing.routing MFD flow direction values.
             stream_path (string) - (input) a raster where 1 indicates a stream
                 all other values ignored must be same dimensions and projection
-                as flow_direction_path.
+                as mfd_flow_direction_path.
             retention_eff_lulc_path (string) - (input) a raster indicating the
                 maximum retention efficiency that the landcover on that pixel
                 can accumulate.
@@ -372,31 +372,55 @@ def ndr_eff_calculation(
 
     cdef float effective_retention_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
-        flow_direction_path, effective_retention_path, gdal.GDT_Float32,
+        mfd_flow_direction_path, effective_retention_path, gdal.GDT_Float32,
         [effective_retention_nodata])
+    _, to_process_flow_directions_path = tempfile.mkstemp(
+        suffix='.tif', prefix='flow_to_process',
+        dir=os.path.dirname(effective_retention_path))
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, to_process_flow_directions_path,
+        gdal.GDT_Byte, [None])
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_rows, n_cols
-    flow_dir_info = pygeoprocessing.get_raster_info(flow_direction_path)
+    flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     n_rows, n_cols = flow_dir_info['raster_size']
 
-    cdef deque[int] visit_stack
+    cdef stack[int] processing_stack
     stream_info = pygeoprocessing.get_raster_info(stream_path)
     cdef float stream_nodata = stream_info['nodata'][0]
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(stream_info['pixel_size'][0])
 
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
+    stream_gdal_raster = gdal.OpenEx(stream_path, gdal.OF_RASTER)
+    stream_band = stream_gdal_raster.GetRasterBand(1)
     cdef _ManagedRaster crit_len_raster = _ManagedRaster(
         crit_len_path, 1, False)
     cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
         retention_eff_lulc_path, 1, False)
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
+    cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
+        to_process_flow_directions_path, 1, True)
 
+    for offset_dict in pygeoprocessing.iterblocks(
+            (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+        stream_array = stream_band.ReadAsArray(
+            **offset_dict).astype(numpy.float64)
+        for row_index in range(win_ysize):
+            for col_index in range(win_xsize):
+                if stream_array[row_index, col_index] == 1:
+                    processing_stack.push(
+                        (yoff+row_index)*n_cols + (xoff + col_index))
+                    print(row_index, col_index)
     return
     ####################
     """
@@ -509,7 +533,7 @@ def ndr_eff_calculation(
                             row_block_offset, col_block_offset] = 1
                         cache_dirty[row_index, col_index] = 1
 
-    cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
+    cdef int neighbor_outflow_directoin, neighbor_index, outflow_direction
     cdef float neighbor_outflow_weight, current_effective_retention
     cdef float outflow_weight, neighbor_effective_retention, step_size
     cdef float downstream_effective_retention, current_stream
