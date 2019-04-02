@@ -374,12 +374,10 @@ def ndr_eff_calculation(
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, effective_retention_path, gdal.GDT_Float32,
         [effective_retention_nodata])
-    _, to_process_flow_directions_path = tempfile.mkstemp(
+    fp, to_process_flow_directions_path = tempfile.mkstemp(
         suffix='.tif', prefix='flow_to_process',
         dir=os.path.dirname(effective_retention_path))
-    pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, to_process_flow_directions_path,
-        gdal.GDT_Byte, [None])
+    os.close(fp)
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -404,6 +402,18 @@ def ndr_eff_calculation(
         retention_eff_lulc_path, 1, False)
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
+
+    # create direction raster in bytes
+    def _mfd_to_flow_dir_op(mfd_array):
+        result = numpy.zeros(mfd_array.shape, dtype=numpy.int8)
+        for i in range(8):
+            result[:] |= (((mfd_array >> (i*8)) & 0xF) > 0) << i
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(mfd_flow_direction_path, 1)], _mfd_to_flow_dir_op,
+        to_process_flow_directions_path, gdal.GDT_Byte, None)
+
     cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
         to_process_flow_directions_path, 1, True)
 
