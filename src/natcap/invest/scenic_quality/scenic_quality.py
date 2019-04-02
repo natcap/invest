@@ -14,14 +14,18 @@ from osgeo import osr
 import taskgraph
 import pygeoprocessing
 
-from natcap.invest.scenic_quality.viewshed import (
-    viewshed, FLOAT_GTIFF_CREATION_OPTIONS, BYTE_GTIFF_CREATION_OPTIONS)
+from natcap.invest.scenic_quality.viewshed import viewshed
 from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
 _BYTE_NODATA = 255  # Largest value a byte can hold
+BYTE_GTIFF_CREATION_OPTIONS = (
+    'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+    'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+FLOAT_GTIFF_CREATION_OPTIONS = (
+    'PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS
 
 _OUTPUT_BASE_FILES = {
     'viewshed_value': 'vshed_value.tif',
