@@ -383,13 +383,12 @@ def ndr_eff_calculation(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int n_rows, n_cols
+    cdef int n_cols
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
-    n_rows, n_cols = flow_dir_info['raster_size']
+    _, n_cols = flow_dir_info['raster_size']
 
     cdef stack[int] processing_stack
     stream_info = pygeoprocessing.get_raster_info(stream_path)
-    cdef float stream_nodata = stream_info['nodata'][0]
     # cell sizes must be square, so no reason to test at this point.
     cdef float cell_size = abs(stream_info['pixel_size'][0])
 
@@ -418,6 +417,15 @@ def ndr_eff_calculation(
 
     cdef _ManagedRaster to_process_flow_directions_raster = _ManagedRaster(
         to_process_flow_directions_path, 1, True)
+
+    cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
+    cdef int global_col, global_row
+    cdef int flat_index, outflow_weight, outflow_weight_sum, flow_dir
+    cdef int ds_col, ds_row, i
+    cdef float current_step_factor, step_size, crit_len
+    cdef int neighbor_row, neighbor_col, neighbor_outflow_dir
+    cdef int neighbor_outflow_dir_mask, neighbor_process_flow_dir
+    cdef numpy.ndarray[numpy.int8_t, ndim=2] stream_array
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -449,13 +457,13 @@ def ndr_eff_calculation(
             if stream_raster.get(global_col, global_row) == 1:
                 retention_eff_lulc_raster.set(global_row, global_col, 0)
             else:
-                flow_dir = mfd_flow_direction_raster.get(
+                flow_dir = <int>mfd_flow_direction_raster.get(
                     global_col, global_row)
-                flow_dir_sum = 0
                 retention_eff_lulc = retention_eff_lulc_raster.get(
                     global_row, global_col)
                 working_retention_eff = 0.0
-                crit_len = crit_len_raster.get(global_col, global_row)
+                crit_len = <float>crit_len_raster.get(global_col, global_row)
+                outflow_weight_sum = 0
                 for i in range(8):
                     outflow_weight = (flow_dir >> (i*4)) & 0xF
                     if outflow_weight == 0:
@@ -469,7 +477,7 @@ def ndr_eff_calculation(
                         step_size = cell_size
                     current_step_factor = exp(-5*step_size/crit_len)
                     neighbor_effective_retention = (
-                        retention_eff_lulc_raster.get(ds_row, ds_col))
+                        effective_retention_raster.get(ds_row, ds_col))
 
                     if neighbor_effective_retention >= retention_eff_lulc:
                         working_retention_eff += (
@@ -484,31 +492,41 @@ def ndr_eff_calculation(
                         working_retention_eff += (
                             intermediate_retention * outflow_weight)
 
-                if working_retention_eff > 0:
+                if outflow_weight_sum > 0:
                     working_retention_eff /= float(outflow_weight_sum)
-
-                    retention_eff_lulc_raster.set(
+                    effective_retention_raster.set(
                         global_row, global_col, working_retention_eff)
                 else:
+                    LOGGER.error('outflow_weight_sum %s', outflow_weight_sum)
                     raise Exception("got to a cell that has no outflow!")
             # search upstream to see if we need to push a cell on the stack
             for i in range(8):
                 neighbor_col = col_offsets[i] + global_col
                 neighbor_row = row_offsets[i] + global_row
                 neighbor_outflow_dir = inflow_offsets[i]
-
+                neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
                     to_process_flow_directions_raster.get(
                         neighbor_col, neighbor_row))
+                if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
+                    # no outflow
+                    continue
 
+                LOGGER.debug(
+                    "neighbor_process, outflow: %s %s",
+                    neighbor_process_flow_dir, neighbor_outflow_dir_mask)
                 # mask out the outflow dir
-                neighbor_process_flow_dir &= ~(1 << neighbor_outflow_dir)
+                neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
+                LOGGER.debug(
+                    "neighbor_process after mask: %s",
+                    neighbor_process_flow_dir)
                 to_process_flow_directions_raster.set(
                     neighbor_col, neighbor_row, neighbor_process_flow_dir)
                 if neighbor_process_flow_dir == 0:
                     # if 0 then all downstream have been processed,
                     # push on stack, otherwise another downstream pixel will
                     # pick it up
+                    LOGGER.debug("process flow dir is 0")
                     processing_stack.push(
                         neighbor_row*n_cols + neighbor_col)
 
@@ -626,7 +644,7 @@ def ndr_eff_calculation(
                             row_block_offset, col_block_offset] = 1
                         cache_dirty[row_index, col_index] = 1
 
-    cdef int neighbor_outflow_directoin, neighbor_index, outflow_direction
+    cdef int neighbor_outflow_direction, neighbor_index, outflow_direction
     cdef float neighbor_outflow_weight, current_effective_retention
     cdef float outflow_weight, neighbor_effective_retention, step_size
     cdef float downstream_effective_retention, current_stream
