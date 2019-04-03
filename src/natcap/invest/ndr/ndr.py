@@ -61,6 +61,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'processed_cell_path': 'processed_cell.tif',
+    'dist_to_channel_path': 'dist_to_channel.tif'
     }
 
 _CACHE_BASE_FILES = {
@@ -324,6 +325,15 @@ def execute(args):
         target_path_list=[f_reg['d_dn_path']],
         task_name='d dn')
 
+    dist_to_channel_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            f_reg['dist_to_channel_path']),
+        dependent_task_list=[stream_extraction_task],
+        target_path_list=[f_reg['dist_to_channel_path']],
+        task_name='dist to channel')
+
     ic_task = task_graph.add_task(
         func=calculate_ic,
         args=(
@@ -429,9 +439,9 @@ def execute(args):
             args=(
                 float(args['subsurface_eff_%s' % nutrient]),
                 float(args['subsurface_critical_length_%s' % nutrient]),
-                f_reg['d_dn_path'], sub_ndr_path),
+                f_reg['dist_to_channel_path'], sub_ndr_path),
             target_path_list=[sub_ndr_path],
-            dependent_task_list=[d_dn_task],
+            dependent_task_list=[dist_to_channel_task],
             task_name='sub ndr %s' % nutrient)
 
     task_graph.close()
