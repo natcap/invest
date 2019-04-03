@@ -466,7 +466,7 @@ def execute(args):
         ndr_path = f_reg['ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
-        def calculate_ndr(effective_retention_array, ic_array):
+        def _calculate_ndr(effective_retention_array, ic_array):
             """Calculate NDR."""
             valid_mask = (
                 (effective_retention_array != effective_retention_nodata) &
@@ -481,7 +481,7 @@ def execute(args):
 
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
             [effective_retention_path, f_reg['ic_factor_path']],
-            calculate_ndr, ndr_path, gdal.GDT_Float32, ndr_nodata,
+            _calculate_ndr, ndr_path, gdal.GDT_Float32, ndr_nodata,
             out_pixel_size, 'intersection', vectorize_op=False)
 
         sub_effective_retention_path = (
@@ -1109,20 +1109,22 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
 def calculate_ndr(
         effective_retention_path, ic_factor_path, k_param, target_ndr_path):
     """Calculate NDR as a function of Equation 4 in the user's guide."""
-    ic_factor_raster = gdal.OpenEx(ic_factor_path, gdal.OF_VECTOR)
+    ic_factor_raster = gdal.OpenEx(ic_factor_path, gdal.OF_RASTER)
     ic_factor_band = ic_factor_raster.GetRasterBand(1)
-    ic_min, ic_max, _, _ = ic_factor_band.GetStatistics()
+    ic_min, ic_max, _, _ = ic_factor_band.GetStatistics(0, 1)
     ic_factor_band = None
     ic_factor_raster = None
     ic_0_param = (ic_min + ic_max) / 2.0
-
+    effective_retention_nodata = pygeoprocessing.get_raster_info(
+        effective_retention_path)['nodata'][0]
+    ic_nodata = pygeoprocessing.get_raster_info(ic_factor_path)['nodata'][0]
     def _calculate_ndr_op(effective_retention_array, ic_array):
             """Calculate NDR."""
             valid_mask = (
                 (effective_retention_array != effective_retention_nodata) &
                 (ic_array != ic_nodata))
             result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-            result[:] = ndr_nodata
+            result[:] = _TARGET_NODATA
             result[valid_mask] = (
                 (1.0 - effective_retention_array[valid_mask]) /
                 (1.0 + numpy.exp(
