@@ -38,6 +38,8 @@ cdef int BLOCK_BITS = 8
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
+cdef int is_close(double x, double y):
+    return abs(x-y) <= (1e-8+1e-05*abs(y))
 
 # this is a least recently used cache written in C++ in an external file,
 # exposing here so _ManagedRaster can use it
@@ -395,8 +397,12 @@ def ndr_eff_calculation(
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
     cdef _ManagedRaster crit_len_raster = _ManagedRaster(
         crit_len_path, 1, False)
+    cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
+        crit_len_path)['nodata'][0]
     cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
         retention_eff_lulc_path, 1, False)
+    cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
+        retention_eff_lulc_path)['nodata'][0]
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
@@ -472,16 +478,20 @@ def ndr_eff_calculation(
             global_row = flat_index / n_cols
             global_col = flat_index % n_cols
 
-            if stream_raster.get(global_col, global_row) == 1:
-                retention_eff_lulc_raster.set(global_col, global_row, 0)
+            crit_len = <float>crit_len_raster.get(global_col, global_row)
+            retention_eff_lulc = retention_eff_lulc_raster.get(
+                global_col, global_row)
+            flow_dir = <int>mfd_flow_direction_raster.get(
+                    global_col, global_row)
+            if stream_raster.get(global_col, global_row) == 1 or (
+                    is_close(crit_len_nodata, crit_len) or
+                    is_close(retention_eff_lulc, retention_eff_nodata) or
+                    flow_dir == 0):
+                effective_retention_raster.set(global_col, global_row, 0)
             else:
-                flow_dir = <int>mfd_flow_direction_raster.get(
-                    global_col, global_row)
-                retention_eff_lulc = retention_eff_lulc_raster.get(
-                    global_col, global_row)
                 working_retention_eff = 0.0
-                crit_len = <float>crit_len_raster.get(global_col, global_row)
                 outflow_weight_sum = 0
+                LOGGER.info('start loop')
                 for i in range(8):
                     outflow_weight = (flow_dir >> (i*4)) & 0xF
                     if outflow_weight == 0:
@@ -489,18 +499,21 @@ def ndr_eff_calculation(
                     outflow_weight_sum += outflow_weight
                     ds_col = col_offsets[i] + global_col
                     if ds_col < 0 or ds_col >= n_cols:
+                        LOGGER.info('skip because ds_col < 0 or >= n_cols %s %s', ds_col, n_cols)
                         continue
                     ds_row = row_offsets[i] + global_row
                     if ds_row < 0 or ds_row >= n_rows:
+                        LOGGER.info('skip because ds_row < 0 or >= n_rows %s %s', ds_row, n_rows)
                         continue
                     if i % 2 == 1:
                         step_size = cell_size*1.41421356237
                     else:
                         step_size = cell_size
+                    # guard against an area that has flow but no landcover
                     current_step_factor = exp(-5*step_size/crit_len)
+
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))
-
                     if neighbor_effective_retention >= retention_eff_lulc:
                         working_retention_eff += (
                             neighbor_effective_retention) * outflow_weight
@@ -513,9 +526,13 @@ def ndr_eff_calculation(
                             intermediate_retention = retention_eff_lulc
                         working_retention_eff += (
                             intermediate_retention * outflow_weight)
-
+                    LOGGER.debug('working_retention_eff %s %s', working_retention_eff, i)
+                LOGGER.info('end loop %s %s %s', outflow_weight_sum, global_col, global_row)
                 if outflow_weight_sum > 0:
+                    old_eff = working_retention_eff
                     working_retention_eff /= float(outflow_weight_sum)
+                    if working_retention_eff == 0:
+                        LOGGER.error('setting %s %s %s %s %s %s %s %s', retention_eff_lulc, intermediate_retention, outflow_weight, outflow_weight_sum, old_eff, retention_eff_lulc, neighbor_effective_retention, current_step_factor)
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
                 else:
@@ -534,6 +551,9 @@ def ndr_eff_calculation(
                 neighbor_process_flow_dir = <int>(
                     to_process_flow_directions_raster.get(
                         neighbor_col, neighbor_row))
+                if neighbor_process_flow_dir == 0:
+                    # skip, due to loop invariant this must be a nodata pixel
+                    continue
                 if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
                     # no outflow
                     continue

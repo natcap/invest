@@ -290,7 +290,6 @@ def execute(args):
             subsurface_proportion_type = 'proportion_subsurface_n'
         else:
             subsurface_proportion_type = None
-        LOGGER.info("Mapping %s load to LULC", nutrient)
         load_task = task_graph.add_task(
             func=calculate_load,
             args=(
@@ -446,7 +445,6 @@ def execute(args):
     for nutrient in nutrients_to_process:
         effective_retention_path = (
             f_reg['effective_retention_%s_path' % nutrient])
-        LOGGER.info('calculate effective retention')
         eff_path = f_reg['eff_%s_path' % nutrient]
         crit_len_path = f_reg['crit_len_%s_path' % nutrient]
         ndr_core.ndr_eff_calculation(
@@ -455,7 +453,6 @@ def execute(args):
         effective_retention_nodata = (
             natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
                 effective_retention_path))
-        LOGGER.info('calculate NDR')
         ndr_path = f_reg['ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
@@ -479,7 +476,6 @@ def execute(args):
 
         sub_effective_retention_path = (
             f_reg['sub_effective_retention_%s_path' % nutrient])
-        LOGGER.info('calculate subsurface effective retention')
         sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
         ndr_core.ndr_eff_calculation(
             f_reg['flow_direction_path'], f_reg['stream_path'], sub_eff_path,
@@ -487,7 +483,6 @@ def execute(args):
         sub_effective_retention_nodata = (
             natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
                 sub_effective_retention_path))
-        LOGGER.info('calculate sub NDR')
         sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
