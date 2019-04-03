@@ -10,9 +10,12 @@ from osgeo import ogr
 from osgeo import gdal
 import numpy
 
+import pygeoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
 import natcap.invest.pygeoprocessing_0_3_3.testing
 from natcap.invest import reporting
+
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 
@@ -270,7 +273,7 @@ def read_population_csv(args, uri):
                 "Region vector shapes do not match. %s" % uri)
 
     # Check that information is correct
-    assert natcap.invest.pygeoprocessing_0_3_3.testing.isclose(
+    assert pygeoprocessing.testing.isclose(
         pop_dict['Larvaldispersal'].sum(), 1), (
             "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
 
@@ -528,9 +531,8 @@ def _verify_single_params(args, create_outputs=True):
         intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
         params_dict['output_dir'] = output_dir
         params_dict['intermediate_dir'] = intermediate_dir
-        natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
-                                            output_dir,
-                                            intermediate_dir])
+        utils.make_directories(
+            [args['workspace_dir'], output_dir, intermediate_dir])
 
     # Check that timesteps is positive integer
     params_dict['total_timesteps'] = int(float(args['total_timesteps'])) + 1
