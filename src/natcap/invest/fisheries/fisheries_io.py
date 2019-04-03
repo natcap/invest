@@ -167,22 +167,22 @@ def read_population_csvs(args):
         ]
     '''
     if args['do_batch'] is False:
-        population_csv_uri_list = [args['population_csv_uri']]
+        population_csv_path_list = [args['population_csv_uri']]
     else:
-        population_csv_uri_list = _listdir(
+        population_csv_path_list = _listdir(
             args['population_csv_dir'])
 
     pop_list = []
-    for uri in population_csv_uri_list:
-        ext = os.path.splitext(uri)[1]
+    for path in population_csv_path_list:
+        ext = os.path.splitext(path)[1]
         if ext == '.csv':
-            pop_dict = read_population_csv(args, uri)
+            pop_dict = read_population_csv(args, path)
             pop_list.append(pop_dict)
 
     return pop_list
 
 
-def read_population_csv(args, uri):
+def read_population_csv(args, path):
     '''
     Parses and verifies a single Population Parameters CSV file
 
@@ -196,7 +196,7 @@ def read_population_csv(args, uri):
 
     Args:
         args (dictionary): arguments provided by user
-        uri (string): the particular Population Parameters CSV file to
+        path (string): the particular Population Parameters CSV file to
             parse and verifiy
 
     Returns:
@@ -224,8 +224,8 @@ def read_population_csv(args, uri):
             'Larvaldispersal': numpy.array([...]),
         }
     '''
-    pop_dict = _parse_population_csv(uri, args['sexsp'])
-    pop_dict['population_csv_uri'] = uri
+    pop_dict = _parse_population_csv(path, args['sexsp'])
+    pop_dict['population_csv_uri'] = path
 
     # Check that required information exists
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
@@ -237,29 +237,29 @@ def read_population_csv(args, uri):
     if (args['recruitment_type'] != 'Fixed'):
         assert 'Maturity' in pop_dict.keys(), (
             "Population Parameters File must contain a 'Maturity' vector when "
-            "running the given recruitment function. %s" % uri)
+            "running the given recruitment function. %s" % path)
 
     if (args['population_type'] == 'Stage-Based'):
         assert 'Duration' in pop_dict.keys(), (
             "Population Parameters File must contain a 'Duration' vector when "
-            "running Stage-Based models. %s" % uri)
+            "running Stage-Based models. %s" % path)
 
     if (args['recruitment_type'] in ['Beverton-Holt', 'Ricker']) and (
             args['spawn_units'] == 'Weight'):
         assert 'Weight' in pop_dict.keys(), (
             "Population Parameters File must contain a 'Weight' vector when "
             "Spawners are calulated by weight using the Beverton-Holt or "
-            "Ricker recruitment functions. %s" % uri)
+            "Ricker recruitment functions. %s" % path)
 
     if (args['harvest_units'] == 'Weight'):
         assert 'Weight' in pop_dict.keys(), (
             "Population Parameters File must contain a 'Weight' vector when "
-            "'Harvest by Weight' is selected. %s" % uri)
+            "'Harvest by Weight' is selected. %s" % path)
 
     if (args['recruitment_type'] == 'Fecundity'):
         assert 'Fecundity' in pop_dict.keys(), (
             "Population Parameters File must contain a 'Fecundity' vector "
-            "when using the Fecundity recruitment function. %s" % uri)
+            "when using the Fecundity recruitment function. %s" % path)
 
     # Make sure parameters are initialized even when user does not enter data
     if 'Larvaldispersal' not in pop_dict.keys():
@@ -270,12 +270,12 @@ def read_population_csv(args, uri):
     # Check that similar vectors have same shapes (NOTE: checks region vectors)
     assert (pop_dict['Larvaldispersal'].shape ==
             pop_dict['Exploitationfraction'].shape), (
-                "Region vector shapes do not match. %s" % uri)
+                "Region vector shapes do not match. %s" % path)
 
     # Check that information is correct
     assert pygeoprocessing.testing.isclose(
         pop_dict['Larvaldispersal'].sum(), 1), (
-            "The Larvaldisperal vector does not sum exactly to one.. %s" % uri)
+            "The Larvaldisperal vector does not sum exactly to one.. %s" % path)
 
     # Check that certain attributes have fraction elements
     Frac_Vectors = ['Survnaturalfrac', 'Vulnfishing',
@@ -286,7 +286,7 @@ def read_population_csv(args, uri):
         a = pop_dict[attr]
         assert (a.min() >= 0.0 and a.max() <= 1.0), (
             "The %s vector has elements that are not decimal "
-            "fractions. %s") % (attr, uri)
+            "fractions. %s") % (attr, path)
 
     # Make duration vector of type integer
     if args['population_type'] == 'Stage-Based':
@@ -304,7 +304,7 @@ def read_population_csv(args, uri):
     return pop_dict
 
 
-def _parse_population_csv(uri, sexsp):
+def _parse_population_csv(path, sexsp):
     '''
     Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
@@ -316,7 +316,7 @@ def _parse_population_csv(uri, sexsp):
             Exploitationfraction, Larvaldispersal, Classes, Regions
 
     Args:
-        uri (string): uri to population parameters csv file
+        path (string): path to population parameters csv file
         sexsp (int): indicates whether classes are distinguished by sex
 
     Returns:
@@ -334,7 +334,7 @@ def _parse_population_csv(uri, sexsp):
     csv_data = []
     pop_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -449,7 +449,7 @@ def _parse_migration_tables(args, class_list):
     will be thrown.
 
     Args:
-        uri (string): filepath to the directory of migration tables
+        path (string): filepath to the directory of migration tables
 
     Returns:
         mig_dict (dictionary)
@@ -465,8 +465,8 @@ def _parse_migration_tables(args, class_list):
     mig_dict = {}
 
     if args['migr_cont']:
-        uri = os.path.abspath(args['migration_dir'])
-        for mig_csv in _listdir(uri):
+        path = os.path.abspath(args['migration_dir'])
+        for mig_csv in _listdir(path):
             basename = os.path.splitext(os.path.basename(mig_csv))[0]
             class_name = basename.split('_').pop().lower()
             if class_name.lower() in class_list:
@@ -552,12 +552,12 @@ def _listdir(path):
             gather all files
 
     Returns:
-        uris (list): A list of full URIs contained within 'path'
+        paths (list): A list of full paths contained within 'path'
     '''
     file_names = os.listdir(path)
-    uris = map(lambda x: os.path.join(path, x), file_names)
+    paths = map(lambda x: os.path.join(path, x), file_names)
 
-    return uris
+    return paths
 
 
 # Helper functions for navigating CSV files
@@ -692,7 +692,7 @@ def _create_intermediate_csv(vars_dict):
             'results_suffix'] + '.csv'
     else:
         filename = 'population_by_time_step.csv'
-    uri = os.path.join(
+    path = os.path.join(
         vars_dict['intermediate_dir'], filename)
 
     Regions = vars_dict['Regions']
@@ -702,7 +702,7 @@ def _create_intermediate_csv(vars_dict):
     sexsp = int(vars_dict['sexsp'])
     Sexes = ['Female', 'Male']
 
-    with open(uri, 'wb') as c_file:
+    with open(path, 'wb') as c_file:
         # c_writer = csv.writer(c_file)
         if sexsp == 2:
             line = "Time Step, Region, Class, Sex, Numbers\n"
@@ -745,7 +745,7 @@ def _create_results_csv(vars_dict):
         filename = 'results_table_' + vars_dict['results_suffix'] + '.csv'
     else:
         filename = 'results_table.csv'
-    uri = os.path.join(vars_dict['output_dir'], filename)
+    path = os.path.join(vars_dict['output_dir'], filename)
 
     recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
@@ -754,7 +754,7 @@ def _create_results_csv(vars_dict):
     equilibrate_timestep = float(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
-    with open(uri, 'wb') as csv_file:
+    with open(path, 'wb') as csv_file:
         csv_writer = csv.writer(csv_file)
 
         total_timesteps = vars_dict['total_timesteps']
@@ -817,7 +817,7 @@ def _create_results_html(vars_dict):
         filename = 'results_page_' + vars_dict['results_suffix'] + '.html'
     else:
         filename = 'results_page.html'
-    uri = os.path.join(vars_dict['output_dir'], filename)
+    path = os.path.join(vars_dict['output_dir'], filename)
 
     recruitment_type = vars_dict['recruitment_type']
     Spawners_t = vars_dict['Spawners_t']
@@ -829,7 +829,7 @@ def _create_results_html(vars_dict):
     # Set Reporting Arguments
     rep_args = {}
     rep_args['title'] = "Fisheries Results Page"
-    rep_args['out_uri'] = uri
+    rep_args['out_uri'] = path
     rep_args['sortable'] = True  # JS Functionality
     rep_args['totals'] = True  # JS Functionality
 
