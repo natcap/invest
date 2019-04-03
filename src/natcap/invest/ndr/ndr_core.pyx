@@ -393,8 +393,6 @@ def ndr_eff_calculation(
     cdef float cell_size = abs(stream_info['pixel_size'][0])
 
     cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
-    stream_gdal_raster = gdal.OpenEx(stream_path, gdal.OF_RASTER)
-    stream_band = stream_gdal_raster.GetRasterBand(1)
     cdef _ManagedRaster crit_len_raster = _ManagedRaster(
         crit_len_path, 1, False)
     cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
@@ -425,7 +423,7 @@ def ndr_eff_calculation(
     cdef float current_step_factor, step_size, crit_len
     cdef int neighbor_row, neighbor_col, neighbor_outflow_dir
     cdef int neighbor_outflow_dir_mask, neighbor_process_flow_dir
-    cdef numpy.ndarray[numpy.int8_t, ndim=2] stream_array
+    cdef int outflow_dirs, dir_mask
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -433,18 +431,38 @@ def ndr_eff_calculation(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
-        stream_array = stream_band.ReadAsArray(**offset_dict).astype(
-            numpy.int8)
         for row_index in range(win_ysize):
+            global_row = yoff + row_index
             for col_index in range(win_xsize):
-                if stream_array[row_index, col_index] == 1:
-                    global_row = yoff + row_index
-                    global_col = xoff + col_index
-                    # this is a stream pixel, all downstream are processed.
+                global_col = xoff + col_index
+                outflow_dirs = <int>to_process_flow_directions_raster.get(
+                    global_col, global_row)
+                should_seed = 0
+                # see if this pixel drains to nodata or the edge, if so it's
+                # a drain
+                for i in range(8):
+                    dir_mask = 1 << i
+                    if outflow_dirs & dir_mask > 0:
+                        neighbor_col = col_offsets[i] + global_col
+                        if neighbor_col < 0 or neighbor_col >= n_cols:
+                            should_seed = 1
+                            outflow_dirs &= ~dir_mask
+                        neighbor_row = row_offsets[i] + global_row
+                        if neighbor_row < 0 or neighbor_row >= n_rows:
+                            should_seed = 1
+                            outflow_dirs &= ~dir_mask
+                        neighbor_flow_dirs = (
+                            to_process_flow_directions_raster.get(
+                                neighbor_col, neighbor_row))
+                        if neighbor_flow_dirs == 0:
+                            should_seed = 1
+                            outflow_dirs &= ~dir_mask
+
+                if should_seed:
+                    # mark all outflow directions processed
                     to_process_flow_directions_raster.set(
-                        global_col, global_row, 0)
-                    processing_stack.push(
-                        (yoff+row_index)*n_cols + (xoff + col_index))
+                        global_col, global_row, outflow_dirs)
+                    processing_stack.push(global_row*n_cols+global_col)
 
         while processing_stack.size() > 0:
             # loop invariant, we don't push a cell on the stack that
@@ -455,12 +473,12 @@ def ndr_eff_calculation(
             global_col = flat_index % n_cols
 
             if stream_raster.get(global_col, global_row) == 1:
-                retention_eff_lulc_raster.set(global_row, global_col, 0)
+                retention_eff_lulc_raster.set(global_col, global_row, 0)
             else:
                 flow_dir = <int>mfd_flow_direction_raster.get(
                     global_col, global_row)
                 retention_eff_lulc = retention_eff_lulc_raster.get(
-                    global_row, global_col)
+                    global_col, global_row)
                 working_retention_eff = 0.0
                 crit_len = <float>crit_len_raster.get(global_col, global_row)
                 outflow_weight_sum = 0
@@ -481,7 +499,7 @@ def ndr_eff_calculation(
                         step_size = cell_size
                     current_step_factor = exp(-5*step_size/crit_len)
                     neighbor_effective_retention = (
-                        effective_retention_raster.get(ds_row, ds_col))
+                        effective_retention_raster.get(ds_col, ds_row))
 
                     if neighbor_effective_retention >= retention_eff_lulc:
                         working_retention_eff += (
@@ -499,7 +517,7 @@ def ndr_eff_calculation(
                 if outflow_weight_sum > 0:
                     working_retention_eff /= float(outflow_weight_sum)
                     effective_retention_raster.set(
-                        global_row, global_col, working_retention_eff)
+                        global_col, global_row, working_retention_eff)
                 else:
                     LOGGER.error('outflow_weight_sum %s', outflow_weight_sum)
                     raise Exception("got to a cell that has no outflow!")
@@ -519,7 +537,7 @@ def ndr_eff_calculation(
                 if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
                     # no outflow
                     continue
-                # mask out the outflow dir
+                # mask out the outflow dir that this iteration processed
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
                 to_process_flow_directions_raster.set(
                     neighbor_col, neighbor_row, neighbor_process_flow_dir)
@@ -527,11 +545,10 @@ def ndr_eff_calculation(
                     # if 0 then all downstream have been processed,
                     # push on stack, otherwise another downstream pixel will
                     # pick it up
-                    processing_stack.push(
-                        neighbor_row*n_cols + neighbor_col)
+                    processing_stack.push(neighbor_row*n_cols + neighbor_col)
 
     to_process_flow_directions_raster.close()
-    os.remove(to_process_flow_directions_path)
+    #os.remove(to_process_flow_directions_path)
     return
     ####################
     """
