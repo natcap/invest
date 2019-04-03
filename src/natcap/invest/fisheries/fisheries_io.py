@@ -984,11 +984,11 @@ def _create_results_aoi(vars_dict):
     population parameters file.
 
     '''
-    aoi_uri = vars_dict['aoi_uri']
+    base_aoi_vector_path = vars_dict['aoi_uri']
     Regions = vars_dict['Regions']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
-    basename = os.path.splitext(os.path.basename(aoi_uri))[0]
+    basename = os.path.splitext(os.path.basename(base_aoi_vector_path))[0]
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename2 = os.path.splitext(os.path.basename(
@@ -1000,21 +1000,28 @@ def _create_results_aoi(vars_dict):
     else:
         filename = basename + '_results_aoi.shp'
 
-    output_aoi_uri = os.path.join(vars_dict['output_dir'], filename)
-    LOGGER.info('Copying AOI %s to %s', aoi_uri, output_aoi_uri)
+    target_aoi_vector_path = os.path.join(vars_dict['output_dir'], filename)
+    LOGGER.info(
+        'Copying AOI %s to %s', base_aoi_vector_path, target_aoi_vector_path)
 
     # Copy AOI file to outputs directory
-    natcap.invest.pygeoprocessing_0_3_3.geoprocessing.copy_datasource_uri(aoi_uri, output_aoi_uri)
+    if os.path.isfile(target_aoi_vector_path):
+        os.remove(target_aoi_vector_path)
+
+    base_vector = gdal.OpenEx(base_aoi_vector_path, gdal.OF_VECTOR)
+    vector_drive = gdal.GetDriverByName('ESRI Shapefile')
+    vector_drive.CreateCopy(target_aoi_vector_path, base_vector)
+    base_vector = None
 
     # Append attributes to Shapefile
-    ds = gdal.OpenEx(output_aoi_uri, gdal.GA_Update)
-    layer = ds.GetLayer()
+    target_vector = gdal.OpenEx(target_aoi_vector_path, gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
 
     # Set Harvest
     harvest_field = ogr.FieldDefn('Hrv_Total', ogr.OFTReal)
     harvest_field.SetWidth(24)
     harvest_field.SetPrecision(11)
-    layer.CreateField(harvest_field)
+    target_layer.CreateField(harvest_field)
 
     harv_reg_dict = {}
     for i in range(0, len(Regions)):
@@ -1025,18 +1032,21 @@ def _create_results_aoi(vars_dict):
         val_field = ogr.FieldDefn('Val_Total', ogr.OFTReal)
         val_field.SetWidth(24)
         val_field.SetPrecision(11)
-        layer.CreateField(val_field)
+        target_layer.CreateField(val_field)
 
     val_reg_dict = {}
     for i in range(0, len(Regions)):
         val_reg_dict[Regions[i]] = V_tx[-1][i]
 
     # Add Information to Shapefile
-    for feature in layer:
+    for feature in target_layer:
         region_name = str(feature.items()['Name'])
         feature.SetField('Hrv_Total', "%.2f" % harv_reg_dict[region_name])
         if vars_dict['val_cont']:
             feature.SetField('Val_Total', "%.2f" % val_reg_dict[region_name])
-        layer.SetFeature(feature)
+        target_layer.SetFeature(feature)
 
-    layer.ResetReading()
+    target_layer.ResetReading()
+    target_layer = None
+    target_vector = None
+
