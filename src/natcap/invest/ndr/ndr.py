@@ -423,6 +423,17 @@ def execute(args):
             dependent_task_list=[ndr_eff_task, ic_task],
             task_name='calc ndr %s' % nutrient)
 
+        sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
+        sub_ndr_task = task_graph.add_task(
+            func=calculate_sub_ndr,
+            args=(
+                float(args['subsurface_eff_%s' % nutrient]),
+                float(args['subsurface_critical_length_%s' % nutrient]),
+                f_reg['d_dn_path'], sub_ndr_path),
+            target_path_list=[sub_ndr_path],
+            dependent_task_list=[d_dn_task],
+            task_name='sub ndr %s' % nutrient)
+
     task_graph.close()
     task_graph.join()
     return
@@ -438,11 +449,6 @@ def execute(args):
     output_datasource = driver.CreateCopy(
         watershed_output_datasource_uri, original_datasource)
     output_layer = output_datasource.GetLayer()
-
-    ic_min, ic_max, _, _ = (
-        natcap.invest.pygeoprocessing_0_3_3.get_statistics_from_uri(f_reg['ic_factor_path']))
-    ic_0_param = (ic_min + ic_max) / 2.0
-    k_param = float(args['k_param'])
 
     # define some variables outside the loop for closure
     effective_retention_nodata = None
@@ -496,7 +502,7 @@ def execute(args):
         sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
         ndr_nodata = -1.0
 
-        def calculate_sub_ndr(sub_eff_ret_array):
+        def _calculate_sub_ndr_old(sub_eff_ret_array):
             """Calculate subsurface NDR."""
             valid_mask = (
                 sub_eff_ret_array !=
@@ -507,7 +513,7 @@ def execute(args):
             return result
 
         natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [sub_effective_retention_path], calculate_sub_ndr, sub_ndr_path,
+            [sub_effective_retention_path], _calculate_sub_ndr_old, sub_ndr_path,
             gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
             vectorize_op=False)
 
@@ -1134,3 +1140,21 @@ def calculate_ndr(
     pygeoprocessing.raster_calculator(
         [(effective_retention_path, 1), (ic_factor_path, 1)],
         _calculate_ndr_op, target_ndr_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def calculate_sub_ndr(eff_sub, crit_len_sub, d_dn_path, target_sub_ndr_path):
+    """Calculate subsurface: subndr = eff_sub(1-e^(-5*l/crit_len)."""
+    d_dn_nodata = pygeoprocessing.get_raster_info(d_dn_path)['nodata'][0]
+
+    def _sub_ndr_op(d_dn_array):
+        """Calculate subsurface NDR."""
+        valid_mask = ~numpy.isclose(d_dn_array, d_dn_nodata)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = 1.0 - eff_sub * (
+            1-numpy.exp(-5*d_dn_array[valid_mask]/crit_len_sub))
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(d_dn_path, 1)], _sub_ndr_op, target_sub_ndr_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
