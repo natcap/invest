@@ -162,8 +162,8 @@ def read_population_csv(args):
             },
         }
     '''
-    uri = args['population_csv_uri']
-    pop_dict = _parse_population_csv(uri, args['sexsp'])
+    path = args['population_csv_uri']
+    pop_dict = _parse_population_csv(path, args['sexsp'])
 
     # Check that required information exists
     assert 'Surv_nat_xsa' in pop_dict, (
@@ -174,7 +174,7 @@ def read_population_csv(args):
 
     assert len(Matching_Params) == len(Necessary_Params), (
         "Population Parameters File does not contain all necessary "
-        "parameters. %s") % uri
+        "parameters. %s") % path
 
     # Checks that all Survival Matrix elements exist between [0, 1]
     A = pop_dict['Surv_nat_xsa']
@@ -184,7 +184,7 @@ def read_population_csv(args):
     return pop_dict
 
 
-def _parse_population_csv(uri, sexsp):
+def _parse_population_csv(path, sexsp):
     '''
     Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
@@ -228,7 +228,7 @@ def _parse_population_csv(uri, sexsp):
     csv_data = []
     pop_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -385,11 +385,11 @@ def _parse_habitat_dep_csv(args):
             'Hab_dep_num_a': np.array([...]),
         }
     '''
-    uri = args['habitat_dep_csv_uri']
+    path = args['habitat_dep_csv_uri']
     csv_data = []
     habitat_dep_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -491,11 +491,11 @@ def _parse_habitat_chg_csv(args):
                 [[[...], [...]], [[...], [...]], ...]),
         }
     '''
-    uri = args['habitat_chg_csv_uri']
+    path = args['habitat_chg_csv_uri']
     csv_data = []
     habitat_chg_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
