@@ -402,12 +402,14 @@ def ndr_eff_calculation(
         retention_eff_lulc_path, 1, False)
     cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
         effective_retention_path, 1, True)
+    cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
+        mfd_flow_direction_path, 1, False)
 
     # create direction raster in bytes
     def _mfd_to_flow_dir_op(mfd_array):
         result = numpy.zeros(mfd_array.shape, dtype=numpy.int8)
         for i in range(8):
-            result[:] |= (((mfd_array >> (i*8)) & 0xF) > 0) << i
+            result[:] |= (((mfd_array >> (i*4)) & 0xF) > 0) << i
         return result
 
     pygeoprocessing.raster_calculator(
@@ -428,9 +430,90 @@ def ndr_eff_calculation(
         for row_index in range(win_ysize):
             for col_index in range(win_xsize):
                 if stream_array[row_index, col_index] == 1:
+                    global_row = yoff + row_index
+                    global_col = xoff + col_index
+                    # this is a stream pixel, all downstream are processed.
+                    to_process_flow_directions_raster.set(
+                        global_col, global_row, 0)
                     processing_stack.push(
                         (yoff+row_index)*n_cols + (xoff + col_index))
-                    print(row_index, col_index)
+
+        while processing_stack.size() > 0:
+            # loop invariant, we don't push a cell on the stack that
+            # hasn't already been set for processing.
+            flat_index = processing_stack.top()
+            processing_stack.pop()
+            global_row = flat_index / n_cols
+            global_col = flat_index % n_cols
+
+            if stream_raster.get(global_col, global_row) == 1:
+                retention_eff_lulc_raster.set(global_row, global_col, 0)
+            else:
+                flow_dir = mfd_flow_direction_raster.get(
+                    global_col, global_row)
+                flow_dir_sum = 0
+                retention_eff_lulc = retention_eff_lulc_raster.get(
+                    global_row, global_col)
+                working_retention_eff = 0.0
+                crit_len = crit_len_raster.get(global_col, global_row)
+                for i in range(8):
+                    outflow_weight = (flow_dir >> (i*4)) & 0xF
+                    if outflow_weight == 0:
+                        continue
+                    outflow_weight_sum += outflow_weight
+                    ds_col = col_offsets[i] + global_col
+                    ds_row = row_offsets[i] + global_row
+                    if i % 2 == 1:
+                        step_size = cell_size*1.41421356237
+                    else:
+                        step_size = cell_size
+                    current_step_factor = exp(-5*step_size/crit_len)
+                    neighbor_effective_retention = (
+                        retention_eff_lulc_raster.get(ds_row, ds_col))
+
+                    if neighbor_effective_retention >= retention_eff_lulc:
+                        working_retention_eff += (
+                            neighbor_effective_retention) * outflow_weight
+                    else:
+                        intermediate_retention = (
+                            (neighbor_effective_retention *
+                             current_step_factor) +
+                            retention_eff_lulc * (1 - current_step_factor))
+                        if intermediate_retention > retention_eff_lulc:
+                            intermediate_retention = retention_eff_lulc
+                        working_retention_eff += (
+                            intermediate_retention * outflow_weight)
+
+                if working_retention_eff > 0:
+                    working_retention_eff /= float(outflow_weight_sum)
+
+                    retention_eff_lulc_raster.set(
+                        global_row, global_col, working_retention_eff)
+                else:
+                    raise Exception("got to a cell that has no outflow!")
+            # search upstream to see if we need to push a cell on the stack
+            for i in range(8):
+                neighbor_col = col_offsets[i] + global_col
+                neighbor_row = row_offsets[i] + global_row
+                neighbor_outflow_dir = inflow_offsets[i]
+
+                neighbor_process_flow_dir = <int>(
+                    to_process_flow_directions_raster.get(
+                        neighbor_col, neighbor_row))
+
+                # mask out the outflow dir
+                neighbor_process_flow_dir &= ~(1 << neighbor_outflow_dir)
+                to_process_flow_directions_raster.set(
+                    neighbor_col, neighbor_row, neighbor_process_flow_dir)
+                if neighbor_process_flow_dir == 0:
+                    # if 0 then all downstream have been processed,
+                    # push on stack, otherwise another downstream pixel will
+                    # pick it up
+                    processing_stack.push(
+                        neighbor_row*n_cols + neighbor_col)
+
+    to_process_flow_directions_raster.close()
+    os.remove(to_process_flow_directions_path)
     return
     ####################
     """
