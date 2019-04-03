@@ -281,6 +281,57 @@ def execute(args):
         dependent_task_list=[align_raster_task],
         task_name='runoff proxy mean')
 
+    s_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
+        kwargs={
+            'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
+        target_path_list=[f_reg['s_accumulation_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='route s')
+
+    s_bar_task = task_graph.add_task(
+        func=s_bar_calculate,
+        args=(f_reg['s_accumulation_path'], f_reg['flow_accumulation_path'],
+              f_reg['s_bar_path']),
+        target_path_list=[f_reg['s_bar_path']],
+        dependent_task_list=[s_task, flow_accum_task],
+        task_name='calculate s bar')
+
+    d_up_task = task_graph.add_task(
+        func=d_up_calculation,
+        args=(f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
+              f_reg['d_up_path']),
+        target_path_list=[f_reg['d_up_path']],
+        dependent_task_list=[s_bar_task, flow_accum_task],
+        task_name='d up')
+
+    s_inv_task = task_graph.add_task(
+        func=invert_raster_values,
+        args=(f_reg['thresholded_slope_path'], f_reg['s_factor_inverse_path']),
+        target_path_list=[f_reg['s_factor_inverse_path']],
+        dependent_task_list=[threshold_slope_task],
+        task_name='s inv')
+
+    d_dn_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
+            f_reg['d_dn_path']),
+        kwargs={'weight_raster_path_band': (
+            f_reg['s_factor_inverse_path'], 1)},
+        dependent_task_list=[stream_extraction_task, s_inv_task],
+        target_path_list=[f_reg['d_dn_path']],
+        task_name='d dn')
+
+    ic_task = task_graph.add_task(
+        func=calculate_ic,
+        args=(
+            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_factor_path']),
+        target_path_list=[f_reg['ic_factor_path']],
+        dependent_task_list=[d_dn_task, d_up_task],
+        task_name='calc ic')
+
     for nutrient in nutrients_to_process:
         load_path = f_reg['load_%s_path' % nutrient]
         modified_load_path = f_reg['modified_load_%s_path' % nutrient]
@@ -362,56 +413,15 @@ def execute(args):
                 stream_extraction_task, eff_task, crit_len_task],
             task_name='eff ret %s' % nutrient)
 
-    s_task = task_graph.add_task(
-        func=pygeoprocessing.routing.flow_accumulation_mfd,
-        args=((f_reg['flow_direction_path'], 1), f_reg['s_accumulation_path']),
-        kwargs={
-            'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
-        target_path_list=[f_reg['s_accumulation_path']],
-        dependent_task_list=[flow_dir_task],
-        task_name='route s')
-
-    s_bar_task = task_graph.add_task(
-        func=s_bar_calculate,
-        args=(f_reg['s_accumulation_path'], f_reg['flow_accumulation_path'],
-              f_reg['s_bar_path']),
-        target_path_list=[f_reg['s_bar_path']],
-        dependent_task_list=[s_task, flow_accum_task],
-        task_name='calculate s bar')
-
-    d_up_task = task_graph.add_task(
-        func=d_up_calculation,
-        args=(f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-              f_reg['d_up_path']),
-        target_path_list=[f_reg['d_up_path']],
-        dependent_task_list=[s_bar_task, flow_accum_task],
-        task_name='d up')
-
-    s_inv_task = task_graph.add_task(
-        func=invert_raster_values,
-        args=(f_reg['thresholded_slope_path'], f_reg['s_factor_inverse_path']),
-        target_path_list=[f_reg['s_factor_inverse_path']],
-        dependent_task_list=[threshold_slope_task],
-        task_name='s inv')
-
-    d_dn_task = task_graph.add_task(
-        func=pygeoprocessing.routing.distance_to_channel_mfd,
-        args=(
-            (f_reg['flow_direction_path'], 1), (f_reg['stream_path'], 1),
-            f_reg['d_dn_path']),
-        kwargs={'weight_raster_path_band': (
-            f_reg['s_factor_inverse_path'], 1)},
-        dependent_task_list=[stream_extraction_task, s_inv_task],
-        target_path_list=[f_reg['d_dn_path']],
-        task_name='d dn')
-
-    ic_task = task_graph.add_task(
-        func=calculate_ic,
-        args=(
-            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_factor_path']),
-        target_path_list=[f_reg['ic_factor_path']],
-        dependent_task_list=[d_dn_task, d_up_task],
-        task_name='calc ic')
+        ndr_path = f_reg['ndr_%s_path' % nutrient]
+        ndr_task = task_graph.add_task(
+            func=calculate_ndr,
+            args=(
+                effective_retention_path, f_reg['ic_factor_path'],
+                float(args['k_param']), ndr_path),
+            target_path_list=[ndr_path],
+            dependent_task_list=[ndr_eff_task, ic_task],
+            task_name='calc ndr %s' % nutrient)
 
     task_graph.close()
     task_graph.join()
@@ -1094,3 +1104,31 @@ def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     pygeoprocessing.raster_calculator(
         [(d_up_path, 1), (d_dn_path, 1)], ic_op,
         target_ic_path, gdal.GDT_Float32, ic_nodata)
+
+
+def calculate_ndr(
+        effective_retention_path, ic_factor_path, k_param, target_ndr_path):
+    """Calculate NDR as a function of Equation 4 in the user's guide."""
+    ic_factor_raster = gdal.OpenEx(ic_factor_path, gdal.OF_VECTOR)
+    ic_factor_band = ic_factor_raster.GetRasterBand(1)
+    ic_min, ic_max, _, _ = ic_factor_band.GetStatistics()
+    ic_factor_band = None
+    ic_factor_raster = None
+    ic_0_param = (ic_min + ic_max) / 2.0
+
+    def _calculate_ndr_op(effective_retention_array, ic_array):
+            """Calculate NDR."""
+            valid_mask = (
+                (effective_retention_array != effective_retention_nodata) &
+                (ic_array != ic_nodata))
+            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+            result[:] = ndr_nodata
+            result[valid_mask] = (
+                (1.0 - effective_retention_array[valid_mask]) /
+                (1.0 + numpy.exp(
+                    (ic_0_param - ic_array[valid_mask]) / k_param)))
+            return result
+
+    pygeoprocessing.raster_calculator(
+        [(effective_retention_path, 1), (ic_factor_path, 1)],
+        _calculate_ndr_op, target_ndr_path, gdal.GDT_Float32, _TARGET_NODATA)
