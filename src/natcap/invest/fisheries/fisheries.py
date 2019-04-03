@@ -7,7 +7,6 @@ import logging
 import csv
 import os
 
-from osgeo import ogr
 from osgeo import gdal
 
 from . import fisheries_io as io
