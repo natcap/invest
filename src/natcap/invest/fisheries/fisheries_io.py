@@ -6,15 +6,12 @@ import logging
 import os
 import csv
 
+import numpy
 from osgeo import ogr
 from osgeo import gdal
-import numpy
-
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-import natcap.invest.pygeoprocessing_0_3_3.testing
-from natcap.invest import reporting
 
+from .. import reporting
 from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
