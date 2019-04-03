@@ -383,9 +383,9 @@ def ndr_eff_calculation(
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
-    cdef int n_cols
+    cdef int n_cols, n_rows
     flow_dir_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
-    _, n_cols = flow_dir_info['raster_size']
+    n_rows, n_cols = flow_dir_info['raster_size']
 
     cdef stack[int] processing_stack
     stream_info = pygeoprocessing.get_raster_info(stream_path)
@@ -433,8 +433,8 @@ def ndr_eff_calculation(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
-        stream_array = stream_band.ReadAsArray(
-            **offset_dict).astype(numpy.float64)
+        stream_array = stream_band.ReadAsArray(**offset_dict).astype(
+            numpy.int8)
         for row_index in range(win_ysize):
             for col_index in range(win_xsize):
                 if stream_array[row_index, col_index] == 1:
@@ -470,7 +470,11 @@ def ndr_eff_calculation(
                         continue
                     outflow_weight_sum += outflow_weight
                     ds_col = col_offsets[i] + global_col
+                    if ds_col < 0 or ds_col >= n_cols:
+                        continue
                     ds_row = row_offsets[i] + global_row
+                    if ds_row < 0 or ds_row >= n_rows:
+                        continue
                     if i % 2 == 1:
                         step_size = cell_size*1.41421356237
                     else:
@@ -502,7 +506,11 @@ def ndr_eff_calculation(
             # search upstream to see if we need to push a cell on the stack
             for i in range(8):
                 neighbor_col = col_offsets[i] + global_col
+                if neighbor_col < 0 or neighbor_col >= n_cols:
+                        continue
                 neighbor_row = row_offsets[i] + global_row
+                if neighbor_row < 0 or neighbor_row >= n_rows:
+                    continue
                 neighbor_outflow_dir = inflow_offsets[i]
                 neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
                 neighbor_process_flow_dir = <int>(
@@ -511,22 +519,14 @@ def ndr_eff_calculation(
                 if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
                     # no outflow
                     continue
-
-                LOGGER.debug(
-                    "neighbor_process, outflow: %s %s",
-                    neighbor_process_flow_dir, neighbor_outflow_dir_mask)
                 # mask out the outflow dir
                 neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
-                LOGGER.debug(
-                    "neighbor_process after mask: %s",
-                    neighbor_process_flow_dir)
                 to_process_flow_directions_raster.set(
                     neighbor_col, neighbor_row, neighbor_process_flow_dir)
                 if neighbor_process_flow_dir == 0:
                     # if 0 then all downstream have been processed,
                     # push on stack, otherwise another downstream pixel will
                     # pick it up
-                    LOGGER.debug("process flow dir is 0")
                     processing_stack.push(
                         neighbor_row*n_cols + neighbor_col)
 
