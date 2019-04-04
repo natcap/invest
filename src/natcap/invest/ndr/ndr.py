@@ -491,7 +491,8 @@ def execute(args):
             args=(
                 (subsurface_load_path, 1), f_reg['watershed_results_ndr_path'],
                 f_reg['subsurface_load_%s_pickle_path' % nutrient]),
-            target_path_list=[f_reg['subsurface_load_%s_pickle_path' % nutrient]],
+            target_path_list=[
+                f_reg['subsurface_load_%s_pickle_path' % nutrient]],
             dependent_task_list=[subsurface_load_task, create_vector_task],
             task_name='aggregate %s subsurface load' % nutrient)
 
@@ -502,7 +503,8 @@ def execute(args):
         field_pickle_map['%s_exp_tot' % nutrient] = (
             f_reg['export_%s_pickle_path' % nutrient])
         field_header_order_list = (
-            [x % nutrient for x in ['surf_%s_ld', 'sub_%s_ld', '%s_exp_tot']] +
+            [x % nutrient for x in [
+                'surf_%s_ld', 'sub_%s_ld', '%s_exp_tot']] +
             field_header_order_list)
 
     task_graph.close()
