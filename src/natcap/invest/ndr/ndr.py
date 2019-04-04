@@ -209,6 +209,10 @@ def execute(args):
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
 
+    # these are used for aggregation in the last step
+    field_pickle_map = {}
+    field_header_order_list = []
+
     create_vector_task = task_graph.add_task(
         func=create_vector_copy,
         args=(args['watersheds_path'], f_reg['watershed_results_ndr_path']),
@@ -486,29 +490,21 @@ def execute(args):
             dependent_task_list=[load_task, create_vector_task],
             task_name='aggregate %s load' % nutrient)
 
+        field_pickle_map['%s_load_tot' % nutrient] = (
+            f_reg['load_%s_pickle_path' % nutrient])
+        field_pickle_map['%s_exp_tot' % nutrient] = (
+            f_reg['export_%s_pickle_path' % nutrient])
+        field_header_order_list = (
+            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] +
+            field_header_order_list)
+
     task_graph.close()
     task_graph.join()
-    return
 
-
-    """
-        # summarize the results in terms of watershed:
-        LOGGER.info("Summarizing the results of nutrient %s", nutrient)
-        load_path = f_reg['load_%s_path' % nutrient]
-        load_tot = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            load_path, args['watersheds_path'], 'ws_id').total
-        export_tot = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-            export_path, args['watersheds_path'], 'ws_id').total
-
-        field_summaries['%s_load_tot' % nutrient] = load_tot
-        field_summaries['%s_exp_tot' % nutrient] = export_tot
-        field_header_order = (
-            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] +
-            field_header_order)
-    """
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
-        'ws_id', field_summaries, output_layer, field_header_order)
+        field_pickle_map, field_header_order_list,
+        f_reg['watershed_results_ndr_path'])
 
     LOGGER.info(r'NDR complete!')
     LOGGER.info(r'  _   _    ____    ____     ')
@@ -552,39 +548,42 @@ def _slope_proportion_and_threshold(slope_path, target_threshold_slope_path):
 
 
 def _add_fields_to_shapefile(
-        key_field, field_summaries, output_layer, field_header_order):
+        field_pickle_map, field_header_order, target_vector_path):
     """Add fields and values to an OGR layer open for writing.
 
     Parameters:
-        key_field (string): name of the key field in the output_layer that
-            uniquely identifies each polygon.
-        field_summaries (dict): index for the desired field name to place in
-            the polygon that indexes to another dictionary indexed by
-            key_field value to map to that particular polygon.
-            ex {'field_name_1': {key_val1: value,
-            key_val2: value}, 'field_name_2': {key_val1: value, etc.
-        output_layer (ogr.Layer): an open writable OGR layer
+        field_pickle_map (dict): maps field name to a pickle file that is a
+            result of pygeoprocessing.zonal_stats with FIDs that match
+            `target_vector_path`.
         field_header_order (list of string): a list of field headers in the
             order to appear in the output table.
+        target_vector_path (string): path to target vector file.
 
     Returns:
         None.
+
     """
+    target_vector = gdal.OpenEx(
+        target_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
+    field_summaries = {}
     for field_name in field_header_order:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
-        output_layer.CreateField(field_def)
+        target_layer.CreateField(field_def)
+        with open(field_pickle_map[field_name]) as pickle_file:
+            field_summaries[field_name] = pickle.load(pickle_file)
 
-    # Initialize each feature field to 0.0
-    for feature_id in xrange(output_layer.GetFeatureCount()):
-        feature = output_layer.GetFeature(feature_id)
+    for feature in target_layer:
+        fid = feature.GetFID()
         for field_name in field_header_order:
-            ws_id = feature.GetFieldAsInteger(key_field)
             feature.SetField(
-                field_name, float(field_summaries[field_name][ws_id]))
+                field_name, float(field_summaries[field_name][fid]['sum']))
         # Save back to datasource
-        output_layer.SetFeature(feature)
+        target_layer.SetFeature(feature)
+    target_layer = None
+    target_vector = None
 
 
 @validation.invest_validator
