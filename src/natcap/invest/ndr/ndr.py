@@ -778,6 +778,8 @@ def calculate_load(
         subsurface_proportion_type, target_load_raster):
     """Calculate load raster.
 
+
+
     Returns:
         None.
 
@@ -942,7 +944,6 @@ def map_subsurface_load(
         subsurface_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
              for x in keys])
-        LOGGER.debug('subsurface_proportion_type: %s', subsurface_values)
 
     def map_subsurface_load_op(lucode_array, modified_load_array):
         """Convert unit load to total load & handle nodata."""
@@ -952,12 +953,10 @@ def map_subsurface_load(
                 lucode_array != nodata_landuse, 0, _TARGET_NODATA)
 
         valid_mask = lucode_array != nodata_landuse
-        LOGGER.debug('%s %s', numpy.count_nonzero(valid_mask), nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
             lucode_array[valid_mask].ravel(), keys, right=True)
-        LOGGER.debug('subsurface_proportion_op: %s', index)
         result[valid_mask] = (
             modified_load_array[valid_mask] * subsurface_values[index] *
             cell_area_ha)
@@ -1097,7 +1096,6 @@ def invert_raster_values(base_raster_path, target_raster_path):
 
 def calculate_ic(d_up_path, d_dn_path, target_ic_path):
     """Calculate IC as log_10(d_up/d_dn)."""
-    LOGGER.info('calculate ic')
     ic_nodata = float(numpy.finfo(numpy.float32).min)
     d_up_nodata = pygeoprocessing.get_raster_info(d_up_path)['nodata'][0]
     d_dn_nodata = pygeoprocessing.get_raster_info(d_dn_path)['nodata'][0]
