@@ -31,8 +31,6 @@ _INTERMEDIATE_BASE_FILES = {
     'load_p_path': 'load_p.tif',
     'modified_load_n_path': 'modified_load_n.tif',
     'modified_load_p_path': 'modified_load_p.tif',
-    'modified_sub_load_n_path': 'modified_sub_load_n.tif',
-    'modified_sub_load_p_path': 'modified_sub_load_p.tif',
     'ndr_n_path': 'ndr_n.tif',
     'ndr_p_path': 'ndr_p.tif',
     'runoff_proxy_index_path': 'runoff_proxy_index.tif',
@@ -48,6 +46,8 @@ _INTERMEDIATE_BASE_FILES = {
     'sub_effective_retention_p_path': 'sub_effective_retention_p.tif',
     'sub_load_n_path': 'sub_load_n.tif',
     'sub_load_p_path': 'sub_load_p.tif',
+    'surface_load_n_path': 'surface_load_n.tif',
+    'surface_load_p_path': 'surface_load_p.tif',
     'sub_ndr_n_path': 'sub_ndr_n.tif',
     'sub_ndr_p_path': 'sub_ndr_p.tif',
     'crit_len_n_path': 'crit_len_n.tif',
@@ -74,8 +74,10 @@ _CACHE_BASE_FILES = {
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
     'runoff_mean_pickle_path': 'runoff_mean.pickle',
-    'load_n_pickle_path': 'load_n.pickle',
-    'load_p_pickle_path': 'load_p.pickle',
+    'surface_load_n_pickle_path': 'surface_load_n.pickle',
+    'surface_load_p_pickle_path': 'surface_load_p.pickle',
+    'subsurface_load_n_pickle_path': 'subsurface_load_n.pickle',
+    'subsurface_load_p_pickle_path': 'subsurface_load_p.pickle',
     'export_n_pickle_path': 'export_n.pickle',
     'export_p_pickle_path': 'export_p.pickle',
     }
@@ -384,28 +386,25 @@ def execute(args):
             dependent_task_list=[load_task, runoff_proxy_index_task],
             task_name='modified load %s' % nutrient)
 
-        sub_load_path = f_reg['sub_load_%s_path' % nutrient]
+        surface_load_path = f_reg['surface_load_%s_path' % nutrient]
+        surface_load_task = task_graph.add_task(
+            func=map_surface_load,
+            args=(modified_load_path, f_reg['aligned_lulc_path'],
+                  lucode_to_parameters, subsurface_proportion_type,
+                  surface_load_path),
+            target_path_list=[surface_load_path],
+            dependent_task_list=[modified_load_task, align_raster_task],
+            task_name='map surface load %s' % nutrient)
+
+        subsurface_load_path = f_reg['sub_load_%s_path' % nutrient]
         subsurface_load_task = task_graph.add_task(
             func=map_subsurface_load,
-            args=(f_reg['aligned_lulc_path'], lucode_to_parameters,
-                  'load_%s' % nutrient, subsurface_proportion_type,
-                  sub_load_path),
-            target_path_list=[sub_load_path],
-            dependent_task_list=[align_raster_task],
+            args=(modified_load_path, f_reg['aligned_lulc_path'],
+                  lucode_to_parameters,
+                  subsurface_proportion_type, subsurface_load_path),
+            target_path_list=[subsurface_load_path],
+            dependent_task_list=[modified_load_task, align_raster_task],
             task_name='map subsurface load %s' % nutrient)
-
-        modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        modified_sub_load_task = task_graph.add_task(
-            func=multiply_rasters,
-            args=(
-                [sub_load_path, f_reg['runoff_proxy_index_path']],
-                _TARGET_NODATA, modified_sub_load_path),
-            target_path_list=[modified_sub_load_path],
-            dependent_task_list=[subsurface_load_task],
-            task_name='modified subsurface load %s' % nutrient)
-
-        sub_eff_val = args['subsurface_eff_%s' % nutrient]
-        sub_crit_len = args['subsurface_critical_length_%s' % nutrient]
 
         eff_path = f_reg['eff_%s_path' % nutrient]
         eff_task = task_graph.add_task(
@@ -464,11 +463,11 @@ def execute(args):
         calculate_export_task = task_graph.add_task(
             func=calculate_export,
             args=(
-                modified_load_path, ndr_path, modified_sub_load_path,
+                surface_load_path, ndr_path, subsurface_load_path,
                 sub_ndr_path, export_path),
             target_path_list=[export_path],
             dependent_task_list=[
-                modified_load_task, ndr_task, modified_sub_load_task,
+                load_task, ndr_task, surface_load_task, subsurface_load_task,
                 sub_ndr_task],
             task_name='export %s' % nutrient)
 
@@ -481,21 +480,32 @@ def execute(args):
             dependent_task_list=[calculate_export_task],
             task_name='aggregate %s export' % nutrient)
 
-        aggregate_load_task = task_graph.add_task(
+        aggregate_surface_load_task = task_graph.add_task(
             func=aggregate_and_pickle_total,
             args=(
-                (load_path, 1), f_reg['watershed_results_ndr_path'],
-                f_reg['load_%s_pickle_path' % nutrient]),
-            target_path_list=[f_reg['load_%s_pickle_path' % nutrient]],
-            dependent_task_list=[load_task, create_vector_task],
-            task_name='aggregate %s load' % nutrient)
+                (surface_load_path, 1), f_reg['watershed_results_ndr_path'],
+                f_reg['surface_load_%s_pickle_path' % nutrient]),
+            target_path_list=[f_reg['surface_load_%s_pickle_path' % nutrient]],
+            dependent_task_list=[surface_load_task, create_vector_task],
+            task_name='aggregate %s surface load' % nutrient)
 
-        field_pickle_map['%s_load_tot' % nutrient] = (
-            f_reg['load_%s_pickle_path' % nutrient])
+        aggregate_subsurface_load_task = task_graph.add_task(
+            func=aggregate_and_pickle_total,
+            args=(
+                (subsurface_load_path, 1), f_reg['watershed_results_ndr_path'],
+                f_reg['subsurface_load_%s_pickle_path' % nutrient]),
+            target_path_list=[f_reg['subsurface_load_%s_pickle_path' % nutrient]],
+            dependent_task_list=[subsurface_load_task, create_vector_task],
+            task_name='aggregate %s subsurface load' % nutrient)
+
+        field_pickle_map['surf_%s_ld' % nutrient] = (
+            f_reg['surface_load_%s_pickle_path' % nutrient])
+        field_pickle_map['sub_%s_ld' % nutrient] = (
+            f_reg['subsurface_load_%s_pickle_path' % nutrient])
         field_pickle_map['%s_exp_tot' % nutrient] = (
             f_reg['export_%s_pickle_path' % nutrient])
         field_header_order_list = (
-            [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] +
+            [x % nutrient for x in ['surf_%s_ld', 'sub_%s_ld', '%s_exp_tot']] +
             field_header_order_list)
 
     task_graph.close()
@@ -853,18 +863,68 @@ def multiply_rasters(raster_path_list, target_nodata, target_result_path):
         gdal.GDT_Float32, target_nodata)
 
 
+def map_surface_load(
+        modified_load_path, lulc_raster_path, lucode_to_parameters,
+        subsurface_proportion_type, target_surface_load_path):
+    """Calculate surface load from landcover raster.
+
+    Parameters:
+        modified_load_path (string): path to modified load raster.
+        lulc_raster_path (string): path to landcover raster.
+        lucode_to_parameters (dict): maps landcover codes to a dictionary that
+            can be indexed by `subsurface_proportion_type`.
+        subsurface_proportion_type (string): if None no subsurface transfer
+            is mapped.  Otherwise indexed from lucode_to_parameters.
+        target_surface_load_path (string): path to target raster.
+
+    Returns:
+        None.
+
+    """
+    lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
+    nodata_landuse = lulc_raster_info['nodata'][0]
+    cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
+
+    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    if subsurface_proportion_type is not None:
+        subsurface_values = numpy.array(
+            [lucode_to_parameters[x][subsurface_proportion_type]
+             for x in keys])
+
+    def map_surface_load_op(lucode_array, modified_load_array):
+        """Convert unit load to total load & handle nodata."""
+        # If we don't have subsurface, just return 0.0.
+        if subsurface_proportion_type is None:
+            return numpy.where(
+                lucode_array != nodata_landuse, modified_load_array,
+                _TARGET_NODATA)
+
+        valid_mask = lucode_array != nodata_landuse
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        index = numpy.digitize(
+            lucode_array[valid_mask].ravel(), keys, right=True)
+        result[valid_mask] = (
+            modified_load_array[valid_mask] * (1 - subsurface_values[index]) *
+            cell_area_ha)
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_raster_path, 1), (modified_load_path, 1)],
+        map_surface_load_op, target_surface_load_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
+
+
 def map_subsurface_load(
-        lulc_raster_path, lucode_to_parameters, load_id,
+        modified_load_path, lulc_raster_path, lucode_to_parameters,
         subsurface_proportion_type, target_sub_load_path):
     """Calculate subsurface load from landcover raster.
 
     Parameters:
+        modified_load_path (string): path to modified load raster.
         lulc_raster_path (string): path to landcover raster.
         lucode_to_parameters (dict): maps landcover codes to a dictionary that
-            can be indexed by `load_id` and then by
-            `subsurface_proportion_type`.
-        load_id (string): either 'load_n' or 'load_p', used to look up in
-            `lucode_to_parameters`.
+            can be indexed by by `subsurface_proportion_type`.
         subsurface_proportion_type (string): if None no subsurface transfer
             is mapped.  Otherwise indexed from lucode_to_parameters.
         target_sub_load_path (string): path to target raster.
@@ -878,14 +938,13 @@ def map_subsurface_load(
     cell_area_ha = abs(numpy.prod(lulc_raster_info['pixel_size'])) * 0.0001
 
     keys = sorted(numpy.array(lucode_to_parameters.keys()))
-    surface_values = numpy.array(
-        [lucode_to_parameters[x][load_id] for x in keys])
     if subsurface_proportion_type is not None:
         subsurface_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
              for x in keys])
+        LOGGER.debug('subsurface_proportion_type: %s', subsurface_values)
 
-    def map_subsurface_load_op(lucode_array):
+    def map_subsurface_load_op(lucode_array, modified_load_array):
         """Convert unit load to total load & handle nodata."""
         # If we don't have subsurface, just return 0.0.
         if subsurface_proportion_type is None:
@@ -893,18 +952,21 @@ def map_subsurface_load(
                 lucode_array != nodata_landuse, 0, _TARGET_NODATA)
 
         valid_mask = lucode_array != nodata_landuse
+        LOGGER.debug('%s %s', numpy.count_nonzero(valid_mask), nodata_landuse)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         index = numpy.digitize(
             lucode_array[valid_mask].ravel(), keys, right=True)
+        LOGGER.debug('subsurface_proportion_op: %s', index)
         result[valid_mask] = (
-            surface_values[index] * subsurface_values[index] *
+            modified_load_array[valid_mask] * subsurface_values[index] *
             cell_area_ha)
         return result
 
     pygeoprocessing.raster_calculator(
-        [(lulc_raster_path, 1)], map_subsurface_load_op, target_sub_load_path,
-        gdal.GDT_Float32, _TARGET_NODATA)
+        [(lulc_raster_path, 1), (modified_load_path, 1)],
+        map_subsurface_load_op, target_sub_load_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
 
 
 def calculate_ret_eff(
@@ -1085,36 +1147,39 @@ def calculate_ndr(
         _calculate_ndr_op, target_ndr_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def calculate_sub_ndr(eff_sub, crit_len_sub, d_dn_path, target_sub_ndr_path):
+def calculate_sub_ndr(
+        eff_sub, crit_len_sub, dist_to_channel_path, target_sub_ndr_path):
     """Calculate subsurface: subndr = eff_sub(1-e^(-5*l/crit_len)."""
-    d_dn_nodata = pygeoprocessing.get_raster_info(d_dn_path)['nodata'][0]
+    dist_to_channel_nodata = pygeoprocessing.get_raster_info(
+        dist_to_channel_path)['nodata'][0]
 
-    def _sub_ndr_op(d_dn_array):
+    def _sub_ndr_op(dist_to_channel_array):
         """Calculate subsurface NDR."""
-        valid_mask = ~numpy.isclose(d_dn_array, d_dn_nodata)
+        valid_mask = ~numpy.isclose(
+            dist_to_channel_array, dist_to_channel_nodata)
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         result[valid_mask] = 1.0 - eff_sub * (
-            1-numpy.exp(-5*d_dn_array[valid_mask]/crit_len_sub))
+            1-numpy.exp(-5*dist_to_channel_array[valid_mask]/crit_len_sub))
         return result
 
     pygeoprocessing.raster_calculator(
-        [(d_dn_path, 1)], _sub_ndr_op, target_sub_ndr_path, gdal.GDT_Float32,
-        _TARGET_NODATA)
+        [(dist_to_channel_path, 1)], _sub_ndr_op, target_sub_ndr_path,
+        gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def calculate_export(
-        modified_load_path, ndr_path, modified_sub_load_path, sub_ndr_path,
-        target_export_path):
+        surface_load_path, ndr_path, subsurface_load_path,
+        subsurface_ndr_path, target_export_path):
     """Calculate export."""
     load_nodata = pygeoprocessing.get_raster_info(
-        modified_load_path)['nodata'][0]
-    sub_load_nodata = pygeoprocessing.get_raster_info(
-        modified_sub_load_path)['nodata'][0]
+        surface_load_path)['nodata'][0]
+    subsurface_load_nodata = pygeoprocessing.get_raster_info(
+        subsurface_load_path)['nodata'][0]
     ndr_nodata = pygeoprocessing.get_raster_info(
         ndr_path)['nodata'][0]
     sub_ndr_nodata = pygeoprocessing.get_raster_info(
-        sub_ndr_path)['nodata'][0]
+        subsurface_ndr_path)['nodata'][0]
 
     def _calculate_export_op(
             modified_load_array, ndr_array, modified_sub_load_array,
@@ -1123,7 +1188,7 @@ def calculate_export(
         valid_mask = (
             ~numpy.isclose(modified_load_array, load_nodata) &
             ~numpy.isclose(ndr_array, ndr_nodata) &
-            ~numpy.isclose(modified_sub_load_array, sub_load_nodata) &
+            ~numpy.isclose(modified_sub_load_array, subsurface_load_nodata) &
             ~numpy.isclose(sub_ndr_array, sub_ndr_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
@@ -1134,9 +1199,10 @@ def calculate_export(
         return result
 
     pygeoprocessing.raster_calculator(
-        [(modified_load_path, 1), (ndr_path, 1),
-         (modified_sub_load_path, 1), (sub_ndr_path, 1)], _calculate_export_op,
-        target_export_path, gdal.GDT_Float32, _TARGET_NODATA)
+        [(surface_load_path, 1), (ndr_path, 1),
+         (subsurface_load_path, 1), (subsurface_ndr_path, 1)],
+        _calculate_export_op, target_export_path, gdal.GDT_Float32,
+        _TARGET_NODATA)
 
 
 def aggregate_and_pickle_total(
