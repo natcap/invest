@@ -1,5 +1,6 @@
 """InVEST Nutrient Delivery Ratio (NDR) module."""
 from __future__ import absolute_import
+import pickle
 import itertools
 import logging
 import os
@@ -61,7 +62,7 @@ _INTERMEDIATE_BASE_FILES = {
     'flow_direction_path': 'flow_direction.tif',
     'thresholded_slope_path': 'thresholded_slope.tif',
     'processed_cell_path': 'processed_cell.tif',
-    'dist_to_channel_path': 'dist_to_channel.tif'
+    'dist_to_channel_path': 'dist_to_channel.tif',
     }
 
 _CACHE_BASE_FILES = {
@@ -73,6 +74,10 @@ _CACHE_BASE_FILES = {
     'aligned_runoff_proxy_path': 'aligned_runoff_proxy.tif',
     'zero_absorption_source_path': 'zero_absorption_source.tif',
     'runoff_mean_pickle_path': 'runoff_mean.pickle',
+    'load_n_pickle_path': 'load_n.pickle',
+    'load_p_pickle_path': 'load_p.pickle',
+    'export_n_pickle_path': 'export_n.pickle',
+    'export_p_pickle_path': 'export_p.pickle',
     }
 
 _TARGET_NODATA = -1
@@ -203,6 +208,13 @@ def execute(args):
         args['biophysical_table_path'], 'lucode')
 
     _validate_inputs(nutrients_to_process, lucode_to_parameters)
+
+    create_vector_task = task_graph.add_task(
+        func=create_vector_copy,
+        args=(args['watersheds_path'], f_reg['watershed_results_ndr_path']),
+        target_path_list=[f_reg['watershed_results_ndr_path']],
+        task_name='create target vector')
+
     dem_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
     base_raster_list = [
@@ -379,7 +391,7 @@ def execute(args):
             task_name='map subsurface load %s' % nutrient)
 
         modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        modified_subsurface_load_task = task_graph.add_task(
+        modified_sub_load_task = task_graph.add_task(
             func=multiply_rasters,
             args=(
                 [sub_load_path, f_reg['runoff_proxy_index_path']],
@@ -444,120 +456,42 @@ def execute(args):
             dependent_task_list=[dist_to_channel_task],
             task_name='sub ndr %s' % nutrient)
 
+        export_path = f_reg['%s_export_path' % nutrient]
+        calculate_export_task = task_graph.add_task(
+            func=calculate_export,
+            args=(
+                modified_load_path, ndr_path, modified_sub_load_path,
+                sub_ndr_path, export_path),
+            target_path_list=[export_path],
+            dependent_task_list=[
+                modified_load_task, ndr_task, modified_sub_load_task,
+                sub_ndr_task],
+            task_name='export %s' % nutrient)
+
+        aggregate_export_task = task_graph.add_task(
+            func=aggregate_and_pickle_total,
+            args=(
+                (export_path, 1), f_reg['watershed_results_ndr_path'],
+                f_reg['export_%s_pickle_path' % nutrient]),
+            target_path_list=[f_reg['export_%s_pickle_path' % nutrient]],
+            dependent_task_list=[calculate_export_task],
+            task_name='aggregate %s export' % nutrient)
+
+        aggregate_load_task = task_graph.add_task(
+            func=aggregate_and_pickle_total,
+            args=(
+                (load_path, 1), f_reg['watershed_results_ndr_path'],
+                f_reg['load_%s_pickle_path' % nutrient]),
+            target_path_list=[f_reg['load_%s_pickle_path' % nutrient]],
+            dependent_task_list=[load_task, create_vector_task],
+            task_name='aggregate %s load' % nutrient)
+
     task_graph.close()
     task_graph.join()
     return
 
-    watershed_output_datasource_uri = os.path.join(
-        output_dir, 'watershed_results_ndr%s.shp' % file_suffix)
-    # If there is already an existing shapefile with the same name and path,
-    # delete it then copy the input shapefile into the designated output folder
-    if os.path.isfile(watershed_output_datasource_uri):
-        os.remove(watershed_output_datasource_uri)
-    original_datasource = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    output_datasource = driver.CreateCopy(
-        watershed_output_datasource_uri, original_datasource)
-    output_layer = output_datasource.GetLayer()
 
-    # define some variables outside the loop for closure
-    effective_retention_nodata = None
-    ndr_nodata = None
-    sub_effective_retention_nodata = None
-    load_nodata = None
-    export_nodata = None
-    field_header_order = []
-    field_summaries = {}
-    for nutrient in nutrients_to_process:
-        effective_retention_path = (
-            f_reg['effective_retention_%s_path' % nutrient])
-        eff_path = f_reg['eff_%s_path' % nutrient]
-        crit_len_path = f_reg['crit_len_%s_path' % nutrient]
-        ndr_core.ndr_eff_calculation(
-            f_reg['flow_direction_path'], f_reg['stream_path'], eff_path,
-            crit_len_path, effective_retention_path)
-        effective_retention_nodata = (
-            natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-                effective_retention_path))
-        ndr_path = f_reg['ndr_%s_path' % nutrient]
-        ndr_nodata = -1.0
-
-        def _calculate_ndr(effective_retention_array, ic_array):
-            """Calculate NDR."""
-            valid_mask = (
-                (effective_retention_array != effective_retention_nodata) &
-                (ic_array != ic_nodata))
-            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-            result[:] = ndr_nodata
-            result[valid_mask] = (
-                (1.0 - effective_retention_array[valid_mask]) /
-                (1.0 + numpy.exp(
-                    (ic_0_param - ic_array[valid_mask]) / k_param)))
-            return result
-
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [effective_retention_path, f_reg['ic_factor_path']],
-            _calculate_ndr, ndr_path, gdal.GDT_Float32, ndr_nodata,
-            out_pixel_size, 'intersection', vectorize_op=False)
-
-        sub_effective_retention_path = (
-            f_reg['sub_effective_retention_%s_path' % nutrient])
-        sub_eff_path = f_reg['sub_eff_%s_path' % nutrient]
-        ndr_core.ndr_eff_calculation(
-            f_reg['flow_direction_path'], f_reg['stream_path'], sub_eff_path,
-            sub_crit_len_path, sub_effective_retention_path)
-        sub_effective_retention_nodata = (
-            natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-                sub_effective_retention_path))
-        sub_ndr_path = f_reg['sub_ndr_%s_path' % nutrient]
-        ndr_nodata = -1.0
-
-        def _calculate_sub_ndr_old(sub_eff_ret_array):
-            """Calculate subsurface NDR."""
-            valid_mask = (
-                sub_eff_ret_array !=
-                sub_effective_retention_nodata)
-            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-            result[:] = ndr_nodata
-            result[valid_mask] = (1.0 - sub_eff_ret_array[valid_mask])
-            return result
-
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [sub_effective_retention_path], _calculate_sub_ndr_old, sub_ndr_path,
-            gdal.GDT_Float32, ndr_nodata, out_pixel_size, 'intersection',
-            vectorize_op=False)
-
-        export_path = f_reg['%s_export_path' % nutrient]
-
-        load_nodata = natcap.invest.pygeoprocessing_0_3_3.get_nodata_from_uri(
-            load_path)
-        export_nodata = -1.0
-
-        def calculate_export(
-                modified_load_array, ndr_array, modified_sub_load_array,
-                sub_ndr_array):
-            """Combine NDR and subsurface NDR."""
-            valid_mask = (
-                (modified_load_array != load_nodata) &
-                (ndr_array != ndr_nodata) &
-                (modified_sub_load_array != load_nodata) &
-                (sub_ndr_array != ndr_nodata))
-            result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
-            result[:] = export_nodata
-            result[valid_mask] = (
-                modified_load_array[valid_mask] * ndr_array[valid_mask] +
-                modified_sub_load_array[valid_mask] *
-                sub_ndr_array[valid_mask])
-            return result
-
-        modified_load_path = f_reg['modified_load_%s_path' % nutrient]
-        modified_sub_load_path = f_reg['modified_sub_load_%s_path' % nutrient]
-        natcap.invest.pygeoprocessing_0_3_3.vectorize_datasets(
-            [modified_load_path, ndr_path,
-             modified_sub_load_path, sub_ndr_path], calculate_export,
-            export_path, gdal.GDT_Float32, export_nodata,
-            out_pixel_size, "intersection", vectorize_op=False)
-
+    """
         # summarize the results in terms of watershed:
         LOGGER.info("Summarizing the results of nutrient %s", nutrient)
         load_path = f_reg['load_%s_path' % nutrient]
@@ -571,7 +505,7 @@ def execute(args):
         field_header_order = (
             [x % nutrient for x in ['%s_load_tot', '%s_exp_tot']] +
             field_header_order)
-
+    """
     LOGGER.info('Writing summaries to output shapefile')
     _add_fields_to_shapefile(
         'ws_id', field_summaries, output_layer, field_header_order)
@@ -1168,3 +1102,74 @@ def calculate_sub_ndr(eff_sub, crit_len_sub, d_dn_path, target_sub_ndr_path):
     pygeoprocessing.raster_calculator(
         [(d_dn_path, 1)], _sub_ndr_op, target_sub_ndr_path, gdal.GDT_Float32,
         _TARGET_NODATA)
+
+
+def calculate_export(
+        modified_load_path, ndr_path, modified_sub_load_path, sub_ndr_path,
+        target_export_path):
+    """Calculate export."""
+    load_nodata = pygeoprocessing.get_raster_info(
+        modified_load_path)['nodata'][0]
+    sub_load_nodata = pygeoprocessing.get_raster_info(
+        modified_sub_load_path)['nodata'][0]
+    ndr_nodata = pygeoprocessing.get_raster_info(
+        ndr_path)['nodata'][0]
+    sub_ndr_nodata = pygeoprocessing.get_raster_info(
+        sub_ndr_path)['nodata'][0]
+
+    def _calculate_export_op(
+            modified_load_array, ndr_array, modified_sub_load_array,
+            sub_ndr_array):
+        """Combine NDR and subsurface NDR."""
+        valid_mask = (
+            ~numpy.isclose(modified_load_array, load_nodata) &
+            ~numpy.isclose(ndr_array, ndr_nodata) &
+            ~numpy.isclose(modified_sub_load_array, sub_load_nodata) &
+            ~numpy.isclose(sub_ndr_array, sub_ndr_nodata))
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = (
+            modified_load_array[valid_mask] * ndr_array[valid_mask] +
+            modified_sub_load_array[valid_mask] *
+            sub_ndr_array[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(modified_load_path, 1), (ndr_path, 1),
+         (modified_sub_load_path, 1), (sub_ndr_path, 1)], _calculate_export_op,
+        target_export_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def aggregate_and_pickle_total(
+        base_raster_path_band, aggregate_vector_path, target_pickle_path):
+    """Aggregate base raster path to vector path FIDs and pickle result.
+
+    Parameters:
+        base_raster_path_band (tuple): raster/path band to aggregate over.
+        aggregate_vector_path (string): path to vector to use geometry to
+            aggregate over.
+        target_pickle_path (string): path to a file that will contain the
+            result of a pygeoprocessing.zonal_statistics call over
+            base_raster_path_band from aggregate_vector_path.
+
+    Returns:
+        None.
+
+    """
+    result = pygeoprocessing.zonal_statistics(
+        base_raster_path_band, aggregate_vector_path,
+        working_dir=os.path.dirname(target_pickle_path))
+
+    with open(target_pickle_path, 'w') as target_pickle_file:
+        pickle.dump(result, target_pickle_file)
+
+
+def create_vector_copy(base_vector_path, target_vector_path):
+    """Create a copy of base vector."""
+    if os.path.isfile(target_vector_path):
+        os.remove(target_vector_path)
+    base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_vector = driver.CreateCopy(
+        target_vector_path, base_vector)
+    target_vector = None
