@@ -17,7 +17,6 @@ from .. import utils
 from natcap.invest.ndr import ndr_core
 
 LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
-logging.getLogger('taskgraph').setLevel(logging.INFO)
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
