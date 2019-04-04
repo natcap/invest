@@ -6,15 +6,12 @@ have on particular habitats.
 '''
 from __future__ import absolute_import
 import logging
-import pprint
 import csv
 
 import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
-
-pp = pprint.PrettyPrinter(indent=4)
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
 
