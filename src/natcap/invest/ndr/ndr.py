@@ -709,7 +709,7 @@ def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
     for _, raster_block in pygeoprocessing.iterblocks(
             base_raster_path_band):
         valid_block = raster_block[~numpy.isclose(raster_block, base_nodata)]
-        value_sum = numpy.sum(valid_block)
+        value_sum += numpy.sum(valid_block)
         value_count += valid_block.size
 
     value_mean = value_sum
