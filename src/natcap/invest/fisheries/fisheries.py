@@ -118,7 +118,7 @@ def execute(args, create_outputs=True):
             'sexsp': 'Yes',
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_path': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'population_csv_dir': '',
             'spawn_units': 'Weight',
             'total_init_recruits': 100000.0,

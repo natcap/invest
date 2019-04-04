@@ -7,7 +7,6 @@ import os
 import numpy
 import pygeoprocessing.testing
 from osgeo import gdal
-from osgeo import ogr
 
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'fisheries')

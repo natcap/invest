@@ -63,7 +63,7 @@ def fetch_args(args, create_outputs=True):
                 'unit_price': 5.0,
 
                 # Pop Params
-                'population_csv_path': 'path/to/csv_uri',
+                'population_csv_path': 'path/to/csv_path',
                 'Survnaturalfrac': numpy.array(
                     [[[...], [...]], [[...], [...]], ...]),
                 'Classes': numpy.array([...]),
@@ -495,7 +495,7 @@ def _verify_single_params(args, create_outputs=True):
 
         {
             'workspace_dir': 'path/to/workspace_dir',
-            'population_csv_path': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'migration_dir': 'path/to/mig_dir',
             'aoi_vector_path': 'path/to/aoi_vector_path',
             'total_timesteps': 100,
@@ -503,7 +503,7 @@ def _verify_single_params(args, create_outputs=True):
             'sexsp': 2,
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_path': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'population_csv_dir': ''
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,

@@ -24,25 +24,25 @@ def execute(args):
     based on habitat area changes and class-level dependencies on those
     habitats.
 
-    :param str args['workspace_dir']: location into which the resultant
+    args['workspace_dir'] (str): location into which the resultant
         modified Population Parameters CSV file should be placed.
 
-    :param str args['sexsp']: specifies whether or not the age and stage
+    args['sexsp'] (str): specifies whether or not the age and stage
         classes are distinguished by sex. Options: 'Yes' or 'No'
 
-    :param str args['population_csv_path']: location of the population
+    args['population_csv_path'] (str): location of the population
         parameters csv file. This file contains all age and stage specific
         parameters.
 
-    :param str args['habitat_chg_csv_path']: location of the habitat change
+    args['habitat_chg_csv_path'] (str): location of the habitat change
         parameters csv file. This file contains habitat area change
         information.
 
-    :param str args['habitat_dep_csv_path']: location of the habitat dependency
+    args['habitat_dep_csv_path'] (str): location of the habitat dependency
         parameters csv file. This file contains habitat-class dependency
         information.
 
-    :param float args['gamma']: describes the relationship between a change
+    args['gamma'] (float): describes the relationship between a change
         in habitat area and a change in survival of life stages dependent on
         that habitat
 

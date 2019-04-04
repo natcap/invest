@@ -714,8 +714,8 @@ def save_population_csv(vars_dict):
     basename, ext = os.path.splitext(os.path.basename(
         vars_dict['population_csv_path']))
     filename = basename + '_modified' + ext
-    output_uri = os.path.join(vars_dict['output_dir'], filename)
-    f = open(output_uri, 'wb')
+    output_path = os.path.join(vars_dict['output_dir'], filename)
+    f = open(output_path, 'wb')
     wr = csv.writer(f)
     for row in l:
         wr.writerow(row)
