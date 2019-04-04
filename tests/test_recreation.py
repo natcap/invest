@@ -169,6 +169,7 @@ class TestRecServer(unittest.TestCase):
         # instead we just check that at the very least it ends with _fast_hash
         self.assertTrue(file_hash.endswith('_fast_hash'))
 
+    @_timeout(30.0)
     def test_year_order(self):
         """Recreation ensure that end year < start year raise ValueError."""
         from natcap.invest.recreation import recmodel_server
