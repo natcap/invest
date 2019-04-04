@@ -104,7 +104,6 @@ class NDRTests(unittest.TestCase):
             f.write('')
 
         # make args explicit that this is a base run of SWY
-        args['workspace_dir'] = 'ndr_test_regression'
         ndr.execute(args)
 
         NDRTests._assert_regression_results_equal(
