@@ -17,8 +17,8 @@ class Fisheries(model.InVESTModel):
             text=(
                 u"This tool is in an ALPHA testing stage and should "
                 u"not be used for decision making."))
-        self.aoi_uri = inputs.File(
-            args_key=u'aoi_uri',
+        self.aoi_vector_path = inputs.File(
+            args_key=u'aoi_vector_path',
             helptext=(
                 u"An OGR-supported vector file used to display outputs "
                 u"within the region(s) of interest.<br><br>The layer "
@@ -28,7 +28,7 @@ class Fisheries(model.InVESTModel):
                 u"alphabetic, but must be unique within the given file."),
             label=u'Area of Interest (Vector) (Optional)',
             validator=self.validator)
-        self.add_input(self.aoi_uri)
+        self.add_input(self.aoi_vector_path)
         self.total_timesteps = inputs.Text(
             args_key=u'total_timesteps',
             helptext=(
@@ -93,8 +93,8 @@ class Fisheries(model.InVESTModel):
                 u"pointing to a set of Population Parameters CSV files."),
             label=u'Batch Processing')
         self.popu_cont.add_input(self.do_batch)
-        self.population_csv_uri = inputs.File(
-            args_key=u'population_csv_uri',
+        self.population_csv_path = inputs.File(
+            args_key=u'population_csv_path',
             helptext=(
                 u"The provided CSV file should contain all necessary "
                 u"attributes for the sub-populations based on lifecycle "
@@ -104,7 +104,7 @@ class Fisheries(model.InVESTModel):
                 u"and how the CSV file should be structured."),
             label=u'Population Parameters File (CSV)',
             validator=self.validator)
-        self.popu_cont.add_input(self.population_csv_uri)
+        self.popu_cont.add_input(self.population_csv_path)
         self.population_csv_dir = inputs.Folder(
             args_key=u'population_csv_dir',
             helptext=(
@@ -263,7 +263,7 @@ class Fisheries(model.InVESTModel):
             self._control_recruitment_parameters)
 
     def _toggle_batch_runs(self, do_batch_runs):
-        self.population_csv_uri.set_interactive(not do_batch_runs)
+        self.population_csv_path.set_interactive(not do_batch_runs)
         self.population_csv_dir.set_interactive(do_batch_runs)
 
     def _control_recruitment_parameters(self, recruit_func):
@@ -281,12 +281,12 @@ class Fisheries(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.aoi_uri.args_key: self.aoi_uri.value(),
+            self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
             self.population_type.args_key: self.population_type.value(),
             self.sexsp.args_key: self.sexsp.value(),
             self.harvest_units.args_key: self.harvest_units.value(),
             self.do_batch.args_key: self.do_batch.value(),
-            self.population_csv_uri.args_key: self.population_csv_uri.value(),
+            self.population_csv_path.args_key: self.population_csv_path.value(),
             self.population_csv_dir.args_key: self.population_csv_dir.value(),
             self.recruitment_type.args_key: self.recruitment_type.value(),
             self.spawn_units.args_key: self.spawn_units.value(),
@@ -329,8 +329,8 @@ class FisheriesHST(model.InVESTModel):
             expanded=True,
             label=u'Population Parameters')
         self.add_input(self.pop_cont)
-        self.population_csv_uri = inputs.File(
-            args_key=u'population_csv_uri',
+        self.population_csv_path = inputs.File(
+            args_key=u'population_csv_path',
             helptext=(
                 u"A CSV file containing all necessary attributes for "
                 u"population classes based on age/stage, sex, and area "
@@ -341,7 +341,7 @@ class FisheriesHST(model.InVESTModel):
                 u"file."),
             label=u'Population Parameters File (CSV)',
             validator=self.validator)
-        self.pop_cont.add_input(self.population_csv_uri)
+        self.pop_cont.add_input(self.population_csv_path)
         self.sexsp = inputs.Dropdown(
             args_key=u'sexsp',
             helptext=(
@@ -356,8 +356,8 @@ class FisheriesHST(model.InVESTModel):
             expanded=True,
             label=u'Habitat Parameters')
         self.add_input(self.hab_cont)
-        self.habitat_csv_dep_uri = inputs.File(
-            args_key=u'habitat_dep_csv_uri',
+        self.habitat_csv_dep_path = inputs.File(
+            args_key=u'habitat_dep_csv_path',
             helptext=(
                 u"A CSV file containing the habitat dependencies (0-1) "
                 u"for each life stage or age and for each habitat type "
@@ -367,9 +367,9 @@ class FisheriesHST(model.InVESTModel):
                 u"documentation for help on how to format this file."),
             label=u'Habitat Dependency Parameters File (CSV)',
             validator=self.validator)
-        self.hab_cont.add_input(self.habitat_csv_dep_uri)
-        self.habitat_chg_csv_uri = inputs.File(
-            args_key=u'habitat_chg_csv_uri',
+        self.hab_cont.add_input(self.habitat_csv_dep_path)
+        self.habitat_chg_csv_path = inputs.File(
+            args_key=u'habitat_chg_csv_path',
             helptext=(
                 u"A CSV file containing the percent changes in habitat "
                 u"area by subregion (if applicable). The habitats "
@@ -380,7 +380,7 @@ class FisheriesHST(model.InVESTModel):
                 u"to format this file."),
             label=u'Habitat Area Change File (CSV)',
             validator=self.validator)
-        self.hab_cont.add_input(self.habitat_chg_csv_uri)
+        self.hab_cont.add_input(self.habitat_chg_csv_path)
         self.gamma = inputs.Text(
             args_key=u'gamma',
             helptext=(
@@ -398,11 +398,11 @@ class FisheriesHST(model.InVESTModel):
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
             self.pop_cont.args_key: self.pop_cont.value(),
-            self.population_csv_uri.args_key: self.population_csv_uri.value(),
+            self.population_csv_path.args_key: self.population_csv_path.value(),
             self.sexsp.args_key: self.sexsp.value(),
             self.hab_cont.args_key: self.hab_cont.value(),
-            self.habitat_csv_dep_uri.args_key: self.habitat_csv_dep_uri.value(),
-            self.habitat_chg_csv_uri.args_key: self.habitat_chg_csv_uri.value(),
+            self.habitat_csv_dep_path.args_key: self.habitat_csv_dep_path.value(),
+            self.habitat_chg_csv_path.args_key: self.habitat_chg_csv_path.value(),
             self.gamma.args_key: self.gamma.value(),
         }
 

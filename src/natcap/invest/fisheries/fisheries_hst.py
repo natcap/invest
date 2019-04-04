@@ -30,15 +30,15 @@ def execute(args):
     :param str args['sexsp']: specifies whether or not the age and stage
         classes are distinguished by sex. Options: 'Yes' or 'No'
 
-    :param str args['population_csv_uri']: location of the population
+    :param str args['population_csv_path']: location of the population
         parameters csv file. This file contains all age and stage specific
         parameters.
 
-    :param str args['habitat_chg_csv_uri']: location of the habitat change
+    :param str args['habitat_chg_csv_path']: location of the habitat change
         parameters csv file. This file contains habitat area change
         information.
 
-    :param str args['habitat_dep_csv_uri']: location of the habitat dependency
+    :param str args['habitat_dep_csv_path']: location of the habitat dependency
         parameters csv file. This file contains habitat-class dependency
         information.
 
@@ -54,9 +54,9 @@ def execute(args):
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
             'sexsp': 'Yes',
-            'population_csv_uri': 'path/to/csv',
-            'habitat_chg_csv_uri': 'path/to/csv',
-            'habitat_dep_csv_uri': 'path/to/csv',
+            'population_csv_path': 'path/to/csv',
+            'habitat_chg_csv_path': 'path/to/csv',
+            'habitat_dep_csv_path': 'path/to/csv',
             'gamma': 0.5,
         }
 
@@ -184,10 +184,10 @@ def validate(args, limit_to=None):
     missing_keys = set([])
     for key in ('workspace_dir',
                 'results_suffix',
-                'population_csv_uri',
+                'population_csv_path',
                 'sexsp',
-                'habitat_dep_csv_uri',
-                'habitat_chg_csv_uri',
+                'habitat_dep_csv_path',
+                'habitat_chg_csv_path',
                 'gamma'):
         if key in (None, limit_to):
             try:
@@ -205,9 +205,9 @@ def validate(args, limit_to=None):
         warnings.append((keys_with_empty_values,
                          'Argument must have a value'))
 
-    for csv_key in ('population_csv_uri',
-                    'habitat_dep_csv_uri',
-                    'habitat_chg_csv_uri'):
+    for csv_key in ('population_csv_path',
+                    'habitat_dep_csv_path',
+                    'habitat_chg_csv_path'):
         if limit_to in (csv_key, None):
             try:
                 csv.reader(open(args[csv_key], 'r'))

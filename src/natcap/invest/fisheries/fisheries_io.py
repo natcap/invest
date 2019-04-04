@@ -45,7 +45,7 @@ def fetch_args(args, create_outputs=True):
                 'workspace_dir': 'path/to/workspace_dir',
                 'results_suffix': 'scenario_name',
                 'output_dir': 'path/to/output_dir',
-                'aoi_uri': 'path/to/aoi_uri',
+                'aoi_vector_path': 'path/to/aoi_vector_path',
                 'total_timesteps': 100,
                 'population_type': 'Stage-Based',
                 'sexsp': 2,
@@ -63,7 +63,7 @@ def fetch_args(args, create_outputs=True):
                 'unit_price': 5.0,
 
                 # Pop Params
-                'population_csv_uri': 'path/to/csv_uri',
+                'population_csv_path': 'path/to/csv_uri',
                 'Survnaturalfrac': numpy.array(
                     [[[...], [...]], [[...], [...]], ...]),
                 'Classes': numpy.array([...]),
@@ -117,11 +117,11 @@ def fetch_args(args, create_outputs=True):
                          params_dict.items())
 
         # When writing out files, we need to ensure that the
-        # 'population_csv_uri' key is exactly where we expect it to be in the
+        # 'population_csv_path' key is exactly where we expect it to be in the
         # vars dict.  The dict() call just above this comment unfortunately
-        # causes the 'population_csv_uri' key present in pop_dict to be
+        # causes the 'population_csv_path' key present in pop_dict to be
         # overwritten by other parameters from other dictionaries.
-        vars_dict['population_csv_uri'] = pop_dict['population_csv_uri']
+        vars_dict['population_csv_path'] = pop_dict['population_csv_path']
         model_list.append(vars_dict)
 
     return model_list
@@ -164,7 +164,7 @@ def read_population_csvs(args):
         ]
     '''
     if args['do_batch'] is False:
-        population_csv_path_list = [args['population_csv_uri']]
+        population_csv_path_list = [args['population_csv_path']]
     else:
         population_csv_path_list = _listdir(
             args['population_csv_dir'])
@@ -203,7 +203,7 @@ def read_population_csv(args, path):
     Example Returns::
 
         pop_dict = {
-            'population_csv_uri': 'path/to/csv',
+            'population_csv_path': 'path/to/csv',
             'Survnaturalfrac': numpy.array(
                 [[...], [...]], [[...], [...]], ...),
 
@@ -222,7 +222,7 @@ def read_population_csv(args, path):
         }
     '''
     pop_dict = _parse_population_csv(path, args['sexsp'])
-    pop_dict['population_csv_uri'] = path
+    pop_dict['population_csv_path'] = path
 
     # Check that required information exists
     Necessary_Params = ['Classes', 'Exploitationfraction', 'Regions',
@@ -495,15 +495,15 @@ def _verify_single_params(args, create_outputs=True):
 
         {
             'workspace_dir': 'path/to/workspace_dir',
-            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_uri',
             'migration_dir': 'path/to/mig_dir',
-            'aoi_uri': 'path/to/aoi_uri',
+            'aoi_vector_path': 'path/to/aoi_vector_path',
             'total_timesteps': 100,
             'population_type': 'Stage-Based',
             'sexsp': 2,
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_uri',
             'population_csv_dir': ''
             'spawn_units': 'Weight',
             'total_init_recruits': 100.0,
@@ -670,7 +670,7 @@ def create_outputs(vars_dict):
     # HTML results page
     _create_results_html(vars_dict)
     # Append Results to Shapefile
-    if vars_dict['aoi_uri']:
+    if vars_dict['aoi_vector_path']:
         _create_results_aoi(vars_dict)
 
 
@@ -682,7 +682,7 @@ def _create_intermediate_csv(vars_dict):
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
-            vars_dict['population_csv_uri']))[0]
+            vars_dict['population_csv_path']))[0]
         filename = 'population_by_time_step_' + basename + '.csv'
     elif vars_dict['results_suffix'] is not '':
         filename = 'population_by_time_step_' + vars_dict[
@@ -736,7 +736,7 @@ def _create_results_csv(vars_dict):
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
-            vars_dict['population_csv_uri']))[0]
+            vars_dict['population_csv_path']))[0]
         filename = 'results_table_' + basename + '.csv'
     elif vars_dict['results_suffix'] is not '':
         filename = 'results_table_' + vars_dict['results_suffix'] + '.csv'
@@ -808,7 +808,7 @@ def _create_results_html(vars_dict):
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
-            vars_dict['population_csv_uri']))[0]
+            vars_dict['population_csv_path']))[0]
         filename = 'results_page_' + basename + '.html'
     elif vars_dict['results_suffix'] is not '':
         filename = 'results_page_' + vars_dict['results_suffix'] + '.html'
@@ -981,7 +981,7 @@ def _create_results_aoi(vars_dict):
     population parameters file.
 
     '''
-    base_aoi_vector_path = vars_dict['aoi_uri']
+    base_aoi_vector_path = vars_dict['aoi_vector_path']
     Regions = vars_dict['Regions']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -989,7 +989,7 @@ def _create_results_aoi(vars_dict):
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename2 = os.path.splitext(os.path.basename(
-            vars_dict['population_csv_uri']))[0]
+            vars_dict['population_csv_path']))[0]
         filename = basename + '_results_aoi_' + basename2 + '.shp'
     elif vars_dict['results_suffix'] is not '':
         filename = basename + '_results_aoi_' + vars_dict[

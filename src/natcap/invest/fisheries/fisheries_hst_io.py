@@ -40,7 +40,7 @@ def fetch_args(args):
             'gamma': 0.5,
 
             # Pop Vars
-            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'Surv_nat_xsa': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
             'Classes': np.array([...]),
@@ -58,8 +58,8 @@ def fetch_args(args):
             },
 
             # Habitat Vars
-            'habitat_chg_csv_uri': 'path/to/csv',
-            'habitat_dep_csv_uri': 'path/to/csv',
+            'habitat_chg_csv_path': 'path/to/csv',
+            'habitat_dep_csv_path': 'path/to/csv',
             'Habitats': ['habitat1', 'habitat2', ...],
             'Hab_classes': ['class1', 'class2', ...],
             'Hab_regions': ['region1', 'region2', ...],
@@ -138,7 +138,7 @@ def read_population_csv(args):
     Example Returns::
 
         pop_dict = {
-            'population_csv_uri': 'path/to/csv',
+            'population_csv_path': 'path/to/csv',
             'Surv_nat_xsa': np.array(
                 [[...], [...]], [[...], [...]], ...),
 
@@ -162,7 +162,7 @@ def read_population_csv(args):
             },
         }
     '''
-    path = args['population_csv_uri']
+    path = args['population_csv_path']
     pop_dict = _parse_population_csv(path, args['sexsp'])
 
     # Check that required information exists
@@ -385,7 +385,7 @@ def _parse_habitat_dep_csv(args):
             'Hab_dep_num_a': np.array([...]),
         }
     '''
-    path = args['habitat_dep_csv_uri']
+    path = args['habitat_dep_csv_path']
     csv_data = []
     habitat_dep_dict = {}
 
@@ -491,7 +491,7 @@ def _parse_habitat_chg_csv(args):
                 [[[...], [...]], [[...], [...]], ...]),
         }
     '''
-    path = args['habitat_chg_csv_uri']
+    path = args['habitat_chg_csv_path']
     csv_data = []
     habitat_chg_dict = {}
 
@@ -629,7 +629,7 @@ def save_population_csv(vars_dict):
             'workspace_dir': 'path/to/workspace_dir/',
             'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
-            'population_csv_uri': 'path/to/csv',  # original csv file
+            'population_csv_path': 'path/to/csv',  # original csv file
             'Surv_nat_xsa': np.ndarray([...]),
             'Surv_nat_xsa_mod': np.ndarray([...]),
 
@@ -712,7 +712,7 @@ def save_population_csv(vars_dict):
 
     # Write List to File
     basename, ext = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))
+        vars_dict['population_csv_path']))
     filename = basename + '_modified' + ext
     output_uri = os.path.join(vars_dict['output_dir'], filename)
     f = open(output_uri, 'wb')
