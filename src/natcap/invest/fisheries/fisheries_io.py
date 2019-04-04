@@ -9,7 +9,7 @@ import csv
 import numpy
 from osgeo import ogr
 from osgeo import gdal
-import pygeoprocessing
+import pygeoprocessing.testing
 
 from .. import reporting
 from .. import utils
