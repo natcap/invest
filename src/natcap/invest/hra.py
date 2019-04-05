@@ -1761,7 +1761,7 @@ def _pair_criteria_num_op(
             spatial_explicit_arr_const[2::4],
             spatial_explicit_arr_const[3::4]):
         # Mask pixels where both habitat, stressor, and spatial array exist
-        overlap_mask = [hab_stress_buff_mask & (spatial_arr != nodata)]
+        overlap_mask = hab_stress_buff_mask & (spatial_arr != nodata)
 
         # Compute the cumulative numerator score
         num_arr[overlap_mask] += spatial_arr[overlap_mask]/(dq*weight)
