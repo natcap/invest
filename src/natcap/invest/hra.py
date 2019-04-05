@@ -50,10 +50,8 @@ _TARGET_PIXEL_INT = gdal.GDT_Byte
 _TARGET_NODATA_FLT = float(numpy.finfo(numpy.float32).min)
 _TARGET_NODATA_INT = 255  # for unsigned 8-bit int
 
-# ESPG code and target bounding box for warping rasters to WGS84 coordinate
-# system.
+# ESPG code for warping rasters to WGS84 coordinate system.
 _WGS84_ESPG_CODE = 4326
-_WGS84_BOUNDING_BOX = [-180.0, -90.0, 180.0, 90.0]
 
 # Resampling method for rasters.
 _RESAMPLE_METHOD = 'near'
@@ -2311,7 +2309,12 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
         raise ValueError('Info table %s is not a CSV nor an Excel file.' %
                          base_info_table_path)
 
-    info_df.columns = map(str.upper, info_df.columns)
+    # Convert column names to upper case, and encode it to strings if it's not
+    # a string (e.g. unicode)
+    info_df.columns = [
+        col.upper() if isinstance(col, str) else col.encode('utf-8').upper()
+        for col in info_df.columns]
+
     missing_columns = list(
         set(required_column_headers) - set(info_df.columns.values))
 
@@ -2324,7 +2327,10 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     info_df.dropna(axis=1, how='all', inplace=True)
 
     # Convert the values in TYPE column to lowercase first
+    if isinstance(info_df.TYPE, unicode):
+        info_df.TYPE = info_df.TYPE.str.encode('utf-8')
     info_df.TYPE = info_df.TYPE.str.lower()
+
     unknown_types = list(set(info_df.TYPE) - set(required_types))
     if unknown_types:
         raise ValueError(
@@ -2722,7 +2728,11 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         # If stressor exists and the row index is not None
         elif stressor and row_idx:
             criteria_name = row_idx
-            criteria_type = row_data[_CRITERIA_TYPE_HEADER].upper()
+            criteria_type = row_data[_CRITERIA_TYPE_HEADER]
+            if isinstance(criteria_type, unicode):
+                criteria_type = criteria_type.encode('utf-8').upper()
+            else:
+                criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
