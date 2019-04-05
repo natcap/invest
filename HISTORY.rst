@@ -4,6 +4,9 @@
 
 Unreleased Changes
 ------------------
+* Valuation is now an optional component of the InVEST Scenic Quality model.
+* Fixing a bug in the percentiles algorithm used by Scenic Quality that
+  would result in incorrect visual quality outputs.
 * Carbon Model and Crop Production models no longer crash if user-input
   rasters do not have a nodata value defined. In this case these models
   treat all pixel values as valid data.
