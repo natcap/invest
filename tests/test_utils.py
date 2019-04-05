@@ -469,7 +469,6 @@ class PrepareWorkspaceTests(unittest.TestCase):
         from natcap.invest import utils
 
         workspace = os.path.join(self.workspace, 'foo')
-
         try:
             with utils.prepare_workspace(workspace,
                                          'some_model'):
@@ -485,8 +484,9 @@ class PrepareWorkspaceTests(unittest.TestCase):
             os.path.basename(logfile_glob[0]).startswith('InVEST-some_model'))
         with open(logfile_glob[0]) as logfile:
             logfile_text = logfile.read()
-            print logfile_text
-            self.assertTrue('osgeo' in logfile_text)  # gdal error captured
+            # all the following strings should be in the logfile.
+            expected_string = 'file should not exist: No such file or directory'
+            self.assertTrue(expected_string in logfile_text)  # gdal error captured
             self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
             self.assertTrue('Elapsed time:' in logfile_text)
 

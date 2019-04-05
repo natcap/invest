@@ -546,6 +546,8 @@ class TestRecServer(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_all.csv'),
             'results_suffix': u'',
             'workspace_dir': self.workspace_dir,
+            'hostname': server_args['hostname'],
+            'port': server_args['port'],
         }
         recmodel_client.execute(args)
 
