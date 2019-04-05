@@ -34,7 +34,7 @@ def execute(args):
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
-            'shade', 'kc', and 'albedo'.
+            'shade', 'kc', and 'albedo', and 'green_area'.
         args['urban_park_cooling_distance'] (float): Distance (in m) over
             which large urban parks (> 2 ha) will have a cooling effect.
         args['uhi_max'] (float): Magnitude of the UHI effect.
@@ -87,7 +87,7 @@ def execute(args):
 
     task_path_prop_map = {}
 
-    for prop in ['kc', 'shade', 'albedo']:
+    for prop in ['kc', 'shade', 'albedo', 'green_area']:
         prop_map = dict([
             (lucode, x[prop])
             for lucode, x in biophysical_lucode_map.items()])
