@@ -2327,9 +2327,9 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
     info_df.dropna(axis=1, how='all', inplace=True)
 
     # Convert the values in TYPE column to lowercase first
-    if isinstance(info_df.TYPE, unicode):
-        info_df.TYPE = info_df.TYPE.str.encode('utf-8')
-    info_df.TYPE = info_df.TYPE.str.lower()
+    info_df.TYPE = [
+        val.lower() if isinstance(val, str) else val.encode('utf-8').lower()
+        for val in info_df.TYPE]
 
     unknown_types = list(set(info_df.TYPE) - set(required_types))
     if unknown_types:
