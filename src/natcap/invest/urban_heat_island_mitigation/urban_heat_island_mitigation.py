@@ -14,8 +14,9 @@ import shapely.wkb
 import shapely.prepared
 import rtree
 
-from . import validation
-from . import utils
+from .. import validation
+from .. import utils
+from . import urban_heat_island_mitigation_core
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -104,6 +105,24 @@ def execute(args):
             dependent_task_list=[align_task],
             task_name='reclassify to %s' % prop)
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
+
+    target_blob_id_raster_path = os.path.join(
+        temporary_working_dir, 'green_blob_id.tif')
+    id_count_map_pickle_path = os.path.join(
+        temporary_working_dir, 'green_blob_map.pickle')
+
+    blob_green_task = task_graph.add_task(
+        func=urban_heat_island_mitigation_core.blob_mask,
+        args=(
+            (task_path_prop_map['green_area'][1], 1),
+            target_blob_id_raster_path, id_count_map_pickle_path),
+        target_path_list=[target_blob_id_raster_path],
+        dependent_task_list=[task_path_prop_map['green_area'][0]],
+        task_name='blob green mask')
+
+    task_graph.close()
+    task_graph.join()
+    return
 
     eto_nodata = pygeoprocessing.get_raster_info(
         args['ref_eto_raster_path'])['nodata'][0]
