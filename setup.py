@@ -47,6 +47,7 @@ setup(
         'natcap.invest.routing',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
+        'natcap.invest.urban_heat_island_mitigation',
         'natcap.invest.pygeoprocessing_0_3_3',
         'natcap.invest.pygeoprocessing_0_3_3.routing',
         'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
@@ -92,6 +93,11 @@ setup(
         Extension(
             name="natcap.invest.ndr.ndr_core",
             sources=['src/natcap/invest/ndr/ndr_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.urban_heat_island_mitigation.urban_heat_island_mitigation_core",
+            sources=['src/natcap/invest/urban_heat_island_mitigation/urban_heat_island_mitigation_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(

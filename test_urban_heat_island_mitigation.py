@@ -2,7 +2,7 @@
 import logging
 import sys
 
-import natcap.invest.urban_heat_island_mitigation
+import natcap.invest.urban_heat_island_mitigation.urban_heat_island_mitigation
 
 logging.basicConfig(
     level=logging.DEBUG,
@@ -30,7 +30,7 @@ def main():
         'building_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
         'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",
         }
-    natcap.invest.urban_heat_island_mitigation.execute(args)
+    natcap.invest.urban_heat_island_mitigation.urban_heat_island_mitigation.execute(args)
 
 
 if __name__ == '__main__':
