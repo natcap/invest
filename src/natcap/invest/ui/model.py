@@ -1553,7 +1553,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                     'n_workers defined in args. It should not be defined.')
 
             args['n_workers'] = inputs.INVEST_SETTINGS.value(
-                'taskgraph/n_workers', -1)
+                'taskgraph/n_workers', '-1', unicode)
 
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
