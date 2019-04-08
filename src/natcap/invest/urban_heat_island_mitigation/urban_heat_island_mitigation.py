@@ -28,6 +28,8 @@ def execute(args):
 
     Parameters:
         args['workspace_dir'] (str): path to target output directory.
+        args['results_suffix'] (string): (optional) string to append to any
+            output file names
         args['t_air_ref_raster_path'] (str): raster of air temperature.
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
@@ -49,6 +51,7 @@ def execute(args):
         None.
 
     """
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
     temporary_working_dir = os.path.join(
         args['workspace_dir'], 'temp_working_dir')
     utils.make_directories([args['workspace_dir'], temporary_working_dir])
@@ -60,11 +63,11 @@ def execute(args):
 
     # align all the input rasters.
     aligned_t_air_ref_raster_path = os.path.join(
-        temporary_working_dir, 't_air_ref.tif')
+        temporary_working_dir, 't_air_ref%s.tif' % file_suffix)
     aligned_lulc_raster_path = os.path.join(
-        temporary_working_dir, 'lulc.tif')
+        temporary_working_dir, 'lulc%s.tif' % file_suffix)
     aligned_ref_eto_raster_path = os.path.join(
-        temporary_working_dir, 'ref_eto.tif')
+        temporary_working_dir, 'ref_eto%s.tif' % file_suffix)
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
@@ -94,7 +97,7 @@ def execute(args):
             for lucode, x in biophysical_lucode_map.items()])
 
         prop_raster_path = os.path.join(
-            temporary_working_dir, '%s.tif' % prop)
+            temporary_working_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
@@ -107,7 +110,7 @@ def execute(args):
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
     target_blob_id_raster_path = os.path.join(
-        temporary_working_dir, 'green_blob_id.tif')
+        temporary_working_dir, 'green_blob_id%s.tif' % file_suffix)
     id_count_map_pickle_path = os.path.join(
         temporary_working_dir, 'green_blob_map.pickle')
 
@@ -126,7 +129,8 @@ def execute(args):
 
     eto_nodata = pygeoprocessing.get_raster_info(
         args['ref_eto_raster_path'])['nodata'][0]
-    eti_raster_path = os.path.join(args['workspace_dir'], 'eti.tif')
+    eti_raster_path = os.path.join(
+        args['workspace_dir'], 'eti%s.tif' % file_suffix)
     eti_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=(
@@ -138,7 +142,8 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
-    cc_raster_path = os.path.join(args['workspace_dir'], 'cc.tif')
+    cc_raster_path = os.path.join(
+        args['workspace_dir'], 'cc%s.tif' % file_suffix)
     cc_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -154,7 +159,8 @@ def execute(args):
 
     air_temp_nodata = pygeoprocessing.get_raster_info(
         args['t_air_ref_raster_path'])['nodata'][0]
-    t_air_raster_path = os.path.join(args['workspace_dir'], 'T_air.tif')
+    t_air_raster_path = os.path.join(
+        args['workspace_dir'], 'T_air%s.tif' % file_suffix)
     t_air_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
@@ -167,7 +173,8 @@ def execute(args):
         task_name='calculate T air')
 
     intermediate_building_vector_path = os.path.join(
-        temporary_working_dir, 'intermediate_building_vector.gpkg')
+        temporary_working_dir,
+        'intermediate_building_vector%s.gpkg' % file_suffix)
     # this is the field name that can be used to uniquely identify a feature
     intermediate_building_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
@@ -202,7 +209,7 @@ def execute(args):
         task_name='pickle t-ref stats')
 
     energy_consumption_vector_path = os.path.join(
-        args['workspace_dir'], 'buildings_with_stats.gpkg')
+        args['workspace_dir'], 'buildings_with_stats%s.gpkg' % file_suffix)
     calculate_energy_savings_task = task_graph.add_task(
         func=calculate_energy_savings,
         args=(
@@ -217,7 +224,7 @@ def execute(args):
         task_name='calculate energy savings task')
 
     intermediate_aoi_vector_path = os.path.join(
-        temporary_working_dir, 'intermediate_aoi.gpkg')
+        temporary_working_dir, 'intermediate_aoi%s.gpkg' % file_suffix)
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -261,7 +268,7 @@ def execute(args):
         task_name='pickle t-air stats')
 
     target_uhi_vector_path = os.path.join(
-        args['workspace_dir'], 'uhi_results.gpkg')
+        args['workspace_dir'], 'uhi_results%s.gpkg' % file_suffix)
     calculate_uhi_result_task = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
