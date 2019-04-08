@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with Habitat Quality's error checking where nodata values
+  in landcover rasters were not being taken into account.
 * Valuation is now an optional component of the InVEST Scenic Quality model.
 * Fixing a bug in the percentiles algorithm used by Scenic Quality that
   would result in incorrect visual quality outputs.
