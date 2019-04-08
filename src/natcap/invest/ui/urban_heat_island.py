@@ -69,6 +69,13 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         self.add_input(self.uhi_max)
         self.uhi_max.set_value("3.5")
 
+        self.t_air_average_radius = inputs.Text(
+            args_key='t_air_average_radius',
+            label='T_air moving average radius (m).',
+            validator=self.validator)
+        self.add_input(self.t_air_average_radius)
+        self.t_air_average_radius.set_value("1000")
+
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
@@ -80,6 +87,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.building_vector_path.args_key: self.building_vector_path.value(),
             self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
+            self.t_air_average_radius.args_key: self.t_air_average_radius.value(),
         }
 
         return args

@@ -39,6 +39,8 @@ def execute(args):
             'shade', 'kc', and 'albedo', and 'green_area'.
         args['urban_park_cooling_distance'] (float): Distance (in m) over
             which large urban parks (> 2 ha) will have a cooling effect.
+        args['t_air_average_radius'] (float): radius of the averaging filter
+            for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
         args['building_vector_path']: path to a vector of building footprints
             that contains at least the field 'type'.
@@ -70,6 +72,8 @@ def execute(args):
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
+    # ensure raster is square by picking the smallest dimension
+    cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
     aligned_raster_path_list = [
         aligned_t_air_ref_raster_path, aligned_lulc_raster_path,
@@ -80,7 +84,7 @@ def execute(args):
             [args['t_air_ref_raster_path'], args['lulc_raster_path'],
              args['ref_eto_raster_path']], aligned_raster_path_list, [
                 'cubicspline', 'mode', 'cubicspline'],
-            lulc_raster_info['pixel_size'], 'intersection'),
+            (cell_size, -cell_size), 'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
@@ -129,10 +133,6 @@ def execute(args):
     ref_eto_band = None
     ref_eto_raster = None
 
-    task_graph.close()
-    task_graph.join()
-    return
-
     eto_nodata = pygeoprocessing.get_raster_info(
         args['ref_eto_raster_path'])['nodata'][0]
     eti_raster_path = os.path.join(
@@ -165,18 +165,48 @@ def execute(args):
 
     air_temp_nodata = pygeoprocessing.get_raster_info(
         args['t_air_ref_raster_path'])['nodata'][0]
-    t_air_raster_path = os.path.join(
-        args['workspace_dir'], 'T_air%s.tif' % file_suffix)
-    t_air_task = task_graph.add_task(
+    t_air_nomix_raster_path = os.path.join(
+        args['workspace_dir'], 'T_air_nomix%s.tif' % file_suffix)
+    t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
             (aligned_t_air_ref_raster_path, 1), (air_temp_nodata, 'raw'),
             (cc_raster_path, 1), (float(args['uhi_max']), 'raw')],
-            calc_t_air_op, t_air_raster_path, gdal.GDT_Float32,
+            calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
-        target_path_list=[t_air_raster_path],
+        target_path_list=[t_air_nomix_raster_path],
         dependent_task_list=[cc_task, align_task],
+        task_name='calculate T air nomix')
+
+    t_air_average_kernel_path = os.path.join(
+        temporary_working_dir, 'exponential_decay_kernel%s.tif' % file_suffix)
+
+    decay_kernel_distance = int(numpy.round(
+        float(args['t_air_average_radius']) / cell_size))
+
+    t_air_kernel_task = task_graph.add_task(
+        func=utils.exponential_decay_kernel_raster,
+        args=(decay_kernel_distance, t_air_average_kernel_path),
+        target_path_list=[t_air_average_kernel_path],
+        task_name='T air averaging kernel')
+
+    t_air_raster_path = os.path.join(
+        args['workspace_dir'], 'T_air%s.tif' % file_suffix)
+
+    t_air_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=(
+            (t_air_nomix_raster_path, 1), (t_air_average_kernel_path, 1),
+            t_air_raster_path),
+        kwargs={
+            'working_dir': temporary_working_dir,
+            'ignore_nodata': True},
+        dependent_task_list=[t_air_nomix_task, t_air_kernel_task],
         task_name='calculate T air')
+
+    task_graph.join()
+    task_graph.close()
+    return
 
     intermediate_building_vector_path = os.path.join(
         temporary_working_dir,
@@ -549,7 +579,7 @@ def pickle_zonal_stats(
         pickle.dump(zonal_stats, pickle_file)
 
 
-def calc_t_air_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
+def calc_t_air_nomix_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
     """Calculate air temperature T_(air,i)=T_(air,ref)+(1-HM_i)*UHI_max."""
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
