@@ -767,7 +767,10 @@ class HraRegressionTests(unittest.TestCase):
         import natcap.invest.hra
 
         args = HraRegressionTests.generate_base_args(self.workspace_dir)
-        # Also test out relative path
+        # Also test on GeoJSON outputs for visualization
+        args['visualize_outputs'] = True
+
+        # Also test relative file paths in Info CSV file
         _make_info_csv(
             args['info_table_path'], self.workspace_dir, rel_path=True)
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
@@ -783,7 +786,8 @@ class HraRegressionTests(unittest.TestCase):
 
         output_vectors = [
             'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
-            'RECLASS_RISK_Ecosystem']
+            'RECLASS_RISK_Ecosystem', 'STRESSOR_stressor_0',
+            'STRESSOR_stressor_1']
 
         # Assert rasters are equal
         output_raster_paths = [
@@ -807,8 +811,8 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
-            self.workspace_dir, 'outputs', vector_name + '.geojson')
-                for vector_name in output_vectors]
+            self.workspace_dir, 'visualization_outputs',
+            vector_name + '.geojson') for vector_name in output_vectors]
         expected_vector_paths = [
             os.path.join(TEST_DATA, vector_name + '_euc_lin.geojson') for
             vector_name in output_vectors]
@@ -851,10 +855,6 @@ class HraRegressionTests(unittest.TestCase):
             'TOTAL_RISK_Ecosystem', 'RECLASS_RISK_habitat_0',
             'RECLASS_RISK_habitat_1', 'RECLASS_RISK_Ecosystem']
 
-        output_vectors = [
-            'RECLASS_RISK_habitat_0', 'RECLASS_RISK_habitat_1',
-            'RECLASS_RISK_Ecosystem']
-
         # Assert rasters are equal
         output_raster_paths = [
             os.path.join(self.workspace_dir, 'outputs', raster_name + '.tif')
@@ -874,19 +874,6 @@ class HraRegressionTests(unittest.TestCase):
                 output_raster_paths, expected_raster_paths):
             pygeoprocessing.testing.assert_rasters_equal(
                 output_raster, expected_raster)
-
-        # Assert GeoJSON vectors are equal
-        output_vector_paths = [os.path.join(
-            self.workspace_dir, 'outputs', vector_name + '.geojson')
-                for vector_name in output_vectors]
-        expected_vector_paths = [
-            os.path.join(TEST_DATA, vector_name + '_mul_exp.geojson') for
-            vector_name in output_vectors]
-
-        for output_vector, expected_vector in zip(
-                output_vector_paths, expected_vector_paths):
-            HraRegressionTests._assert_vectors_equal(
-                output_vector, expected_vector, precision=6)
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(

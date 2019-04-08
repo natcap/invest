@@ -99,12 +99,19 @@ def execute(args):
         args['n_workers'] (int): the number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process. (optional)
+        args['visualize_outputs'] (bool): if True, create output GeoJSONs and
+            save them in a visualization_outputs folder, so users can visualize
+            results on a web interface. Default to False for Qt UI, and True
+            for electron-Node.js based UI. (optional)
 
     Returns:
         None.
 
     """
     LOGGER.info('Validating arguments')
+    # Default visualization option to False for Qt UI
+    if 'visualize_outputs' not in args:
+        args['visualize_outputs'] = False
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
@@ -119,8 +126,13 @@ def execute(args):
     file_preprocessing_dir = os.path.join(
         intermediate_dir, 'file_preprocessing')
     output_dir = os.path.join(args['workspace_dir'], 'outputs')
-    utils.make_directories(
-        [output_dir, intermediate_dir, file_preprocessing_dir])
+    work_dirs = [output_dir, intermediate_dir, file_preprocessing_dir]
+
+    # Add visualization_outputs folder if in an electron-Node.js based UI
+    if args['visualize_outputs']:
+        viz_dir = os.path.join(args['workspace_dir'], 'visualization_outputs')
+        work_dirs.append(viz_dir)
+    utils.make_directories(work_dirs)
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
@@ -729,6 +741,15 @@ def execute(args):
         task_name='zonal_stats_to_csv',
         dependent_task_list=zonal_stats_dependent_tasks)
 
+    # Finish the model if no visualization outputs need to be generated
+    if not args['visualize_outputs']:
+        task_graph.close()
+        task_graph.join()
+        LOGGER.info('HRA model completed.')
+        return
+    else:
+        LOGGER.info('Generating visualization outputs.')
+
     # Unproject output rasters to WGS84 (World Mercator), and then convert
     # the rasters to GeoJSON files for visualization
     LOGGER.info('Unprojecting output rasters')
@@ -761,7 +782,7 @@ def execute(args):
             field_name = 'Stressor'
 
         geojson_path = os.path.join(
-            output_dir, file_basename + '%s.geojson' % file_suffix)
+            viz_dir, file_basename + '%s.geojson' % file_suffix)
         task_graph.add_task(
             func=_raster_to_geojson,
             args=(out_raster_path, geojson_path, file_basename, field_name),
