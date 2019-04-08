@@ -350,6 +350,16 @@ cdef class _ManagedRaster:
 
 ctypedef pair[int, int] PointPair
 
+cdef int* NEIGHBOR_OFFSET_ARRAY = [
+    1, 0,  # 0
+    1, -1,  # 1
+    0, -1,  # 2
+    -1, -1,  # 3
+    -1, 0,  # 4
+    -1, 1,  # 5
+    0, 1,  # 6
+    1, 1  # 7
+    ]
 
 def blob_mask(
         mask_raster_path_band, target_blob_id_raster_path,
@@ -366,6 +376,10 @@ def blob_mask(
         mask_raster_path_band[0], target_blob_id_raster_path, gdal.GDT_Int32,
         [blob_id_nodata], fill_value_list=[blob_id_nodata])
 
+    cdef int n_cols, n_rows
+    n_cols, n_rows = pygeoprocessing.get_raster_info(
+        target_blob_id_raster_path)['raster_size']
+
     cdef _ManagedRaster mask_raster = _ManagedRaster(
         mask_raster_path_band[0], mask_raster_path_band[1], False)
     cdef _ManagedRaster blob_id_raster = _ManagedRaster(
@@ -373,7 +387,8 @@ def blob_mask(
 
     cdef stack[PointPair] search_stack
 
-    cdef int i, j
+    cdef int i, j, x, y, xn, yn, d
+    cdef int xmin, xmax, ymin, ymax
     cdef int current_blob_id = -1
 
     for offset_dict in pygeoprocessing.iterblocks(
@@ -385,11 +400,24 @@ def blob_mask(
 
         for j in range(ymin, ymax):
             for i in range(xmin, xmax):
-                if mask_raster.get(i, j) == 1:
+                if (blob_id_raster.get(i, j) == blob_id_nodata and
+                        mask_raster.get(i, j) == 1):
                     current_blob_id += 1
                     search_stack.push(PointPair(i, j))
+                    blob_id_raster.set(i, j, current_blob_id)
                     while search_stack.size() > 0:
                         x = search_stack.top().first
                         y = search_stack.top().second
                         search_stack.pop()
-                        blob_id_raster.set(x, y, current_blob_id)
+                        for d in range(8):
+                            xn = x + NEIGHBOR_OFFSET_ARRAY[d*2]
+                            if xn < 0 or xn >= n_cols:
+                                continue
+                            yn = y + NEIGHBOR_OFFSET_ARRAY[d*2+1]
+                            if yn < 0 or yn >= n_rows:
+                                continue
+                            if (mask_raster.get(xn, yn) == 1 and
+                                    blob_id_raster.get(xn, yn) ==
+                                    blob_id_nodata):
+                                blob_id_raster.set(xn, yn, current_blob_id)
+                                search_stack.push(PointPair(xn, yn))
