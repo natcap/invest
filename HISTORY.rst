@@ -6,6 +6,8 @@ Unreleased Changes
 ------------------
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
+* Correcting an issue with Habitat Quality's error checking where nodata values
+  in landcover rasters were not being taken into account.
 * Valuation is now an optional component of the InVEST Scenic Quality model.
 * Fixing a bug in the percentiles algorithm used by Scenic Quality that
   would result in incorrect visual quality outputs.
