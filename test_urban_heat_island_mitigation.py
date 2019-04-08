@@ -26,7 +26,6 @@ def main():
         'biophysical_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Biophysical table_UHI.csv",
         'urban_park_cooling_distance': 1000.0,
         'uhi_max': 3.5,
-        'et_max': 600.0,
         'building_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
         'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",
         }

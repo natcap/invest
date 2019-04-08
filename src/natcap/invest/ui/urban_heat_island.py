@@ -62,12 +62,6 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.energy_consumption_table_path)
 
-        self.et_max = inputs.Text(
-            args_key='et_max',
-            label='maximum evapotranspiration.',
-            validator=self.validator)
-        self.add_input(self.et_max)
-
         self.uhi_max = inputs.Text(
             args_key='uhi_max',
             label='Magnitude of the UHI effect.',
@@ -85,7 +79,6 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.biophysical_table_path.args_key: self.biophysical_table_path.value(),
             self.building_vector_path.args_key: self.building_vector_path.value(),
             self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
-            self.et_max.args_key: self.et_max.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
         }
 

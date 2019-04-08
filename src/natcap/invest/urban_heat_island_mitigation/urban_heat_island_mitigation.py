@@ -33,7 +33,6 @@ def execute(args):
         args['t_air_ref_raster_path'] (str): raster of air temperature.
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
-        args['et_max'] (float): maximum evapotranspiration.
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
@@ -123,6 +122,13 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['green_area'][0]],
         task_name='blob green mask')
 
+    align_task.join()
+    ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
+    ref_eto_band = ref_eto_raster.GetRasterBand(1)
+    _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
+    ref_eto_band = None
+    ref_eto_raster = None
+
     task_graph.close()
     task_graph.join()
     return
@@ -136,7 +142,7 @@ def execute(args):
         args=(
             [(task_path_prop_map['kc'][1], 1), (TARGET_NODATA, 'raw'),
              (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
-             (float(args['et_max']), 'raw'), (TARGET_NODATA, 'raw')],
+             (ref_eto_max, 'raw'), (TARGET_NODATA, 'raw')],
             calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[eti_raster_path],
         dependent_task_list=[task_path_prop_map['kc'][0]],
@@ -611,7 +617,6 @@ def validate(args, limit_to=None):
         't_air_ref_raster_path',
         'lulc_raster_path',
         'ref_eto_raster_path',
-        'et_max',
         'aoi_vector_path',
         'biophysical_table_path',
         'urban_park_cooling_distance',
