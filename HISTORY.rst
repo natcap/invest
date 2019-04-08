@@ -1,7 +1,5 @@
 .. :changelog:
 
-.. Unreleased Changes
-
 Unreleased Changes
 ------------------
 * Correcting an issue with Habitat Quality's error checking where nodata values
@@ -29,6 +27,10 @@ Unreleased Changes
   in the same workspace but use a different file suffix. This is useful when
   users need to do a parameter study or run scenarios with otherwise minor
   changes to inputs.
+* Refactoring Habitat Risk Assessment (HRA) Model to use TaskGraph >= 0.8.2 and
+  Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
+  functionality was simplified and merged into the HRA model itself.
+  The model will no longer generate HTML plots and tables.
 
 3.6.0 (2019-01-30)
 ------------------
