@@ -19,7 +19,7 @@ def main():
     args = {
         'workspace_dir': 'urban_heat_island_invest_workspace',
         'results_suffix': 'suffix2',
-        't_air_ref_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Tair_Sept.tif",
+        't_obs_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Tair_Sept.tif",
         'lulc_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\LULC_SFBA.tif",
         'ref_eto_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\ETo_SFBA.tif",
         'aoi_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",

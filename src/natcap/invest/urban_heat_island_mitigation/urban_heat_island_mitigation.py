@@ -1,5 +1,6 @@
 """Urban Heat Island Mitigation model."""
 from __future__ import absolute_import
+import sys
 import logging
 import os
 import pickle
@@ -30,7 +31,7 @@ def execute(args):
         args['workspace_dir'] (str): path to target output directory.
         args['results_suffix'] (string): (optional) string to append to any
             output file names
-        args['t_air_ref_raster_path'] (str): raster of air temperature.
+        args['t_obs_raster_path'] (str): raster of air temperature (optional).
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['aoi_vector_path'] (str): path to desired AOI.
@@ -63,7 +64,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
 
     # align all the input rasters.
-    aligned_t_air_ref_raster_path = os.path.join(
+    aligned_t_obs_raster_path = os.path.join(
         temporary_working_dir, 't_air_ref%s.tif' % file_suffix)
     aligned_lulc_raster_path = os.path.join(
         temporary_working_dir, 'lulc%s.tif' % file_suffix)
@@ -76,12 +77,12 @@ def execute(args):
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
     aligned_raster_path_list = [
-        aligned_t_air_ref_raster_path, aligned_lulc_raster_path,
+        aligned_t_obs_raster_path, aligned_lulc_raster_path,
         aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['t_air_ref_raster_path'], args['lulc_raster_path'],
+            [args['t_obs_raster_path'], args['lulc_raster_path'],
              args['ref_eto_raster_path']], aligned_raster_path_list, [
                 'cubicspline', 'mode', 'cubicspline'],
             (cell_size, -cell_size), 'intersection'),
@@ -148,6 +149,21 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
+    cc_weight_path = os.path.join(
+        temporary_working_dir, 'cc_weights%s.pickle' % file_suffix)
+    cc_regression_task = task_graph.add_task(
+        func=cc_regression_op,
+        args=((task_path_prop_map['shade'][1], 1),
+              (task_path_prop_map['albedo'][1], 1),
+              (eti_raster_path, 1),
+              (aligned_t_obs_raster_path, 1),
+              cc_weight_path),
+        target_path_list=[cc_weight_path],
+        dependent_task_list=[
+            eti_task, task_path_prop_map['shade'][0],
+            task_path_prop_map['albedo'][0]],
+        task_name='cc regression')
+
     cc_raster_path = os.path.join(
         args['workspace_dir'], 'cc%s.tif' % file_suffix)
     cc_task = task_graph.add_task(
@@ -164,13 +180,13 @@ def execute(args):
         task_name='calculate cc index')
 
     air_temp_nodata = pygeoprocessing.get_raster_info(
-        args['t_air_ref_raster_path'])['nodata'][0]
+        args['t_obs_raster_path'])['nodata'][0]
     t_air_nomix_raster_path = os.path.join(
         args['workspace_dir'], 'T_air_nomix%s.tif' % file_suffix)
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (aligned_t_air_ref_raster_path, 1), (air_temp_nodata, 'raw'),
+            (aligned_t_obs_raster_path, 1), (air_temp_nodata, 'raw'),
             (cc_raster_path, 1), (float(args['uhi_max']), 'raw')],
             calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
@@ -239,7 +255,7 @@ def execute(args):
         func=pickle_zonal_stats,
         args=(
             intermediate_building_vector_path,
-            aligned_t_air_ref_raster_path, t_ref_stats_pickle_path),
+            aligned_t_obs_raster_path, t_ref_stats_pickle_path),
         target_path_list=[t_ref_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_building_vector_task],
         task_name='pickle t-ref stats')
@@ -287,7 +303,7 @@ def execute(args):
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path,
-            aligned_t_air_ref_raster_path, t_air_ref_aoi_stats_pickle_path),
+            aligned_t_obs_raster_path, t_air_ref_aoi_stats_pickle_path),
         target_path_list=[t_air_ref_aoi_stats_pickle_path],
         dependent_task_list=[align_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-ref stats')
@@ -644,7 +660,7 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
-        't_air_ref_raster_path',
+        't_obs_raster_path',
         'lulc_raster_path',
         'ref_eto_raster_path',
         'aoi_vector_path',
@@ -673,7 +689,7 @@ def validate(args, limit_to=None):
             (no_value_list, 'parameter has no value'))
 
     file_type_list = [
-        ('t_air_ref_raster_path', 'raster'),
+        ('t_obs_raster_path', 'raster'),
         ('lulc_raster_path', 'raster'),
         ('ref_eto_raster_path', 'raster'),
         ('aoi_vector_path', 'vector'),
@@ -754,6 +770,64 @@ def validate(args, limit_to=None):
                                     args['building_vector_path'], raw_val))
 
     return validation_error_list
+
+
+def cc_regression_op(
+        shade_raster_path_band, albedo_raster_path_band, eti_raster_path_band,
+        t_obs_raster_path_band, target_cc_weight_pickle_path):
+    """Calculate CC regression weights for shade, albedo, and eti.
+
+    Parameters:
+        shade_raster_path_band (tuple): Shade raster path band (dependent).
+        albedo_raster_path_band (tuple): Albedo raster path band (dependent).
+        eti_raster_path_band (tuple): ETI raster path band (dependent).
+        t_obs_raster_path_band (tuple): T_obs raster path band
+            (derives independent).
+        target_cc_weight_pickle_path: pickle tuple of the weights
+            (shade_w, albedo_w, eti_w).
+
+    Returns:
+        None.
+
+    """
+    t_obs_raster = gdal.OpenEx(t_obs_raster_path_band[0], gdal.OF_RASTER)
+    t_obs_band = t_obs_raster.GetRasterBand(t_obs_raster_path_band[1])
+    shade_raster = gdal.OpenEx(shade_raster_path_band[0], gdal.OF_RASTER)
+    shade_band = shade_raster.GetRasterBand(shade_raster_path_band[1])
+    albedo_raster = gdal.OpenEx(albedo_raster_path_band[0], gdal.OF_RASTER)
+    albedo_band = albedo_raster.GetRasterBand(albedo_raster_path_band[1])
+    eti_raster = gdal.OpenEx(eti_raster_path_band[0], gdal.OF_RASTER)
+    eti_band = eti_raster.GetRasterBand(eti_raster_path_band[1])
+
+    t_obs_min, t_obs_max, _, _ = t_obs_band.GetStatistics(0, 1)
+
+    band_list = [t_obs_band, shade_band, albedo_band, eti_band]
+    nodata_list = [b.GetNoDataValue() for b in band_list]
+    data_matrix = None
+    for offset_dict in pygeoprocessing.iterblocks(
+            shade_raster_path_band, offset_only=True):
+        block_list = [
+            band.ReadAsArray(**offset_dict) for band in band_list]
+        valid_mask = numpy.logical_and.reduce(
+            [~numpy.isclose(block, nodata) for block, nodata in
+             zip(block_list, nodata_list)], axis=0)
+        if data_matrix is None:
+            data_matrix = numpy.array([b[valid_mask] for b in block_list])
+        else:
+            new_rows = numpy.array([b[valid_mask] for b in block_list])
+            LOGGER.debug(data_matrix.shape)
+            LOGGER.debug(new_rows.shape)
+            data_matrix = numpy.concatenate(
+                (data_matrix, new_rows), axis=1)
+            break
+        LOGGER.debug(data_matrix.shape)
+
+    LOGGER.debug(data_matrix[1:, :].shape)
+    LOGGER.debug(data_matrix[0, :].shape)
+    coefficients, _, _, _ = numpy.linalg.lstsq(
+        numpy.transpose(data_matrix[1:, :]), data_matrix[0, :])
+    with open(target_cc_weight_pickle_path, 'w') as cc_weight_pickle_file:
+        pickle.dump(coefficients, cc_weight_pickle_file)
 
 
 def _invoke_timed_callback(

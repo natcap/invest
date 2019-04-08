@@ -13,12 +13,12 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=natcap.invest.urban_heat_island_mitigation.validate,
             localdoc=u'../documentation/urban_heat_island_mitigation.html')
 
-        self.t_air_ref_raster_path = inputs.File(
-            args_key='t_air_ref_raster_path',
-            helptext=('raster of air temperature.'),
-            label='t_air_ref_raster_path',
+        self.t_obs_raster_path = inputs.File(
+            args_key='t_obs_raster_path',
+            helptext=('Observed air temperature (optional).'),
+            label='t_obs_raster_path',
             validator=self.validator)
-        self.add_input(self.t_air_ref_raster_path)
+        self.add_input(self.t_obs_raster_path)
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
@@ -79,7 +79,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
-            self.t_air_ref_raster_path.args_key: self.t_air_ref_raster_path.value(),
+            self.t_obs_raster_path.args_key: self.t_obs_raster_path.value(),
             self.lulc_raster_path.args_key: self.lulc_raster_path.value(),
             self.ref_eto_raster_path.args_key: self.ref_eto_raster_path.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
