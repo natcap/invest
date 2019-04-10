@@ -125,7 +125,6 @@ def execute(args):
         args=(green_area_decay_kernel_distance,
               green_area_average_kernel_path),
         hash_algorithm='md5',
-        copy_duplicate_artifact=True,
         target_path_list=[green_area_average_kernel_path],
         task_name='T air averaging kernel')
 
@@ -289,10 +288,8 @@ def execute(args):
     t_air_average_kernel_path = os.path.join(
         temporary_working_dir,
         't_air_exponential_decay_kernel%s.tif' % file_suffix)
-
     decay_kernel_distance = int(numpy.round(
         float(args['t_air_average_radius']) / cell_size))
-
     t_air_kernel_task = task_graph.add_task(
         func=utils.exponential_decay_kernel_raster,
         args=(decay_kernel_distance, t_air_average_kernel_path),
@@ -311,6 +308,8 @@ def execute(args):
             'working_dir': temporary_working_dir,
             'ignore_nodata': True},
         target_path_list=[t_air_raster_path],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
         dependent_task_list=[t_air_nomix_task, t_air_kernel_task],
         task_name='calculate T air')
 
