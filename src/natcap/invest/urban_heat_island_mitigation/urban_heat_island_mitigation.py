@@ -313,14 +313,14 @@ def execute(args):
         task_name='calculate T air')
 
     # work productivity
-    vapor_pressure_raster_path = os.path.join(
-        temporary_working_dir, 'ei%s.tif' % file_suffix)
-    vapor_pressure_task = task_graph.add_task(
-        func=calculate_vapor_pressure,
+    wbti_raster_path = os.path.join(
+        temporary_working_dir, 'wbti%s.tif' % file_suffix)
+    wbti_task = task_graph.add_task(
+        func=calculate_wbti,
         args=(
             float(args['avg_rel_humidity']), t_air_raster_path,
-            vapor_pressure_raster_path),
-        target_path_list=[vapor_pressure_raster_path],
+            wbti_raster_path),
+        target_path_list=[wbti_raster_path],
         dependent_task_list=[t_air_task],
         task_name='vapor pressure')
 
@@ -934,9 +934,9 @@ def cc_regression_op(
         pickle.dump(coefficients, cc_weight_pickle_file)
 
 
-def calculate_vapor_pressure(
+def calculate_wbti(
         avg_rel_humidity, t_air_raster_path, target_vapor_pressure_path):
-    """Raster calculator op to calculate vapor pressure.
+    """Raster calculator op to calculate wet bulb globe temperature.
 
     Parameters:
         avg_rel_humidity (float): number between 0-100.
@@ -945,25 +945,29 @@ def calculate_vapor_pressure(
             raster.
 
     Returns:
-        e_i  = RH/100*6.105*exp(17.27*T_air/(237.7+T_air))
+        WBGT_i  = 0.567 * T_(air,i)  + 0.393 * e_i  + 3.94
+
+        where e_i:
+            e_i  = RH/100*6.105*exp(17.27*T_air/(237.7+T_air))
 
     """
     t_air_nodata = pygeoprocessing.get_raster_info(
         t_air_raster_path)['nodata'][0]
 
-    def vapor_pressure_op(avg_rel_humidity, t_air_array):
-        result = numpy.empty(t_air_array.shape, dtype=numpy.float32)
+    def wbti_op(avg_rel_humidity, t_air_array):
+        wbgt = numpy.empty(t_air_array.shape, dtype=numpy.float32)
         valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
-        result[:] = TARGET_NODATA
+        wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
-        result[valid_mask] = (
+        e_i = (
             avg_rel_humidity/100.0*6.105*numpy.exp(
                 17.27*t_air_valid/(237.7+t_air_valid)))
-        return result
+        wbgt[valid_mask] = 0.567 * t_air_valid+0.393*e_i+3.94
+        return wbgt
 
     pygeoprocessing.raster_calculator(
         [(avg_rel_humidity, 'raw'), (t_air_raster_path, 1)],
-        vapor_pressure_op, target_vapor_pressure_path, gdal.GDT_Float32,
+        wbti_op, target_vapor_pressure_path, gdal.GDT_Float32,
         TARGET_NODATA)
 
 
