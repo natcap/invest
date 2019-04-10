@@ -124,6 +124,7 @@ def execute(args):
         func=utils.exponential_decay_kernel_raster,
         args=(green_area_decay_kernel_distance,
               green_area_average_kernel_path),
+        hash_algorithm='md5',
         target_path_list=[green_area_average_kernel_path],
         task_name='T air averaging kernel')
 
@@ -323,6 +324,23 @@ def execute(args):
         target_path_list=[wbti_raster_path],
         dependent_task_list=[t_air_task],
         task_name='vapor pressure')
+
+    light_work_temps = [31.5, 32, 32.5]
+    light_work_loss_raster_path = os.path.join(
+        temporary_working_dir, 'light_work_loss_percent%s.tif' % file_suffix)
+    heavy_work_temps = [27.5, 29.5, 31.5]
+    heavy_work_loss_raster_path = os.path.join(
+        temporary_working_dir, 'heavy_work_loss_percent%s.tif' % file_suffix)
+
+    for temp_map, loss_raster_path in [
+            (light_work_temps, light_work_loss_raster_path),
+            (heavy_work_temps, heavy_work_loss_raster_path)]:
+        work_loss_task = task_graph.add_task(
+            func=map_work_loss,
+            args=(temp_map, wbti_raster_path, loss_raster_path),
+            target_path_list=[loss_raster_path],
+            dependent_task_list=[wbti_task],
+            task_name='work loss: %s' % os.path.basename(loss_raster_path))
 
     task_graph.join()
     task_graph.close()
@@ -1068,6 +1086,48 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
     return numpy.where(
         (cc_array < cc_park_array) & (green_area_sum > green_area_threshold),
         cc_park_array, cc_array)
+
+
+def map_work_loss(
+        work_temp_threshold_array, temperature_raster_path,
+        work_loss_raster_path):
+    """Maps work loss due to temperature.
+
+    Parameters:
+        work_temp_threshold_array (list): list of 3 sorted floats indicating the
+            thresholds for 25, 50, and 75% work loss.
+        temperature_raster_path (string): path to temperature raster in the
+            same units as `work_temp_threshold_array`.
+        work_loss_raster_path (string): path to target raster that maps per
+            pixel work loss percent.
+
+    Returns:
+        None.
+
+    """
+    def classify_to_percent_op(temperature_array):
+        result = numpy.empty(temperature_array.shape)
+        result[:] = TARGET_NODATA
+        valid_mask = ~numpy.isclose(temperature_array, TARGET_NODATA)
+        result[
+            valid_mask &
+            (temperature_array[valid_mask] < work_temp_threshold_array[0])] = 0
+        result[
+            valid_mask &
+            (temperature_array[valid_mask] >= work_temp_threshold_array[0]) &
+            (temperature_array[valid_mask] < work_temp_threshold_array[1])] = 25
+        result[
+            valid_mask &
+            (temperature_array[valid_mask] >= work_temp_threshold_array[1]) &
+            (temperature_array[valid_mask] < work_temp_threshold_array[2])] = 50
+        result[
+            valid_mask &
+            (temperature_array[valid_mask] >= work_temp_threshold_array[2])] = 75
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(temperature_raster_path, 1)], classify_to_percent_op,
+        work_loss_raster_path, gdal.GDT_Byte, TARGET_NODATA)
 
 
 def _invoke_timed_callback(
