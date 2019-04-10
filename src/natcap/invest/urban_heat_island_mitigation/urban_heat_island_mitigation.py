@@ -1111,18 +1111,18 @@ def map_work_loss(
         valid_mask = ~numpy.isclose(temperature_array, TARGET_NODATA)
         result[
             valid_mask &
-            (temperature_array[valid_mask] < work_temp_threshold_array[0])] = 0
+            (temperature_array < work_temp_threshold_array[0])] = 0
         result[
             valid_mask &
-            (temperature_array[valid_mask] >= work_temp_threshold_array[0]) &
-            (temperature_array[valid_mask] < work_temp_threshold_array[1])] = 25
+            (temperature_array >= work_temp_threshold_array[0]) &
+            (temperature_array < work_temp_threshold_array[1])] = 25
         result[
             valid_mask &
-            (temperature_array[valid_mask] >= work_temp_threshold_array[1]) &
-            (temperature_array[valid_mask] < work_temp_threshold_array[2])] = 50
+            (temperature_array >= work_temp_threshold_array[1]) &
+            (temperature_array < work_temp_threshold_array[2])] = 50
         result[
             valid_mask &
-            (temperature_array[valid_mask] >= work_temp_threshold_array[2])] = 75
+            (temperature_array >= work_temp_threshold_array[2])] = 75
         return result
 
     pygeoprocessing.raster_calculator(
