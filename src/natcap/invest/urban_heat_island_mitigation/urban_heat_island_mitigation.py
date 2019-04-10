@@ -125,6 +125,7 @@ def execute(args):
         args=(green_area_decay_kernel_distance,
               green_area_average_kernel_path),
         hash_algorithm='md5',
+        copy_duplicate_artifact=True,
         target_path_list=[green_area_average_kernel_path],
         task_name='T air averaging kernel')
 
