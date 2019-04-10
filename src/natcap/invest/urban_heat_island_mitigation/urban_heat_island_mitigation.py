@@ -1,6 +1,6 @@
 """Urban Heat Island Mitigation model."""
 from __future__ import absolute_import
-import sys
+import math
 import logging
 import os
 import pickle
@@ -8,6 +8,7 @@ import time
 
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import pygeoprocessing
 import taskgraph
 import numpy
@@ -43,6 +44,7 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
+        args['avg_rel_humidity'] (float): Average relative humidity (0-100%).
         args['building_vector_path']: path to a vector of building footprints
             that contains at least the field 'type'.
         args['energy_consumption_table_path'] (str): path to a table that
@@ -113,6 +115,77 @@ def execute(args):
             task_name='reclassify to %s' % prop)
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
+    green_area_average_kernel_path = os.path.join(
+        temporary_working_dir,
+        'green_area_exponential_decay_kernel%s.tif' % file_suffix)
+    green_area_decay_kernel_distance = int(numpy.round(
+        float(args['urban_park_cooling_distance']) / cell_size))
+    green_area_kernel_task = task_graph.add_task(
+        func=utils.exponential_decay_kernel_raster,
+        args=(green_area_decay_kernel_distance,
+              green_area_average_kernel_path),
+        target_path_list=[green_area_average_kernel_path],
+        task_name='T air averaging kernel')
+
+    cc_park_raster_path = os.path.join(
+        temporary_working_dir, 'cc_park%s.tif' % file_suffix)
+    cc_park_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=(
+            (task_path_prop_map['green_area'][1], 1),
+            (green_area_average_kernel_path, 1),
+            cc_park_raster_path),
+        kwargs={
+            'working_dir': temporary_working_dir,
+            'ignore_nodata': True},
+        target_path_list=[cc_park_raster_path],
+        dependent_task_list=[
+            task_path_prop_map['green_area'][0], green_area_kernel_task],
+        task_name='calculate T air')
+
+    # calculate a raster that's the area
+    area_kernel_path = os.path.join(
+        temporary_working_dir, 'area_kernel%s.tif' % file_suffix)
+    area_kernel_task = task_graph.add_task(
+        func=flat_disk_kernel,
+        args=(green_area_decay_kernel_distance, area_kernel_path),
+        target_path_list=[area_kernel_path],
+        task_name='area kernel')
+
+    green_area_mask_map = dict([
+        (lucode, 1 if x['green_area'] == 1 else 0)
+        for lucode, x in biophysical_lucode_map.items()])
+
+    green_area_mask_raster_path = os.path.join(
+        temporary_working_dir, 'green_area_mask%s.tif' % file_suffix)
+    green_area_mask_task = task_graph.add_task(
+        func=pygeoprocessing.reclassify_raster,
+        args=(
+            (aligned_lulc_raster_path, 1), green_area_mask_map,
+            green_area_mask_raster_path,
+            gdal.GDT_Byte, TARGET_NODATA),
+        kwargs={'values_required': True},
+        target_path_list=[green_area_mask_raster_path],
+        dependent_task_list=[align_task],
+        task_name='mask green area')
+
+    green_area_sum_raster_path = os.path.join(
+        temporary_working_dir, 'green_area_sum%s.tif' % file_suffix)
+    green_area_sum_task = task_graph.add_task(
+        func=pygeoprocessing.convolve_2d,
+        args=(
+            (green_area_mask_raster_path, 1),
+            (area_kernel_path, 1),
+            green_area_sum_raster_path),
+        kwargs={
+            'working_dir': temporary_working_dir,
+            'ignore_nodata': True},
+        target_path_list=[green_area_sum_raster_path],
+        dependent_task_list=[
+            green_area_mask_task, area_kernel_task],
+        task_name='calculate green area')
+
+    """
     target_blob_id_raster_path = os.path.join(
         temporary_working_dir, 'green_blob_id%s.tif' % file_suffix)
     id_count_map_pickle_path = os.path.join(
@@ -126,6 +199,7 @@ def execute(args):
         target_path_list=[target_blob_id_raster_path],
         dependent_task_list=[task_path_prop_map['green_area'][0]],
         task_name='blob green mask')
+    """
 
     align_task.join()
     ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
@@ -179,6 +253,22 @@ def execute(args):
             eti_task],
         task_name='calculate cc index')
 
+    # convert 2 hectares to number of pixels
+    green_area_threshold = 2e4 / cell_size**2
+    hm_raster_path = os.path.join(
+        args['workspace_dir'], 'hm%s.tif' % file_suffix)
+    hm_task = task_graph.add_task(
+        func=pygeoprocessing.raster_calculator,
+        args=([
+            (cc_raster_path, 1),
+            (green_area_sum_raster_path, 1),
+            (cc_park_raster_path, 1),
+            (green_area_threshold, 'raw'),
+            ], hm_op, hm_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+        target_path_list=[hm_raster_path],
+        dependent_task_list=[cc_task, green_area_sum_task, cc_park_task],
+        task_name='calculate HM index')
+
     air_temp_nodata = pygeoprocessing.get_raster_info(
         args['t_obs_raster_path'])['nodata'][0]
     t_air_nomix_raster_path = os.path.join(
@@ -187,15 +277,16 @@ def execute(args):
         func=pygeoprocessing.raster_calculator,
         args=([
             (aligned_t_obs_raster_path, 1), (air_temp_nodata, 'raw'),
-            (cc_raster_path, 1), (float(args['uhi_max']), 'raw')],
+            (hm_raster_path, 1), (float(args['uhi_max']), 'raw')],
             calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
         target_path_list=[t_air_nomix_raster_path],
-        dependent_task_list=[cc_task, align_task],
+        dependent_task_list=[hm_task, align_task],
         task_name='calculate T air nomix')
 
     t_air_average_kernel_path = os.path.join(
-        temporary_working_dir, 'exponential_decay_kernel%s.tif' % file_suffix)
+        temporary_working_dir,
+        't_air_exponential_decay_kernel%s.tif' % file_suffix)
 
     decay_kernel_distance = int(numpy.round(
         float(args['t_air_average_radius']) / cell_size))
@@ -217,8 +308,21 @@ def execute(args):
         kwargs={
             'working_dir': temporary_working_dir,
             'ignore_nodata': True},
+        target_path_list=[t_air_raster_path],
         dependent_task_list=[t_air_nomix_task, t_air_kernel_task],
         task_name='calculate T air')
+
+    # work productivity
+    vapor_pressure_raster_path = os.path.join(
+        temporary_working_dir, 'ei%s.tif' % file_suffix)
+    vapor_pressure_task = task_graph.add_task(
+        func=calculate_vapor_pressure,
+        args=(
+            float(args['avg_rel_humidity']), t_air_raster_path,
+            vapor_pressure_raster_path),
+        target_path_list=[vapor_pressure_raster_path],
+        dependent_task_list=[t_air_task],
+        task_name='vapor pressure')
 
     task_graph.join()
     task_graph.close()
@@ -764,9 +868,9 @@ def validate(args, limit_to=None):
                         except TypeError:
                             validation_error_list(
                                 [key],
-                                'feature "type" fields of %s should be floating '
-                                'point numbers, but at least one is not. '
-                                '(raw val: %s)' % (
+                                'feature "type" fields of %s should be '
+                                'floating point numbers, but at least one is '
+                                'not. (raw val: %s)' % (
                                     args['building_vector_path'], raw_val))
 
     return validation_error_list
@@ -828,6 +932,138 @@ def cc_regression_op(
         numpy.transpose(data_matrix[1:, :]), data_matrix[0, :])
     with open(target_cc_weight_pickle_path, 'w') as cc_weight_pickle_file:
         pickle.dump(coefficients, cc_weight_pickle_file)
+
+
+def calculate_vapor_pressure(
+        avg_rel_humidity, t_air_raster_path, target_vapor_pressure_path):
+    """Raster calculator op to calculate vapor pressure.
+
+    Parameters:
+        avg_rel_humidity (float): number between 0-100.
+        t_air_raster_path (string): path to T air raster.
+        target_vapor_pressure_path (string): path to target vapor pressure
+            raster.
+
+    Returns:
+        e_i  = RH/100*6.105*exp(17.27*T_air/(237.7+T_air))
+
+    """
+    t_air_nodata = pygeoprocessing.get_raster_info(
+        t_air_raster_path)['nodata'][0]
+
+    def vapor_pressure_op(avg_rel_humidity, t_air_array):
+        result = numpy.empty(t_air_array.shape, dtype=numpy.float32)
+        valid_mask = ~numpy.isclose(t_air_array, t_air_nodata)
+        result[:] = TARGET_NODATA
+        t_air_valid = t_air_array[valid_mask]
+        result[valid_mask] = (
+            avg_rel_humidity/100.0*6.105*numpy.exp(
+                17.27*t_air_valid/(237.7+t_air_valid)))
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(avg_rel_humidity, 'raw'), (t_air_raster_path, 1)],
+        vapor_pressure_op, target_vapor_pressure_path, gdal.GDT_Float32,
+        TARGET_NODATA)
+
+
+def flat_disk_kernel(max_distance, kernel_filepath):
+    """Create a flat disk  kernel.
+
+    The raster created will be a tiled GeoTiff, with 256x256 memory blocks.
+
+    Parameters:
+        max_distance (int): The distance (in pixels) of the
+            kernel's radius.
+        kernel_filepath (string): The path to the file on disk where this
+            kernel should be stored.  If this file exists, it will be
+            overwritten.
+
+    Returns:
+        None
+
+    """
+    kernel_size = int(numpy.round(max_distance * 2 + 1))
+
+    driver = gdal.GetDriverByName('GTiff')
+    kernel_dataset = driver.Create(
+        kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
+        gdal.GDT_Float32, options=[
+            'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
+            'BLOCKYSIZE=256'])
+
+    # Make some kind of geotransform, it doesn't matter what but
+    # will make GIS libraries behave better if it's all defined
+    kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
+    srs = osr.SpatialReference()
+    srs.SetWellKnownGeogCS('WGS84')
+    kernel_dataset.SetProjection(srs.ExportToWkt())
+
+    kernel_band = kernel_dataset.GetRasterBand(1)
+    kernel_band.SetNoDataValue(-9999)
+
+    cols_per_block, rows_per_block = kernel_band.GetBlockSize()
+
+    n_cols = kernel_dataset.RasterXSize
+    n_rows = kernel_dataset.RasterYSize
+
+    n_col_blocks = int(math.ceil(n_cols / float(cols_per_block)))
+    n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
+
+    for row_block_index in range(n_row_blocks):
+        row_offset = row_block_index * rows_per_block
+        row_block_width = n_rows - row_offset
+        if row_block_width > rows_per_block:
+            row_block_width = rows_per_block
+
+        for col_block_index in range(n_col_blocks):
+            col_offset = col_block_index * cols_per_block
+            col_block_width = n_cols - col_offset
+            if col_block_width > cols_per_block:
+                col_block_width = cols_per_block
+
+            # Numpy creates index rasters as ints by default, which sometimes
+            # creates problems on 32-bit builds when we try to add Int32
+            # matrices to float64 matrices.
+            row_indices, col_indices = numpy.indices((row_block_width,
+                                                      col_block_width),
+                                                     dtype=numpy.float)
+
+            row_indices += numpy.float(row_offset - max_distance)
+            col_indices += numpy.float(col_offset - max_distance)
+
+            kernel_index_distances = numpy.hypot(
+                row_indices, col_indices)
+            kernel = kernel_index_distances > max_distance
+
+            kernel_band.WriteArray(kernel, xoff=col_offset,
+                                   yoff=row_offset)
+
+    # Need to flush the kernel's cache to disk before opening up a new Dataset
+    # object in interblocks()
+    kernel_dataset.FlushCache()
+
+
+def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
+    """Calculate HM.
+
+        cc_array (numpy.ndarray): this is the raw cooling index mapped from
+            landcover values.
+        green_area_sum (numpy.ndarray): this is the sum of green space pixels
+            pixels within the user defined area for green space.
+        cc_park_array (numpy.ndarray): this is the exponentially decayed
+            cooling index due to proximity of green space.
+        green_area_threshold (float): a value used to determine how much
+            area is required to trigger a green area overwrite.
+
+    Returns:
+        cc_array if green area < green_area_threshold or cc_park < cc array,
+        otherwise cc_park array is returned.
+
+    """
+    return numpy.where(
+        (cc_array < cc_park_array) & (green_area_sum > green_area_threshold),
+        cc_park_array, cc_array)
 
 
 def _invoke_timed_callback(

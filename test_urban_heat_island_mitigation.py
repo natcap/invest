@@ -29,6 +29,7 @@ def main():
         't_air_average_radius': "1000.0",
         'building_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
         'energy_consumption_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Energy.csv",
+        'avg_rel_humidity': '30.0',
         }
     natcap.invest.urban_heat_island_mitigation.urban_heat_island_mitigation.execute(args)
 

@@ -76,6 +76,13 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         self.add_input(self.t_air_average_radius)
         self.t_air_average_radius.set_value("1000")
 
+        self.avg_rel_humidity = inputs.Text(
+            args_key='avg_rel_humidity',
+            label='Average relative humidity (0-100%)',
+            validator=self.validator)
+        self.add_input(self.avg_rel_humidity)
+        self.avg_rel_humidity.set_value("30")
+
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
@@ -88,6 +95,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
             self.t_air_average_radius.args_key: self.t_air_average_radius.value(),
+            self.avg_rel_humidity.args_key: self.avg_rel_humidity.value(),
         }
 
         return args
