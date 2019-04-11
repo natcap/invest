@@ -1,5 +1,5 @@
 # cython: profile=False
-
+# cython: language_level=2
 import logging
 import os
 import collections
@@ -652,7 +652,7 @@ def route_baseflow_sum(
         target_b_sum_path (string): path to created raster for per-pixel
             upstream sum of baseflow.
 
-    Returns:
+`    Returns:
         None.
 
     """
