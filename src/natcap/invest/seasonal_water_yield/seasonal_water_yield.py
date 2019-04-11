@@ -581,45 +581,6 @@ def _execute(args):
     LOGGER.info('      //_| //_|')
 
 
-def _calculate_l_sum(
-        mfd_flow_dir_path, l_path, stream_path, l_sum_pre_clamp_path,
-        target_l_sum_path):
-    """Calculate L_sum.
-
-    Parameters:
-        mfd_flow_dir_path (str): path to a multiple flow direction raster.
-        l_path (str): path to L raster.
-        stream_path (str): path to stream mask raster.
-        l_sum_pre_clamp_path (str): path to intermediate l_sum before
-            clamping.
-        target_l_sum_path (str): path to target L_sum raster.
-
-    Returns:
-        None.
-
-    """
-    pygeoprocessing.routing.flow_accumulation_mfd(
-        mfd_flow_dir_path, l_sum_pre_clamp_path,
-        weight_raster_path_band=l_path)
-
-    # The result of route_flux can be slightly negative due to roundoff error
-    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
-    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
-        l_sum_pre_clamp_path)['nodata'][0]
-
-    def clamp_l_sum(l_sum_pre_clamp):
-        """Clamp any negative values to 0.0."""
-        result = l_sum_pre_clamp.copy()
-        result[
-            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
-            (l_sum_pre_clamp < 0.0)] = 0.0
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(l_sum_pre_clamp_path, 1)], clamp_l_sum, target_l_sum_path,
-        gdal.GDT_Float32, l_sum_pre_clamp_nodata)
-
-
 def _calculate_vri(l_path, target_vri_path):
     """Calculate VRI as li_array / qb_sum.
 
