@@ -1200,6 +1200,11 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
+        # Software update button to the left of text links
+        self.update_button = QtWidgets.QPushButton('')
+        self.update_button.setIcon(
+            qtawesome.icon('fa.refresh', color='orange'))
+
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel(parent=self)
         self.links.setAlignment(QtCore.Qt.AlignRight)
@@ -1208,8 +1213,15 @@ class InVESTModel(QtWidgets.QMainWindow):
             '<a href="localdocs">Model documentation</a>',
             ('<a href="http://forums.naturalcapitalproject.org">'
              'Report an issue</a>'))))
-        self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
+
+        # Add refresh button and links horizontally
+        self.button_and_link = QtWidgets.QHBoxLayout()
+        self.button_and_link.addWidget(self.update_button)
+        self.button_and_link.addWidget(self.links)
+        self.button_and_link_widget = QtWidgets.QWidget()
+        self.button_and_link_widget.setLayout(self.button_and_link)
+        self._central_widget.layout().addWidget(self.button_and_link_widget)
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
