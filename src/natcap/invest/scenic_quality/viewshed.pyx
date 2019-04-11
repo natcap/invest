@@ -48,6 +48,11 @@ cimport cython
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.addHandler(logging.NullHandler())
+BYTE_GTIFF_CREATION_OPTIONS = (
+    'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+    'BLOCKXSIZE=256', 'BLOCKYSIZE=256', 'SPARSE_OK=TRUE')
+FLOAT_GTIFF_CREATION_OPTIONS = (
+    'PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS
 
 # Indexes for neighbors relative to the target pixel.
 # Indexes in this array are stored in numpy order (row, col).
@@ -650,14 +655,11 @@ def viewshed(dem_raster_path_band,
                 '%Y-%m-%d_%H_%M_%S', time.gmtime()))
         aux_filepath = os.path.join(temp_dir, 'auxiliary.tif')
 
-    gtiff_creation_options = [
-        'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
-        'BLOCKXSIZE=%s' % block_xsize, 'BLOCKYSIZE=%s' % block_ysize]
     LOGGER.info("Creating auxiliary raster %s", aux_filepath)
     pygeoprocessing.new_raster_from_base(
         dem_raster_path_band[0], aux_filepath, gdal.GDT_Float64, [AUX_NOT_VISITED],
         fill_value_list=[AUX_NOT_VISITED],
-        gtiff_creation_options=gtiff_creation_options)
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
     # Create the visibility raster for indicating whether a pixel is visible
     # based on the calculated minimum height.
@@ -665,7 +667,7 @@ def viewshed(dem_raster_path_band,
     pygeoprocessing.new_raster_from_base(
         dem_raster_path_band[0], visibility_filepath, gdal.GDT_Byte,
         [VISIBILITY_NODATA], fill_value_list=[VISIBILITY_NODATA],
-        gtiff_creation_options=gtiff_creation_options)
+        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
 
     # LRU-cached rasters for easier access to individual pixels.
     cdef _ManagedRaster dem_managed_raster = (
