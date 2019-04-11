@@ -217,6 +217,27 @@ def make_biophysical_csv(biophysical_csv_path):
         open_table.write('0.4,0.4,0.4,0.4,0.4\n')
 
 
+def make_bad_biophysical_csv(biophysical_csv_path):
+    """Make a bad biophysical csv with bad values to test error handling.
+
+    Parameters:
+        biophysical_csv (str): path to the corrupted biophysical csv.
+
+    Returns:
+        None.
+    """
+    with open(biophysical_csv_path, 'wb') as open_table:
+        open_table.write(
+            'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
+        open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
+        # look at that 'fifty'
+        open_table.write(
+            '0,"lulc 1",fifty,50,0,0,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
+        open_table.write('0.7,0.7,0.7,0.7,0.7\n')
+        open_table.write('1,"lulc 2",72,82,0,0,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
+        open_table.write('0.4,0.4,0.4,0.4,0.4\n')
+
+
 def make_alpha_csv(alpha_csv_path):
     """Make a monthly alpha csv on the designated path.
 
@@ -296,7 +317,6 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
 
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files"""
-
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
@@ -609,6 +629,25 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
+
+    def test_bad_biophysical_table(self):
+        """SWY bad biophysical table with non-numerica values."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+        make_bad_biophysical_csv(args['biophysical_table_path'])
+
+        with self.assertRaises(ValueError) as context:
+            seasonal_water_yield.execute(args)
+        self.assertTrue(
+            'expecting all floating point numbers' in str(context.exception))
 
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data
