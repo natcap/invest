@@ -146,6 +146,21 @@ class NDRTests(unittest.TestCase):
         # we should have one warning that is an empty value
         self.assertEqual(len(validation_error_list), 1)
 
+        # cover that there's no p and n calculation
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['calc_p'] = False
+        args['calc_n'] = False
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # cover that a file is missing
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['lulc_path'] = 'this/path/does/not/exist.tif'
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
 
     @staticmethod
     def _assert_regression_results_equal(
