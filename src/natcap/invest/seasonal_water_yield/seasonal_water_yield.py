@@ -581,42 +581,6 @@ def _execute(args):
     LOGGER.info('      //_| //_|')
 
 
-def _calculate_b(b_sum_path, l_path, l_sum_path, target_b_path):
-    """Calculate B.
-
-    Parameters:
-        b_sum_path (str): path to Bsum raster.
-        l_path (str): path to L raster.
-        l_sum_path (str): path to L_sum raster.
-        target_b_path (str): path to target B raster calculated by this fn.
-
-    Returns:
-        None.
-
-    """
-    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
-    l_sum_nodata = pygeoprocessing.get_raster_info(l_sum_path)['nodata'][0]
-    b_sum_nodata = li_nodata
-
-    def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
-        valid_mask = (
-            (b_sum != b_sum_nodata) & (l_avail != li_nodata) & (l_sum > 0) &
-            (l_sum != l_sum_nodata))
-        result = numpy.empty(b_sum.shape)
-        result[:] = b_sum_nodata
-        result[valid_mask] = (
-            b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-        # if l_sum is zero, it's okay to make B zero says Perrine in an email
-        result[l_sum == 0] = 0.0
-        result[(result < 0) & valid_mask] = 0
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(b_sum_path, 1), (l_path, 1), (l_sum_path, 1)], op_b, target_b_path,
-        gdal.GDT_Float32, b_sum_nodata)
-
-
 def _calculate_l_sum(
         mfd_flow_dir_path, l_path, stream_path, l_sum_pre_clamp_path,
         target_l_sum_path):
