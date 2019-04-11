@@ -30,7 +30,7 @@ cdef extern from "time.h" nogil:
     ctypedef int time_t
     time_t time(time_t*)
 
-LOGGER = logging.getLogger('ndr core')
+LOGGER = logging.getLogger(__name__)
 
 cdef double PI = 3.141592653589793238462643383279502884
 # This module creates rasters with a memory xy block size of 2**BLOCK_BITS
