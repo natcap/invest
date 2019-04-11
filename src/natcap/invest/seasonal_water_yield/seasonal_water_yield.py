@@ -18,7 +18,7 @@ import taskgraph
 from .. import utils
 from .. import validation
 
-from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
+from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
 
