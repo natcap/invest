@@ -1,4 +1,5 @@
 # cython: profile=False
+# cython: language_level=2
 import tempfile
 import logging
 import os
