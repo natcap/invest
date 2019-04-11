@@ -644,38 +644,6 @@ def _calculate_annual_qfi(qfm_path_list, target_qf_path):
         qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
 
 
-def stream_threshold(
-        flow_accum_path, threshold_flow_accum, target_stream_path):
-    """Calculate stream threshold.
-
-    Parameters:
-        flow_accum_path (str): path to flow accumulation raster.
-        threshold_flow_accum (float): any value >= to this in
-            `flow_accum_path` will be classified as a stream.
-        target_stream_path (str): path to stream mask raster.
-
-    Returns:
-        None.
-
-    """
-    flow_accum_nodata = pygeoprocessing.get_raster_info(
-        flow_accum_path)['nodata'][0]
-
-    mask_nodata = 2
-
-    def mask_threshold(value_array, value_nodata, threshold_val):
-        result = numpy.empty(value_array.shape, dtype=numpy.int8)
-        result[:] = mask_nodata
-        valid_mask = ~numpy.isclose(value_array, value_nodata)
-        result[valid_mask] = value_array[valid_mask] >= threshold_val
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(flow_accum_path, 1), (flow_accum_nodata, 'raw'),
-         (threshold_flow_accum, 'raw')], mask_threshold, target_stream_path,
-        gdal.GDT_Float32, mask_nodata)
-
-
 def _calculate_monthly_quick_flow(
         precip_path, lulc_raster_path, cn_path, n_events_raster_path,
         stream_path, si_path, qf_monthly_path):
