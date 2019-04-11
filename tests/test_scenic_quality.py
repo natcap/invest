@@ -109,6 +109,101 @@ class ScenicQualityTests(unittest.TestCase):
             attributes=attributes,
             filename=viewpoints_path)
 
+    def test_exception_when_no_structures_aoi_overlap(self):
+        """SQ: model raises exception when AOI does not overlap structures."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        ScenicQualityTests.create_viewpoints(viewpoints_path)
+
+        # AOI DEFINITELY doesn't overlap with the viewpoints.
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        sampledata.create_vector_on_disk(
+            [Polygon([(2, 2), (2, 12), (12, 12), (12, 2), (2, 2)])],
+            WKT, filename=aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            # Valuation parameter defaults to False, so leaving it off here.
+            'n_workers': -1,
+        }
+
+        with self.assertRaises(ValueError) as cm:
+            scenic_quality.execute(args)
+
+        self.assertTrue('found no intersection between' in str(cm.exception))
+
+    def test_no_valuation(self):
+        """SQ: model works as expected without valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+
+        dem_path = os.path.join(self.workspace_dir, 'dem.tif')
+        ScenicQualityTests.create_dem(dem_path)
+
+        # Using weighted viewpoints here to make the visual quality output more
+        # interesting.
+        viewpoints_path = os.path.join(self.workspace_dir,
+                                       'viewpoints.geojson')
+        ScenicQualityTests.create_viewpoints(
+            viewpoints_path,
+            fields={'RADIUS': 'real',
+                    'HEIGHT': 'real',
+                    'WEIGHT': 'real'},
+            attributes=[
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 1.0},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5},
+                {'RADIUS': 6.0, 'HEIGHT': 1.0, 'WEIGHT': 2.5}])
+
+        aoi_path = os.path.join(self.workspace_dir, 'aoi.geojson')
+        ScenicQualityTests.create_aoi(aoi_path)
+
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'aoi_path': aoi_path,
+            'structure_path': viewpoints_path,
+            'dem_path': dem_path,
+            'refraction': 0.13,
+            # Valuation parameter defaults to False, so leaving it off here.
+            'n_workers': -1,
+        }
+
+        scenic_quality.execute(args)
+
+        # vshed.tif and vshed_qual.tif are still created by the model,
+        # vshed_value.tif is not when we are not doing valuation.
+        for output_filename, should_exist in (
+                ('vshed_value.tif', False),
+                ('vshed.tif', True),
+                ('vshed_qual.tif', True)):
+            full_filepath = os.path.join(
+                args['workspace_dir'], 'output', output_filename)
+            self.assertEqual(os.path.exists(full_filepath), should_exist)
+
+        # In a non-valuation run, vshed_qual.tif is based on the number of
+        # visible structures rather than the valuation, so we need to make sure
+        # that the raster has the expected values.
+        expected_visual_quality = numpy.array(
+            [[1, 1, 1, 1, 4],
+             [0, 1, 1, 4, 3],
+             [0, 0, 4, 3, 3],
+             [0, 3, 3, 4, 3],
+             [3, 3, 3, 3, 4]])
+        visual_quality_raster = os.path.join(
+            args['workspace_dir'], 'output', 'vshed_qual.tif')
+        quality_matrix = gdal.OpenEx(
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          quality_matrix)
+
     def test_invalid_valuation_function(self):
         """SQ: model raises exception with invalid valuation function."""
         from natcap.invest.scenic_quality import scenic_quality
@@ -130,6 +225,7 @@ class ScenicQualityTests(unittest.TestCase):
             'structure_path': viewpoints_path,
             'dem_path': dem_path,
             'refraction': 0.13,
+            'do_valuation': True,
             'valuation_function': 'INVALID FUNCTION',
             'a_coef': 1,
             'b_coef': 0,
@@ -219,6 +315,7 @@ class ScenicQualityTests(unittest.TestCase):
             'dem_path': dem_path,
             'refraction': 0.13,
             'valuation_function': 'linear',
+            'do_valuation': True,
             'a_coef': 1,
             'b_coef': 0,
             'max_valuation_radius': 10.0,
@@ -238,8 +335,6 @@ class ScenicQualityTests(unittest.TestCase):
 
         # 3 of the 4 viewpoints overlap the DEM, so there should only be files
         # from 3 viewsheds.
-        self.assertEqual(len(glob.glob(os.path.join(
-            args['workspace_dir'], 'intermediate', 'auxiliary*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
             args['workspace_dir'], 'intermediate', 'visibility*'))), 3)
         self.assertEqual(len(glob.glob(os.path.join(
@@ -315,11 +410,13 @@ class ScenicQualityTests(unittest.TestCase):
             'structure_path': viewpoints_path,
             'dem_path': dem_path,
             'refraction': 0.13,
+            'do_valuation': True,
             'valuation_function': 'linear',
             'a_coef': 0,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
-            'n_workers': -1,
+            # n_workers is explicitly excluded here to trigger the model
+            # default.
         }
 
         scenic_quality.execute(args)
@@ -393,6 +490,7 @@ class ScenicQualityTests(unittest.TestCase):
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
+            'do_valuation': True,
             'n_workers': -1,
         }
 
@@ -408,8 +506,8 @@ class ScenicQualityTests(unittest.TestCase):
              [0.01831564, 0.13533528, 1., 0.13533528, 0.03663128]])
 
         value_raster = gdal.OpenEx(
-            os.path.join(args['workspace_dir'], 'output',
-                         'vshed_value.tif'), gdal.OF_RASTER)
+            os.path.join(args['workspace_dir'], 'output', 'vshed_value.tif'),
+            gdal.OF_RASTER)
         value_band = value_raster.GetRasterBand(1)
         value_matrix = value_band.ReadAsArray()
 
@@ -436,6 +534,7 @@ class ScenicQualityTests(unittest.TestCase):
             'dem_path': dem_path,
             'refraction': 0.13,
             'valuation_function': 'logarithmic',
+            'do_valuation': True,
             'a_coef': 1,
             'b_coef': 1,
             'max_valuation_radius': 10.0,
@@ -484,6 +583,42 @@ class ScenicQualityTests(unittest.TestCase):
 
         expected_visual_quality = numpy.tile(
             numpy.array([1, 0, 0, 0, 2, 3, 4]), (5, 1))
+
+        visual_quality_matrix = gdal.OpenEx(
+            visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
+        numpy.testing.assert_almost_equal(expected_visual_quality,
+                                          visual_quality_matrix)
+
+    def test_visual_quality_large_blocks(self):
+        """SQ: verify visual quality on large blocks."""
+        # This is a regression test for an issue encountered in the
+        # percentiles algorithm.  To exercise the fix, we need to
+        # calculate percentiles on a raster that does not fit completely into
+        # memory in a single percentile buffer.
+        from natcap.invest.scenic_quality import scenic_quality
+        shape = (512, 512)
+        n_blocks = 5
+        visible_structures = numpy.concatenate(
+            [numpy.full(shape, n*2) for n in range(n_blocks)])
+
+        n_visible = os.path.join(self.workspace_dir, 'n_visible.tif')
+        visual_quality_raster = os.path.join(self.workspace_dir,
+                                             'visual_quality.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster = driver.Create(n_visible, shape[0], shape[1]*n_blocks,
+                               1, gdal.GDT_Int32)
+        band = raster.GetRasterBand(1)
+        band.SetNoDataValue(-1)
+        band.WriteArray(visible_structures)
+        band = None
+        raster = None
+
+        scenic_quality._calculate_visual_quality(n_visible,
+                                                 self.workspace_dir,
+                                                 visual_quality_raster)
+
+        expected_visual_quality = numpy.concatenate(
+            [numpy.full(shape, n) for n in range(n_blocks)])
 
         visual_quality_matrix = gdal.OpenEx(
             visual_quality_raster, gdal.OF_RASTER).ReadAsArray()
@@ -566,14 +701,10 @@ class ScenicQualityValidationTests(unittest.TestCase):
         except KeyError as error_raised:
             missing_keys = sorted(error_raised.args)
             expected_missing_keys = [
-                'a_coef',
                 'aoi_path',
-                'b_coef',
                 'dem_path',
-                'max_valuation_radius',
                 'refraction',
                 'structure_path',
-                'valuation_function',
                 'workspace_dir',
             ]
             self.assertEqual(missing_keys, expected_missing_keys)
@@ -582,7 +713,10 @@ class ScenicQualityValidationTests(unittest.TestCase):
         """SQ Validate: assert polynomial required keys."""
         from natcap.invest.scenic_quality import scenic_quality
         try:
-            args = {'valuation_function': 'polynomial'}
+            args = {
+                'valuation_function': 'polynomial',
+                'do_valuation': True,
+            }
             scenic_quality.validate(args)
             self.fail('KeyError expected but not found')
         except KeyError as error_raised:
@@ -598,6 +732,24 @@ class ScenicQualityValidationTests(unittest.TestCase):
                 'workspace_dir',
                 # This list doesn't contain key ``valuation_function`` because
                 # the key was provided in args.
+            ]
+            self.assertEqual(missing_keys, expected_missing_keys)
+
+    def test_novaluation_required_keys(self):
+        """SQ Validate: assert required keys without valuation."""
+        from natcap.invest.scenic_quality import scenic_quality
+        try:
+            args = {}
+            scenic_quality.validate(args)
+            self.fail('KeyError expected but not found')
+        except KeyError as error_raised:
+            missing_keys = sorted(error_raised.args)
+            expected_missing_keys = [
+                'aoi_path',
+                'dem_path',
+                'refraction',
+                'structure_path',
+                'workspace_dir',
             ]
             self.assertEqual(missing_keys, expected_missing_keys)
 

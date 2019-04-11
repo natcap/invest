@@ -146,6 +146,16 @@ def execute(args):
             for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
                 raster_unique_lucodes.update(numpy.unique(lulc_block))
 
+            # Remove the nodata value from the set of landuser codes.
+            nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+            try:
+                raster_unique_lucodes.remove(nodata)
+            except KeyError:
+                # KeyError when the nodata value was not encountered in the
+                # raster's pixel values.  Same result when nodata value is
+                # None.
+                pass
+
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
             threat_path_dict['threat' + lulc_key] = {}
@@ -173,9 +183,10 @@ def execute(args):
     missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
     if missing_lucodes:
         raise ValueError(
-            'The following land cover codes were found in the sensitivity '
-            'table. Check your sensitivity table to see if they are missing: '
-            '%s. \n\n' % ', '.join([str(x) for x in sorted(missing_lucodes)]))
+            'The following land cover codes were found in your landcover rasters '
+            'but not in your sensitivity table. Check your sensitivity table '
+            'to see if they are missing: %s. \n\n' %
+            ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
