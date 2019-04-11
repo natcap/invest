@@ -481,8 +481,6 @@ cpdef calculate_local_recharge(
     cdef _ManagedRaster target_aet_raster = _ManagedRaster(
         target_aet_path, 1, 1)
 
-    #cdef numpy.ndarray alpha_month_array = numpy.array([x[1] for x in sorted(alpha_month.iteritems())])
-
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
         win_xsize = offset_dict['win_xsize']
