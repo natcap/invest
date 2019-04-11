@@ -355,23 +355,25 @@ def ndr_eff_calculation(
     """Calculate flow downhill effective_retention to the channel.
 
         Parameters:
-            mfd_flow_direction_path (string) - (input) a path to a raster with
+            mfd_flow_direction_path (string): a path to a raster with
                 pygeoprocessing.routing MFD flow direction values.
-            stream_path (string) - (input) a raster where 1 indicates a stream
-                all other values ignored must be same dimensions and projection
-                as mfd_flow_direction_path.
-            retention_eff_lulc_path (string) - (input) a raster indicating the
-                maximum retention efficiency that the landcover on that pixel
-                can accumulate.
-            crit_len_path (string) - (input) a raster indicating the critical length
-                of the retention efficiency that the landcover on this pixel.
-
-            effective_retention_path (string) - (output) a raster showing
-                the effective retention on that pixel to the stream.
+            stream_path (string): a path to a raster where 1 indicates a
+                stream all other values ignored must be same dimensions and
+                projection as mfd_flow_direction_path.
+            retention_eff_lulc_path (string): a path to a raster indicating
+                the maximum retention efficiency that the landcover on that
+                pixel can accumulate.
+            crit_len_path (string): a path to a raster indicating the critical
+                length of the retention efficiency that the landcover on this
+                pixel.
+            effective_retention_path (string): path to a raster that is
+                created by this call that contains a per-pixel effective
+                sediment retention to the stream.
 
         Returns:
-            nothing"""
+            None.
 
+    """
     cdef float effective_retention_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, effective_retention_path, gdal.GDT_Float32,
