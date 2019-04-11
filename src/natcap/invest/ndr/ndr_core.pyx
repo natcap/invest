@@ -507,11 +507,11 @@ def ndr_eff_calculation(
                     if ds_row < 0 or ds_row >= n_rows:
                         continue
                     if i % 2 == 1:
-                        step_size = cell_size*1.41421356237
+                        step_size = <float>(cell_size*1.41421356237)
                     else:
                         step_size = cell_size
                     # guard against an area that has flow but no landcover
-                    current_step_factor = exp(-5*step_size/crit_len)
+                    current_step_factor = <float>(exp(-5*step_size/crit_len))
 
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))
@@ -528,7 +528,6 @@ def ndr_eff_calculation(
                         working_retention_eff += (
                             intermediate_retention * outflow_weight)
                 if outflow_weight_sum > 0:
-                    old_eff = working_retention_eff
                     working_retention_eff /= float(outflow_weight_sum)
                     effective_retention_raster.set(
                         global_col, global_row, working_retention_eff)
