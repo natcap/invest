@@ -302,7 +302,7 @@ def execute(args):
         kwargs={
             'weight_raster_path_band': (f_reg['thresholded_slope_path'], 1)},
         target_path_list=[f_reg['s_accumulation_path']],
-        dependent_task_list=[flow_dir_task],
+        dependent_task_list=[flow_dir_task, threshold_slope_task],
         task_name='route s')
 
     s_bar_task = task_graph.add_task(
