@@ -196,7 +196,7 @@ def _execute(args):
     bad_value_list = []
     for lucode, value in biophysical_table.items():
         for biophysical_id in ['cn_a', 'cn_b', 'cn_c', 'cn_d'] + [
-                'kc_%d' % (month_index+1) for month_index in range(12)]:
+                'kc_%d' % (month_index+1) for month_index in range(N_MONTHS)]:
             try:
                 _ = float(value[biophysical_id])
             except ValueError:
@@ -223,7 +223,7 @@ def _execute(args):
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
         alpha_month_map = dict(
-            (month_index+1, alpha_m) for month_index in range(12))
+            (month_index+1, alpha_m) for month_index in range(N_MONTHS))
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
@@ -469,7 +469,7 @@ def _execute(args):
 
         LOGGER.info('calculate local recharge')
         kc_task_list = []
-        for month_index in range(12):
+        for month_index in range(N_MONTHS):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
