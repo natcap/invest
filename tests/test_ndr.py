@@ -111,6 +111,42 @@ class NDRTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'watershed_results_ndr.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    def test_validation(self):
+        """NDR test argument validation."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        # should not raise an exception
+        ndr.validate(args)
+
+        with self.assertRaises(KeyError)  as context:
+            del args['workspace_dir']
+            ndr.validate(args)
+        self.assertTrue(
+            'The following keys were expected' in str(context.exception))
+
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['workspace_dir'] = ''
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # here the wrong GDAL type happens (vector instead of raster)
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['lulc_path'] = args['watersheds_path']
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # here the wrong GDAL type happens (raster instead of vector)
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['watersheds_path'] = args['lulc_path']
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+
     @staticmethod
     def _assert_regression_results_equal(
             workspace_dir, result_vector_path, agg_results_path):
