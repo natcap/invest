@@ -637,7 +637,23 @@ cpdef calculate_local_recharge(
 def route_baseflow_sum(
         flow_dir_mfd_path, l_path, l_avail_path, l_sum_path,
         stream_path, target_b_path, target_b_sum_path):
-    """Route Baseflow Equation 11.
+    """Route Baseflow through MFD as described in Equation 11.
+
+    Parameters:
+        flow_dir_mfd_path (string): path to a pygeoprocessing multiple flow
+            direction raster.
+        l_path (string): path to local recharge raster.
+        l_avail_path (string): path to local recharge raster that shows
+            recharge available to the pixel.
+        l_sum_path (string): path to upstream sum of l_path.
+        stream_path (string): path to stream raster, 1 stream, 0 no stream,
+            and nodata.
+        target_b_path (string): path to created raster for per-pixel baseflow.
+        target_b_sum_path (string): path to created raster for per-pixel
+            upstream sum of baseflow.
+
+    Returns:
+        None.
 
     """
     # used for time-delayed logging
