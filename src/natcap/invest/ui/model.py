@@ -1200,14 +1200,14 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
-        # Software update button to the left of text links
+        # InVEST version update button to the left of text links
         self.update_button = QtWidgets.QPushButton('')
         self.update_button.setIcon(
             qtawesome.icon('fa.refresh', color='orange'))
+        self.update_button.setFixedWidth(25)
 
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel(parent=self)
-        self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
             '<a href="localdocs">Model documentation</a>',
@@ -1215,13 +1215,14 @@ class InVESTModel(QtWidgets.QMainWindow):
              'Report an issue</a>'))))
         self.links.linkActivated.connect(self._check_local_docs)
 
-        # Add refresh button and links horizontally
-        self.button_and_link = QtWidgets.QHBoxLayout()
-        self.button_and_link.addWidget(self.update_button)
-        self.button_and_link.addWidget(self.links)
-        self.button_and_link_widget = QtWidgets.QWidget()
-        self.button_and_link_widget.setLayout(self.button_and_link)
-        self._central_widget.layout().addWidget(self.button_and_link_widget)
+        # Add update button and links to the right of horizontal layout
+        self.links_layout = QtWidgets.QHBoxLayout()
+        self.links_layout.addWidget(self.update_button)
+        self.links_layout.setAlignment(QtCore.Qt.AlignRight)
+        self.links_layout.addWidget(self.links)
+        self.links_widget = QtWidgets.QWidget()
+        self.links_widget.setLayout(self.links_layout)
+        self._central_widget.layout().addWidget(self.links_widget)
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
