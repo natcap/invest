@@ -8,6 +8,7 @@ import os
 import pprint
 import collections
 import json
+import requests
 import textwrap
 import cgi
 import tarfile
@@ -1504,7 +1505,21 @@ class InVESTModel(QtWidgets.QMainWindow):
     def _check_version(self):
         """Check InVEST software version update.
         """
-        print 'hello'
+        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
+        try:
+            response = requests.get(
+                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
+            # Get the latest version string
+            latest_version = json.loads(response.text)['info']['version']
+            print latest_version
+
+        # If a ConnectionError, HTTPError, Timeout, or TooManyRedirects
+        # exception happens
+        except requests.exceptions.RequestException as err:
+            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
+
+
+
 
     def add_input(self, input_obj):
         """Add an input to the model.
