@@ -6,6 +6,7 @@ from __future__ import absolute_import
 import logging
 import os
 import pprint
+from pkg_resources import parse_version
 import collections
 import json
 import requests
@@ -38,10 +39,10 @@ QT_APP = inputs.QT_APP
 
 # How long satus bar messages should be visible, in milliseconds.
 STATUSBAR_MSG_DURATION = 10000
-ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
-                           color='grey')
-ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
-                            color='orange')
+ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left', color='grey')
+ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
+ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
+
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
@@ -1102,6 +1103,70 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setVisible(True)
 
 
+class InvestVersionUpdateDialog(QtWidgets.QDialog):
+    """A dialog for notifying users of the link to a new InVEST version."""
+    def __init__(self, parent=None):
+        """Initialize the InvestVersionUpdateDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog. None if
+                no parent.
+
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setWindowTitle('Version Update')
+
+        self.title_icon = QtWidgets.QLabel()
+        self.title_icon.setPixmap(ICON_UPDATE.pixmap(50, 50))
+        self.title_icon.setAlignment(QtCore.Qt.AlignCenter)
+        self.title = QtWidgets.QWidget()
+        self.title.setLayout(QtWidgets.QHBoxLayout())
+        self.title.layout().addWidget(self.title_icon)
+
+        self.title_label = QtWidgets.QLabel(
+            '<h2>A new version of InVEST is available</h2>'
+            '<h4>To install a new version, please go to the download page:</h4>'
+            '<a href="https://naturalcapitalproject.stanford.edu/invest/">'
+            'https://naturalcapitalproject.stanford.edu/invest/</a>')
+        self.title.layout().addWidget(self.title_label)
+        self.layout().addWidget(self.title)
+
+    @staticmethod
+    def _has_new_version():
+        """Check if there's a new InVEST software version.
+
+        Returns:
+            True if there's a new version, False if there's no new version,
+            or any exception happens.
+
+        """
+        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
+        try:
+            response = requests.get(
+                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
+            # Get the latest version string
+            latest_version = json.loads(response.text)['info']['version']
+            return True # for now for development & debugging
+            if parse_version(latest_version) > parse_version(
+                    natcap.invest.__version__):
+                return True
+            else:
+                return False
+
+        # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
+        # exception happens
+        except requests.exceptions.RequestException as err:
+            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
+
+        # If the text doesn't have the 'info' or 'version' keys
+        except KeyError as err:
+            LOGGER.debug('Version string could not be found from PyPI page. '
+                         'Exception raised: %s' % err)
+
+        return False
+
+
 class InVESTModel(QtWidgets.QMainWindow):
     """An InVEST model window.
 
@@ -1203,11 +1268,13 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         # InVEST version update button to the left of text links
         self.update_button = QtWidgets.QPushButton('')
-        self.update_button.setIcon(
-            qtawesome.icon('fa.refresh', color='orange'))
+        self.update_button.setIcon(ICON_UPDATE)
         self.update_button.setFixedWidth(25)
         self.update_button.setToolTip('New InVEST Version Available')
-        self.update_button.clicked.connect(self._check_version)
+        self.new_version_report_dialog = InvestVersionUpdateDialog(self)
+        self.update_button.setVisible(
+            self.new_version_report_dialog._has_new_version())
+        self.update_button.clicked.connect(self.new_version_report_dialog.show)
 
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel(parent=self)
@@ -1501,25 +1568,6 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info(alert_message)
         self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
         self.window_title.filename = os.path.basename(save_filepath)
-
-    def _check_version(self):
-        """Check InVEST software version update.
-        """
-        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
-        try:
-            response = requests.get(
-                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
-            # Get the latest version string
-            latest_version = json.loads(response.text)['info']['version']
-            print latest_version
-
-        # If a ConnectionError, HTTPError, Timeout, or TooManyRedirects
-        # exception happens
-        except requests.exceptions.RequestException as err:
-            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
-
-
-
 
     def add_input(self, input_obj):
         """Add an input to the model.
