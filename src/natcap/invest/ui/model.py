@@ -1105,15 +1105,19 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
 
 class InvestVersionUpdateDialog(QtWidgets.QDialog):
     """A dialog for notifying users of the link to a new InVEST version."""
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, latest_version=None):
         """Initialize the InvestVersionUpdateDialog.
 
         Parameters:
             parent=None (QWidget or None): The parent of the dialog. None if
                 no parent.
 
+            latest_version (str or None): A string representing the latest
+                version of InVEST.
+
         """
         QtWidgets.QDialog.__init__(self, parent=parent)
+        self.latest_version = latest_version if latest_version else ''
         self.setLayout(QtWidgets.QVBoxLayout())
         self.setWindowTitle('InVEST Version Update')
 
@@ -1124,8 +1128,6 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         self.title.setLayout(QtWidgets.QHBoxLayout())
         self.title.layout().addWidget(self.title_icon)
 
-        self.latest_version = self._get_latest_version()
-        self.needs_update = self._needs_update(self.latest_version)
         self.title_label = QtWidgets.QLabel(
             '<h2>A new InVEST version %s is available</h2>'
             '<h4>To install a new version, please go to the download page:</h4>'
@@ -1135,51 +1137,6 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         self.title_label.linkActivated.connect(self._activate_link)
         self.title.layout().addWidget(self.title_label)
         self.layout().addWidget(self.title)
-
-    def _get_latest_version(self):
-        """Get the latest InVEST version string from PyPI page.
-
-        Returns:
-            latest_version (str) if the HTTP request is successfully, or
-                None if not.
-
-        """
-        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
-        try:
-            response = requests.get(
-                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
-            # Get the latest version string
-            latest_version = json.loads(response.text)['info']['version']
-            return latest_version
-
-        # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
-        # exception happens
-        except requests.exceptions.RequestException as err:
-            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
-
-        # If the text doesn't have the 'info' or 'version' keys
-        except KeyError as err:
-            LOGGER.debug('Version string could not be found from PyPI page. '
-                         'Exception raised: %s' % err)
-        return None
-
-    def _needs_update(self, latest_version):
-        """Compare the latest version with current version.
-
-        Returns:
-            True if the latest version is later than the current version, False
-                if the latest version is the same as the current version, or
-                the request to the PyPI page wasn't successful.
-
-        """
-        latest_version = self._get_latest_version()
-        if latest_version:
-            return True # for now for development & debugging
-            if parse_version(latest_version) > parse_version(
-                    natcap.invest.__version__):
-                return True
-            else:
-                return False
 
     def _activate_link(self, link=None):
         """Activate the Hyperlink.
@@ -1297,17 +1254,26 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
-        # InVEST version update button to the left of text links
-        self.update_button = QtWidgets.QPushButton('')
-        self.update_button.setIcon(ICON_UPDATE)
-        self.update_button.setFixedWidth(25)
-        self.update_button.setToolTip('New InVEST Version Available')
-        self.new_version_report_dialog = InvestVersionUpdateDialog(self)
-        self.update_button.setVisible(
-            self.new_version_report_dialog.needs_update)
-        self.update_button.clicked.connect(self.new_version_report_dialog.show)
+        # Add InVEST version update button and links at the top of the window.
+        self.links_layout = QtWidgets.QHBoxLayout()
+        self.links_layout.setAlignment(QtCore.Qt.AlignRight)
 
-        # Format the text links at the top of the window.
+        # Add update button to the left of text links, if a newer version is
+        # found
+        self.latest_version = self._get_latest_version()
+        self.needs_update = self._needs_update(self.latest_version)
+        if self.needs_update:
+            self.update_button = QtWidgets.QPushButton('')
+            self.update_button.setIcon(ICON_UPDATE)
+            self.update_button.setFixedWidth(25)
+            self.update_button.setToolTip('New InVEST Version Available')
+            self.new_version_report_dialog = InvestVersionUpdateDialog(
+                self, self.latest_version)
+            self.update_button.clicked.connect(
+                self.new_version_report_dialog.show)
+            self.links_layout.addWidget(self.update_button)
+
+        # Format the text links
         self.links = QtWidgets.QLabel(parent=self)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
@@ -1315,11 +1281,6 @@ class InVESTModel(QtWidgets.QMainWindow):
             ('<a href="http://forums.naturalcapitalproject.org">'
              'Report an issue</a>'))))
         self.links.linkActivated.connect(self._check_local_docs)
-
-        # Add update button and links to the right of the horizontal layout
-        self.links_layout = QtWidgets.QHBoxLayout()
-        self.links_layout.addWidget(self.update_button)
-        self.links_layout.setAlignment(QtCore.Qt.AlignRight)
         self.links_layout.addWidget(self.links)
         self.links_widget = QtWidgets.QWidget()
         self.links_widget.setLayout(self.links_layout)
@@ -2133,3 +2094,48 @@ class InVESTModel(QtWidgets.QMainWindow):
         path = event.mimeData().urls()[0].toLocalFile()
         self.setStyleSheet('')
         self.load_datastack(path)
+
+    def _get_latest_version(self):
+        """Get the latest InVEST version string from PyPI page.
+
+        Returns:
+            latest_version (str) if the HTTP request is successfully, or
+                None if not.
+
+        """
+        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
+        try:
+            response = requests.get(
+                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
+            # Get the latest version string
+            latest_version = json.loads(response.text)['info']['version']
+            return latest_version
+
+        # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
+        # exception happens
+        except requests.exceptions.RequestException as err:
+            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
+
+        # If the text doesn't have the 'info' or 'version' keys
+        except KeyError as err:
+            LOGGER.debug('Version string could not be found from PyPI page. '
+                         'Exception raised: %s' % err)
+        return None
+
+    def _needs_update(self, latest_version):
+        """Compare the latest version with current version.
+
+        Returns:
+            True if the latest version is later than the current version, False
+                if the latest version is the same as the current version, or
+                the request to the PyPI page wasn't successful.
+
+        """
+        latest_version = self._get_latest_version()
+        if latest_version:
+            return True # for now for development & debugging
+            if parse_version(latest_version) > parse_version(
+                    natcap.invest.__version__):
+                return True
+            else:
+                return False
