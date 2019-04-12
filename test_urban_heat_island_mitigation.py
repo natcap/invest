@@ -24,7 +24,7 @@ def main():
         'ref_eto_raster_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\ETo_SFBA.tif",
         'aoi_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",
         'biophysical_table_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Biophysical table_UHI.csv",
-        'urban_park_cooling_distance': 1000.0,
+        'green_area_cooling_distance': 1000.0,
         'uhi_max': 3.5,
         't_air_average_radius': "1001.0",
         'building_vector_path': r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",

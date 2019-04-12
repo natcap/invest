@@ -38,8 +38,8 @@ def execute(args):
         args['biophysical_table_path'] (str): table to map landcover codes to
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
             'shade', 'kc', and 'albedo', and 'green_area'.
-        args['urban_park_cooling_distance'] (float): Distance (in m) over
-            which large urban parks (> 2 ha) will have a cooling effect.
+        args['green_area_cooling_distance'] (float): Distance (in m) over
+            which largegreen areas (> 2 ha) will have a cooling effect.
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
@@ -138,7 +138,7 @@ def execute(args):
         temporary_working_dir,
         'green_area_exponential_decay_kernel%s.tif' % file_suffix)
     green_area_decay_kernel_distance = int(numpy.round(
-        float(args['urban_park_cooling_distance']) / cell_size))
+        float(args['green_area_cooling_distance']) / cell_size))
     green_area_kernel_task = task_graph.add_task(
         func=utils.exponential_decay_kernel_raster,
         args=(green_area_decay_kernel_distance,
@@ -902,7 +902,7 @@ def validate(args, limit_to=None):
         'ref_eto_raster_path',
         'aoi_vector_path',
         'biophysical_table_path',
-        'urban_park_cooling_distance',
+        'green_area_cooling_distance',
         'uhi_max',
         'building_vector_path',
         'energy_consumption_table_path',

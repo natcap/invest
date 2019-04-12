@@ -74,7 +74,14 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             label='T_air moving average radius (m).',
             validator=self.validator)
         self.add_input(self.t_air_average_radius)
-        self.t_air_average_radius.set_value("1000")
+        self.t_air_average_radius.set_value("2000")
+
+        self.green_area_cooling_distance = inputs.Text(
+            args_key='green_area_cooling_distance',
+            label='Green area max cooling distance effect (m).',
+            validator=self.validator)
+        self.add_input(self.green_area_cooling_distance)
+        self.green_area_cooling_distance.set_value("1000")
 
         self.avg_rel_humidity = inputs.Text(
             args_key='avg_rel_humidity',
@@ -120,7 +127,11 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
             self.t_air_average_radius.args_key: self.t_air_average_radius.value(),
+            self.green_area_cooling_distance.args_key: self.green_area_cooling_distance.value(),
             self.avg_rel_humidity.args_key: self.avg_rel_humidity.value(),
+            self.cc_weight_shade.args_key: self.cc_weight_shade.value(),
+            self.cc_weight_albedo.args_key: self.cc_weight_albedo.value(),
+            self.cc_weight_eti.args_key: self.cc_weight_eti.value(),
         }
 
         return args
