@@ -1205,6 +1205,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.update_button.setIcon(
             qtawesome.icon('fa.refresh', color='orange'))
         self.update_button.setFixedWidth(25)
+        self.update_button.setToolTip('New InVEST Version Available')
+        self.update_button.clicked.connect(self._check_version)
 
         # Format the text links at the top of the window.
         self.links = QtWidgets.QLabel(parent=self)
@@ -1215,7 +1217,7 @@ class InVESTModel(QtWidgets.QMainWindow):
              'Report an issue</a>'))))
         self.links.linkActivated.connect(self._check_local_docs)
 
-        # Add update button and links to the right of horizontal layout
+        # Add update button and links to the right of the horizontal layout
         self.links_layout = QtWidgets.QHBoxLayout()
         self.links_layout.addWidget(self.update_button)
         self.links_layout.setAlignment(QtCore.Qt.AlignRight)
@@ -1498,6 +1500,11 @@ class InVESTModel(QtWidgets.QMainWindow):
         LOGGER.info(alert_message)
         self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
         self.window_title.filename = os.path.basename(save_filepath)
+
+    def _check_version(self):
+        """Check InVEST software version update.
+        """
+        print 'hello'
 
     def add_input(self, input_obj):
         """Add an input to the model.
