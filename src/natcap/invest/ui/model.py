@@ -1115,7 +1115,7 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         """
         QtWidgets.QDialog.__init__(self, parent=parent)
         self.setLayout(QtWidgets.QVBoxLayout())
-        self.setWindowTitle('Version Update')
+        self.setWindowTitle('InVEST Version Update')
 
         self.title_icon = QtWidgets.QLabel()
         self.title_icon.setPixmap(ICON_UPDATE.pixmap(50, 50))
@@ -1124,21 +1124,24 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         self.title.setLayout(QtWidgets.QHBoxLayout())
         self.title.layout().addWidget(self.title_icon)
 
+        self.latest_version = self._get_latest_version()
+        self.needs_update = self._needs_update(self.latest_version)
         self.title_label = QtWidgets.QLabel(
-            '<h2>A new version of InVEST is available</h2>'
+            '<h2>A new InVEST version %s is available</h2>'
             '<h4>To install a new version, please go to the download page:</h4>'
             '<a href="https://naturalcapitalproject.stanford.edu/invest/">'
-            'https://naturalcapitalproject.stanford.edu/invest/</a>')
+            'https://naturalcapitalproject.stanford.edu/invest/</a>' %
+            self.latest_version)
+        self.title_label.linkActivated.connect(self._activate_link)
         self.title.layout().addWidget(self.title_label)
         self.layout().addWidget(self.title)
 
-    @staticmethod
-    def _has_new_version():
-        """Check if there's a new InVEST software version.
+    def _get_latest_version(self):
+        """Get the latest InVEST version string from PyPI page.
 
         Returns:
-            True if there's a new version, False if there's no new version,
-            or any exception happens.
+            latest_version (str) if the HTTP request is successfully, or
+                None if not.
 
         """
         # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
@@ -1147,12 +1150,7 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
                 'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
             # Get the latest version string
             latest_version = json.loads(response.text)['info']['version']
-            return True # for now for development & debugging
-            if parse_version(latest_version) > parse_version(
-                    natcap.invest.__version__):
-                return True
-            else:
-                return False
+            return latest_version
 
         # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
         # exception happens
@@ -1163,8 +1161,41 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         except KeyError as err:
             LOGGER.debug('Version string could not be found from PyPI page. '
                          'Exception raised: %s' % err)
+        return None
 
-        return False
+    def _needs_update(self, latest_version):
+        """Compare the latest version with current version.
+
+        Returns:
+            True if the latest version is later than the current version, False
+                if the latest version is the same as the current version, or
+                the request to the PyPI page wasn't successful.
+
+        """
+        latest_version = self._get_latest_version()
+        if latest_version:
+            return True # for now for development & debugging
+            if parse_version(latest_version) > parse_version(
+                    natcap.invest.__version__):
+                return True
+            else:
+                return False
+
+    def _activate_link(self, link=None):
+        """Activate the Hyperlink.
+
+        Returns:
+            None.
+
+        """
+        link = QtCore.QUrl(link)
+
+        LOGGER.debug('Activating link: %s', link)
+        # Qt4 and Qt5 hvae QDesktopServices located in different places.
+        try:
+            QtCore.QDesktopServices.openUrl(link)
+        except AttributeError:
+            QtGui.QDesktopServices.openUrl(link)
 
 
 class InVESTModel(QtWidgets.QMainWindow):
@@ -1273,7 +1304,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.update_button.setToolTip('New InVEST Version Available')
         self.new_version_report_dialog = InvestVersionUpdateDialog(self)
         self.update_button.setVisible(
-            self.new_version_report_dialog._has_new_version())
+            self.new_version_report_dialog.needs_update)
         self.update_button.clicked.connect(self.new_version_report_dialog.show)
 
         # Format the text links at the top of the window.
