@@ -37,7 +37,6 @@ DATASTACKS = {
     'globio': ['globio_demo.invs.json'],
     'habitat_quality': ['habitat_quality_willamette.invs.json'],
     'hra': ['hra_wcvi.invs.json'],
-    'habitat_risk_assessment_preprocessor': ['hra_pre_wcvi.invs.json'],
     'hydropower_water_yield': ['annual_water_yield_willamette.invs.json'],
     'ndr': ['ndr_n_p_willamette.invs.json'],
     'pollination': ['pollination_willamette.invs.json'],
