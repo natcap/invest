@@ -83,6 +83,31 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         self.add_input(self.avg_rel_humidity)
         self.avg_rel_humidity.set_value("30")
 
+        self.cc_weight_shade = inputs.Text(
+            args_key='cc_weight_shade',
+            helptext=("Shade weight for cooling capacity index. The default value of 0.6 is fine unless you know what you are doing."),
+            label='cc_weight_shade',
+            validator=self.validator)
+        self.add_input(self.cc_weight_shade)
+        self.cc_weight_shade.set_value("0.6")
+
+        self.cc_weight_albedo = inputs.Text(
+            args_key='cc_weight_albedo',
+            helptext=("Albedo weight for cooling capacity index. The default value of 0.2 is fine unless you know what you are doing."),
+            label='cc_weight_albedo',
+            validator=self.validator)
+        self.add_input(self.cc_weight_albedo)
+        self.cc_weight_albedo.set_value("0.2")
+
+        self.cc_weight_eti = inputs.Text(
+            args_key='cc_weight_eti',
+            helptext=("Evapotranspiration index weight for cooling capacity index. The default value of 0.2 is fine unless you know what you are doing."),
+            label='cc_weight_eti',
+            validator=self.validator)
+        self.add_input(self.cc_weight_eti)
+        self.cc_weight_eti.set_value("0.2")
+
+
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),

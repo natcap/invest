@@ -16,9 +16,8 @@ import shapely.wkb
 import shapely.prepared
 import rtree
 
-from .. import validation
-from .. import utils
-from . import urban_heat_island_mitigation_core
+from . import validation
+from . import utils
 
 LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
@@ -50,6 +49,15 @@ def execute(args):
         args['energy_consumption_table_path'] (str): path to a table that
             maps building types to energy consumption. Must contain at least
             the fields 'type' and 'consumption'.
+        args['cc_weight_shade'] (str/float): floating point number
+            representing the relative weight to apply to shade when
+            calculating the cooling index.
+        args['cc_weight_albedo'] (str/float): floating point number
+            representing the relative weight to apply to albedo when
+            calculating the cooling index.
+        args['cc_weight_eti'] (str/float): floating point number
+            representing the relative weight to apply to ETI when
+            calculating the cooling index.
 
     Returns:
         None.
@@ -62,6 +70,17 @@ def execute(args):
     biophysical_lucode_map = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=True,
         warn_if_missing=True)
+
+    # cast to float and calculate relative weights
+    cc_weight_shade_raw = float(args['cc_weight_shade'])
+    cc_weight_albedo_raw = float(args['cc_weight_albedo'])
+    cc_weight_eti_raw = float(args['cc_weight_eti'])
+    cc_weight_shade = cc_weight_shade_raw / (
+        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
+    cc_weight_albedo = cc_weight_albedo_raw / (
+        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
+    cc_weight_eti = cc_weight_eti_raw / (
+        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
 
     task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
 
@@ -230,7 +249,11 @@ def execute(args):
         args=([
             (task_path_prop_map['shade'][1], 1),
             (task_path_prop_map['albedo'][1], 1),
-            (eti_raster_path, 1)], calc_cc_op, cc_raster_path,
+            (eti_raster_path, 1),
+            (cc_weight_shade, 'raw'),
+            (cc_weight_albedo, 'raw'),
+            (cc_weight_eti, 'raw'),
+            ], calc_cc_op, cc_raster_path,
             gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[cc_raster_path],
         dependent_task_list=[
@@ -804,8 +827,24 @@ def calc_t_air_nomix_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
     return result
 
 
-def calc_cc_op(shade_array, albedo_array, eti_array):
-    """Calculate the cooling capacity index CC_i=.6*shade+.2*albedo+.2*ETI."""
+def calc_cc_op(
+        shade_array, albedo_array, eti_array, cc_weight_shade,
+        cc_weight_albedo, cc_weight_eti):
+    """Calculate the cooling capacity index.
+
+    Parameters:
+        shade_array (numpy.ndarray): array of shade index values 0..1
+        albedo_array (numpy.ndarray): array of albedo index values 0..1
+        eti_array (numpy.ndarray): array of evapotransipration index values
+            0..1,
+        cc_weight_shade (float): 0..1 weight to apply to shade
+        cc_weight_albedo (float): 0..1 weight to apply to albedo
+        cc_weight_eti (float): 0..1 weight to apply to eti
+
+    Returns:
+         CC_i=cc_weight_shade*shade+cc_weight_albedo*albedo+cc_weight_eti*ETI
+
+    """
     result = numpy.empty(shade_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
@@ -813,9 +852,9 @@ def calc_cc_op(shade_array, albedo_array, eti_array):
         numpy.isclose(albedo_array, TARGET_NODATA) |
         numpy.isclose(eti_array, TARGET_NODATA))
     result[valid_mask] = (
-        0.6*shade_array[valid_mask] +
-        0.2*albedo_array[valid_mask] +
-        0.2*eti_array[valid_mask])
+        cc_weight_shade*shade_array[valid_mask] +
+        cc_weight_albedo*albedo_array[valid_mask] +
+        cc_weight_eti*eti_array[valid_mask])
     return result
 
 
@@ -851,6 +890,7 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
+    LOGGER.debug('starting validation')
     missing_key_list = []
     no_value_list = []
     validation_error_list = []
@@ -866,6 +906,9 @@ def validate(args, limit_to=None):
         'uhi_max',
         'building_vector_path',
         'energy_consumption_table_path',
+        'cc_weight_shade',
+        'cc_weight_albedo',
+        'cc_weight_eti',
         ]
 
     for key in required_keys:
@@ -884,6 +927,25 @@ def validate(args, limit_to=None):
     if len(no_value_list) > 0:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
+
+    no_float_value_list = []
+    negative_value_list = []
+    for weight_key in [
+            'cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti']:
+        try:
+            LOGGER.debug(weight_key)
+            val = float(args[weight_key])
+            LOGGER.debug(val)
+            if val < 0:
+                negative_value_list.append(weight_key)
+        except ValueError:
+            no_float_value_list.append(weight_key)
+    if no_float_value_list:
+        validation_error_list.append(
+            no_float_value_list, 'parameter is not a number')
+    if negative_value_list:
+        validation_error_list.append(
+            negative_value_list, 'value should be positive')
 
     file_type_list = [
         ('t_obs_raster_path', 'raster'),
