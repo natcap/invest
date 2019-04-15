@@ -10,7 +10,7 @@ SVN_TEST_DATA_REPO_REV  := 224
 
 HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := f903e6636cca8bf28eb529d8c6931a508c0bdc14
+HG_UG_REPO_REV          := b39bc56cc601
 
 
 ENV = env
