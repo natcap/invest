@@ -2628,6 +2628,16 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
+    def test_version_update_button(self):
+        """UI Model: Check update notification when there's a new version."""
+        model_ui = ModelTests.build_model()
+        try:
+            model_ui.run()
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
         from natcap.invest import datastack
