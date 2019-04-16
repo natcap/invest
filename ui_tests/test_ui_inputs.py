@@ -2651,6 +2651,22 @@ class ModelTests(_QtTest):
                 model_ui = ModelTests.build_model()
                 assert all([hasattr(model_ui, 'update_button'),
                             hasattr(model_ui, 'version_update_dialog')])
+
+                if hasattr(QtCore, 'QDesktopServices'):
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtCore.'
+                                              'QDesktopServices.openUrl')
+                else:
+                    # PyQt5 changed the location of this.
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtGui.'
+                                              'QDesktopServices.openUrl')
+
+                # Simulate InVEST download link clicked
+                with patch_object as patched_openurl:
+                    model_ui._activate_link(
+                        model_ui.version_update_dialog.download_qurl)
+
+                patched_openurl.assert_called_once_with(QtCore.QUrl(
+                    'https://naturalcapitalproject.stanford.edu/invest/'))
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
