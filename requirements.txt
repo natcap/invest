@@ -25,3 +25,4 @@ taskgraph[niced_processes]>=0.8.2
 psutil<5.6.0
 chardet>=3.0.4
 matplotlib
+xlrd>=1.2.0
