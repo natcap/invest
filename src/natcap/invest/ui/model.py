@@ -1128,31 +1128,18 @@ class InvestVersionUpdateDialog(QtWidgets.QDialog):
         self.title.setLayout(QtWidgets.QHBoxLayout())
         self.title.layout().addWidget(self.title_icon)
 
+        self.download_link = "https://naturalcapitalproject.stanford.edu/invest/"
+        self.download_qurl = QtCore.QUrl(self.download_link)
         self.title_label = QtWidgets.QLabel(
             '<h2>A new InVEST version %s is available</h2>'
             '<h4>To install a new version, please go to the download page:</h4>'
-            '<a href="https://naturalcapitalproject.stanford.edu/invest/">'
-            'https://naturalcapitalproject.stanford.edu/invest/</a>' %
-            self.latest_version)
-        self.title_label.linkActivated.connect(self._activate_link)
+            '<a href="%s">%s' % (
+                self.latest_version, self.download_link, self.download_link))
+
+        self.title_label.linkActivated.connect(functools.partial(
+            InVESTModel._activate_link, self.download_qurl))
         self.title.layout().addWidget(self.title_label)
         self.layout().addWidget(self.title)
-
-    def _activate_link(self, link=None):
-        """Activate the Hyperlink.
-
-        Returns:
-            None.
-
-        """
-        link = QtCore.QUrl(link)
-
-        LOGGER.debug('Activating link: %s', link)
-        # Qt4 and Qt5 hvae QDesktopServices located in different places.
-        try:
-            QtCore.QDesktopServices.openUrl(link)
-        except AttributeError:
-            QtGui.QDesktopServices.openUrl(link)
 
 
 class InVESTModel(QtWidgets.QMainWindow):
@@ -1258,8 +1245,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.links_layout = QtWidgets.QHBoxLayout()
         self.links_layout.setAlignment(QtCore.Qt.AlignRight)
 
-        # Add update button to the left of text links, if a newer version is
-        # found
+        # Add update button to the left of text links, if a more recent version
+        # is found
         self.latest_version = self._get_latest_version()
         self.needs_update = self._needs_update(self.latest_version)
         if self.needs_update:
@@ -1267,10 +1254,10 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.update_button.setIcon(ICON_UPDATE)
             self.update_button.setFixedWidth(25)
             self.update_button.setToolTip('New InVEST Version Available')
-            self.new_version_report_dialog = InvestVersionUpdateDialog(
+            self.version_update_dialog = InvestVersionUpdateDialog(
                 self, self.latest_version)
             self.update_button.clicked.connect(
-                self.new_version_report_dialog.show)
+                self.version_update_dialog.show)
             self.links_layout.addWidget(self.update_button)
 
         # Format the text links
@@ -1512,12 +1499,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             link = QtCore.QUrl(link)
 
-        LOGGER.debug('Activating link: %s', link)
-        # Qt4 and Qt5 hvae QDesktopServices located in different places.
-        try:
-            QtCore.QDesktopServices.openUrl(link)
-        except AttributeError:
-            QtGui.QDesktopServices.openUrl(link)
+        InVESTModel._activate_link(link)
 
     def _save_datastack_as(self):
         """Save the current set of inputs as a datastack.
@@ -2095,11 +2077,29 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.setStyleSheet('')
         self.load_datastack(path)
 
+    @staticmethod
+    def _activate_link(link):
+        """Activate a QUrl.
+
+        link (QUrl): a QUrl object that is constructed either from a local file
+            path or a URI.
+
+        Returns:
+            None.
+
+        """
+        LOGGER.debug('Activating link: %s', link)
+        # Qt4 and Qt5 have QDesktopServices located in different places.
+        try:
+            QtCore.QDesktopServices.openUrl(link)
+        except AttributeError:
+            QtGui.QDesktopServices.openUrl(link)
+
     def _get_latest_version(self):
         """Get the latest InVEST version string from PyPI page.
 
         Returns:
-            latest_version (str) if the HTTP request is successfully, or
+            latest_version (str): if the HTTP request is successfully, or
                 None if not.
 
         """
@@ -2114,12 +2114,12 @@ class InVESTModel(QtWidgets.QMainWindow):
         # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
         # exception happens
         except requests.exceptions.RequestException as err:
-            LOGGER.debug('Exception while requesting PyPI page: %s' % err)
+            LOGGER.exception('Exception while requesting PyPI page: %s' % err)
 
         # If the text doesn't have the 'info' or 'version' keys
         except KeyError as err:
-            LOGGER.debug('Version string could not be found from PyPI page. '
-                         'Exception raised: %s' % err)
+            LOGGER.exception('Version string could not be found from PyPI page.'
+                             'Exception raised: %s' % err)
         return None
 
     def _needs_update(self, latest_version):

@@ -2628,15 +2628,22 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
-    def test_version_update_button(self):
-        """UI Model: Check update notification when there's a new version."""
+    def test_version_update_dialog(self):
+        """UI Model: Check update dialog exists when there's a new version."""
         model_ui = ModelTests.build_model()
         try:
-            model_ui.run()
+            # Assert that the dialog exists
+            with mock.patch('natcap.invest.ui.model.InVESTModel._needs_update',
+                            return_value=False):
+                assert ~hasattr(model_ui, 'version_update_dialog')
+
+            with mock.patch('natcap.invest.ui.model.InVESTModel._needs_update',
+                            return_value=True):
+                assert hasattr(model_ui, 'version_update_dialog')
+
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
-
 
     def test_load_datastack_paramset(self):
         """UI Model: Check that we can load a parameter set datastack."""
