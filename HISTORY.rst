@@ -4,6 +4,8 @@
 
 Unreleased Changes
 ------------------
+* Model User Interface 'Report an Issue' link points to our new 
+  community.naturalcapitalproject.org
 * Carbon Model and Crop Production models no longer crash if user-input
   rasters do not have a nodata value defined. In this case these models
   treat all pixel values as valid data.
