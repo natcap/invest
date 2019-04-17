@@ -1206,7 +1206,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
             '<a href="localdocs">Model documentation</a>',
-            ('<a href="http://forums.naturalcapitalproject.org">'
+            ('<a href="https://community.naturalcapitalproject.org">'
              'Report an issue</a>'))))
         self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
