@@ -2644,7 +2644,8 @@ class ModelTests(_QtTest):
                 assert not all([hasattr(model_ui, 'update_button'),
                                 hasattr(model_ui, 'version_update_dialog')])
 
-            # Assert that button and dialog exists if there is a new version
+            # Assert that button and dialog exists if there is a new version,
+            # and the page can be linked successfully
             with mock.patch('natcap.invest.ui.model.'
                             'InVESTModel._get_latest_version',
                             return_value='1' + current_version):
