@@ -2133,9 +2133,6 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         latest_version = self._get_latest_version()
         if latest_version:
-            # return True # for now for development & debugging
-            if parse_version(latest_version) > parse_version(
-                    natcap.invest.__version__):
-                return True
-            else:
-                return False
+            return parse_version(latest_version) > parse_version(
+                natcap.invest.__version__)
+        return False
