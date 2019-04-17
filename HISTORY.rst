@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Model User Interface 'Report an Issue' link points to our new 
+  community.naturalcapitalproject.org
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
 * Correcting an issue with Habitat Quality's error checking where nodata values
