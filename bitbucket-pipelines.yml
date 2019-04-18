@@ -45,7 +45,7 @@ pipelines:
                         - make sampledata
                     artifacts:
                         - dist/data/*
-                        - data/invest-data/*.json
+                        - data/invest-sample-data/*.json
                 - step:
                     name: Python Binaries
                     image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
@@ -80,7 +80,7 @@ pipelines:
                     # so touching the needed artifacts will make sure that Make uses these
                     # artifacts instead of rebuilding.
                     - mkdir doc/users-guide
-                    - touch dist/*.pdf dist/userguide data/invest-data
+                    - touch dist/*.pdf dist/userguide data/invest-sample-data
 
                     # Now we can run make.
                     # Need to set PYTHON_ARCH because for some reason the
