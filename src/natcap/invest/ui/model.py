@@ -2095,7 +2095,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         except AttributeError:
             QtGui.QDesktopServices.openUrl(link)
 
-    def _get_latest_version(self):
+    @staticmethod
+    def _get_latest_version():
         """Get the latest InVEST version string from PyPI page.
 
         Returns:
