@@ -5,21 +5,22 @@ import os
 import logging
 import re
 import fractions
-import uuid
 import warnings
 
 import scipy.special
 import numpy
 from osgeo import gdal
 from osgeo import ogr
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
 import pygeoprocessing
+import pygeoprocessing.routing
+import taskgraph
 
 from .. import utils
 from .. import validation
 
-from natcap.invest.seasonal_water_yield import seasonal_water_yield_core
+from . import seasonal_water_yield_core
+
+gdal.SetCacheMax(2**26)
 
 LOGGER = logging.getLogger(
     'natcap.invest.seasonal_water_yield.seasonal_water_yield')
@@ -46,9 +47,9 @@ _OUTPUT_BASE_FILES = {
 
 _INTERMEDIATE_BASE_FILES = {
     'aet_path': 'aet.tif',
-    'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
-    'flow_dir_path': 'flow_dir.tif',
-    'qfm_path_list': ['qf_%d.tif' % (x+1) for x in xrange(N_MONTHS)],
+    'aetm_path_list': ['aetm_%d.tif' % (x+1) for x in range(N_MONTHS)],
+    'flow_dir_mfd_path': 'flow_dir_mfd.tif',
+    'qfm_path_list': ['qf_%d.tif' % (x+1) for x in range(N_MONTHS)],
     'stream_path': 'stream.tif',
 }
 
@@ -59,14 +60,15 @@ _TMP_BASE_FILES = {
     'si_path': 'Si.tif',
     'lulc_aligned_path': 'lulc_aligned.tif',
     'dem_aligned_path': 'dem_aligned.tif',
+    'dem_pit_filled_path': 'pit_filled_dem.tif',
     'loss_path': 'loss.tif',
     'zero_absorption_source_path': 'zero_absorption.tif',
     'soil_group_aligned_path': 'soil_group_aligned.tif',
     'flow_accum_path': 'flow_accum.tif',
-    'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in xrange(N_MONTHS)],
-    'n_events_path_list': ['n_events%d.tif' % x for x in xrange(N_MONTHS)],
-    'et0_path_aligned_list': ['et0_a%d.tif' % x for x in xrange(N_MONTHS)],
-    'kc_path_list': ['kc_%d.tif' % x for x in xrange(N_MONTHS)],
+    'precip_path_aligned_list': ['prcp_a%d.tif' % x for x in range(N_MONTHS)],
+    'n_events_path_list': ['n_events%d.tif' % x for x in range(N_MONTHS)],
+    'et0_path_aligned_list': ['et0_a%d.tif' % x for x in range(N_MONTHS)],
+    'kc_path_list': ['kc_%d.tif' % x for x in range(N_MONTHS)],
     'l_aligned_path': 'l_aligned.tif',
     'cz_aligned_raster_path': 'cz_aligned.tif',
     'l_sum_pre_clamp': 'l_sum_pre_clamp.tif'
@@ -149,6 +151,11 @@ def execute(args):
         args['monthly_alpha'] (boolean): if True, use the alpha
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
             is True.
+        args['n_workers'] (int): (optional) indicates the number of processes
+            to devote to potential parallel task execution. A value < 0 will
+            use a single process, 0 will be non-blocking scheduling but
+            single process, and >= 1 will make additional processes for
+            parallel execution.
 
     Returns:
         ``None``
@@ -186,17 +193,37 @@ def _execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode')
 
+    bad_value_list = []
+    for lucode, value in biophysical_table.items():
+        for biophysical_id in ['cn_a', 'cn_b', 'cn_c', 'cn_d'] + [
+                'kc_%d' % (month_index+1) for month_index in range(N_MONTHS)]:
+            try:
+                _ = float(value[biophysical_id])
+            except ValueError:
+                bad_value_list.append(
+                    (biophysical_id, lucode, value[biophysical_id]))
+
+    if bad_value_list:
+        raise ValueError(
+            'biophysical_table at %s seems to have the following incorrect '
+            'values (expecting all floating point numbers): %s' % (
+                args['biophysical_table_path'], ','.join(
+                    ['%s(lucode %d): "%s"' % (
+                        lucode, biophysical_id, bad_value)
+                     for lucode, biophysical_id, bad_value in
+                        bad_value_list])))
+
     if args['monthly_alpha']:
         # parse out the alpha lookup table of the form (month_id: alpha_val)
-        alpha_month = dict(
+        alpha_month_map = dict(
             (key, val['alpha']) for key, val in
             utils.build_lookup_from_csv(
                 args['monthly_alpha_path'], 'month').iteritems())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
-        alpha_month = dict(
-            (month_index+1, alpha_m) for month_index in xrange(12))
+        alpha_month_map = dict(
+            (month_index+1, alpha_m) for month_index in range(N_MONTHS))
 
     beta_i = float(fractions.Fraction(args['beta_i']))
     gamma = float(fractions.Fraction(args['gamma']))
@@ -206,14 +233,21 @@ def _execute(args):
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
+    cache_dir = os.path.join(args['workspace_dir'], 'cache_dir')
     output_dir = args['workspace_dir']
-    utils.make_directories([intermediate_output_dir, output_dir])
+    utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
+
+    n_workers = -1
+    if 'n_workers' in args:
+        n_workers = int(args['n_workers'])
+    task_graph = taskgraph.TaskGraph(
+        cache_dir, n_workers, reporting_interval=5.0)
 
     LOGGER.info('Building file registry')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_TMP_BASE_FILES, cache_dir)], file_suffix)
 
     LOGGER.info('Checking that the AOI is not the output aggregate vector')
     if (os.path.normpath(args['aoi_path']) ==
@@ -275,55 +309,74 @@ def _execute(args):
             file_registry['cz_aligned_raster_path'])
     interpolate_list = ['near'] * len(input_align_list)
 
-    pygeoprocessing.align_and_resize_raster_stack(
-        input_align_list, output_align_list, interpolate_list,
-        pixel_size, 'intersection', base_vector_path_list=[args['aoi_path']],
-        raster_align_index=align_index)
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            input_align_list, output_align_list, interpolate_list,
+            pixel_size, 'intersection'),
+        kwargs={
+            'base_vector_path_list': (args['aoi_path'],),
+            'raster_align_index': align_index},
+        target_path_list=output_align_list,
+        task_name='align rasters')
 
-    LOGGER.info('flow direction')
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        file_registry['dem_aligned_path'],
-        file_registry['flow_dir_path'])
+    fill_pit_task = task_graph.add_task(
+        func=pygeoprocessing.routing.fill_pits,
+        args=(
+            (file_registry['dem_aligned_path'], 1),
+            file_registry['dem_pit_filled_path']),
+        kwargs={'working_dir': cache_dir},
+        target_path_list=[file_registry['dem_pit_filled_path']],
+        dependent_task_list=[align_task],
+        task_name='fill dem pits')
 
-    LOGGER.info('flow weights')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.calculate_flow_weights(
-        file_registry['flow_dir_path'],
-        file_registry['outflow_weights_path'],
-        file_registry['outflow_direction_path'])
+    flow_dir_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_dir_mfd,
+        args=(
+            (file_registry['dem_pit_filled_path'], 1),
+            file_registry['flow_dir_mfd_path']),
+        kwargs={'working_dir': cache_dir},
+        target_path_list=[file_registry['flow_dir_mfd_path']],
+        dependent_task_list=[fill_pit_task],
+        task_name='flow dir mfd')
 
-    LOGGER.info('flow accumulation')
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
-        file_registry['flow_dir_path'],
-        file_registry['dem_aligned_path'],
-        file_registry['flow_accum_path'])
+    flow_accum_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(
+            (file_registry['flow_dir_mfd_path'], 1),
+            file_registry['flow_accum_path']),
+        target_path_list=[file_registry['flow_accum_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='flow accum task')
 
-    LOGGER.info('stream thresholding')
-    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
-        file_registry['flow_accum_path'],
-        threshold_flow_accumulation,
-        file_registry['stream_path'])
+    stream_threshold_task = task_graph.add_task(
+        func=pygeoprocessing.routing.extract_streams_mfd,
+        args=(
+            (file_registry['flow_accum_path'], 1),
+            (file_registry['flow_dir_mfd_path'], 1),
+            threshold_flow_accumulation,
+            file_registry['stream_path']),
+        target_path_list=[file_registry['stream_path']],
+        dependent_task_list=[flow_accum_task],
+        task_name='stream threshold')
 
     LOGGER.info('quick flow')
     if args['user_defined_local_recharge']:
         file_registry['l_path'] = file_registry['l_aligned_path']
-        li_nodata = pygeoprocessing.get_raster_info(
-            file_registry['l_path'])['nodata'][0]
 
-        def l_avail_op(l_array):
-            """Calculate equation [8] L_avail = min(gamma*L, L)"""
-            result = numpy.empty(l_array.shape)
-            result[:] = li_nodata
-            valid_mask = (l_array != li_nodata)
-            result[valid_mask] = numpy.min(numpy.stack(
-                (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
-            return result
-        pygeoprocessing.raster_calculator(
-            [(file_registry['l_path'], 1)], l_avail_op,
-            file_registry['l_avail_path'], gdal.GDT_Float32, li_nodata)
+        l_avail_task = task_graph.add_task(
+            func=_calculate_l_avail,
+            args=(
+                file_registry['l_path'], gamma,
+                file_registry['l_avail_path']),
+            target_path_list=[file_registry['l_avail_path']],
+            dependent_task_list=[align_task],
+            task_name='l avail task')
     else:
         # user didn't predefine local recharge so calculate it
         LOGGER.info('loading number of monthly events')
-        for month_id in xrange(N_MONTHS):
+        reclassify_n_events_task_list = []
+        for month_id in range(N_MONTHS):
             if args['user_defined_climate_zones']:
                 cz_rain_events_lookup = (
                     utils.build_lookup_from_csv(
@@ -333,193 +386,192 @@ def _execute(args):
                     (cz_id, cz_rain_events_lookup[cz_id][month_label]) for
                     cz_id in cz_rain_events_lookup])
                 n_events_nodata = -1
-                pygeoprocessing.reclassify_raster(
-                    (file_registry['cz_aligned_raster_path'], 1),
-                    climate_zone_rain_events_month,
-                    file_registry['n_events_path_list'][month_id],
-                    gdal.GDT_Float32, n_events_nodata, values_required=True)
+                n_events_task = task_graph.add_task(
+                    func=pygeoprocessing.reclassify_raster,
+                    args=(
+                        (file_registry['cz_aligned_raster_path'], 1),
+                        climate_zone_rain_events_month,
+                        file_registry['n_events_path_list'][month_id],
+                        gdal.GDT_Float32, n_events_nodata),
+                    kwargs={'values_required': True},
+                    target_path_list=[
+                        file_registry['n_events_path_list'][month_id]],
+                    dependent_task_list=[align_task],
+                    task_name='n_events for month %d' % month_id)
+                reclassify_n_events_task_list.append(n_events_task)
             else:
                 # rain_events_lookup defined near entry point of execute
                 n_events = rain_events_lookup[month_id+1]['events']
-                pygeoprocessing.new_raster_from_base(
-                    file_registry['dem_aligned_path'],
-                    file_registry['n_events_path_list'][month_id],
-                    gdal.GDT_Float32, [TARGET_NODATA],
-                    fill_value_list=[n_events])
+                n_events_task = task_graph.add_task(
+                    func=pygeoprocessing.new_raster_from_base,
+                    args=(
+                        file_registry['dem_aligned_path'],
+                        file_registry['n_events_path_list'][month_id],
+                        gdal.GDT_Float32, [TARGET_NODATA]),
+                    kwargs={'fill_value_list': (n_events,)},
+                    target_path_list=[
+                        file_registry['n_events_path_list'][month_id]],
+                    dependent_task_list=[align_task],
+                    hash_algorithm='md5',
+                    copy_duplicate_artifact=True,
+                    task_name=(
+                        'n_events as a constant raster month %d' % month_id))
+                reclassify_n_events_task_list.append(n_events_task)
 
-        LOGGER.info('calculate curve number')
-        _calculate_curve_number_raster(
-            file_registry['lulc_aligned_path'],
-            file_registry['soil_group_aligned_path'],
-            biophysical_table, file_registry['cn_path'])
+        curve_number_task = task_graph.add_task(
+            func=_calculate_curve_number_raster,
+            args=(
+                file_registry['lulc_aligned_path'],
+                file_registry['soil_group_aligned_path'],
+                biophysical_table, file_registry['cn_path']),
+            target_path_list=[file_registry['cn_path']],
+            dependent_task_list=[align_task],
+            task_name='calculate curve number')
 
-        LOGGER.info('calculate Si raster')
-        _calculate_si_raster(
-            file_registry['cn_path'], file_registry['stream_path'],
-            file_registry['si_path'])
+        si_task = task_graph.add_task(
+            func=_calculate_si_raster,
+            args=(
+                file_registry['cn_path'], file_registry['stream_path'],
+                file_registry['si_path']),
+            target_path_list=[file_registry['si_path']],
+            dependent_task_list=[curve_number_task, stream_threshold_task],
+            task_name='calculate Si raster')
 
-        for month_index in xrange(N_MONTHS):
+        quick_flow_task_list = []
+        for month_index in range(N_MONTHS):
             LOGGER.info('calculate quick flow for month %d', month_index+1)
-            _calculate_monthly_quick_flow(
-                file_registry['precip_path_aligned_list'][month_index],
-                file_registry['lulc_aligned_path'], file_registry['cn_path'],
-                file_registry['n_events_path_list'][month_index],
-                file_registry['stream_path'],
-                file_registry['qfm_path_list'][month_index],
-                file_registry['si_path'])
+            monthly_quick_flow_task = task_graph.add_task(
+                func=_calculate_monthly_quick_flow,
+                args=(
+                    file_registry['precip_path_aligned_list'][month_index],
+                    file_registry['lulc_aligned_path'], file_registry['cn_path'],
+                    file_registry['n_events_path_list'][month_index],
+                    file_registry['stream_path'],
+                    file_registry['si_path'],
+                    file_registry['qfm_path_list'][month_index]),
+                target_path_list=[
+                    file_registry['qfm_path_list'][month_index]],
+                dependent_task_list=[
+                    align_task, reclassify_n_events_task_list[month_index],
+                    si_task, stream_threshold_task],
+                hash_algorithm='md5',
+                copy_duplicate_artifact=True,
+                task_name='calculate quick flow for month %d' % (
+                    month_index+1))
+            quick_flow_task_list.append(monthly_quick_flow_task)
 
-        qf_nodata = -1
-        LOGGER.info('calculate QFi')
-
-        # TODO: lose this loop
-        def qfi_sum_op(*qf_values):
-            """Sum the monthly qfis."""
-            qf_sum = numpy.zeros(qf_values[0].shape)
-            valid_mask = qf_values[0] != qf_nodata
-            valid_qf_sum = qf_sum[valid_mask]
-            for index in range(len(qf_values)):
-                valid_qf_sum += qf_values[index][valid_mask]
-            qf_sum[:] = qf_nodata
-            qf_sum[valid_mask] = valid_qf_sum
-            return qf_sum
-
-        pygeoprocessing.raster_calculator(
-            [(path, 1) for path in file_registry['qfm_path_list']],
-            qfi_sum_op, file_registry['qf_path'], gdal.GDT_Float32, qf_nodata)
+        qf_task = task_graph.add_task(
+            func=_calculate_annual_qfi,
+            args=(file_registry['qfm_path_list'], file_registry['qf_path']),
+            target_path_list=[file_registry['qf_path']],
+            dependent_task_list=quick_flow_task_list,
+            task_name='calculate QFi')
 
         LOGGER.info('calculate local recharge')
-        kc_lookup = {}
-        LOGGER.info('classify kc')
-        for month_index in xrange(12):
+        kc_task_list = []
+        for month_index in range(N_MONTHS):
             kc_lookup = dict([
                 (lucode, biophysical_table[lucode]['kc_%d' % (month_index+1)])
                 for lucode in biophysical_table])
             kc_nodata = -1  # a reasonable nodata value
-            pygeoprocessing.reclassify_raster(
-                (file_registry['lulc_aligned_path'], 1), kc_lookup,
-                file_registry['kc_path_list'][month_index], gdal.GDT_Float32,
-                kc_nodata)
+            kc_task = task_graph.add_task(
+                func=pygeoprocessing.reclassify_raster,
+                args=(
+                    (file_registry['lulc_aligned_path'], 1), kc_lookup,
+                    file_registry['kc_path_list'][month_index],
+                    gdal.GDT_Float32, kc_nodata),
+                target_path_list=[file_registry['kc_path_list'][month_index]],
+                dependent_task_list=[align_task],
+                hash_algorithm='md5',
+                copy_duplicate_artifact=True,
+                task_name='classify kc month %d' % month_index)
+            kc_task_list.append(kc_task)
 
         # call through to a cython function that does the necessary routing
         # between AET and L.sum.avail in equation [7], [4], and [3]
-        seasonal_water_yield_core.calculate_local_recharge(
-            file_registry['precip_path_aligned_list'],
-            file_registry['et0_path_aligned_list'],
-            file_registry['qfm_path_list'],
-            file_registry['flow_dir_path'],
-            file_registry['outflow_weights_path'],
-            file_registry['outflow_direction_path'],
-            file_registry['dem_aligned_path'],
-            file_registry['lulc_aligned_path'], alpha_month,
-            beta_i, gamma, file_registry['stream_path'],
-            file_registry['l_path'],
-            file_registry['l_avail_path'],
-            file_registry['l_sum_avail_path'],
-            file_registry['aet_path'], file_registry['kc_path_list'])
+        calculate_local_recharge_task = task_graph.add_task(
+            func=seasonal_water_yield_core.calculate_local_recharge,
+            args=(
+                file_registry['precip_path_aligned_list'],
+                file_registry['et0_path_aligned_list'],
+                file_registry['qfm_path_list'],
+                file_registry['flow_dir_mfd_path'],
+                file_registry['kc_path_list'],
+                alpha_month_map,
+                beta_i, gamma, file_registry['stream_path'],
+                file_registry['l_path'],
+                file_registry['l_avail_path'],
+                file_registry['l_sum_avail_path'],
+                file_registry['aet_path']),
+            target_path_list=[
+                file_registry['l_path'],
+                file_registry['l_avail_path'],
+                file_registry['l_sum_avail_path'],
+                file_registry['aet_path']],
+            dependent_task_list=[
+                align_task, flow_dir_task, stream_threshold_task,
+                fill_pit_task, qf_task] + quick_flow_task_list,
+            task_name='calculate local recharge')
 
     #calculate Qb as the sum of local_recharge_avail over the AOI, Eq [9]
-    qb_sum, qb_valid_count = _sum_valid(file_registry['l_path'])
-    qb_result = 0.0
-    if qb_valid_count > 0:
-        qb_result = qb_sum / qb_valid_count
 
-    li_nodata = pygeoprocessing.get_raster_info(
-        file_registry['l_path'])['nodata'][0]
+    if args['user_defined_local_recharge']:
+        vri_dependent_task_list = [l_avail_task]
+    else:
+        vri_dependent_task_list = [calculate_local_recharge_task]
 
-    def vri_op(li_array):
-        """Calculate vri index [Eq 10]."""
-        result = numpy.empty_like(li_array)
-        result[:] = li_nodata
-        if qb_sum > 0:
-            valid_mask = li_array != li_nodata
-            result[valid_mask] = li_array[valid_mask] / qb_sum
-        return result
-    pygeoprocessing.raster_calculator(
-        [(file_registry['l_path'], 1)], vri_op, file_registry['vri_path'],
-        gdal.GDT_Float32, li_nodata)
+    vri_task = task_graph.add_task(
+        func=_calculate_vri,
+        args=(file_registry['l_path'], file_registry['vri_path']),
+        target_path_list=[file_registry['vri_path']],
+        dependent_task_list=vri_dependent_task_list,
+        task_name='calculate vri')
 
-    _aggregate_recharge(
-        args['aoi_path'], file_registry['l_path'],
-        file_registry['vri_path'],
-        file_registry['aggregate_vector_path'])
+    aggregate_recharge_task = task_graph.add_task(
+        func=_aggregate_recharge,
+        args=(
+            args['aoi_path'], file_registry['l_path'],
+            file_registry['vri_path'],
+            file_registry['aggregate_vector_path']),
+        target_path_list=[file_registry['aggregate_vector_path']],
+        dependent_task_list=[vri_task],
+        task_name='aggregate recharge')
 
     LOGGER.info('calculate L_sum')  # Eq. [12]
-    pygeoprocessing.new_raster_from_base(
-        file_registry['dem_aligned_path'],
-        file_registry['zero_absorption_source_path'],
-        gdal.GDT_Float32, [TARGET_NODATA], fill_value_list=[0.0])
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        file_registry['flow_dir_path'],
-        file_registry['dem_aligned_path'],
-        file_registry['l_path'],
-        file_registry['zero_absorption_source_path'],
-        file_registry['loss_path'],
-        file_registry['l_sum_pre_clamp'], 'flux_only',
-        stream_uri=file_registry['stream_path'])
+    l_sum_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(
+            (file_registry['flow_dir_mfd_path'], 1),
+            file_registry['l_sum_path']),
+        kwargs={'weight_raster_path_band': (file_registry['l_path'], 1)},
+        target_path_list=[file_registry['l_sum_path']],
+        dependent_task_list=vri_dependent_task_list + [
+            fill_pit_task, flow_dir_task, stream_threshold_task],
+        task_name='calculate l sum')
 
-    # The result of route_flux can be slightly negative due to roundoff error
-    # (on the order of 1e-4.  It is acceptable to clamp those values to 0.0
-    l_sum_pre_clamp_nodata = pygeoprocessing.get_raster_info(
-        file_registry['l_sum_pre_clamp'])['nodata'][0]
+    if args['user_defined_local_recharge']:
+        b_sum_dependent_task_list = [l_avail_task]
+    else:
+        b_sum_dependent_task_list = [calculate_local_recharge_task]
 
-    def clamp_l_sum(l_sum_pre_clamp):
-        """Clamp any negative values to 0.0."""
-        result = l_sum_pre_clamp.copy()
-        result[
-            (l_sum_pre_clamp != l_sum_pre_clamp_nodata) &
-            (l_sum_pre_clamp < 0.0)] = 0.0
-        return result
+    b_sum_task = task_graph.add_task(
+        func=seasonal_water_yield_core.route_baseflow_sum,
+        args=(
+            file_registry['flow_dir_mfd_path'],
+            file_registry['l_path'],
+            file_registry['l_avail_path'],
+            file_registry['l_sum_path'],
+            file_registry['stream_path'],
+            file_registry['b_path'],
+            file_registry['b_sum_path']),
 
-    pygeoprocessing.raster_calculator(
-        [(file_registry['l_sum_pre_clamp'], 1)], clamp_l_sum,
-        file_registry['l_sum_path'], gdal.GDT_Float32, l_sum_pre_clamp_nodata)
+        target_path_list=[
+            file_registry['b_sum_path'], file_registry['b_path']],
+        dependent_task_list=b_sum_dependent_task_list + [l_sum_task],
+        task_name='calculate B_sum')
 
-    LOGGER.info('calculate B_sum')
-    seasonal_water_yield_core.route_baseflow_sum(
-        file_registry['dem_aligned_path'],
-        file_registry['l_path'],
-        file_registry['l_avail_path'],
-        file_registry['l_sum_path'],
-        file_registry['outflow_direction_path'],
-        file_registry['outflow_weights_path'],
-        file_registry['stream_path'],
-        file_registry['b_sum_path'])
-
-    LOGGER.info('calculate B')
-
-    b_sum_nodata = li_nodata
-
-    def op_b(b_sum, l_avail, l_sum):
-        """Calculate B=max(B_sum*Lavail/L_sum, 0)."""
-        valid_mask = (
-            (b_sum != b_sum_nodata) & (l_avail != li_nodata) & (l_sum > 0) &
-            (l_sum != l_sum_pre_clamp_nodata))
-        result = numpy.empty(b_sum.shape)
-        result[:] = b_sum_nodata
-        result[valid_mask] = (
-            b_sum[valid_mask] * l_avail[valid_mask] / l_sum[valid_mask])
-        # if l_sum is zero, it's okay to make B zero says Perrine in an email
-        result[l_sum == 0] = 0.0
-        result[(result < 0) & valid_mask] = 0
-        return result
-
-    pygeoprocessing.raster_calculator(
-        [(file_registry['b_sum_path'], 1),
-         (file_registry['l_path'], 1),
-         (file_registry['l_sum_path'], 1)], op_b, file_registry['b_path'],
-        gdal.GDT_Float32, b_sum_nodata)
-
-    LOGGER.info('deleting temporary files')
-    for file_id in _TMP_BASE_FILES:
-        try:
-            if isinstance(file_registry[file_id], basestring):
-                os.remove(file_registry[file_id])
-            elif isinstance(file_registry[file_id], list):
-                for index in xrange(len(file_registry[file_id])):
-                    os.remove(file_registry[file_id][index])
-        except OSError:
-            # Let it go.
-            pass
+    task_graph.close()
+    task_graph.join()
 
     LOGGER.info('  (\\w/)  SWY Complete!')
     LOGGER.info('  (..  \\ ')
@@ -530,9 +582,72 @@ def _execute(args):
     LOGGER.info('      //_| //_|')
 
 
+def _calculate_vri(l_path, target_vri_path):
+    """Calculate VRI as li_array / qb_sum.
+
+    Parameters:
+        l_path (str): path to L raster.
+        target_vri_path (str): path to output Vri raster.
+
+    Returns:
+        None.
+
+    """
+    qb_sum = 0.0
+    qb_valid_count = 0
+    l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+
+    for _, block in pygeoprocessing.iterblocks((l_path, 1)):
+        valid_mask = block != l_nodata
+        qb_sum += numpy.sum(block[valid_mask])
+        qb_valid_count += numpy.count_nonzero(valid_mask)
+    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
+
+    def vri_op(li_array):
+        """Calculate vri index [Eq 10]."""
+        result = numpy.empty_like(li_array)
+        result[:] = li_nodata
+        if qb_sum > 0:
+            valid_mask = li_array != li_nodata
+            result[valid_mask] = li_array[valid_mask] / qb_sum
+        return result
+    pygeoprocessing.raster_calculator(
+        [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
+        li_nodata)
+
+
+def _calculate_annual_qfi(qfm_path_list, target_qf_path):
+    """Calculate annual quickflow.
+
+    Parameters:
+        qfm_path_list (list): list of monthly quickflow raster paths.
+        target_qf_path (str): path to target annual quickflow raster.
+
+    Returns:
+        None.
+
+    """
+    qf_nodata = -1
+
+    def qfi_sum_op(*qf_values):
+        """Sum the monthly qfis."""
+        qf_sum = numpy.zeros(qf_values[0].shape)
+        valid_mask = qf_values[0] != qf_nodata
+        valid_qf_sum = qf_sum[valid_mask]
+        for index in range(len(qf_values)):
+            valid_qf_sum += qf_values[index][valid_mask]
+        qf_sum[:] = qf_nodata
+        qf_sum[valid_mask] = valid_qf_sum
+        return qf_sum
+
+    pygeoprocessing.raster_calculator(
+        [(path, 1) for path in qfm_path_list],
+        qfi_sum_op, target_qf_path, gdal.GDT_Float32, qf_nodata)
+
+
 def _calculate_monthly_quick_flow(
         precip_path, lulc_raster_path, cn_path, n_events_raster_path,
-        stream_path, qf_monthly_path, si_path):
+        stream_path, si_path, qf_monthly_path):
     """Calculate quick flow for a month.
 
     Parameters:
@@ -545,28 +660,14 @@ def _calculate_monthly_quick_flow(
         stream_path (string): path to stream mask raster where 1 indicates a
             stream pixel, 0 is a non-stream but otherwise valid area from the
             original DEM, and nodata indicates areas outside the valid DEM.
+        si_path (string): path to raster that has potential maximum retention
         qf_monthly_path_list (list of string): list of paths to output monthly
             rasters.
-        si_path (string): list to output raster for potential maximum retention
 
     Returns:
         None
     """
-    si_nodata = -1
-    cn_nodata = pygeoprocessing.get_raster_info(cn_path)['nodata'][0]
-
-    def si_op(ci_array, stream_array):
-        """Potential maximum retention."""
-        result = numpy.empty_like(ci_array)
-        result[:] = si_nodata
-        valid_mask = (ci_array != cn_nodata) & (ci_array != 0)
-        result[valid_mask] = 1000.0 / ci_array[valid_mask] - 10
-        result[(stream_array == 1) & valid_mask] = 0
-        return result
-
-    pygeoprocessing.raster_calculator(
-         [(cn_path, 1), (stream_path, 1)], si_op, si_path, gdal.GDT_Float32,
-         si_nodata)
+    si_nodata = pygeoprocessing.get_raster_info(si_path)['nodata'][0]
 
     qf_nodata = -1
     p_nodata = pygeoprocessing.get_raster_info(precip_path)['nodata'][0]
@@ -587,6 +688,7 @@ def _calculate_monthly_quick_flow(
 
         Returns:
             quick flow (numpy.array)
+
         """
         valid_mask = (
             (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
@@ -607,7 +709,7 @@ def _calculate_monthly_quick_flow(
         # on large valid_si/a_im this number will be zero and the latter
         # exponent will also be zero because of a divide by zero. rather than
         # raise that numerical warning, just handle it manually
-        E1 = scipy.special.expn(1, valid_si / a_im)  #pylint: disable=invalid-name,no-member
+        E1 = scipy.special.expn(1, valid_si / a_im)
         E1[valid_si == 0] = 0
         nonzero_e1_mask = E1 != 0
         exp_result = numpy.zeros(valid_si.shape)
@@ -809,7 +911,7 @@ def _aggregate_recharge(
                     value = 0.0
             elif op_type == 'sum':
                 value = aggregate_stats[poly_index]['sum']
-            poly_feat.SetField(aggregate_field_id, value)
+            poly_feat.SetField(aggregate_field_id, float(value))
             aggregate_layer.SetFeature(poly_feat)
 
     aggregate_layer.SyncToDisk()
@@ -818,25 +920,22 @@ def _aggregate_recharge(
     aggregate_vector = None
 
 
-def _sum_valid(raster_path):
-    """Calculate the sum of the non-nodata pixels in the raster.
+def _calculate_l_avail(l_path, gamma, target_l_avail_path):
+    """l avail = l * gamma."""
+    li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
-    Parameters:
-        raster_path (string): path to raster on disk
+    def l_avail_op(l_array):
+        """Calculate equation [8] L_avail = min(gamma*L, L)."""
+        result = numpy.empty(l_array.shape)
+        result[:] = li_nodata
+        valid_mask = (l_array != li_nodata)
+        result[valid_mask] = numpy.min(numpy.stack(
+            (gamma*l_array[valid_mask], l_array[valid_mask])), axis=0)
+        return result
 
-    Returns:
-        (sum, n_pixels) tuple where sum is the sum of the non-nodata pixels
-        and n_pixels is the count of them
-    """
-    raster_sum = 0
-    raster_count = 0
-    raster_nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
-
-    for _, block in pygeoprocessing.iterblocks((raster_path, 1)):
-        valid_mask = block != raster_nodata
-        raster_sum += numpy.sum(block[valid_mask])
-        raster_count += numpy.count_nonzero(valid_mask)
-    return raster_sum, raster_count
+    pygeoprocessing.raster_calculator(
+        [(l_path, 1)], l_avail_op, target_l_avail_path, gdal.GDT_Float32,
+        li_nodata)
 
 
 @validation.invest_validator
