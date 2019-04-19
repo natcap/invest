@@ -85,11 +85,9 @@ FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
-	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 else
 	BUCKET := gs://natcap-dev-build-artifacts
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
-	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
@@ -110,6 +108,7 @@ USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 
 
 .PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy
@@ -295,9 +294,14 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 windows_installer: $(WINDOWS_INSTALLER_FILE)
+ifeq ($(FORKUSER), natcap)
+	INSTALLER_NAME_FORKUSER :=
+else
+	INSTALLER_NAME_FORKUSER := $(FORKUSER)
+endif
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(SVN_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
-	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
+	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
