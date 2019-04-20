@@ -63,7 +63,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 u"Path to a vector with built infrastructure footprints. "
                 u"Attribute table contains a column 'Type' with integers "
                 u"(e.g. 1=residential, 2=office, etc.)."),
-            label=u'Built Infrastructure Vector',
+            label=u'Built Infrastructure Vector (optional)',
             validator=self.validator)
         self.add_input(self.built_infrastructure_vector_path)
 

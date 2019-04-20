@@ -44,9 +44,10 @@ def execute(args):
         args['curve_number_table_path'] (string): path to a CSV table that
             contains at least the headers 'lucode', 'CN_A', 'CN_B', 'CN_C',
             'CN_D'.
-        args['built_infrastructure_vector_path'] (string): path to a vector
-            with built infrastructure footprints. Attribute table contains a
-            column 'Type' with integers (e.g. 1=residential, 2=office, etc.).
+        args['built_infrastructure_vector_path'] (string): (optional) path to
+            a vector with built infrastructure footprints. Attribute table
+            contains a column 'Type' with integers (e.g. 1=residential,
+            2=office, etc.).
         args['infrastructure_damage_loss_table_path'] (string): (optional)
             path to a a CSV table with columns 'Type' and 'Damage' with values
             of built infrastructure type from the 'Type' field in
@@ -209,6 +210,10 @@ def execute(args):
         target_path_list=[flood_vol_raster_path],
         dependent_task_list=[q_pi_task],
         task_name='calculate service built raster')
+
+    if 'built_infrastructure_vector_path' not in args or (
+            args['built_infrastructure_vector_path'] in ('', None)):
+        return
 
     # intersect built_infrastructure_vector_path with aoi_watersheds_path
     intermediate_target_watershed_result_vector_path = os.path.join(
