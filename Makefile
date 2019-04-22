@@ -1,16 +1,16 @@
 # Repositories managed by the makefile task tree
 DATA_DIR := data
-GIT_SAMPLE_DATA_REPO       := https://bitbucket.org/natcap/invest-sample-data.git
-GIT_SAMPLE_DATA_REPO_PATH  := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV   := 79c7c11c4d6bac301f297573347cb1f560d4f716
+GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
+GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
+GIT_SAMPLE_DATA_REPO_BRANCH := master
 
-GIT_TEST_DATA_REPO         := https://bitbucket.org/natcap/invest-test-data.git
-GIT_TEST_DATA_REPO_PATH    := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV     := 00f16f6ccdf9d51c050bfe44a57c6821e045d50f
+GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
+GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
+GIT_TEST_DATA_REPO_BRANCH   := test-branch
 
-HG_UG_REPO                 := https://bitbucket.org/natcap/invest.users-guide
-HG_UG_REPO_PATH            := doc/users-guide
-HG_UG_REPO_REV             := b39bc56cc601
+HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
+HG_UG_REPO_PATH             := doc/users-guide
+HG_UG_REPO_REV              := b39bc56cc601
 
 
 ENV = env
@@ -176,11 +176,11 @@ $(HG_UG_REPO_PATH):
 
 $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
-	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_BRANCH)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
-	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
+	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_BRANCH)
 
 fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
