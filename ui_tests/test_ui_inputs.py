@@ -7,6 +7,7 @@ import logging
 import contextlib
 import sys
 import os
+import requests
 import time
 import tempfile
 import shutil
@@ -2624,6 +2625,71 @@ class ModelTests(_QtTest):
 
             patched_openurl.assert_called_once_with(
                 QtCore.QUrl('https://forums.naturalcapitalproject.org'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_version_update(self):
+        """UI Model: Check update button & dialog exist with a new version."""
+        import natcap.invest
+        current_version = natcap.invest.__version__
+
+        try:
+            # Assert that update button and dialog do not exist if the current
+            # version is already the latest
+            with mock.patch('natcap.invest.ui.model.'
+                            'InVESTModel._get_latest_version',
+                            return_value=current_version):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
+            # Assert that button and dialog exists if there is a new version,
+            # and the page can be linked successfully
+            with mock.patch('natcap.invest.ui.model.'
+                            'InVESTModel._get_latest_version',
+                            return_value='1' + current_version):
+                model_ui = ModelTests.build_model()
+                assert all([hasattr(model_ui, 'update_button'),
+                            hasattr(model_ui, 'version_update_dialog')])
+
+                if hasattr(QtCore, 'QDesktopServices'):
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtCore.'
+                                              'QDesktopServices.openUrl')
+                else:
+                    # PyQt5 changed the location of this.
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtGui.'
+                                              'QDesktopServices.openUrl')
+
+                # Simulate InVEST download link clicked
+                with patch_object as patched_openurl:
+                    model_ui._activate_link(
+                        model_ui.version_update_dialog.download_qurl)
+
+                patched_openurl.assert_called_once_with(QtCore.QUrl(
+                    'https://naturalcapitalproject.stanford.edu/invest/'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_version_update_slow_connection(self):
+        """UI Model: Check no/slow Internet connection won't interrupt UI."""
+        import natcap.invest
+        try:
+            # Assert that update button and dialog don't exist if connection
+            # is slow
+            with mock.patch('requests.get', side_effect=requests.Timeout):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
+            # Assert that update button and dialog don't exist if no connection
+            with mock.patch('requests.get',
+                            side_effect=requests.ConnectionError):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
