@@ -6,7 +6,7 @@ GIT_SAMPLE_DATA_REPO_BRANCH := master
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_BRANCH   := test-branch
+GIT_TEST_DATA_REPO_BRANCH   := master
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
