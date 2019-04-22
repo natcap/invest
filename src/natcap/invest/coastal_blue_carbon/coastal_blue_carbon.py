@@ -363,6 +363,7 @@ def execute(args):
             for snapshot_year, snapshot_raster_path in zip(
                     d['snapshot_years'], d['File_Registry']['NPV_transition_rasters']):
                 # Including the year of the snapshot as well (hence the +1)
+                # Baseline year will also be in d['snapshot_years'] at index 0.
                 end_timestep_index = snapshot_year - int(args['lulc_baseline_year']) + 1
                 snapshot_npv = numpy.empty_like(C_prior, dtype=numpy.float32)
                 snapshot_npv[:] = NODATA_FLOAT
