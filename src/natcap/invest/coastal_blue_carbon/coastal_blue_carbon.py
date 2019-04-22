@@ -360,6 +360,19 @@ def execute(args):
                 offset_dict['xoff'],
                 offset_dict['yoff'])
 
+            for snapshot_year, snapshot_raster_path in zip(
+                    d['snapshot_years'], d['File_Registry']['NPV_transition_rasters']):
+                # Including the year of the snapshot as well (hence the +1)
+                end_timestep_index = snapshot_year - int(args['lulc_baseline_year']) + 1
+                snapshot_npv = numpy.empty_like(C_prior, dtype=numpy.float32)
+                snapshot_npv[:] = NODATA_FLOAT
+                snapshot_npv[valid_mask] = numpy.sum(V[:end_timestep_index], axis=0)
+                write_to_raster(
+                    snapshot_raster_path,
+                    snapshot_npv,
+                    offset_dict['xoff'],
+                    offset_dict['yoff'])
+
     LOGGER.info("...Coastal Blue Carbon model run complete.")
 
 
@@ -473,7 +486,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         raise
     reclass_array = v[index].reshape(array.shape)
 
-    if nodata_mask and numpy.issubdtype(reclass_array.dtype, float):
+    if nodata_mask and numpy.issubdtype(reclass_array.dtype, numpy.floating):
         reclass_array[array == nodata_mask] = numpy.nan
         reclass_array[array == ndata] = numpy.nan
 
@@ -508,7 +521,7 @@ def reclass_transition(a_prev, a_next, trans_dict, out_dtype=None,
         else:
             c[index] = numpy.ma.masked
 
-    if nodata_mask and numpy.issubdtype(c.dtype, float):
+    if nodata_mask and numpy.issubdtype(c.dtype, numpy.floating):
         c[a == nodata_mask] = numpy.nan
 
     return c.reshape(a_prev.shape)
@@ -525,7 +538,7 @@ def write_to_raster(output_raster, array, xoff, yoff):
     """
     ds = gdal.OpenEx(output_raster, gdal.GA_Update)
     band = ds.GetRasterBand(1)
-    if numpy.issubdtype(array.dtype, float):
+    if numpy.issubdtype(array.dtype, numpy.floating):
         array[numpy.isnan(array)] = NODATA_FLOAT
     band.WriteArray(array, xoff, yoff)
     band.FlushCache()
@@ -796,6 +809,9 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     # Net Sequestration from Base Year to Analysis Year
     if do_economic_analysis:
         raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
+        raster_registry_dict['NPV_transition_rasters'] = [
+            'net_present_value_at_%s.tif' % trans_year
+            for trans_year in snapshot_years]
 
     file_registry = utils.build_file_registry(
         [(raster_registry_dict, outputs_dir),
@@ -818,6 +834,9 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
         'intersection')
 
     raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
+    if do_economic_analysis:
+        raster_lists.append('NPV_transition_rasters')
+
     num_temporal_rasters = sum(
         [len(file_registry[key]) for key in raster_lists])
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
