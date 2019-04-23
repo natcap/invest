@@ -105,7 +105,7 @@ You could then activate the environment created at ``myEnv``.
 Using a different environment management tool
 """""""""""""""""""""""""""""""""""""""""""""
 The InVEST Makefile uses ``virtualenv`` to set up an environment, but this is
-not the only `environment management tool out there 
+not the only `environment management tool out there
 <https://packaging.python.org/tutorials/installing-packages/#creating-virtual-environments>`_.
 You may elect to manage your virtual environment a different way, independent
 of ``make env``.  The only requirement for the build process is that the required
@@ -209,7 +209,7 @@ build zip archives of the sample data::
 
     $ make sampledata
 
-This will write the data zipfiles to ``dist/data``
+This will write the data zipfiles to ``dist/data``. ``git`` command is needed.
 
 Single archive of sample data
 +++++++++++++++++++++++++++++
