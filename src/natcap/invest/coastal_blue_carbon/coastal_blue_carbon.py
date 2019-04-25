@@ -828,15 +828,16 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
         baseline_pixel_size,
         'intersection')
 
-    raster_lists = ['T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']
+    raster_filepaths = list(itertools.chain(
+        *[file_registry[key] for key in [
+            'T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']]))
     if do_economic_analysis:
-        raster_lists.append('NPV_transition_rasters')
+        raster_filepaths += file_registry['NPV_transition_rasters']
+        raster_filepaths += [file_registry['N_total_raster']]
 
-    num_temporal_rasters = sum(
-        [len(file_registry[key]) for key in raster_lists])
+    num_temporal_rasters = len(raster_filepaths)
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
-    for index, raster_filepath in enumerate(itertools.chain(
-            *[file_registry[key] for key in raster_lists])):
+    for index, raster_filepath in enumerate(raster_filepaths):
         LOGGER.info('Setting up temporal raster %s of %s at %s', index+1,
                     num_temporal_rasters, os.path.basename(raster_filepath))
         pygeoprocessing.new_raster_from_base(
@@ -844,19 +845,6 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
             raster_filepath,
             gdal.GDT_Float32,
             [NODATA_FLOAT])
-
-    try:
-        filepath = file_registry['N_total_raster']
-        LOGGER.info('Setting up valuation raster %s',
-                    os.path.basename(filepath))
-        pygeoprocessing.new_raster_from_base(
-            template_raster,
-            filepath,
-            gdal.GDT_Float32,
-            [NODATA_FLOAT])
-    except KeyError:
-        # KeyError raised when ``N_total_raster`` is not in the file registry.
-        pass
 
     return file_registry
 
