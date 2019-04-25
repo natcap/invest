@@ -601,7 +601,7 @@ class TestModel(unittest.TestCase):
             'outputs_core/total_net_carbon_sequestration_test.tif')
         npv_output_raster = os.path.join(
             self.args['workspace_dir'],
-            'outputs_core/net_present_value_test.tif')
+            'outputs_core/net_present_value_at_2010_test.tif')
         netseq_array = _read_array(netseq_output_raster)
         npv_array = _read_array(npv_output_raster)
 
@@ -724,7 +724,7 @@ class TestModel(unittest.TestCase):
         npv_raster = os.path.join(
             os.path.join(
                 args['workspace_dir'],
-                'outputs_core/net_present_value_150225.tif'))
+                'outputs_core/net_present_value_at_2050_150225.tif'))
         npv_array = _read_array(npv_raster)
 
         # this is just a regression test, but it will capture all values
