@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* InVEST Coastal Blue Carbon model now writes out a net present value
+  raster for the year of the current landcover, each transition year,
+  and the final analysis year (if provided).
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
