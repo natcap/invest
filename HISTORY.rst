@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
