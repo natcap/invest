@@ -831,9 +831,10 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
     raster_filepaths = list(itertools.chain(
         *[file_registry[key] for key in [
             'T_s_rasters', 'A_r_rasters', 'E_r_rasters', 'N_r_rasters']]))
+    raster_filepaths += [file_registry['N_total_raster']]
+
     if do_economic_analysis:
         raster_filepaths += file_registry['NPV_transition_rasters']
-        raster_filepaths += [file_registry['N_total_raster']]
 
     num_temporal_rasters = len(raster_filepaths)
     LOGGER.info('Creating %s temporal rasters', num_temporal_rasters)
