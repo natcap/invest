@@ -354,11 +354,6 @@ def execute(args):
             NPV_out_array = numpy.empty_like(C_prior, dtype=numpy.float32)
             NPV_out_array[:] = NODATA_FLOAT
             NPV_out_array[valid_mask] = NPV
-            write_to_raster(
-                d['File_Registry']['NPV_raster'],
-                NPV_out_array,
-                offset_dict['xoff'],
-                offset_dict['yoff'])
 
             for snapshot_year, snapshot_raster_path in zip(
                     d['snapshot_years'], d['File_Registry']['NPV_transition_rasters']):
@@ -809,7 +804,6 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
 
     # Net Sequestration from Base Year to Analysis Year
     if do_economic_analysis:
-        raster_registry_dict['NPV_raster'] = 'net_present_value.tif'
         raster_registry_dict['NPV_transition_rasters'] = [
             'net_present_value_at_%s.tif' % trans_year
             for trans_year in snapshot_years]
@@ -851,19 +845,18 @@ def _build_file_registry(C_prior_raster, transition_rasters, snapshot_years,
             gdal.GDT_Float32,
             [NODATA_FLOAT])
 
-    for raster_key in ['N_total_raster', 'NPV_raster']:
-        try:
-            filepath = file_registry[raster_key]
-            LOGGER.info('Setting up valuation raster %s',
-                        os.path.basename(filepath))
-            pygeoprocessing.new_raster_from_base(
-                template_raster,
-                filepath,
-                gdal.GDT_Float32,
-                [NODATA_FLOAT])
-        except KeyError:
-            # KeyError raised when ``raster_key`` is not in the file registry.
-            pass
+    try:
+        filepath = file_registry['N_total_raster']
+        LOGGER.info('Setting up valuation raster %s',
+                    os.path.basename(filepath))
+        pygeoprocessing.new_raster_from_base(
+            template_raster,
+            filepath,
+            gdal.GDT_Float32,
+            [NODATA_FLOAT])
+    except KeyError:
+        # KeyError raised when ``N_total_raster`` is not in the file registry.
+        pass
 
     return file_registry
 
