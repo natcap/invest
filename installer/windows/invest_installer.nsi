@@ -350,8 +350,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     file ..\..\HISTORY.rst
 
     ; Copy over all the sample parameter files
-    File ..\..\data\invest-data\*.invs.json
-    File ..\..\data\invest-data\*.invest.json
+    File ..\..\data\invest-sample-data\*.invs.json
+    File ..\..\data\invest-sample-data\*.invest.json
 
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*

@@ -39,6 +39,9 @@ Unreleased Changes
   The model will no longer generate HTML plots and tables.
 * Add a software update notification button, dialog, and a link to the download
   page on the User Interface when a new InVEST version is available.
+* Migrate the subversion sample and test data repositories to Git LFS
+  repositories on BitBucket. Update the repository URL and fetch commands on
+  Makefile accordingly.
 
 3.6.0 (2019-01-30)
 ------------------

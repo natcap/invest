@@ -1,16 +1,16 @@
 # Repositories managed by the makefile task tree
 DATA_DIR := data
-SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 191
+GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
+GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
+GIT_SAMPLE_DATA_REPO_REV    := 79c7c11c4d6bac301f297573347cb1f560d4f716
 
-SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 224
+GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
+GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
+GIT_TEST_DATA_REPO_REV      := 00f16f6ccdf9d51c050bfe44a57c6821e045d50f
 
-HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
-HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := b39bc56cc601
+HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
+HG_UG_REPO_PATH             := doc/users-guide
+HG_UG_REPO_REV              := b39bc56cc601
 
 
 ENV = env
@@ -60,7 +60,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git hg pdflatex latexmk
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -142,7 +142,7 @@ help:
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
-test: $(SVN_TEST_DATA_REPO_PATH)
+test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
 test_ui:
@@ -174,13 +174,15 @@ $(HG_UG_REPO_PATH):
 	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
-$(SVN_DATA_REPO_PATH): | $(DATA_DIR)
-	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
+$(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
+	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
-$(SVN_TEST_DATA_REPO_PATH): | $(DATA_DIR)
-	svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
+$(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
+	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
+	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
-fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
 # Python environment management
@@ -281,21 +283,21 @@ sampledata: $(ZIPTARGETS)
 $(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
-	cd $(SVN_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
+$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
+	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
-$(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
+$(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git -x *.json"
 
 
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(SVN_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
@@ -320,7 +322,7 @@ jenkins:
 jenkins_test_ui: env
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
-jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
+jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
 
 deploy:
