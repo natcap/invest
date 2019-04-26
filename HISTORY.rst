@@ -2,7 +2,9 @@
 
 Unreleased Changes
 ------------------
-* Model User Interface 'Report an Issue' link points to our new 
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
+* Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
@@ -35,6 +37,11 @@ Unreleased Changes
   Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
   functionality was simplified and merged into the HRA model itself.
   The model will no longer generate HTML plots and tables.
+* Add a software update notification button, dialog, and a link to the download
+  page on the User Interface when a new InVEST version is available.
+* Migrate the subversion sample and test data repositories to Git LFS
+  repositories on BitBucket. Update the repository URL and fetch commands on
+  Makefile accordingly.
 
 3.6.0 (2019-01-30)
 ------------------
