@@ -62,6 +62,7 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
+    'e_prime_path': 'e_prime.tif',
     }
 
 _TMP_BASE_FILES = {
@@ -429,6 +430,16 @@ def execute(args):
         target_path_list=[f_reg['sed_export_path']],
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate sed export')
+
+    e_prime_task = task_graph.add_task(
+        func=_calculate_e_prime,
+        args=(
+            f_reg['usle_path'], f_reg['sdr_path'], f_reg['e_prime_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['e_prime_path']],
+        dependent_task_list=[usle_task, sdr_task],
+        task_name='calculate export prime')
 
     _ = task_graph.add_task(
         func=_calculate_sed_retention_index,
@@ -1022,9 +1033,8 @@ def _calculate_sdr(
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
+def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
     """Calculate USLE * SDR."""
-
     def sed_export_op(usle, sdr):
         """Sediment export."""
         valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
@@ -1034,7 +1044,22 @@ def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
         return result
 
     pygeoprocessing.raster_calculator(
-        [(usle_path, 1), (sdr_path, 1)], sed_export_op, out_sed_export_path,
+        [(usle_path, 1), (sdr_path, 1)], sed_export_op,
+        target_sed_export_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
+    """Calculate USLE * (1-SDR)."""
+    def e_prime_op(usle, sdr):
+        """Wash that does not reach stream."""
+        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(usle_path, 1), (sdr_path, 1)], e_prime_op, target_e_prime,
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
@@ -1042,7 +1067,6 @@ def _calculate_sed_retention_index(
         rkls_path, usle_path, sdr_path, sdr_max,
         out_sed_retention_index_path):
     """Calculate (rkls-usle) * sdr  / sdr_max."""
-
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
         valid_mask = (
@@ -1084,6 +1108,7 @@ def _calculate_sed_retention(
 
     Returns:
         None
+
     """
     stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
