@@ -370,8 +370,8 @@ def calculate_sediment_deposition(
     """
     cdef float sediment_deposition_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, target_sediment_deposition_path, gdal.GDT_Float32,
-        [sediment_deposition_nodata])
+        mfd_flow_direction_path, target_sediment_deposition_path,
+        gdal.GDT_Float32, [sediment_deposition_nodata])
     fp, to_process_flow_directions_path = tempfile.mkstemp(
         suffix='.tif', prefix='flow_to_process',
         dir=os.path.dirname(target_sediment_deposition_path))
@@ -393,7 +393,10 @@ def calculate_sediment_deposition(
     cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
-    cdef _ManagedRaster e_prime_raster = _ManagedRaster(e_prime_path, 1, True)
+    cdef _ManagedRaster e_prime_raster = _ManagedRaster(
+        e_prime_path, 1, False)
+    cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
+        target_sediment_deposition_path, 1, True)
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
 
@@ -419,6 +422,8 @@ def calculate_sediment_deposition(
     cdef int neighbor_row, neighbor_col, neighbor_outflow_dir
     cdef int neighbor_outflow_dir_mask, neighbor_process_flow_dir
     cdef int outflow_dirs, dir_mask
+    cdef int neighbor_flow_val
+    cdef float r_j
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -430,6 +435,28 @@ def calculate_sediment_deposition(
             global_row = yoff + row_index
             for col_index in range(win_xsize):
                 global_col = xoff + col_index
+                # search to see if this is a good seed
+                r_j_weighted_sum = 0.0
+                for j in range(8):
+                    neighbor_row = global_row + row_offsets[j]
+                    if neighbor_row < 0 or neighbor_row >= n_rows:
+                        continue
+                    neighbor_col = global_col + col_offsets[j]
+                    if neighbor_col < 0 or neighbor_col >= n_cols:
+                        continue
+                    neighbor_flow_val = <int>mfd_flow_direction_raster.get(
+                        neighbor_col, neighbor_row)
+
+                    if (neighbor_flow_val >> inflow_offsets[j]) & 0xF > 0:
+                        neighbor_flow_sum = sum(
+                            [(neighbor_flow_val >> j) & 0xF
+                             for j in range(8)])
+                        p_val = neighbor_flow_val / neighbor_flow_sum
+                        r_j = sediment_deposition_raster.get(
+                            neighbor_col, neighbor_row)
+                        r_j_weighted_sum += p_val * r_j
+
+    return
                 outflow_dirs = <int>to_process_flow_directions_raster.get(
                     global_col, global_row)
                 should_seed = 0
