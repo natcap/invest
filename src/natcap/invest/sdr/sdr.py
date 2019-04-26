@@ -19,10 +19,11 @@ import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from . import utils
-from . import validation
+from .. import utils
+from .. import validation
+from . import sdr_core
 
-LOGGER = logging.getLogger('natcap.invest.sdr')
+LOGGER = logging.getLogger(__name__)
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
