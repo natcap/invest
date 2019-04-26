@@ -350,38 +350,31 @@ cdef class _ManagedRaster:
             raster = None
 
 
-def ndr_eff_calculation(
-        mfd_flow_direction_path, stream_path, retention_eff_lulc_path,
-        crit_len_path, effective_retention_path):
-    """Calculate flow downhill effective_retention to the channel.
+def calculate_sediment_deposition(
+        mfd_flow_direction_path, e_prime_path, sdr_path,
+        target_sediment_deposition_path):
+    """Calculate sediment deposition layer
 
         Parameters:
             mfd_flow_direction_path (string): a path to a raster with
                 pygeoprocessing.routing MFD flow direction values.
-            stream_path (string): a path to a raster where 1 indicates a
-                stream all other values ignored must be same dimensions and
-                projection as mfd_flow_direction_path.
-            retention_eff_lulc_path (string): a path to a raster indicating
-                the maximum retention efficiency that the landcover on that
-                pixel can accumulate.
-            crit_len_path (string): a path to a raster indicating the critical
-                length of the retention efficiency that the landcover on this
-                pixel.
-            effective_retention_path (string): path to a raster that is
-                created by this call that contains a per-pixel effective
-                sediment retention to the stream.
+            e_prime_path (string): path to a raster that shows sources of
+                sediment that wash off a pixel but do not reach the stream.
+            sdr_path (string): path to Sediment Delivery Ratio raster.
+            target_sediment_deposition_path (string): path to created that
+                shows where the E' sources end up across the landscape.
 
         Returns:
             None.
 
     """
-    cdef float effective_retention_nodata = -1.0
+    cdef float sediment_deposition_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, effective_retention_path, gdal.GDT_Float32,
-        [effective_retention_nodata])
+        mfd_flow_direction_path, target_sediment_deposition_path, gdal.GDT_Float32,
+        [sediment_deposition_nodata])
     fp, to_process_flow_directions_path = tempfile.mkstemp(
         suffix='.tif', prefix='flow_to_process',
-        dir=os.path.dirname(effective_retention_path))
+        dir=os.path.dirname(target_sediment_deposition_path))
     os.close(fp)
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
@@ -393,21 +386,14 @@ def ndr_eff_calculation(
     n_cols, n_rows = flow_dir_info['raster_size']
 
     cdef stack[int] processing_stack
-    stream_info = pygeoprocessing.get_raster_info(stream_path)
+    mfd_info = pygeoprocessing.get_raster_info(mfd_flow_direction_path)
     # cell sizes must be square, so no reason to test at this point.
-    cdef float cell_size = abs(stream_info['pixel_size'][0])
+    cdef float cell_size = abs(mfd_info['pixel_size'][0])
 
-    cdef _ManagedRaster stream_raster = _ManagedRaster(stream_path, 1, False)
-    cdef _ManagedRaster crit_len_raster = _ManagedRaster(
-        crit_len_path, 1, False)
-    cdef float crit_len_nodata = pygeoprocessing.get_raster_info(
-        crit_len_path)['nodata'][0]
-    cdef _ManagedRaster retention_eff_lulc_raster = _ManagedRaster(
-        retention_eff_lulc_path, 1, False)
-    cdef float retention_eff_nodata = pygeoprocessing.get_raster_info(
-        retention_eff_lulc_path)['nodata'][0]
-    cdef _ManagedRaster effective_retention_raster = _ManagedRaster(
-        effective_retention_path, 1, True)
+    cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
+    cdef float sdr_nodata = pygeoprocessing.get_raster_info(
+        sdr_path)['nodata'][0]
+    cdef _ManagedRaster e_prime_raster = _ManagedRaster(e_prime_path, 1, True)
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
 
@@ -447,6 +433,8 @@ def ndr_eff_calculation(
                 outflow_dirs = <int>to_process_flow_directions_raster.get(
                     global_col, global_row)
                 should_seed = 0
+
+                continue
                 # see if this pixel drains to nodata or the edge, if so it's
                 # a drain
                 for i in range(8):
