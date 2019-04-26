@@ -85,11 +85,9 @@ FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
-	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 else
 	BUCKET := gs://natcap-dev-build-artifacts
 	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
-	WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 endif
 DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
@@ -99,8 +97,6 @@ TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.inve
 
 
 # Target names.
-# WINDOWS_INSTALLER_FILE name is defined above because the filename differs
-# a bit when we're on a fork vs. when we are on the main natcap/invest repo.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
@@ -296,10 +292,16 @@ $(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
+ifeq ($(FORKUSER), natcap)
+	INSTALLER_NAME_FORKUSER :=
+else
+	INSTALLER_NAME_FORKUSER := $(FORKUSER)
+endif
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
 $(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
-	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
+	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
