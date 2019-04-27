@@ -372,10 +372,30 @@ def calculate_sediment_deposition(
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
         gdal.GDT_Float32, [sediment_deposition_nodata])
-    fp, to_process_flow_directions_path = tempfile.mkstemp(
-        suffix='.tif', prefix='flow_to_process',
+
+    # this raster remembers which directions still need to be processed for
+    # when an upstream direction needs processing
+    fp, upstream_to_process_flow_directions_path = tempfile.mkstemp(
+        suffix='.tif', prefix='upstream_flow_to_process',
         dir=os.path.dirname(target_sediment_deposition_path))
     os.close(fp)
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, upstream_to_process_flow_directions_path,
+        gdal.GDT_Byte, [sediment_deposition_nodata], fill_value_list=[0])
+    cdef _ManagedRaster upstream_to_process_flow_directions_raster = (
+        _ManagedRaster(upstream_to_process_flow_directions_path, 1, True))
+
+    # ths raster keeps track of the intermediate Ri sum in case we have to
+    # process something upstream
+    fp, r_j_upstream_intermediate = tempfile.mkstemp(
+        suffix='.tif', prefix='r_j_upstream_intermediate',
+        dir=os.path.dirname(target_sediment_deposition_path))
+    os.close(fp)
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, r_j_upstream_intermediate_path,
+        gdal.GDT_Float32, [sediment_deposition_nodata], fill_value_list=[0])
+    cdef _ManagedRaster r_j_upstream_intermediate_raster = (
+        _ManagedRaster(r_j_upstream_intermediate_path, 1, True))
 
     cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
     cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
@@ -436,7 +456,8 @@ def calculate_sediment_deposition(
             for col_index in range(win_xsize):
                 global_col = xoff + col_index
                 # search to see if this is a good seed
-                r_j_weighted_sum = 0.0
+
+                seed_pixel = 1
                 for j in range(8):
                     neighbor_row = global_row + row_offsets[j]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
@@ -446,139 +467,101 @@ def calculate_sediment_deposition(
                         continue
                     neighbor_flow_val = <int>mfd_flow_direction_raster.get(
                         neighbor_col, neighbor_row)
+                    neighbor_flow_weight = (
+                        neighbor_flow_val >> inflow_offsets[j]) & 0xF
+                    if neighbor_flow_weight > 0:
+                        # neighbor flows in, not a seed
+                        seed_pixel = 0
+                        break
+                if seed_pixel:
+                    processing_stack.push(global_row * n_cols + global_col)
 
-                    if (neighbor_flow_val >> inflow_offsets[j]) & 0xF > 0:
-                        neighbor_flow_sum = sum(
-                            [(neighbor_flow_val >> j) & 0xF
-                             for j in range(8)])
-                        p_val = neighbor_flow_val / neighbor_flow_sum
-                        r_j = sediment_deposition_raster.get(
-                            neighbor_col, neighbor_row)
-                        r_j_weighted_sum += p_val * r_j
+                while processing_stack.size() > 0:
+                    flat_index = processing_stack.top()
+                    processing_stack.pop()
+                    global_row = flat_index / n_cols
+                    global_col = flat_index % n_cols
 
-    return
-                outflow_dirs = <int>to_process_flow_directions_raster.get(
-                    global_col, global_row)
-                should_seed = 0
-
-                continue
-                # see if this pixel drains to nodata or the edge, if so it's
-                # a drain
-                for i in range(8):
-                    dir_mask = 1 << i
-                    if outflow_dirs & dir_mask > 0:
-                        neighbor_col = col_offsets[i] + global_col
-                        if neighbor_col < 0 or neighbor_col >= n_cols:
-                            should_seed = 1
-                            outflow_dirs &= ~dir_mask
-                        neighbor_row = row_offsets[i] + global_row
+                    flow_dir_start = (
+                        upstream_to_process_flow_directions_raster.get(
+                            global_col, global_row))
+                    if flow_dir > 0:
+                        # we've been here before so we have a weighted sum
+                        r_j_weighted_sum = (
+                            r_j_upstream_intermediate_raster.get(
+                                global_col, global_row))
+                    else:
+                        r_j_weighted_sum = 0.0
+                    need_to_process_upstream = 0
+                    for j in range(flow_dir_start, 8):
+                        neighbor_row = global_row + row_offsets[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
-                            should_seed = 1
-                            outflow_dirs &= ~dir_mask
-                        neighbor_flow_dirs = (
-                            to_process_flow_directions_raster.get(
+                            continue
+                        neighbor_col = global_col + col_offsets[j]
+                        if neighbor_col < 0 or neighbor_col >= n_cols:
+                            continue
+
+                        # see if there's an inflow
+                        neighbor_flow_val = (
+                            <int>mfd_flow_direction_raster.get(
                                 neighbor_col, neighbor_row))
-                        if neighbor_flow_dirs == 0:
-                            should_seed = 1
-                            outflow_dirs &= ~dir_mask
+                        neighbor_flow_weight = (
+                            neighbor_flow_val >> inflow_offsets[j]) & 0xF
+                        if neighbor_flow_weight > 0:
+                            # see if neighbor is processed, if not, record
+                            # where we left off here and push neighbor to
+                            # stack
+                            r_j = sediment_deposition_raster.get(
+                                neighbor_col, neighbor_row)
+                            if r_j == sediment_deposition_nodata:
+                                r_j_upstream_intermediate_raster.set(
+                                    neighbor_col, neighbor_row,
+                                    r_j_weighted_sum)
+                                processing_stack.push(
+                                    neighbor_row * n_cols + neighbor_col)
+                                upstream_to_process_flow_directions_raster.set(
+                                    global_col, global_row, j)
+                                need_to_process_upstream = 1
+                                break
 
-                if should_seed:
-                    # mark all outflow directions processed
-                    to_process_flow_directions_raster.set(
-                        global_col, global_row, outflow_dirs)
-                    processing_stack.push(global_row*n_cols+global_col)
+                            neighbor_flow_sum = sum(
+                                [(neighbor_flow_val >> k) & 0xF
+                                 for k in range(8)])
+                            p_val = neighbor_flow_weight / neighbor_flow_sum
+                            r_j_weighted_sum += p_val * r_j
+                    if need_to_process_upstream:
+                        continue
 
-        while processing_stack.size() > 0:
-            # loop invariant, we don't push a cell on the stack that
-            # hasn't already been set for processing.
-            flat_index = processing_stack.top()
-            processing_stack.pop()
-            global_row = flat_index / n_cols
-            global_col = flat_index % n_cols
+                    downstream_sdr_weighted_sum = 0.0
+                    flow_val = <int>mfd_flow_direction_raster.get(
+                        global_row, global_col)
+                    flow_sum = sum(
+                        [(neighbor_flow_val >> k) & 0xF for k in range(8)])
 
-            crit_len = <float>crit_len_raster.get(global_col, global_row)
-            retention_eff_lulc = retention_eff_lulc_raster.get(
-                global_col, global_row)
-            flow_dir = <int>mfd_flow_direction_raster.get(
-                    global_col, global_row)
-            if stream_raster.get(global_col, global_row) == 1:
-                # if it's a stream effective retention is 0.
-                effective_retention_raster.set(global_col, global_row, 0)
-            elif (is_close(crit_len, crit_len_nodata) or
-                  is_close(retention_eff_lulc, retention_eff_nodata) or
-                  flow_dir == 0):
-                # if it's nodata, effective retention is nodata.
-                effective_retention_raster.set(
-                    global_col, global_row, effective_retention_nodata)
-            else:
-                working_retention_eff = 0.0
-                outflow_weight_sum = 0
-                for i in range(8):
-                    outflow_weight = (flow_dir >> (i*4)) & 0xF
-                    if outflow_weight == 0:
-                        continue
-                    outflow_weight_sum += outflow_weight
-                    ds_col = col_offsets[i] + global_col
-                    if ds_col < 0 or ds_col >= n_cols:
-                        continue
-                    ds_row = row_offsets[i] + global_row
-                    if ds_row < 0 or ds_row >= n_rows:
-                        continue
-                    if i % 2 == 1:
-                        step_size = <float>(cell_size*1.41421356237)
-                    else:
-                        step_size = cell_size
-                    # guard against an area that has flow but no landcover
-                    current_step_factor = <float>(exp(-5*step_size/crit_len))
+                    for j in range(8):
+                        neighbor_row = global_row + row_offsets[j]
+                        if neighbor_row < 0 or neighbor_row >= n_rows:
+                            continue
+                        neighbor_col = global_col + col_offsets[j]
+                        if neighbor_col < 0 or neighbor_col >= n_cols:
+                            continue
+                        # if this direction flows out, add to weighted sum
+                        flow_weight = (flow_val >> j) & 0xF
+                        if flow_weight > 0:
+                            sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
+                            if sdr_j != sdr_nodata:
+                                p_j = flow_weight / flow_sum
+                                downstream_sdr_weighted_sum += sdr_j * p_j
+                                processing_stack.push(
+                                    neighbor_row * n_cols + neighbor_col)
 
-                    neighbor_effective_retention = (
-                        effective_retention_raster.get(ds_col, ds_row))
-                    if neighbor_effective_retention >= retention_eff_lulc:
-                        working_retention_eff += (
-                            neighbor_effective_retention) * outflow_weight
-                    else:
-                        intermediate_retention = (
-                            (neighbor_effective_retention *
-                             current_step_factor) +
-                            retention_eff_lulc * (1 - current_step_factor))
-                        if intermediate_retention > retention_eff_lulc:
-                            intermediate_retention = retention_eff_lulc
-                        working_retention_eff += (
-                            intermediate_retention * outflow_weight)
-                if outflow_weight_sum > 0:
-                    working_retention_eff /= float(outflow_weight_sum)
-                    effective_retention_raster.set(
-                        global_col, global_row, working_retention_eff)
-                else:
-                    LOGGER.error('outflow_weight_sum %s', outflow_weight_sum)
-                    raise Exception("got to a cell that has no outflow!")
-            # search upstream to see if we need to push a cell on the stack
-            for i in range(8):
-                neighbor_col = col_offsets[i] + global_col
-                if neighbor_col < 0 or neighbor_col >= n_cols:
-                        continue
-                neighbor_row = row_offsets[i] + global_row
-                if neighbor_row < 0 or neighbor_row >= n_rows:
-                    continue
-                neighbor_outflow_dir = inflow_offsets[i]
-                neighbor_outflow_dir_mask = 1 << neighbor_outflow_dir
-                neighbor_process_flow_dir = <int>(
-                    to_process_flow_directions_raster.get(
-                        neighbor_col, neighbor_row))
-                if neighbor_process_flow_dir == 0:
-                    # skip, due to loop invariant this must be a nodata pixel
-                    continue
-                if neighbor_process_flow_dir & neighbor_outflow_dir_mask == 0:
-                    # no outflow
-                    continue
-                # mask out the outflow dir that this iteration processed
-                neighbor_process_flow_dir &= ~neighbor_outflow_dir_mask
-                to_process_flow_directions_raster.set(
-                    neighbor_col, neighbor_row, neighbor_process_flow_dir)
-                if neighbor_process_flow_dir == 0:
-                    # if 0 then all downstream have been processed,
-                    # push on stack, otherwise another downstream pixel will
-                    # pick it up
-                    processing_stack.push(neighbor_row*n_cols + neighbor_col)
-    to_process_flow_directions_raster.close()
-    os.remove(to_process_flow_directions_path)
+                    sdr_i = sdr_raster.get(global_col, global_row)
+                    e_prime_i = e_prime_raster.get(global_col, global_row)
+                    r_i = (e_prime_i + r_j_weighted_sum) * (
+                        1 - sdr_i - downstream_sdr_weighted_sum)
+                    sediment_deposition_raster.set(
+                        global_col, global_row, r_i)
+
+    upstream_to_process_flow_directions_raster.close()
+    r_j_upstream_intermediate_raster.close()
+    sediment_deposition_raster.close()
