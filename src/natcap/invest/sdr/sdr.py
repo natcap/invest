@@ -30,6 +30,7 @@ _OUTPUT_BASE_FILES = {
     'sed_export_path': 'sed_export.tif',
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
+    'sediment_deposition_path': 'sediment_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',

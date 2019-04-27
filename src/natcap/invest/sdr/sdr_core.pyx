@@ -368,6 +368,7 @@ def calculate_sediment_deposition(
             None.
 
     """
+    LOGGER.debug('CALCULATE SEDIMENT DEPOSITION')
     cdef float sediment_deposition_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
@@ -432,6 +433,8 @@ def calculate_sediment_deposition(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
+        LOGGER.debug('%.2f%% complete', 100.0 * (
+            (yoff*n_cols+xoff) / float(n_cols*n_rows)))
         for row_index in range(win_ysize):
             global_row = yoff + row_index
             for col_index in range(win_xsize):
@@ -456,8 +459,9 @@ def calculate_sediment_deposition(
                         break
                 if seed_pixel and (
                         sediment_deposition_raster.get(
-                            global_col, global_row) !=
+                            global_col, global_row) ==
                         sediment_deposition_nodata):
+                    LOGGER.debug('pushing a seed')
                     processing_stack.push(global_row * n_cols + global_col)
 
                 while processing_stack.size() > 0:
