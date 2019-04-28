@@ -392,7 +392,8 @@ def calculate_sediment_deposition(
     cdef stack[int] processing_stack
     cdef float sdr_nodata = pygeoprocessing.get_raster_info(
         sdr_path)['nodata'][0]
-
+    cdef float e_prime_nodata = pygeoprocessing.get_raster_info(
+        e_prime_path)['nodata'][0]
     cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef int global_col, global_row, flat_index, j, k
     cdef int neighbor_row, neighbor_col
@@ -415,8 +416,8 @@ def calculate_sediment_deposition(
             for col_index in range(win_xsize):
                 global_col = xoff + col_index
                 # search to see if this is a good seed
-                if mfd_flow_direction_raster.get(global_col, global_row) == 0:
-                    # 0 means nodata for flow direction
+                if e_prime_raster.get(
+                        global_col, global_row) == e_prime_nodata:
                     continue
                 seed_pixel = 1
                 for j in range(8):
@@ -505,6 +506,10 @@ def calculate_sediment_deposition(
                                 # completed
                                 upstream_neighbors_processed = 1
                                 for k in range(8):
+                                    if inflow_offsets[k] == j:
+                                        # we don't need to process the one
+                                        # we're currently calculating
+                                        continue
                                     # see if there's an inflow
                                     ds_neighbor_row = (
                                         neighbor_row + row_offsets[k])
@@ -525,20 +530,22 @@ def calculate_sediment_deposition(
                                                     sediment_deposition_nodata):
                                             # can't push it because not
                                             # processed yet
+                                            LOGGER.debug('considering %d %d, %d %d upstream not processed yet', neighbor_col, neighbor_row, ds_neighbor_col, ds_neighbor_row)
                                             upstream_neighbors_processed = 0
                                             break
-                                    if upstream_neighbors_processed:
-                                        LOGGER.debug(
-                                            'pushing downstream sdr %d %d',
-                                            neighbor_col, neighbor_row)
-                                        processing_stack.push(
-                                            neighbor_row * n_cols +
-                                            neighbor_col)
+                                if upstream_neighbors_processed:
+                                    LOGGER.debug(
+                                        'pushing downstream sdr %d %d',
+                                        neighbor_col, neighbor_row)
+                                    processing_stack.push(
+                                        neighbor_row * n_cols +
+                                        neighbor_col)
 
                     sdr_i = sdr_raster.get(global_col, global_row)
                     e_prime_i = e_prime_raster.get(global_col, global_row)
                     r_i = (e_prime_i + r_j_weighted_sum) * (
                         1 - sdr_i - downstream_sdr_weighted_sum)
+                    LOGGER.debug('setting %f at %d %d', r_i, global_col, global_row)
                     sediment_deposition_raster.set(
                         global_col, global_row, r_i)
 
