@@ -429,8 +429,10 @@ def calculate_sediment_deposition(
                         continue
                     neighbor_flow_val = <int>mfd_flow_direction_raster.get(
                         neighbor_col, neighbor_row)
+                    if neighbor_flow_val == 0:
+                        continue
                     neighbor_flow_weight = (
-                        neighbor_flow_val >> (inflow_offsets[j]*8)) & 0xF
+                        neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                     if neighbor_flow_weight > 0:
                         # neighbor flows in, not a seed
                         seed_pixel = 0
@@ -439,7 +441,6 @@ def calculate_sediment_deposition(
                         sediment_deposition_raster.get(
                             global_col, global_row) ==
                         sediment_deposition_nodata):
-                    LOGGER.debug('pushing a seed')
                     processing_stack.push(global_row * n_cols + global_col)
 
                 while processing_stack.size() > 0:
@@ -465,14 +466,14 @@ def calculate_sediment_deposition(
                             <int>mfd_flow_direction_raster.get(
                                 neighbor_col, neighbor_row))
                         neighbor_flow_weight = (
-                            neighbor_flow_val >> (inflow_offsets[j]*8)) & 0xF
+                            neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                         if neighbor_flow_weight > 0:
                             r_j = sediment_deposition_raster.get(
                                 neighbor_col, neighbor_row)
                             neighbor_flow_sum = 0
                             for k in range(8):
                                 neighbor_flow_sum += (
-                                    neighbor_flow_val >> (k*8)) & 0xF
+                                    neighbor_flow_val >> (k*4)) & 0xF
                             p_val = neighbor_flow_weight / neighbor_flow_sum
                             r_j_weighted_sum += p_val * r_j
 
@@ -483,7 +484,7 @@ def calculate_sediment_deposition(
                         global_col, global_row)
                     flow_sum = 0.0
                     for k in range(8):
-                        flow_sum += (flow_val >> (k*8)) & 0xF
+                        flow_sum += (flow_val >> (k*4)) & 0xF
 
                     for j in range(8):
                         neighbor_row = global_row + row_offsets[j]
@@ -493,7 +494,7 @@ def calculate_sediment_deposition(
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
                         # if this direction flows out, add to weighted sum
-                        flow_weight = (flow_val >> (j*8)) & 0xF
+                        flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
                             if sdr_j != sdr_nodata:
@@ -523,29 +524,31 @@ def calculate_sediment_deposition(
                                         <int>mfd_flow_direction_raster.get(
                                             ds_neighbor_col, ds_neighbor_row))
                                     if (ds_neighbor_flow_val >> (
-                                            inflow_offsets[k]*8)) & 0xF > 0:
+                                            inflow_offsets[k]*4)) & 0xF > 0:
                                         if sediment_deposition_raster.get(
                                                 ds_neighbor_col,
                                                 ds_neighbor_row) == (
                                                     sediment_deposition_nodata):
                                             # can't push it because not
                                             # processed yet
-                                            LOGGER.debug('considering %d %d, %d %d upstream not processed yet', neighbor_col, neighbor_row, ds_neighbor_col, ds_neighbor_row)
                                             upstream_neighbors_processed = 0
                                             break
                                 if upstream_neighbors_processed:
-                                    LOGGER.debug(
-                                        'pushing downstream sdr %d %d',
-                                        neighbor_col, neighbor_row)
                                     processing_stack.push(
                                         neighbor_row * n_cols +
                                         neighbor_col)
 
                     sdr_i = sdr_raster.get(global_col, global_row)
                     e_prime_i = e_prime_raster.get(global_col, global_row)
+                    if e_prime_i == e_prime_nodata:
+                        e_prime_i = 0.0
+
+                    if downstream_sdr_weighted_sum < sdr_i:
+                        # i think this happens because of our low resolution
+                        # flow direction, it's okay to zero out.
+                        downstream_sdr_weighted_sum = sdr_i
                     r_i = (e_prime_i + r_j_weighted_sum) * (
-                        1 - sdr_i - downstream_sdr_weighted_sum)
-                    LOGGER.debug('setting %f at %d %d', r_i, global_col, global_row)
+                        1 - (downstream_sdr_weighted_sum - sdr_i))
                     sediment_deposition_raster.set(
                         global_col, global_row, r_i)
 
