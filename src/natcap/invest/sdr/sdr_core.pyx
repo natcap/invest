@@ -1,16 +1,13 @@
 # cython: profile=False
 # cython: language_level=2
-import tempfile
 import logging
 import os
-import collections
 
 import numpy
 import pygeoprocessing
 cimport numpy
 cimport cython
 from osgeo import gdal
-from cython.operator cimport dereference as deref
 
 from cpython.mem cimport PyMem_Malloc, PyMem_Free
 from cython.operator cimport dereference as deref
@@ -19,13 +16,6 @@ from libcpp.pair cimport pair
 from libcpp.set cimport set as cset
 from libcpp.list cimport list as clist
 from libcpp.stack cimport stack
-from libcpp.map cimport map
-from libc.math cimport atan
-from libc.math cimport atan2
-from libc.math cimport tan
-from libc.math cimport sqrt
-from libc.math cimport ceil
-from libc.math cimport exp
 
 cdef extern from "time.h" nogil:
     ctypedef int time_t
