@@ -540,8 +540,11 @@ def calculate_sediment_deposition(
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
                         downstream_sdr_weighted_sum = sdr_i
-                    r_i = (e_prime_i + r_j_weighted_sum) * (
-                        1 - (downstream_sdr_weighted_sum - sdr_i))
+                    if sdr_i != 0:
+                        r_i = (e_prime_i + r_j_weighted_sum) * (
+                            1 - (downstream_sdr_weighted_sum - sdr_i))
+                    else:
+                        r_i = 0
                     sediment_deposition_raster.set(
                         global_col, global_row, r_i)
 
