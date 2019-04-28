@@ -396,6 +396,7 @@ def calculate_sediment_deposition(
         e_prime_path)['nodata'][0]
     cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef int global_col, global_row, flat_index, j, k
+    cdef int seed_col, seed_row
     cdef int neighbor_row, neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
@@ -412,19 +413,18 @@ def calculate_sediment_deposition(
         LOGGER.debug('%.2f%% complete', 100.0 * (
             (yoff*n_cols+xoff) / float(n_cols*n_rows)))
         for row_index in range(win_ysize):
-            global_row = yoff + row_index
+            seed_row = yoff + row_index
             for col_index in range(win_xsize):
-                global_col = xoff + col_index
+                seed_col = xoff + col_index
                 # search to see if this is a good seed
-                if e_prime_raster.get(
-                        global_col, global_row) == e_prime_nodata:
+                if mfd_flow_direction_raster.get(seed_col, seed_row) == 0:
                     continue
                 seed_pixel = 1
                 for j in range(8):
-                    neighbor_row = global_row + row_offsets[j]
+                    neighbor_row = seed_row + row_offsets[j]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
                         continue
-                    neighbor_col = global_col + col_offsets[j]
+                    neighbor_col = seed_col + col_offsets[j]
                     if neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
                     neighbor_flow_val = <int>mfd_flow_direction_raster.get(
@@ -439,9 +439,9 @@ def calculate_sediment_deposition(
                         break
                 if seed_pixel and (
                         sediment_deposition_raster.get(
-                            global_col, global_row) ==
+                            seed_col, seed_row) ==
                         sediment_deposition_nodata):
-                    processing_stack.push(global_row * n_cols + global_col)
+                    processing_stack.push(seed_row * n_cols + seed_col)
 
                 while processing_stack.size() > 0:
                     # loop invariant: cell has all upstream neighbors
@@ -497,48 +497,51 @@ def calculate_sediment_deposition(
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
-                            if sdr_j != sdr_nodata:
-                                p_j = flow_weight / flow_sum
-                                downstream_sdr_weighted_sum += sdr_j * p_j
+                            if sdr_j == sdr_nodata:
+                                sdr_j = 0.0
+                            p_j = flow_weight / flow_sum
+                            downstream_sdr_weighted_sum += sdr_j * p_j
 
-                                # if there is a downstream neighbor it
-                                # couldn't have been pushed on the processing
-                                # stack yet, because the upstream was just
-                                # completed
-                                upstream_neighbors_processed = 1
-                                for k in range(8):
-                                    if inflow_offsets[k] == j:
-                                        # we don't need to process the one
-                                        # we're currently calculating
-                                        continue
-                                    # see if there's an inflow
-                                    ds_neighbor_row = (
-                                        neighbor_row + row_offsets[k])
-                                    if ds_neighbor_row < 0 or ds_neighbor_row >= n_rows:
-                                        continue
-                                    ds_neighbor_col = (
-                                        neighbor_col + col_offsets[k])
-                                    if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
-                                        continue
-                                    ds_neighbor_flow_val = (
-                                        <int>mfd_flow_direction_raster.get(
-                                            ds_neighbor_col, ds_neighbor_row))
-                                    if (ds_neighbor_flow_val >> (
-                                            inflow_offsets[k]*4)) & 0xF > 0:
-                                        if sediment_deposition_raster.get(
-                                                ds_neighbor_col,
-                                                ds_neighbor_row) == (
-                                                    sediment_deposition_nodata):
-                                            # can't push it because not
-                                            # processed yet
-                                            upstream_neighbors_processed = 0
-                                            break
-                                if upstream_neighbors_processed:
-                                    processing_stack.push(
-                                        neighbor_row * n_cols +
-                                        neighbor_col)
+                            # if there is a downstream neighbor it
+                            # couldn't have been pushed on the processing
+                            # stack yet, because the upstream was just
+                            # completed
+                            upstream_neighbors_processed = 1
+                            for k in range(8):
+                                if inflow_offsets[k] == j:
+                                    # we don't need to process the one
+                                    # we're currently calculating
+                                    continue
+                                # see if there's an inflow
+                                ds_neighbor_row = (
+                                    neighbor_row + row_offsets[k])
+                                if ds_neighbor_row < 0 or ds_neighbor_row >= n_rows:
+                                    continue
+                                ds_neighbor_col = (
+                                    neighbor_col + col_offsets[k])
+                                if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
+                                    continue
+                                ds_neighbor_flow_val = (
+                                    <int>mfd_flow_direction_raster.get(
+                                        ds_neighbor_col, ds_neighbor_row))
+                                if (ds_neighbor_flow_val >> (
+                                        inflow_offsets[k]*4)) & 0xF > 0:
+                                    if sediment_deposition_raster.get(
+                                            ds_neighbor_col,
+                                            ds_neighbor_row) == (
+                                                sediment_deposition_nodata):
+                                        # can't push it because not
+                                        # processed yet
+                                        upstream_neighbors_processed = 0
+                                        break
+                            if upstream_neighbors_processed:
+                                processing_stack.push(
+                                    neighbor_row * n_cols +
+                                    neighbor_col)
 
                     sdr_i = sdr_raster.get(global_col, global_row)
+                    if sdr_i == sdr_nodata:
+                        sdr_i = 0.0
                     e_prime_i = e_prime_raster.get(global_col, global_row)
                     if e_prime_i == e_prime_nodata:
                         e_prime_i = 0.0
