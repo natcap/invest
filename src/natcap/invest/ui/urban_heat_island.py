@@ -13,12 +13,13 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=natcap.invest.urban_heat_island_mitigation.validate,
             localdoc=u'../documentation/urban_heat_island_mitigation.html')
 
-        self.t_obs_raster_path = inputs.File(
-            args_key='t_obs_raster_path',
-            helptext=('Observed air temperature (optional).'),
-            label='t_obs_raster_path',
+        self.t_ref = inputs.File(
+            args_key='t_ref',
+            helptext=('Reference air temperature (real).'),
+            label='t_ref',
             validator=self.validator)
-        self.add_input(self.t_obs_raster_path)
+        self.t_ref.set_value("21.5")
+        self.add_input(self.t_ref)
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
@@ -48,20 +49,6 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
 
-        self.building_vector_path = inputs.File(
-            args_key='building_vector_path',
-            helptext=("path to a vector of building footprints that contains at least the field 'type'."),
-            label='building_vector_path',
-            validator=self.validator)
-        self.add_input(self.building_vector_path)
-
-        self.energy_consumption_table_path = inputs.File(
-            args_key='energy_consumption_table_path',
-            helptext=("path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'."),
-            label='energy_consumption_table_path',
-            validator=self.validator)
-        self.add_input(self.energy_consumption_table_path)
-
         self.uhi_max = inputs.Text(
             args_key='uhi_max',
             label='Magnitude of the UHI effect.',
@@ -83,12 +70,34 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         self.add_input(self.green_area_cooling_distance)
         self.green_area_cooling_distance.set_value("1000")
 
+        self.valuation_container = inputs.Container(
+            args_key=u'do_valuation_container',
+            expandable=True,
+            expanded=True,
+            interactive=True,
+            label=u'Run Valuation Model')
+        self.add_input(self.valuation_container)
+
+        self.building_vector_path = inputs.File(
+            args_key='building_vector_path',
+            helptext=("path to a vector of building footprints that contains at least the field 'type'."),
+            label='building_vector_path',
+            validator=self.validator)
+        self.valuation_container.add_input(self.building_vector_path)
+
         self.avg_rel_humidity = inputs.Text(
             args_key='avg_rel_humidity',
             label='Average relative humidity (0-100%)',
             validator=self.validator)
-        self.add_input(self.avg_rel_humidity)
+        self.valuation_container.add_input(self.avg_rel_humidity)
         self.avg_rel_humidity.set_value("30")
+
+        self.energy_consumption_table_path = inputs.File(
+            args_key='energy_consumption_table_path',
+            helptext=("path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'."),
+            label='energy_consumption_table_path',
+            validator=self.validator)
+        self.valuation_container.add_input(self.energy_consumption_table_path)
 
         self.cc_weight_shade = inputs.Text(
             args_key='cc_weight_shade',
@@ -118,20 +127,24 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
-            self.t_obs_raster_path.args_key: self.t_obs_raster_path.value(),
+            self.t_ref.args_key: self.t_ref.value(),
             self.lulc_raster_path.args_key: self.lulc_raster_path.value(),
             self.ref_eto_raster_path.args_key: self.ref_eto_raster_path.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
             self.biophysical_table_path.args_key: self.biophysical_table_path.value(),
-            self.building_vector_path.args_key: self.building_vector_path.value(),
-            self.energy_consumption_table_path.args_key: self.energy_consumption_table_path.value(),
             self.uhi_max.args_key: self.uhi_max.value(),
             self.t_air_average_radius.args_key: self.t_air_average_radius.value(),
             self.green_area_cooling_distance.args_key: self.green_area_cooling_distance.value(),
-            self.avg_rel_humidity.args_key: self.avg_rel_humidity.value(),
             self.cc_weight_shade.args_key: self.cc_weight_shade.value(),
             self.cc_weight_albedo.args_key: self.cc_weight_albedo.value(),
             self.cc_weight_eti.args_key: self.cc_weight_eti.value(),
         }
+        if self.valuation_container.value():
+            args[self.energy_consumption_table_path.args_key] = (
+                self.energy_consumption_table_path.value()),
+            args[self.avg_rel_humidity.args_key] = (
+                self.avg_rel_humidity.value()),
+            args[self.building_vector_path.args_key] = (
+                self.building_vector_path.value())
 
         return args

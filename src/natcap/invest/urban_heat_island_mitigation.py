@@ -31,7 +31,7 @@ def execute(args):
         args['workspace_dir'] (str): path to target output directory.
         args['results_suffix'] (string): (optional) string to append to any
             output file names
-        args['t_obs_raster_path'] (str): raster of air temperature (optional).
+        args['t_ref'] (str/float): reference air temperature.
         args['lulc_raster_path'] (str): path to landcover raster.
         args['ref_eto_raster_path'] (str): path to evapotranspiration raster.
         args['aoi_vector_path'] (str): path to desired AOI.
@@ -43,12 +43,17 @@ def execute(args):
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
-        args['avg_rel_humidity'] (float): Average relative humidity (0-100%).
-        args['building_vector_path']: path to a vector of building footprints
-            that contains at least the field 'type'.
-        args['energy_consumption_table_path'] (str): path to a table that
-            maps building types to energy consumption. Must contain at least
-            the fields 'type' and 'consumption'.
+        args['do_valuation'] (bool): if True, consider the valuation
+            parameters for buildings.
+        args['avg_rel_humidity'] (float): (optional, depends on
+            'do_valuation') Average relative humidity (0-100%).
+        args['building_vector_path']: (str) (optional, depends on
+            'do_valuation') path to a vector of building footprints that
+            contains at least the field 'type'.
+        args['energy_consumption_table_path'] (str): (optional, depends on
+            'do_valuation') path to a table that maps building types to
+            energy consumption. Must contain at least the fields 'type' and
+            'consumption'.
         args['cc_weight_shade'] (str/float): floating point number
             representing the relative weight to apply to shade when
             calculating the cooling index.
@@ -58,6 +63,7 @@ def execute(args):
         args['cc_weight_eti'] (str/float): floating point number
             representing the relative weight to apply to ETI when
             calculating the cooling index.
+
 
     Returns:
         None.
@@ -75,6 +81,8 @@ def execute(args):
     cc_weight_shade_raw = float(args['cc_weight_shade'])
     cc_weight_albedo_raw = float(args['cc_weight_albedo'])
     cc_weight_eti_raw = float(args['cc_weight_eti'])
+    t_ref_raw = float(args['t_ref'])
+    uhi_max_raw = float(args['uhi_max'])
     cc_weight_shade = cc_weight_shade_raw / (
         cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
     cc_weight_albedo = cc_weight_albedo_raw / (
@@ -85,8 +93,6 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
 
     # align all the input rasters.
-    aligned_t_obs_raster_path = os.path.join(
-        temporary_working_dir, 't_air_ref%s.tif' % file_suffix)
     aligned_lulc_raster_path = os.path.join(
         temporary_working_dir, 'lulc%s.tif' % file_suffix)
     aligned_ref_eto_raster_path = os.path.join(
@@ -98,15 +104,13 @@ def execute(args):
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
     aligned_raster_path_list = [
-        aligned_t_obs_raster_path, aligned_lulc_raster_path,
-        aligned_ref_eto_raster_path]
+        aligned_lulc_raster_path, aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
-            [args['t_obs_raster_path'], args['lulc_raster_path'],
-             args['ref_eto_raster_path']], aligned_raster_path_list, [
-                'cubicspline', 'mode', 'cubicspline'],
-            (cell_size, -cell_size), 'intersection'),
+            [args['lulc_raster_path'],
+             args['ref_eto_raster_path']], aligned_raster_path_list,
+            ['mode', 'cubicspline'], (cell_size, -cell_size), 'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
@@ -227,21 +231,6 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
-    cc_weight_path = os.path.join(
-        temporary_working_dir, 'cc_weights%s.pickle' % file_suffix)
-    cc_regression_task = task_graph.add_task(
-        func=cc_regression_op,
-        args=((task_path_prop_map['shade'][1], 1),
-              (task_path_prop_map['albedo'][1], 1),
-              (eti_raster_path, 1),
-              (aligned_t_obs_raster_path, 1),
-              cc_weight_path),
-        target_path_list=[cc_weight_path],
-        dependent_task_list=[
-            eti_task, task_path_prop_map['shade'][0],
-            task_path_prop_map['albedo'][0]],
-        task_name='cc regression')
-
     cc_raster_path = os.path.join(
         args['workspace_dir'], 'cc%s.tif' % file_suffix)
     cc_task = task_graph.add_task(
@@ -277,15 +266,13 @@ def execute(args):
         dependent_task_list=[cc_task, green_area_sum_task, cc_park_task],
         task_name='calculate HM index')
 
-    air_temp_nodata = pygeoprocessing.get_raster_info(
-        args['t_obs_raster_path'])['nodata'][0]
     t_air_nomix_raster_path = os.path.join(
         args['workspace_dir'], 'T_air_nomix%s.tif' % file_suffix)
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (aligned_t_obs_raster_path, 1), (air_temp_nodata, 'raw'),
-            (hm_raster_path, 1), (float(args['uhi_max']), 'raw')],
+            (t_ref_raw, 'raw'), (hm_raster_path, 1),
+            (float(args['uhi_max']), 'raw')],
             calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
         target_path_list=[t_air_nomix_raster_path],
@@ -320,88 +307,6 @@ def execute(args):
         dependent_task_list=[t_air_nomix_task, t_air_kernel_task],
         task_name='calculate T air')
 
-    # work productivity
-    wbgt_raster_path = os.path.join(
-        temporary_working_dir, 'wbgt%s.tif' % file_suffix)
-    wbgt_task = task_graph.add_task(
-        func=calculate_wbgt,
-        args=(
-            float(args['avg_rel_humidity']), t_air_raster_path,
-            wbgt_raster_path),
-        target_path_list=[wbgt_raster_path],
-        dependent_task_list=[t_air_task],
-        task_name='vapor pressure')
-
-    light_work_temps = [31.5, 32, 32.5]
-    light_work_loss_raster_path = os.path.join(
-        temporary_working_dir, 'light_work_loss_percent%s.tif' % file_suffix)
-    heavy_work_temps = [27.5, 29.5, 31.5]
-    heavy_work_loss_raster_path = os.path.join(
-        temporary_working_dir, 'heavy_work_loss_percent%s.tif' % file_suffix)
-
-    loss_task_path_map = {}
-    for loss_type, temp_map, loss_raster_path in [
-            ('light', light_work_temps, light_work_loss_raster_path),
-            ('heavy', heavy_work_temps, heavy_work_loss_raster_path)]:
-        work_loss_task = task_graph.add_task(
-            func=map_work_loss,
-            args=(temp_map, wbgt_raster_path, loss_raster_path),
-            target_path_list=[loss_raster_path],
-            dependent_task_list=[wbgt_task],
-            task_name='work loss: %s' % os.path.basename(loss_raster_path))
-        loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
-
-    intermediate_building_vector_path = os.path.join(
-        temporary_working_dir,
-        'intermediate_building_vector%s.gpkg' % file_suffix)
-    # this is the field name that can be used to uniquely identify a feature
-    intermediate_building_vector_task = task_graph.add_task(
-        func=pygeoprocessing.reproject_vector,
-        args=(
-            args['building_vector_path'], lulc_raster_info['projection'],
-            intermediate_building_vector_path),
-        kwargs={'driver_name': 'GPKG'},
-        target_path_list=[intermediate_building_vector_path],
-        task_name='reproject building vector')
-
-    # zonal stats over buildings for t_air
-    t_air_stats_pickle_path = os.path.join(
-        temporary_working_dir, 't_air_stats.pickle')
-    pickle_t_air_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_building_vector_path,
-            t_air_raster_path, t_air_stats_pickle_path),
-        target_path_list=[t_air_stats_pickle_path],
-        dependent_task_list=[t_air_task, intermediate_building_vector_task],
-        task_name='pickle t-air stats')
-
-    t_ref_stats_pickle_path = os.path.join(
-        temporary_working_dir, 't_ref_stats.pickle')
-    pickle_t_ref_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_building_vector_path,
-            aligned_t_obs_raster_path, t_ref_stats_pickle_path),
-        target_path_list=[t_ref_stats_pickle_path],
-        dependent_task_list=[align_task, intermediate_building_vector_task],
-        task_name='pickle t-ref stats')
-
-    energy_consumption_vector_path = os.path.join(
-        args['workspace_dir'], 'buildings_with_stats%s.gpkg' % file_suffix)
-    calculate_energy_savings_task = task_graph.add_task(
-        func=calculate_energy_savings,
-        args=(
-            t_air_stats_pickle_path, t_ref_stats_pickle_path,
-            float(args['uhi_max']), args['energy_consumption_table_path'],
-            intermediate_building_vector_path,
-            energy_consumption_vector_path),
-        target_path_list=[energy_consumption_vector_path],
-        dependent_task_list=[
-            pickle_t_ref_task, pickle_t_air_task,
-            intermediate_building_vector_task],
-        task_name='calculate energy savings task')
-
     intermediate_aoi_vector_path = os.path.join(
         temporary_working_dir, 'intermediate_aoi%s.gpkg' % file_suffix)
     intermediate_uhi_result_vector_task = task_graph.add_task(
@@ -424,17 +329,6 @@ def execute(args):
         dependent_task_list=[cc_task, intermediate_uhi_result_vector_task],
         task_name='pickle cc ref stats')
 
-    t_air_ref_aoi_stats_pickle_path = os.path.join(
-        temporary_working_dir, 't_ref_aoi_stats.pickle')
-    pickle_t_air_ref_aoi_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_aoi_vector_path,
-            aligned_t_obs_raster_path, t_air_ref_aoi_stats_pickle_path),
-        target_path_list=[t_air_ref_aoi_stats_pickle_path],
-        dependent_task_list=[align_task, intermediate_uhi_result_vector_task],
-        task_name='pickle t-ref stats')
-
     t_air_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 't_air_aoi_stats.pickle')
     pickle_t_air_aoi_task = task_graph.add_task(
@@ -446,54 +340,124 @@ def execute(args):
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-air stats')
 
-    # pickle WBGI
-    wbgt_stats_pickle_path = os.path.join(
-        temporary_working_dir, 'wbgt_stats.pickle')
-    pickle_wbgt_stats_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_aoi_vector_path,
-            t_air_raster_path, wbgt_stats_pickle_path),
-        target_path_list=[wbgt_stats_pickle_path],
-        dependent_task_list=[wbgt_task, intermediate_uhi_result_vector_task],
-        task_name='pickle WBgt stats')
-    # pickle light loss
-    loss_task_path_map
-    light_loss_stats_pickle_path = os.path.join(
-        temporary_working_dir, 'light_loss_stats.pickle')
-    pickle_light_loss_stats_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_aoi_vector_path,
-            loss_task_path_map['light'][1], light_loss_stats_pickle_path),
-        target_path_list=[light_loss_stats_pickle_path],
-        dependent_task_list=[
-            loss_task_path_map['light'][0],
-            intermediate_uhi_result_vector_task],
-        task_name='pickle light_loss stats')
+    if 'do_valuation' in args and bool(args['do_valuation']):
 
-    heavy_loss_stats_pickle_path = os.path.join(
-        temporary_working_dir, 'heavy_loss_stats.pickle')
-    pickle_heavy_loss_stats_task = task_graph.add_task(
-        func=pickle_zonal_stats,
-        args=(
-            intermediate_aoi_vector_path,
-            loss_task_path_map['heavy'][1], heavy_loss_stats_pickle_path),
-        target_path_list=[heavy_loss_stats_pickle_path],
-        dependent_task_list=[
-            loss_task_path_map['heavy'][0],
-            intermediate_uhi_result_vector_task],
-        task_name='pickle heavy_loss stats')
+        # work productivity
+        wbgt_raster_path = os.path.join(
+            temporary_working_dir, 'wbgt%s.tif' % file_suffix)
+        wbgt_task = task_graph.add_task(
+            func=calculate_wbgt,
+            args=(
+                float(args['avg_rel_humidity']), t_air_raster_path,
+                wbgt_raster_path),
+            target_path_list=[wbgt_raster_path],
+            dependent_task_list=[t_air_task],
+            task_name='vapor pressure')
+
+        light_work_temps = [31.5, 32, 32.5]
+        light_work_loss_raster_path = os.path.join(
+            temporary_working_dir, 'light_work_loss_percent%s.tif' % file_suffix)
+        heavy_work_temps = [27.5, 29.5, 31.5]
+        heavy_work_loss_raster_path = os.path.join(
+            temporary_working_dir, 'heavy_work_loss_percent%s.tif' % file_suffix)
+
+        loss_task_path_map = {}
+        for loss_type, temp_map, loss_raster_path in [
+                ('light', light_work_temps, light_work_loss_raster_path),
+                ('heavy', heavy_work_temps, heavy_work_loss_raster_path)]:
+            work_loss_task = task_graph.add_task(
+                func=map_work_loss,
+                args=(temp_map, wbgt_raster_path, loss_raster_path),
+                target_path_list=[loss_raster_path],
+                dependent_task_list=[wbgt_task],
+                task_name='work loss: %s' % os.path.basename(loss_raster_path))
+            loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
+
+        intermediate_building_vector_path = os.path.join(
+            temporary_working_dir,
+            'intermediate_building_vector%s.gpkg' % file_suffix)
+        intermediate_building_vector_task = task_graph.add_task(
+            func=pygeoprocessing.reproject_vector,
+            args=(
+                args['building_vector_path'], lulc_raster_info['projection'],
+                intermediate_building_vector_path),
+            kwargs={'driver_name': 'GPKG'},
+            target_path_list=[intermediate_building_vector_path],
+            task_name='reproject building vector')
+
+        # zonal stats over buildings for t_air
+        t_air_stats_pickle_path = os.path.join(
+            temporary_working_dir, 't_air_stats.pickle')
+        pickle_t_air_task = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_building_vector_path,
+                t_air_raster_path, t_air_stats_pickle_path),
+            target_path_list=[t_air_stats_pickle_path],
+            dependent_task_list=[t_air_task, intermediate_building_vector_task],
+            task_name='pickle t-air stats')
+
+        energy_consumption_vector_path = os.path.join(
+            args['workspace_dir'], 'buildings_with_stats%s.gpkg' % file_suffix)
+        calculate_energy_savings_task = task_graph.add_task(
+            func=calculate_energy_savings,
+            args=(
+                t_air_stats_pickle_path, t_ref_raw,
+                uhi_max_raw, args['energy_consumption_table_path'],
+                intermediate_building_vector_path,
+                energy_consumption_vector_path),
+            target_path_list=[energy_consumption_vector_path],
+            dependent_task_list=[
+                pickle_t_air_task, intermediate_building_vector_task],
+            task_name='calculate energy savings task')
+
+        # pickle WBGI
+        wbgt_stats_pickle_path = os.path.join(
+            temporary_working_dir, 'wbgt_stats.pickle')
+        pickle_wbgt_stats_task = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                t_air_raster_path, wbgt_stats_pickle_path),
+            target_path_list=[wbgt_stats_pickle_path],
+            dependent_task_list=[
+                wbgt_task, intermediate_uhi_result_vector_task],
+            task_name='pickle WBgt stats')
+        # pickle light loss
+        light_loss_stats_pickle_path = os.path.join(
+            temporary_working_dir, 'light_loss_stats.pickle')
+        pickle_light_loss_stats_task = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                loss_task_path_map['light'][1], light_loss_stats_pickle_path),
+            target_path_list=[light_loss_stats_pickle_path],
+            dependent_task_list=[
+                loss_task_path_map['light'][0],
+                intermediate_uhi_result_vector_task],
+            task_name='pickle light_loss stats')
+
+        heavy_loss_stats_pickle_path = os.path.join(
+            temporary_working_dir, 'heavy_loss_stats.pickle')
+        pickle_heavy_loss_stats_task = task_graph.add_task(
+            func=pickle_zonal_stats,
+            args=(
+                intermediate_aoi_vector_path,
+                loss_task_path_map['heavy'][1], heavy_loss_stats_pickle_path),
+            target_path_list=[heavy_loss_stats_pickle_path],
+            dependent_task_list=[
+                loss_task_path_map['heavy'][0],
+                intermediate_uhi_result_vector_task],
+            task_name='pickle heavy_loss stats')
 
     # pickle heavy loss
-
     target_uhi_vector_path = os.path.join(
         args['workspace_dir'], 'uhi_results%s.gpkg' % file_suffix)
     calculate_uhi_result_task = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
             intermediate_aoi_vector_path,
-            t_air_aoi_stats_pickle_path, t_air_ref_aoi_stats_pickle_path,
+            t_ref_raw, t_air_aoi_stats_pickle_path,
             cc_aoi_stats_pickle_path,
             wbgt_stats_pickle_path,
             light_loss_stats_pickle_path,
@@ -502,12 +466,10 @@ def execute(args):
             target_uhi_vector_path),
         target_path_list=[target_uhi_vector_path],
         dependent_task_list=[
-            pickle_t_air_aoi_task, pickle_t_air_ref_aoi_task,
-            pickle_cc_aoi_stats_task, calculate_energy_savings_task,
-            intermediate_uhi_result_vector_task,
-            pickle_wbgt_stats_task,
-            pickle_light_loss_stats_task,
-            pickle_heavy_loss_stats_task],
+            pickle_t_air_aoi_task, pickle_cc_aoi_stats_task,
+            calculate_energy_savings_task,
+            intermediate_uhi_result_vector_task, pickle_wbgt_stats_task,
+            pickle_light_loss_stats_task, pickle_heavy_loss_stats_task],
         task_name='calculate uhi results')
 
     task_graph.close()
@@ -515,8 +477,8 @@ def execute(args):
 
 
 def calculate_uhi_result_vector(
-        base_aoi_path, t_air_stats_pickle_path,
-        t_air_ref_stats_pickle_path, cc_stats_pickle_path,
+        base_aoi_path, t_ref_val, t_air_stats_pickle_path,
+        cc_stats_pickle_path,
         wbgt_stats_pickle_path,
         light_loss_stats_pickle_path,
         heavy_loss_stats_pickle_path,
@@ -531,12 +493,12 @@ def calculate_uhi_result_vector(
 
     Parameters:
         base_aoi_path (str): path to AOI vector.
+        t_ref_val (float): reference temperature.
         energy_consumption_vector_path (str): path to vector that contains
             building footprints with the field 'energy_savings'.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
                 * average_cc_value
-                * average_temp_value
                 * average_temp_anom
                 * avoided_energy_consumption
                 * average WBGT
@@ -554,10 +516,6 @@ def calculate_uhi_result_vector(
     LOGGER.info("load t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
-    LOGGER.info("load t_air_ref_stats")
-    with open(t_air_ref_stats_pickle_path, 'rb') as \
-            t_air_ref_stats_pickle_file:
-        t_air_ref_stats = pickle.load(t_air_ref_stats_pickle_file)
     LOGGER.info("load cc_stats")
     with open(cc_stats_pickle_path, 'rb') as cc_stats_pickle_file:
         cc_stats = pickle.load(cc_stats_pickle_file)
@@ -621,16 +579,9 @@ def calculate_uhi_result_vector(
                 t_air_stats[feature_id]['count'])
             feature.SetField('average_temp_value', mean_t_air)
 
-        mean_t_air_ref = None
-        if feature_id in t_air_ref_stats and t_air_ref_stats[
-                feature_id]['count'] > 0:
-            mean_t_air_ref = (
-                t_air_ref_stats[feature_id]['sum'] /
-                t_air_ref_stats[feature_id]['count'])
-
-        if mean_t_air and mean_t_air_ref:
+        if mean_t_air:
             feature.SetField(
-                'average_temp_anom', mean_t_air-mean_t_air_ref)
+                'average_temp_anom', mean_t_air-t_ref_val)
 
         wbgt = None
         if feature_id in wbgt_stats and wbgt_stats[feature_id]['count'] > 0:
@@ -682,7 +633,7 @@ def calculate_uhi_result_vector(
 
 
 def calculate_energy_savings(
-        t_air_stats_pickle_path, t_ref_stats_pickle_path, uhi_max,
+        t_air_stats_pickle_path, t_ref_raw, uhi_max,
         energy_consumption_table_path, base_building_vector_path,
         target_building_vector_path):
     """Add watershed scale values of the given base_raster.
@@ -690,8 +641,7 @@ def calculate_energy_savings(
     Parameters:
         t_air_stats_pickle_path (str): path to t_air zonal stats indexed by
             FID.
-        t_ref_stats_pickle_path (str): path to t_ref zonal stats indexed by
-            FID.
+        t_ref_raw (float): single value for Tref.
         uhi_max (float): UHI max parameter from documentation.
         base_building_vector_path (str): path to existing vector to copy for
             the target vector that contains at least the field 'type'.
@@ -710,9 +660,6 @@ def calculate_energy_savings(
     LOGGER.info("load t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
-    LOGGER.info("load t_ref_stats")
-    with open(t_ref_stats_pickle_path, 'rb') as t_ref_stats_pickle_file:
-        t_ref_stats = pickle.load(t_ref_stats_pickle_file)
 
     base_building_vector = gdal.OpenEx(
         base_building_vector_path, gdal.OF_VECTOR)
@@ -764,15 +711,6 @@ def calculate_energy_savings(
                     float(pixel_count))
                 target_feature.SetField('mean_t_air', float(t_air_mean))
 
-        t_ref_mean = None
-        if feature_id in t_ref_stats:
-            pixel_count = t_ref_stats[feature_id]['count']
-            if pixel_count > 0:
-                t_ref_mean = (
-                    t_ref_stats[feature_id]['sum'] /
-                    float(pixel_count))
-                target_feature.SetField('mean_t_ref', float(t_ref_mean))
-
         target_type = target_feature.GetField(int(type_field_index))
         if target_type not in energy_consumption_table:
             raise ValueError(
@@ -784,10 +722,10 @@ def calculate_energy_savings(
                     energy_consumption_table_path))
         consumption_increase = float(
             energy_consumption_table[target_type]['consumption'])
-        if t_air_mean and t_ref_mean:
+        if t_air_mean:
             target_feature.SetField(
                 'energy_savings', consumption_increase * (
-                    t_ref_mean-t_air_mean + uhi_max))
+                    t_ref_raw-t_air_mean + uhi_max))
 
         target_building_layer.SetFeature(target_feature)
     target_building_layer.CommitTransaction()
@@ -815,15 +753,13 @@ def pickle_zonal_stats(
         pickle.dump(zonal_stats, pickle_file)
 
 
-def calc_t_air_nomix_op(t_air_ref_array, t_air_ref_nodata, hm_array, uhi_max):
-    """Calculate air temperature T_(air,i)=T_(air,ref)+(1-HM_i)*UHI_max."""
+def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
+    """Calculate air temperature T_(air,i)=T_ref+(1-HM_i)*UHI_max."""
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
     valid_mask = ~(
-        numpy.isclose(hm_array, TARGET_NODATA) |
-        numpy.isclose(t_air_ref_array, t_air_ref_nodata))
-    result[valid_mask] = t_air_ref_array[valid_mask] + (
-        1-hm_array[valid_mask]) * uhi_max
+        numpy.isclose(hm_array, TARGET_NODATA))
+    result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
 
 
