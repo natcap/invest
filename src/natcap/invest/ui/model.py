@@ -6,8 +6,10 @@ from __future__ import absolute_import
 import logging
 import os
 import pprint
+from pkg_resources import parse_version
 import collections
 import json
+import requests
 import textwrap
 import cgi
 import tarfile
@@ -37,10 +39,10 @@ QT_APP = inputs.QT_APP
 
 # How long satus bar messages should be visible, in milliseconds.
 STATUSBAR_MSG_DURATION = 10000
-ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
-                           color='grey')
-ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
-                            color='orange')
+ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left', color='grey')
+ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
+ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
+
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
@@ -1101,6 +1103,45 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setVisible(True)
 
 
+class InvestVersionUpdateDialog(QtWidgets.QDialog):
+    """A dialog for notifying users of the link to a new InVEST version."""
+    def __init__(self, parent=None, latest_version=None):
+        """Initialize the InvestVersionUpdateDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog. None if
+                no parent.
+
+            latest_version (str or None): A string representing the latest
+                version of InVEST.
+
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
+        self.latest_version = latest_version if latest_version else ''
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setWindowTitle('InVEST Version Update')
+
+        self.title_icon = QtWidgets.QLabel()
+        self.title_icon.setPixmap(ICON_UPDATE.pixmap(50, 50))
+        self.title_icon.setAlignment(QtCore.Qt.AlignCenter)
+        self.title = QtWidgets.QWidget()
+        self.title.setLayout(QtWidgets.QHBoxLayout())
+        self.title.layout().addWidget(self.title_icon)
+
+        self.download_link = "https://naturalcapitalproject.stanford.edu/invest/"
+        self.download_qurl = QtCore.QUrl(self.download_link)
+        self.title_label = QtWidgets.QLabel(
+            '<h2>A new InVEST version %s is available</h2>'
+            '<h4>To install a new version, please go to the download page:</h4>'
+            '<a href="%s">%s' % (
+                self.latest_version, self.download_link, self.download_link))
+
+        self.title_label.linkActivated.connect(functools.partial(
+            InVESTModel._activate_link, self.download_qurl))
+        self.title.layout().addWidget(self.title_label)
+        self.layout().addWidget(self.title)
+
+
 class InVESTModel(QtWidgets.QMainWindow):
     """An InVEST model window.
 
@@ -1200,16 +1241,37 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
-        # Format the text links at the top of the window.
+        # Add InVEST version update button and links at the top of the window.
+        self.links_layout = QtWidgets.QHBoxLayout()
+        self.links_layout.setAlignment(QtCore.Qt.AlignRight)
+
+        # Add update button to the left of text links, if a more recent version
+        # is found
+        self.latest_version = self._get_latest_version()
+        self.needs_update = self._needs_update(self.latest_version)
+        if self.needs_update:
+            self.update_button = QtWidgets.QPushButton('')
+            self.update_button.setIcon(ICON_UPDATE)
+            self.update_button.setFixedWidth(25)
+            self.update_button.setToolTip('New InVEST Version Available')
+            self.version_update_dialog = InvestVersionUpdateDialog(
+                self, self.latest_version)
+            self.update_button.clicked.connect(
+                self.version_update_dialog.show)
+            self.links_layout.addWidget(self.update_button)
+
+        # Format the text links
         self.links = QtWidgets.QLabel(parent=self)
-        self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
             '<a href="localdocs">Model documentation</a>',
-            ('<a href="http://forums.naturalcapitalproject.org">'
+            ('<a href="https://community.naturalcapitalproject.org">'
              'Report an issue</a>'))))
-        self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
+        self.links_layout.addWidget(self.links)
+        self.links_widget = QtWidgets.QWidget()
+        self.links_widget.setLayout(self.links_layout)
+        self._central_widget.layout().addWidget(self.links_widget)
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
@@ -1437,12 +1499,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             link = QtCore.QUrl(link)
 
-        LOGGER.debug('Activating link: %s', link)
-        # Qt4 and Qt5 hvae QDesktopServices located in different places.
-        try:
-            QtCore.QDesktopServices.openUrl(link)
-        except AttributeError:
-            QtGui.QDesktopServices.openUrl(link)
+        InVESTModel._activate_link(link)
 
     def _save_datastack_as(self):
         """Save the current set of inputs as a datastack.
@@ -2019,3 +2076,64 @@ class InVESTModel(QtWidgets.QMainWindow):
         path = event.mimeData().urls()[0].toLocalFile()
         self.setStyleSheet('')
         self.load_datastack(path)
+
+    @staticmethod
+    def _activate_link(link):
+        """Activate a QUrl.
+
+        link (QUrl): a QUrl object that is constructed either from a local file
+            path or a URI.
+
+        Returns:
+            None.
+
+        """
+        LOGGER.debug('Activating link: %s', link)
+        # Qt4 and Qt5 have QDesktopServices located in different places.
+        try:
+            QtCore.QDesktopServices.openUrl(link)
+        except AttributeError:
+            QtGui.QDesktopServices.openUrl(link)
+
+    @staticmethod
+    def _get_latest_version():
+        """Get the latest InVEST version string from PyPI page.
+
+        Returns:
+            latest_version (str): if the HTTP request is successfully, or
+                None if not.
+
+        """
+        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
+        try:
+            response = requests.get(
+                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
+            # Get the latest version string
+            latest_version = json.loads(response.text)['info']['version']
+            return latest_version
+
+        # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
+        # exception happens
+        except requests.exceptions.RequestException as err:
+            LOGGER.exception('Exception while requesting PyPI page: %s' % err)
+
+        # If the text doesn't have the 'info' or 'version' keys
+        except KeyError as err:
+            LOGGER.exception('Version string could not be found from PyPI page.'
+                             'Exception raised: %s' % err)
+        return None
+
+    def _needs_update(self, latest_version):
+        """Compare the latest version with current version.
+
+        Returns:
+            True if the latest version is later than the current version, False
+                if the latest version is the same as the current version, or
+                the request to the PyPI page wasn't successful.
+
+        """
+        latest_version = self._get_latest_version()
+        if latest_version:
+            return parse_version(latest_version) > parse_version(
+                natcap.invest.__version__)
+        return False
