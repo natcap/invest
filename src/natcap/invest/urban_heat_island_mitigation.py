@@ -340,8 +340,10 @@ def execute(args):
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
         task_name='pickle t-air stats')
 
+    wbgt_stats_pickle_path = None
+    light_loss_stats_pickle_path = None
+    heavy_loss_stats_pickle_path = None
     if 'do_valuation' in args and bool(args['do_valuation']):
-
         # work productivity
         wbgt_raster_path = os.path.join(
             temporary_working_dir, 'wbgt%s.tif' % file_suffix)
@@ -496,6 +498,12 @@ def calculate_uhi_result_vector(
         t_ref_val (float): reference temperature.
         energy_consumption_vector_path (str): path to vector that contains
             building footprints with the field 'energy_savings'.
+        wbgt_stats_pickle_path (str): path to pickled zonal stats for wbgt.
+            Can be None if no valuation occurred.
+        light_loss_stats_pickle_path (str): path to pickled zonal stats for
+            light work loss. Can be None if no valuation occurred.
+        heavy_loss_stats_pickle_path (str): path to pickled zonal stats for
+            heavy work loss. Can be None if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
                 * average_cc_value
@@ -520,19 +528,25 @@ def calculate_uhi_result_vector(
     with open(cc_stats_pickle_path, 'rb') as cc_stats_pickle_file:
         cc_stats = pickle.load(cc_stats_pickle_file)
 
-    LOGGER.info("load wbgt_stats")
-    with open(wbgt_stats_pickle_path, 'rb') as wbgt_stats_pickle_file:
-        wbgt_stats = pickle.load(wbgt_stats_pickle_file)
+    wbgt_stats = None
+    if wbgt_stats_pickle_path:
+        LOGGER.info("load wbgt_stats")
+        with open(wbgt_stats_pickle_path, 'rb') as wbgt_stats_pickle_file:
+            wbgt_stats = pickle.load(wbgt_stats_pickle_file)
 
-    LOGGER.info("load light_loss_stats")
-    with open(light_loss_stats_pickle_path, 'rb') as (
-            light_loss_stats_pickle_file):
-        light_loss_stats = pickle.load(light_loss_stats_pickle_file)
+    light_loss_stats = None
+    if light_loss_stats_pickle_path:
+        LOGGER.info("load light_loss_stats")
+        with open(light_loss_stats_pickle_path, 'rb') as (
+                light_loss_stats_pickle_file):
+            light_loss_stats = pickle.load(light_loss_stats_pickle_file)
 
-    LOGGER.info("load heavy_loss_stats")
-    with open(heavy_loss_stats_pickle_path, 'rb') as (
-            heavy_loss_stats_pickle_file):
-        heavy_loss_stats = pickle.load(heavy_loss_stats_pickle_file)
+    heavy_loss_stats = None
+    if heavy_loss_stats_pickle_path:
+        LOGGER.info("load heavy_loss_stats")
+        with open(heavy_loss_stats_pickle_path, 'rb') as (
+                heavy_loss_stats_pickle_file):
+            heavy_loss_stats = pickle.load(heavy_loss_stats_pickle_file)
 
     energy_consumption_vector = gdal.OpenEx(
         energy_consumption_vector_path, gdal.OF_VECTOR)
@@ -583,15 +597,14 @@ def calculate_uhi_result_vector(
             feature.SetField(
                 'average_temp_anom', mean_t_air-t_ref_val)
 
-        wbgt = None
-        if feature_id in wbgt_stats and wbgt_stats[feature_id]['count'] > 0:
+        if wbgt_stats and feature_id in wbgt_stats and (
+                wbgt_stats[feature_id]['count'] > 0):
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
             feature.SetField('average_wbgt_value', wbgt)
 
-        light_loss = None
-        if feature_id in light_loss_stats and (
+        if light_loss_stats and feature_id in light_loss_stats and (
                 light_loss_stats[feature_id]['count'] > 0):
             light_loss = (
                 light_loss_stats[feature_id]['sum'] /
@@ -599,8 +612,7 @@ def calculate_uhi_result_vector(
             LOGGER.debug(light_loss)
             feature.SetField('average_light_loss_value', float(light_loss))
 
-        heavy_loss = None
-        if feature_id in heavy_loss_stats and (
+        if heavy_loss_stats and feature_id in heavy_loss_stats and (
                 heavy_loss_stats[feature_id]['count'] > 0):
             heavy_loss = (
                 heavy_loss_stats[feature_id]['sum'] /
