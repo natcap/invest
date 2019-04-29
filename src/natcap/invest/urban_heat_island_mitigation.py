@@ -343,6 +343,7 @@ def execute(args):
     wbgt_stats_pickle_path = None
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
+    energy_consumption_vector_path = None
     if 'do_valuation' in args and bool(args['do_valuation']):
         # work productivity
         wbgt_raster_path = os.path.join(
@@ -496,14 +497,15 @@ def calculate_uhi_result_vector(
     Parameters:
         base_aoi_path (str): path to AOI vector.
         t_ref_val (float): reference temperature.
-        energy_consumption_vector_path (str): path to vector that contains
-            building footprints with the field 'energy_savings'.
         wbgt_stats_pickle_path (str): path to pickled zonal stats for wbgt.
             Can be None if no valuation occurred.
         light_loss_stats_pickle_path (str): path to pickled zonal stats for
             light work loss. Can be None if no valuation occurred.
         heavy_loss_stats_pickle_path (str): path to pickled zonal stats for
             heavy work loss. Can be None if no valuation occurred.
+        energy_consumption_vector_path (str): path to vector that contains
+            building footprints with the field 'energy_savings'. Can be None
+            if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
                 * average_cc_value
@@ -547,21 +549,6 @@ def calculate_uhi_result_vector(
         with open(heavy_loss_stats_pickle_path, 'rb') as (
                 heavy_loss_stats_pickle_file):
             heavy_loss_stats = pickle.load(heavy_loss_stats_pickle_file)
-
-    energy_consumption_vector = gdal.OpenEx(
-        energy_consumption_vector_path, gdal.OF_VECTOR)
-    energy_consumption_layer = energy_consumption_vector.GetLayer()
-
-    LOGGER.info('parsing building footprint geometry')
-    building_shapely_polygon_lookup = dict([
-        (poly_feat.GetFID(),
-         shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
-        for poly_feat in energy_consumption_layer])
-
-    LOGGER.info("constructing building footprint spatial index")
-    poly_rtree_index = rtree.index.Index(
-        [(poly_fid, poly.bounds, None)
-         for poly_fid, poly in building_shapely_polygon_lookup.items()])
 
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
     gpkg_driver = gdal.GetDriverByName('GPKG')
@@ -620,25 +607,43 @@ def calculate_uhi_result_vector(
             LOGGER.debug(heavy_loss)
             feature.SetField('average_heavy_loss_value', float(heavy_loss))
 
-        aoi_geometry = feature.GetGeometryRef()
-        aoi_shapely_geometry = shapely.wkb.loads(aoi_geometry.ExportToWkb())
-        aoi_shapely_geometry_prep = shapely.prepared.prep(
-            aoi_shapely_geometry)
-        avoided_energy_consumption = 0.0
-        for building_id in poly_rtree_index.intersection(
-                aoi_shapely_geometry.bounds):
-            if aoi_shapely_geometry_prep.intersects(
-                    building_shapely_polygon_lookup[building_id]):
-                energy_consumption_value = (
-                    energy_consumption_layer.GetFeature(
-                        building_id).GetField('energy_savings'))
-                if energy_consumption_value:
-                    # this step lets us skip values that might be in nodata
-                    # ranges that we can't help.
-                    avoided_energy_consumption += float(
-                        energy_consumption_value)
-        feature.SetField(
-            'avoided_energy_consumption', avoided_energy_consumption)
+        if energy_consumption_vector_path:
+            energy_consumption_vector = gdal.OpenEx(
+                energy_consumption_vector_path, gdal.OF_VECTOR)
+            energy_consumption_layer = energy_consumption_vector.GetLayer()
+
+            LOGGER.info('parsing building footprint geometry')
+            building_shapely_polygon_lookup = dict([
+                (poly_feat.GetFID(),
+                 shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
+                for poly_feat in energy_consumption_layer])
+
+            LOGGER.info("constructing building footprint spatial index")
+            poly_rtree_index = rtree.index.Index(
+                [(poly_fid, poly.bounds, None)
+                 for poly_fid, poly in
+                 building_shapely_polygon_lookup.items()])
+
+            aoi_geometry = feature.GetGeometryRef()
+            aoi_shapely_geometry = shapely.wkb.loads(
+                aoi_geometry.ExportToWkb())
+            aoi_shapely_geometry_prep = shapely.prepared.prep(
+                aoi_shapely_geometry)
+            avoided_energy_consumption = 0.0
+            for building_id in poly_rtree_index.intersection(
+                    aoi_shapely_geometry.bounds):
+                if aoi_shapely_geometry_prep.intersects(
+                        building_shapely_polygon_lookup[building_id]):
+                    energy_consumption_value = (
+                        energy_consumption_layer.GetFeature(
+                            building_id).GetField('energy_savings'))
+                    if energy_consumption_value:
+                        # this step lets us skip values that might be in
+                        # nodata ranges that we can't help.
+                        avoided_energy_consumption += float(
+                            energy_consumption_value)
+            feature.SetField(
+                'avoided_energy_consumption', avoided_energy_consumption)
 
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
