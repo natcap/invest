@@ -1,5 +1,6 @@
 """Urban Heat Island Mitigation model."""
 from __future__ import absolute_import
+import shutil
 import tempfile
 import math
 import logging
@@ -1165,3 +1166,4 @@ def convolve_2d_by_exponential(
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
         target_convolve_raster_path)
+    shutil.rmtree(temporary_working_dir)
