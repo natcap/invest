@@ -1,5 +1,6 @@
 """Urban Heat Island Mitigation model."""
 from __future__ import absolute_import
+import tempfile
 import math
 import logging
 import os
@@ -90,7 +91,10 @@ def execute(args):
     cc_weight_eti = cc_weight_eti_raw / (
         cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
 
-    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
+    n_workers = -1
+    if 'n_workers' in args:
+        n_workers = int(args['n_workers'])
+    task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
 
     # align all the input rasters.
     aligned_lulc_raster_path = os.path.join(
@@ -138,34 +142,19 @@ def execute(args):
             task_name='reclassify to %s' % prop)
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
-    green_area_average_kernel_path = os.path.join(
-        temporary_working_dir,
-        'green_area_exponential_decay_kernel%s.tif' % file_suffix)
     green_area_decay_kernel_distance = int(numpy.round(
-        float(args['green_area_cooling_distance']) / cell_size))
-    green_area_kernel_task = task_graph.add_task(
-        func=utils.exponential_decay_kernel_raster,
-        args=(green_area_decay_kernel_distance,
-              green_area_average_kernel_path),
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
-        target_path_list=[green_area_average_kernel_path],
-        task_name='T air averaging kernel')
-
+     float(args['green_area_cooling_distance']) / cell_size))
     cc_park_raster_path = os.path.join(
         temporary_working_dir, 'cc_park%s.tif' % file_suffix)
     cc_park_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
+        func=convolve_2d_by_exponential,
         args=(
-            (task_path_prop_map['green_area'][1], 1),
-            (green_area_average_kernel_path, 1),
+            green_area_decay_kernel_distance,
+            task_path_prop_map['green_area'][1],
             cc_park_raster_path),
-        kwargs={
-            'working_dir': temporary_working_dir,
-            'ignore_nodata': True},
         target_path_list=[cc_park_raster_path],
         dependent_task_list=[
-            task_path_prop_map['green_area'][0], green_area_kernel_task],
+            task_path_prop_map['green_area'][0]],
         task_name='calculate T air')
 
     # calculate a raster that's the area
@@ -214,6 +203,7 @@ def execute(args):
     ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
     ref_eto_band = ref_eto_raster.GetRasterBand(1)
     _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
+    ref_eto_max = numpy.round(ref_eto_max, decimals=9)
     ref_eto_band = None
     ref_eto_raster = None
 
@@ -280,35 +270,18 @@ def execute(args):
         dependent_task_list=[hm_task, align_task],
         task_name='calculate T air nomix')
 
-    t_air_average_kernel_path = os.path.join(
-        temporary_working_dir,
-        't_air_exponential_decay_kernel%s.tif' % file_suffix)
     decay_kernel_distance = int(numpy.round(
         float(args['t_air_average_radius']) / cell_size))
-    t_air_kernel_task = task_graph.add_task(
-        func=utils.exponential_decay_kernel_raster,
-        args=(decay_kernel_distance, t_air_average_kernel_path),
-        target_path_list=[t_air_average_kernel_path],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
-        dependent_task_list=[green_area_kernel_task],
-        task_name='T air averaging kernel')
-
     t_air_raster_path = os.path.join(
         args['workspace_dir'], 'T_air%s.tif' % file_suffix)
-
     t_air_task = task_graph.add_task(
-        func=pygeoprocessing.convolve_2d,
+        func=convolve_2d_by_exponential,
         args=(
-            (t_air_nomix_raster_path, 1), (t_air_average_kernel_path, 1),
+            decay_kernel_distance,
+            t_air_nomix_raster_path,
             t_air_raster_path),
-        kwargs={
-            'working_dir': temporary_working_dir,
-            'ignore_nodata': True},
         target_path_list=[t_air_raster_path],
-        hash_algorithm='md5',
-        copy_duplicate_artifact=True,
-        dependent_task_list=[t_air_nomix_task, t_air_kernel_task],
+        dependent_task_list=[t_air_nomix_task],
         task_name='calculate T air')
 
     intermediate_aoi_vector_path = os.path.join(
@@ -324,7 +297,7 @@ def execute(args):
 
     cc_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 'cc_ref_aoi_stats.pickle')
-    pickle_cc_aoi_stats_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path,
@@ -335,7 +308,7 @@ def execute(args):
 
     t_air_aoi_stats_pickle_path = os.path.join(
         temporary_working_dir, 't_air_aoi_stats.pickle')
-    pickle_t_air_aoi_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
             intermediate_aoi_vector_path,
@@ -363,10 +336,12 @@ def execute(args):
 
         light_work_temps = [31.5, 32, 32.5]
         light_work_loss_raster_path = os.path.join(
-            temporary_working_dir, 'light_work_loss_percent%s.tif' % file_suffix)
+            temporary_working_dir,
+            'light_work_loss_percent%s.tif' % file_suffix)
         heavy_work_temps = [27.5, 29.5, 31.5]
         heavy_work_loss_raster_path = os.path.join(
-            temporary_working_dir, 'heavy_work_loss_percent%s.tif' % file_suffix)
+            temporary_working_dir,
+            'heavy_work_loss_percent%s.tif' % file_suffix)
 
         loss_task_path_map = {}
         for loss_type, temp_map, loss_raster_path in [
@@ -401,12 +376,13 @@ def execute(args):
                 intermediate_building_vector_path,
                 t_air_raster_path, t_air_stats_pickle_path),
             target_path_list=[t_air_stats_pickle_path],
-            dependent_task_list=[t_air_task, intermediate_building_vector_task],
+            dependent_task_list=[
+                t_air_task, intermediate_building_vector_task],
             task_name='pickle t-air stats')
 
         energy_consumption_vector_path = os.path.join(
             args['workspace_dir'], 'buildings_with_stats%s.gpkg' % file_suffix)
-        calculate_energy_savings_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=calculate_energy_savings,
             args=(
                 t_air_stats_pickle_path, t_ref_raw,
@@ -479,6 +455,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
 
 def calculate_uhi_result_vector(
         base_aoi_path, t_ref_val, t_air_stats_pickle_path,
@@ -1245,3 +1222,29 @@ def _invoke_timed_callback(
         callback_lambda()
         return current_time
     return reference_time
+
+
+def convolve_2d_by_exponential(
+        decay_kernel_distance, signal_raster_path,
+        target_convolve_raster_path):
+    """Convolve signal by an exponential decay of a given radius.
+
+    Parameters:
+        decay_kernel_distance (float): radius of 1/e cutoff of decay kernel
+            raster in pixels.
+        signal_rater_path (str): path to single band signal raster.
+        target_convolve_raster_path (str): path to convolved raster.
+
+    Returns:
+        None.
+
+    """
+    temporary_working_dir = tempfile.mkdtemp(
+        dir=os.path.dirname(target_convolve_raster_path))
+    exponential_kernel_path = os.path.join(
+        temporary_working_dir, 'exponential_decay_kernel.tif')
+    utils.exponential_decay_kernel_raster(
+        decay_kernel_distance, exponential_kernel_path)
+    pygeoprocessing.convolve_2d(
+        (signal_raster_path, 1), (exponential_kernel_path, 1),
+        target_convolve_raster_path)
