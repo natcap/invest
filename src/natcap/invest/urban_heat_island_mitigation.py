@@ -417,7 +417,7 @@ def execute(args):
         # pickle WBGI
         wbgt_stats_pickle_path = os.path.join(
             temporary_working_dir, 'wbgt_stats.pickle')
-        pickle_wbgt_stats_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
                 intermediate_aoi_vector_path,
@@ -429,7 +429,7 @@ def execute(args):
         # pickle light loss
         light_loss_stats_pickle_path = os.path.join(
             temporary_working_dir, 'light_loss_stats.pickle')
-        pickle_light_loss_stats_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
                 intermediate_aoi_vector_path,
@@ -442,7 +442,7 @@ def execute(args):
 
         heavy_loss_stats_pickle_path = os.path.join(
             temporary_working_dir, 'heavy_loss_stats.pickle')
-        pickle_heavy_loss_stats_task = task_graph.add_task(
+        _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
                 intermediate_aoi_vector_path,
@@ -453,10 +453,14 @@ def execute(args):
                 intermediate_uhi_result_vector_task],
             task_name='pickle heavy_loss stats')
 
-    # pickle heavy loss
+    # final reporting can't be done until everything else is complete so
+    # stop here
+    task_graph.close()
+    task_graph.join()
+
     target_uhi_vector_path = os.path.join(
         args['workspace_dir'], 'uhi_results%s.gpkg' % file_suffix)
-    calculate_uhi_result_task = task_graph.add_task(
+    _ = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
             intermediate_aoi_vector_path,
@@ -468,15 +472,7 @@ def execute(args):
             energy_consumption_vector_path,
             target_uhi_vector_path),
         target_path_list=[target_uhi_vector_path],
-        dependent_task_list=[
-            pickle_t_air_aoi_task, pickle_cc_aoi_stats_task,
-            calculate_energy_savings_task,
-            intermediate_uhi_result_vector_task, pickle_wbgt_stats_task,
-            pickle_light_loss_stats_task, pickle_heavy_loss_stats_task],
         task_name='calculate uhi results')
-
-    task_graph.close()
-    task_graph.join()
 
 
 def calculate_uhi_result_vector(
