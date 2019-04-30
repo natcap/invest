@@ -828,15 +828,13 @@ def validate(args, limit_to=None):
 
     required_keys = [
         'workspace_dir',
-        't_obs_raster_path',
+        't_ref',
         'lulc_raster_path',
         'ref_eto_raster_path',
         'aoi_vector_path',
         'biophysical_table_path',
         'green_area_cooling_distance',
         'uhi_max',
-        'building_vector_path',
-        'energy_consumption_table_path',
         'cc_weight_shade',
         'cc_weight_albedo',
         'cc_weight_eti',
@@ -873,91 +871,10 @@ def validate(args, limit_to=None):
             no_float_value_list.append(weight_key)
     if no_float_value_list:
         validation_error_list.append(
-            no_float_value_list, 'parameter is not a number')
+            (no_float_value_list, 'parameter is not a number'))
     if negative_value_list:
         validation_error_list.append(
-            negative_value_list, 'value should be positive')
-
-    file_type_list = [
-        ('t_obs_raster_path', 'raster'),
-        ('lulc_raster_path', 'raster'),
-        ('ref_eto_raster_path', 'raster'),
-        ('aoi_vector_path', 'vector'),
-        ('building_vector_path', 'vector'),
-        ('biophysical_table_path', 'table'),
-        ('energy_consumption_table_path', 'table'),
-        ]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and key in required_keys):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.Open(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-        if limit_to in ['biophysical_table_path', None]:
-            try:
-                biophysical_table = pygeoprocessing.build_lookup_from_csv(
-                    args['biophysical_table_path'], 'lucode')
-            except ValueError as e:
-                validation_error_list(
-                    [key], 'lucode might not be defined (%s)' % e)
-            table_columns = next(biophysical_table.keys())
-            for column_id in ['shade', 'kc', 'albedo']:
-                if column_id not in table_columns:
-                    validation_error_list(
-                        [key], '"%s" expected but not a header this table' % (
-                            column_id))
-        if limit_to in ['energy_consumption_table_path', None]:
-            try:
-                energy_consumption_table = (
-                    pygeoprocessing.build_lookup_from_csv(
-                        args['energy_consumption_table_path'], 'type'))
-            except ValueError as e:
-                validation_error_list(
-                    [key], 'type might not be defined (%s)' % e)
-            table_columns = next(energy_consumption_table.keys())
-            for column_id in ['consumption']:
-                if column_id not in table_columns:
-                    validation_error_list(
-                        [key], '"%s" expected but not a header this table')
-        if limit_to in ['energy_consumption_table_path', None]:
-            building_vector = gdal.OpenEx(
-                args['building_vector_path'], gdal.OF_VECTOR)
-            building_layer = building_vector.GetLayer()
-            building_layer_defn = building_layer.GetLayerDefn()
-            for field_id in ['type', 'consumption']:
-                type_index = building_layer_defn.GetFieldIndex('type')
-                if type_index < 0:
-                    validation_error_list(
-                        [key], '"type" field expected in %s '
-                        'but not defined' % (args['building_vector_path']))
-                else:
-                    for feature in building_layer:
-                        raw_val = feature.GetField(type_index)
-                        try:
-                            _ = float(raw_val)
-                        except TypeError:
-                            validation_error_list(
-                                [key],
-                                'feature "type" fields of %s should be '
-                                'floating point numbers, but at least one is '
-                                'not. (raw val: %s)' % (
-                                    args['building_vector_path'], raw_val))
+            (negative_value_list, 'value should be positive'))
 
     return validation_error_list
 

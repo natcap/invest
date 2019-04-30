@@ -141,9 +141,9 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         }
         if self.valuation_container.value():
             args[self.energy_consumption_table_path.args_key] = (
-                self.energy_consumption_table_path.value()),
+                self.energy_consumption_table_path.value())
             args[self.avg_rel_humidity.args_key] = (
-                self.avg_rel_humidity.value()),
+                self.avg_rel_humidity.value())
             args[self.building_vector_path.args_key] = (
                 self.building_vector_path.value())
 
