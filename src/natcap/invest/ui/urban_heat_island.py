@@ -71,7 +71,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
         self.green_area_cooling_distance.set_value("1000")
 
         self.valuation_container = inputs.Container(
-            args_key=u'do_valuation_container',
+            args_key=u'do_valuation',
             expandable=True,
             expanded=True,
             interactive=True,

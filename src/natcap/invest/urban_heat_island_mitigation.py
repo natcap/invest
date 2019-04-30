@@ -148,6 +148,7 @@ def execute(args):
         args=(green_area_decay_kernel_distance,
               green_area_average_kernel_path),
         hash_algorithm='md5',
+        copy_duplicate_artifact=True,
         target_path_list=[green_area_average_kernel_path],
         task_name='T air averaging kernel')
 
@@ -288,6 +289,9 @@ def execute(args):
         func=utils.exponential_decay_kernel_raster,
         args=(decay_kernel_distance, t_air_average_kernel_path),
         target_path_list=[t_air_average_kernel_path],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[green_area_kernel_task],
         task_name='T air averaging kernel')
 
     t_air_raster_path = os.path.join(
@@ -455,7 +459,6 @@ def execute(args):
 
     # final reporting can't be done until everything else is complete so
     # stop here
-    task_graph.close()
     task_graph.join()
 
     target_uhi_vector_path = os.path.join(
@@ -474,6 +477,8 @@ def execute(args):
         target_path_list=[target_uhi_vector_path],
         task_name='calculate uhi results')
 
+    task_graph.close()
+    task_graph.join()
 
 def calculate_uhi_result_vector(
         base_aoi_path, t_ref_val, t_air_stats_pickle_path,
