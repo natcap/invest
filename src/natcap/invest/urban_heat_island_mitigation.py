@@ -1165,5 +1165,5 @@ def convolve_2d_by_exponential(
         decay_kernel_distance, exponential_kernel_path)
     pygeoprocessing.convolve_2d(
         (signal_raster_path, 1), (exponential_kernel_path, 1),
-        target_convolve_raster_path)
+        target_convolve_raster_path, working_dir=temporary_working_dir)
     shutil.rmtree(temporary_working_dir)
