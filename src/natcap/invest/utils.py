@@ -3,7 +3,6 @@ import math
 import os
 import contextlib
 import logging
-import threading
 import tempfile
 import shutil
 from datetime import datetime
@@ -16,8 +15,10 @@ from osgeo import osr
 import pygeoprocessing
 
 LOGGER = logging.getLogger(__name__)
-LOG_FMT = "%(asctime)s %(name)-18s %(levelname)-8s %(message)s"
-DATE_FMT = "%m/%d/%Y %H:%M:%S "
+LOG_FMT = (
+    "%(asctime)s "
+    "%(module)s.%(funcName)s(%(lineno)d) "
+    "%(levelname)s %(message)s")
 
 # GDAL has 5 error levels, python's logging has 6.  We skip logging.INFO.
 # A dict clarifies the mapping between levels.
@@ -146,7 +147,7 @@ class ThreadFilter(logging.Filter):
 
 @contextlib.contextmanager
 def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
-                log_fmt=LOG_FMT, date_fmt=DATE_FMT):
+                log_fmt=LOG_FMT, date_fmt=None):
     """Log all messages within this context to a file.
 
     Parameters:
@@ -162,8 +163,8 @@ def log_to_file(logfile, exclude_threads=None, logging_level=logging.NOTSET,
             will cause all logging to be captured.
         log_fmt=LOG_FMT (string): The logging format string to use.  If not
             provided, ``utils.LOG_FMT`` will be used.
-        date_fmt=DATE_FMT (string): The logging date format string to use.
-            If not provided, ``utils.DATE_FMT`` will be used.
+        date_fmt (string): The logging date format string to use.
+            If not provided, ISO8601 format will be used.
 
 
     Yields:
@@ -338,7 +339,7 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     kernel_dataset.FlushCache()
 
     for block_data, kernel_block in pygeoprocessing.iterblocks(
-            kernel_filepath):
+            (kernel_filepath, 1)):
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])
@@ -489,3 +490,27 @@ def make_directories(directory_list):
         except OSError:
             if not os.path.isdir(path):
                 raise
+
+
+def mean_pixel_size_and_area(pixel_size_tuple):
+    """Convert to mean and raise Exception if they are not close.
+
+    Parameter:
+        pixel_size_tuple (tuple): a 2 tuple indicating the x/y size of a
+            pixel.
+
+    Returns:
+        tuple of (mean absolute average of pixel_size, area of pixel size)
+
+    Raises:
+        ValueError if the dimensions of pixel_size_tuple are not almost
+            square.
+
+    """
+    x_size, y_size = abs(pixel_size_tuple[0]), abs(pixel_size_tuple[1])
+    if not numpy.isclose(x_size, y_size):
+        raise ValueError(
+            "pixel size is not square. dimensions: %s" % repr(
+                pixel_size_tuple))
+
+    return (x_size, x_size*y_size)

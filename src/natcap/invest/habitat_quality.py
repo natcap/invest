@@ -91,7 +91,7 @@ def execute(args):
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = sensitivity_dict[0].keys()
+    sens_header_list = sensitivity_dict.items()[0][1].keys()
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
         h for h in required_sens_header_list if h not in sens_header_list]
@@ -103,7 +103,7 @@ def execute(args):
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
     for threat in threat_dict:
-        if threat not in sens_header_list:
+        if 'L_' + threat not in sens_header_list:
             missing_threat_header_list = (
                 set(sens_header_list) - set(required_sens_header_list))
             raise ValueError(
@@ -143,8 +143,18 @@ def execute(args):
                         '.tif', '_aligned.tif')))
 
             # save unique codes to check if it's missing in sensitivity table
-            for _, lulc_block in pygeoprocessing.iterblocks(lulc_path):
+            for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
                 raster_unique_lucodes.update(numpy.unique(lulc_block))
+
+            # Remove the nodata value from the set of landuser codes.
+            nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+            try:
+                raster_unique_lucodes.remove(nodata)
+            except KeyError:
+                # KeyError when the nodata value was not encountered in the
+                # raster's pixel values.  Same result when nodata value is
+                # None.
+                pass
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -173,9 +183,10 @@ def execute(args):
     missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
     if missing_lucodes:
         raise ValueError(
-            'The following land cover codes were found in the sensitivity '
-            'table. Check your sensitivity table to see if they are missing: '
-            '%s. \n\n' % ', '.join([str(x) for x in sorted(missing_lucodes)]))
+            'The following land cover codes were found in your landcover rasters '
+            'but not in your sensitivity table. Check your sensitivity table '
+            'to see if they are missing: %s. \n\n' %
+            ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
@@ -261,7 +272,6 @@ def execute(args):
 
         # adjust each threat/threat raster for distance, weight, and access
         for threat, threat_data in threat_dict.iteritems():
-
             LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
                         (threat, threat_data))
 
@@ -318,7 +328,7 @@ def execute(args):
             sens_raster_path = os.path.join(
                 inter_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
             map_raster_to_dict_values(
-                lulc_path, sens_raster_path, sensitivity_dict, threat,
+                lulc_path, sens_raster_path, sensitivity_dict, 'L_' + threat,
                 _OUT_NODATA, values_required=True)
 
             # get the normalized weight for each threat
@@ -592,7 +602,7 @@ def raster_pixel_count(raster_path):
     """
     nodata = pygeoprocessing.get_raster_info(raster_path)['nodata'][0]
     counts = collections.defaultdict(int)
-    for _, raster_block in pygeoprocessing.iterblocks(raster_path):
+    for _, raster_block in pygeoprocessing.iterblocks((raster_path, 1)):
         for value, count in zip(
                 *numpy.unique(raster_block, return_counts=True)):
             if value == nodata:

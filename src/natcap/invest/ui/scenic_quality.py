@@ -69,10 +69,13 @@ class ScenicQuality(model.InVESTModel):
             label=u'Refractivity Coefficient (Required)',
             validator=self.validator)
         self.general_tab.add_input(self.refraction)
-        self.valuation_tab = inputs.Container(
+        self.valuation_container = inputs.Container(
+            args_key=u'do_valuation',
+            expandable=True,
+            expanded=False,
             interactive=True,
             label=u'Valuation')
-        self.add_input(self.valuation_tab)
+        self.add_input(self.valuation_container)
         self.valuation_function = inputs.Dropdown(
             args_key=u'valuation_function',
             helptext=(
@@ -83,21 +86,21 @@ class ScenicQuality(model.InVESTModel):
             options=[u'linear: a + bx',
                      u'logarithmic: a + b log(x+1)',
                      u'exponential: a * e^(-bx)'])
-        self.valuation_tab.add_input(self.valuation_function)
+        self.valuation_container.add_input(self.valuation_function)
         self.a_coefficient = inputs.Text(
             args_key=u'a_coef',
             helptext=(
                 u"First coefficient used by the valuation function"),
-            label=u"'a' Coefficient",
+            label=u"'a' Coefficient (Required)",
             validator=self.validator)
-        self.valuation_tab.add_input(self.a_coefficient)
+        self.valuation_container.add_input(self.a_coefficient)
         self.b_coefficient = inputs.Text(
             args_key=u'b_coef',
             helptext=(
                 u"Second coefficient used by the valuation function"),
-            label=u"'b' Coefficient",
+            label=u"'b' Coefficient (Required)",
             validator=self.validator)
-        self.valuation_tab.add_input(self.b_coefficient)
+        self.valuation_container.add_input(self.b_coefficient)
         self.max_valuation_radius = inputs.Text(
             args_key=u'max_valuation_radius',
             helptext=(
@@ -106,17 +109,17 @@ class ScenicQuality(model.InVESTModel):
                 u"radius 'r' (f(r)>=0)."),
             label=u'Maximum Valuation Radius (meters) (Required)',
             validator=self.validator)
-        self.valuation_tab.add_input(self.max_valuation_radius)
+        self.valuation_container.add_input(self.max_valuation_radius)
 
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.n_workers.args_key: self.n_workers.value(),
             self.aoi_path.args_key: self.aoi_path.value(),
             self.structure_path.args_key: self.structure_path.value(),
             self.dem_path.args_key: self.dem_path.value(),
             self.refraction.args_key: self.refraction.value(),
+            self.valuation_container.args_key: self.valuation_container.value(),
             self.valuation_function.args_key: self.valuation_function.value(),
             self.a_coefficient.args_key: self.a_coefficient.value(),
             self.b_coefficient.args_key: self.b_coefficient.value(),

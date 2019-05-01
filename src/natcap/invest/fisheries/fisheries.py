@@ -1,5 +1,5 @@
 '''
-The Fisheries module contains the high-level code for excuting the fisheries
+The Fisheries module contains the high-level code for executing the fisheries
 model
 '''
 from __future__ import absolute_import
@@ -7,7 +7,6 @@ import logging
 import csv
 import os
 
-from osgeo import ogr
 from osgeo import gdal
 
 from . import fisheries_io as io
@@ -22,86 +21,90 @@ LABEL = 'Fisheries'
 def execute(args, create_outputs=True):
     """Fisheries.
 
-    :param str args['workspace_dir']: location into which all intermediate
+    args['workspace_dir'] (str): location into which all intermediate
         and output files should be placed.
 
-    :param str args['results_suffix']: a string to append to output filenames
+    args['results_suffix'] (str): a string to append to output filenames
 
-    :param str args['aoi_uri']: location of shapefile which will be used as
-        subregions for calculation. Each region must conatin a 'Name'
+    args['aoi_vector_path'] (str): location of shapefile which will be
+        used as subregions for calculation. Each region must contain a 'Name'
         attribute (case-sensitive) matching the given name in the population
         parameters csv file.
 
-    :param int args['timesteps']: represents the number of time steps that
+    args['timesteps'] (int): represents the number of time steps that
         the user desires the model to run.
 
-    :param str args['population_type']: specifies whether the model
+    args['population_type'] (str): specifies whether the model
         is age-specific or stage-specific. Options will be either "Age
         Specific" or "Stage Specific" and will change which equation is
         used in modeling growth.
 
-    :param str args['sexsp']: specifies whether or not the age and stage
+    args['sexsp'] (str): specifies whether or not the age and stage
         classes are distinguished by sex.
 
-    :param str args['harvest_units']: specifies how the user wants to get
+    args['harvest_units'] (str): specifies how the user wants to get
         the harvest data. Options are either "Individuals" or "Weight", and
         will change the harvest equation used in core. (Required if
         args['val_cont'] is True)
 
-    :param bool args['do_batch']: specifies whether program will perform a
+    args['do_batch'] (bool): specifies whether program will perform a
         single model run or a batch (set) of model runs.
 
-    :param str args['population_csv_uri']: location of the population
+    args['population_csv_path'] (str): location of the population
         parameters csv. This will contain all age and stage specific
         parameters. (Required if args['do_batch'] is False)
 
-    :param str args['population_csv_dir']: location of the directory that
+    args['population_csv_dir'] (str): location of the directory that
         contains the Population Parameters CSV files for batch processing
         (Required if args['do_batch'] is True)
 
-    :param str args['spawn_units']: (description)
+    args['spawn_units'] (str): specifies whether the spawner abundance used in
+        the recruitment function should be calculated in terms of number of
+        individuals ('Individuals') or in terms of biomass ('Weight'). If
+        'Weight' is selected, the user must provide a 'Weight' vector alongside
+        the survival matrix in the Population Parameters CSV File. The 'alpha'
+        and 'beta' parameters provided by the user should correspond to the
+        selected choice.
 
-    :param float args['total_init_recruits']: represents the initial number
-        of recruits that will be used in calculation of population on a per
-        area basis.
+    args['total_init_recruits'] (float): represents the initial number of
+        recruits that will be used in calculation of population on a per area
+        basis.
 
-    :param str args['recruitment_type']: Name corresponding to one of the
-        built-in recruitment functions {'Beverton-Holt', 'Ricker', 'Fecundity',
-        Fixed}, or 'Other', meaning that the user is passing in their own
-        recruitment function as an anonymous python function via the
-        optional dictionary argument 'recruitment_func'.
+    args['recruitment_type'] (str): name corresponding to one of the built-in
+        recruitment functions {'Beverton-Holt', 'Ricker', 'Fecundity', Fixed},
+        or 'Other', meaning that the user is passing in their own recruitment
+        function as an anonymous python function via the optional dictionary
+        argument 'recruitment_func'.
 
-    :param function args['recruitment_func']: Required if
-        args['recruitment_type'] is set to 'Other'.  See below for
-        instructions on how to create a user-defined recruitment function.
+    args['recruitment_func'] (function): Required if args['recruitment_type']
+        is set to 'Other'.  See below for instructions on how to create a user-
+        defined recruitment function.
 
-    :param float args['alpha']: must exist within args for BH or Ricker
+    args['alpha'] (float): must exist within args for BH or Ricker Recruitment.
+        Parameter that will be used in calculation of recruitment.
+
+    args['beta'] (float): must exist within args for BH or Ricker Recruitment.
+        Parameter that will be used in calculation of recruitment.
+
+    args['total_recur_recruits'] (float): must exist within args for Fixed
         Recruitment. Parameter that will be used in calculation of recruitment.
 
-    :param float args['beta']: must exist within args for BH or Ricker
-        Recruitment. Parameter that will be used in calculation of recruitment.
+    args['migr_cont'] (bool): if True, model uses migration.
 
-    :param float args['total_recur_recruits']: must exist within args for
-        Fixed Recruitment. Parameter that will be used in calculation of
-        recruitment.
+    args['migration_dir'] (str): if this parameter exists, it means migration
+        is desired. This is  the location of the parameters folder containing
+        files for migration. There should be one file for every age class which
+        migrates. (Required if args['migr_cont'] is True)
 
-    :param bool args['migr_cont']: if True, model uses migration
+    args['val_cont'] (bool): if True, model computes valuation.
 
-    :param str args['migration_dir']: if this parameter exists, it means
-        migration is desired. This is  the location of the parameters
-        folder containing files for migration. There should be one file for
-        every age class which migrates. (Required if args['migr_cont'] is
-        True)
+    args['frac_post_process'] (float): represents the fraction of the species
+        remaining after processing of the whole carcass is complete. This will
+        exist only if valuation is desired for the particular species.
+        (Required if args['val_cont'] is True)
 
-    :param bool args['val_cont']: if True, model computes valuation
-
-    :param float args['frac_post_process']: represents the fraction of the
-        species remaining after processing of the whole carcass is
-        complete. This will exist only if valuation is desired for the
-        particular species. (Required if args['val_cont'] is True)
-
-    :param float args['unit_price']: represents the price for a single unit
-        of harvest. Exists only if valuation is desired. (Required if
+    args['unit_price'] (float): represents the price for a single unit of
+        harvest. Exists only if valuation is desired. (Required if
         args['val_cont'] is True)
 
     Example Args::
@@ -109,13 +112,13 @@ def execute(args, create_outputs=True):
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
             'results_suffix': 'scenario_name',
-            'aoi_uri': 'path/to/aoi_uri',
+            'aoi_vector_path': 'path/to/aoi_vector_path',
             'total_timesteps': 100,
             'population_type': 'Stage-Based',
             'sexsp': 'Yes',
             'harvest_units': 'Individuals',
             'do_batch': False,
-            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'population_csv_dir': '',
             'spawn_units': 'Weight',
             'total_init_recruits': 100000.0,
@@ -132,17 +135,23 @@ def execute(args, create_outputs=True):
 
     **Creating a User-Defined Recruitment Function**
 
-    An optional argument has been created in the Fisheries Model to allow users proficient in Python to pass their own recruitment function into the program via the args dictionary.
+    An optional argument has been created in the Fisheries Model to allow users
+    proficient in Python to pass their own recruitment function into the
+    program via the args dictionary.
 
-    Using the Beverton-Holt recruitment function as an example, here's how a user might create and pass in their own recruitment function::
+    Using the Beverton-Holt recruitment function as an example, here's how a
+    user might create and pass in their own recruitment function::
 
         import natcap.invest
         import numpy as np
 
         # define input data
-        Matu = np.array([...])  # the Maturity vector in the Population Parameters File
-        Weight = np.array([...])  # the Weight vector in the Population Parameters File
-        LarvDisp = np.array([...])  # the LarvalDispersal vector in the Population Parameters File
+        Matu = np.array([...])  # the Maturity vector in the Population
+            Parameters File
+        Weight = np.array([...])  # the Weight vector in the Population
+            Parameters File
+        LarvDisp = np.array([...])  # the LarvalDispersal vector in the
+            Population Parameters File
         alpha = 2.0  # scalar value
         beta = 10.0  # scalar value
         sexsp = 2   # 1 = not sex-specific, 2 = sex-specific
@@ -159,17 +168,37 @@ def execute(args, create_outputs=True):
         # fill out args dictionary
         args = {}
         # ... define other arguments ...
-        args['recruitment_type'] = 'Other'  # lets program know to use user-defined function
-        args['recruitment_func'] = rec_func_BH  # pass recruitment function as 'anonymous' Python function
+        args['recruitment_type'] = 'Other'  # lets program know to use user-
+            defined function
+        args['recruitment_func'] = rec_func_BH  # pass recruitment function as
+            'anonymous' Python function
 
         # run model
         natcap.invest.fisheries.fisheries.execute(args)
 
     Conditions that a new recruitment function must meet to run properly:
 
-    + **The function must accept as an argument:** a single numpy three-dimensional array (N_prev) representing the state of the population at the previous time step. N_prev has three dimensions: the indices of the first dimension correspond to the region (must be in same order as provided in the Population Parameters File), the indices of the second dimension represent the sex if it is specific (i.e. two indices representing female, then male if the model is 'sex-specific', else just a single zero index representing the female and male populations aggregated together), and  the indicies of the third dimension represent age/stage in ascending order.
+    + **The function must accept as an argument:** a single numpy three-
+        dimensional array (N_prev) representing the state of the population at
+        the previous time step. N_prev has three dimensions: the indices of the
+        first dimension correspond to the region (must be in same order as
+        provided in the Population Parameters File), the indices of the second
+        dimension represent the sex if it is specific (i.e. two indices
+        representing female, then male if the model is 'sex-specific', else
+        just a single zero index representing the female and male populations
+        aggregated together), and the indicies of the third dimension represent
+        age/stage in ascending order.
 
-    + **The function must return:** a tuple of two values. The first value (N_0) being a single numpy one-dimensional array representing the youngest age of the population for the next time step. The indices of the array correspond to the regions of the population (outputted in same order as provided). If the model is sex-specific, it is currently assumed that males and females are produced in equal number and that the returned array has been already been divided by 2 in the recruitment function.   The second value (spawners) is the number or weight of the spawners created by the population from the previous time step, provided as a scalar float value (non-negative).
+    + **The function must return:** a tuple of two values. The first value
+        (N_0) being a single numpy one-dimensional array representing the
+        youngest age of the population for the next time step. The indices of
+        the array correspond to the regions of the population (outputted in
+        same order as provided). If the model is sex-specific, it is currently
+        assumed that males and females are produced in equal number and that
+        the returned array has been already been divided by 2 in the
+        recruitment function. The second value (spawners) is the number or
+        weight of the spawners created by the population from the previous time
+        step, provided as a scalar float value (non-negative).
 
     Example of How Recruitment Function Operates within Fisheries Model::
 
@@ -184,8 +213,8 @@ def execute(args, create_outputs=True):
 
         # output data - where N_0 contains information about the youngest
         #     age/stage of the population for the next time step:
-        N_0_x = [region0-age0, region1-age0] # if sex-specific, rec_func should divide by two before returning
-        type(spawners) is float
+        N_0_x = [region0-age0, region1-age0] # if sex-specific, rec_func should
+            divide by two before returning type(spawners) is float
 
     """
     args = args.copy()
@@ -237,32 +266,50 @@ def validate(args, limit_to=None):
 
     missing_keys = set([])
     keys_with_empty_values = set([])
-    for key, required in (('workspace_dir', True),
-                          ('results_suffix', False),
-                          ('aoi_uri', False),
-                          ('total_timesteps', True),
-                          ('population_type', True),
-                          ('sexsp', True),
-                          ('harvest_units', True),
-                          ('population_csv_uri', False),
-                          ('population_csv_dir', False),
-                          ('total_init_recruits', True),
-                          ('recruitment_type', True),
-                          ('spawn_units', True),
-                          ('alpha', False),
-                          ('beta', False),
-                          ('total_recur_recruits', False),
-                          ('migration_dir', False),
-                          ('migr_cont', True),
-                          ('val_cont', True),
-                          ('frac_post_process', True),
-                          ('unit_price', True)):
-        if key in (None, limit_to):
+    required_key_list = [
+        ('workspace_dir', True),
+        ('results_suffix', False),
+        ('aoi_vector_path', False),
+        ('total_timesteps', True),
+        ('population_type', True),
+        ('sexsp', True),
+        ('harvest_units', True),
+        ('total_init_recruits', True),
+        ('recruitment_type', True),
+        ('spawn_units', True),
+        ('alpha', False),
+        ('beta', False),
+    ]
+
+    if 'do_batch' in args:
+        if bool(args['do_batch']):
+            # If we're doing batch processing, require the batch-processing
+            # directory.
+            required_key_list.append(('population_csv_dir', True))
+        else:
+            # If we're not doing batch processing, just require the one CSV.
+            required_key_list.append(('population_csv_path', True))
+
+    if 'val_cont' in args and bool(args['val_cont']):
+        required_key_list += [
+            ('frac_post_process', True),
+            ('unit_price', True),
+        ]
+
+    if 'migr_cont' in args and bool(args['migr_cont']):
+        required_key_list += [
+            ('migration_dir', True),
+            ('total_recur_recruits', True),
+        ]
+
+    for key, required in required_key_list:
+        if limit_to in (None, key):
             try:
                 if args[key] in ('', None) and required:
                     keys_with_empty_values.add(key)
             except KeyError:
-                missing_keys.add(key)
+                if required:
+                    missing_keys.add(key)
 
     if len(missing_keys) > 0:
         raise KeyError(
@@ -273,33 +320,37 @@ def validate(args, limit_to=None):
         warnings.append((keys_with_empty_values,
                          'Argument must have a value.'))
 
-    if (limit_to in ('aoi_uri', None) and
-            'aoi_uri' in args and args['aoi_uri'] != ''):
+    if (limit_to in ('aoi_vector_path', None) and
+            'aoi_vector_path' in args and args['aoi_vector_path'] != ''):
         with utils.capture_gdal_logging():
-            dataset = gdal.OpenEx(args['aoi_uri'], gdal.OF_VECTOR)
+            dataset = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
         if dataset is None:
             warnings.append(
-                (['aoi_uri'],
+                (['aoi_vector_path'],
                  'AOI vector must be an OGR-compatible vector.'))
         else:
             layer = dataset.GetLayer()
             column_names = [defn.GetName() for defn in layer.schema]
             if 'Name' not in column_names:
                 warnings.append(
-                    ['aoi_uri'],
-                    'Case-sensitive column name "Name" is missing')
+                    (['aoi_vector_path'],
+                     'Case-sensitive column name "Name" is missing'))
 
     if limit_to in ('do_batch', None):
         if args['do_batch'] not in (True, False):
             warnings.append((['do_batch'],
                              'Parameter must be either True or False"'))
 
-    if limit_to in ('population_csv_uri', None):
-        try:
-            csv.reader(open(args['population_csv_uri'], 'r'))
-        except (csv.Error, IOError):
-            warnings.append((['population_csv_uri'],
-                             'Parameter must be a valid CSV file.'))
+    if limit_to in ('population_csv_path', None):
+        # Only validate the CSV if it's provided.
+        # Either the CSV or the batch-processing dir must be valid.
+        if ('population_csv_path' in args and
+                args['population_csv_path'] not in ('', None)):
+            try:
+                csv.reader(open(args['population_csv_path'], 'r'))
+            except (csv.Error, IOError):
+                warnings.append((['population_csv_path'],
+                                 'Parameter must be a valid CSV file.'))
 
     for directory_key in ('population_csv_dir', 'migration_dir'):
         try:

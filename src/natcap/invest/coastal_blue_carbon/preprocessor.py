@@ -64,11 +64,12 @@ def execute(args):
         vars_dict['results_suffix'])
 
     aligned_lulcs = [reg['aligned_lulc_template'] % index
-                     for index in xrange(len(args['lulc_snapshot_list']))]
+                     for index in range(len(args['lulc_snapshot_list']))]
     min_pixel_raster_info = min(
         (pygeoprocessing.get_raster_info(path) for path
          in vars_dict['lulc_snapshot_list']),
-        key=lambda info: info['mean_pixel_size'])
+        key=lambda info: utils.mean_pixel_size_and_area(
+            info['pixel_size'])[0])
     pygeoprocessing.align_and_resize_raster_stack(
         vars_dict['lulc_snapshot_list'],
         aligned_lulcs,
@@ -78,7 +79,7 @@ def execute(args):
 
     # Run Preprocessor
     vars_dict['transition_matrix_dict'] = _preprocess_data(
-        vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
+        vars_dict['lulc_lookup_dict'], aligned_lulcs)
 
     # Outputs
     _create_transition_table(
@@ -167,7 +168,7 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
     raster_val_set = set(reduce(
         lambda accum_value, x: numpy.unique(
             numpy.append(accum_value, x.next()[1].flat)),
-        itertools.chain(pygeoprocessing.iterblocks(snapshot)
+        itertools.chain(pygeoprocessing.iterblocks((snapshot, 1))
                         for snapshot in lulc_snapshot_list),
         numpy.array([])))
 
@@ -195,7 +196,7 @@ def _get_land_cover_transitions(raster_t1_uri, raster_t2_uri):
         raster_t1_uri)['nodata'][0]
     transition_set = set()
 
-    for d, a1 in pygeoprocessing.iterblocks(raster_t1_uri):
+    for d, a1 in pygeoprocessing.iterblocks((raster_t1_uri, 1)):
         a2 = read_from_raster(raster_t2_uri, d)
         transition_list = zip(a1.flatten(), a2.flatten())
         transition_set = transition_set.union(set(transition_list))
@@ -273,7 +274,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
         (i, '') for i in product(lulc_lookup_dict.iterkeys(), repeat=2))
 
     # Determine Transitions and Directions
-    for snapshot_idx in xrange(0, len(lulc_snapshot_list)-1):
+    for snapshot_idx in range(0, len(lulc_snapshot_list)-1):
         transition_set = _get_land_cover_transitions(
             lulc_snapshot_list[snapshot_idx],
             lulc_snapshot_list[snapshot_idx+1])

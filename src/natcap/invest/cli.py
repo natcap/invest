@@ -76,13 +76,9 @@ _MODEL_UIS = {
         gui='habitat_quality.HabitatQuality',
         aliases=('hq',)),
     'habitat_risk_assessment': _UIMETA(
-        pyname='natcap.invest.habitat_risk_assessment.hra',
+        pyname='natcap.invest.hra',
         gui='hra.HabitatRiskAssessment',
         aliases=('hra',)),
-    'habitat_risk_assessment_preprocessor': _UIMETA(
-        pyname='natcap.invest.habitat_risk_assessment.hra_preprocessor',
-        gui='hra.HRAPreprocessor',
-        aliases=('hra_pre',)),
     'hydropower_water_yield': _UIMETA(
         pyname='natcap.invest.hydropower.hydropower_water_yield',
         gui='hydropower.HydropowerWaterYield',
@@ -100,13 +96,9 @@ _MODEL_UIS = {
         gui='recreation.Recreation',
         aliases=()),
     'routedem': _UIMETA(
-        pyname='natcap.invest.routing.routedem',
-        gui='routing.RouteDEM',
+        pyname='natcap.invest.routedem',
+        gui='routedem.RouteDEM',
         aliases=()),
-    'scenario_generator': _UIMETA(
-        pyname='natcap.invest.scenario_generator.scenario_generator',
-        gui='scenario_gen.ScenarioGenerator',
-        aliases=('sg',)),
     'scenario_generator_proximity': _UIMETA(
         pyname='natcap.invest.scenario_gen_proximity',
         gui='scenario_gen.ScenarioGenProximity',
@@ -128,7 +120,7 @@ _MODEL_UIS = {
         gui='wind_energy.WindEnergy',
         aliases=()),
     'wave_energy': _UIMETA(
-        pyname='natcap.invest.wave_energy.wave_energy',
+        pyname='natcap.invest.wave_energy',
         gui='wave_energy.WaveEnergy',
         aliases=()),
 }

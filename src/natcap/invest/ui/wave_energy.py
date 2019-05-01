@@ -1,7 +1,7 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.wave_energy.wave_energy
+import natcap.invest.wave_energy
 
 
 class WaveEnergy(model.InVESTModel):
@@ -9,8 +9,8 @@ class WaveEnergy(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label=u'Wave Energy',
-            target=natcap.invest.wave_energy.wave_energy.execute,
-            validator=natcap.invest.wave_energy.wave_energy.validate,
+            target=natcap.invest.wave_energy.execute,
+            validator=natcap.invest.wave_energy.validate,
             localdoc=u'../documentation/wave_energy.html')
 
         self.results_suffix = inputs.Text(
@@ -22,7 +22,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.results_suffix)
         self.wave_base_data = inputs.Folder(
-            args_key=u'wave_base_data_uri',
+            args_key=u'wave_base_data_path',
             helptext=(
                 u'Select the folder that has the packaged Wave Energy '
                 u'Data.'),
@@ -30,7 +30,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.wave_base_data)
         self.analysis_area = inputs.Dropdown(
-            args_key=u'analysis_area_uri',
+            args_key=u'analysis_area_path',
             helptext=(
                 u"A list of analysis areas for which the model can "
                 u"currently be run.  All the wave energy data needed "
@@ -46,7 +46,7 @@ class WaveEnergy(model.InVESTModel):
                 u'Global'))
         self.add_input(self.analysis_area)
         self.aoi = inputs.File(
-            args_key=u'aoi_uri',
+            args_key=u'aoi_path',
             helptext=(
                 u"An OGR-supported vector file containing a single "
                 u"polygon representing the area of interest.  This "
@@ -57,7 +57,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.aoi)
         self.machine_perf_table = inputs.File(
-            args_key=u'machine_perf_uri',
+            args_key=u'machine_perf_path',
             helptext=(
                 u"A CSV Table that has the performance of a particular "
                 u"wave energy machine at certain sea state conditions."),
@@ -65,7 +65,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.machine_perf_table)
         self.machine_param_table = inputs.File(
-            args_key=u'machine_param_uri',
+            args_key=u'machine_param_path',
             helptext=(
                 u"A CSV Table that has parameter values for a wave "
                 u"energy machine.  This includes information on the "
@@ -75,7 +75,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.add_input(self.machine_param_table)
         self.dem = inputs.File(
-            args_key=u'dem_uri',
+            args_key=u'dem_path',
             helptext=(
                 u"A GDAL-supported raster file containing a digital "
                 u"elevation model dataset that has elevation values in "
@@ -91,7 +91,7 @@ class WaveEnergy(model.InVESTModel):
             label=u'Valuation')
         self.add_input(self.valuation_container)
         self.land_grid_points = inputs.File(
-            args_key=u'land_gridPts_uri',
+            args_key=u'land_gridPts_path',
             helptext=(
                 u"A CSV Table that has the landing points and grid "
                 u"points locations for computing cable distances."),
@@ -99,7 +99,7 @@ class WaveEnergy(model.InVESTModel):
             validator=self.validator)
         self.valuation_container.add_input(self.land_grid_points)
         self.machine_econ_table = inputs.File(
-            args_key=u'machine_econ_uri',
+            args_key=u'machine_econ_path',
             helptext=(
                 u"A CSV Table that has the economic parameters for the "
                 u"wave energy machine."),

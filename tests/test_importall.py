@@ -6,12 +6,6 @@ import os
 import pkgutil
 import unittest
 
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-    '_example_model')
-
 LOGGER = logging.getLogger('test_example')
 
 

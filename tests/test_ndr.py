@@ -108,20 +108,67 @@ class NDRTests(unittest.TestCase):
 
         NDRTests._assert_regression_results_equal(
             args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'watershed_results_ndr.shp'),
             os.path.join(REGRESSION_DATA, 'agg_results_base.csv'))
 
+    def test_validation(self):
+        """NDR test argument validation."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        # should not raise an exception
+        ndr.validate(args)
+
+        with self.assertRaises(KeyError)  as context:
+            del args['workspace_dir']
+            ndr.validate(args)
+        self.assertTrue(
+            'The following keys were expected' in str(context.exception))
+
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['workspace_dir'] = ''
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # here the wrong GDAL type happens (vector instead of raster)
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['lulc_path'] = args['watersheds_path']
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # here the wrong GDAL type happens (raster instead of vector)
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['watersheds_path'] = args['lulc_path']
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # cover that there's no p and n calculation
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['calc_p'] = False
+        args['calc_n'] = False
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+        # cover that a file is missing
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        args['lulc_path'] = 'this/path/does/not/exist.tif'
+        validation_error_list = ndr.validate(args)
+        # we should have one warning that is an empty value
+        self.assertEqual(len(validation_error_list), 1)
+
+
     @staticmethod
     def _assert_regression_results_equal(
-            workspace_dir, file_list_path, result_vector_path,
-            agg_results_path):
+            workspace_dir, result_vector_path, agg_results_path):
         """Test workspace state against expected aggregate results.
 
         Parameters:
             workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
@@ -135,9 +182,6 @@ class NDRTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-        # test that the workspace has the same files as we expect
-        NDRTests._test_same_files(file_list_path, workspace_dir)
-
         # we expect a file called 'aggregated_results.shp'
         result_vector = ogr.Open(result_vector_path)
         result_layer = result_vector.GetLayer()
@@ -145,19 +189,23 @@ class NDRTests(unittest.TestCase):
         error_results = collections.defaultdict(dict)
         with open(agg_results_path, 'rb') as agg_result_file:
             for line in agg_result_file:
-                fid, p_load_tot, p_exp_tot, n_load_tot, n_exp_tot = [
+                (fid, surf_p_ld, sub_p_ld, p_exp_tot,
+                 surf_n_ld, sub_n_ld, n_exp_tot) = [
                     float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
                 if not feature:
                     raise AssertionError("The fid %s is missing." % fid)
-                for field, value in [('p_load_tot', p_load_tot),
-                                     ('p_exp_tot', p_exp_tot),
-                                     ('n_load_tot', n_load_tot),
-                                     ('n_exp_tot', n_exp_tot)]:
+                for field, value in [
+                                    ('ws_id', fid),
+                                    ('surf_p_ld', surf_p_ld),
+                                    ('sub_p_ld', sub_p_ld),
+                                    ('p_exp_tot', p_exp_tot),
+                                    ('surf_n_ld', surf_n_ld),
+                                    ('sub_n_ld', sub_n_ld),
+                                    ('n_exp_tot', n_exp_tot)]:
                     if not numpy.isclose(feature.GetField(field), value):
                         error_results[fid][field] = (
                             feature.GetField(field), value)
-
                 ogr.Feature.__swig_destroy__(feature)
                 feature = None
         result_layer = None
@@ -166,33 +214,3 @@ class NDRTests(unittest.TestCase):
         if error_results:
             raise AssertionError(
                 "The following values are not equal: %s" % error_results)
-
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert files in `base_list_path` are in `directory_path`.
-
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
-
-        Returns:
-            None
-
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`
-        """
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))

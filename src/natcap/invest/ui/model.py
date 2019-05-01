@@ -6,8 +6,10 @@ from __future__ import absolute_import
 import logging
 import os
 import pprint
+from pkg_resources import parse_version
 import collections
 import json
+import requests
 import textwrap
 import cgi
 import tarfile
@@ -37,10 +39,10 @@ QT_APP = inputs.QT_APP
 
 # How long satus bar messages should be visible, in milliseconds.
 STATUSBAR_MSG_DURATION = 10000
-ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left',
-                           color='grey')
-ICON_ALERT = qtawesome.icon('fa.exclamation-triangle',
-                            color='orange')
+ICON_BACK = qtawesome.icon('fa.arrow-circle-o-left', color='grey')
+ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
+ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
+
 _ONLINE_DOCS_LINK = (
     'http://data.naturalcapitalproject.org/nightly-build/'
     'invest-users-guide/html/')
@@ -421,6 +423,50 @@ class SettingsDialog(OptionsDialog):
             'logging/logfile', 'NOTSET', unicode))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
+        self.taskgraph_logging_level = inputs.Dropdown(
+            label='Taskgraph logging threshold',
+            helptext=('The minimum logging level for taskgraph messages to be '
+                      'displayed in either the logfile or the UI.  Log '
+                      'messages with a level lower than this will not be '
+                      'written to the logfile. Default: ERROR'),
+            options=logging_options)
+        self.taskgraph_logging_level.set_value(inputs.INVEST_SETTINGS.value(
+            'logging/taskgraph', 'ERROR', unicode))
+        self._global_opts_container.add_input(self.taskgraph_logging_level)
+
+        # Taskgraph n_workers settings.
+        # Using a dropdown to avoid the need to validate.
+        n_workers_values = {
+            'Synchronous (-1)': '-1',
+            'Threaded task management (0)': '0'}
+        n_workers_values.update(dict(('%s CPUs' % n, str(n)) for n in range(
+            1, multiprocessing.cpu_count()*2)))
+        self.taskgraph_n_workers = inputs.Dropdown(
+            label='Taskgraph n_workers parameter',
+            helptext=('For models that are implemented with taskgraph, this '
+                      'is provided to the graph at creation.  The default '
+                      'value of -1 is best for most users, as this will '
+                      'eliminate the risk of deadlocks and improve the '
+                      'coherency of the logfile. Allowed values are<ul> '
+                      '<li>-1: Synchronous task execution (most reliable) </li>'
+                      '<li>0: Tasks execute in the main process, but use '
+                      'threaded task management. </li>'
+                      '<li><em>n</em>: Where <em>n</em> is a positive integer, '
+                      'taskgraph will execute tasks in <em>n</em> processes. '
+                      'This can yield a nice speedup, but incurs a risk of '
+                      'deadlock.</li>'
+                      '</ul>Regardless of this value, all models that are '
+                      'taskgraph-enabled take advantage of '
+                      'avoided recomputation. To see if a model uses '
+                      "taskgraph, take a look at the User's Guide chapter "
+                      'for the model, or inspect the source code.'),
+            options=[pair[0] for pair in sorted(
+                n_workers_values.items(), key=lambda x: int(x[1]))],
+            return_value_map=n_workers_values)
+        self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', '-1', unicode))
+        self._global_opts_container.add_input(self.taskgraph_n_workers)
+
     def postprocess(self, exitcode):
         """Save the settings from the dialog.
 
@@ -439,6 +485,12 @@ class SettingsDialog(OptionsDialog):
             inputs.INVEST_SETTINGS.setValue(
                 'logging/logfile',
                 self.logfile_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'logging/taskgraph',
+                self.taskgraph_logging_level.value())
+            inputs.INVEST_SETTINGS.setValue(
+                'taskgraph/n_workers',
+                self.taskgraph_n_workers.value())
 
 
 class AboutDialog(QtWidgets.QDialog):
@@ -1051,6 +1103,45 @@ class WholeModelValidationErrorDialog(QtWidgets.QDialog):
             self.label.setVisible(True)
 
 
+class InvestVersionUpdateDialog(QtWidgets.QDialog):
+    """A dialog for notifying users of the link to a new InVEST version."""
+    def __init__(self, parent=None, latest_version=None):
+        """Initialize the InvestVersionUpdateDialog.
+
+        Parameters:
+            parent=None (QWidget or None): The parent of the dialog. None if
+                no parent.
+
+            latest_version (str or None): A string representing the latest
+                version of InVEST.
+
+        """
+        QtWidgets.QDialog.__init__(self, parent=parent)
+        self.latest_version = latest_version if latest_version else ''
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.setWindowTitle('InVEST Version Update')
+
+        self.title_icon = QtWidgets.QLabel()
+        self.title_icon.setPixmap(ICON_UPDATE.pixmap(50, 50))
+        self.title_icon.setAlignment(QtCore.Qt.AlignCenter)
+        self.title = QtWidgets.QWidget()
+        self.title.setLayout(QtWidgets.QHBoxLayout())
+        self.title.layout().addWidget(self.title_icon)
+
+        self.download_link = "https://naturalcapitalproject.stanford.edu/invest/"
+        self.download_qurl = QtCore.QUrl(self.download_link)
+        self.title_label = QtWidgets.QLabel(
+            '<h2>A new InVEST version %s is available</h2>'
+            '<h4>To install a new version, please go to the download page:</h4>'
+            '<a href="%s">%s' % (
+                self.latest_version, self.download_link, self.download_link))
+
+        self.title_label.linkActivated.connect(functools.partial(
+            InVESTModel._activate_link, self.download_qurl))
+        self.title.layout().addWidget(self.title_label)
+        self.layout().addWidget(self.title)
+
+
 class InVESTModel(QtWidgets.QMainWindow):
     """An InVEST model window.
 
@@ -1150,16 +1241,37 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.window_title.title_changed.connect(self.setWindowTitle)
         self.window_title.modelname = self.label
 
-        # Format the text links at the top of the window.
+        # Add InVEST version update button and links at the top of the window.
+        self.links_layout = QtWidgets.QHBoxLayout()
+        self.links_layout.setAlignment(QtCore.Qt.AlignRight)
+
+        # Add update button to the left of text links, if a more recent version
+        # is found
+        self.latest_version = self._get_latest_version()
+        self.needs_update = self._needs_update(self.latest_version)
+        if self.needs_update:
+            self.update_button = QtWidgets.QPushButton('')
+            self.update_button.setIcon(ICON_UPDATE)
+            self.update_button.setFixedWidth(25)
+            self.update_button.setToolTip('New InVEST Version Available')
+            self.version_update_dialog = InvestVersionUpdateDialog(
+                self, self.latest_version)
+            self.update_button.clicked.connect(
+                self.version_update_dialog.show)
+            self.links_layout.addWidget(self.update_button)
+
+        # Format the text links
         self.links = QtWidgets.QLabel(parent=self)
-        self.links.setAlignment(QtCore.Qt.AlignRight)
         self.links.setText(' | '.join((
             'InVEST version %s' % natcap.invest.__version__,
             '<a href="localdocs">Model documentation</a>',
-            ('<a href="http://forums.naturalcapitalproject.org">'
+            ('<a href="https://community.naturalcapitalproject.org">'
              'Report an issue</a>'))))
-        self._central_widget.layout().addWidget(self.links)
         self.links.linkActivated.connect(self._check_local_docs)
+        self.links_layout.addWidget(self.links)
+        self.links_widget = QtWidgets.QWidget()
+        self.links_widget.setLayout(self.links_layout)
+        self._central_widget.layout().addWidget(self.links_widget)
 
         self.form = inputs.Form(parent=self)
         self._central_widget.layout().addWidget(self.form)
@@ -1186,29 +1298,6 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.add_input(self.workspace)
         self.add_input(self.suffix)
-
-        # If the model has a documented input for the number of taskgraph
-        # workers, add an input for it.
-        try:
-            if 'n_workers' in self.target.__doc__:
-                n_cpus = max(1, multiprocessing.cpu_count())
-                self.n_workers = inputs.Text(
-                    args_key='n_workers',
-                    helptext=(
-                        u'The number of workers to spawn for executing tasks. '
-                        u'If this input is not provided, the model will be '
-                        u'executed in the current process.  <br/><br/>'
-                        u'Your computer has <b>%s CPUs</b>') % n_cpus,
-                    label='Number of parallel workers (optional)',
-                    validator=self.validator)
-                self.n_workers.textfield.setMaximumWidth(150)
-                self.add_input(self.n_workers)
-                self.n_workers.set_value(n_cpus)
-        except TypeError:
-            # When self.target doesn't have __doc__, assume that there's no
-            # n_workers parameter.
-            pass
-
         self.form.submitted.connect(self.execute_model)
 
         # Settings files
@@ -1410,12 +1499,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         else:
             link = QtCore.QUrl(link)
 
-        LOGGER.debug('Activating link: %s', link)
-        # Qt4 and Qt5 hvae QDesktopServices located in different places.
-        try:
-            QtCore.QDesktopServices.openUrl(link)
-        except AttributeError:
-            QtGui.QDesktopServices.openUrl(link)
+        InVESTModel._activate_link(link)
 
     def _save_datastack_as(self):
         """Save the current set of inputs as a datastack.
@@ -1521,12 +1605,22 @@ class InVESTModel(QtWidgets.QMainWindow):
         ui_thread_name = threading.current_thread().name
 
         def _logged_target():
+            if 'n_workers' in args:
+                raise RuntimeError(
+                    'n_workers defined in args. It should not be defined.')
+
+            args['n_workers'] = inputs.INVEST_SETTINGS.value(
+                'taskgraph/n_workers', '-1', unicode)
+
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
                 'logging/logfile', 'NOTSET'))
 
-            threads_to_exclude = [ui_thread_name,
-                                  usage._USAGE_LOGGING_THREAD_NAME]
+            taskgraph_log_level = getattr(
+                logging, inputs.INVEST_SETTINGS.value('logging/taskgraph', 'ERROR'))
+            logging.getLogger('taskgraph').setLevel(taskgraph_log_level)
+
+            threads_to_exclude = [usage._USAGE_LOGGING_THREAD_NAME]
 
             with utils.prepare_workspace(args['workspace_dir'],
                                          name,
@@ -1537,12 +1631,6 @@ class InVESTModel(QtWidgets.QMainWindow):
                                'Starting model with parameters: \n%s',
                                datastack.format_args_dict(
                                    args, self.target.__module__))
-
-                    try:
-                        args['n_workers'] = self.n_workers.value()
-                    except AttributeError:
-                        # When we don't have n_workers defined
-                        pass
 
                     try:
                         return self.target(args=args)
@@ -1988,3 +2076,64 @@ class InVESTModel(QtWidgets.QMainWindow):
         path = event.mimeData().urls()[0].toLocalFile()
         self.setStyleSheet('')
         self.load_datastack(path)
+
+    @staticmethod
+    def _activate_link(link):
+        """Activate a QUrl.
+
+        link (QUrl): a QUrl object that is constructed either from a local file
+            path or a URI.
+
+        Returns:
+            None.
+
+        """
+        LOGGER.debug('Activating link: %s', link)
+        # Qt4 and Qt5 have QDesktopServices located in different places.
+        try:
+            QtCore.QDesktopServices.openUrl(link)
+        except AttributeError:
+            QtGui.QDesktopServices.openUrl(link)
+
+    @staticmethod
+    def _get_latest_version():
+        """Get the latest InVEST version string from PyPI page.
+
+        Returns:
+            latest_version (str): if the HTTP request is successfully, or
+                None if not.
+
+        """
+        # Make an HTTP call to InVEST's PyPI page, set timeout of 10s
+        try:
+            response = requests.get(
+                'https://pypi.python.org/pypi/natcap.invest/json', timeout=10)
+            # Get the latest version string
+            latest_version = json.loads(response.text)['info']['version']
+            return latest_version
+
+        # If any ConnectionError, HTTPError, Timeout, or TooManyRedirects
+        # exception happens
+        except requests.exceptions.RequestException as err:
+            LOGGER.exception('Exception while requesting PyPI page: %s' % err)
+
+        # If the text doesn't have the 'info' or 'version' keys
+        except KeyError as err:
+            LOGGER.exception('Version string could not be found from PyPI page.'
+                             'Exception raised: %s' % err)
+        return None
+
+    def _needs_update(self, latest_version):
+        """Compare the latest version with current version.
+
+        Returns:
+            True if the latest version is later than the current version, False
+                if the latest version is the same as the current version, or
+                the request to the PyPI page wasn't successful.
+
+        """
+        latest_version = self._get_latest_version()
+        if latest_version:
+            return parse_version(latest_version) > parse_version(
+                natcap.invest.__version__)
+        return False

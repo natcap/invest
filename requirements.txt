@@ -15,12 +15,16 @@
 GDAL>=2.0,<3.0
 Pyro4==4.41  # pip-only
 pandas>=0.22.0
-numpy>=1.11.0
+numpy>=1.11.0,!=1.16.0
 Rtree>=0.8.2
 scipy>=0.16.1
 Shapely>=1.6.4
 six
+# pygeoprocessing>=1.6.1
 hg+https://bitbucket.org/jdouglass/pygeoprocessing@bec178879333
-taskgraph[niced_processes]>=0.6.1
+taskgraph[niced_processes]>=0.8.2
+psutil<5.6.0
 chardet>=3.0.4
 matplotlib
+xlrd>=1.2.0
+

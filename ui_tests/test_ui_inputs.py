@@ -7,6 +7,7 @@ import logging
 import contextlib
 import sys
 import os
+import requests
 import time
 import tempfile
 import shutil
@@ -1923,6 +1924,107 @@ class SettingsDialogTest(_SettingsSandbox):
         finally:
             settings_dialog.close()
 
+    def test_dialog_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of dialog log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.dialog_logging_level.value(),
+                         'INFO')
+
+
+    def test_dialog_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for dialog threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.dialog_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.dialog_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
+    def test_logfile_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of logfile log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.logfile_logging_level.value(),
+                         'NOTSET')
+
+    def test_logfile_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for logfile threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.logfile_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.logfile_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
+    def test_taskgraph_log_level_initialized(self):
+        """UI SettingsDialog: check initialization of taskgraph log level."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.taskgraph_logging_level.value(),
+                         'ERROR')
+
+    def test_taskgraph_log_level_set_correctly(self):
+        """UI SettingsDialog: check settings value for taskgraph threshold."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.taskgraph_logging_level.set_value('CRITICAL')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.taskgraph_logging_level.value(),
+                             'CRITICAL')
+        finally:
+            settings_dialog.close()
+
+    def test_n_workers_initialized(self):
+        """UI SettingsDialog: check initialization of n_workers."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+        self.assertEqual(settings_dialog.taskgraph_n_workers.value(),
+                         '-1')
+
+    def test_n_workers_set_correctly(self):
+        """UI SettingsDialog: check settings value for n_workers."""
+        from natcap.invest.ui import model
+
+        settings_dialog = model.SettingsDialog()
+
+        settings_dialog.show()
+        settings_dialog.taskgraph_n_workers.set_value('3')
+        QTest.mouseClick(settings_dialog.ok_button,
+                         QtCore.Qt.LeftButton)
+        self.qt_app.processEvents()
+        try:
+            self.assertEqual(settings_dialog.taskgraph_n_workers.value(),
+                             '3')
+        finally:
+            settings_dialog.close()
+
 
 class DatastackOptionsDialogTests(_QtTest):
     def setUp(self):
@@ -2341,6 +2443,112 @@ class ModelTests(_QtTest):
             model_ui.close(prompt=False)
             model_ui.destroy()
 
+    def test_execute_with_n_workers(self):
+        """UI Model: Check that model runs with n_workers parameter."""
+
+        from natcap.invest.ui import inputs
+
+        n_workers_setting = inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', '-1', unicode)
+
+        def target_func(args):
+            """n_workers is required in args."""
+            if 'n_workers' not in args:
+                raise ValueError('n_workers should be in args but is not.')
+
+            if args['n_workers'] != n_workers_setting:
+                raise ValueError('n_workers value is not set correctly')
+
+        model_ui = ModelTests.build_model(target_func=target_func)
+        model_ui.workspace.set_value(os.path.join(self.workspace, 'new_dir'))
+
+        try:
+            # Show the window
+            model_ui.run()
+            self.assertTrue(model_ui.isVisible())
+
+            # This should execute without exception.
+            model_ui.execute_model()
+
+            # I don't particularly like spinning here, but it should be
+            # reliable.
+            while model_ui.form.run_dialog.is_executing:
+                self.qt_app.processEvents()
+                time.sleep(0.1)
+            self.assertFalse(model_ui.form._thread.failed)
+        finally:
+            model_ui.form.run_dialog.close()
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_execute_error_with_n_workers(self):
+        """UI Model: Check that model fails with n_workers parameter."""
+        from natcap.invest.ui import inputs, model
+        from natcap.invest import validation
+
+        n_workers_setting = inputs.INVEST_SETTINGS.value(
+            'taskgraph/n_workers', 1, unicode)
+
+        def target_func(args):
+            raise AssertionError(
+                'Target should not have been called due to n_workers being '
+                'in args.')
+
+        @validation.invest_validator
+        def _validate(args, limit_to=None):
+            return []
+
+        class _TestInVESTModel(model.InVESTModel):
+            def __init__(self):
+                model.InVESTModel.__init__(
+                    self,
+                    label='Test model',
+                    target=target_func,
+                    validator=_validate,
+                    localdoc='testmodel.html')
+
+            # Default model class already has workspace and suffix input.
+            def assemble_args(self):
+                return {
+                    self.workspace.args_key: self.workspace.value(),
+                    self.suffix.args_key: self.suffix.value(),
+                    'n_workers': n_workers_setting  # this should cause an error.
+                }
+
+            def __del__(self):
+                # clear the settings for future runs.
+                self.settings.clear()
+                model.InVESTModel.__del__(self)
+
+        model_ui = _TestInVESTModel()
+        model_ui.workspace.set_value(os.path.join(self.workspace, 'new_dir'))
+
+        try:
+            # Show the window
+            model_ui.run()
+            self.assertTrue(model_ui.isVisible())
+
+            # This should execute without exception.
+            model_ui.execute_model()
+
+            # I don't particularly like spinning here, but it should be
+            # reliable.
+            while model_ui.form.run_dialog.is_executing:
+                self.qt_app.processEvents()
+                time.sleep(0.1)
+            self.assertTrue(model_ui.form._thread.failed)
+
+            # We expect RuntimeError to be raised by the UI in the function
+            # that wraps the target, not by the target itself.
+            self.assertTrue(isinstance(model_ui.form._thread.exception,
+                                       RuntimeError))
+            self.assertTrue('n_workers defined in args.' in
+                            repr(model_ui.form._thread.exception))
+        finally:
+            model_ui.form.run_dialog.close()
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
     def test_local_docs_from_hyperlink(self):
         """UI Model: Check that we can open the local docs missing dialog."""
         model_ui = ModelTests.build_model()
@@ -2417,6 +2625,71 @@ class ModelTests(_QtTest):
 
             patched_openurl.assert_called_once_with(
                 QtCore.QUrl('https://forums.naturalcapitalproject.org'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_version_update(self):
+        """UI Model: Check update button & dialog exist with a new version."""
+        import natcap.invest
+        current_version = natcap.invest.__version__
+
+        try:
+            # Assert that update button and dialog do not exist if the current
+            # version is already the latest
+            with mock.patch('natcap.invest.ui.model.'
+                            'InVESTModel._get_latest_version',
+                            return_value=current_version):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
+            # Assert that button and dialog exists if there is a new version,
+            # and the page can be linked successfully
+            with mock.patch('natcap.invest.ui.model.'
+                            'InVESTModel._get_latest_version',
+                            return_value='1' + current_version):
+                model_ui = ModelTests.build_model()
+                assert all([hasattr(model_ui, 'update_button'),
+                            hasattr(model_ui, 'version_update_dialog')])
+
+                if hasattr(QtCore, 'QDesktopServices'):
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtCore.'
+                                              'QDesktopServices.openUrl')
+                else:
+                    # PyQt5 changed the location of this.
+                    patch_object = mock.patch('natcap.invest.ui.inputs.QtGui.'
+                                              'QDesktopServices.openUrl')
+
+                # Simulate InVEST download link clicked
+                with patch_object as patched_openurl:
+                    model_ui._activate_link(
+                        model_ui.version_update_dialog.download_qurl)
+
+                patched_openurl.assert_called_once_with(QtCore.QUrl(
+                    'https://naturalcapitalproject.stanford.edu/invest/'))
+        finally:
+            model_ui.close(prompt=False)
+            model_ui.destroy()
+
+    def test_version_update_slow_connection(self):
+        """UI Model: Check no/slow Internet connection won't interrupt UI."""
+        import natcap.invest
+        try:
+            # Assert that update button and dialog don't exist if connection
+            # is slow
+            with mock.patch('requests.get', side_effect=requests.Timeout):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
+            # Assert that update button and dialog don't exist if no connection
+            with mock.patch('requests.get',
+                            side_effect=requests.ConnectionError):
+                model_ui = ModelTests.build_model()
+                assert not all([hasattr(model_ui, 'update_button'),
+                                hasattr(model_ui, 'version_update_dialog')])
+
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()

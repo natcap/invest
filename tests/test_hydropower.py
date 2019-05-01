@@ -5,7 +5,6 @@ import shutil
 import os
 
 import pandas
-
 import pygeoprocessing.testing
 
 SAMPLE_DATA = os.path.join(
@@ -13,7 +12,6 @@ SAMPLE_DATA = os.path.join(
     'input')
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hydropower')
-
 
 class HydropowerTests(unittest.TestCase):
     """Regression Tests for Annual Water Yield Hydropower Model."""
@@ -33,17 +31,18 @@ class HydropowerTests(unittest.TestCase):
         """Generate an args list that is consistent across regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'lulc_uri': os.path.join(SAMPLE_DATA, 'lulc.tif'),
-            'depth_to_root_rest_layer_uri': os.path.join(
+            'lulc_path': os.path.join(SAMPLE_DATA, 'lulc.tif'),
+            'depth_to_root_rest_layer_path': os.path.join(
                 SAMPLE_DATA,
                 'depth_to_root_rest_layer.tif'),
-            'precipitation_uri': os.path.join(SAMPLE_DATA, 'precip.tif'),
-            'pawc_uri': os.path.join(SAMPLE_DATA, 'pawc.tif'),
-            'eto_uri': os.path.join(SAMPLE_DATA, 'eto.tif'),
-            'watersheds_uri': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
-            'biophysical_table_uri': os.path.join(
+            'precipitation_path': os.path.join(SAMPLE_DATA, 'precip.tif'),
+            'pawc_path': os.path.join(SAMPLE_DATA, 'pawc.tif'),
+            'eto_path': os.path.join(SAMPLE_DATA, 'eto.tif'),
+            'watersheds_path': os.path.join(SAMPLE_DATA, 'watersheds.shp'),
+            'biophysical_table_path': os.path.join(
                 SAMPLE_DATA, 'biophysical_table.csv'),
-            'seasonality_constant': 5
+            'seasonality_constant': 5,
+            'n_workers': -1,
         }
         return args
 
@@ -52,7 +51,7 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['sub_watersheds_uri'] = os.path.join(
+        args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
         args['results_suffix'] = 'test'
         hydropower_water_yield.execute(args)
@@ -63,7 +62,8 @@ class HydropowerTests(unittest.TestCase):
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
                 os.path.join(
-                    REGRESSION_DATA, raster_path.replace('_test', '')))
+                    REGRESSION_DATA, raster_path.replace('_test', '')),
+                1e-6)
 
         vector_results = ['watershed_results_wyield_test.shp',
                           'subwatershed_results_wyield_test.shp']
@@ -90,10 +90,9 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['calculate_water_scarcity'] = True
-        args['demand_table_uri'] = os.path.join(
+        args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
-        args['sub_watersheds_uri'] = os.path.join(
+        args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
         hydropower_water_yield.execute(args)
@@ -103,7 +102,8 @@ class HydropowerTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel', raster_path),
-                os.path.join(REGRESSION_DATA, raster_path))
+                os.path.join(REGRESSION_DATA, raster_path),
+                1e-6)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
@@ -127,13 +127,11 @@ class HydropowerTests(unittest.TestCase):
         from natcap.invest.hydropower import hydropower_water_yield
 
         args = HydropowerTests.generate_base_args(self.workspace_dir)
-        args['calculate_water_scarcity'] = True
-        args['demand_table_uri'] = os.path.join(
+        args['demand_table_path'] = os.path.join(
             SAMPLE_DATA, 'water_demand_table.csv')
-        args['calculate_valuation'] = True
-        args['valuation_table_uri'] = os.path.join(
+        args['valuation_table_path'] = os.path.join(
             SAMPLE_DATA, 'hydropower_valuation_table.csv')
-        args['sub_watersheds_uri'] = os.path.join(
+        args['sub_watersheds_path'] = os.path.join(
             SAMPLE_DATA, 'subwatersheds.shp')
 
         hydropower_water_yield.execute(args)
@@ -143,7 +141,8 @@ class HydropowerTests(unittest.TestCase):
             pygeoprocessing.testing.assert_rasters_equal(
                 os.path.join(
                     args['workspace_dir'], 'output', 'per_pixel',
-                    raster_path), os.path.join(REGRESSION_DATA, raster_path))
+                    raster_path), os.path.join(REGRESSION_DATA, raster_path),
+                1e-6)
 
         vector_results = ['watershed_results_wyield.shp',
                           'subwatershed_results_wyield.shp']
@@ -172,22 +171,22 @@ class HydropowerTests(unittest.TestCase):
         self.assertEqual(hydropower_water_yield.validate(args), [])
 
         args_bad_vector = args.copy()
-        args_bad_vector['watersheds_uri'] = args_bad_vector['eto_uri']
+        args_bad_vector['watersheds_path'] = args_bad_vector['eto_path']
         bad_vector_list = hydropower_water_yield.validate(args_bad_vector)
         self.assertEqual(bad_vector_list[0][1], 'not a vector')
 
         args_bad_raster = args.copy()
-        args_bad_raster['eto_uri'] = args_bad_raster['watersheds_uri']
+        args_bad_raster['eto_path'] = args_bad_raster['watersheds_path']
         bad_raster_list = hydropower_water_yield.validate(args_bad_raster)
         self.assertEqual(bad_raster_list[0][1], 'not a raster')
 
         args_bad_file = args.copy()
-        args_bad_file['eto_uri'] = 'non_existant_file.tif'
+        args_bad_file['eto_path'] = 'non_existant_file.tif'
         bad_file_list = hydropower_water_yield.validate(args_bad_file)
         self.assertEqual(bad_file_list[0][1], 'not found on disk')
 
         args_missing_key = args.copy()
-        del args_missing_key['eto_uri']
+        del args_missing_key['eto_path']
         with self.assertRaises(KeyError):
             hydropower_water_yield.validate(args_missing_key)
 
@@ -197,7 +196,7 @@ class HydropowerTests(unittest.TestCase):
         bad_biophysical_path = os.path.join(
             self.workspace_dir, 'bad_biophysical_table.csv')
         with open(bad_biophysical_path, 'wb') as bad_biophysical_file:
-            with open(args['biophysical_table_uri'], 'rb') as (
+            with open(args['biophysical_table_path'], 'rb') as (
                     biophysical_table_file):
                 lines_to_write = 2
                 for line in biophysical_table_file.readlines():
@@ -205,7 +204,7 @@ class HydropowerTests(unittest.TestCase):
                     lines_to_write -= 1
                     if lines_to_write == 0:
                         break
-        args_bad_biophysical_table['biophysical_table_uri'] = (
+        args_bad_biophysical_table['biophysical_table_path'] = (
             bad_biophysical_path)
         with self.assertRaises(ValueError) as cm:
             hydropower_water_yield.execute(args_bad_biophysical_table)
@@ -220,7 +219,7 @@ class HydropowerTests(unittest.TestCase):
         bad_biophysical_path = os.path.join(
             self.workspace_dir, 'bad_biophysical_table.csv')
         with open(bad_biophysical_path, 'wb') as bad_biophysical_file:
-            with open(args['biophysical_table_uri'], 'rb') as (
+            with open(args['biophysical_table_path'], 'rb') as (
                     biophysical_table_file):
                 lines_to_write = 2
                 for line in biophysical_table_file.readlines():
@@ -231,7 +230,7 @@ class HydropowerTests(unittest.TestCase):
         args_bad_demand_table = args.copy()
         bad_demand_path = os.path.join(
             self.workspace_dir, 'bad_demand_table.csv')
-        args_bad_demand_table['demand_table_uri'] = (
+        args_bad_demand_table['demand_table_path'] = (
             bad_demand_path)
         with open(bad_demand_path, 'wb') as bad_demand_file:
             with open(os.path.join(
@@ -256,9 +255,12 @@ class HydropowerTests(unittest.TestCase):
         args_bad_valuation_table = args.copy()
         bad_valuation_path = os.path.join(
             self.workspace_dir, 'bad_valuation_table.csv')
-
-        args_bad_valuation_table['valuation_table_uri'] = (
+        args_bad_valuation_table['valuation_table_path'] = (
             bad_valuation_path)
+        # args contract requires a demand table if there is a valuation table
+        args_bad_valuation_table['demand_table_path'] = os.path.join(
+            SAMPLE_DATA, 'water_demand_table.csv')
+
         with open(bad_valuation_path, 'wb') as bad_valuation_file:
             with open(os.path.join(
                 SAMPLE_DATA, 'hydropower_valuation_table.csv'), 'rb') as (

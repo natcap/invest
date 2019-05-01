@@ -17,8 +17,8 @@ from osgeo import ogr
 import numpy
 
 import pygeoprocessing
-import natcap.invest.pygeoprocessing_0_3_3.routing
-import natcap.invest.pygeoprocessing_0_3_3.routing.routing_core
+import pygeoprocessing.routing
+import taskgraph
 from . import utils
 from . import validation
 
@@ -27,49 +27,48 @@ LOGGER = logging.getLogger('natcap.invest.sdr')
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
     'sed_export_path': 'sed_export.tif',
-    'stream_path': 'stream.tif',
-    'usle_path': 'usle.tif',
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
-    'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
+    'stream_path': 'stream.tif',
+    'usle_path': 'usle.tif',
+    'watershed_results_sdr_path': 'watershed_results_sdr.shp',
     }
 
 _INTERMEDIATE_BASE_FILES = {
-    'dem_offset_path': 'dem_offset.tif',
-    'slope_path': 'slope.tif',
-    'thresholded_slope_path': 'thresholded_slope.tif',
-    'flow_direction_path': 'flow_direction.tif',
-    'flow_accumulation_path': 'flow_accumulation.tif',
-    'ls_path': 'ls.tif',
-    'w_bar_path': 'w_bar.tif',
-    's_bar_path': 's_bar.tif',
-    'd_up_path': 'd_up.tif',
-    'd_dn_path': 'd_dn.tif',
+    'cp_factor_path': 'cp.tif',
     'd_dn_bare_soil_path': 'd_dn_bare_soil.tif',
+    'd_dn_path': 'd_dn.tif',
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
+    'd_up_path': 'd_up.tif',
+    'dem_offset_path': 'dem_offset.tif',
+    'flow_accumulation_path': 'flow_accumulation.tif',
+    'flow_direction_path': 'flow_direction.tif',
     'ic_bare_soil_path': 'ic_bare_soil.tif',
-    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
-    'ws_factor_path': 'ws_factor.tif',
     'ic_path': 'ic.tif',
+    'ls_path': 'ls.tif',
+    'pit_filled_dem_path': 'pit_filled_dem.tif',
+    's_accumulation_path': 's_accumulation.tif',
+    's_bar_path': 's_bar.tif',
+    's_inverse_path': 's_inverse.tif',
+    'sdr_bare_soil_path': 'sdr_bare_soil.tif',
     'sdr_path': 'sdr_factor.tif',
+    'slope_path': 'slope.tif',
+    'thresholded_slope_path': 'slope_threshold.tif',
+    'thresholded_w_path': 'w_threshold.tif',
+    'w_accumulation_path': 'w_accumulation.tif',
+    'w_bar_path': 'w_bar.tif',
     'w_path': 'w.tif',
+    'ws_factor_path': 'ws_factor.tif',
+    'ws_inverse_path': 'ws_inverse.tif',
     }
 
 _TMP_BASE_FILES = {
-    'cp_factor_path': 'cp.tif',
     'aligned_dem_path': 'aligned_dem.tif',
-    'aligned_lulc_path': 'aligned_lulc.tif',
-    'aligned_erosivity_path': 'aligned_erosivity.tif',
-    'aligned_erodibility_path': 'aligned_erodibility.tif',
     'aligned_drainage_path': 'aligned_drainage.tif',
-    'zero_absorption_source_path': 'zero_absorption_source.tif',
-    'loss_path': 'loss.tif',
-    'w_accumulation_path': 'w_accumulation.tif',
-    's_accumulation_path': 's_accumulation.tif',
-    'thresholded_w_path': 'w_threshold.tif',
-    'ws_inverse_path': 'ws_inverse.tif',
-    's_inverse_path': 's_inverse.tif',
+    'aligned_erodibility_path': 'aligned_erodibility.tif',
+    'aligned_erosivity_path': 'aligned_erosivity.tif',
+    'aligned_lulc_path': 'aligned_lulc.tif',
     }
 
 # Target nodata is for general rasters that are positive, and _IC_NODATA are
@@ -107,6 +106,10 @@ def execute(args):
         args['drainage_path'] (string): (optional) path to drainage raster that
             is used to add additional drainage areas to the internally
             calculated stream layer
+        args['n_workers'] (int): if present, indicates how many worker
+            processes should be used in parallel processing. -1 indicates
+            single process mode, 0 is single process but non-blocking mode,
+            and >= 1 is number of processes.
 
     Returns:
         None.
@@ -135,175 +138,393 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     output_dir = os.path.join(args['workspace_dir'])
-    utils.make_directories([output_dir, intermediate_output_dir])
+    churn_dir = os.path.join(
+        intermediate_output_dir, 'churn_dir_not_for_humans')
+    utils.make_directories([output_dir, intermediate_output_dir, churn_dir])
 
     f_reg = utils.build_file_registry(
         [(_OUTPUT_BASE_FILES, output_dir),
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
+         (_TMP_BASE_FILES, churn_dir)], file_suffix)
+
+    n_workers = -1  # single process mode, but adjust if in args
+    if 'n_workers' in args:
+        n_workers = int(args['n_workers'])
+
+    task_graph = taskgraph.TaskGraph(
+        churn_dir, n_workers, reporting_interval=5.0)
 
     base_list = []
     aligned_list = []
     for file_key in ['dem', 'lulc', 'erosivity', 'erodibility']:
         base_list.append(args[file_key + "_path"])
         aligned_list.append(f_reg["aligned_" + file_key + "_path"])
+    # all continuous rasters can use bilinaer, but lulc should be mode
+    interpolation_list = ['bilinear', 'mode', 'bilinear', 'bilinear']
 
     drainage_present = False
     if 'drainage_path' in args and args['drainage_path'] != '':
         drainage_present = True
         base_list.append(args['drainage_path'])
         aligned_list.append(f_reg['aligned_drainage_path'])
+        interpolation_list.append('near')
 
-    dem_pixel_size = pygeoprocessing.get_raster_info(
-        args['dem_path'])['pixel_size']
-    pygeoprocessing.align_and_resize_raster_stack(
-        base_list, aligned_list, ['near'] * len(base_list),
-        dem_pixel_size, 'intersection',
-        base_vector_path_list=[args['watersheds_path']],
-        raster_align_index=0)
+    dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+    min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
+    target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    LOGGER.info("calculating slope")
-    natcap.invest.pygeoprocessing_0_3_3.calculate_slope(
-        f_reg['aligned_dem_path'], f_reg['slope_path'])
-    _threshold_slope(f_reg['slope_path'], f_reg['thresholded_slope_path'])
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            base_list, aligned_list, interpolation_list,
+            target_pixel_size, 'intersection'),
+        kwargs={
+            'target_sr_wkt': dem_raster_info['projection'],
+            'base_vector_path_list': (args['watersheds_path'],),
+            'raster_align_index': 0,
+            },
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=aligned_list,
+        task_name='align input rasters')
 
-    LOGGER.info("calculating flow direction")
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_direction_d_inf(
-        f_reg['aligned_dem_path'], f_reg['flow_direction_path'])
+    pit_fill_task = task_graph.add_task(
+        func=pygeoprocessing.routing.fill_pits,
+        args=(
+            (f_reg['aligned_dem_path'], 1),
+            f_reg['pit_filled_dem_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['pit_filled_dem_path']],
+        dependent_task_list=[align_task],
+        task_name='fill pits')
 
-    LOGGER.info("calculating flow accumulation")
-    natcap.invest.pygeoprocessing_0_3_3.routing.flow_accumulation(
-        f_reg['flow_direction_path'], f_reg['aligned_dem_path'],
-        f_reg['flow_accumulation_path'])
+    slope_task = task_graph.add_task(
+        func=pygeoprocessing.calculate_slope,
+        args=(
+            (f_reg['pit_filled_dem_path'], 1),
+            f_reg['slope_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[pit_fill_task],
+        target_path_list=[f_reg['slope_path']],
+        task_name='calculate slope')
 
-    LOGGER.info('calculate ls term')
+    threshold_slope_task = task_graph.add_task(
+        func=_threshold_slope,
+        args=(f_reg['slope_path'], f_reg['thresholded_slope_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['thresholded_slope_path']],
+        dependent_task_list=[slope_task],
+        task_name='threshold slope')
 
-    _calculate_ls_factor(
-        f_reg['flow_accumulation_path'], f_reg['slope_path'],
-        f_reg['flow_direction_path'], f_reg['ls_path'])
+    flow_dir_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_dir_mfd,
+        args=(
+            (f_reg['pit_filled_dem_path'], 1),
+            f_reg['flow_direction_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['flow_direction_path']],
+        dependent_task_list=[pit_fill_task],
+        task_name='flow direction calculation')
 
-    LOGGER.info("classifying streams from flow accumulation raster")
-    natcap.invest.pygeoprocessing_0_3_3.routing.stream_threshold(
-        f_reg['flow_accumulation_path'],
-        float(args['threshold_flow_accumulation']),
-        f_reg['stream_path'])
+    flow_accumulation_task = task_graph.add_task(
+        func=pygeoprocessing.routing.flow_accumulation_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            f_reg['flow_accumulation_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['flow_accumulation_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='flow accumulation calculation')
+
+    ls_factor_task = task_graph.add_task(
+        func=_calculate_ls_factor,
+        args=(
+            f_reg['flow_accumulation_path'], f_reg['slope_path'],
+            f_reg['flow_direction_path'], f_reg['ls_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['ls_path']],
+        dependent_task_list=[flow_accumulation_task, slope_task],
+        task_name='ls factor calculation')
+
+    stream_task = task_graph.add_task(
+        func=pygeoprocessing.routing.extract_streams_mfd,
+        args=(
+            (f_reg['flow_accumulation_path'], 1),
+            (f_reg['flow_direction_path'], 1),
+            float(args['threshold_flow_accumulation']),
+            f_reg['stream_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        kwargs={'trace_threshold_proportion': 0.7},
+        target_path_list=[f_reg['stream_path']],
+        dependent_task_list=[flow_accumulation_task],
+        task_name='extract streams')
 
     if drainage_present:
-        _add_drainage(
-            f_reg['stream_path'],
-            f_reg['aligned_drainage_path'],
-            f_reg['stream_and_drainage_path'])
-        f_reg['drainage_raster_path'] = (
-            f_reg['stream_and_drainage_path'])
+        drainage_task = task_graph.add_task(
+            func=_add_drainage(
+                f_reg['stream_path'],
+                f_reg['aligned_drainage_path'],
+                f_reg['stream_and_drainage_path']),
+            hash_algorithm='md5',
+            copy_duplicate_artifact=True,
+            target_path_list=[f_reg['stream_and_drainage_path']],
+            dependent_task_list=[stream_task, align_task],
+            task_name='add drainage')
+        drainage_raster_path_task = (
+            f_reg['stream_and_drainage_path'], drainage_task)
     else:
-        f_reg['drainage_raster_path'] = (
-            f_reg['stream_path'])
+        drainage_raster_path_task = (f_reg['stream_path'], stream_task)
 
-    LOGGER.info('calculate per pixel W')
-    _calculate_w(
-        biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
-        f_reg['thresholded_w_path'])
+    threshold_w_task = task_graph.add_task(
+        func=_calculate_w,
+        args=(
+            biophysical_table, f_reg['aligned_lulc_path'], f_reg['w_path'],
+            f_reg['thresholded_w_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['w_path'], f_reg['thresholded_w_path']],
+        dependent_task_list=[align_task],
+        task_name='calculate W')
 
-    LOGGER.info('calculate CP raster')
-    _calculate_cp(
-        biophysical_table, f_reg['aligned_lulc_path'],
-        f_reg['cp_factor_path'])
+    cp_task = task_graph.add_task(
+        func=_calculate_cp,
+        args=(
+            biophysical_table, f_reg['aligned_lulc_path'],
+            f_reg['cp_factor_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['cp_factor_path']],
+        dependent_task_list=[align_task],
+        task_name='calculate CP')
 
-    LOGGER.info('calculating RKLS')
-    _calculate_rkls(*[f_reg[key] for key in [
-        'ls_path', 'aligned_erosivity_path', 'aligned_erodibility_path',
-        'drainage_raster_path', 'rkls_path']])
+    rkls_task = task_graph.add_task(
+        func=_calculate_rkls,
+        args=(
+            f_reg['ls_path'],
+            f_reg['aligned_erosivity_path'],
+            f_reg['aligned_erodibility_path'],
+            drainage_raster_path_task[0],
+            f_reg['rkls_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['rkls_path']],
+        dependent_task_list=[
+            align_task, ls_factor_task, drainage_raster_path_task[1]],
+        task_name='calculate RKLS')
 
-    LOGGER.info('calculating USLE')
-    _calculate_usle(*[f_reg[key] for key in [
-        'rkls_path', 'cp_factor_path', 'drainage_raster_path', 'usle_path']])
+    usle_task = task_graph.add_task(
+        func=_calculate_usle,
+        args=(
+            f_reg['rkls_path'],
+            f_reg['cp_factor_path'],
+            drainage_raster_path_task[0],
+            f_reg['usle_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['usle_path']],
+        dependent_task_list=[
+            rkls_task, cp_task, drainage_raster_path_task[1]],
+        task_name='calculate USLE')
 
-    LOGGER.info('calculating w_bar')
-    for factor_path, accumulation_path, out_bar_path in [
-            (f_reg['thresholded_w_path'], f_reg['w_accumulation_path'],
-             f_reg['w_bar_path']),
-            (f_reg['thresholded_slope_path'], f_reg['s_accumulation_path'],
-             f_reg['s_bar_path'])]:
-        _calculate_bar_factor(
-            f_reg['aligned_dem_path'], factor_path,
-            f_reg['flow_accumulation_path'], f_reg['flow_direction_path'],
-            f_reg['zero_absorption_source_path'], f_reg['loss_path'],
-            accumulation_path, out_bar_path)
+    bar_task_map = {}
+    for factor_path, factor_task, accumulation_path, out_bar_path, bar_id in [
+            (f_reg['thresholded_w_path'], threshold_w_task,
+             f_reg['w_accumulation_path'],
+             f_reg['w_bar_path'],
+             'w_bar'),
+            (f_reg['thresholded_slope_path'], threshold_slope_task,
+             f_reg['s_accumulation_path'],
+             f_reg['s_bar_path'],
+             's_bar')]:
+        bar_task = task_graph.add_task(
+            func=_calculate_bar_factor,
+            args=(
+                f_reg['flow_direction_path'], factor_path,
+                f_reg['flow_accumulation_path'],
+                accumulation_path, out_bar_path),
+            hash_algorithm='md5',
+            copy_duplicate_artifact=True,
+            target_path_list=[accumulation_path, out_bar_path],
+            dependent_task_list=[
+                align_task, factor_task, flow_accumulation_task,
+                flow_dir_task],
+            task_name='calculate %s' % bar_id)
+        bar_task_map[bar_id] = bar_task
 
-    LOGGER.info('calculating d_up')
-    _calculate_d_up(
-        *[f_reg[key] for key in [
-            'w_bar_path', 's_bar_path', 'flow_accumulation_path',
-            'd_up_path']])
+    d_up_task = task_graph.add_task(
+        func=_calculate_d_up,
+        args=(
+            f_reg['w_bar_path'], f_reg['s_bar_path'],
+            f_reg['flow_accumulation_path'], f_reg['d_up_path']),
+        target_path_list=[f_reg['d_up_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[
+            bar_task_map['s_bar'], bar_task_map['w_bar'],
+            flow_accumulation_task],
+        task_name='calculate Dup')
 
-    LOGGER.info('calculate WS factor')
-    _calculate_inverse_ws_factor(
-        f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
-        f_reg['ws_inverse_path'])
+    inverse_ws_factor_task = task_graph.add_task(
+        func=_calculate_inverse_ws_factor,
+        args=(
+            f_reg['thresholded_slope_path'], f_reg['thresholded_w_path'],
+            f_reg['ws_inverse_path']),
+        target_path_list=[f_reg['ws_inverse_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[threshold_slope_task, threshold_w_task],
+        task_name='calculate inverse ws factor')
 
-    LOGGER.info('calculating d_dn')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
-        f_reg['d_dn_path'], factor_uri=f_reg['ws_inverse_path'])
+    d_dn_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            (drainage_raster_path_task[0], 1),
+            f_reg['d_dn_path']),
+        kwargs={'weight_raster_path_band': (f_reg['ws_inverse_path'], 1)},
+        target_path_list=[f_reg['d_dn_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[
+            flow_dir_task, drainage_raster_path_task[1],
+            inverse_ws_factor_task],
+        task_name='calculating d_dn')
 
-    LOGGER.info('calculate ic')
-    _calculate_ic(
-        f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path'])
+    ic_task = task_graph.add_task(
+        func=_calculate_ic,
+        args=(
+            f_reg['d_up_path'], f_reg['d_dn_path'], f_reg['ic_path']),
+        target_path_list=[f_reg['ic_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[d_up_task, d_dn_task],
+        task_name='calculate ic')
 
-    LOGGER.info('calculate sdr')
-    _calculate_sdr(
-        float(args['k_param']), float(args['ic_0_param']),
-        float(args['sdr_max']), f_reg['ic_path'],
-        f_reg['drainage_raster_path'], f_reg['sdr_path'])
+    sdr_task = task_graph.add_task(
+        func=_calculate_sdr,
+        args=(
+            float(args['k_param']), float(args['ic_0_param']),
+            float(args['sdr_max']), f_reg['ic_path'],
+            drainage_raster_path_task[0], f_reg['sdr_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['sdr_path']],
+        dependent_task_list=[ic_task],
+        task_name='calculate sdr')
 
-    LOGGER.info('calculate sed export')
-    _calculate_sed_export(
-        f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path'])
+    sed_export_task = task_graph.add_task(
+        func=_calculate_sed_export,
+        args=(
+            f_reg['usle_path'], f_reg['sdr_path'], f_reg['sed_export_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['sed_export_path']],
+        dependent_task_list=[usle_task, sdr_task],
+        task_name='calculate sed export')
 
-    LOGGER.info('calculate sediment retention index')
-    _calculate_sed_retention_index(
-        f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
-        float(args['sdr_max']), f_reg['sed_retention_index_path'])
+    _ = task_graph.add_task(
+        func=_calculate_sed_retention_index,
+        args=(
+            f_reg['rkls_path'], f_reg['usle_path'], f_reg['sdr_path'],
+            float(args['sdr_max']), f_reg['sed_retention_index_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['sed_retention_index_path']],
+        dependent_task_list=[rkls_task, usle_task, sdr_task],
+        task_name='calculate sediment retention index')
 
-    LOGGER.info('calculate sediment retention')
-    LOGGER.info('calculate S factor')
-    _calculate_inverse_s_factor(
-        f_reg['thresholded_slope_path'], f_reg['s_inverse_path'])
+    # This next section is for calculating the bare soil part.
+    s_inverse_task = task_graph.add_task(
+        func=_calculate_inverse_s_factor,
+        args=(f_reg['thresholded_slope_path'], f_reg['s_inverse_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['s_inverse_path']],
+        dependent_task_list=[threshold_slope_task],
+        task_name='calculate S factor')
 
-    LOGGER.info('calculating d_dn bare soil')
-    natcap.invest.pygeoprocessing_0_3_3.routing.routing_core.distance_to_stream(
-        f_reg['flow_direction_path'], f_reg['drainage_raster_path'],
-        f_reg['d_dn_bare_soil_path'], factor_uri=f_reg['s_inverse_path'])
+    d_dn_bare_task = task_graph.add_task(
+        func=pygeoprocessing.routing.distance_to_channel_mfd,
+        args=(
+            (f_reg['flow_direction_path'], 1),
+            (drainage_raster_path_task[0], 1),
+            f_reg['d_dn_bare_soil_path']),
+        kwargs={'weight_raster_path_band': (f_reg['s_inverse_path'], 1)},
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['d_dn_bare_soil_path']],
+        dependent_task_list=[
+            flow_dir_task, drainage_raster_path_task[1], s_inverse_task],
+        task_name='calculating d_dn soil')
 
-    LOGGER.info('calculating d_up bare soil')
-    _calculate_d_up_bare(
-        f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
-        f_reg['d_up_bare_soil_path'])
+    d_up_bare_task = task_graph.add_task(
+        func=_calculate_d_up_bare,
+        args=(
+            f_reg['s_bar_path'], f_reg['flow_accumulation_path'],
+            f_reg['d_up_bare_soil_path']),
+        target_path_list=[f_reg['d_up_bare_soil_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[bar_task_map['s_bar'], flow_accumulation_task],
+        task_name='calculating d_up bare soil')
 
-    LOGGER.info('calculate ic')
-    _calculate_ic(
-        f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
-        f_reg['ic_bare_soil_path'])
+    ic_bare_task = task_graph.add_task(
+        func=_calculate_ic,
+        args=(
+            f_reg['d_up_bare_soil_path'], f_reg['d_dn_bare_soil_path'],
+            f_reg['ic_bare_soil_path']),
+        target_path_list=[f_reg['ic_bare_soil_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[d_up_bare_task, d_dn_bare_task],
+        task_name='calculate bare soil ic')
 
-    _calculate_sdr(
-        float(args['k_param']), float(args['ic_0_param']),
-        float(args['sdr_max']), f_reg['ic_bare_soil_path'],
-        f_reg['drainage_raster_path'], f_reg['sdr_bare_soil_path'])
+    sdr_bare_task = task_graph.add_task(
+        func=_calculate_sdr,
+        args=(
+            float(args['k_param']), float(args['ic_0_param']),
+            float(args['sdr_max']), f_reg['ic_bare_soil_path'],
+            drainage_raster_path_task[0], f_reg['sdr_bare_soil_path']),
+        target_path_list=[f_reg['sdr_bare_soil_path']],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        dependent_task_list=[ic_bare_task, drainage_raster_path_task[1]],
+        task_name='calculate bare SDR')
 
-    _calculate_sed_retention(
-        f_reg['rkls_path'], f_reg['usle_path'], f_reg['drainage_raster_path'],
-        f_reg['sdr_path'], f_reg['sdr_bare_soil_path'],
-        f_reg['sed_retention_path'])
+    sed_retention_task = task_graph.add_task(
+        func=_calculate_sed_retention,
+        args=(
+            f_reg['rkls_path'], f_reg['usle_path'],
+            drainage_raster_path_task[0], f_reg['sdr_path'],
+            f_reg['sdr_bare_soil_path'], f_reg['sed_retention_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['sed_retention_path']],
+        dependent_task_list=[
+            rkls_task, usle_task, drainage_raster_path_task[1], sdr_task,
+            sdr_bare_task],
+        task_name='calculate sediment retention')
 
-    LOGGER.info('generating report')
-    _generate_report(
-        args['watersheds_path'], f_reg['usle_path'],
-        f_reg['sed_export_path'], f_reg['sed_retention_path'],
-        f_reg['watershed_results_sdr_path'])
+    _ = task_graph.add_task(
+        func=_generate_report,
+        args=(
+            args['watersheds_path'], f_reg['usle_path'],
+            f_reg['sed_export_path'], f_reg['sed_retention_path'],
+            f_reg['watershed_results_sdr_path']),
+        target_path_list=[f_reg['watershed_results_sdr_path']],
+        dependent_task_list=[
+            usle_task, sed_export_task, sed_retention_task],
+        task_name='generate report')
 
-    for tmp_filename_key in _TMP_BASE_FILES:
-        if os.path.exists(f_reg[tmp_filename_key]):
-            os.remove(f_reg[tmp_filename_key])
+    task_graph.close()
+    task_graph.join()
 
 
 def _calculate_ls_factor(
@@ -317,7 +538,7 @@ def _calculate_ls_factor(
 
     Parameters:
         flow_accumulation_path (string): path to raster, pixel values are the
-            contributing upstream area at that cell
+            contributing upstream area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
         aspect_path string): path to raster flow direction raster in radians
         out_ls_factor_path (string): path to output ls_factor raster
@@ -331,7 +552,7 @@ def _calculate_ls_factor(
     flow_accumulation_info = pygeoprocessing.get_raster_info(
         flow_accumulation_path)
     flow_accumulation_nodata = flow_accumulation_info['nodata'][0]
-    cell_size = flow_accumulation_info['mean_pixel_size']
+    cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
     def ls_factor_function(aspect_angle, percent_slope, flow_accumulation):
@@ -412,7 +633,8 @@ def _calculate_rkls(
     (revised universal soil loss equation with no C or P).
 
     Parameters:
-        ls_factor_path (string): path to LS raster
+        ls_factor_path (string): path to LS raster that has square pixels in
+            meter units.
         erosivity_path (string): path to per pixel erosivity raster
         erodibility_path (string): path to erodibility raster
         stream_path (string): path to drainage raster
@@ -429,9 +651,9 @@ def _calculate_rkls(
     stream_nodata = pygeoprocessing.get_raster_info(
         stream_path)['nodata'][0]
 
-    cell_size = pygeoprocessing.get_raster_info(
-        ls_factor_path)['mean_pixel_size']
-    cell_area_ha = cell_size ** 2 / 10000.0
+    cell_size = abs(
+        pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
+    cell_area_ha = cell_size**2 / 10000.0
 
     def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
@@ -446,12 +668,14 @@ def _calculate_rkls(
         Returns:
             ls_factor * erosivity * erodibility * usle_c_p or nodata if
             any values are nodata themselves.
+
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
             (ls_factor != _TARGET_NODATA) &
-            (erosivity != erosivity_nodata) &
-            (erodibility != erodibility_nodata) & (stream != stream_nodata))
+            ~numpy.isclose(erosivity, erosivity_nodata) &
+            ~numpy.isclose(erodibility, erodibility_nodata) &
+            (stream != stream_nodata))
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
@@ -608,22 +832,17 @@ def _calculate_usle(
 
 
 def _calculate_bar_factor(
-        dem_path, factor_path, flow_accumulation_path, flow_direction_path,
-        zero_absorption_source_path, loss_path, accumulation_path,
-        out_bar_path):
+        flow_direction_path, factor_path, flow_accumulation_path,
+        accumulation_path, out_bar_path):
     """Route user defined source across DEM.
 
-    Used for calcualting S and W bar in the SDR operation.
+    Used for calculating S and W bar in the SDR operation.
 
     Parameters:
         dem_path (string): path to DEM raster
         factor_path (string): path to arbitrary factor raster
         flow_accumulation_path (string): path to flow accumulation raster
         flow_direction_path (string): path to flow direction path (in radians)
-        zero_absorption_source_path (string): path to a raster that is all
-            0s and same size as `dem_path`.  Temporary file.
-        loss_path (string): path to a raster that can save the loss raster
-            from routing.  Temporary file.
         accumulation_path (string): path to a raster that can be used to
             save the accumulation of the factor.  Temporary file.
         out_bar_path (string): path to output raster that is the result of
@@ -633,24 +852,25 @@ def _calculate_bar_factor(
     Returns:
         None.
     """
-    pygeoprocessing.new_raster_from_base(
-        dem_path, zero_absorption_source_path, gdal.GDT_Float32,
-        [_TARGET_NODATA], fill_value_list=[0.0])
-
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
-    natcap.invest.pygeoprocessing_0_3_3.routing.route_flux(
-        flow_direction_path, dem_path, factor_path,
-        zero_absorption_source_path, loss_path, accumulation_path,
-        'flux_only')
+    LOGGER.debug("doing flow accumulation mfd on %s", factor_path)
+    # manually setting compression to DEFLATE because we got some LZW
+    # errors when testing with large data.
+    pygeoprocessing.routing.flow_accumulation_mfd(
+        (flow_direction_path, 1), accumulation_path,
+        weight_raster_path_band=(factor_path, 1),
+        gtiff_creation_options=[
+            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+            'PREDICTOR=3'])
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
         result = numpy.empty(base_accumulation.shape)
         valid_mask = (
-            (base_accumulation != _TARGET_NODATA) &
-            (flow_accumulation != flow_accumulation_nodata))
+            ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
+            ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
         result[:] = _TARGET_NODATA
         result[valid_mask] = (
             base_accumulation[valid_mask] / flow_accumulation[valid_mask])
@@ -663,8 +883,8 @@ def _calculate_bar_factor(
 def _calculate_d_up(
         w_bar_path, s_bar_path, flow_accumulation_path, out_d_up_path):
     """Calculate w_bar * s_bar * sqrt(flow accumulation * cell area)."""
-    cell_area = pygeoprocessing.get_raster_info(
-        w_bar_path)['mean_pixel_size'] ** 2
+    cell_area = abs(
+        pygeoprocessing.get_raster_info(w_bar_path)['pixel_size'][0])**2
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
@@ -693,8 +913,8 @@ def _calculate_d_up(
 def _calculate_d_up_bare(
         s_bar_path, flow_accumulation_path, out_d_up_bare_path):
     """Calculate s_bar * sqrt(flow accumulation * cell area)."""
-    cell_area = pygeoprocessing.get_raster_info(
-        s_bar_path)['mean_pixel_size'] ** 2
+    cell_area = abs(
+        pygeoprocessing.get_raster_info(s_bar_path)['pixel_size'][0])**2
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
 
@@ -870,7 +1090,8 @@ def _calculate_sed_retention(
             rkls, usle, stream_factor, sdr_factor, sdr_factor_bare_soil):
         """Subtract bare soil export from real landcover."""
         valid_mask = (
-            (rkls != _TARGET_NODATA) & (usle != _TARGET_NODATA) &
+            (rkls != _TARGET_NODATA) &
+            (usle != _TARGET_NODATA) &
             (stream_factor != stream_nodata) &
             (sdr_factor != _TARGET_NODATA) &
             (sdr_factor_bare_soil != _TARGET_NODATA))
@@ -903,9 +1124,6 @@ def _generate_report(
         }
 
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
-    # Delete if existing shapefile with the same name and path
-    if os.path.isfile(watershed_results_sdr_path):
-        os.remove(watershed_results_sdr_path)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
@@ -917,13 +1135,13 @@ def _generate_report(
         field_def.SetPrecision(11)
         layer.CreateField(field_def)
 
-    # initialize each feature field to 0.0
     layer.ResetReading()
     for feature in layer:
-        fid = feature.GetFID()
+        feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
-                field_name, float(field_summaries[field_name][fid]['sum']))
+                field_name,
+                float(field_summaries[field_name][feature_id]['sum']))
         layer.SetFeature(feature)
 
 
@@ -1001,7 +1219,7 @@ def validate(args, limit_to=None):
                         ([key], 'not found on disk'))
                     continue
                 if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
+                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
                     if raster is None:
                         validation_error_list.append(
                             ([key], 'not a raster'))
@@ -1028,7 +1246,8 @@ def validate(args, limit_to=None):
                             for feature in watersheds_layer:
                                 try:
                                     value = feature.GetFieldAsString('ws_id')
-                                    _ = int(value)  # value should be an integer
+                                    # value should be an integer
+                                    _ = int(value)
                                 except ValueError:
                                     validation_error_list.append((
                                         ['watersheds_path'],

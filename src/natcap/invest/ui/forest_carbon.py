@@ -13,16 +13,16 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
             validator=natcap.invest.forest_carbon_edge_effect.validate,
             localdoc=u'../documentation/forest_carbon_edge_effect.html')
 
-        self.lulc_uri = inputs.File(
-            args_key=u'lulc_uri',
+        self.lulc_raster_path = inputs.File(
+            args_key=u'lulc_raster_path',
             helptext=(
                 u"A GDAL-supported raster file, with an integer LULC "
                 u"code for each cell."),
             label=u'Land-Use/Land-Cover Map (raster)',
             validator=self.validator)
-        self.add_input(self.lulc_uri)
-        self.biophysical_table_uri = inputs.File(
-            args_key=u'biophysical_table_uri',
+        self.add_input(self.lulc_raster_path)
+        self.biophysical_table_path = inputs.File(
+            args_key=u'biophysical_table_path',
             helptext=(
                 u"A CSV table containing model information "
                 u"corresponding to each of the land use classes in the "
@@ -34,7 +34,7 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
                 u"for more information about these fields."),
             label=u'Biophysical Table (csv)',
             validator=self.validator)
-        self.add_input(self.biophysical_table_uri)
+        self.add_input(self.biophysical_table_path)
         self.pools_to_calculate = inputs.Dropdown(
             args_key=u'pools_to_calculate',
             helptext=(
@@ -56,8 +56,8 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
                 u"'is_tropical_forest' field in the biophysical table."),
             label=u'Compute forest edge effects')
         self.add_input(self.compute_forest_edge_effects)
-        self.tropical_forest_edge_carbon_model_shape_uri = inputs.File(
-            args_key=u'tropical_forest_edge_carbon_model_shape_uri',
+        self.tropical_forest_edge_carbon_model_vector_path = inputs.File(
+            args_key=u'tropical_forest_edge_carbon_model_vector_path',
             helptext=(
                 u"A shapefile with fields 'method', 'theta1', "
                 u"'theta2', 'theta3' describing the global forest "
@@ -66,7 +66,7 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
             interactive=False,
             label=u'Global forest carbon edge regression models (vector)',
             validator=self.validator)
-        self.add_input(self.tropical_forest_edge_carbon_model_shape_uri)
+        self.add_input(self.tropical_forest_edge_carbon_model_vector_path)
         self.n_nearest_model_points = inputs.Text(
             args_key=u'n_nearest_model_points',
             helptext=(
@@ -94,19 +94,19 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
             label=u'Forest Edge Biomass to Carbon Conversion Factor',
             validator=self.validator)
         self.add_input(self.biomass_to_carbon_conversion_factor)
-        self.aoi_uri = inputs.File(
-            args_key=u'aoi_uri',
+        self.aoi_vector_path = inputs.File(
+            args_key=u'aoi_vector_path',
             helptext=(
                 u"This is a set of polygons that will be used to "
                 u"aggregate carbon values at the end of the run if "
                 u"provided."),
             label=u'Service areas of interest <em>(optional)</em> (vector)',
             validator=self.validator)
-        self.add_input(self.aoi_uri)
+        self.add_input(self.aoi_vector_path)
 
         # Set interactivity, requirement as input sufficiency changes
         self.compute_forest_edge_effects.sufficiency_changed.connect(
-            self.tropical_forest_edge_carbon_model_shape_uri.set_interactive)
+            self.tropical_forest_edge_carbon_model_vector_path.set_interactive)
         self.compute_forest_edge_effects.sufficiency_changed.connect(
             self.n_nearest_model_points.set_interactive)
         self.compute_forest_edge_effects.sufficiency_changed.connect(
@@ -116,20 +116,20 @@ class ForestCarbonEdgeEffect(model.InVESTModel):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.lulc_uri.args_key: self.lulc_uri.value(),
-            self.biophysical_table_uri.args_key:
-                self.biophysical_table_uri.value(),
+            self.lulc_raster_path.args_key: self.lulc_raster_path.value(),
+            self.biophysical_table_path.args_key:
+                self.biophysical_table_path.value(),
             self.pools_to_calculate.args_key:
                 self.pools_to_calculate.value(),
             self.compute_forest_edge_effects.args_key:
                 self.compute_forest_edge_effects.value(),
-            self.tropical_forest_edge_carbon_model_shape_uri.args_key:
-                self.tropical_forest_edge_carbon_model_shape_uri.value(),
+            self.tropical_forest_edge_carbon_model_vector_path.args_key:
+                self.tropical_forest_edge_carbon_model_vector_path.value(),
             self.n_nearest_model_points.args_key:
                 self.n_nearest_model_points.value(),
             self.biomass_to_carbon_conversion_factor.args_key:
                 self.biomass_to_carbon_conversion_factor.value(),
-            self.aoi_uri.args_key: self.aoi_uri.value(),
+            self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
         }
 
         return args

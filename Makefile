@@ -1,16 +1,16 @@
 # Repositories managed by the makefile task tree
 DATA_DIR := data
-SVN_DATA_REPO           := svn://scm.naturalcapitalproject.org/svn/invest-sample-data
-SVN_DATA_REPO_PATH      := $(DATA_DIR)/invest-data
-SVN_DATA_REPO_REV       := 178
+GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
+GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
+GIT_SAMPLE_DATA_REPO_REV    := 79c7c11c4d6bac301f297573347cb1f560d4f716
 
-SVN_TEST_DATA_REPO      := svn://scm.naturalcapitalproject.org/svn/invest-test-data
-SVN_TEST_DATA_REPO_PATH := $(DATA_DIR)/invest-test-data
-SVN_TEST_DATA_REPO_REV  := 188
+GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
+GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
+GIT_TEST_DATA_REPO_REV      := 00f16f6ccdf9d51c050bfe44a57c6821e045d50f
 
-HG_UG_REPO              := https://bitbucket.org/natcap/invest.users-guide
-HG_UG_REPO_PATH         := doc/users-guide
-HG_UG_REPO_REV          := 10cd532ac720
+HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
+HG_UG_REPO_PATH             := doc/users-guide
+HG_UG_REPO_REV              := b39bc56cc601
 
 
 ENV = env
@@ -23,6 +23,7 @@ ifeq ($(OS),Windows_NT)
 	COPYDIR := $(CP) -Recurse
 	MKDIR := powershell.exe mkdir -Force -Path
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
+	RMDIR := cmd /C "rmdir /S /Q"
 	# Windows doesn't install a python2 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
@@ -44,6 +45,7 @@ else
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
+	RMDIR := $(RM)
 	/ := /
 	# linux, mac distinguish between python2 and python3
 	PYTHON = python2
@@ -58,7 +60,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) svn hg pdflatex latexmk
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git hg pdflatex latexmk
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -66,7 +68,6 @@ endif
 PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
-DEST_VERSION := $(shell hg log -r. --template="{ifeq(latesttagdistance,'0',latesttag,'develop')}")
 
 
 # Output directory names
@@ -74,14 +75,24 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 
-# These are intended to be overridden by a jenkins build.
-# When building a fork, we might set FORKNAME to <username> and DATA_BASE_URL
-# to wherever the datasets will be available based on the forkname and where
-# we're storing the datasets.
-# These defaults assume that we're storing datasets for an InVEST release.
-# DEST_VERSION is 'develop' unless we're at a tag, in which case it's the tag.
-FORKNAME :=
-DATA_BASE_URL := http://data.naturalcapitalproject.org/invest-data/$(DEST_VERSION)
+# The fork name and user here are derived from the mercurial path.
+# They will need to be set manually (e.g. make FORKNAME=natcap/invest)
+# if someone wants to build from source outside of mercurial (like if
+# they grabbed a zipfile of the source code)
+# FORKUSER should not need to be set from the CLI.
+FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
+FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
+ifeq ($(FORKUSER),natcap)
+	BUCKET := gs://releases.naturalcapitalproject.org
+	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
+else
+	BUCKET := gs://natcap-dev-build-artifacts
+	DIST_URL_BASE := $(BUCKET)/invest/$(FORKUSER)/$(VERSION)
+endif
+DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BASE))
+DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
+
+
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
 
@@ -92,13 +103,12 @@ APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
 USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
-WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(FORKNAME)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH) jenkins purge mac_zipfile
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -128,7 +138,7 @@ help:
 $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 	$(MKDIR) $@
 
-test: $(SVN_TEST_DATA_REPO_PATH)
+test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
 test_ui:
@@ -136,15 +146,15 @@ test_ui:
 
 clean:
 	$(PYTHON) setup.py clean
-	-$(RM) $(BUILD_DIR)
-	-$(RM) natcap.invest.egg-info
-	-$(RM) cover
+	-$(RMDIR) $(BUILD_DIR)
+	-$(RMDIR) natcap.invest.egg-info
+	-$(RMDIR) cover
 	-$(RM) coverage.xml
 
 purge: clean
 	-$(RM_DATA_DIR)
-	-$(RM) $(HG_UG_REPO_PATH)
-	-$(RM) $(ENV)
+	-$(RMDIR) $(HG_UG_REPO_PATH)
+	-$(RMDIR) $(ENV)
 
 check:
 	@echo "Checking required applications"
@@ -160,13 +170,15 @@ $(HG_UG_REPO_PATH):
 	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
 	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
 
-$(SVN_DATA_REPO_PATH): | $(DATA_DIR)
-	svn checkout $(SVN_DATA_REPO) -r $(SVN_DATA_REPO_REV) $(SVN_DATA_REPO_PATH)
+$(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
+	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
-$(SVN_TEST_DATA_REPO_PATH): | $(DATA_DIR)
-	svn checkout $(SVN_TEST_DATA_REPO) -r $(SVN_TEST_DATA_REPO_REV) $(SVN_TEST_DATA_REPO_PATH)
+$(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
+	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
+	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
-fetch: $(HG_UG_REPO_PATH) $(SVN_DATA_REPO_PATH) $(SVN_TEST_DATA_REPO_PATH)
+fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
 # Python environment management
@@ -180,7 +192,7 @@ env:
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
 # of pip don't think CWD is a valid package.
 install: $(DIST_DIR)/natcap.invest%.whl
-	-$(RM) natcap.invest.egg-info
+	-$(RMDIR) natcap.invest.egg-info
 	$(PIP) install --isolated --upgrade --only-binary natcap.invest --find-links=dist natcap.invest
 
 
@@ -194,16 +206,15 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 
 
 # Build binaries and put them in dist/invest
+# The `invest.exe --list` is to test the binaries.  If something doesn't
+# import, we want to know right away.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
-	-$(RM) $(BUILD_DIR)/pyi-build
-	-$(RM) $(INVEST_BINARIES_DIR)
-	$(PYTHON) -m PyInstaller \
-		--workpath $(BUILD_DIR)/pyi-build \
-		--clean \
-		--distpath $(DIST_DIR) \
-		exe/invest.spec
-	$(BASHLIKE_SHELL_COMMAND) "pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	-$(RMDIR) $(BUILD_DIR)/pyi-build
+	-$(RMDIR) $(INVEST_BINARIES_DIR)
+	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
+	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
+	$(INVEST_BINARIES_DIR)/invest.exe --list
 
 # Documentation.
 # API docs are copied to dist/apidocs
@@ -219,14 +230,14 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	-$(RM) build/userguide/latex
+	-$(RMDIR) build/userguide/latex
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide latex
 	$(MAKE) -C build/userguide/latex all-pdf
 	$(CP) build/userguide/latex/InVEST*.pdf dist
 
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
-	-$(RM) $(USERGUIDE_HTML_DIR)
+	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
@@ -256,7 +267,6 @@ ZIPDIRS = Aquaculture \
 		  Malaria \
 		  pollination \
 		  recreation \
-		  ScenarioGenerator \
 		  scenario_proximity \
 		  ScenicQuality \
 		  seasonal_water_yield \
@@ -269,33 +279,29 @@ sampledata: $(ZIPTARGETS)
 $(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(SVN_DATA_REPO_PATH)
-	cd $(SVN_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
+$(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
+	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
 SAMPLEDATA_SINGLE_ARCHIVE := dist/InVEST_$(VERSION)_sample_data.zip
 sampledata_single: $(SAMPLEDATA_SINGLE_ARCHIVE)
 
-$(SAMPLEDATA_SINGLE_ARCHIVE): $(SVN_DATA_REPO_PATH) dist
-	$(BASHLIKE_SHELL_COMMAND) "cd $(SVN_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x *.json"
+$(SAMPLEDATA_SINGLE_ARCHIVE): $(GIT_SAMPLE_DATA_REPO_PATH) dist
+	$(BASHLIKE_SHELL_COMMAND) "cd $(GIT_SAMPLE_DATA_REPO_PATH) && zip -r ../../$(SAMPLEDATA_SINGLE_ARCHIVE) ./* -x .svn -x .git -x *.json"
 
 
 # Installers for each platform.
 # Windows (NSIS) installer is written to dist/InVEST_<version>_x86_Setup.exe
 # Mac (DMG) disk image is written to dist/InVEST <version>.dmg
+ifeq ($(FORKUSER), natcap)
+	INSTALLER_NAME_FORKUSER :=
+else
+	INSTALLER_NAME_FORKUSER := $(FORKUSER)
+endif
+WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) \
-							$(USERGUIDE_HTML_DIR) \
-							$(USERGUIDE_PDF_FILE) \
-							build/vcredist_x86.exe \
-							$(SVN_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
-	makensis \
-		/DVERSION=$(VERSION) \
-		/DBINDIR=$(INVEST_BINARIES_DIR) \
-		/DARCHITECTURE=$(PYTHON_ARCH) \
-		/DFORKNAME=$(FORKNAME) \
-		/DDATA_LOCATION=$(DATA_BASE_URL) \
-		installer\windows\invest_installer.nsi
+	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
 mac_app: $(MAC_APPLICATION_BUNDLE)
 $(MAC_APPLICATION_BUNDLE): $(BUILD_DIR) $(INVEST_BINARIES_DIR)
@@ -318,5 +324,17 @@ jenkins:
 jenkins_test_ui: env
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
-jenkins_test: env $(SVN_TEST_DATA_REPO_PATH)
+jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
+
+deploy:
+	gsutil -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
+	@echo "Binaries (if they were created) can be downloaded from:"
+	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
+
+
+# Notes on Makefile development
+#
+# * Use the -drR to show the decision tree (and none of the implicit rules)
+#   if a task is (or is not) executing when expected.
+# * Use -n to print the actions to be executed instead of actually executing them.

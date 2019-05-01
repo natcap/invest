@@ -309,13 +309,13 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\Coastal Vulnerability" "cv"
     !insertmacro StartMenuLink "${SMPATH}\SDR" "sdr"
     !insertmacro StartMenuLink "${SMPATH}\NDR" "ndr"
-    !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Rule Based" "sg"
     !insertmacro StartMenuLink "${SMPATH}\Scenario Generator: Proximity Based" "sgp"
     !insertmacro StartMenuLink "${SMPATH}\Water Yield" "hwy"
     !insertmacro StartMenuLink "${SMPATH}\Seasonal Water Yield" "swy"
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+    !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
@@ -326,11 +326,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     CreateDirectory "${FISHERIES}"
     !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
     !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
-
-    !define HRA "${SMPATH}\Habitat Risk Assessment"
-    CreateDirectory "${HRA}"
-    !insertmacro StartMenuLink "${HRA}\(1) Habitat Risk Assessment Preprocessor" "hra_pre"
-    !insertmacro StartMenuLink "${HRA}\(2) Habitat Risk Assessment" "hra"
 
 
     ; Write registry keys for convenient uninstallation via add/remove programs.
@@ -355,8 +350,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     file ..\..\HISTORY.rst
 
     ; Copy over all the sample parameter files
-    File ..\..\data\invest-data\*.invs.json
-    File ..\..\data\invest-data\*.invest.json
+    File ..\..\data\invest-sample-data\*.invs.json
+    File ..\..\data\invest-sample-data\*.invest.json
 
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*
@@ -486,7 +481,6 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 4656
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
-    !insertmacro downloadData "Scenario Generator: Rule Based (optional)" "ScenarioGenerator.zip" 1452
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
   SectionGroupEnd
 SectionGroupEnd

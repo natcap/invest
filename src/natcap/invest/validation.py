@@ -135,7 +135,8 @@ def invest_validator(validate_func):
                 n_workers_int = int(n_workers_float)
                 if n_workers_float != n_workers_int:
                     common_warnings.append(
-                        (['n_workers'], ('If provided, must be an integer.')))
+                        (['n_workers'],
+                         ('If provided, must be an integer ')))
             except (ValueError, KeyError):
                 # ValueError When n_workers is an empty string.  Input is
                 # optional, so this is not erroneous behavior.

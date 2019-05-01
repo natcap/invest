@@ -4,7 +4,6 @@ import math
 import logging
 import tempfile
 import shutil
-import collections
 import itertools
 import heapq
 import struct
@@ -22,7 +21,11 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
 _BYTE_NODATA = 255  # Largest value a byte can hold
-
+BYTE_GTIFF_CREATION_OPTIONS = (
+    'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+    'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+FLOAT_GTIFF_CREATION_OPTIONS = (
+    'PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS
 
 _OUTPUT_BASE_FILES = {
     'viewshed_value': 'vshed_value.tif',
@@ -36,7 +39,7 @@ _INTERMEDIATE_BASE_FILES = {
     'structures_clipped': 'structures_clipped.shp',
     'structures_reprojected': 'structures_reprojected.shp',
     'visibility_pattern': 'visibility_{id}.tif',
-    'auxiliary_pattern': 'auxiliary_{id}.tif',
+    'auxiliary_pattern': 'auxiliary_{id}.tif',  # Retained for debugging.
     'value_pattern': 'value_{id}.tif',
 }
 
@@ -58,14 +61,21 @@ def execute(args):
             raster.
         args['refraction'] (float): (required) number indicating the refraction
             coefficient to use for calculating curvature of the earth.
-        args['valuation_function'] (string): (required) The type of economic
+        args['do_valuation'] (bool): (optional) indicates whether to compute
+            valuation.  If ``False``, per-viewpoint value will not be computed,
+            and the summation of valuation rasters (vshed_value.tif) will not
+            be created.  Additionally, the Viewshed Quality raster will
+            represent the weighted sum of viewsheds. Default: ``False``.
+        args['valuation_function'] (string): The type of economic
             function to use for valuation.  One of "linear", "logarithmic",
             or "exponential".
-        args['a_coef'] (float): (required) The "a" coefficient for valuation.
-        args['b_coef'] (float): (required) The "b" coefficient for valuation.
-        args['max_valuation_radius'] (float): (required) Past this distance
+        args['a_coef'] (float): The "a" coefficient for valuation.  Required
+            if ``args['do_valuation']`` is ``True``.
+        args['b_coef'] (float): The "b" coefficient for valuation.  Required
+            if ``args['do_valuation']`` is ``True``.
+        args['max_valuation_radius'] (float): Past this distance
             from the viewpoint, the valuation raster's pixel values will be set
-            to 0.
+            to 0.  Required if ``args['do_valuation']`` is ``True``.
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -77,19 +87,27 @@ def execute(args):
     LOGGER.info("Starting Scenic Quality Model")
     dem_raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
 
-    valuation_coefficients = {
-        'a': float(args['a_coef']),
-        'b': float(args['b_coef']),
-    }
-    if args['valuation_function'].startswith('linear'):
-        valuation_method = 'linear'
-    elif args['valuation_function'].startswith('logarithmic'):
-        valuation_method = 'logarithmic'
-    elif args['valuation_function'].startswith('exponential'):
-        valuation_method = 'exponential'
-    else:
-        raise ValueError('Valuation function type %s not recognized' %
-                         args['valuation_function'])
+    try:
+        do_valuation = bool(args['do_valuation'])
+    except KeyError:
+        do_valuation = False
+
+    if do_valuation:
+        valuation_coefficients = {
+            'a': float(args['a_coef']),
+            'b': float(args['b_coef']),
+        }
+        if args['valuation_function'].startswith('linear'):
+            valuation_method = 'linear'
+        elif args['valuation_function'].startswith('logarithmic'):
+            valuation_method = 'logarithmic'
+        elif args['valuation_function'].startswith('exponential'):
+            valuation_method = 'exponential'
+        else:
+            raise ValueError('Valuation function type %s not recognized' %
+                             args['valuation_function'])
+
+        max_valuation_radius = float(args['max_valuation_radius'])
 
     # Create output and intermediate directory
     output_dir = os.path.join(args['workspace_dir'], 'output')
@@ -105,8 +123,6 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
 
-    max_valuation_radius = float(args['max_valuation_radius'])
-
     work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
     try:
         n_workers = int(args['n_workers'])
@@ -114,7 +130,7 @@ def execute(args):
         # KeyError when n_workers is not present in args
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
+        n_workers = -1  # Synchronous execution
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     reprojected_aoi_task = graph.add_task(
@@ -237,54 +253,45 @@ def execute(args):
         visibility_filepath = file_registry['visibility_pattern'].format(
             id=feature_index)
         viewshed_files.append(visibility_filepath)
-        auxiliary_filepath = file_registry['auxiliary_pattern'].format(
-            id=feature_index)
         viewshed_task = graph.add_task(
             viewshed,
             args=((file_registry['clipped_dem'], 1),  # DEM
                   viewpoint,
                   visibility_filepath),
-            kwargs={'curved_earth': True,  # model always assumes this.
+            kwargs={'curved_earth': True,  # SQ model always assumes this.
                     'refraction_coeff': float(args['refraction']),
                     'max_distance': max_radius,
                     'viewpoint_height': viewpoint_height,
-                    'aux_filepath': auxiliary_filepath},
-            target_path_list=[auxiliary_filepath, visibility_filepath],
+                    'aux_filepath': None},  # Remove aux filepath after run
+            target_path_list=[visibility_filepath],
             dependent_task_list=[clipped_dem_task,
                                  clipped_viewpoints_task],
             task_name='calculate_visibility_%s' % feature_index)
         viewshed_tasks.append(viewshed_task)
 
-        # calculate valuation
-        viewshed_valuation_path = file_registry['value_pattern'].format(
-            id=feature_index)
-        valuation_task = graph.add_task(
-            _calculate_valuation,
-            args=(visibility_filepath,
-                  viewpoint,
-                  weight,  # user defined, from WEIGHT field in vector
-                  valuation_method,
-                  valuation_coefficients,  # a, b from args, a dict.
-                  max_valuation_radius,
-                  viewshed_valuation_path),
-            target_path_list=[viewshed_valuation_path],
-            dependent_task_list=[viewshed_task],
-            task_name='calculate_valuation_for_viewshed_%s' % feature_index)
-        valuation_tasks.append(valuation_task)
-        valuation_filepaths.append(viewshed_valuation_path)
+        if do_valuation:
+            # calculate valuation
+            viewshed_valuation_path = file_registry['value_pattern'].format(
+                id=feature_index)
+            valuation_task = graph.add_task(
+                _calculate_valuation,
+                args=(visibility_filepath,
+                      viewpoint,
+                      weight,  # user defined, from WEIGHT field in vector
+                      valuation_method,
+                      valuation_coefficients,  # a, b from args, a dict.
+                      max_valuation_radius,
+                      viewshed_valuation_path),
+                target_path_list=[viewshed_valuation_path],
+                dependent_task_list=[viewshed_task],
+                task_name='calculate_valuation_for_viewshed_%s' % feature_index)
+            valuation_tasks.append(valuation_task)
+            valuation_filepaths.append(viewshed_valuation_path)
+
         feature_index += 1
 
-    viewshed_value_task = graph.add_task(
-        _sum_valuation_rasters,
-        args=(file_registry['clipped_dem'],
-              valuation_filepaths,
-              file_registry['viewshed_value']),
-        target_path_list=[file_registry['viewshed_value']],
-        dependent_task_list=sorted(valuation_tasks),
-        task_name='add_up_valuation_rasters')
-
     # The weighted visible structures raster is a leaf node
-    graph.add_task(
+    weighted_visible_structures_task = graph.add_task(
         _count_and_weight_visible_structures,
         args=(viewshed_files,
               weights,
@@ -294,13 +301,31 @@ def execute(args):
         dependent_task_list=sorted(viewshed_tasks),
         task_name='sum_visibility_for_all_structures')
 
+    # If we're not doing valuation, we can still compute visual quality,
+    # we'll just use the weighted visible structures raster instead of the
+    # sum of the valuation rasters.
+    if not do_valuation:
+        parent_visual_quality_task = weighted_visible_structures_task
+        parent_visual_quality_raster_path = (
+            file_registry['n_visible_structures'])
+    else:
+        parent_visual_quality_task = graph.add_task(
+            _sum_valuation_rasters,
+            args=(file_registry['clipped_dem'],
+                  valuation_filepaths,
+                  file_registry['viewshed_value']),
+            target_path_list=[file_registry['viewshed_value']],
+            dependent_task_list=sorted(valuation_tasks),
+            task_name='add_up_valuation_rasters')
+        parent_visual_quality_raster_path = file_registry['viewshed_value']
+
     # visual quality is one of the leaf nodes on the task graph.
     graph.add_task(
         _calculate_visual_quality,
-        args=(file_registry['viewshed_value'],
+        args=(parent_visual_quality_raster_path,
               intermediate_dir,
               file_registry['viewshed_quality']),
-        dependent_task_list=[viewshed_value_task],
+        dependent_task_list=[parent_visual_quality_task],
         target_path_list=[file_registry['viewshed_quality']],
         task_name='calculate_visual_quality'
     )
@@ -394,7 +419,8 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
 
     pygeoprocessing.raster_calculator(
         [(dem_path, 1)] + [(path, 1) for path in valuation_filepaths],
-        _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA)
+        _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA,
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
@@ -489,14 +515,16 @@ def _calculate_valuation(visibility_path, viewpoint, weight,
     spatial_reference = osr.SpatialReference()
     spatial_reference.ImportFromWkt(vis_raster_info['projection'])
     linear_units = spatial_reference.GetLinearUnits()
-    pixel_size_in_m = vis_raster_info['mean_pixel_size'] * linear_units
+    pixel_size_in_m = utils.mean_pixel_size_and_area(
+        vis_raster_info['pixel_size'])[0] * linear_units
 
     valuation_raster = gdal.OpenEx(valuation_raster_path,
                                    gdal.OF_RASTER | gdal.GA_Update)
     valuation_band = valuation_raster.GetRasterBand(1)
     vis_nodata = vis_raster_info['nodata'][0]
 
-    for block_info, vis_block in pygeoprocessing.iterblocks(visibility_path):
+    for block_info, vis_block in pygeoprocessing.iterblocks(
+            (visibility_path, 1)):
         visibility_value = numpy.empty(vis_block.shape, dtype=numpy.float64)
         visibility_value[:] = _VALUATION_NODATA
 
@@ -617,8 +645,10 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     LOGGER.info('Clipping the DEM to its intersection with the AOI.')
     aoi_vector_info = pygeoprocessing.get_vector_info(aoi_path)
     dem_raster_info = pygeoprocessing.get_raster_info(dem_path)
-    pixel_size = (dem_raster_info['mean_pixel_size'],
-                  dem_raster_info['mean_pixel_size'])
+    mean_pixel_size = (
+        abs(dem_raster_info['pixel_size'][0]) +
+        abs(dem_raster_info['pixel_size'][1])) / 2.0
+    pixel_size = (mean_pixel_size, -mean_pixel_size)
 
     intersection_bbox = [op(aoi_dim, dem_dim) for (aoi_dim, dem_dim, op) in
                          zip(aoi_vector_info['bounding_box'],
@@ -634,7 +664,8 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     aoi_mask_raster_path = os.path.join(temp_dir, 'aoi_mask.tif')
     pygeoprocessing.new_raster_from_base(
         clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte,
-        [_BYTE_NODATA], [0])
+        [_BYTE_NODATA], [0],
+        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
     pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
 
     dem_nodata = dem_raster_info['nodata'][0]
@@ -650,14 +681,9 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     pygeoprocessing.raster_calculator(
         [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
         _mask_op, target_path, gdal.GDT_Float32, dem_nodata,
-        gtiff_creation_options=(
-            'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW', 'BLOCKXSIZE=256',
-            'BLOCKYSIZE=256'))
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
-    try:
-        shutil.rmtree(temp_dir)
-    except OSError:
-        LOGGER.exception('Could not remove temp directory %s', temp_dir)
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
 
 def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
@@ -721,7 +747,8 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
         ([(clipped_dem_path, 1)] +
          [(vis_path, 1) for vis_path in visibility_raster_path_list] +
          [(weight, 'raw') for weight in weights]),
-        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata)
+        _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata,
+        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):
@@ -787,7 +814,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
             if not packed_score:
                 break
             for value in struct.unpack(
-                    'd' * (len(values_buffer)//dtype_n_bytes), values_buffer):
+                    'd' * (len(packed_score)//dtype_n_bytes), packed_score):
                 yield value
 
     # phase 1: calculate percentiles from the visible_structures raster
@@ -800,9 +827,10 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     n_pixels_read = 0
     n_pixels_in_raster = (raster_info['raster_size'][0] *
                           raster_info['raster_size'][1])
-    for _, block in pygeoprocessing.iterblocks(source_raster_path):
+    for _, block in pygeoprocessing.iterblocks((source_raster_path, 1)):
         block = block.astype(numpy.float64)
-        valid_pixels = block[(block != raster_nodata) & (block != 0)]
+        valid_pixels = block[(~numpy.isclose(block, raster_nodata) &
+                               (~numpy.isclose(block, 0)))]
         n_pixels_read += block.size
 
         # Only process blocks that have valid pixels.
@@ -824,7 +852,6 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     rank_ordinals = [math.ceil(n*n_valid_pixels) for n in
                      (0.0, 0.25, 0.50, 0.75)]
-
     percentile_values = []
     current_index = 0
     next_percentile_ordinal = rank_ordinals.pop(0)
@@ -858,7 +885,8 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
 
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1)], _map_percentiles, target_path,
-        gdal.GDT_Byte, _BYTE_NODATA)
+        gdal.GDT_Byte, _BYTE_NODATA,
+        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
 
 
 @validation.invest_validator
@@ -890,10 +918,17 @@ def validate(args, limit_to=None):
         'structure_path',
         'dem_path',
         'refraction',
-        'max_valuation_radius',
-        'valuation_function',
-        'a_coef',
-        'b_coef']
+    ]
+
+    if (limit_to is None and
+            'do_valuation' in args and
+            bool(args['do_valuation'])):
+        required_keys.extend([
+            'a_coef',
+            'b_coef',
+            'max_valuation_radius',
+            'valuation_function'
+        ])
 
     for key in required_keys:
         if limit_to in (None, key):

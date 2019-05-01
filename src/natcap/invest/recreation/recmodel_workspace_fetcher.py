@@ -5,7 +5,8 @@ import logging
 import urllib
 
 import Pyro4
-import natcap.invest.pygeoprocessing_0_3_3
+
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
@@ -32,7 +33,7 @@ def execute(args):
         None
     """
     output_dir = args['workspace_dir']
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_dir])
+    utils.make_directories([output_dir])
 
     # in case the user defines a hostname
     if 'hostname' in args:
