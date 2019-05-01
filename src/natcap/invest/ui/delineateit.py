@@ -26,7 +26,7 @@ class Delineateit(model.InVESTModel):
             helptext=(
                 u"This is a layer of geometries representing watershed "
                 u"outlets such as municipal water intakes or lakes."),
-            label=u'Outlet Points (Vector)',
+            label=u'Outlet Geometries (Vector)',
             validator=self.validator)
         self.add_input(self.outlet_vector_path)
         self.outlet_vector_path.value_changed.connect(
@@ -57,7 +57,9 @@ class Delineateit(model.InVESTModel):
                 u"If provided, the maximum search radius in pixels to look "
                 u"for stream pixels.  If a stream pixel is found within the "
                 u"snap distance, the outflow point will be snapped to the "
-                u"center of the nearest stream pixel."),
+                u"center of the nearest stream pixel.  Geometries that are "
+                u"not points (such as Lines and Polygons) will not be "
+                u"snapped."),
             validator=self.validator)
         self.snap_points_container.add_input(self.snap_distance)
 
