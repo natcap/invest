@@ -20,8 +20,7 @@ Rtree>=0.8.2
 scipy>=0.16.1
 Shapely>=1.6.4
 six
-# pygeoprocessing>=1.3.1
-hg+https://bitbucket.org/jdouglass/pygeoprocessing@c2221faaf6bb
+hg+https://bitbucket.org/jdouglass/pygeoprocessing@bec178879333
 taskgraph[niced_processes]>=0.6.1
 chardet>=3.0.4
 matplotlib

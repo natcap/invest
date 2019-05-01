@@ -36,9 +36,9 @@ def execute(args):
     Upon successful completion, the following files are written to the
     output workspace:
 
-        * ``snapped_outlets.shp`` - an ESRI shapefile with the points snapped
+        * ``snapped_outlets.gpkg`` - A GeoPackage with the points snapped
           to a nearby stream.
-        * ``watersheds.shp`` - an ESRI shapefile of watersheds determined
+        * ``watersheds.gpkg`` - a GeoPackage of watersheds determined
           by the D8 routing algorithm.
         * ``stream.tif`` - a GeoTiff representing detected streams based on
           the provided ``flow_threshold`` parameter.  Values of 1 are
@@ -149,22 +149,14 @@ def execute(args):
         outflow_vector = file_registry['snapped_outlets']
 
     watershed_delineation_task = graph.add_task(
-        pygeoprocessing.routing.delineate_watersheds,
+        pygeoprocessing.routing.delineate_watersheds_trivial_d8,
         args=((file_registry['flow_dir_d8'], 1),
               outflow_vector,
-              file_registry['watershed_fragments']),
+              file_registry['watersheds']),
         kwargs={'working_dir': output_directory},
-        target_path_list=[file_registry['watershed_fragments']],
+        target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
         task_name='delineate_watersheds')
-
-    graph.add_task(
-        pygeoprocessing.routing.join_watershed_fragments,
-        args=(file_registry['watershed_fragments'],
-              file_registry['watersheds']),
-        target_path_list=[file_registry['watersheds']],
-        dependent_task_list=[watershed_delineation_task],
-        task_name='join_watershed_fragments')
 
     graph.join()
 
@@ -190,6 +182,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
+# TODO: if two streams are the same distance from a pixel, pick the one with the higher flow accumulation.
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):
     """Adjust the location of points to the nearest stream pixel.
