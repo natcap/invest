@@ -35,5 +35,5 @@ __pycache__/
 ^doc/api-docs/build
 
 # Repositories (tracked in their own SCMs)
-^data/invest-data
+^data/invest-sample-data
 ^data/invest-test-data
