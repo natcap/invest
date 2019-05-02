@@ -12,7 +12,7 @@ pipelines:
               script:
                 - apt-get update && apt-get install -y curl mercurial
                 - |
-                  curl --fail-early --header "Authorization: Bearer $APPVEYOR_API_KEY" \
+                  curl --fail --header "Authorization: Bearer $APPVEYOR_API_KEY" \
                     --header "Content-Type: application/json" \
                     --data "{'accountName': '$APPVEYOR_ACC_NAME',
                              'projectSlug': '$APPVEYOR_PROJ_SLUG',
