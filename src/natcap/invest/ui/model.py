@@ -610,7 +610,7 @@ class LocalDocsMissingDialog(QtWidgets.QMessageBox):
         self.setInformativeText(
             'Online docs: [<a href="%s">documentation</a>]'
             '<br/><br/>Local documentation link could not be found: %s' %
-            (remote_link, local_docs_link))
+            (remote_link, os.getcwd()))
         self.setStandardButtons(QtWidgets.QMessageBox.Ok)
         self.setIconPixmap(
             qtawesome.icon(
