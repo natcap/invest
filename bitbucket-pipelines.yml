@@ -17,7 +17,7 @@ pipelines:
                     --data "{'accountName': '$APPVEYOR_ACC_NAME',
                              'projectSlug': '$APPVEYOR_PROJ_SLUG',
                              'branch': '$(hg branch)',
-                             'commitID': '$(hg log -r . -T \"{node}\")'}" \
+                             'commitID': wrongstring}" \
                     "https://ci.appveyor.com/api/builds"
                 - echo "Build history at "
                 - echo "    https://ci.appveyor.com/project/$APPVEYOR_ACC_NAME/$APPVEYOR_PROJ_SLUG/history"
