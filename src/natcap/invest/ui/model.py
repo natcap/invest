@@ -610,7 +610,7 @@ class LocalDocsMissingDialog(QtWidgets.QMessageBox):
         self.setInformativeText(
             'Online docs: [<a href="%s">documentation</a>]'
             '<br/><br/>Local documentation link could not be found: %s' %
-            (remote_link, os.getcwd()))
+            (remote_link, local_docs_link))
         self.setStandardButtons(QtWidgets.QMessageBox.Ok)
         self.setIconPixmap(
             qtawesome.icon(
@@ -1490,7 +1490,7 @@ class InVESTModel(QtWidgets.QMainWindow):
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
             local_path = os.path.abspath(
-                os.path.join('../documentation/userguide/', self.localdoc))
+                os.path.join('./documentation/userguide/', self.localdoc))
             if not os.path.exists(local_path):
                 LOGGER.warning('Could not find local docs path %s',
                                local_path)
