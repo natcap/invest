@@ -50,7 +50,7 @@ def execute(args):
             selected folder does not exist, it will be created. If datasets
             already exist in the selected folder, they will be overwritten.
             (required)
-        args['suffix'] (string):  This text will be appended to the end of
+        args['results_suffix'] (string):  This text will be appended to the end of
             output files to help separate multiple runs. (optional)
         args['dem_path'] (string):  A GDAL-supported raster file with an elevation
             for each cell. Make sure the DEM is corrected by filling in sinks,
@@ -75,7 +75,7 @@ def execute(args):
     output_directory = args['workspace_dir']
     utils.make_directories([output_directory])
 
-    file_suffix = utils.make_suffix_string(args, 'suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
     file_registry = utils.build_file_registry(
         [(_OUTPUT_FILES, output_directory)], file_suffix)
 
