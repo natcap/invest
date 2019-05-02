@@ -16,7 +16,7 @@ class Pollination(model.InVESTModel):
             label=u'Crop Pollination',
             target=pollination.execute,
             validator=pollination.validate,
-            localdoc=u'../documentation/croppollination.html')
+            localdoc=u'croppollination.html')
 
         self.landcover_raster_path = inputs.File(
             args_key=u'landcover_raster_path',

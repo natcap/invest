@@ -1489,7 +1489,8 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
-            local_path = os.path.abspath(self.localdoc)
+            local_path = os.path.abspath(
+                os.path.join('../documentation/userguide/', self.localdoc))
             if not os.path.exists(local_path):
                 LOGGER.warning('Could not find local docs path %s',
                                local_path)
