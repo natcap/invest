@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 import os
 import logging
+import time
 
 from osgeo import gdal
 from osgeo import ogr
@@ -233,8 +234,13 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
     snapped_layer_defn = snapped_layer.GetLayerDefn()
 
     snapped_layer.StartTransaction()
-    # TODO: add time-based logging
-    for point_feature in points_layer:
+    n_features = points_layer.GetFeatureCount()
+    last_time = time.time()
+    for index, point_feature in enumerate(points_layer, 1):
+        if time.time() - last_time > 5.0:
+            LOGGER.info('Snapped %s of %s points', index, n_features)
+            last_time = time.time()
+
         point_geometry = point_feature.GetGeometryRef()
 
         # If the geometry is not a primitive point, just create the new feature
