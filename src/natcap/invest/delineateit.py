@@ -253,7 +253,7 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         point = shapely.wkb.loads(point_geometry.ExportToWkb())
         x_index = (point.x - geotransform[0]) // geotransform[1]
         y_index = (point.y - geotransform[3]) // geotransform[5]
-        if (x_index < 0 or x_index >= n_cols or
+        if (x_index < 0 or x_index > n_cols or
                 y_index < 0 or y_index > n_rows):
             LOGGER.warn('Encountered a point that was outside the bounds of '
                         'the stream raster.  FID:%s at %s',
