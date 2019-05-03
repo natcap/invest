@@ -6,6 +6,7 @@ import time
 
 from osgeo import gdal
 from osgeo import ogr
+import shapely.wkb
 import numpy
 import pygeoprocessing
 import pygeoprocessing.routing
@@ -249,9 +250,9 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             snapped_layer.CreateFeature(point_feature.Clone())
             continue
 
-        point = point_geometry.GetPoint()
-        x_index = (point[0] - geotransform[0]) // geotransform[1]
-        y_index = (point[1] - geotransform[3]) // geotransform[5]
+        point = shapely.wkb.loads(point_geometry.ExportToWkb())
+        x_index = (point.x - geotransform[0]) // geotransform[1]
+        y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index >= n_cols or
                 y_index < 0 or y_index > n_rows):
             LOGGER.warn('Encountered a point that was outside the bounds of '
@@ -275,8 +276,8 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
         if row_indexes.size > 0:
             # Calculate euclidean distance for sorting
             distance_array = numpy.hypot(
-                row_indexes - y_center - y_top,
-                col_indexes - x_center - x_left,
+                y_center - y_top - row_indexes,
+                x_center - x_left - col_indexes,
                 dtype=numpy.float32)
 
             # Find the closest stream pixel that meets the distance
