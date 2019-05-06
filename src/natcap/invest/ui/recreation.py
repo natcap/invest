@@ -11,7 +11,7 @@ class Recreation(model.InVESTModel):
             label=u'Recreation Model',
             target=recmodel_client.execute,
             validator=recmodel_client.validate,
-            localdoc=u'../documentation/recreation.html')
+            localdoc=u'recreation.html')
 
         self.internet_warning = inputs.Label(
             text=(

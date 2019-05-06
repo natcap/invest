@@ -11,7 +11,7 @@ class CoastalVulnerability(model.InVESTModel):
             label=u'Coastal Vulnerability Assessment Tool',
             target=coastal_vulnerability.execute,
             validator=coastal_vulnerability.validate,
-            localdoc=u'../documentation/coastal_vulnerability.html',
+            localdoc=u'coastal_vulnerability.html',
             suffix_args_key='suffix'
         )
 
