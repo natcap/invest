@@ -575,3 +575,24 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
         self.assertEqual(lookup_dict[1]['header1'], 1)
+
+    def test_csv_utf_8_bom(self):
+        """utils: test that text read correctly with UTF-8 BOM encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                \xef\xbb\xbfheader1,HEADER2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1')
+
+        self.assertEqual(lookup_dict[4]['header2'], 5)
+        self.assertEqual(lookup_dict[4]['header3'], 'foo')
+        self.assertEqual(lookup_dict[1]['header1'], 1)
