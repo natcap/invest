@@ -42,6 +42,8 @@ Unreleased Changes
 * Migrate the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
+* Fixing a bug in Habitat Quality UI where the absence of the required
+  half_saturation_constant variable did not raise an exception.
 
 3.6.0 (2019-01-30)
 ------------------
