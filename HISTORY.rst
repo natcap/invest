@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+
+3.7.0 (2019-05-09)
+------------------
 * Correcting an issue with the Coastal Blue Carbon preprocessor where
   using misaligned landcover rasters would cause an exception to be raised.
 * Model User Interface 'Report an Issue' link points to our new
@@ -25,7 +28,7 @@ Unreleased Changes
   Multiprocessing offered by taskgraph means server-side PUD calculations
   and client-side predictor data processing can happen in parallel. Some
   output filenames have changed.
-* Upgrade to SDR to use new PyGeoprocessing multiflow routing, DEM pit
+* Upgrading to SDR to use new PyGeoprocessing multiflow routing, DEM pit
   filling, contiguous stream extraction, and TaskGraph integration. This
   also includes a new TaskGraph feature that avoids recomputation by copying
   results from previous runs so long as the expected result would be
@@ -37,9 +40,9 @@ Unreleased Changes
   Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
   functionality was simplified and merged into the HRA model itself.
   The model will no longer generate HTML plots and tables.
-* Add a software update notification button, dialog, and a link to the download
-  page on the User Interface when a new InVEST version is available.
-* Migrate the subversion sample and test data repositories to Git LFS
+* Adding a software update notification button, dialog, and a link to the
+  download page on the User Interface when a new InVEST version is available.
+* Migrating the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
 
