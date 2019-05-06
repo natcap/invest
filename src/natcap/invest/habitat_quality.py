@@ -737,14 +737,15 @@ def validate(args, limit_to=None):
     if missing_key_list:
         # if there are missing keys, raise an exception
         raise KeyError(
-            "The following keys were expected in `args` but were missing" +
+            "The following keys were expected in `args` but were missing: " +
             ', '.join(missing_key_list))
 
+    # if any value for required keys is empty, append to the validation
+    # error list
     if no_value_list:
-        # if any value for required keys is empty, raise an exception
-        raise ValueError(
-            "The following keys in `args` need to have a value" +
-            ', '.join(no_value_list))
+        for key in no_value_list:
+            if limit_to is None or limit_to == key:
+                validation_error_list.append(([key], 'should have a value'))
 
     # check for required file existence:
     for key in [
