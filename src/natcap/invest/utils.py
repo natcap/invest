@@ -441,7 +441,8 @@ def build_lookup_from_csv(
         if `to_lower` all strings including key_fields and values are
         converted to lowercase unicode.
     """
-    table = pandas.read_csv(table_path, sep=None, engine='python')
+    table = pandas.read_csv(
+        table_path, sep=None, engine='python', encoding='utf-8-sig')
     header_row = list(table)
     key_field = unicode(key_field)
     if to_lower:
