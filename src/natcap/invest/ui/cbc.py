@@ -13,7 +13,7 @@ class CoastalBlueCarbonPreprocessor(model.InVESTModel):
             label=u'Coastal Blue Carbon Preprocessor',
             target=preprocessor.execute,
             validator=preprocessor.validate,
-            localdoc=u'../documentation/coastal_blue_carbon.html')
+            localdoc=u'coastal_blue_carbon.html')
 
         self.lulc_lookup_uri = inputs.File(
             args_key=u'lulc_lookup_uri',
@@ -48,7 +48,7 @@ class CoastalBlueCarbon(model.InVESTModel):
             label=u'Coastal Blue Carbon',
             target=coastal_blue_carbon.execute,
             validator=coastal_blue_carbon.validate,
-            localdoc=u'../documentation/coastal_blue_carbon.html')
+            localdoc=u'coastal_blue_carbon.html')
 
         self.lulc_lookup_uri = inputs.File(
             args_key=u'lulc_lookup_uri',
