@@ -734,11 +734,17 @@ def validate(args, limit_to=None):
             elif args[key] in ['', None]:
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
+    if missing_key_list:
+        # if there are missing keys, raise an exception
         raise KeyError(
             "The following keys were expected in `args` but were missing" +
             ', '.join(missing_key_list))
+
+    if no_value_list:
+        # if any value for required keys is empty, raise an exception
+        raise ValueError(
+            "The following keys in `args` need to have a value" +
+            ', '.join(no_value_list))
 
     # check for required file existence:
     for key in [
