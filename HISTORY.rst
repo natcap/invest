@@ -42,6 +42,9 @@ Unreleased Changes
 * Migrate the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
+* Adding encoding='utf-8-sig' to pandas.read_csv() to support
+  utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
+  (byte-order mark) properly.
 
 3.6.0 (2019-01-30)
 ------------------
