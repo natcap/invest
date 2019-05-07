@@ -36,8 +36,8 @@ _MODEL_UIS = {
         gui='cbc.CoastalBlueCarbonPreprocessor',
         aliases=('cbc_pre',)),
     'coastal_vulnerability': _UIMETA(
-        pyname='natcap.invest.coastal_vulnerability.coastal_vulnerability',
-        gui='cv.CoastalVulnerability',
+        pyname='natcap.invest.coastal_vulnerability',
+        gui='coastal_vulnerability.CoastalVulnerability',
         aliases=('cv',)),
     'crop_production_percentile': _UIMETA(
         pyname='natcap.invest.crop_production_percentile',
