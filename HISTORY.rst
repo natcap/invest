@@ -52,6 +52,8 @@ Unreleased Changes
 * Migrating the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
+* Fixing a bug in Habitat Quality UI where the absence of the required
+  half_saturation_constant variable did not raise an exception.
 * Adding encoding='utf-8-sig' to pandas.read_csv() to support
   utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
   (byte-order mark) properly.
