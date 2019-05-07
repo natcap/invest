@@ -12,10 +12,10 @@ Unreleased Changes
   be reduced with multiprocessing. CV also supports avoided recomputation for
   successive runs in the same workspace, even if a different file suffix is used.
   Output vector files are in CSV and geopackage formats.
-* Correcting an issue with the Coastal Blue Carbon preprocessor where
-  using misaligned landcover rasters would cause an exception to be raised.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
 * Correcting an issue with Habitat Quality's error checking where nodata values
