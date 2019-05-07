@@ -2,13 +2,22 @@
 
 Unreleased Changes
 ------------------
+<<<<<<< working copy
 
 3.7.0 (2019-05-09)
 ------------------
-* Correcting an issue with the Coastal Blue Carbon preprocessor where
-  using misaligned landcover rasters would cause an exception to be raised.
+=======
+* Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and
+  Pygeoprocessing >=1.6.1. The model is now largely vector-based instead of
+  raster-based. Fewer input datasets are required for the same functionality.
+  Runtime in sycnhronous mode is similar to previous versions, but runtime can
+  be reduced with multiprocessing. CV also supports avoided recomputation for
+  successive runs in the same workspace, even if a different file suffix is used.
+  Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
 * Correcting an issue with Habitat Quality's error checking where nodata values

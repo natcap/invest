@@ -35,7 +35,6 @@ setup(
         'natcap',
         'natcap.invest',
         'natcap.invest.coastal_blue_carbon',
-        'natcap.invest.coastal_vulnerability',
         'natcap.invest.finfish_aquaculture',
         'natcap.invest.fisheries',
         'natcap.invest.hydropower',
