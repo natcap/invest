@@ -43,9 +43,10 @@ pipelines:
                           apt-get update &&
                           apt-get install -y git curl mercurial build-essential
                             zip python-setuptools python-numpy python-setuptools-scm
-                            cython &&
+                            cython
+                        - |
                           curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash &&
-                          apt-get install -y git-lfs
+                          apt-get install -y git-lfs && git lfs install
                         - make sampledata
                     artifacts:
                         - dist/data/*
