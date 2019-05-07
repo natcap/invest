@@ -44,6 +44,9 @@ Unreleased Changes
   Makefile accordingly.
 * Fixing a bug in Habitat Quality UI where the absence of the required
   half_saturation_constant variable did not raise an exception.
+* Adding encoding='utf-8-sig' to pandas.read_csv() to support
+  utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
+  (byte-order mark) properly.
 
 3.6.0 (2019-01-30)
 ------------------
