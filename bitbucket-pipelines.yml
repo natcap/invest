@@ -39,7 +39,7 @@ pipelines:
                     name: Sample Data
                     image: debian:9.7
                     script:
-                        - apt-get update && apt-get install -y git
+                        - apt-get update && apt-get install -y && apt-get install git-lfs
                             mercurial build-essential zip python-setuptools
                             python-numpy python-setuptools-scm cython
                         - make sampledata
