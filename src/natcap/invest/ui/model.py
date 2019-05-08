@@ -44,8 +44,7 @@ ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
 ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
 
 _ONLINE_DOCS_LINK = (
-    'http://data.naturalcapitalproject.org/nightly-build/'
-    'invest-users-guide/html/')
+    'http://releases.naturalcapitalproject.org/invest-userguide/latest/')
 _DATASTACK_BASE_FILENAME = 'datastack.invest.%s'
 _DATASTACK_DIALOG_TITLE = 'Select where to save the datastack'
 _DATASTACK_PARAMETER_SET = 'Parameter set (saves parameter values only)'
