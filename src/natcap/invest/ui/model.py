@@ -520,8 +520,8 @@ class AboutDialog(QtWidgets.QDialog):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation: <a href="http://data.naturalcapitalproject.org/
-            nightly-build/invest-users-guide/html/">online</a><br/>
+            Documentation: <a href="http://releases.naturalcapitalproject.org/
+            invest-userguide/latest/">online</a><br/>
             Homepage: <a href="http://naturalcapitalproject.org">
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
