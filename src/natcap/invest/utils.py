@@ -441,8 +441,15 @@ def build_lookup_from_csv(
         if `to_lower` all strings including key_fields and values are
         converted to lowercase unicode.
     """
+    # Check if the file encoding is UTF-8 BOM first, related to issue
+    # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+    encoding = None
+    with open(table_path) as file_obj:
+        first_line = file_obj.readline()
+        if first_line.startswith('\xef\xbb\xbf'):
+            encoding = 'utf-8-sig'
     table = pandas.read_csv(
-        table_path, sep=None, engine='python', encoding='utf-8-sig')
+        table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
     key_field = unicode(key_field)
     if to_lower:
