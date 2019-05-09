@@ -39,9 +39,14 @@ pipelines:
                     name: Sample Data
                     image: debian:9.7
                     script:
-                        - apt-get update && apt-get install -y git
-                            mercurial build-essential zip python-setuptools
-                            python-numpy python-setuptools-scm cython
+                        - |
+                          apt-get update &&
+                          apt-get install -y git curl mercurial build-essential \
+                            zip python-setuptools python-numpy python-setuptools-scm \
+                            cython
+                        - |
+                          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash &&
+                          apt-get install -y git-lfs && git lfs install
                         - make sampledata
                     artifacts:
                         - dist/data/*
