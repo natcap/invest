@@ -2,11 +2,11 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 1030df2b8078133da24cfc4409f9d8c6bd82f53b
+GIT_SAMPLE_DATA_REPO_REV    := 2d615534d52e345ee7dc8bc898571c36b47dc6f1
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 4705780783bb5cf9fb2eaddac7e0c64b770b5f9c
+GIT_TEST_DATA_REPO_REV      := 398e028b3125946f057f07a6805f2f6ce54aadec
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
@@ -206,15 +206,16 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 
 
 # Build binaries and put them in dist/invest
-# The `invest.exe --list` is to test the binaries.  If something doesn't
-# import, we want to know right away.
+# The `invest --list` is to test the binaries.  If something doesn't
+# import, we want to know right away.  No need to provide the `.exe` extension
+# on Windows as the .exe extension is assumed.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
-	$(INVEST_BINARIES_DIR)/invest.exe --list
+	$(INVEST_BINARIES_DIR)/invest --list
 
 # Documentation.
 # API docs are copied to dist/apidocs
