@@ -101,17 +101,16 @@ def execute(args):
             place in the current process. (optional)
         args['visualize_outputs'] (bool): if True, create output GeoJSONs and
             save them in a visualization_outputs folder, so users can visualize
-            results on a web interface. Default to False for Qt UI, and True
-            for electron-Node.js based UI. (optional)
+            results on the web app. Default to True if not specified. (optional)
 
     Returns:
         None.
 
     """
     LOGGER.info('Validating arguments')
-    # Default visualization option to False for Qt UI
+    # Default visualization option to True if it's not in args
     if 'visualize_outputs' not in args:
-        args['visualize_outputs'] = False
+        args['visualize_outputs'] = True
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
@@ -3063,6 +3062,7 @@ def validate(args, limit_to=None):
     max_rating_key = 'max_rating'
     aoi_vector_key = 'aoi_vector_path'
     resolution_key = 'resolution'
+    viz_option_key = 'visualize_outputs'
 
     for key in [
             'workspace_dir',
@@ -3088,6 +3088,12 @@ def validate(args, limit_to=None):
     if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
+
+    if limit_to is None or limit_to == viz_option_key:
+        if viz_option_key in args and not isinstance(
+                args[viz_option_key], bool):
+            validation_error_list.append(
+                ([viz_option_key], 'needs to be True or False'))
 
     # Check if resolution is a positive number
     if limit_to is None or limit_to == resolution_key:
