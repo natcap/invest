@@ -4,13 +4,9 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing.testing
 import numpy
 from osgeo import gdal
 from osgeo import osr
-
-REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'routedem')
 
 
 class RouteDEMTests(unittest.TestCase):

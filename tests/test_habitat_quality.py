@@ -486,9 +486,22 @@ class HabitatQualityTests(unittest.TestCase):
 
         scenarios = ['_bas_', '_cur_', '_fut_']
         for lulc_val, scenario in enumerate(scenarios):
-            args['lulc' + scenario + 'path'] = os.path.join(
+            path = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
-            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+            args['lulc' + scenario + 'path'] = path
+            make_lulc_raster(path, lulc_val)
+
+            # Add a nodata value to this raster to make sure we don't include
+            # the nodata value in the error message.
+            raster = gdal.OpenEx(path, gdal.OF_RASTER | gdal.GA_Update)
+            band = raster.GetRasterBand(1)
+            band_nodata = 255
+            band.SetNoDataValue(band_nodata)  # band nodata before this is -1
+            current_array = band.ReadAsArray()
+            current_array[49][49] = band_nodata
+            band.WriteArray(current_array)
+            band = None
+            raster = None
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
                                                       'sensitivity_samp.csv')
@@ -504,7 +517,41 @@ class HabitatQualityTests(unittest.TestCase):
 
         with self.assertRaises(ValueError) as cm:
             habitat_quality.execute(args)
-            actual_message = str(cm.exception)
+
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'The following land cover codes were found in ' in
+            actual_message, actual_message)
+        # 1, 2 are the missing landcover codes.
+        # Raster nodata is 255 and should NOT appear in this list.
+        self.assertTrue(': 1, 2.' in actual_message, actual_message)
+
+    def test_habitat_quality_validate(self):
+        """Habitat Quality: validate raise exception as expected."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'suffix': 'regression',
+            'workspace_dir': self.workspace_dir,
+            'threat_raster_folder': self.workspace_dir,
+        }
+
+        with self.assertRaises(KeyError) as cm:
+            habitat_quality.validate(args)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'missing: lulc_cur_path, threats_table_path, sensitivity_table_path'
+            ', half_saturation_constant' in actual_message, actual_message)
+
+        keys_without_value = [
+            'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',
+            'half_saturation_constant']
+
+        for key in keys_without_value:
+            args[key] = ''
+
+        validation_error_list = habitat_quality.validate(args)
+        for key in keys_without_value:
             self.assertTrue(
-                'The following land cover codes were found in ' in
-                actual_message, actual_message)
+                ([key], 'should have a value') in validation_error_list,
+                'exception not raised for %s')

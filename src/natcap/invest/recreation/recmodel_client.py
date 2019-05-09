@@ -1,12 +1,14 @@
 """InVEST Recreation Client."""
 from __future__ import absolute_import
 
+import json
 import uuid
 import os
 import zipfile
 import time
 import logging
 import math
+import pickle
 import urllib
 import tempfile
 import shutil
@@ -20,10 +22,11 @@ import shapely
 import shapely.geometry
 import shapely.wkt
 import shapely.prepared
-import natcap.invest.pygeoprocessing_0_3_3
+import pygeoprocessing
 import numpy
 import numpy.linalg
 import shapely.speedups
+import taskgraph
 
 if shapely.speedups.available:
     shapely.speedups.enable()
@@ -55,18 +58,18 @@ SCENARIO_RESPONSE_ID = 'PUD_EST'
 
 _OUTPUT_BASE_FILES = {
     'pud_results_path': 'pud_results.shp',
-    'coefficent_vector_path': 'regression_coefficients.shp',
+    'monthly_table_path': 'monthly_table.csv',
+    'predictor_vector_path': 'predictor_data.shp',
     'scenario_results_path': 'scenario_results.shp',
     'regression_coefficients': 'regression_coefficients.txt',
     }
 
-_TMP_BASE_FILES = {
+_INTERMEDIATE_BASE_FILES = {
     'local_aoi_path': 'aoi.shp',
     'compressed_aoi_path': 'aoi.zip',
     'compressed_pud_path': 'pud.zip',
-    'tmp_indexed_vector_path': 'indexed_vector.shp',
-    'tmp_fid_raster_path': 'vector_fid_raster.tif',
-    'tmp_scenario_indexed_vector_path': 'scenario_indexed_vector.shp',
+    'response_polygons_lookup': 'response_polygons_lookup.pickle',
+    'server_version': 'server_version.pickle',
     }
 
 def execute(args):
@@ -133,6 +136,7 @@ def execute(args):
 
     Returns:
         None
+
     """
     if ('predictor_table_path' in args and
             args['predictor_table_path'] != ''):
@@ -157,59 +161,196 @@ def execute(args):
 
     # in case the user defines a hostname
     if 'hostname' in args:
-        path = "PYRO:natcap.invest.recreation@%s:%s" % (
+        server_url = "PYRO:natcap.invest.recreation@%s:%s" % (
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        path = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+        server_url = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
+
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+
+    output_dir = args['workspace_dir']
+    intermediate_dir = os.path.join(output_dir, 'intermediate')
+    scenario_dir = os.path.join(intermediate_dir, 'scenario')
+    utils.make_directories([output_dir, intermediate_dir])
+
+    file_registry = utils.build_file_registry(
+        [(_OUTPUT_BASE_FILES, output_dir),
+         (_INTERMEDIATE_BASE_FILES, intermediate_dir)], file_suffix)
+
+    # Initialize a TaskGraph
+    taskgraph_db_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # single process mode.
+    task_graph = taskgraph.TaskGraph(taskgraph_db_dir, n_workers)
+
+    if args['grid_aoi']:
+        prep_aoi_task = task_graph.add_task(
+            func=_grid_vector,
+            args=(args['aoi_path'], args['grid_type'],
+                  float(args['cell_size']), file_registry['local_aoi_path']),
+            target_path_list=[file_registry['local_aoi_path']],
+            task_name='grid_aoi')
+    else:
+        # Even if we don't modify the AOI by gridding it, we still need
+        # to move it to the expected location.
+        prep_aoi_task = task_graph.add_task(
+            func=_copy_aoi_no_grid,
+            args=(args['aoi_path'], file_registry['local_aoi_path']),
+            target_path_list=[file_registry['local_aoi_path']],
+            task_name='copy_aoi')
+    # All other tasks are dependent on this one, including tasks added
+    # within _schedule_predictor_data_processing(). Rather than passing
+    # this task to that function, I'm joining here.
+    prep_aoi_task.join()
+
+    # All the server communication happens in this task.
+    photo_user_days_task = task_graph.add_task(
+        func=_retrieve_photo_user_days,
+        args=(file_registry['local_aoi_path'],
+              file_registry['compressed_aoi_path'],
+              args['start_year'], args['end_year'],
+              os.path.basename(file_registry['pud_results_path']),
+              file_registry['compressed_pud_path'],
+              output_dir, server_url, file_registry['server_version']),
+        target_path_list=[file_registry['compressed_aoi_path'],
+                          file_registry['compressed_pud_path'],
+                          file_registry['pud_results_path'],
+                          file_registry['monthly_table_path'],
+                          file_registry['server_version']],
+        task_name='photo-user-day-calculation')
+
+    if 'compute_regression' in args and args['compute_regression']:
+        # Prepare the AOI for geoprocessing.
+        prepare_response_polygons_task = task_graph.add_task(
+            func=_prepare_response_polygons_lookup,
+            args=(file_registry['local_aoi_path'],
+                  file_registry['response_polygons_lookup']),
+            target_path_list=[file_registry['response_polygons_lookup']],
+            task_name='prepare response polygons for geoprocessing')
+
+        # Build predictor data
+        build_predictor_data_task = _schedule_predictor_data_processing(
+            file_registry['local_aoi_path'],
+            file_registry['response_polygons_lookup'],
+            prepare_response_polygons_task,
+            args['predictor_table_path'],
+            file_registry['predictor_vector_path'],
+            intermediate_dir, task_graph)
+
+        # Compute the regression
+        coefficient_json_path = os.path.join(
+            intermediate_dir, 'predictor_estimates.json')
+        compute_regression_task = task_graph.add_task(
+            func=_compute_and_summarize_regression,
+            args=(file_registry['pud_results_path'],
+                  file_registry['predictor_vector_path'],
+                  file_registry['server_version'],
+                  coefficient_json_path,
+                  file_registry['regression_coefficients']),
+            target_path_list=[file_registry['regression_coefficients'],
+                              coefficient_json_path],
+            dependent_task_list=[
+                photo_user_days_task, build_predictor_data_task],
+            task_name='compute regression')
+
+        if ('scenario_predictor_table_path' in args and
+                args['scenario_predictor_table_path'] != ''):
+            utils.make_directories([scenario_dir])
+            build_scenario_data_task = _schedule_predictor_data_processing(
+                file_registry['local_aoi_path'],
+                file_registry['response_polygons_lookup'],
+                prepare_response_polygons_task,
+                args['scenario_predictor_table_path'],
+                file_registry['scenario_results_path'],
+                scenario_dir, task_graph)
+
+            task_graph.add_task(
+                func=_calculate_scenario,
+                args=(file_registry['scenario_results_path'],
+                      SCENARIO_RESPONSE_ID, coefficient_json_path),
+                target_path_list=[file_registry['scenario_results_path']],
+                dependent_task_list=[
+                    compute_regression_task, build_scenario_data_task],
+                task_name='calculate scenario')
+
+    task_graph.close()
+    task_graph.join()
+
+
+def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
+    """Copy a shapefile from source to destination"""
+    aoi_vector = gdal.OpenEx(source_aoi_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    local_aoi_vector = driver.CreateCopy(
+        dest_aoi_path, aoi_vector)
+    gdal.Dataset.__swig_destroy__(local_aoi_vector)
+    local_aoi_vector = None
+    gdal.Dataset.__swig_destroy__(aoi_vector)
+    aoi_vector = None
+
+
+def _retrieve_photo_user_days(
+        local_aoi_path, compressed_aoi_path, start_year, end_year,
+        pud_results_filename, compressed_pud_path, output_dir, server_url,
+        server_version_pickle):
+    """Calculate photo-user-days (PUD) on the server and send back results.
+
+    All of the client-server communication happens in this scope. The local AOI
+    is sent to the server for PUD calculations. PUD results are sent back when
+    complete.
+
+    Parameters:
+        local_aoi_path (string): path to polygon vector for PUD aggregation
+        compressed_aoi_path (string): path to zip file storing compressed AOI
+        start_year (int/string): lower limit of date-range for PUD queries
+        end_year (int/string): upper limit of date-range for PUD queries
+        pud_results_filename (string): filename for a shapefile to hold results
+        compressed_pud_path (string): path to zip file storing compressed PUD
+            results, including 'pud_results.shp' and 'monthly_table.csv'.
+        output_dir (string): path to output workspace where results are
+            unpacked.
+        server_url (string): URL for connecting to the server
+        server_version_pickle (string): path to a pickle that stores server
+            version and workspace id info.
+
+    Returns:
+        None
+
+    """
 
     LOGGER.info('Contacting server, please wait.')
-    recmodel_server = Pyro4.Proxy(path)
+    recmodel_server = Pyro4.Proxy(server_url)
     server_version = recmodel_server.get_version()
     LOGGER.info('Server online, version: %s', server_version)
+    # store server version info in a file so we can list it in results summary.
+    with open(server_version_pickle, 'wb') as f:
+        pickle.dump(server_version, f)
 
     # validate available year range
     min_year, max_year = recmodel_server.get_valid_year_range()
     LOGGER.info(
         "Server supports year queries between %d and %d", min_year, max_year)
-    if not min_year <= int(args['start_year']) <= max_year:
+    if not min_year <= int(start_year) <= max_year:
         raise ValueError(
             "Start year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, args['start_year']))
-    if not min_year <= int(args['end_year']) <= max_year:
+            " User input: (%s)" % (min_year, max_year, start_year))
+    if not min_year <= int(end_year) <= max_year:
         raise ValueError(
             "End year must be between %d and %d.\n"
-            " User input: (%s)" % (min_year, max_year, args['end_year']))
+            " User input: (%s)" % (min_year, max_year, end_year))
 
     # append jan 1 to start and dec 31 to end
-    date_range = (str(args['start_year'])+'-01-01',
-                  str(args['end_year'])+'-12-31')
-    file_suffix = utils.make_suffix_string(args, 'results_suffix')
+    date_range = (str(start_year)+'-01-01',
+                  str(end_year)+'-12-31')
 
-    output_dir = args['workspace_dir']
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([output_dir])
-
-    file_registry = utils.build_file_registry(
-        [(_OUTPUT_BASE_FILES, output_dir),
-         (_TMP_BASE_FILES, output_dir)], file_suffix)
-
-    if args['grid_aoi']:
-        LOGGER.info("gridding aoi")
-        _grid_vector(
-            args['aoi_path'], args['grid_type'], float(args['cell_size']),
-            file_registry['local_aoi_path'])
-    else:
-        aoi_vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
-        driver = gdal.GetDriverByName('ESRI Shapefile')
-        local_aoi_vector = driver.CreateCopy(
-            file_registry['local_aoi_path'], aoi_vector)
-        gdal.Dataset.__swig_destroy__(local_aoi_vector)
-        local_aoi_vector = None
-        gdal.Dataset.__swig_destroy__(aoi_vector)
-        aoi_vector = None
-
-    basename = os.path.splitext(file_registry['local_aoi_path'])[0]
-    with zipfile.ZipFile(file_registry['compressed_aoi_path'], 'w') as aoizip:
+    basename = os.path.splitext(local_aoi_path)[0]
+    with zipfile.ZipFile(compressed_aoi_path, 'w') as aoizip:
         for suffix in _ESRI_SHAPEFILE_EXTENSIONS:
             filename = basename + suffix
             if os.path.exists(filename):
@@ -217,7 +358,7 @@ def execute(args):
                 aoizip.write(filename, os.path.basename(filename))
 
     # convert shapefile to binary string for serialization
-    zip_file_binary = open(file_registry['compressed_aoi_path'], 'rb').read()
+    zip_file_binary = open(compressed_aoi_path, 'rb').read()
 
     # transfer zipped file to server
     start_time = time.time()
@@ -226,84 +367,24 @@ def execute(args):
     result_zip_file_binary, workspace_id = (
         recmodel_server.calc_photo_user_days_in_aoi(
             zip_file_binary, date_range,
-            os.path.basename(file_registry['pud_results_path'])))
+            pud_results_filename))
     LOGGER.info(
         'received result, took %f seconds, workspace_id: %s',
         time.time() - start_time, workspace_id)
 
     # unpack result
-    open(file_registry['compressed_pud_path'], 'wb').write(
+    open(compressed_pud_path, 'wb').write(
         result_zip_file_binary)
     temporary_output_dir = tempfile.mkdtemp(dir=output_dir)
-    zipfile.ZipFile(file_registry['compressed_pud_path'], 'r').extractall(
+    zipfile.ZipFile(compressed_pud_path, 'r').extractall(
         temporary_output_dir)
-    monthly_table_path = os.path.join(
-        temporary_output_dir, 'monthly_table.csv')
-    if os.path.exists(monthly_table_path):
-        os.rename(
-            monthly_table_path,
-            os.path.splitext(monthly_table_path)[0] + file_suffix + '.csv')
+
     for filename in os.listdir(temporary_output_dir):
         shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
     shutil.rmtree(temporary_output_dir)
 
-    if 'compute_regression' in args and args['compute_regression']:
-        LOGGER.info('Calculating regression')
-        predictor_id_list = []
-        _build_regression_coefficients(
-            file_registry['pud_results_path'], args['predictor_table_path'],
-            file_registry['tmp_indexed_vector_path'],
-            file_registry['coefficent_vector_path'], predictor_id_list)
-
-        coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est = (
-            _build_regression(
-                file_registry['coefficent_vector_path'], RESPONSE_ID,
-                predictor_id_list))
-
-        # the last coefficient is the y intercept and has no id, thus
-        # the [:-1] on the coefficients list
-        coefficents_string = '               estimate     stderr    t value\n'
-        coefficents_string += '%-12s %+.3e %+.3e %+.3e\n' % (
-            '(Intercept)', coefficents[-1], se_est[-1],
-            coefficents[-1] / se_est[-1])
-        coefficents_string += '\n'.join(
-            '%-12s %+.3e %+.3e %+.3e' % (
-                p_id, coefficent, se_est_factor, coefficent / se_est_factor)
-            for p_id, coefficent, se_est_factor in zip(
-                predictor_id_list, coefficents[:-1], se_est[:-1]))
-
-        # generate a nice looking regression result and write to log and file
-        report_string = (
-            '\n******************************\n'
-            '%s\n'
-            '---\n\n'
-            'Residual standard error: %.4f on %d degrees of freedom\n'
-            'Multiple R-squared: %.4f\n'
-            'Adjusted R-squared: %.4f\n'
-            'SSreg: %.4f\n'
-            'server id hash: %s\n'
-            '********************************\n' % (
-                coefficents_string, std_err, dof, r_sq, r_sq_adj, ssreg,
-                server_version))
-        LOGGER.info(report_string)
-        with open(file_registry['regression_coefficients'], 'w') as \
-                regression_log:
-            regression_log.write(report_string + '\n')
-
-        if ('scenario_predictor_table_path' in args and
-                args['scenario_predictor_table_path'] != ''):
-            LOGGER.info('Calculating scenario')
-            _calculate_scenario(
-                file_registry['pud_results_path'], SCENARIO_RESPONSE_ID,
-                coefficents, predictor_id_list,
-                args['scenario_predictor_table_path'],
-                file_registry['tmp_scenario_indexed_vector_path'],
-                file_registry['scenario_results_path'])
-
     LOGGER.info('connection release')
     recmodel_server._pyroRelease()
-    LOGGER.info('deleting temporary files')
-    shutil.rmtree(temporary_output_dir, ignore_errors=True)
 
 
 def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
@@ -325,7 +406,9 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
 
     Returns:
         None
+
     """
+    LOGGER.info("gridding aoi")
     driver = gdal.GetDriverByName('ESRI Shapefile')
     if os.path.exists(out_grid_vector_path):
         driver.Delete(out_grid_vector_path)
@@ -414,18 +497,23 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
                 grid_layer.CreateFeature(poly_feature)
 
 
-def _build_regression_coefficients(
-        response_vector_path, predictor_table_path,
-        tmp_indexed_vector_path, out_coefficient_vector_path,
-        out_predictor_id_list):
-    """Calculate least squares fit for the polygons in the response vector.
+def _schedule_predictor_data_processing(
+        response_vector_path, response_polygons_pickle_path,
+        prepare_response_polygons_task,
+        predictor_table_path, out_predictor_vector_path,
+        working_dir, task_graph):
+    """Summarize spatial predictor data by polygons in the response vector.
 
-    Build a least squares regression from the log normalized response vector,
-    spatial predictor datasets in `predictor_table_path`, and a column of 1s
-    for the y intercept.
+    Build a shapefile with geometry from the response vector, and tabular
+    data from aggregate metrics of spatial predictor datasets in
+    `predictor_table_path`.
 
     Parameters:
         response_vector_path (string): path to a single layer polygon vector.
+        response_polygons_pickle_path (string): path to pickle that stores a
+            dictionary which maps FIDs to shapely geometry.
+        prepare_response_polygons_task (Taskgraph.Task object):
+            A Task needed for dependent_task_lists in this scope.
         predictor_table_path (string): path to a CSV file with three columns
             'id', 'path' and 'type'.  'id' is the unique ID for that predictor
             and must be less than 10 characters long. 'path' indicates the
@@ -444,18 +532,90 @@ def _build_regression_coefficients(
                     polygon
                 'raster_mean': average of predictor raster under the
                     response polygon
-        tmp_indexed_vector_path (string): path to temporary working file in
-            case the response vector needs an index added
-        out_coefficient_vector_path (string): path to a copy of
-            `response_vector_path` with the modified predictor variable
-            responses. Overwritten if exists.
-        out_predictor_id_list (list): a list that is overwritten with the
-            predictor ids that are added to the coefficient vector attribute
-            table.
+        out_predictor_vector_path (string): path to a copy of
+            `response_vector_path` with a column for each id in
+            predictor_table_path. Overwritten if exists.
+        working_dir (string): path to an intermediate directory to store json
+            files with geoprocessing results.
+        task_graph (Taskgraph): the graph that was initialized in execute()
 
     Returns:
-        None
+        The ultimate task object from this branch of the taskgraph.
+
     """
+    LOGGER.info('Processing predictor datasets')
+
+    # lookup functions for response types
+    # polygon predictor types are a special case because the polygon_area
+    # function requires a 'mode' argument that these fucntions do not.
+    predictor_functions = {
+        'point_count': _point_count,
+        'point_nearest_distance': _point_nearest_distance,
+        'line_intersect_length': _line_intersect_length,
+        }
+
+    predictor_table = utils.build_lookup_from_csv(
+        predictor_table_path, 'id')
+    predictor_task_list = []
+    predictor_json_list = []  # tracks predictor files to add to shp
+
+    for predictor_id in predictor_table:
+        LOGGER.info("Building predictor %s", predictor_id)
+
+        predictor_path = _sanitize_path(
+            predictor_table_path, predictor_table[predictor_id]['path'])
+        predictor_type = predictor_table[predictor_id]['type']
+        if predictor_type.startswith('raster'):
+            # type must be one of raster_sum or raster_mean
+            raster_op_mode = predictor_type.split('_')[1]
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=_raster_sum_mean,
+                args=(predictor_path, raster_op_mode, response_vector_path,
+                      predictor_target_path),
+                target_path_list=[predictor_target_path],
+                task_name='predictor %s' % predictor_id))
+        # polygon types are a special case because the polygon_area
+        # function requires an additional 'mode' argument.
+        elif predictor_type.startswith('polygon'):
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=_polygon_area,
+                args=(predictor_type, response_polygons_pickle_path,
+                      predictor_path, predictor_target_path),
+                target_path_list=[predictor_target_path],
+                dependent_task_list=[prepare_response_polygons_task],
+                task_name='predictor %s' % predictor_id))
+        else:
+            predictor_target_path = os.path.join(
+                working_dir, predictor_id + '.json')
+            predictor_json_list.append(predictor_target_path)
+            predictor_task_list.append(task_graph.add_task(
+                func=predictor_functions[predictor_type],
+                args=(response_polygons_pickle_path, predictor_path,
+                      predictor_target_path),
+                target_path_list=[predictor_target_path],
+                dependent_task_list=[prepare_response_polygons_task],
+                task_name='predictor %s' % predictor_id))
+
+    assemble_predictor_data_task = task_graph.add_task(
+        func=_json_to_shp_table,
+        args=(response_vector_path, out_predictor_vector_path,
+              predictor_json_list),
+        target_path_list=[out_predictor_vector_path],
+        dependent_task_list=predictor_task_list,
+        task_name='assemble predictor data')
+
+    return assemble_predictor_data_task
+
+
+def _prepare_response_polygons_lookup(
+        response_vector_path, target_pickle_path):
+    """Translate a shapefile to a dictionary that maps FIDs to geometries."""
     response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
     response_layer = response_vector.GetLayer()
     response_polygons_lookup = {}  # maps FID to prepared geometry
@@ -465,135 +625,134 @@ def _build_regression_coefficients(
         feature_geometry = None
         response_polygons_lookup[response_feature.GetFID()] = feature_polygon
     response_layer = None
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(response_polygons_lookup, pickle_file)
 
+
+def _json_to_shp_table(
+        response_vector_path, predictor_vector_path,
+        predictor_json_list):
+    """Create a shapefile and a field with data from each json file.
+
+    Parameters:
+        response_vector_path (string): Path to the response vector polygon
+            shapefile.
+        predictor_vector_path (string): a copy of `response_vector_path`.
+            One field will be added for each json file, and all other
+            fields will be deleted.
+        predictor_json_list (list): list of json filenames, one for each
+            predictor dataset. A json file will look like this,
+            {0: 0.0, 1: 0.0}
+            Keys match FIDs of 'vector_path'.
+
+    Returns:
+        None
+
+    """
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(out_coefficient_vector_path):
-        driver.Delete(out_coefficient_vector_path)
-
-    out_coefficent_vector = driver.CreateCopy(
-        out_coefficient_vector_path, response_vector)
+    if os.path.exists(predictor_vector_path):
+        driver.Delete(predictor_vector_path)
+    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    predictor_vector = driver.CreateCopy(
+        predictor_vector_path, response_vector)
     response_vector = None
 
-    out_coefficent_layer = out_coefficent_vector.GetLayer()
+    layer = predictor_vector.GetLayer()
+    layer_defn = layer.GetLayerDefn()
 
-    # lookup functions for response types
-    predictor_functions = {
-        'point_count': _point_count,
-        'point_nearest_distance': _point_nearest_distance,
-        'line_intersect_length': _line_intersect_length,
-        'polygon_area_coverage': lambda x, y: _polygon_area('area', x, y),
-        'polygon_percent_coverage': lambda x, y: _polygon_area(
-            'percent', x, y),
-        }
-
-    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
-        predictor_table_path, 'id')
-    out_predictor_id_list[:] = predictor_table.keys()
-
-    for predictor_id in predictor_table:
-        LOGGER.info("Building predictor %s", predictor_id)
-        # Delete the field if it already exists
-        field_index = out_coefficent_layer.FindFieldIndex(
+    predictor_id_list = []
+    for json_filename in predictor_json_list:
+        predictor_id = os.path.basename(os.path.splitext(json_filename)[0])
+        predictor_id_list.append(predictor_id)
+        # Create a new field for the predictor
+        # Delete the field first if it already exists
+        field_index = layer.FindFieldIndex(
             str(predictor_id), 1)
         if field_index >= 0:
-            out_coefficent_layer.DeleteField(field_index)
+            layer.DeleteField(field_index)
         predictor_field = ogr.FieldDefn(str(predictor_id), ogr.OFTReal)
         predictor_field.SetWidth(24)
         predictor_field.SetPrecision(11)
-        out_coefficent_layer.CreateField(predictor_field)
+        layer.CreateField(predictor_field)
 
-        predictor_path = _sanitize_path(
-            predictor_table_path, predictor_table[predictor_id]['path'])
-
-        predictor_type = predictor_table[predictor_id]['type']
-
-        if predictor_type.startswith('raster'):
-            # type must be one of raster_sum or raster_mean
-            raster_type = predictor_type.split('_')[1]
-            raster_sum_mean_results = _raster_sum_mean(
-                response_vector_path, predictor_path,
-                tmp_indexed_vector_path)
-            predictor_results = raster_sum_mean_results[raster_type]
-        else:
-            predictor_results = predictor_functions[predictor_type](
-                response_polygons_lookup, predictor_path)
+        with open(json_filename, 'r') as file:
+            predictor_results = json.load(file)
         for feature_id, value in predictor_results.iteritems():
-            feature = out_coefficent_layer.GetFeature(int(feature_id))
+            feature = layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
-            out_coefficent_layer.SetFeature(feature)
-    out_coefficent_layer = None
-    out_coefficent_vector.FlushCache()
-    out_coefficent_vector = None
+            layer.SetFeature(feature)
 
-
-def _build_temporary_indexed_vector(vector_path, out_fid_index_vector_path):
-    """Copy single layer vector and add a field to map feature indexes.
-
-    Parameters:
-        vector_path (string): path to OGR vector
-        out_fid_index_vector_path (string): desired path to the copied vector
-            that has an index field added to it
-
-    Returns:
-        fid_field (string): name of FID field added to output vector_path
-    """
-    vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(out_fid_index_vector_path):
-        os.remove(out_fid_index_vector_path)
-
-    fid_indexed_vector = driver.CreateCopy(
-        out_fid_index_vector_path, vector)
-    fid_indexed_layer = fid_indexed_vector.GetLayer()
-
-    # make a random field name
-    fid_field = str(uuid.uuid4())[-8:]
-    fid_field_defn = ogr.FieldDefn(str(fid_field), ogr.OFTInteger)
-    fid_indexed_layer.CreateField(fid_field_defn)
-    for feature in fid_indexed_layer:
-        fid = feature.GetFID()
-        feature.SetField(fid_field, fid)
-        fid_indexed_layer.SetFeature(feature)
-
-    fid_indexed_vector.FlushCache()
-    fid_indexed_layer = None
-    fid_indexed_vector = None
-
-    return fid_field
+    # Get all the fieldnames. If they are not in the predictor_id_list,
+    # get their index and delete
+    n_fields = layer_defn.GetFieldCount()
+    fieldnames = []
+    for idx in range(n_fields):
+        field_defn = layer_defn.GetFieldDefn(idx)
+        fieldnames.append(field_defn.GetName())
+    for field_name in fieldnames:
+        if field_name not in predictor_id_list:
+            idx = layer.FindFieldIndex(field_name, 1)
+            layer.DeleteField(idx)
+    layer_defn = None
+    layer = None
+    predictor_vector.FlushCache()
+    predictor_vector = None
 
 
 def _raster_sum_mean(
-        response_vector_path, raster_path, tmp_indexed_vector_path):
-    """Sum all non-nodata values in the raster under each polygon.
+        raster_path, op_mode, response_vector_path,
+        predictor_target_path):
+    """Sum or mean for all non-nodata values in the raster under each polygon.
 
     Parameters:
-        response_vector_path (string): path to response polygons
         raster_path (string): path to a raster.
-        tmp_indexed_vector_path (string): desired path to a vector that will
-            be used to add unique indexes to `response_vector_path`
-        tmp_fid_raster_path (string): desired path to raster that will be used
-            to aggregate `raster_path` values by unique response IDs.
+        op_mode (string): either 'mean' or 'sum'.
+        response_vector_path (string): path to response polygons
+        predictor_target_path (string): path to json file to store result,
+            which is a dictionary mapping feature IDs from `response_vector_path`
+            to values of the raster under the polygon.
 
     Returns:
-        A dictionary indexing 'sum', 'mean', and 'count', to dictionaries
-        mapping feature IDs from `response_polygons_lookup` to those values
-        of the raster under the polygon.
-    """
-    fid_field = _build_temporary_indexed_vector(
-        response_vector_path, tmp_indexed_vector_path)
+        None
 
-    aggregate_results = natcap.invest.pygeoprocessing_0_3_3.aggregate_raster_values_uri(
-        raster_path, tmp_indexed_vector_path, shapefile_field=fid_field)
+    """
+    aggregate_results = pygeoprocessing.zonal_statistics(
+        (raster_path, 1), response_vector_path)
+    # remove results for a feature when the pixel count is 0.
+    # we don't have non-nodata predictor values for those features.
+    aggregate_results = {
+        str(fid): stats for fid, stats in aggregate_results.iteritems()
+        if stats['count'] != 0}
+    if not aggregate_results:
+        LOGGER.warn('raster predictor does not intersect with vector AOI')
+        # Create an empty file so that Taskgraph has its target file.
+        predictor_results = {}
+        with open(predictor_target_path, 'w') as jsonfile:
+            json.dump(predictor_results, jsonfile)
+        return None
 
     fid_raster_values = {
-        'sum': aggregate_results.total,
-        'mean': aggregate_results.pixel_mean,
-        'count': aggregate_results.n_pixels,
+        'fid': aggregate_results.keys(),
+        'sum': [fid['sum'] for fid in aggregate_results.values()],
+        'count': [fid['count'] for fid in aggregate_results.values()],
         }
-    return fid_raster_values
+
+    if op_mode == 'mean':
+        mean_results = (
+            numpy.array(fid_raster_values['sum']) /
+            numpy.array(fid_raster_values['count']))
+        predictor_results = dict(
+            zip(fid_raster_values['fid'], mean_results))
+    else:
+        predictor_results = dict(
+            zip(fid_raster_values['fid'], fid_raster_values['sum']))
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(predictor_results, jsonfile)
 
 
-def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
+def _polygon_area(
+        mode, response_polygons_pickle_path, polygon_vector_path,
+        predictor_target_path):
     """Calculate polygon area overlap.
 
     Calculates the amount of projected area overlap from `polygon_vector_path`
@@ -603,23 +762,29 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
         mode (string): one of 'area' or 'percent'.  How this is set affects
             the metric that's output.  'area' is the area covered in projected
             units while 'percent' is percent of the total response area
-            covered
+            covered.
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
         polygon_vector_path (string): path to a single layer polygon vector
             object.
+        predictor_target_path (string): path to json file to store result,
+            which is a dictionary mapping feature IDs from
+            `response_polygons_lookup` to polygon area coverage.
 
     Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to polygon area coverage.
+        None
+
     """
     start_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     polygons = _ogr_to_geometry_list(polygon_vector_path)
     prepped_polygons = [shapely.prepared.prep(polygon) for polygon in polygons]
     polygon_spatial_index = rtree.index.Index()
     for polygon_index, polygon in enumerate(polygons):
         polygon_spatial_index.insert(polygon_index, polygon.bounds)
     polygon_coverage_lookup = {}  # map FID to point count
+
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
         if time.time() - start_time > 5.0:
@@ -639,32 +804,39 @@ def _polygon_area(mode, response_polygons_lookup, polygon_vector_path):
             (geometry.intersection(polygon)).area
             for polygon in intersecting_polygons])
 
-        if mode == 'area':
+        if mode == 'polygon_area_coverage':
             polygon_coverage_lookup[feature_id] = polygon_area_coverage
-        elif mode == 'percent':
-            polygon_coverage_lookup[feature_id] = (
+        elif mode == 'polygon_percent_coverage':
+            polygon_coverage_lookup[str(feature_id)] = (
                 polygon_area_coverage / geometry.area * 100.0)
     LOGGER.info(
         "%s polygon area: 100.00%% complete",
         os.path.basename(polygon_vector_path))
-    return polygon_coverage_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(polygon_coverage_lookup, jsonfile)
 
 
-def _line_intersect_length(response_polygons_lookup, line_vector_path):
+def _line_intersect_length(
+        response_polygons_pickle_path,
+        line_vector_path, predictor_target_path):
     """Calculate the length of the intersecting lines on the response polygon.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
-
-        line_vector_path (string): path to a single layer point vector
+        line_vector_path (string): path to a single layer line vector
             object.
+        predictor_target_path (string): path to json file to store result,
+            which is a dictionary mapping feature IDs from
+            `response_polygons_lookup` to line intersect length.
 
     Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to line intersect length.
+        None
+
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     lines = _ogr_to_geometry_list(line_vector_path)
     line_length_lookup = {}  # map FID to intersecting line length
 
@@ -686,30 +858,38 @@ def _line_intersect_length(response_polygons_lookup, line_vector_path):
             (lines[line_index].intersection(geometry)).length
             for line_index in potential_intersecting_lines if
             geometry.intersects(lines[line_index])])
-        line_length_lookup[feature_id] = line_length
+        line_length_lookup[str(feature_id)] = line_length
     LOGGER.info(
         "%s line intersect length: 100.00%% complete",
         os.path.basename(line_vector_path))
-    return line_length_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(line_length_lookup, jsonfile)
 
 
-def _point_nearest_distance(response_polygons_lookup, point_vector_path):
+def _point_nearest_distance(
+        response_polygons_pickle_path, point_vector_path,
+        predictor_target_path):
     """Calculate distance to nearest point for all polygons.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
-
         point_vector_path (string): path to a single layer point vector
             object.
+        predictor_target_path (string): path to json file to store result,
+            which is a dictionary mapping feature IDs from
+            `response_polygons_lookup` to distance to nearest point.
 
     Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to distance to nearest point.
+        None
+
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     points = _ogr_to_geometry_list(point_vector_path)
     point_distance_lookup = {}  # map FID to point count
+
     index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
@@ -719,31 +899,39 @@ def _point_nearest_distance(response_polygons_lookup, point_vector_path):
                 os.path.basename(point_vector_path),
                 (100.0*index)/len(response_polygons_lookup)))
 
-        point_distance_lookup[feature_id] = min([
+        point_distance_lookup[str(feature_id)] = min([
             geometry.distance(point) for point in points])
     LOGGER.info(
         "%s point distance: 100.00%% complete",
         os.path.basename(point_vector_path))
-    return point_distance_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(point_distance_lookup, jsonfile)
 
 
-def _point_count(response_polygons_lookup, point_vector_path):
-    """Calculate number of points that intersect the response polygons.
+def _point_count(
+        response_polygons_pickle_path, point_vector_path,
+        predictor_target_path):
+    """Calculate number of points contained in each response polygon.
 
     Parameters:
         response_polygons_lookup (dictionary): maps feature ID to
             prepared shapely.Polygon.
-
         point_vector_path (string): path to a single layer point vector
             object.
+        predictor_target_path (string): path to json file to store result,
+            which is a dictionary mapping feature IDs from
+            `response_polygons_lookup` to number of points in that polygon.
 
     Returns:
-        A dictionary mapping feature IDs from `response_polygons_lookup`
-        to number of points in that polygon.
+        None
+
     """
     last_time = time.time()
+    with open(response_polygons_pickle_path, 'rb') as pickle_file:
+        response_polygons_lookup = pickle.load(pickle_file)
     points = _ogr_to_geometry_list(point_vector_path)
     point_count_lookup = {}  # map FID to point count
+
     index = None
     for index, (feature_id, geometry) in enumerate(
             response_polygons_lookup.iteritems()):
@@ -754,11 +942,12 @@ def _point_count(response_polygons_lookup, point_vector_path):
                 (100.0*index)/len(response_polygons_lookup)))
         point_count = len([
             point for point in points if geometry.contains(point)])
-        point_count_lookup[feature_id] = point_count
+        point_count_lookup[str(feature_id)] = point_count
     LOGGER.info(
         "%s point count: 100.00%% complete",
         os.path.basename(point_vector_path))
-    return point_count_lookup
+    with open(predictor_target_path, 'w') as jsonfile:
+        json.dump(point_count_lookup, jsonfile)
 
 
 def _ogr_to_geometry_list(vector_path):
@@ -775,6 +964,7 @@ def _ogr_to_geometry_list(vector_path):
     Returns:
         list of shapely geometry objects representing the features in the
         `vector_path` layer.
+
     """
     vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     layer = vector.GetLayer()
@@ -791,187 +981,269 @@ def _ogr_to_geometry_list(vector_path):
     return geometry_list
 
 
-def _build_regression(coefficient_vector_path, response_id, predictor_id_list):
-    """Multiple regression for log response of the coefficient vector table.
-
-    The regression is built such that each feature in the single layer vector
-    pointed to by `coefficent_vector_path` corresponds to one data point.
-    The coefficients are defined in the vector's attribute table such that
-    `response_id` is the response coefficient, and `predictor_id_list` is a
-    list of the predictor ids.
+def _compute_and_summarize_regression(
+        response_vector_path, predictor_vector_path, server_version_path,
+        target_coefficient_json_path, target_regression_summary_path):
+    """Compute a regression and summary statistics and generate a report.
 
     Parameters:
-        coefficient_vector_path (string): path to a shapefile that contains
-            at least the fields described in `response_id` and
-            `predictor_id_list`.
-        response_id (string): field ID in `coefficient_vector_path` whose
-            values correspond to the regression response variable.
-        predictor_id_list (list): a list of field IDs in
-            `coefficient_vector_path` that correspond to the predictor
-            variables in the regression.  The order of this list also
-            determines the order of the regression coefficients returned
-            by this function.
+        response_vector_path (string): path to polygon vector containing the
+            RESPONSE_ID field.
+        predictor_vector_path (string): path to polygon vector containing
+            fields for each predictor variable. Geometry is identical to that
+            of 'response_vector_path'.
+        server_version_path (string): path to pickle file containing the
+            rec server id hash.
+        target_coefficient_json_path (string): path to json file to store a dictionary
+            that maps a predictor id its coefficient estimate.
+            This file is created by this function.
+        target_regression_summary_path (string): path to txt file for the report.
+            This file is created by this function.
 
     Returns:
-        X: A list of coefficients in the least-squares solution including
-            the y intercept as the last element
-        ssreg: sums of squared residuals
+        None
+
+    """
+    predictor_id_list, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est = (
+        _build_regression(
+            response_vector_path, predictor_vector_path, RESPONSE_ID))
+
+    # Generate a nice looking regression result and write to log and file
+    coefficients_string = '               estimate     stderr    t value\n'
+    # The last coefficient is the y-intercept,
+    # but we want it at the top of the report, thus [-1] on lists
+    coefficients_string += '%-12s %+.3e %+.3e %+.3e\n' % (
+        predictor_id_list[-1], coefficients[-1], se_est[-1],
+        coefficients[-1] / se_est[-1])
+    # Since the intercept has already been reported, [:-1] on all the lists
+    coefficients_string += '\n'.join(
+        '%-12s %+.3e %+.3e %+.3e' % (
+            p_id, coefficient, se_est_factor, coefficient / se_est_factor)
+        for p_id, coefficient, se_est_factor in zip(
+            predictor_id_list[:-1], coefficients[:-1], se_est[:-1]))
+
+    # Include the server version and PUD hash in the report:
+    with open(server_version_path, 'rb') as f:
+        server_version = pickle.load(f)
+    report_string = (
+        '\n******************************\n'
+        '%s\n'
+        '---\n\n'
+        'Residual standard error: %.4f on %d degrees of freedom\n'
+        'Multiple R-squared: %.4f\n'
+        'Adjusted R-squared: %.4f\n'
+        'SSres: %.4f\n'
+        'server id hash: %s\n'
+        '********************************\n' % (
+            coefficients_string, std_err, dof, r_sq, r_sq_adj, ssres,
+            server_version))
+    LOGGER.info(report_string)
+    with open(target_regression_summary_path, 'w') as \
+            regression_log:
+        regression_log.write(report_string + '\n')
+
+    # Predictor coefficients are needed for _calculate_scenario()
+    predictor_estimates = dict(zip(predictor_id_list, coefficients))
+    with open(target_coefficient_json_path, 'w') as json_file:
+        json.dump(predictor_estimates, json_file)
+
+
+def _build_regression(
+        response_vector_path, predictor_vector_path,
+        response_id):
+    """Multiple least-squares regression with log-transformed response.
+
+    The regression is built such that each feature in the single layer vector
+    pointed to by `predictor_vector_path` corresponds to one data point.
+    `response_id` is the response variable to be log-transformed, and is found
+    in `response_vector_path`. Predictor variables are found in
+    `predictor_vector_path` and are not transformed. Features with incomplete
+    data are dropped prior to computing the regression.
+
+    Parameters:
+        response_vector_path (string): path to polygon vector with PUD
+            results, in particular a field named with the `response_id`.
+        predictor_vector_path (string): path to a shapefile that contains
+            only the fields to be used as predictor variables.
+        response_id (string): field ID in `response_vector_path` whose
+            values correspond to the regression response variable.
+
+    Asserts:
+        `response_vector_path` and `predictor_vector_path` have an equal
+        number of features.
+
+    Returns:
+        predictor_names: A list of predictor id strings. Length matches
+            coeffiecients.
+        coefficients: A list of coefficients in the least-squares solution
+            including the y intercept as the last element.
+        ssres: sums of squared residuals
         r_sq: R^2 value
         r_sq_adj: adjusted R^2 value
         std_err: residual standard error
         dof: degrees of freedom
-        se_est: standard error estimate on coefficients
+        se_est: A list of standard error estimate, length matches coefficients.
+
     """
-    coefficent_vector = gdal.OpenEx(coefficient_vector_path, gdal.OF_VECTOR)
-    coefficent_layer = coefficent_vector.GetLayer()
+    LOGGER.info("Computing regression")
+    response_vector = gdal.OpenEx(response_vector_path, gdal.OF_VECTOR)
+    response_layer = response_vector.GetLayer()
 
-    # Loop through each feature and build up the dictionary representing the
-    # attribute table
-    n_features = coefficent_layer.GetFeatureCount()
-    coefficient_matrix = numpy.empty((n_features, len(predictor_id_list)+2))
-    for row_index, feature in enumerate(coefficent_layer):
-        coefficient_matrix[row_index, :] = numpy.array(
-            [feature.GetField(str(response_id))] + [
-                feature.GetField(str(key)) for key in predictor_id_list] +
-            [1])  # add the 1s for the y intercept
+    predictor_vector = gdal.OpenEx(predictor_vector_path, gdal.OF_VECTOR)
+    predictor_layer = predictor_vector.GetLayer()
+    predictor_layer_defn = predictor_layer.GetLayerDefn()
 
-    y_factors = numpy.log1p(coefficient_matrix[:, 0])
+    n_features = predictor_layer.GetFeatureCount()
+    # Not sure what would cause this to be untrue, but if it ever is,
+    # we sure want to know about it.
+    assert(n_features == response_layer.GetFeatureCount())
 
-    coefficents, _, _, _ = numpy.linalg.lstsq(
-        coefficient_matrix[:, 1:], y_factors)
-    ssreg = numpy.sum((
+    # Response data matrix
+    response_array = numpy.empty((n_features, 1))
+    for row_index, feature in enumerate(response_layer):
+        response_array[row_index, :] = feature.GetField(str(response_id))
+    response_array = numpy.log1p(response_array)
+
+    # Y-Intercept data matrix
+    intercept_array = numpy.ones_like(response_array)
+
+    # Predictor data matrix
+    n_predictors = predictor_layer_defn.GetFieldCount()
+    predictor_matrix = numpy.empty((n_features, n_predictors))
+    predictor_names = []
+    for idx in range(n_predictors):
+        field_defn = predictor_layer_defn.GetFieldDefn(idx)
+        field_name = field_defn.GetName()
+        predictor_names.append(field_name)
+    for row_index, feature in enumerate(predictor_layer):
+        predictor_matrix[row_index, :] = numpy.array(
+            [feature.GetField(str(key)) for key in predictor_names])
+
+    # If some predictor has no data across all features, drop that predictor:
+    valid_pred = ~numpy.isnan(predictor_matrix).all(axis=0)
+    predictor_matrix = predictor_matrix[:, valid_pred]
+    predictor_names = [
+        pred for (pred, valid) in zip(predictor_names, valid_pred)
+        if valid]
+    n_predictors = predictor_matrix.shape[1]
+
+    # add columns for response variable and y-intercept
+    data_matrix = numpy.concatenate(
+        (response_array, predictor_matrix, intercept_array), axis=1)
+    predictor_names.append('(Intercept)')
+
+    # if any variable is missing data for some feature, drop that feature:
+    data_matrix = data_matrix[~numpy.isnan(data_matrix).any(axis=1)]
+    n_features = data_matrix.shape[0]
+    y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
+    coefficients, _, _, _ = numpy.linalg.lstsq(
+        data_matrix[:, 1:], y_factors) 
+
+    ssres = numpy.sum((
         y_factors -
-        numpy.sum(coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2)
+        numpy.sum(data_matrix[:, 1:] * coefficients, axis=1)) ** 2)
     sstot = numpy.sum((
-        numpy.average(y_factors) -
-        numpy.log1p(coefficient_matrix[:, 0])) ** 2)
-    dof = n_features - len(predictor_id_list) - 1
-
+        numpy.average(y_factors) - y_factors) ** 2)
+    dof = n_features - n_predictors - 1
     if sstot == 0.0 or dof <= 0.0:
         # this can happen if there is only one sample
         r_sq = 1.0
         r_sq_adj = 1.0
     else:
-        r_sq = 1. - ssreg / sstot
+        r_sq = 1. - ssres / sstot
         r_sq_adj = 1 - (1 - r_sq) * (n_features - 1) / dof
 
     if dof > 0:
-        std_err = numpy.sqrt(ssreg / dof)
+        std_err = numpy.sqrt(ssres / dof)
         sigma2 = numpy.sum((
             y_factors - numpy.sum(
-                coefficient_matrix[:, 1:] * coefficents, axis=1)) ** 2) / dof
+                data_matrix[:, 1:] * coefficients, axis=1)) ** 2) / dof
         var_est = sigma2 * numpy.diag(numpy.linalg.pinv(
             numpy.dot(
-                coefficient_matrix[:, 1:].T, coefficient_matrix[:, 1:])))
+                data_matrix[:, 1:].T, data_matrix[:, 1:])))
         se_est = numpy.sqrt(var_est)
     else:
         LOGGER.warn("Linear model is under constrained with DOF=%d", dof)
         std_err = sigma2 = numpy.nan
-        se_est = var_est = [numpy.nan] * coefficient_matrix.shape[0]
-
-    return coefficents, ssreg, r_sq, r_sq_adj, std_err, dof, se_est
+        se_est = var_est = [numpy.nan] * data_matrix.shape[1]
+    return predictor_names, coefficients, ssres, r_sq, r_sq_adj, std_err, dof, se_est
 
 
 def _calculate_scenario(
-        base_aoi_path, response_id, predictor_coefficents, predictor_id_list,
-        scenario_predictor_table_path, tmp_indexed_vector_path,
-        scenario_results_path):
-    """Calculate the PUD of a scenario given an existing regression.
+        scenario_results_path, response_id, coefficient_json_path):
+    """Estimate the PUD of a scenario given an existing regression equation.
 
     It is expected that the predictor coefficients have been derived from a
     log normal distribution.
 
     Parameters:
-        base_aoi_path (string): path to the a polygon vector that was used
-            to build the original regression.  Geometry will be copied for
-            `scenario_results_path` output vector.
-        response_id (string): text ID of response variable to write to
-            the scenario result
-        predictor_coefficents (numpy.ndarray): 1D array of regression
-            coefficients that are parallel to `predictor_id_list` except the
-            last element is the y-intercept.
-        predictor_id_list (list of string): list of text ID predictor
-            variables that correspond with `coefficients`
-        scenario_predictor_table_path (string): path to a CSV table of
-            regression predictors, their IDs and types.  Must contain the
-            fields 'id', 'path', and 'type' where:
-                'id': is a <=10 character length ID that is used to uniquely
-                    describe the predictor.  It will be added to the output
-                    result shapefile attribute table which is an ESRI
-                    Shapefile, thus limited to 10 characters.
-                'path': an absolute or relative (to this table) path to the
-                    predictor dataset, either a vector or raster type.
-                'type': one of the following,
-                    'raster_mean': mean of values in the raster under the
-                        response polygon
-                    'raster_sum': sum of values in the raster under the
-                        response polygon
-                    'point_count': count of the points contained in the
-                        response polygon
-                    'point_nearest_distance': distance to the nearest point
-                        from the response polygon
-                    'line_intersect_length': length of lines that intersect
-                        with the response polygon in projected units of AOI
-                    'polygon_area': area of the polygon contained within
-                        response polygon in projected units of AOI
-                Note also that each ID in the table must have a corresponding
-                entry in `response_id` else the input is invalid.
-        tmp_indexed_vector_path (string): path to temporary working file in
-            case the response vector needs an index added
         scenario_results_path (string): path to desired output scenario
             vector result which will be geometrically a copy of the input
-            AOI but contain the base regression fields as well as the scenario
-            derived response.
+            AOI but contain the scenario predictor data fields as well as the
+            scenario esimated response.
+        response_id (string): text ID of response variable to write to
+            the scenario result.
+        coefficient_json_path (string): path to json file with the pre-existing
+            regression results. It contains a dictionary that maps
+            predictor id strings to coefficient values. Includes Y-Intercept.
 
     Returns:
         None
-    """
-    scenario_predictor_id_list = []
-    _build_regression_coefficients(
-        base_aoi_path, scenario_predictor_table_path,
-        tmp_indexed_vector_path, scenario_results_path,
-        scenario_predictor_id_list)
 
-    id_to_coefficient = dict(
-        (p_id, coeff) for p_id, coeff in zip(
-            predictor_id_list, predictor_coefficents))
+    """
+    LOGGER.info("Calculating scenario results")
 
     # Open for writing
-    scenario_coefficent_vector = gdal.OpenEx(
-        scenario_results_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
-    scenario_coefficent_layer = scenario_coefficent_vector.GetLayer()
+    scenario_coefficient_vector = gdal.OpenEx(
+        scenario_results_path, gdal.OF_VECTOR | gdal.GA_Update)
+    scenario_coefficient_layer = scenario_coefficient_vector.GetLayer()
 
     # delete the response ID if it's already there because it must have been
     # copied from the base layer
-    response_index = scenario_coefficent_layer.FindFieldIndex(response_id, 1)
+    response_index = scenario_coefficient_layer.FindFieldIndex(response_id, 1)
     if response_index >= 0:
-        scenario_coefficent_layer.DeleteField(response_index)
+        scenario_coefficient_layer.DeleteField(response_index)
 
     response_field = ogr.FieldDefn(response_id, ogr.OFTReal)
     response_field.SetWidth(24)
     response_field.SetPrecision(11)
+    scenario_coefficient_layer.CreateField(response_field)
 
-    scenario_coefficent_layer.CreateField(response_field)
+    # Load the pre-existing predictor coefficients to build the regression
+    # equation.
+    with open(coefficient_json_path, 'r') as json_file:
+        predictor_estimates = json.load(json_file)
 
-    for feature_id in xrange(scenario_coefficent_layer.GetFeatureCount()):
-        feature = scenario_coefficent_layer.GetFeature(feature_id)
+    y_intercept = predictor_estimates.pop("(Intercept)")
+
+    for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
+        feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
-        for scenario_predictor_id in scenario_predictor_id_list:
-            response_value += (
-                id_to_coefficient[scenario_predictor_id] *
-                feature.GetField(str(scenario_predictor_id)))
-        response_value += predictor_coefficents[-1]  # y-intercept
+        try:
+            for predictor_id, coefficient in predictor_estimates.iteritems():
+                response_value += (
+                    coefficient *
+                    feature.GetField(str(predictor_id)))
+        except TypeError as e:
+            # TypeError will happen if GetField returned None
+            LOGGER.warn(
+                'incomplete predictor data for feature_id %d, \
+                not estimating PUD_EST' % feature_id)
+            feature = None
+            continue  # without writing to the feature
+        response_value += y_intercept
         # recall the coefficients are log normal, so expm1 inverses it
         feature.SetField(response_id, numpy.expm1(response_value))
-        scenario_coefficent_layer.SetFeature(feature)
+        scenario_coefficient_layer.SetFeature(feature)
+        feature = None
 
-    scenario_coefficent_layer = None
-    scenario_coefficent_vector.FlushCache()
-    scenario_coefficent_vector = None
+    scenario_coefficient_layer = None
+    scenario_coefficient_vector.FlushCache()
+    scenario_coefficient_vector = None
 
 
 def _validate_same_id_lengths(table_path):
-    """Ensure both table has ids of length less than 10.
+    """Ensure a predictor table has ids of length less than 10.
 
     Parameter:
         table_path (string):  path to a csv table that has at least
@@ -980,8 +1252,9 @@ def _validate_same_id_lengths(table_path):
     Raises:
         ValueError if any of the fields in 'id' and 'type' don't match between
         tables.
+
     """
-    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(table_path, 'id')
+    predictor_table = utils.build_lookup_from_csv(table_path, 'id')
     too_long = set()
     for p_id in predictor_table:
         if len(p_id) > 10:
@@ -1012,11 +1285,12 @@ def _validate_same_ids_and_types(
     Raises:
         ValueError if any of the fields in 'id' and 'type' don't match between
         tables.
+
     """
-    predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
+    predictor_table = utils.build_lookup_from_csv(
         predictor_table_path, 'id')
 
-    scenario_predictor_table = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
+    scenario_predictor_table = utils.build_lookup_from_csv(
         scenario_predictor_table_path, 'id')
 
     predictor_table_pairs = set([
@@ -1046,10 +1320,11 @@ def _validate_same_projection(base_vector_path, table_path):
     Raises:
         ValueError if the projections in each of the GIS types in the table
             are not identical to the projection in base_vector_path
+
     """
     # This will load the table as paths which we can iterate through without
     # bothering the rest of the table structure
-    data_paths = natcap.invest.pygeoprocessing_0_3_3.get_lookup_from_csv(
+    data_paths = utils.build_lookup_from_csv(
         table_path, 'path')
 
     base_vector = gdal.OpenEx(base_vector_path, gdal.OF_VECTOR)
@@ -1106,6 +1381,7 @@ def delay_op(last_time, time_delay, func):
     Returns:
         If `func` was triggered, return the time which it was triggered in
         seconds, otherwise return `last_time`.
+
     """
     if time.time() - last_time > time_delay:
         func()
@@ -1138,6 +1414,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []

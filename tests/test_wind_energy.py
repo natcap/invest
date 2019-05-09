@@ -1,9 +1,11 @@
 """Module for Regression Testing the InVEST Wind Energy module."""
 import unittest
-import tempfile
-import shutil
-import os
 import csv
+import shutil
+import tempfile
+import os
+import pickle
+import re
 
 import numpy
 import numpy.testing
@@ -98,7 +100,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         exp_array = numpy.array([[10, 110, 210, 310], [20, 120, 220, 320]])
         numpy.testing.assert_array_equal(res_array, exp_array)
 
-    def test_point_to_polygon_distance(self):
+    def test_calculate_land_to_grid_distance(self):
         """WindEnergy: testing 'point_to_polygon_distance' function."""
         from natcap.invest import wind_energy
 
@@ -135,14 +137,17 @@ class WindEnergyUnitTests(unittest.TestCase):
         point_vector_path = pygeoprocessing.testing.create_vector_on_disk(
             point_geometries, srs.projection, fields, attr_pt,
             vector_format='ESRI Shapefile', filename=point_file)
+        target_point_vector_path = os.path.join(
+            self.workspace_dir, 'target_point.shp')
         # Call function to test
         field_name = 'L2G'
-        wind_energy._point_to_polygon_distance(
-            point_vector_path, poly_vector_path, field_name)
+        wind_energy._calculate_land_to_grid_distance(
+            point_vector_path, poly_vector_path, field_name,
+            target_point_vector_path)
 
         exp_results = [.15, .1, .05, .05]
 
-        point_vector = gdal.OpenEx(point_vector_path)
+        point_vector = gdal.OpenEx(target_point_vector_path)
         point_layer = point_vector.GetLayer()
         field_index = point_layer.GetFeature(0).GetFieldIndex(field_name)
         for i, point_feat in enumerate(point_layer):
@@ -170,7 +175,7 @@ class WindEnergyUnitTests(unittest.TestCase):
         }
         self.assertDictEqual(expected_result, result)
 
-    def test_calculate_distances_grid(self):
+    def test_calculate_grid_dist_on_raster(self):
         """WindEnergy: testing 'calculate_distances_grid' function."""
         from natcap.invest import wind_energy
 
@@ -197,7 +202,7 @@ class WindEnergyUnitTests(unittest.TestCase):
 
         tmp_dist_final_path = os.path.join(self.workspace_dir, 'dist_final.tif')
         # Call function to test
-        wind_energy._calculate_distances_grid(
+        wind_energy._calculate_grid_dist_on_raster(
             land_shape_path, harvested_masked_path, tmp_dist_final_path, '')
 
         # Compare
@@ -211,16 +216,20 @@ class WindEnergyUnitTests(unittest.TestCase):
         """WindEnergy: testing 'wind_data_to_point_vector' function."""
         from natcap.invest import wind_energy
 
-        dict_data = {
+        wind_data = {
             (31.79, 123.76): {
                 'LONG': 123.76, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
+        wind_data_pickle_path = os.path.join(
+            self.workspace_dir, 'wind_data.pickle')
+        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(
+            wind_data_pickle_path, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -242,7 +251,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        dict_data[(31.79, 123.76)][field], field_val)
+                        wind_data[(31.79, 123.76)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)
@@ -258,16 +267,20 @@ class WindEnergyUnitTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         # Set up a coordinate with a longitude in the range of -360 to 0.
-        dict_data = {
+        wind_data = {
             (31.79, -200.0): {
                 'LONG': -200.0, 'LATI': 31.79, 'Ram-080m': 7.98,
                 'K-010m': 1.90}
         }
+        wind_data_pickle_path = os.path.join(
+            self.workspace_dir, 'wind_data.pickle')
+        pickle.dump(wind_data, open(wind_data_pickle_path, 'wb'))
 
         layer_name = "datatopoint"
         out_path = os.path.join(self.workspace_dir, 'datatopoint.shp')
 
-        wind_energy._wind_data_to_point_vector(dict_data, layer_name, out_path)
+        wind_energy._wind_data_to_point_vector(
+            wind_data_pickle_path, layer_name, out_path)
 
         field_names = ['LONG', 'LATI', 'Ram-080m', 'K-010m']
         ogr_point = ogr.Geometry(ogr.wkbPoint)
@@ -291,7 +304,7 @@ class WindEnergyUnitTests(unittest.TestCase):
                 try:
                     field_val = feat.GetField(field)
                     self.assertEqual(
-                        dict_data[(31.79, -200.0)][field], field_val)
+                        wind_data[(31.79, -200.0)][field], field_val)
                 except ValueError:
                     raise AssertionError(
                         'Could not find field %s' % field)
@@ -320,14 +333,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'wind_data_path': os.path.join(
                 SAMPLE_DATA, 'resampled_wind_points.csv'),
             'bathymetry_path': os.path.join(
-                SAMPLE_DATA, 'resampled_global_dem.tif'),
+                SAMPLE_DATA, 'resampled_global_dem_unprojected.tif'),
             'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
                 SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 180
+            'max_depth': 180,
+            'n_workers': -1
             }
 
         return args
@@ -337,6 +351,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wind_energy
 
         args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        # Also test on input bathymetry that has equal x, y pixel sizes
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_global_dem_equal_pixel.tif')
 
         wind_energy.execute(args)
 
@@ -350,9 +367,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'noaoi', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'noaoi', vector_path))
 
     def test_no_land_polygon(self):
         """WindEnergy: testing case w/ AOI but w/o land poly or distances."""
@@ -374,9 +391,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'nolandpoly', vector_path))
 
     def test_no_distances(self):
         """WindEnergy: testing case w/ AOI and land poly, but w/o distances."""
@@ -400,9 +417,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'nodistances', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'nodistances', vector_path))
 
     def test_val_gridpts_windprice(self):
         """WindEnergy: testing Valuation w/ grid pts and wind price."""
@@ -427,6 +444,15 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         wind_energy.execute(args)
 
+        # Make sure the output files were created.
+        vector_path = 'wind_energy_points.shp'
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'output', vector_path)))
+
+        # Run through the model again, which should mean deleting shapefiles
+        # that have already been made, but which need to be created again.
+        wind_energy.execute(args)
+
         raster_results = [
             'carbon_emissions_tons.tif',
             'levelized_cost_price_per_kWh.tif',	'npv_US_millions.tif']
@@ -439,9 +465,9 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         vector_path = 'wind_energy_points.shp'
 
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'pricevalgrid', vector_path))
 
     def test_val_land_grid_points(self):
         """WindEnergy: testing Valuation w/ grid/land pts and wind price."""
@@ -480,11 +506,49 @@ class WindEnergyRegressionTests(unittest.TestCase):
                 1E-6)
 
         vector_path = 'wind_energy_points.shp'
-
-        pygeoprocessing.testing.assert_vectors_equal(
+        WindEnergyRegressionTests._assert_vectors_equal(
             os.path.join(args['workspace_dir'], 'output', vector_path),
-            os.path.join(
-                REGRESSION_DATA, 'pricevalgridland', vector_path), 1E-6)
+            os.path.join(REGRESSION_DATA, 'pricevalgridland', vector_path))
+
+    def test_val_no_grid_land_pts(self):
+        """WindEnergy: testing Valuation without grid or land points."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        # Also use an already projected bathymetry
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_global_dem_projected.tif')
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp')
+        args['land_polygon_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'simple_north_america_polygon.shp')
+        args['min_distance'] = 0
+        args['max_distance'] = 200000
+        args['valuation_container'] = True
+        args['foundation_cost'] = 2
+        args['discount_rate'] = 0.07
+        args['price_table'] = True
+        args['wind_schedule'] = os.path.join(
+                SAMPLE_DATA, 'price_table_example.csv')
+        args['wind_price'] = 0.187
+        args['rate_change'] = 0.2
+        args['avg_grid_distance'] = 4
+
+        wind_energy.execute(args)
+
+        raster_results = [
+            'carbon_emissions_tons.tif',
+            'levelized_cost_price_per_kWh.tif', 'npv_US_millions.tif']
+
+        for raster_path in raster_results:
+            pygeoprocessing.testing.assert_rasters_equal(
+                os.path.join(args['workspace_dir'], 'output', raster_path),
+                os.path.join(REGRESSION_DATA, 'priceval', raster_path),
+                1E-6)
+
+        vector_path = 'wind_energy_points.shp'
+        WindEnergyRegressionTests._assert_vectors_equal(
+            os.path.join(args['workspace_dir'], 'output', vector_path),
+            os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
     def test_grid_points_no_aoi(self):
         """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
@@ -501,6 +565,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
         # Provide the grid points but not AOI
         args['grid_points_path'] = os.path.join(
             SAMPLE_DATA, 'resampled_grid_pts.csv')
+        args['aoi_vector_path'] = ''  # Empty AOI value
         args['price_table'] = False
         args['wind_price'] = 0.187
         args['rate_change'] = 0.2
@@ -521,8 +586,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -612,8 +676,7 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'bathymetry_path': os.path.join(
                 REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
+                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
             'max_depth': 200,
@@ -655,76 +718,361 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    def test_remove_datasources(self):
-        """WindEnergy: testing datasources which already exist are removed."""
-        from natcap.invest import wind_energy
-
+    @staticmethod
+    def generate_validate_args(workspace_dir):
+        """Generate an args list for testing validate function in the model."""
         args = {
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': workspace_dir,
             'wind_data_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
+                SAMPLE_DATA, 'resampled_wind_points.csv'),
             'bathymetry_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
+                SAMPLE_DATA, 'resampled_global_dem_unprojected.tif'),
             'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                'global_wind_energy_parameters.csv'),
+                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
             'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA,
-                '3_6_turbine.csv'),
+                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 200,
+            'max_depth': 180,
             'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
+                SAMPLE_DATA, 'New_England_US_Aoi.shp'),
             'land_polygon_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
+                SAMPLE_DATA, 'simple_north_america_polygon.shp'),
             'min_distance': 0,
             'max_distance': 200000,
             'valuation_container': True,
             'foundation_cost': 2,
             'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-        }
+            'grid_points_path': os.path.join(
+                SAMPLE_DATA, 'resampled_grid_pts.csv'),
+            'price_table': False,
+            'wind_price': 0.187,
+            'rate_change': 0.2,
+            'n_workers': -1
+            }
 
-        wind_energy.execute(args)
+        return args
 
-        # Make sure the output files were created.
-        vector_path = 'wind_energy_points.shp'
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-        # Run through the model again, which should mean deleting
-        # shapefiles that have already been made, but which need
-        # to be created again.
-        wind_energy.execute(args)
-
-        # For testing, just check to make sure the output files
-        # were created again.
-        vector_path = 'wind_energy_points.shp'
-        self.assertTrue(os.path.exists(
-            os.path.join(args['workspace_dir'], 'output', vector_path)))
-
-    def test_validate(self):
-        """WindEnergy: testing validation with valuation checked."""
+    def test_validate_missing_distance(self):
+        """WindEnergy: testing validate with missing max_distance."""
         from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
 
+        # Testing when min_distance is provided, but max_distance is None.
+        args['max_distance'] = None
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['max_distance'], 'Value must be defined.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_invalid_price_table(self):
+        """WindEnergy: testing price_table is neither True nor False."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Testing wrong value in price_table
+        args['price_table'] = 'wrong_value'
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['price_table'], 'Parameter must be either True or False.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_invalid_wind_schedule(self):
+        """WindEnergy: testing missing or invalid wind_schedule values."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Testing exception raised when missing wind_schedule, provided
+        # price_table is True
+        args['price_table'] = True
+        with self.assertRaises(AssertionError) as cm:
+            wind_energy.validate(args)
+        expected_message = (
+            "Key wind_schedule (from ['wind_schedule']) must be in args")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+        # Testing invalid values in the wind schedule table
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'price_table_bad_example.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_errors = [
+            (['wind_schedule'], 'Value(s) in Year column is not integer.'),
+            (['wind_schedule'], 'Value(s) in Price column is not numeric.')]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
+        # Testing duplicate years in the wind schedule table
+        args['wind_schedule'] = os.path.join(
+            SAMPLE_DATA, 'price_table_example_duplicate_years.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['wind_schedule'],
+            'The following year(s) showed up more than once: [2008L, 2004L].')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_missing_grid_distance_keys(self):
+        """WindEnergy: testing missing distance keys when valuation checked."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Remove grid_points_path from args so both grid_points_path and
+        # avg_grid_distance are missing
+        args['grid_points_path'] = 'non_existing_file.csv'
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['grid_points_path'],
+            'Either avg_grid_distance or grid_points_path must be provided.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_missing_workspace(self):
+        """WindEnergy: testing missing workspace_dir."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        args['workspace_dir'] = ''
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['workspace_dir'], 'Parameter must have a value.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_invalid_aoi_vector(self):
+        """WindEnergy: testing invalid aoi_vector_path values in args."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Use a non-compatible vector file for AOI
         args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp')
-        args['land_polygon_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'simple_north_america_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_land_pts.csv')
-        args['price_table'] = False
-        args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
+            SAMPLE_DATA, 'New_England_US_Aoi.shp.gz')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['aoi_vector_path'],
+            'Parameter must be a path to an OGR-compatible vector file.')
+        self.assertTrue(expected_error in validation_error_list)
 
-        wind_energy.validate(args)
+        # Use a projection that's not in meters
+        args['aoi_vector_path'] = os.path.join(
+            SAMPLE_DATA, 'aoi_projected_in_ft.shp')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['aoi_vector_path'], 'Vector must be projected in meters')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_invalid_bathymetry_raster(self):
+        """WindEnergy: testing GDAL non-compatible bathymetry_path in args."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Use a non-compatible vector file for AOI
+        args['bathymetry_path'] = os.path.join(
+            SAMPLE_DATA, 'New_England_US_Aoi.shp.gz')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['bathymetry_path'],
+            'Parameter must be a path to a GDAL-compatible raster on disk.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_missing_required_fields_in_wind_data(self):
+        """WindEnergy: testing missing required fields in wind_data_path."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Use a CSV file that's missing the REF field
+        args['wind_data_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_wind_points_missing_ref_field.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['wind_data_path'], 'Missing REF field.')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file that's missing some fields other than REF
+        args['wind_data_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_wind_points_missing_other_fields.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['wind_data_path'], 'CSV missing required fields: lam, k')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file path that doesn't exist
+        args['wind_data_path'] = os.path.join(
+            SAMPLE_DATA, 'file_not_exist.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['wind_data_path'], 'Could not locate file.')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file that has invalid field values
+        args['wind_data_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_wind_points_invalid_field_values.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_errors = [
+            (['wind_data_path'], 'Ref 10.2 must be an integer.'),
+            (['wind_data_path'], 'Ref 10.2 column k must be a number.')]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_csv_file_nonexist(self):
+        """WindEnergy: testing validate turbine_parameters_path not existing."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Use a non-compatible vector file for AOI
+        args['turbine_parameters_path'] = os.path.join(
+            SAMPLE_DATA, 'file_not_exist.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['turbine_parameters_path'], 'File not found.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_invalid_number_keys(self):
+        """WindEnergy: testing validate invalid values for number keys."""
+        from natcap.invest import wind_energy
+
+        # Use a float for number_of_turbines
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+        args['number_of_turbines'] = 0.5
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['number_of_turbines'], 'Parameter must be an integer.')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a string for discount_rate
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+        args['discount_rate'] = 'string'
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['discount_rate'], 'Parameter must be a number.')
+        self.assertTrue(expected_error in validation_error_list)
+
+    def test_missing_required_fields_in_grid_points(self):
+        """WindEnergy: testing missing required fields in grid_points_path."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Use a CSV file that's missing the ID field
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_grid_pts_missing_id_field.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['grid_points_path'], 'Missing ID field.')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file that's missing some fields other than ID
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_grid_pts_missing_other_fields.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (
+            ['grid_points_path'], 'CSV missing required fields: lati, type')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file path that doesn't exist
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'file_not_exist.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_error = (['grid_points_path'], 'Could not locate file.')
+        self.assertTrue(expected_error in validation_error_list)
+
+        # Use a CSV file that has invalid field values
+        args['grid_points_path'] = os.path.join(
+            SAMPLE_DATA, 'resampled_grid_pts_invalid_field_values.csv')
+        validation_error_list = wind_energy.validate(args)
+        expected_errors = [
+            (['grid_points_path'], 'ID 10.5 must be an integer.'),
+            (['grid_points_path'], 'ID 10.5 column lati must be a number.'),
+            (['grid_points_path'], ('ID 30.0 column TYPE must be either ' +
+             '"land" or "grid" (case-insensitive)'))]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_missing_land_poly(self):
+        """WindEnergy: testing missing land_polygon_vector_path."""
+        from natcap.invest import wind_energy
+        args = WindEnergyRegressionTests.generate_validate_args(
+            self.workspace_dir)
+
+        # Remove land_polygon_vector_path while min_distance, max_distance
+        # and valuation_container remain in args
+        del args['land_polygon_vector_path']
+        with self.assertRaises(AssertionError) as cm:
+            wind_energy.validate(args)
+        expected_message = (
+            "Key land_polygon_vector_path (from ['land_polygon_vector_path'])")
+        actual_message = str(cm.exception)
+        self.assertTrue(expected_message in actual_message, actual_message)
+
+    @staticmethod
+    def _assert_vectors_equal(a_vector_path, b_vector_path):
+        """Assert that geometries and fields in the two vectors are equal.
+
+        Parameters:
+            a_vector_path (str): a path to an OGR vector.
+            b_vector_path (str): a path to an OGR vector.
+
+        Returns:
+            None.
+
+        Raises:
+            AssertionError when the two geometries or field values are not
+            equal up to desired precision (default is 6).
+
+        """
+        a_shape = ogr.Open(a_vector_path)
+        a_layer = a_shape.GetLayer(0)
+        a_feat = a_layer.GetNextFeature()
+
+        b_shape = ogr.Open(b_vector_path)
+        b_layer = b_shape.GetLayer(0)
+        b_feat = b_layer.GetNextFeature()
+
+        while a_feat is not None:
+            # Get coordinates from geometry and store them in a list
+            a_geom = a_feat.GetGeometryRef()
+            a_geom_list = re.findall(r'\d+\.\d+', a_geom.ExportToWkt())
+            a_geom_list = [float(x) for x in a_geom_list]
+
+            b_geom = b_feat.GetGeometryRef()
+            b_geom_list = re.findall(r'\d+\.\d+', b_geom.ExportToWkt())
+            b_geom_list = [float(x) for x in b_geom_list]
+
+            try:
+                numpy.testing.assert_array_almost_equal(
+                    a_geom_list, b_geom_list)
+            except AssertionError:
+                a_feature_fid = a_feat.GetFID()
+                b_feature_fid = b_feat.GetFID()
+                raise AssertionError('Geometries are not equal in feature %s, '
+                                     'regression feature %s.' %
+                                     (a_feature_fid, b_feature_fid))
+
+            # Get field names/values as dictionaries and compare them without
+            # specifying
+            a_fields = a_feat.items()
+            b_fields = b_feat.items()
+            for a_field, a_value in a_fields.iteritems():
+                try:
+                    b_value = b_fields[a_field]
+                except KeyError:
+                    raise AssertionError(
+                        'Field %s in feature %s does not exist in regression'
+                        'feature %s.' % (a_field, a_feature_fid, b_feature_fid))
+                try:
+                    numpy.testing.assert_almost_equal(a_value, b_value)
+                except AssertionError:
+                    raise AssertionError(
+                        'Values in %s field are not equal in feature %s: %s, '
+                        'regression feature %s: %s.' %
+                        (a_field, a_feature_fid, a_value, b_feature_fid, b_value))
+
+            a_feat = None
+            b_feat = None
+            a_feat = a_layer.GetNextFeature()
+            b_feat = b_layer.GetNextFeature()
+
+        a_shape = None
+        b_shape = None

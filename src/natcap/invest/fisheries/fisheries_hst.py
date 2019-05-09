@@ -6,15 +6,12 @@ have on particular habitats.
 '''
 from __future__ import absolute_import
 import logging
-import pprint
 import csv
 
 import numpy as np
 
 from . import fisheries_hst_io as io
 from .. import validation
-
-pp = pprint.PrettyPrinter(indent=4)
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
 
@@ -27,25 +24,25 @@ def execute(args):
     based on habitat area changes and class-level dependencies on those
     habitats.
 
-    :param str args['workspace_dir']: location into which the resultant
+    args['workspace_dir'] (str): location into which the resultant
         modified Population Parameters CSV file should be placed.
 
-    :param str args['sexsp']: specifies whether or not the age and stage
+    args['sexsp'] (str): specifies whether or not the age and stage
         classes are distinguished by sex. Options: 'Yes' or 'No'
 
-    :param str args['population_csv_uri']: location of the population
+    args['population_csv_path'] (str): location of the population
         parameters csv file. This file contains all age and stage specific
         parameters.
 
-    :param str args['habitat_chg_csv_uri']: location of the habitat change
+    args['habitat_chg_csv_path'] (str): location of the habitat change
         parameters csv file. This file contains habitat area change
         information.
 
-    :param str args['habitat_dep_csv_uri']: location of the habitat dependency
+    args['habitat_dep_csv_path'] (str): location of the habitat dependency
         parameters csv file. This file contains habitat-class dependency
         information.
 
-    :param float args['gamma']: describes the relationship between a change
+    args['gamma'] (float): describes the relationship between a change
         in habitat area and a change in survival of life stages dependent on
         that habitat
 
@@ -57,9 +54,9 @@ def execute(args):
         args = {
             'workspace_dir': 'path/to/workspace_dir/',
             'sexsp': 'Yes',
-            'population_csv_uri': 'path/to/csv',
-            'habitat_chg_csv_uri': 'path/to/csv',
-            'habitat_dep_csv_uri': 'path/to/csv',
+            'population_csv_path': 'path/to/csv',
+            'habitat_chg_csv_path': 'path/to/csv',
+            'habitat_dep_csv_path': 'path/to/csv',
             'gamma': 0.5,
         }
 
@@ -187,10 +184,10 @@ def validate(args, limit_to=None):
     missing_keys = set([])
     for key in ('workspace_dir',
                 'results_suffix',
-                'population_csv_uri',
+                'population_csv_path',
                 'sexsp',
-                'habitat_dep_csv_uri',
-                'habitat_chg_csv_uri',
+                'habitat_dep_csv_path',
+                'habitat_chg_csv_path',
                 'gamma'):
         if key in (None, limit_to):
             try:
@@ -208,9 +205,9 @@ def validate(args, limit_to=None):
         warnings.append((keys_with_empty_values,
                          'Argument must have a value'))
 
-    for csv_key in ('population_csv_uri',
-                    'habitat_dep_csv_uri',
-                    'habitat_chg_csv_uri'):
+    for csv_key in ('population_csv_path',
+                    'habitat_dep_csv_path',
+                    'habitat_chg_csv_path'):
         if limit_to in (csv_key, None):
             try:
                 csv.reader(open(args[csv_key], 'r'))

@@ -1,4 +1,5 @@
 """Module for testing the natcap.invest.utils module.."""
+import codecs
 import unittest
 import os
 import tempfile
@@ -469,7 +470,6 @@ class PrepareWorkspaceTests(unittest.TestCase):
         from natcap.invest import utils
 
         workspace = os.path.join(self.workspace, 'foo')
-
         try:
             with utils.prepare_workspace(workspace,
                                          'some_model'):
@@ -485,8 +485,9 @@ class PrepareWorkspaceTests(unittest.TestCase):
             os.path.basename(logfile_glob[0]).startswith('InVEST-some_model'))
         with open(logfile_glob[0]) as logfile:
             logfile_text = logfile.read()
-            print logfile_text
-            self.assertTrue('osgeo' in logfile_text)  # gdal error captured
+            # all the following strings should be in the logfile.
+            expected_string = 'file should not exist: No such file or directory'
+            self.assertTrue(expected_string in logfile_text)  # gdal error captured
             self.assertEqual(len(re.findall('WARNING', logfile_text)), 1)
             self.assertTrue('Elapsed time:' in logfile_text)
 
@@ -575,3 +576,45 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['HEADER2'], 'FOO')
         self.assertEqual(lookup_dict[4]['header3'], 'bar')
         self.assertEqual(lookup_dict[1]['header1'], 1)
+
+    def test_csv_utf8_bom_encoding(self):
+        """utils: test that CSV read correctly with UTF-8 BOM encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with open(csv_file, 'w') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                \xef\xbb\xbfheader1,HEADER2,header3
+                1,2,bar
+                4,5,FOO
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header1')
+
+        self.assertEqual(lookup_dict[4]['header2'], 5)
+        self.assertEqual(lookup_dict[4]['header3'], 'foo')
+        self.assertEqual(lookup_dict[1]['header1'], 1)
+
+    def test_csv_latin_1_encoding(self):
+        """utils: test that CSV read correctly with Latin-1 encoding."""
+        from natcap.invest import utils
+
+        csv_file = os.path.join(self.workspace, 'csv.csv')
+        with codecs.open(csv_file, 'w', encoding='iso-8859-1') as file_obj:
+            file_obj.write(textwrap.dedent(
+                """
+                header 1,HEADER 2,header 3
+                1,2,bar1
+                4,5,FOO
+                """
+            ).strip())
+
+        lookup_dict = utils.build_lookup_from_csv(
+            csv_file, 'header 1')
+
+        self.assertEqual(lookup_dict[4]['header 2'], 5)
+        self.assertEqual(lookup_dict[4]['header 3'], 'foo')
+        self.assertEqual(lookup_dict[1]['header 1'], 1)

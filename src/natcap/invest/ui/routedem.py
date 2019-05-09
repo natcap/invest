@@ -10,7 +10,7 @@ class RouteDEM(model.InVESTModel):
             label=u'RouteDEM',
             target=routedem.execute,
             validator=routedem.validate,
-            localdoc=u'../documentation/routedem.html')
+            localdoc=u'routedem.html')
 
         self.dem_path = inputs.File(
             args_key=u'dem_path',

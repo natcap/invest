@@ -11,7 +11,7 @@ class Nutrient(model.InVESTModel):
             label=u'Nutrient Delivery Ratio Model (NDR)',
             target=natcap.invest.ndr.ndr.execute,
             validator=natcap.invest.ndr.ndr.validate,
-            localdoc=u'../documentation/waterpurification.html')
+            localdoc=u'waterpurification.html')
 
         self.dem_path = inputs.File(
             args_key=u'dem_path',

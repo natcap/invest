@@ -494,9 +494,14 @@ def _parse_input_csv(
 
 def _file_len(file_path):
     """Count lines in file, return -1 if not supported."""
-    wc_process = subprocess.Popen(
-        ['wc', '-l', file_path], stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE)
+    # If wc isn't found, Popen raises an exception here:
+    try:
+        wc_process = subprocess.Popen(
+            ['wc', '-l', file_path], stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
+    except OSError as e:
+        LOGGER.warn(repr(e))
+        return -1
     result, err = wc_process.communicate()
     if wc_process.returncode != 0:
         LOGGER.warn(err)

@@ -315,6 +315,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+    !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
     CreateDirectory "${COASTALBLUECARBON}"
@@ -325,11 +326,6 @@ Section "InVEST Tools" Section_InVEST_Tools
     CreateDirectory "${FISHERIES}"
     !insertmacro StartMenuLink "${FISHERIES}\(1) Fisheries" "fisheries"
     !insertmacro StartMenuLink "${FISHERIES}\(2) Fisheries Habitat Scenario Tool" "fisheries_hst"
-
-    !define HRA "${SMPATH}\Habitat Risk Assessment"
-    CreateDirectory "${HRA}"
-    !insertmacro StartMenuLink "${HRA}\(1) Habitat Risk Assessment Preprocessor" "hra_pre"
-    !insertmacro StartMenuLink "${HRA}\(2) Habitat Risk Assessment" "hra"
 
 
     ; Write registry keys for convenient uninstallation via add/remove programs.
@@ -354,8 +350,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     file ..\..\HISTORY.rst
 
     ; Copy over all the sample parameter files
-    File ..\..\data\invest-data\*.invs.json
-    File ..\..\data\invest-data\*.invest.json
+    File ..\..\data\invest-sample-data\*.invs.json
+    File ..\..\data\invest-sample-data\*.invest.json
 
     SetOutPath "${INVEST_BINARIES}"
     File /r /x *.hg* /x *.svn* ..\..\${BINDIR}\*

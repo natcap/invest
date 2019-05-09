@@ -1,6 +1,62 @@
 .. :changelog:
 
-.. Unreleased Changes
+Unreleased Changes
+------------------
+
+3.7.0 (2019-05-09)
+------------------
+* Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and
+  Pygeoprocessing >=1.6.1. The model is now largely vector-based instead of
+  raster-based. Fewer input datasets are required for the same functionality.
+  Runtime in sycnhronous mode is similar to previous versions, but runtime can
+  be reduced with multiprocessing. CV also supports avoided recomputation for
+  successive runs in the same workspace, even if a different file suffix is used.
+  Output vector files are in CSV and geopackage formats.
+* Model User Interface 'Report an Issue' link points to our new
+  community.naturalcapitalproject.org
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
+* Correcting an issue with RouteDEM where runs of the tool with Flow Direction
+  enabled would cause the tool to crash if ``n_workers > 0``.
+* Correcting an issue with Habitat Quality's error checking where nodata values
+  in landcover rasters were not being taken into account.
+* Valuation is now an optional component of the InVEST Scenic Quality model.
+* Fixing a bug in the percentiles algorithm used by Scenic Quality that
+  would result in incorrect visual quality outputs.
+* Carbon Model and Crop Production models no longer crash if user-input
+  rasters do not have a nodata value defined. In this case these models
+  treat all pixel values as valid data.
+* Adding bitbucket pipelines and AppVeyor build configurations.
+* Refactoring Recreation Model client to use taskgraph and the latest
+  pygeoprocessing. Avoided re-computation from taskgraph means that
+  successive model runs with the same AOI and gridding option can re-use PUD
+  results and avoid server communication entirely. Successive runs with the
+  same predictor data will re-use intermediate geoprocessing results.
+  Multiprocessing offered by taskgraph means server-side PUD calculations
+  and client-side predictor data processing can happen in parallel. Some
+  output filenames have changed.
+* Upgrading to SDR to use new PyGeoprocessing multiflow routing, DEM pit
+  filling, contiguous stream extraction, and TaskGraph integration. This
+  also includes a new TaskGraph feature that avoids recomputation by copying
+  results from previous runs so long as the expected result would be
+  identical. To use this feature, users must execute successive runs of SDR
+  in the same workspace but use a different file suffix. This is useful when
+  users need to do a parameter study or run scenarios with otherwise minor
+  changes to inputs.
+* Refactoring Habitat Risk Assessment (HRA) Model to use TaskGraph >= 0.8.2 and
+  Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
+  functionality was simplified and merged into the HRA model itself.
+  The model will no longer generate HTML plots and tables.
+* Adding a software update notification button, dialog, and a link to the
+  download page on the User Interface when a new InVEST version is available.
+* Migrating the subversion sample and test data repositories to Git LFS
+  repositories on BitBucket. Update the repository URL and fetch commands on
+  Makefile accordingly.
+* Fixing a bug in Habitat Quality UI where the absence of the required
+  half_saturation_constant variable did not raise an exception.
+* Adding encoding='utf-8-sig' to pandas.read_csv() to support
+  utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
+  (byte-order mark) properly.
 
 3.6.0 (2019-01-30)
 ------------------
