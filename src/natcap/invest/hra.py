@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import os
 import logging
 import pickle
+import shutil
 import tempfile
 
 import numpy
@@ -730,13 +731,13 @@ def execute(args):
                         habitat_name, criteria_type, region_name)))
 
     # Convert the statistics dataframe to a CSV file
-    stats_csv_path = os.path.join(
+    target_stats_csv_path = os.path.join(
         output_dir, 'SUMMARY_STATISTICS%s.csv' % file_suffix)
 
     task_graph.add_task(
         func=_zonal_stats_to_csv,
-        args=(overlap_df, habitats_info_df, region_list, stats_csv_path),
-        target_path_list=[stats_csv_path],
+        args=(overlap_df, habitats_info_df, region_list, target_stats_csv_path),
+        target_path_list=[target_stats_csv_path],
         task_name='zonal_stats_to_csv',
         dependent_task_list=zonal_stats_dependent_tasks)
 
@@ -792,7 +793,15 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
-    LOGGER.info('HRA model completed.')
+    # Copy summary stats CSV to the viz output folder for scatter plots
+    # visualization. This keeps all the viz files in one place
+    viz_stats_csv_path = os.path.join(
+        viz_dir, 'SUMMARY_STATISTICS%s.csv' % file_suffix)
+    shutil.copyfile(target_stats_csv_path, viz_stats_csv_path)
+
+    LOGGER.info(
+        'HRA model completed. Please visit http://marineapps.'
+        'naturalcapitalproject.org/ to visualize your outputs.')
 
 
 def _raster_to_geojson(
