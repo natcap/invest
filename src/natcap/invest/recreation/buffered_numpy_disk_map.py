@@ -46,8 +46,8 @@ class BufferedNumpyDiskMap(object):
         db_connection = sqlite3.connect(
             manager_filename, detect_types=sqlite3.PARSE_DECLTYPES)
         db_cursor = db_connection.cursor()
-        db_cursor.execute('''CREATE TABLE IF NOT EXISTS array_table
-            (array_id INTEGER PRIMARY KEY, array_path TEXT)''')
+        db_cursor.execute("""CREATE TABLE IF NOT EXISTS array_table
+            (array_id INTEGER PRIMARY KEY, array_path TEXT)""")
 
         db_connection.commit()
         db_connection.close()
@@ -117,9 +117,9 @@ class BufferedNumpyDiskMap(object):
                 numpy.save(array_path, array_data)
                 insert_list.append((array_id, array_path))
         db_cursor.executemany(
-            '''INSERT INTO array_table
+            """INSERT INTO array_table
                 (array_id, array_path)
-            VALUES (?,?)''', insert_list)
+            VALUES (?,?)""", insert_list)
 
         db_connection.commit()
         db_connection.close()

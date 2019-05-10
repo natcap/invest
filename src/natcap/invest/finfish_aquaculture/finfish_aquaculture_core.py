@@ -1,7 +1,7 @@
-'''
+"""
 Implementation of the aquaculture calculations, and subsequent outputs.
 This will pull from data passed in by finfish_aquaculture.
-'''
+"""
 
 import collections
 import os
@@ -25,7 +25,7 @@ NUM_HISTOGRAM_BINS = 30
 
 
 def execute(args):
-    ''''
+    """'
     Runs the biophysical and valuation parts of the finfish aquaculture model.
     This will output:
     1. a shape file showing farm locations w/ addition of # of harvest cycles,
@@ -85,7 +85,7 @@ def execute(args):
     args['discount']: Daily market discount rate
 
     returns nothing
-    '''
+    """
     LOGGER.debug("FROM CORE: %s" % args['farm_op_dict'])
     output_dir = os.path.join(args['workspace_dir'], 'output')
 
@@ -175,7 +175,7 @@ def execute(args):
 
 def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
                      farm_op_dict, dur):
-    '''
+    """
     Input:
         outplant_buffer: The number of days surrounding the outplant day during
             which the fish growth cycle can still be started.
@@ -200,7 +200,7 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
 
             Farm->List of Type (day of outplanting,day of harvest, fish weight
                 (grams))
-    '''
+    """
 
     cycle_history = {}
 
@@ -268,7 +268,7 @@ def calc_farm_cycles(outplant_buffer, a, b, tau, water_temp_dict,
 
 
 def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
-    '''
+    """
     Input:
         farm_op_dict: 2D dictionary which contains individual operating
             parameters for each farm. The outer key is farm number as a string,
@@ -287,7 +287,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
         indiv_tpw_totals: dictionary which will hold a farm->list mapping,
             where the list holds the individual tpw for all cycles that the
             farm completed
-    '''
+    """
 
     curr_cycle_totals = {}
     indiv_tpw_totals = {}
@@ -339,7 +339,7 @@ def calc_hrv_weight(farm_op_dict, frac, mort, cycle_history):
 
 def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
               cycle_history):
-    '''
+    """
     This performs the valuation calculations, and returns tuple containing a
     dictionary with a farm-> float mapping, where each float is the net
     processed value of the fish processed on that farm, in $1000s of dollars,
@@ -365,7 +365,7 @@ def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
             each cycle completed by that farm
         valuations: dictionary with a farm-> float mapping, where each float is
             the net processed value of the fish processed on that farm
-    '''
+    """
     val_history = {}
     valuations = {}
 
@@ -398,14 +398,14 @@ def valuation(price_per_kg, frac_mrkt_price, discount, hrv_weight,
 
 
 def compute_uncertainty_data(args, output_dir):
-    '''Does uncertainty analysis via a Monte Carlo simulation.
+    """Does uncertainty analysis via a Monte Carlo simulation.
 
     Returns a tuple with two 2D dicts.
     -a dict containing relative file paths to produced histograms
     -a dict containining statistical results (mean and std deviation)
     Each dict has farm IDs as outer keys, and result types (e.g. 'value',
     'weight', and 'cycles') as inner keys.
-    '''
+    """
     results = do_monte_carlo_simulation(args)
 
     LOGGER.info('Computing confidence statistics.')
@@ -430,13 +430,13 @@ def compute_uncertainty_data(args, output_dir):
 
 
 def do_monte_carlo_simulation(args):
-    '''
+    """
     Performs a Monte Carlo simulation and returns the results.
-    '''
+    """
     def sample_param(param):
-        '''Samples the normal distribution for the given growth parameter.
+        """Samples the normal distribution for the given growth parameter.
 
-        Returns only positive values, discarding the rest.'''
+        Returns only positive values, discarding the rest."""
         while True:
             sample = np.random.normal(args['g_param_%s' % param],
                                       args['g_param_%s_sd' % param])
@@ -503,18 +503,18 @@ def do_monte_carlo_simulation(args):
 
 
 def make_histograms(farm, results, output_dir, total_num_runs):
-    '''
+    """
     Makes a histogram for the given farm and data.
 
     Returns a dict mapping type (e.g. 'value', 'weight') to the relative
     file path for the respective histogram.
-    '''
+    """
     plot_dir = os.path.join(output_dir, 'images')
     if not os.path.exists(plot_dir):
         os.makedirs(plot_dir)
 
     def make_plot_relpath(result_type):
-        '''Return a relative path to a histogram.'''
+        """Return a relative path to a histogram."""
         if farm == 'total':
             filename = 'total_%s.png' % result_type
         else:
@@ -557,7 +557,7 @@ def make_histograms(farm, results, output_dir, total_num_runs):
 def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
                       hrv_weight, farms_npv, value_history, histogram_paths,
                       uncertainty_stats):
-    '''
+    """
     Inputs:
         output_dir: The directory in which we will be creating our .html file
             output.
@@ -593,7 +593,7 @@ def create_HTML_table(output_dir, args, cycle_history, sum_hrv_weight,
                 total volume harvested.
 
         Returns nothing.
-    '''
+    """
     html_uri = os.path.join(output_dir,
                             ("Harvest_Results.html"))
     doc = html.HTMLDocument(html_uri, 'Marine InVEST',
