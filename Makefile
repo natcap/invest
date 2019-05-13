@@ -329,7 +329,9 @@ jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
 
 deploy:
-	gsutil -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
+	gsutil -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	gsutil -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	gsutil -m rsync $(DIST_DIR)/* $(DIST_URL_BASE)
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
