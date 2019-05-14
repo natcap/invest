@@ -933,3 +933,33 @@ class CBCRefactorTest(unittest.TestCase):
 
         self.assertEqual(biomass_dict, expected_biomass_dict)
         self.assertEqual(soil_dict, expected_soil_dict)
+
+    def test_reclass_invalid_nodata(self):
+        """Coastal Blue Carbon: verify handling of incorrect nodata values."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        # In this case, the nodata provided (-1) cannot be represented by
+        # numpy.uint16 datatype.
+        lulc_nodata = -1
+        lulc_matrix = numpy.array([
+            [1, 2, 3],
+            [1, 2, 3],
+            [-1, -1, -1]], numpy.uint16)
+
+        reclass_map = {
+            1: 1.1,
+            2: 2.2,
+            3: 3.3
+        }
+
+        expected_array = numpy.array([
+            [1.1, 2.2, 3.3],
+            [1.1, 2.2, 3.3],
+            [numpy.nan, numpy.nan, numpy.nan]], numpy.float32)
+
+        reclassified_array = cbc.reclass(
+            lulc_matrix, reclass_map, out_dtype=numpy.float32,
+            nodata_mask=lulc_nodata)
+
+        numpy.testing.assert_almost_equal(reclassified_array, expected_array)

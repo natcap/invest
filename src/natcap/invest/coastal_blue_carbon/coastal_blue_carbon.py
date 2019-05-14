@@ -472,7 +472,7 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
         reclass_array = numpy.where(reclass_array == i, ndata, reclass_array)
 
     a_ravel = reclass_array.ravel()
-    d[ndata] = ndata
+    d[ndata] = ndata  # Side effect! Adds -3.4028...e+38 to the map
     k = sorted(d.keys())
     v = numpy.array([d[key] for key in k])
     try:
@@ -485,6 +485,14 @@ def reclass(array, d, out_dtype=None, nodata_mask=None):
     if nodata_mask and numpy.issubdtype(reclass_array.dtype, numpy.floating):
         reclass_array[array == nodata_mask] = numpy.nan
         reclass_array[array == ndata] = numpy.nan
+
+        # If the user's nodata value is incorrectly configured for the datatype
+        # of the landcover raster, some pixels will still have the 'ndata'
+        # value from above (-3.402e+38).  We can get around this by casting
+        # everything left over with that value back to numpy.nan, where it will
+        # be converted into the raster's nodata value later in the model's
+        # execution.
+        #reclass_array[numpy.isclose(reclass_array, ndata)] = numpy.nan
 
     return reclass_array
 
