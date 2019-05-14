@@ -79,7 +79,7 @@ def execute(args):
 
     # Run Preprocessor
     vars_dict['transition_matrix_dict'] = _preprocess_data(
-        vars_dict['lulc_lookup_dict'], vars_dict['lulc_snapshot_list'])
+        vars_dict['lulc_lookup_dict'], aligned_lulcs)
 
     # Outputs
     _create_transition_table(

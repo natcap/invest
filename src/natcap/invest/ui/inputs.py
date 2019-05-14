@@ -2022,7 +2022,7 @@ class Dropdown(GriddedInput):
         if newindex >= 0:
             value = self.options[newindex]
         else:
-            value = None
+            value = 'None'
         self.value_changed.emit(value)
 
     def set_options(self, options, return_value_map=None):
@@ -2061,10 +2061,12 @@ class Dropdown(GriddedInput):
 
         self.dropdown.clear()
         cast_options = []
+        self.dropdown.blockSignals(True)
         for label in options:
             cast_value = _cast_value(label)
             self.dropdown.addItem(cast_value)
             cast_options.append(cast_value)
+        self.dropdown.blockSignals(False)
         self.options = cast_options
         self.user_options = options
 

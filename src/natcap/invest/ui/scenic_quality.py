@@ -11,7 +11,7 @@ class ScenicQuality(model.InVESTModel):
             label=u'Scenic Quality',
             target=scenic_quality.execute,
             validator=scenic_quality.validate,
-            localdoc=u'../documentation/scenic_quality.html')
+            localdoc=u'scenic_quality.html')
 
         self.general_tab = inputs.Container(
             interactive=True,

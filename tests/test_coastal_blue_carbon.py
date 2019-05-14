@@ -194,7 +194,7 @@ def _get_preprocessor_args(args_choice, workspace):
         args (dict): preprocessor arguments
     """
     band_matrices_zeros = [numpy.zeros((2, 2))]
-    band_matrices_ones = [numpy.ones((2, 2))]
+    band_matrices_ones = [numpy.ones((2, 3))]  # tests alignment
     band_matrices_nodata = [numpy.ones((2, 2)) * NODATA_INT]
     srs = pygeotest.sampledata.SRS_WILLAMETTE
 

@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import os
 import logging
 import pickle
+import shutil
 import tempfile
 
 import numpy
@@ -101,17 +102,16 @@ def execute(args):
             place in the current process. (optional)
         args['visualize_outputs'] (bool): if True, create output GeoJSONs and
             save them in a visualization_outputs folder, so users can visualize
-            results on a web interface. Default to False for Qt UI, and True
-            for electron-Node.js based UI. (optional)
+            results on the web app. Default to True if not specified. (optional)
 
     Returns:
         None.
 
     """
     LOGGER.info('Validating arguments')
-    # Default visualization option to False for Qt UI
+    # Default visualization option to True if it's not in args
     if 'visualize_outputs' not in args:
-        args['visualize_outputs'] = False
+        args['visualize_outputs'] = True
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
@@ -731,13 +731,13 @@ def execute(args):
                         habitat_name, criteria_type, region_name)))
 
     # Convert the statistics dataframe to a CSV file
-    stats_csv_path = os.path.join(
+    target_stats_csv_path = os.path.join(
         output_dir, 'SUMMARY_STATISTICS%s.csv' % file_suffix)
 
     task_graph.add_task(
         func=_zonal_stats_to_csv,
-        args=(overlap_df, habitats_info_df, region_list, stats_csv_path),
-        target_path_list=[stats_csv_path],
+        args=(overlap_df, habitats_info_df, region_list, target_stats_csv_path),
+        target_path_list=[target_stats_csv_path],
         task_name='zonal_stats_to_csv',
         dependent_task_list=zonal_stats_dependent_tasks)
 
@@ -793,7 +793,15 @@ def execute(args):
     task_graph.close()
     task_graph.join()
 
-    LOGGER.info('HRA model completed.')
+    # Copy summary stats CSV to the viz output folder for scatter plots
+    # visualization. This keeps all the viz files in one place
+    viz_stats_csv_path = os.path.join(
+        viz_dir, 'SUMMARY_STATISTICS%s.csv' % file_suffix)
+    shutil.copyfile(target_stats_csv_path, viz_stats_csv_path)
+
+    LOGGER.info(
+        'HRA model completed. Please visit http://marineapps.'
+        'naturalcapitalproject.org/ to visualize your outputs.')
 
 
 def _raster_to_geojson(
@@ -3063,6 +3071,7 @@ def validate(args, limit_to=None):
     max_rating_key = 'max_rating'
     aoi_vector_key = 'aoi_vector_path'
     resolution_key = 'resolution'
+    viz_option_key = 'visualize_outputs'
 
     for key in [
             'workspace_dir',
@@ -3088,6 +3097,12 @@ def validate(args, limit_to=None):
     if no_value_list:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
+
+    if limit_to is None or limit_to == viz_option_key:
+        if viz_option_key in args and not isinstance(
+                args[viz_option_key], bool):
+            validation_error_list.append(
+                ([viz_option_key], 'needs to be True or False'))
 
     # Check if resolution is a positive number
     if limit_to is None or limit_to == resolution_key:

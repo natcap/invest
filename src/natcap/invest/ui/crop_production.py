@@ -12,7 +12,7 @@ class CropProductionPercentile(model.InVESTModel):
             label=u'Crop Production Percentile Model',
             target=natcap.invest.crop_production_percentile.execute,
             validator=natcap.invest.crop_production_percentile.validate,
-            localdoc=u'../documentation/crop_production.html')
+            localdoc=u'crop_production.html')
 
         self.model_data_path = inputs.Folder(
             args_key=u'model_data_path',
@@ -110,7 +110,7 @@ class CropProductionRegression(model.InVESTModel):
             label=u'Crop Production Regression Model',
             target=natcap.invest.crop_production_regression.execute,
             validator=natcap.invest.crop_production_regression.validate,
-            localdoc=u'../documentation/crop_production.html')
+            localdoc=u'crop_production.html')
 
         self.model_data_path = inputs.Folder(
             args_key=u'model_data_path',

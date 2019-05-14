@@ -1,7 +1,7 @@
-'''
+"""
 The Fisheries Habitat Scenarios Tool IO module contains functions for handling
 inputs and outputs
-'''
+"""
 
 import logging
 import os
@@ -17,7 +17,7 @@ LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
 
 # Fetch and Verify Arguments
 def fetch_args(args):
-    '''
+    """
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
 
@@ -71,7 +71,7 @@ def fetch_args(args):
             'Hab_dep_num_a': np.array([...]),
         }
 
-    '''
+    """
     args = args.copy()
     sexsp_dict = {
         'no': 1,
@@ -113,7 +113,7 @@ def fetch_args(args):
 
 
 def read_population_csv(args):
-    '''
+    """
     Parses and verifies a single Population Parameters CSV file
 
     Parses and verifies inputs from the Population Parameters CSV file.
@@ -161,7 +161,7 @@ def read_population_csv(args):
                 'Larvaldispersal': np.array([...]),
             },
         }
-    '''
+    """
     path = args['population_csv_path']
     pop_dict = _parse_population_csv(path, args['sexsp'])
 
@@ -185,7 +185,7 @@ def read_population_csv(args):
 
 
 def _parse_population_csv(path, sexsp):
-    '''
+    """
     Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
 
@@ -223,7 +223,7 @@ def _parse_population_csv(path, sexsp):
                 'Larvaldispersal': np.array([...]),
             }
         }
-    '''
+    """
     assert sexsp in (1, 2), 'Sexsp value %s unknown' % sexsp
     csv_data = []
     pop_dict = {}
@@ -289,7 +289,7 @@ def _parse_population_csv(path, sexsp):
 
 
 def read_habitat_dep_csv(args):
-    '''
+    """
     Parses and verifies a Habitat Dependency Parameters CSV file and returns a
     dictionary of information related to the interaction between a species and
     the given habitats.
@@ -327,7 +327,7 @@ def read_habitat_dep_csv(args):
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
-    '''
+    """
     habitat_dep_dict = _parse_habitat_dep_csv(args)
 
     # Verify provided information
@@ -357,7 +357,7 @@ def read_habitat_dep_csv(args):
 
 
 def _parse_habitat_dep_csv(args):
-    '''
+    """
     Parses the Habitat Dependency Parameters CSV file for the following vectors
         + Names of Habitats and Classes
         + Habitat-Class Dependency
@@ -384,7 +384,7 @@ def _parse_habitat_dep_csv(args):
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
-    '''
+    """
     path = args['habitat_dep_csv_path']
     csv_data = []
     habitat_dep_dict = {}
@@ -421,7 +421,7 @@ def _parse_habitat_dep_csv(args):
 
 
 def read_habitat_chg_csv(args):
-    '''
+    """
     Parses and verifies a Habitat Change Parameters CSV file and returns a
     dictionary of information related to the interaction between a species
     and the given habitats.
@@ -452,7 +452,7 @@ def read_habitat_chg_csv(args):
             'Hab_chg_hx': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
         }
-    '''
+    """
     habitat_chg_dict = _parse_habitat_chg_csv(args)
 
     # Verify provided information
@@ -465,7 +465,7 @@ def read_habitat_chg_csv(args):
 
 
 def _parse_habitat_chg_csv(args):
-    '''
+    """
     Parses the Habitat Change Parameters CSV file for the following vectors
         + Names of Habitats and Regions
         + Habitat Area Change
@@ -490,7 +490,7 @@ def _parse_habitat_chg_csv(args):
             'Hab_chg_hx': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
         }
-    '''
+    """
     path = args['habitat_chg_csv_path']
     csv_data = []
     habitat_chg_dict = {}
@@ -616,7 +616,7 @@ def _vectorize_reg_attribute(lst):
 
 # Generate Outputs
 def save_population_csv(vars_dict):
-    '''
+    """
     Creates a new Population Parameters CSV file based the provided inputs.
 
     Args:
@@ -658,7 +658,7 @@ def save_population_csv(vars_dict):
     Note:
         + Creates a modified Population Parameters CSV file located in the 'workspace/output/' folder
         + Currently appends '_modified' to original filename for new filename
-    '''
+    """
     Surv_nat_asx_mod = vars_dict['Surv_nat_xsa_mod'].swapaxes(0, 2)
     num_classes = len(vars_dict['Classes'])
     l = []
