@@ -109,6 +109,8 @@ def execute(args):
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
     # reproject vector inputs
+    aligned_aoi_vector_path = os.path.join(
+        temporary_working_dir, 'aoi%s.tif')
 
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
@@ -324,7 +326,7 @@ def execute(args):
     light_loss_stats_pickle_path = None
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
-    if 'do_valuation' in args and bool(args['do_valuation']):
+    if bool(args['do_valuation']):
         # work productivity
         wbgt_raster_path = os.path.join(
             temporary_working_dir, 'wbgt%s.tif' % file_suffix)
@@ -533,6 +535,8 @@ def calculate_uhi_result_vector(
 
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
+    if os.path.exists(target_uhi_vector_path):
+        os.remove(target_uhi_vector_path)
     LOGGER.info("creating %s", os.path.basename(target_uhi_vector_path))
     shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
