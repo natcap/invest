@@ -108,6 +108,8 @@ def execute(args):
     # ensure raster is square by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
+    # reproject vector inputs
+
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
@@ -621,8 +623,7 @@ def calculate_uhi_result_vector(
                         # nodata ranges that we can't help.
                         a_en_con += float(
                             energy_consumption_value)
-            feature.SetField(
-                'a_en_con', a_en_con)
+            feature.SetField('a_en_con', a_en_con)
 
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()

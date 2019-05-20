@@ -139,6 +139,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             self.cc_weight_shade.args_key: self.cc_weight_shade.value(),
             self.cc_weight_albedo.args_key: self.cc_weight_albedo.value(),
             self.cc_weight_eti.args_key: self.cc_weight_eti.value(),
+            self.do_valuation.args_key: self.valuation_container.value(),
         }
         if self.valuation_container.value():
             args[self.energy_consumption_table_path.args_key] = (
