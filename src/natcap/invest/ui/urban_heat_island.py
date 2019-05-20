@@ -127,6 +127,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
+            self.suffix.args_key: self.suffix.value(),
             self.t_ref.args_key: self.t_ref.value(),
             self.lulc_raster_path.args_key: self.lulc_raster_path.value(),
             self.ref_eto_raster_path.args_key: self.ref_eto_raster_path.value(),
