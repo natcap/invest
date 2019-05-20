@@ -2,10 +2,20 @@
 
 Unreleased Changes
 ------------------
-* Correcting an issue with the Coastal Blue Carbon preprocessor where
-  using misaligned landcover rasters would cause an exception to be raised.
+
+3.7.0 (2019-05-09)
+------------------
+* Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and
+  Pygeoprocessing >=1.6.1. The model is now largely vector-based instead of
+  raster-based. Fewer input datasets are required for the same functionality.
+  Runtime in sycnhronous mode is similar to previous versions, but runtime can
+  be reduced with multiprocessing. CV also supports avoided recomputation for
+  successive runs in the same workspace, even if a different file suffix is used.
+  Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
 * Correcting an issue with Habitat Quality's error checking where nodata values
@@ -25,7 +35,7 @@ Unreleased Changes
   Multiprocessing offered by taskgraph means server-side PUD calculations
   and client-side predictor data processing can happen in parallel. Some
   output filenames have changed.
-* Upgrade to SDR to use new PyGeoprocessing multiflow routing, DEM pit
+* Upgrading to SDR to use new PyGeoprocessing multiflow routing, DEM pit
   filling, contiguous stream extraction, and TaskGraph integration. This
   also includes a new TaskGraph feature that avoids recomputation by copying
   results from previous runs so long as the expected result would be
@@ -37,11 +47,16 @@ Unreleased Changes
   Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
   functionality was simplified and merged into the HRA model itself.
   The model will no longer generate HTML plots and tables.
-* Add a software update notification button, dialog, and a link to the download
-  page on the User Interface when a new InVEST version is available.
-* Migrate the subversion sample and test data repositories to Git LFS
+* Adding a software update notification button, dialog, and a link to the
+  download page on the User Interface when a new InVEST version is available.
+* Migrating the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
+* Fixing a bug in Habitat Quality UI where the absence of the required
+  half_saturation_constant variable did not raise an exception.
+* Adding encoding='utf-8-sig' to pandas.read_csv() to support
+  utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
+  (byte-order mark) properly.
 
 3.6.0 (2019-01-30)
 ------------------

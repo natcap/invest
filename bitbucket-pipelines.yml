@@ -12,7 +12,7 @@ pipelines:
               script:
                 - apt-get update && apt-get install -y curl mercurial
                 - |
-                  curl --header "Authorization: Bearer $APPVEYOR_API_KEY" \
+                  curl --fail --header "Authorization: Bearer $APPVEYOR_API_KEY" \
                     --header "Content-Type: application/json" \
                     --data "{'accountName': '$APPVEYOR_ACC_NAME',
                              'projectSlug': '$APPVEYOR_PROJ_SLUG',
@@ -39,9 +39,14 @@ pipelines:
                     name: Sample Data
                     image: debian:9.7
                     script:
-                        - apt-get update && apt-get install -y git
-                            mercurial build-essential zip python-setuptools
-                            python-numpy python-setuptools-scm cython
+                        - |
+                          apt-get update &&
+                          apt-get install -y git curl mercurial build-essential \
+                            zip python-setuptools python-numpy python-setuptools-scm \
+                            cython
+                        - |
+                          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash &&
+                          apt-get install -y git-lfs && git lfs install
                         - make sampledata
                     artifacts:
                         - dist/data/*

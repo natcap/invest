@@ -16,7 +16,7 @@ class ScenarioGenProximity(model.InVESTModel):
             label=u'Scenario Generator: Proximity Based',
             target=natcap.invest.scenario_gen_proximity.execute,
             validator=natcap.invest.scenario_gen_proximity.validate,
-            localdoc=u'../documentation/scenario_gen_proximity.html')
+            localdoc=u'scenario_gen_proximity.html')
 
         self.base_lulc_path = inputs.File(
             args_key=u'base_lulc_path',

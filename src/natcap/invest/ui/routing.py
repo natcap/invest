@@ -11,7 +11,7 @@ class Delineateit(model.InVESTModel):
             label=u'DelineateIT: Watershed Delineation',
             target=delineateit.execute,
             validator=delineateit.validate,
-            localdoc=u'../documentation/delineateit.html')
+            localdoc=u'delineateit.html')
 
         self.dem_uri = inputs.File(
             args_key=u'dem_uri',

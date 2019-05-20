@@ -81,6 +81,14 @@ class HabitatRiskAssessment(model.InVESTModel):
             label=u'Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
+        self.visualize_outputs = inputs.Checkbox(
+            args_key='visualize_outputs',
+            helptext=(
+                u"Check to enable the generation of GeoJSON outputs. This "
+                u"could be used to visualize the risk scores on a map in the "
+                u"HRA visualization web application."),
+            label=u'Generate GeoJSONs for Web Visualization')
+        self.add_input(self.visualize_outputs)
 
     def assemble_args(self):
         args = {
@@ -93,6 +101,7 @@ class HabitatRiskAssessment(model.InVESTModel):
             self.decay_eq.args_key: self.decay_eq.value(),
             self.max_rating.args_key: self.max_rating.value(),
             self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
+            self.visualize_outputs.args_key: self.visualize_outputs.value(),
         }
 
         return args

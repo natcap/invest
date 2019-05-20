@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 79c7c11c4d6bac301f297573347cb1f560d4f716
+GIT_SAMPLE_DATA_REPO_REV    := 2d615534d52e345ee7dc8bc898571c36b47dc6f1
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 00f16f6ccdf9d51c050bfe44a57c6821e045d50f
+GIT_TEST_DATA_REPO_REV      := 398e028b3125946f057f07a6805f2f6ce54aadec
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := b39bc56cc601
+HG_UG_REPO_REV              := d96a8d657a85
 
 
 ENV = env
@@ -206,15 +206,16 @@ $(DIST_DIR)/natcap.invest%.zip: | $(DIST_DIR)
 
 
 # Build binaries and put them in dist/invest
-# The `invest.exe --list` is to test the binaries.  If something doesn't
-# import, we want to know right away.
+# The `invest --list` is to test the binaries.  If something doesn't
+# import, we want to know right away.  No need to provide the `.exe` extension
+# on Windows as the .exe extension is assumed.
 binaries: $(INVEST_BINARIES_DIR)
 $(INVEST_BINARIES_DIR): | $(DIST_DIR) $(BUILD_DIR)
 	-$(RMDIR) $(BUILD_DIR)/pyi-build
 	-$(RMDIR) $(INVEST_BINARIES_DIR)
 	$(PYTHON) -m PyInstaller --workpath $(BUILD_DIR)/pyi-build --clean --distpath $(DIST_DIR) exe/invest.spec
 	$(BASHLIKE_SHELL_COMMAND) "$(PYTHON) -m pip freeze --all > $(INVEST_BINARIES_DIR)/package_versions.txt"
-	$(INVEST_BINARIES_DIR)/invest.exe --list
+	$(INVEST_BINARIES_DIR)/invest --list
 
 # Documentation.
 # API docs are copied to dist/apidocs
@@ -328,7 +329,9 @@ jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
 
 deploy:
-	gsutil -m rsync -r $(DIST_DIR) $(DIST_URL_BASE)
+	gsutil -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	gsutil -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	gsutil -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
 
