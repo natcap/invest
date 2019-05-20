@@ -286,13 +286,13 @@ def execute(args):
         task_name='calculate T air')
 
     intermediate_aoi_vector_path = os.path.join(
-        temporary_working_dir, 'intermediate_aoi%s.gpkg' % file_suffix)
+        temporary_working_dir, 'intermediate_aoi%s.shp' % file_suffix)
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
             args['aoi_vector_path'], lulc_raster_info['projection'],
             intermediate_aoi_vector_path),
-        kwargs={'driver_name': 'GPKG'},
+        kwargs={'driver_name': 'ESRI Shapefile'},
         target_path_list=[intermediate_aoi_vector_path],
         task_name='reproject and label aoi')
 
@@ -358,13 +358,13 @@ def execute(args):
 
         intermediate_building_vector_path = os.path.join(
             temporary_working_dir,
-            'intermediate_building_vector%s.gpkg' % file_suffix)
+            'intermediate_building_vector%s.shp' % file_suffix)
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
                 args['building_vector_path'], lulc_raster_info['projection'],
                 intermediate_building_vector_path),
-            kwargs={'driver_name': 'GPKG'},
+            kwargs={'driver_name': 'ESRI Shapefile'},
             target_path_list=[intermediate_building_vector_path],
             task_name='reproject building vector')
 
@@ -382,7 +382,7 @@ def execute(args):
             task_name='pickle t-air stats')
 
         energy_consumption_vector_path = os.path.join(
-            args['workspace_dir'], 'buildings_with_stats%s.gpkg' % file_suffix)
+            args['workspace_dir'], 'buildings_with_stats%s.shp' % file_suffix)
         _ = task_graph.add_task(
             func=calculate_energy_savings,
             args=(
@@ -439,7 +439,7 @@ def execute(args):
     task_graph.join()
 
     target_uhi_vector_path = os.path.join(
-        args['workspace_dir'], 'uhi_results%s.gpkg' % file_suffix)
+        args['workspace_dir'], 'uhi_results%s.shp' % file_suffix)
     _ = task_graph.add_task(
         func=calculate_uhi_result_vector,
         args=(
@@ -487,9 +487,9 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
-                * average_cc_value
-                * average_temp_anom
-                * avoided_energy_consumption
+                * a_cc_val
+                * a_temp_anom
+                * a_en_con
                 * average WBGT
                 * average light loss work
                 * average heavy loss work
@@ -530,9 +530,9 @@ def calculate_uhi_result_vector(
             heavy_loss_stats = pickle.load(heavy_loss_stats_pickle_file)
 
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
-    gpkg_driver = gdal.GetDriverByName('GPKG')
+    shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     LOGGER.info("creating %s", os.path.basename(target_uhi_vector_path))
-    gpkg_driver.CreateCopy(
+    shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
     base_aoi_vector = None
     target_uhi_vector = gdal.OpenEx(
@@ -540,9 +540,9 @@ def calculate_uhi_result_vector(
     target_uhi_layer = target_uhi_vector.GetLayer()
 
     for field_id in [
-            'average_cc_value', 'average_temp_value', 'average_temp_anom',
-            'avoided_energy_consumption', 'average_wbgt_value',
-            'average_light_loss_value', 'average_heavy_loss_value']:
+            'a_cc_val', 'a_temp_val', 'a_temp_anom',
+            'a_en_con', 'a_wbgt_val',
+            'a_ltloss_val', 'a_hvloss_val']:
         target_uhi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
 
     target_uhi_layer.StartTransaction()
@@ -551,24 +551,24 @@ def calculate_uhi_result_vector(
         if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature.SetField('average_cc_value', mean_cc)
+            feature.SetField('a_cc_val', mean_cc)
         mean_t_air = None
         if feature_id in t_air_stats and t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature.SetField('average_temp_value', mean_t_air)
+            feature.SetField('a_temp_val', mean_t_air)
 
         if mean_t_air:
             feature.SetField(
-                'average_temp_anom', mean_t_air-t_ref_val)
+                'a_temp_anom', mean_t_air-t_ref_val)
 
         if wbgt_stats and feature_id in wbgt_stats and (
                 wbgt_stats[feature_id]['count'] > 0):
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
-            feature.SetField('average_wbgt_value', wbgt)
+            feature.SetField('a_wbgt_val', wbgt)
 
         if light_loss_stats and feature_id in light_loss_stats and (
                 light_loss_stats[feature_id]['count'] > 0):
@@ -576,7 +576,7 @@ def calculate_uhi_result_vector(
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
             LOGGER.debug(light_loss)
-            feature.SetField('average_light_loss_value', float(light_loss))
+            feature.SetField('a_ltloss_val', float(light_loss))
 
         if heavy_loss_stats and feature_id in heavy_loss_stats and (
                 heavy_loss_stats[feature_id]['count'] > 0):
@@ -584,7 +584,7 @@ def calculate_uhi_result_vector(
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
             LOGGER.debug(heavy_loss)
-            feature.SetField('average_heavy_loss_value', float(heavy_loss))
+            feature.SetField('a_hvloss_val', float(heavy_loss))
 
         if energy_consumption_vector_path:
             energy_consumption_vector = gdal.OpenEx(
@@ -608,7 +608,7 @@ def calculate_uhi_result_vector(
                 aoi_geometry.ExportToWkb())
             aoi_shapely_geometry_prep = shapely.prepared.prep(
                 aoi_shapely_geometry)
-            avoided_energy_consumption = 0.0
+            a_en_con = 0.0
             for building_id in poly_rtree_index.intersection(
                     aoi_shapely_geometry.bounds):
                 if aoi_shapely_geometry_prep.intersects(
@@ -619,10 +619,10 @@ def calculate_uhi_result_vector(
                     if energy_consumption_value:
                         # this step lets us skip values that might be in
                         # nodata ranges that we can't help.
-                        avoided_energy_consumption += float(
+                        a_en_con += float(
                             energy_consumption_value)
             feature.SetField(
-                'avoided_energy_consumption', avoided_energy_consumption)
+                'a_en_con', a_en_con)
 
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
@@ -659,9 +659,9 @@ def calculate_energy_savings(
 
     base_building_vector = gdal.OpenEx(
         base_building_vector_path, gdal.OF_VECTOR)
-    gpkg_driver = gdal.GetDriverByName('GPKG')
+    shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     LOGGER.info("creating %s", os.path.basename(target_building_vector_path))
-    gpkg_driver.CreateCopy(
+    shapefile_driver.CreateCopy(
         target_building_vector_path, base_building_vector)
     base_building_vector = None
     target_building_vector = gdal.OpenEx(
