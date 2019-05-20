@@ -165,6 +165,31 @@ class PollinationTests(unittest.TestCase):
         # when I manually inspected a run that appeared to be correct.
         self.assertAlmostEqual(result_sum, 58.669518, places=2)
 
+    def test_pollination_constant_abundance(self):
+        """Pollination: regression testing when abundance is all 1."""
+        from natcap.invest import pollination
+
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table_rel_all_ones.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv')
+        }
+        pollination.execute(args)
+        result_raster_path = os.path.join(
+            self.workspace_dir, 'pollinator_abundance_apis_spring.tif')
+        result_sum = numpy.float32(0.0)
+        for _, data_block in pygeoprocessing.iterblocks(
+                (result_raster_path, 1)):
+            result_sum += numpy.sum(data_block)
+        # the number below is just what the sum rounded to two decimal places
+        # when I manually inspected a run that appeared to be correct.
+        self.assertAlmostEqual(result_sum, 68.44777, places=2)
+
     def test_pollination_bad_guild_headers(self):
         """Pollination: testing that model detects bad guild headers."""
         from natcap.invest import pollination

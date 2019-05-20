@@ -336,13 +336,21 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     # Need to flush the kernel's cache to disk before opening up a new Dataset
     # object in interblocks()
+    kernel_band.FlushCache()
     kernel_dataset.FlushCache()
 
-    for block_data, kernel_block in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1)):
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        kernel_block = kernel_band.ReadAsArray(**block_data)
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])
+
+    kernel_band.FlushCache()
+    kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
+
 
 
 def build_file_registry(base_file_path_list, file_suffix):
