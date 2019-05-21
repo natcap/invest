@@ -487,7 +487,7 @@ def calculate_uhi_result_vector(
         heavy_loss_stats_pickle_path (str): path to pickled zonal stats for
             heavy work loss. Can be None if no valuation occurred.
         energy_consumption_vector_path (str): path to vector that contains
-            building footprints with the field 'energy_savings'. Can be None
+            building footprints with the field 'energy_sav'. Can be None
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
@@ -648,7 +648,7 @@ def calculate_energy_savings(
         energy_consumption_table_path (str): path to energy consumption table
             that contains at least the columns 'type', and 'consumption'.
         target_building_vector_path (str): path to target vector that
-            will contain the additional field 'energy_savings' calculated as
+            will contain the additional field 'energy_sav' calculated as
             consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))
 
     Return:
@@ -672,7 +672,7 @@ def calculate_energy_savings(
         target_building_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
     target_building_layer = target_building_vector.GetLayer()
     target_building_layer.CreateField(
-        ogr.FieldDefn('energy_savings', ogr.OFTReal))
+        ogr.FieldDefn('energy_sav', ogr.OFTReal))
     target_building_layer.CreateField(
         ogr.FieldDefn('mean_t_air', ogr.OFTReal))
     target_building_layer.CreateField(
@@ -724,7 +724,7 @@ def calculate_energy_savings(
             energy_consumption_table[target_type]['consumption'])
         if t_air_mean:
             target_feature.SetField(
-                'energy_savings', consumption_increase * (
+                'energy_sav', consumption_increase * (
                     t_ref_raw-t_air_mean + uhi_max))
 
         target_building_layer.SetFeature(target_feature)
