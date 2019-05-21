@@ -886,64 +886,6 @@ def validate(args, limit_to=None):
     return validation_error_list
 
 
-def cc_regression_op(
-        shade_raster_path_band, albedo_raster_path_band, eti_raster_path_band,
-        t_obs_raster_path_band, target_cc_weight_pickle_path):
-    """Calculate CC regression weights for shade, albedo, and eti.
-
-    Parameters:
-        shade_raster_path_band (tuple): Shade raster path band (dependent).
-        albedo_raster_path_band (tuple): Albedo raster path band (dependent).
-        eti_raster_path_band (tuple): ETI raster path band (dependent).
-        t_obs_raster_path_band (tuple): T_obs raster path band
-            (derives independent).
-        target_cc_weight_pickle_path: pickle tuple of the weights
-            (shade_w, albedo_w, eti_w).
-
-    Returns:
-        None.
-
-    """
-    t_obs_raster = gdal.OpenEx(t_obs_raster_path_band[0], gdal.OF_RASTER)
-    t_obs_band = t_obs_raster.GetRasterBand(t_obs_raster_path_band[1])
-    shade_raster = gdal.OpenEx(shade_raster_path_band[0], gdal.OF_RASTER)
-    shade_band = shade_raster.GetRasterBand(shade_raster_path_band[1])
-    albedo_raster = gdal.OpenEx(albedo_raster_path_band[0], gdal.OF_RASTER)
-    albedo_band = albedo_raster.GetRasterBand(albedo_raster_path_band[1])
-    eti_raster = gdal.OpenEx(eti_raster_path_band[0], gdal.OF_RASTER)
-    eti_band = eti_raster.GetRasterBand(eti_raster_path_band[1])
-
-    t_obs_min, t_obs_max, _, _ = t_obs_band.GetStatistics(0, 1)
-
-    band_list = [t_obs_band, shade_band, albedo_band, eti_band]
-    nodata_list = [b.GetNoDataValue() for b in band_list]
-    data_matrix = None
-    for offset_dict in pygeoprocessing.iterblocks(
-            shade_raster_path_band, offset_only=True):
-        block_list = [
-            band.ReadAsArray(**offset_dict) for band in band_list]
-        valid_mask = numpy.logical_and.reduce(
-            [~numpy.isclose(block, nodata) for block, nodata in
-             zip(block_list, nodata_list)], axis=0)
-        if data_matrix is None:
-            data_matrix = numpy.array([b[valid_mask] for b in block_list])
-        else:
-            new_rows = numpy.array([b[valid_mask] for b in block_list])
-            LOGGER.debug(data_matrix.shape)
-            LOGGER.debug(new_rows.shape)
-            data_matrix = numpy.concatenate(
-                (data_matrix, new_rows), axis=1)
-            break
-        LOGGER.debug(data_matrix.shape)
-
-    LOGGER.debug(data_matrix[1:, :].shape)
-    LOGGER.debug(data_matrix[0, :].shape)
-    coefficients, _, _, _ = numpy.linalg.lstsq(
-        numpy.transpose(data_matrix[1:, :]), data_matrix[0, :])
-    with open(target_cc_weight_pickle_path, 'w') as cc_weight_pickle_file:
-        pickle.dump(coefficients, cc_weight_pickle_file)
-
-
 def calculate_wbgt(
         avg_rel_humidity, t_air_raster_path, target_vapor_pressure_path):
     """Raster calculator op to calculate wet bulb globe temperature.
