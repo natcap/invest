@@ -535,8 +535,11 @@ def calculate_uhi_result_vector(
 
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    if os.path.exists(target_uhi_vector_path):
+    try:
+        # can't make a shapefile on top of an existing one
         os.remove(target_uhi_vector_path)
+    except OSError:
+        pass
     LOGGER.info("creating %s", os.path.basename(target_uhi_vector_path))
     shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
@@ -665,8 +668,11 @@ def calculate_energy_savings(
         base_building_vector_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     LOGGER.info("creating %s", os.path.basename(target_building_vector_path))
-    if os.path.exists(target_building_vector_path):
+    try:
+        # can't make a shapefile on top of an existing one
         os.remove(target_building_vector_path)
+    except OSError:
+        pass
     shapefile_driver.CreateCopy(
         target_building_vector_path, base_building_vector)
     base_building_vector = None
@@ -681,14 +687,12 @@ def calculate_energy_savings(
         ogr.FieldDefn('mean_t_ref', ogr.OFTReal))
 
     target_building_layer_defn = target_building_layer.GetLayerDefn()
+    # assume 'type' field is in layer, just not what it's called
     for field_name in ['Type', 'type', 'TYPE']:
         type_field_index = target_building_layer_defn.GetFieldIndex(
             field_name)
         if type_field_index != -1:
             break
-    if type_field_index == -1:
-        raise ValueError(
-            "Could not find field 'Type' in %s", target_building_vector_path)
 
     energy_consumption_table = utils.build_lookup_from_csv(
         energy_consumption_table_path, 'type', to_lower=True,
@@ -715,6 +719,9 @@ def calculate_energy_savings(
 
         target_type = target_feature.GetField(int(type_field_index))
         if target_type not in energy_consumption_table:
+            target_building_layer.CommitTransaction()
+            target_building_layer = None
+            target_building_vector = None
             raise ValueError(
                 "Encountered a building 'type' of: '%s' in "
                 "FID: %d in the building vector layer that has no "
@@ -882,6 +889,21 @@ def validate(args, limit_to=None):
     if negative_value_list:
         validation_error_list.append(
             (negative_value_list, 'value should be positive'))
+
+    if (not limit_to and bool(args['do_valuation'])) or (
+            limit_to == 'building_vector_path'):
+        building_vector = gdal.OpenEx(args['building_vector_path'])
+        building_layer = building_vector.GetLayer()
+        building_layer_defn = building_layer.GetLayerDefn()
+        # assume 'type' field is in layer, just not what it's called
+        for field_name in ['Type', 'type', 'TYPE']:
+            type_field_index = building_layer_defn.GetFieldIndex(field_name)
+            if type_field_index != -1:
+                break
+        if type_field_index == -1:
+            validation_error_list.append(
+                ['building_vector_path'],
+                "Could not find field 'Type' in layer.")
 
     return validation_error_list
 
