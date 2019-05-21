@@ -492,8 +492,8 @@ def calculate_uhi_result_vector(
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
                 * avg_cc
-                * avg_tmp_anm
-                * avd_eng_con
+                * avg_tmp_an
+                * avd_eng_cn
                 * average WBGT
                 * average light loss work
                 * average heavy loss work
@@ -546,8 +546,8 @@ def calculate_uhi_result_vector(
     target_uhi_layer = target_uhi_vector.GetLayer()
 
     for field_id in [
-            'avg_cc', 'avg_tmp_v', 'avg_tmp_anm', 'avd_eng_con', 'avg_wbgt_v',
-            'avg_lt_ls_v', 'avg_hv_ls_v']:
+            'avg_cc', 'avg_tmp_v', 'avg_tmp_an', 'avd_eng_cn', 'avg_wbgt_v',
+            'avg_ltls_v', 'avg_hvls_v']:
         target_uhi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
 
     target_uhi_layer.StartTransaction()
@@ -566,7 +566,7 @@ def calculate_uhi_result_vector(
 
         if mean_t_air:
             feature.SetField(
-                'avg_tmp_anm', mean_t_air-t_ref_val)
+                'avg_tmp_an', mean_t_air-t_ref_val)
 
         if wbgt_stats and feature_id in wbgt_stats and (
                 wbgt_stats[feature_id]['count'] > 0):
@@ -581,7 +581,7 @@ def calculate_uhi_result_vector(
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
             LOGGER.debug(light_loss)
-            feature.SetField('avg_lt_ls_v', float(light_loss))
+            feature.SetField('avg_ltls_v', float(light_loss))
 
         if heavy_loss_stats and feature_id in heavy_loss_stats and (
                 heavy_loss_stats[feature_id]['count'] > 0):
@@ -589,7 +589,7 @@ def calculate_uhi_result_vector(
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
             LOGGER.debug(heavy_loss)
-            feature.SetField('avg_hv_ls_v', float(heavy_loss))
+            feature.SetField('avg_hvls_v', float(heavy_loss))
 
         if energy_consumption_vector_path:
             energy_consumption_vector = gdal.OpenEx(
@@ -613,7 +613,7 @@ def calculate_uhi_result_vector(
                 aoi_geometry.ExportToWkb())
             aoi_shapely_geometry_prep = shapely.prepared.prep(
                 aoi_shapely_geometry)
-            avd_eng_con = 0.0
+            avd_eng_cn = 0.0
             for building_id in poly_rtree_index.intersection(
                     aoi_shapely_geometry.bounds):
                 if aoi_shapely_geometry_prep.intersects(
@@ -624,9 +624,9 @@ def calculate_uhi_result_vector(
                     if energy_consumption_value:
                         # this step lets us skip values that might be in
                         # nodata ranges that we can't help.
-                        avd_eng_con += float(
+                        avd_eng_cn += float(
                             energy_consumption_value)
-            feature.SetField('avd_eng_con', avd_eng_con)
+            feature.SetField('avd_eng_cn', avd_eng_cn)
 
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
