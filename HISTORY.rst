@@ -2,6 +2,12 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in the pollination model that would cause outputs to be all 0
+  rasters if all the ``relative_abundance`` fields in the guild table were
+  integers.
+* Fixed a file cache flushing issue observed on Debian in
+  ``utils.exponential_decay_kernel_raster`` that would cause an exponential
+  kernel raster to contain random values rather than expected value.
 
 3.7.0 (2019-05-09)
 ------------------
@@ -760,7 +766,7 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Nutrient 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
         than the original ArcGIS model, but may have memory issues with
@@ -769,20 +775,20 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Wind Energy:
       - A new offshore wind energy model.  This is a standalone-only model
         available under the windows start menu.
   - *new* Recreation Alpha:
       - This is a working demo of our soon to be released future land and near
         shore recreation model.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
+        be used as a demo or by NatCap partners that know what they're doing.
   - *new* Habitat Risk Assessment 3.0 Alpha:
       - This is a working demo of our soon to be released 3.0 version of habitat
         risk assessment.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
-	Users that need to use the habitat risk assessment should use the ArcGIS
-	version of this model.
+    	be used as a demo or by NatCap partners that know what they're doing.
+    	Users that need to use the habitat risk assessment should use the
+        ArcGIS version of this model.
 
   - Improvements to the InVEST 2.x ArcGIS-based toolset:
       - Bug fixes to the ArcGIS based Coastal Protection toolset.
