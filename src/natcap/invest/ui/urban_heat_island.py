@@ -13,7 +13,7 @@ class UrbanHeatIslandMitigation(model.InVESTModel):
             validator=natcap.invest.urban_heat_island_mitigation.validate,
             localdoc=u'../documentation/urban_heat_island_mitigation.html')
 
-        self.t_ref = inputs.File(
+        self.t_ref = inputs.Text(
             args_key='t_ref',
             helptext=('Reference air temperature (real).'),
             label='t_ref',
