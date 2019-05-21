@@ -620,7 +620,7 @@ def calculate_uhi_result_vector(
                         building_shapely_polygon_lookup[building_id]):
                     energy_consumption_value = (
                         energy_consumption_layer.GetFeature(
-                            building_id).GetField('energy_savings'))
+                            building_id).GetField('energy_sav'))
                     if energy_consumption_value:
                         # this step lets us skip values that might be in
                         # nodata ranges that we can't help.
@@ -665,6 +665,8 @@ def calculate_energy_savings(
         base_building_vector_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     LOGGER.info("creating %s", os.path.basename(target_building_vector_path))
+    if os.path.exists(target_building_vector_path):
+        os.remove(target_building_vector_path)
     shapefile_driver.CreateCopy(
         target_building_vector_path, base_building_vector)
     base_building_vector = None
