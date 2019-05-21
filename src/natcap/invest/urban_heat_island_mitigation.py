@@ -491,9 +491,9 @@ def calculate_uhi_result_vector(
             if no valuation occurred.
         target_uhi_vector_path (str): path to UHI vector created for result.
             Will contain the fields:
-                * a_cc_val
-                * a_temp_anom
-                * a_en_con
+                * avg_cc
+                * avg_tmp_anm
+                * avd_eng_con
                 * average WBGT
                 * average light loss work
                 * average heavy loss work
@@ -546,9 +546,8 @@ def calculate_uhi_result_vector(
     target_uhi_layer = target_uhi_vector.GetLayer()
 
     for field_id in [
-            'a_cc_val', 'a_temp_val', 'a_temp_anom',
-            'a_en_con', 'a_wbgt_val',
-            'a_ltloss_val', 'a_hvloss_val']:
+            'avg_cc', 'avg_tmp_v', 'avg_tmp_anm', 'avd_eng_con', 'avg_wbgt_v',
+            'avg_lt_ls_v', 'avg_hv_ls_v']:
         target_uhi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
 
     target_uhi_layer.StartTransaction()
@@ -557,24 +556,24 @@ def calculate_uhi_result_vector(
         if feature_id in cc_stats and cc_stats[feature_id]['count'] > 0:
             mean_cc = (
                 cc_stats[feature_id]['sum'] / cc_stats[feature_id]['count'])
-            feature.SetField('a_cc_val', mean_cc)
+            feature.SetField('avg_cc', mean_cc)
         mean_t_air = None
         if feature_id in t_air_stats and t_air_stats[feature_id]['count'] > 0:
             mean_t_air = (
                 t_air_stats[feature_id]['sum'] /
                 t_air_stats[feature_id]['count'])
-            feature.SetField('a_temp_val', mean_t_air)
+            feature.SetField('avg_tmp_v', mean_t_air)
 
         if mean_t_air:
             feature.SetField(
-                'a_temp_anom', mean_t_air-t_ref_val)
+                'avg_tmp_anm', mean_t_air-t_ref_val)
 
         if wbgt_stats and feature_id in wbgt_stats and (
                 wbgt_stats[feature_id]['count'] > 0):
             wbgt = (
                 wbgt_stats[feature_id]['sum'] /
                 wbgt_stats[feature_id]['count'])
-            feature.SetField('a_wbgt_val', wbgt)
+            feature.SetField('avg_wbgt_v', wbgt)
 
         if light_loss_stats and feature_id in light_loss_stats and (
                 light_loss_stats[feature_id]['count'] > 0):
@@ -582,7 +581,7 @@ def calculate_uhi_result_vector(
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
             LOGGER.debug(light_loss)
-            feature.SetField('a_ltloss_val', float(light_loss))
+            feature.SetField('avg_lt_ls_v', float(light_loss))
 
         if heavy_loss_stats and feature_id in heavy_loss_stats and (
                 heavy_loss_stats[feature_id]['count'] > 0):
@@ -590,7 +589,7 @@ def calculate_uhi_result_vector(
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
             LOGGER.debug(heavy_loss)
-            feature.SetField('a_hvloss_val', float(heavy_loss))
+            feature.SetField('avg_hv_ls_v', float(heavy_loss))
 
         if energy_consumption_vector_path:
             energy_consumption_vector = gdal.OpenEx(
@@ -614,7 +613,7 @@ def calculate_uhi_result_vector(
                 aoi_geometry.ExportToWkb())
             aoi_shapely_geometry_prep = shapely.prepared.prep(
                 aoi_shapely_geometry)
-            a_en_con = 0.0
+            avd_eng_con = 0.0
             for building_id in poly_rtree_index.intersection(
                     aoi_shapely_geometry.bounds):
                 if aoi_shapely_geometry_prep.intersects(
@@ -625,9 +624,9 @@ def calculate_uhi_result_vector(
                     if energy_consumption_value:
                         # this step lets us skip values that might be in
                         # nodata ranges that we can't help.
-                        a_en_con += float(
+                        avd_eng_con += float(
                             energy_consumption_value)
-            feature.SetField('a_en_con', a_en_con)
+            feature.SetField('avd_eng_con', avd_eng_con)
 
         target_uhi_layer.SetFeature(feature)
     target_uhi_layer.CommitTransaction()
