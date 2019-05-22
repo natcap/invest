@@ -316,7 +316,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
     !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
-    !insertmacro StartMenuLink "${SMPATH}\Urban Heat Island Mitigation" "uhim"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"

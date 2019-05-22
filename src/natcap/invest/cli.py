@@ -131,10 +131,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.urban_flood_risk_mitigation',
         gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
         aliases=('ufrm',)),
-    'urban_heat_island_mitigation': _UIMETA(
-        pyname='natcap.invest.urban_heat_island_mitigation',
-        gui='urban_heat_island.UrbanHeatIslandMitigation',
-        aliases=('uhim',)),
+    'urban_cooling_model': _UIMETA(
+        pyname='natcap.invest.urban_cooling_model',
+        gui='urban_heat_island.UrbanCoolingModel',
+        aliases=('ucm',)),
     'habitat_suitability': _UIMETA(
         pyname='natcap.invest.habitat_suitability',
         gui=None,

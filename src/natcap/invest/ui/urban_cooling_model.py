@@ -1,17 +1,17 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.urban_heat_island_mitigation
+import natcap.invest.urban_cooling_model
 
 
-class UrbanHeatIslandMitigation(model.InVESTModel):
+class UrbanCoolingModel(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'UrbanHeatIslandMitigation',
-            target=natcap.invest.urban_heat_island_mitigation.execute,
-            validator=natcap.invest.urban_heat_island_mitigation.validate,
-            localdoc=u'../documentation/urban_heat_island_mitigation.html')
+            label=u'Urban Cooling Model',
+            target=natcap.invest.urban_cooling_model.execute,
+            validator=natcap.invest.urban_cooling_model.validate,
+            localdoc=u'../documentation/urban_cooling_model.html')
 
         self.t_ref = inputs.Text(
             args_key='t_ref',

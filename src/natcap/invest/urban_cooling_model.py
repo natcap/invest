@@ -1,4 +1,4 @@
-"""Urban Heat Island Mitigation model."""
+"""Urban Cooling Model."""
 from __future__ import absolute_import
 import shutil
 import tempfile
@@ -27,7 +27,7 @@ _LOGGING_PERIOD = 5.0
 
 
 def execute(args):
-    """Urban Flood Heat Island Mitigation model.
+    """Urban Cooling Model.
 
     Parameters:
         args['workspace_dir'] (str): path to target output directory.
