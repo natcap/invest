@@ -56,12 +56,12 @@ class UHIMTests(unittest.TestCase):
 
         expected_results = {
             'avg_cc': 0.222150472947109,
-            'avg_tmp_v': 37.306552793522201,
-            'avg_tmp_an': 2.306552793522201,
-            'avd_eng_cn': 9212.488475267766262,
-            'avg_wbgt_v': 37.306552793522201,
-            'avg_ltls_v': 74.654377880184327,
-            'avg_hvls_v': 74.654377880184327,
+            'avg_tmp_v': 37.325275675470998,
+            'avg_tmp_an': 2.325275675470998,
+            'avd_eng_cn': 9019.152329608312357,
+            'avg_wbgt_v': 37.325275675470998,
+            'avg_ltls_v': 75.000000000000000,
+            'avg_hvls_v': 75.000000000000000,
         }
 
         for key, expected_value in expected_results.items():
