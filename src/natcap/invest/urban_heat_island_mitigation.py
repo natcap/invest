@@ -890,21 +890,6 @@ def validate(args, limit_to=None):
         validation_error_list.append(
             (negative_value_list, 'value should be positive'))
 
-    if (not limit_to and bool(args['do_valuation'])) or (
-            limit_to == 'building_vector_path'):
-        building_vector = gdal.OpenEx(args['building_vector_path'])
-        building_layer = building_vector.GetLayer()
-        building_layer_defn = building_layer.GetLayerDefn()
-        # assume 'type' field is in layer, just not what it's called
-        for field_name in ['Type', 'type', 'TYPE']:
-            type_field_index = building_layer_defn.GetFieldIndex(field_name)
-            if type_field_index != -1:
-                break
-        if type_field_index == -1:
-            validation_error_list.append(
-                ['building_vector_path'],
-                "Could not find field 'Type' in layer.")
-
     return validation_error_list
 
 
@@ -1012,7 +997,7 @@ def flat_disk_kernel(max_distance, kernel_filepath):
 
             kernel_index_distances = numpy.hypot(
                 row_indices, col_indices)
-            kernel = kernel_index_distances > max_distance
+            kernel = kernel_index_distances < max_distance
 
             kernel_band.WriteArray(kernel, xoff=col_offset,
                                    yoff=row_offset)

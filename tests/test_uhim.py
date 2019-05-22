@@ -72,7 +72,7 @@ class UHIMTests(unittest.TestCase):
                     key, expected_value, actual_value))
 
     def test_bad_building_type(self):
-        """UHIM regression."""
+        """UHIM: regression test."""
         import natcap.invest.urban_heat_island_mitigation
         args = {
             'workspace_dir': self.workspace_dir,
@@ -115,5 +115,64 @@ class UHIMTests(unittest.TestCase):
         with self.assertRaises(ValueError) as context:
             natcap.invest.urban_heat_island_mitigation.execute(args)
         self.assertTrue(
-            "ValueError: Encountered a building 'type' of",
-            context.exception)
+            "Encountered a building 'type' of:" in
+            str(context.exception))
+
+    def test_bad_args(self):
+        """UHIM: test bad arguments validating."""
+        import natcap.invest.urban_heat_island_mitigation
+        args = {
+            'workspace_dir': self.workspace_dir,
+            'results_suffix': 'test_suffix',
+            't_ref': 35.0,
+            't_obs_raster_path': os.path.join(REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(REGRESSION_DATA, "Biophysical table_UHI.csv"),
+            'green_area_cooling_distance': 1000.0,
+            'uhi_max': 3,
+            'do_valuation': True,
+            't_air_average_radius': "1000.0",
+            'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(REGRESSION_DATA, "Energy.csv"),
+            'avg_rel_humidity': '30.0',
+            'cc_weight_shade': '0.6',
+            'cc_weight_albedo': '0.2',
+            'cc_weight_eti': '0.2',
+            'n_workers': -1,
+            }
+
+        del args['t_ref']
+        with self.assertRaises(KeyError) as context:
+            natcap.invest.urban_heat_island_mitigation.validate(args)
+        self.assertTrue(
+            "The following keys were expected" in str(context.exception))
+
+        args['t_ref'] = ''
+        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        self.assertEqual(result[0][1], "parameter has no value")
+
+        args['t_ref'] = 35.0
+        args['cc_weight_shade'] = -0.6
+        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        self.assertEqual(result[0][1], "value should be positive")
+
+        args['cc_weight_shade'] = "not a number"
+        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        self.assertEqual(result[0][1], "parameter is not a number")
+
+    def test_flat_disk_kernel(self):
+        """UHIM: test flat disk kernel."""
+        import natcap.invest.urban_heat_island_mitigation
+
+        kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
+        natcap.invest.urban_heat_island_mitigation.flat_disk_kernel(
+            1000, kernel_filepath)
+
+        kernel_raster = gdal.OpenEx(kernel_filepath, gdal.OF_RASTER)
+        kernel_band = kernel_raster.GetRasterBand(1)
+        self.assertAlmostEqual(
+            numpy.sum(kernel_band.ReadAsArray())/1000,
+            numpy.ceil(1000**2*numpy.pi/1000),
+            places=0)
