@@ -683,8 +683,6 @@ def calculate_energy_savings(
         ogr.FieldDefn('energy_sav', ogr.OFTReal))
     target_building_layer.CreateField(
         ogr.FieldDefn('mean_t_air', ogr.OFTReal))
-    target_building_layer.CreateField(
-        ogr.FieldDefn('mean_t_ref', ogr.OFTReal))
 
     target_building_layer_defn = target_building_layer.GetLayerDefn()
     # assume 'type' field is in layer, just not what it's called
