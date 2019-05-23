@@ -146,6 +146,16 @@ def execute(args):
             for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
                 raster_unique_lucodes.update(numpy.unique(lulc_block))
 
+            # Remove the nodata value from the set of landuser codes.
+            nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+            try:
+                raster_unique_lucodes.remove(nodata)
+            except KeyError:
+                # KeyError when the nodata value was not encountered in the
+                # raster's pixel values.  Same result when nodata value is
+                # None.
+                pass
+
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
             threat_path_dict['threat' + lulc_key] = {}
@@ -173,9 +183,10 @@ def execute(args):
     missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
     if missing_lucodes:
         raise ValueError(
-            'The following land cover codes were found in the sensitivity '
-            'table. Check your sensitivity table to see if they are missing: '
-            '%s. \n\n' % ', '.join([str(x) for x in sorted(missing_lucodes)]))
+            'The following land cover codes were found in your landcover rasters '
+            'but not in your sensitivity table. Check your sensitivity table '
+            'to see if they are missing: %s. \n\n' %
+            ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
     # Align and resize all the land cover and threat rasters,
     # and tore them in the intermediate folder
@@ -723,11 +734,18 @@ def validate(args, limit_to=None):
             elif args[key] in ['', None]:
                 no_value_list.append(key)
 
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
+    if missing_key_list:
+        # if there are missing keys, raise an exception
         raise KeyError(
-            "The following keys were expected in `args` but were missing" +
+            "The following keys were expected in `args` but were missing: " +
             ', '.join(missing_key_list))
+
+    # if any value for required keys is empty, append to the validation
+    # error list
+    if no_value_list:
+        for key in no_value_list:
+            if limit_to is None or limit_to == key:
+                validation_error_list.append(([key], 'should have a value'))
 
     # check for required file existence:
     for key in [

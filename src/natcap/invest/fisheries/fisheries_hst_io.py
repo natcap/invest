@@ -1,7 +1,7 @@
-'''
+"""
 The Fisheries Habitat Scenarios Tool IO module contains functions for handling
 inputs and outputs
-'''
+"""
 
 import logging
 import os
@@ -9,14 +9,15 @@ import csv
 import copy
 
 import numpy as np
-import natcap.invest.pygeoprocessing_0_3_3
+
+from .. import utils
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.hst_io')
 
 
 # Fetch and Verify Arguments
 def fetch_args(args):
-    '''
+    """
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
 
@@ -39,7 +40,7 @@ def fetch_args(args):
             'gamma': 0.5,
 
             # Pop Vars
-            'population_csv_uri': 'path/to/csv_uri',
+            'population_csv_path': 'path/to/csv_path',
             'Surv_nat_xsa': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
             'Classes': np.array([...]),
@@ -57,8 +58,8 @@ def fetch_args(args):
             },
 
             # Habitat Vars
-            'habitat_chg_csv_uri': 'path/to/csv',
-            'habitat_dep_csv_uri': 'path/to/csv',
+            'habitat_chg_csv_path': 'path/to/csv',
+            'habitat_dep_csv_path': 'path/to/csv',
             'Habitats': ['habitat1', 'habitat2', ...],
             'Hab_classes': ['class1', 'class2', ...],
             'Hab_regions': ['region1', 'region2', ...],
@@ -70,7 +71,7 @@ def fetch_args(args):
             'Hab_dep_num_a': np.array([...]),
         }
 
-    '''
+    """
     args = args.copy()
     sexsp_dict = {
         'no': 1,
@@ -81,8 +82,7 @@ def fetch_args(args):
 
     # Fetch Data
     args['output_dir'] = os.path.join(args['workspace_dir'], 'output')
-    natcap.invest.pygeoprocessing_0_3_3.create_directories([args['workspace_dir'],
-                                        args['output_dir']])
+    utils.make_directories([args['workspace_dir'], args['output_dir']])
     pop_dict = read_population_csv(args)
     habitat_chg_dict = read_habitat_chg_csv(args)
     habitat_dep_dict = read_habitat_dep_csv(args)
@@ -113,7 +113,7 @@ def fetch_args(args):
 
 
 def read_population_csv(args):
-    '''
+    """
     Parses and verifies a single Population Parameters CSV file
 
     Parses and verifies inputs from the Population Parameters CSV file.
@@ -138,7 +138,7 @@ def read_population_csv(args):
     Example Returns::
 
         pop_dict = {
-            'population_csv_uri': 'path/to/csv',
+            'population_csv_path': 'path/to/csv',
             'Surv_nat_xsa': np.array(
                 [[...], [...]], [[...], [...]], ...),
 
@@ -161,9 +161,9 @@ def read_population_csv(args):
                 'Larvaldispersal': np.array([...]),
             },
         }
-    '''
-    uri = args['population_csv_uri']
-    pop_dict = _parse_population_csv(uri, args['sexsp'])
+    """
+    path = args['population_csv_path']
+    pop_dict = _parse_population_csv(path, args['sexsp'])
 
     # Check that required information exists
     assert 'Surv_nat_xsa' in pop_dict, (
@@ -174,7 +174,7 @@ def read_population_csv(args):
 
     assert len(Matching_Params) == len(Necessary_Params), (
         "Population Parameters File does not contain all necessary "
-        "parameters. %s") % uri
+        "parameters. %s") % path
 
     # Checks that all Survival Matrix elements exist between [0, 1]
     A = pop_dict['Surv_nat_xsa']
@@ -184,8 +184,8 @@ def read_population_csv(args):
     return pop_dict
 
 
-def _parse_population_csv(uri, sexsp):
-    '''
+def _parse_population_csv(path, sexsp):
+    """
     Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
 
@@ -223,12 +223,12 @@ def _parse_population_csv(uri, sexsp):
                 'Larvaldispersal': np.array([...]),
             }
         }
-    '''
+    """
     assert sexsp in (1, 2), 'Sexsp value %s unknown' % sexsp
     csv_data = []
     pop_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -289,7 +289,7 @@ def _parse_population_csv(uri, sexsp):
 
 
 def read_habitat_dep_csv(args):
-    '''
+    """
     Parses and verifies a Habitat Dependency Parameters CSV file and returns a
     dictionary of information related to the interaction between a species and
     the given habitats.
@@ -327,7 +327,7 @@ def read_habitat_dep_csv(args):
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
-    '''
+    """
     habitat_dep_dict = _parse_habitat_dep_csv(args)
 
     # Verify provided information
@@ -357,7 +357,7 @@ def read_habitat_dep_csv(args):
 
 
 def _parse_habitat_dep_csv(args):
-    '''
+    """
     Parses the Habitat Dependency Parameters CSV file for the following vectors
         + Names of Habitats and Classes
         + Habitat-Class Dependency
@@ -384,12 +384,12 @@ def _parse_habitat_dep_csv(args):
             'Hab_class_mvmt_a': np.array([...]),
             'Hab_dep_num_a': np.array([...]),
         }
-    '''
-    uri = args['habitat_dep_csv_uri']
+    """
+    path = args['habitat_dep_csv_path']
     csv_data = []
     habitat_dep_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -421,7 +421,7 @@ def _parse_habitat_dep_csv(args):
 
 
 def read_habitat_chg_csv(args):
-    '''
+    """
     Parses and verifies a Habitat Change Parameters CSV file and returns a
     dictionary of information related to the interaction between a species
     and the given habitats.
@@ -452,7 +452,7 @@ def read_habitat_chg_csv(args):
             'Hab_chg_hx': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
         }
-    '''
+    """
     habitat_chg_dict = _parse_habitat_chg_csv(args)
 
     # Verify provided information
@@ -465,7 +465,7 @@ def read_habitat_chg_csv(args):
 
 
 def _parse_habitat_chg_csv(args):
-    '''
+    """
     Parses the Habitat Change Parameters CSV file for the following vectors
         + Names of Habitats and Regions
         + Habitat Area Change
@@ -490,12 +490,12 @@ def _parse_habitat_chg_csv(args):
             'Hab_chg_hx': np.array(
                 [[[...], [...]], [[...], [...]], ...]),
         }
-    '''
-    uri = args['habitat_chg_csv_uri']
+    """
+    path = args['habitat_chg_csv_path']
     csv_data = []
     habitat_chg_dict = {}
 
-    with open(uri, 'rb') as csvfile:
+    with open(path, 'rb') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -616,7 +616,7 @@ def _vectorize_reg_attribute(lst):
 
 # Generate Outputs
 def save_population_csv(vars_dict):
-    '''
+    """
     Creates a new Population Parameters CSV file based the provided inputs.
 
     Args:
@@ -629,7 +629,7 @@ def save_population_csv(vars_dict):
             'workspace_dir': 'path/to/workspace_dir/',
             'output_dir': 'path/to/output_dir/',
             'sexsp': 2,
-            'population_csv_uri': 'path/to/csv',  # original csv file
+            'population_csv_path': 'path/to/csv',  # original csv file
             'Surv_nat_xsa': np.ndarray([...]),
             'Surv_nat_xsa_mod': np.ndarray([...]),
 
@@ -658,7 +658,7 @@ def save_population_csv(vars_dict):
     Note:
         + Creates a modified Population Parameters CSV file located in the 'workspace/output/' folder
         + Currently appends '_modified' to original filename for new filename
-    '''
+    """
     Surv_nat_asx_mod = vars_dict['Surv_nat_xsa_mod'].swapaxes(0, 2)
     num_classes = len(vars_dict['Classes'])
     l = []
@@ -712,10 +712,10 @@ def save_population_csv(vars_dict):
 
     # Write List to File
     basename, ext = os.path.splitext(os.path.basename(
-        vars_dict['population_csv_uri']))
+        vars_dict['population_csv_path']))
     filename = basename + '_modified' + ext
-    output_uri = os.path.join(vars_dict['output_dir'], filename)
-    f = open(output_uri, 'wb')
+    output_path = os.path.join(vars_dict['output_dir'], filename)
+    f = open(output_path, 'wb')
     wr = csv.writer(f)
     for row in l:
         wr.writerow(row)

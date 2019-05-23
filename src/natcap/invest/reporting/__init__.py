@@ -474,11 +474,11 @@ def add_head_element(param_args):
                     ' the header elements' % exp)
 
     if form == 'style':
-        html_str = '''<style type=text/css %s> %s </style>''' % (attr, file_str)
+        html_str = """<style type=text/css %s> %s </style>""" % (attr, file_str)
     elif form == 'script':
-        html_str = '''<script type=text/javascript %s> %s </script>''' % (attr, file_str)
+        html_str = """<script type=text/javascript %s> %s </script>""" % (attr, file_str)
     elif form == 'json':
-        html_str = '''<script type=application/json %s> %s </script>''' % (attr, file_str)
+        html_str = """<script type=application/json %s> %s </script>""" % (attr, file_str)
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)

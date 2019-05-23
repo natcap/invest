@@ -5,7 +5,6 @@ from __future__ import absolute_import
 
 import functools
 import os
-import threading
 import logging
 import platform
 import subprocess
@@ -23,6 +22,7 @@ from qtpy import QtGui
 import six
 import qtawesome
 import chardet
+from .. import utils
 
 try:
     import faulthandler
@@ -238,8 +238,7 @@ class QLogHandler(logging.StreamHandler):
         self.setLevel(logging.NOTSET)  # capture everything
 
         self.formatter = logging.Formatter(
-            fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
-            datefmt='%m/%d/%Y %H:%M:%S ')
+            fmt=utils.LOG_FMT)
         self.setFormatter(self.formatter)
 
 
@@ -2023,7 +2022,7 @@ class Dropdown(GriddedInput):
         if newindex >= 0:
             value = self.options[newindex]
         else:
-            value = None
+            value = 'None'
         self.value_changed.emit(value)
 
     def set_options(self, options, return_value_map=None):
@@ -2062,10 +2061,12 @@ class Dropdown(GriddedInput):
 
         self.dropdown.clear()
         cast_options = []
+        self.dropdown.blockSignals(True)
         for label in options:
             cast_value = _cast_value(label)
             self.dropdown.addItem(cast_value)
             cast_options.append(cast_value)
+        self.dropdown.blockSignals(False)
         self.options = cast_options
         self.user_options = options
 

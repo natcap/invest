@@ -1,8 +1,6 @@
 # coding=UTF-8
-import functools
-
 from natcap.invest.ui import model, inputs
-from natcap.invest.habitat_risk_assessment import hra, hra_preprocessor
+from natcap.invest import hra
 
 
 class HabitatRiskAssessment(model.InVESTModel):
@@ -14,183 +12,96 @@ class HabitatRiskAssessment(model.InVESTModel):
             validator=hra.validate,
             localdoc=u'../documentation/habitat_risk_assessment.html')
 
-        self.csv_uri = inputs.Folder(
-            args_key=u'csv_uri',
+        self.info_table_path = inputs.File(
+            args_key=u'info_table_path',
             helptext=(
-                u"A folder containing multiple CSV files.  Each file "
-                u"refers to the overlap between a habitat and a "
-                u"stressor pulled from habitat and stressor shapefiles "
-                u"during the run of the HRA Preprocessor."),
-            label=u'Criteria Scores CSV Folder',
+                u"A CSV or Excel file that contains the name of the habitat "
+                u"(H) or stressor (s) on the `NAME` column that matches the "
+                u"names in `criteria_table_path`. Each H/S has its "
+                u"corresponding vector or raster path on the `PATH` column. "
+                u"The `STRESSOR BUFFER (meters)` column should have a buffer "
+                u"value if the `TYPE` column is a stressor."),
+            label=u'Habitat Stressor Information CSV or Excel File',
             validator=self.validator)
-        self.add_input(self.csv_uri)
-        self.grid_size = inputs.Text(
-            args_key=u'grid_size',
+        self.add_input(self.info_table_path)
+        self.criteria_table_path = inputs.File(
+            args_key=u'criteria_table_path',
             helptext=(
-                u"The size that should be used to grid the given "
-                u"habitat and stressor shapefiles into rasters.  This "
-                u"value will be the pixel size of the completed raster "
-                u"files."),
+                u"A CSV or Excel file that contains the set of criteria "
+                u"ranking  (rating, DQ and weight) of each stressor on each "
+                u"habitat, as well as the habitat resilience attributes."),
+            label=u'Criteria Scores CSV or Excel File',
+            validator=self.validator)
+        self.add_input(self.criteria_table_path)
+        self.resolution = inputs.Text(
+            args_key=u'resolution',
+            helptext=(
+                u"The size that should be used to grid the given habitat and "
+                u"stressor files into rasters. This value will be the pixel "
+                u"size of the completed raster files."),
             label=u'Resolution of Analysis (meters)',
             validator=self.validator)
-        self.add_input(self.grid_size)
+        self.add_input(self.resolution)
+        self.max_rating = inputs.Text(
+            args_key=u'max_rating',
+            helptext=(
+                u"This is the highest score that is used to rate a criteria "
+                u"within this model run. This value would be used to compare "
+                u"with the values within Rating column of the Criteria Scores "
+                u"table."),
+            label=u'Maximum Criteria Score',
+            validator=self.validator)
+        self.add_input(self.max_rating)
         self.risk_eq = inputs.Dropdown(
             args_key=u'risk_eq',
             helptext=(
-                u"Each of these represents an option of a risk "
-                u"calculation equation.  This will determine the "
-                u"numeric output of risk for every habitat and stressor "
-                u"overlap area."),
+                u"Each of these represents an option of a risk calculation "
+                u"equation. This will determine the numeric output of risk "
+                u"for every habitat and stressor overlap area."),
             label=u'Risk Equation',
             options=[u'Multiplicative', u'Euclidean'])
         self.add_input(self.risk_eq)
         self.decay_eq = inputs.Dropdown(
             args_key=u'decay_eq',
             helptext=(
-                u"Each of these represents an option for decay "
-                u"equations for the buffered stressors.  If stressor "
-                u"buffering is desired, these equtions will determine "
-                u"the rate at which stressor data is reduced."),
+                u"Each of these represents an option of a decay equation "
+                u"for the buffered stressors. If stressor buffering is "
+                u"desired, this equation will determine the rate at which "
+                u"stressor data is reduced."),
             label=u'Decay Equation',
             options=[u'None', u'Linear', u'Exponential'])
         self.add_input(self.decay_eq)
-        self.max_rating = inputs.Text(
-            args_key=u'max_rating',
+        self.aoi_vector_path = inputs.File(
+            args_key=u'aoi_vector_path',
             helptext=(
-                u"This is the highest score that is used to rate a "
-                u"criteria within this model run.  These values would "
-                u"be placed within the Rating column of the habitat, "
-                u"species, and stressor CSVs."),
-            label=u'Maximum Criteria Score',
+                u"An OGR-supported vector file containing feature containing "
+                u"one or more planning regions. subregions. An optional field "
+                u"called `name` could be added to compute average risk values "
+                u"within each subregion."),
+            label=u'Area of Interest (Vector)',
             validator=self.validator)
-        self.add_input(self.max_rating)
-        self.max_stress = inputs.Text(
-            args_key=u'max_stress',
+        self.add_input(self.aoi_vector_path)
+        self.visualize_outputs = inputs.Checkbox(
+            args_key='visualize_outputs',
             helptext=(
-                u"This is the largest number of stressors that are "
-                u"suspected to overlap.  This will be used in order to "
-                u"make determinations of low, medium, and high risk for "
-                u"any given habitat."),
-            label=u'Maximum Overlapping Stressors',
-            validator=self.validator)
-        self.add_input(self.max_stress)
-        self.aoi_tables = inputs.File(
-            args_key=u'aoi_tables',
-            helptext=(
-                u"An OGR-supported vector file containing feature "
-                u"subregions.  The program will create additional "
-                u"summary outputs across each subregion."),
-            label=u'Subregions (Vector)',
-            validator=self.validator)
-        self.add_input(self.aoi_tables)
+                u"Check to enable the generation of GeoJSON outputs. This "
+                u"could be used to visualize the risk scores on a map in the "
+                u"HRA visualization web application."),
+            label=u'Generate GeoJSONs for Web Visualization')
+        self.add_input(self.visualize_outputs)
 
     def assemble_args(self):
         args = {
             self.workspace.args_key: self.workspace.value(),
             self.suffix.args_key: self.suffix.value(),
-            self.csv_uri.args_key: self.csv_uri.value(),
-            self.grid_size.args_key: self.grid_size.value(),
+            self.info_table_path.args_key: self.info_table_path.value(),
+            self.criteria_table_path.args_key: self.criteria_table_path.value(),
+            self.resolution.args_key: self.resolution.value(),
             self.risk_eq.args_key: self.risk_eq.value(),
             self.decay_eq.args_key: self.decay_eq.value(),
             self.max_rating.args_key: self.max_rating.value(),
-            self.max_stress.args_key: self.max_stress.value(),
-            self.aoi_tables.args_key: self.aoi_tables.value(),
+            self.aoi_vector_path.args_key: self.aoi_vector_path.value(),
+            self.visualize_outputs.args_key: self.visualize_outputs.value(),
         }
-
-        return args
-
-
-class HRAPreprocessor(model.InVESTModel):
-    def __init__(self):
-        model.InVESTModel.__init__(
-            self,
-            label=u'Habitat Risk Assessment Preprocessor',
-            target=hra_preprocessor.execute,
-            validator=hra_preprocessor.validate,
-            localdoc=u'../documentation/habitat_risk_assessment.html')
-
-        self.habs_dir = inputs.Folder(
-            args_key=u'habitats_dir',
-            helptext=(
-                u"Checking this box indicates that habitats should be "
-                u"used as a base for overlap with provided stressors. "
-                u"If checked, the path to the habitat layers folder "
-                u"must be provided."),
-            hideable=True,
-            label=u'Calculate Risk to Habitats?',
-            validator=self.validator)
-        self.add_input(self.habs_dir)
-        self.species_dir = inputs.Folder(
-            args_key=u'species_dir',
-            helptext=(
-                u"Checking this box indicates that species should be "
-                u"used as a base for overlap with provided stressors. "
-                u"If checked, the path to the species layers folder "
-                u"must be provided."),
-            hideable=True,
-            label=u'Calculate Risk to Species?',
-            validator=self.validator)
-        self.add_input(self.species_dir)
-        self.stressor_dir = inputs.Folder(
-            args_key=u'stressors_dir',
-            helptext=u'This is the path to the stressors layers folder.',
-            label=u'Stressors Layers Folder',
-            validator=self.validator)
-        self.add_input(self.stressor_dir)
-        self.cur_lulc_box = inputs.Container(
-            expandable=False,
-            label=u'Criteria')
-        self.add_input(self.cur_lulc_box)
-        self.help_label = inputs.Label(
-            text=(
-                u"(Choose at least 1 criteria for each category below, "
-                u"and at least 4 total.)"))
-        self.exp_crit = inputs.Multi(
-            args_key=u'exposure_crits',
-            callable_=functools.partial(inputs.Text, label="Input Criteria"),
-            label=u'Exposure',
-            link_text=u'Add Another')
-        self.cur_lulc_box.add_input(self.exp_crit)
-        self.sens_crit = inputs.Multi(
-            args_key=u'sensitivity_crits',
-            callable_=functools.partial(inputs.Text, label="Input Criteria"),
-            label=u'Consequence: Sensitivity',
-            link_text=u'Add Another')
-        self.cur_lulc_box.add_input(self.sens_crit)
-        self.res_crit = inputs.Multi(
-            args_key=u'resilience_crits',
-            callable_=functools.partial(inputs.Text, label="Input Criteria"),
-            label=u'Consequence: Resilience',
-            link_text=u'Add Another')
-        self.cur_lulc_box.add_input(self.res_crit)
-        self.crit_dir = inputs.Folder(
-            args_key=u'criteria_dir',
-            helptext=(
-                u"Checking this box indicates that model should use "
-                u"criteria from provided shapefiles.  Each shapefile in "
-                u"the folder directories will need to contain a "
-                u"'Rating' attribute to be used for calculations in the "
-                u"HRA model.  Refer to the HRA User's Guide for "
-                u"information about the MANDATORY layout of the "
-                u"shapefile directories."),
-            hideable=True,
-            label=u'Use Spatially Explicit Risk Score in Shapefiles',
-            validator=self.validator)
-        self.add_input(self.crit_dir)
-
-    def assemble_args(self):
-        args = {
-            self.workspace.args_key: self.workspace.value(),
-            self.suffix.args_key: self.suffix.value(),
-            self.stressor_dir.args_key: self.stressor_dir.value(),
-            self.exp_crit.args_key: self.exp_crit.value(),
-            self.sens_crit.args_key: self.sens_crit.value(),
-            self.res_crit.args_key: self.res_crit.value(),
-        }
-
-        for hideable_input_name in ('habs_dir', 'species_dir', 'crit_dir'):
-            hideable_input = getattr(self, hideable_input_name)
-            if not hideable_input.hidden():
-                args[hideable_input.args_key] = hideable_input.value()
 
         return args

@@ -13,7 +13,7 @@ class FinfishAquaculture(model.InVESTModel):
             label=u'Marine Aquaculture: Finfish',
             target=finfish_aquaculture.execute,
             validator=finfish_aquaculture.validate,
-            localdoc=u'../documentation/marine_fish.html')
+            localdoc=u'marine_fish.html')
 
         self.farm_location = inputs.File(
             args_key=u'ff_farm_loc',

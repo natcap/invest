@@ -5,6 +5,7 @@ import shutil
 import os
 
 import numpy
+from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 import pygeoprocessing.testing
@@ -216,6 +217,27 @@ def make_biophysical_csv(biophysical_csv_path):
         open_table.write('0.4,0.4,0.4,0.4,0.4\n')
 
 
+def make_bad_biophysical_csv(biophysical_csv_path):
+    """Make a bad biophysical csv with bad values to test error handling.
+
+    Parameters:
+        biophysical_csv (str): path to the corrupted biophysical csv.
+
+    Returns:
+        None.
+    """
+    with open(biophysical_csv_path, 'wb') as open_table:
+        open_table.write(
+            'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
+        open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
+        # look at that 'fifty'
+        open_table.write(
+            '0,"lulc 1",fifty,50,0,0,0.7,0.7,0.7,0.7,0.7,0.7,0.7,')
+        open_table.write('0.7,0.7,0.7,0.7,0.7\n')
+        open_table.write('1,"lulc 2",72,82,0,0,0.4,0.4,0.4,0.4,0.4,0.4,0.4,')
+        open_table.write('0.4,0.4,0.4,0.4,0.4\n')
+
+
 def make_alpha_csv(alpha_csv_path):
     """Make a monthly alpha csv on the designated path.
 
@@ -272,13 +294,13 @@ def make_agg_results_csv(result_csv_path,
     """
     with open(result_csv_path, 'wb') as open_table:
         if climate_zones:
-            open_table.write('0,0.99999,155.09967\n')
+            open_table.write('0,1.0,54.4764\n')
         elif recharge:
             open_table.write('0,0.00000,200.00000')
         elif vector_exists:
             open_table.write('0,2000000.00000,200.00000')
         else:
-            open_table.write('0,0.99999,148.72562\n')
+            open_table.write('0,1.0,51.359875\n')
 
 
 class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
@@ -295,7 +317,6 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
 
     def test_ambiguous_precip_data(self):
         """SWY test case where there are more than 12 precipitation files"""
-
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         precip_dir_path = os.path.join(self.workspace_dir, 'precip_dir')
@@ -540,7 +561,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             'beta_i': '1.0',
             'gamma': '1.0',
             'results_suffix': '',
-            'threshold_flow_accumulation': '1000',
+            'threshold_flow_accumulation': '50',
             'workspace_dir': workspace_dir,
         }
 
@@ -601,15 +622,32 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         seasonal_water_yield.execute(args)
 
         # generate aggregated results csv table for assertion
-        agg_results_csv_path = os.path.join(args['workspace_dir'],
-                                            'agg_results_base.csv')
+        agg_results_csv_path = os.path.join(
+            args['workspace_dir'], 'agg_results_base.csv')
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
+
+    def test_bad_biophysical_table(self):
+        """SWY bad biophysical table with non-numerica values."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+
+        # use predefined directory so test can clean up files during teardown
+        args = SeasonalWaterYieldRegressionTests.generate_base_args(
+            self.workspace_dir)
+        # make args explicit that this is a base run of SWY
+        args['user_defined_climate_zones'] = False
+        args['user_defined_local_recharge'] = False
+        args['monthly_alpha'] = False
+        args['results_suffix'] = ''
+        make_bad_biophysical_csv(args['biophysical_table_path'])
+
+        with self.assertRaises(ValueError) as context:
+            seasonal_water_yield.execute(args)
+        self.assertTrue(
+            'expecting all floating point numbers' in str(context.exception))
 
     def test_monthly_alpha_regression(self):
         """SWY monthly alpha values regression test on sample data
@@ -641,8 +679,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_base.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
@@ -680,8 +716,6 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, climate_zones=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_cz.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results_cz.shp'),
             agg_results_csv_path)
 
@@ -713,21 +747,16 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         make_agg_results_csv(agg_results_csv_path, recharge=True)
 
         SeasonalWaterYieldRegressionTests._assert_regression_results_equal(
-            args['workspace_dir'],
-            os.path.join(REGRESSION_DATA, 'file_list_user_recharge.txt'),
             os.path.join(args['workspace_dir'], 'aggregated_results.shp'),
             agg_results_csv_path)
 
     @staticmethod
-    def _assert_regression_results_equal(workspace_dir, file_list_path,
-                                         result_vector_path, agg_results_path):
+    def _assert_regression_results_equal(
+            result_vector_path, agg_results_path):
         """Test the state of the workspace against the expected list of files
         and aggregated results.
 
         Parameters:
-            workspace_dir (string): path to the completed model workspace
-            file_list_path (string): path to a file that has a list of all
-                the expected files relative to the workspace base
             result_vector_path (string): path to the summary shapefile
                 produced by the SWY model.
             agg_results_path (string): path to a csv file that has the
@@ -741,13 +770,8 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             AssertionError if any files are missing or results are out of
             range by `tolerance_places`
         """
-
-        # Test that the workspace has the same files as we expect
-        SeasonalWaterYieldRegressionTests._test_same_files(
-            file_list_path, workspace_dir)
-
         # we expect a file called 'aggregated_results.shp'
-        result_vector = ogr.Open(result_vector_path)
+        result_vector = gdal.OpenEx(result_vector_path, gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
 
         # The tolerance of 3 digits after the decimal was determined by
@@ -771,36 +795,4 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
                 feature = None
 
         result_layer = None
-        ogr.DataSource.__swig_destroy__(result_vector)
         result_vector = None
-
-    @staticmethod
-    def _test_same_files(base_list_path, directory_path):
-        """Assert that the files listed in `base_list_path` are also in the
-        directory pointed to by `directory_path`.
-
-        Parameters:
-            base_list_path (string): a path to a file that has one relative
-                file path per line.
-            directory_path (string): a path to a directory whose contents will
-                be checked against the files listed in `base_list_file`
-
-        Returns:
-            None
-
-        Raises:
-            AssertionError when there are files listed in `base_list_file`
-                that don't exist in the directory indicated by `path`"""
-
-        missing_files = []
-        with open(base_list_path, 'r') as file_list:
-            for file_path in file_list:
-                full_path = os.path.join(directory_path, file_path.rstrip())
-                if full_path == '':  # skip blank lines
-                    continue
-                if not os.path.isfile(full_path):
-                    missing_files.append(full_path)
-        if len(missing_files) > 0:
-            raise AssertionError(
-                "The following files were expected but not found: " +
-                '\n'.join(missing_files))
