@@ -24,7 +24,7 @@ class UHIMTests(unittest.TestCase):
 
     def test_uhim_regression(self):
         """UHIM regression."""
-        import natcap.invest.urban_heat_island_mitigation
+        import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
@@ -47,7 +47,7 @@ class UHIMTests(unittest.TestCase):
             'n_workers': -1,
             }
 
-        natcap.invest.urban_heat_island_mitigation.execute(args)
+        natcap.invest.urban_cooling_model.execute(args)
         results_vector = gdal.OpenEx(os.path.join(
             args['workspace_dir'],
             'uhi_results_%s.shp' % args['results_suffix']))
@@ -73,7 +73,7 @@ class UHIMTests(unittest.TestCase):
 
     def test_bad_building_type(self):
         """UHIM: regression test."""
-        import natcap.invest.urban_heat_island_mitigation
+        import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
@@ -113,14 +113,14 @@ class UHIMTests(unittest.TestCase):
 
         args['building_vector_path'] = bad_building_vector_path
         with self.assertRaises(ValueError) as context:
-            natcap.invest.urban_heat_island_mitigation.execute(args)
+            natcap.invest.urban_cooling_model.execute(args)
         self.assertTrue(
             "Encountered a building 'type' of:" in
             str(context.exception))
 
     def test_bad_args(self):
         """UHIM: test bad arguments validating."""
-        import natcap.invest.urban_heat_island_mitigation
+        import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
             'results_suffix': 'test_suffix',
@@ -145,29 +145,29 @@ class UHIMTests(unittest.TestCase):
 
         del args['t_ref']
         with self.assertRaises(KeyError) as context:
-            natcap.invest.urban_heat_island_mitigation.validate(args)
+            natcap.invest.urban_cooling_model.validate(args)
         self.assertTrue(
             "The following keys were expected" in str(context.exception))
 
         args['t_ref'] = ''
-        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        result = natcap.invest.urban_cooling_model.validate(args)
         self.assertEqual(result[0][1], "parameter has no value")
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
-        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        result = natcap.invest.urban_cooling_model.validate(args)
         self.assertEqual(result[0][1], "value should be positive")
 
         args['cc_weight_shade'] = "not a number"
-        result = natcap.invest.urban_heat_island_mitigation.validate(args)
+        result = natcap.invest.urban_cooling_model.validate(args)
         self.assertEqual(result[0][1], "parameter is not a number")
 
     def test_flat_disk_kernel(self):
         """UHIM: test flat disk kernel."""
-        import natcap.invest.urban_heat_island_mitigation
+        import natcap.invest.urban_cooling_model
 
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
-        natcap.invest.urban_heat_island_mitigation.flat_disk_kernel(
+        natcap.invest.urban_cooling_model.flat_disk_kernel(
             1000, kernel_filepath)
 
         kernel_raster = gdal.OpenEx(kernel_filepath, gdal.OF_RASTER)
