@@ -8,10 +8,10 @@ import numpy
 from osgeo import gdal
 
 REGRESSION_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'uhim')
+    os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
 
 
-class UHIMTests(unittest.TestCase):
+class UCMTests(unittest.TestCase):
     """Regression tests for InVEST SDR model."""
 
     def setUp(self):
@@ -33,7 +33,7 @@ class UHIMTests(unittest.TestCase):
             'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
             'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
             'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "Biophysical table_UHI.csv"),
+            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'do_valuation': True,
@@ -82,7 +82,7 @@ class UHIMTests(unittest.TestCase):
             'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
             'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
             'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "Biophysical table_UHI.csv"),
+            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'do_valuation': True,
@@ -129,7 +129,7 @@ class UHIMTests(unittest.TestCase):
             'lulc_raster_path': os.path.join(REGRESSION_DATA, "LULC_SFBA.tif"),
             'ref_eto_raster_path': os.path.join(REGRESSION_DATA, "ETo_SFBA.tif"),
             'aoi_vector_path': os.path.join(REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
-            'biophysical_table_path': os.path.join(REGRESSION_DATA, "Biophysical table_UHI.csv"),
+            'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
             'do_valuation': True,
