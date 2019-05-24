@@ -1,135 +1,192 @@
-# open the json copied from bucket
-# parse the installer string, grep for post to see if it's a dev build
-# if dev: compare to version string already in the json file's dev key
-# if release: compare to version string already in json file's windows key
-# if new version > existing version, write new string to json
-
-# do this for....the windows installer filename from make? any .exe or .zip in the dist dir?
-
-
 import argparse
 import json
 import re
 import os
 from pkg_resources import parse_version
-
+import tempfile
+import unittest
 from pprint import pprint
 
-def main(json_file, outgoing_filenames, dist_url_base):
+
+class InstallerURLTests(unittest.TestCase):
+    """Tests for updating latest installer URLs."""
+
+    def setUp(self):
+        """Overriding setUp function to create temp file."""
+        # this lets us delete the file after its done no matter the
+        # the rest result
+        self.lookup = {
+            "#latest-invest-windows": "http://releases.naturalcapitalproject.org/invest/3.7.0/InVEST_3.7.0_x86_Setup.exe",
+            "#latest-invest-windows-dev": "http://releases.naturalcapitalproject.org/invest/3.7.0.post525+h31b10cfee0d4/InVEST_3.7.0.post525+h31b10cfee0d4_x86_Setup.exe",
+            "#latest-invest-mac": "http://releases.naturalcapitalproject.org/invest/3.7.0/InVEST-3.7.0-mac.zip",
+        }
+        self.dist_url_base = 'gs://releases.naturalcapitalproject.org/invest/9.9.9'  # this number doesn't matter
+        self.public_url_base = self.dist_url_base.replace('gs://', 'http://')
+        f, self.json_file = tempfile.mkstemp()
+        os.close(f)
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary file."""
+        os.remove(self.json_file)
+
+    def do_update(self, outgoing_filenames):
+        """Helper for the tests that creates the initial lookup file
+        and opens the udpated file for easy comparison back to original.
+
+        Return: dict.
+
+        """
+        with open(self.json_file, 'wb') as file:
+            json.dump(self.lookup, file)
+
+        main(self.json_file, self.dist_url_base, outgoing_filenames)
+
+        with open(self.json_file, 'r') as file:
+            updated_lookup = json.load(file)
+        return updated_lookup
+
+    def test_newer_release(self):
+        """Test outgoing release > than existing dev and release."""
+        outgoing_filename = "InVEST_3.8.0_x86_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_filename)))
+        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
+        assert(updated_lookup["#latest-invest-mac"] == self.lookup["#latest-invest-mac"])
+
+    def test_older_release(self):
+        """Test outgoing release < existing release and dev."""
+        updated_lookup = InstallerURLTests.do_update(self, ["InVEST_3.6.0_x86_Setup.exe"])
+        assert(updated_lookup == self.lookup)
+
+    def test_equal_versions(self):
+        """Test outgoing release == existing release."""
+        updated_lookup = InstallerURLTests.do_update(self, ["InVEST_3.7.0_x86_Setup.exe"])
+        assert(updated_lookup == self.lookup)
+
+    def test_newer_dev(self):
+        """Test outgoing dev > existing dev and release."""
+        outgoing_filename = "InVEST_3.7.0.post9999+h31b10cfee0d4_x86_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup["#latest-invest-windows"] == self.lookup["#latest-invest-windows"])
+        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
+
+    def test_older_dev(self):
+        """Test outgoing dev < existing dev and release."""
+        outgoing_filename = "InVEST_3.6.0.post9999+h31b10cfee0d4_x86_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup == self.lookup)
+
+    def test_mac(self):
+        """Test outgoing mac release > existing release."""
+        outgoing_filename = "InVEST-3.8.0-mac.zip"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup["#latest-invest-mac"] == '/'.join((self.public_url_base, outgoing_filename)))
+        assert(updated_lookup["#latest-invest-windows-dev"] == self.lookup["#latest-invest-windows-dev"])
+        assert(updated_lookup["#latest-invest-windows"] == self.lookup["#latest-invest-windows"])
+
+    def test_bogus_filename(self):
+        """Test outgoing filename is totally bogus."""
+        outgoing_filename = "adfadfa.zip"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup == self.lookup)
+
+    def test_bogus_version(self):
+        """Test outgoing filename looks valid but version string is bogus.
+
+        There's actually no such thing as a bogus version in pkg_resources.parse_version.
+        this example parses to < parse_version('0.0'), which is desireable.
+        """
+        outgoing_filename = "InVEST_???_x86_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup == self.lookup)
+
+    def test_multiple_artifacts(self):
+        """Test with multiple outgoing files."""
+        outgoing_mac = "InVEST-3.8.0-mac.zip"
+        outgoing_windows = "InVEST_3.8.0_x86_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_mac, outgoing_windows])
+        assert(updated_lookup["#latest-invest-mac"] == '/'.join((self.public_url_base, outgoing_mac)))
+        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_windows)))
+        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_windows)))
+
+    def test_arch(self):
+        """Test exe with an architecture different than existing exe."""
+        outgoing_filename = "InVEST_3.8.0_x64_Setup.exe"
+        updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
+        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_filename)))
+        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
+        assert(updated_lookup["#latest-invest-mac"] == self.lookup["#latest-invest-mac"])
+
+
+def is_dev_build(filename):
+    x = False
+    if re.search('post', filename):
+        x = True
+    return x
+
+
+def main(json_file, dist_url_base, outgoing_filenames):
     """Key a download location to a static url fragment identifier."""
 
+    # To extract version strings from filenames and
+    # validate filenames are installers.
     version_re = {
-        'windows': 'InVEST_(.+?)_x86_Setup.exe$',
-        'mac': 'InVEST-(.+?)-mac.zip$'}
+        'windows': 'InVEST_(.+?)_x\d\d_Setup.exe$',  # accepts x86 or x64
+        'mac': 'InVEST-(.+?)-mac.zip$',
+        }
+
     public_url_base = dist_url_base.replace('gs://', 'http://')
 
     with open(json_file) as file:
         lookup = json.load(file)
-        pprint(lookup)
-        print '\n'
+        # pprint(lookup)
+        # print '\n'
 
     for outgoing_filename in outgoing_filenames:
-        # import pdb; pdb.set_trace()
-        if re.search('post', outgoing_filename):
-            branch = 'dev'
-        else:
-            branch = ''
-
-        if re.search('.*exe$', outgoing_filename):
-            opsys = 'windows'
+        # Which OS is the outgoing artifact, and is it a valid installer?
+        outgoing_version = None
+        for opsys in version_re:
             match = re.search(version_re[opsys], outgoing_filename)
             if match:
                 outgoing_version = match.group(1)
+                break
 
-        elif re.search('.*zip$', outgoing_filename):
-            opsys = 'mac'
-            match = re.search(version_re[opsys], outgoing_filename)
-            if match:
-                outgoing_version = match.group(1)
+        if not outgoing_version:
+            print('outgoing artifact %s does not look like an invest installer'
+                  % outgoing_filename)
+            continue
 
-        frag_id = '-'.join(['#latest', 'invest', opsys])
-        if branch:
-            frag_id = '-'.join([frag_id, branch])
-        if frag_id in lookup:
-            existing_filename = os.path.basename(lookup[frag_id])
-            match = re.search(version_re[opsys], existing_filename)
-            if match:
+        for frag_id in lookup:
+            # only compare versions for artifacts of same OS
+            if opsys in frag_id:
+                existing_filename = os.path.basename(lookup[frag_id])
+                match = re.search(version_re[opsys], existing_filename)
                 existing_version = match.group(1)
 
-            if parse_version(outgoing_version) > parse_version(existing_version):
-                lookup[frag_id] = '/'.join((public_url_base, outgoing_filename))
-        else:
-            print('fragment identifier %s is not in the lookup and will not be created' % frag_id)
-            continue
+                if parse_version(outgoing_version) > parse_version(existing_version):
+
+                    if not is_dev_build(outgoing_filename):
+                        # Official release, update both release and dev URLs
+                        lookup[frag_id] = '/'.join(
+                            (public_url_base, outgoing_filename))
+                    else:
+                        # Dev build, only update the dev URL
+                        if is_dev_build(existing_filename):
+                            lookup[frag_id] = '/'.join(
+                                (public_url_base, outgoing_filename))
 
     with open(json_file, 'wb') as file:
         json.dump(lookup, file)
+    print('deployed artifacts with static redirect identifiers will include:')
     pprint(lookup)
+    print('usage: http://releases.naturalcapitalproject.org/#latest-invest-windows')
 
-
-
-def test_main():
-    import tempfile
-    lookup = {
-      "#latest-invest-windows": "http://releases.naturalcapitalproject.org/invest/3.7.0/InVEST_3.7.0_x86_Setup.exe",
-      "#latest-invest-windows-dev": "http://releases.naturalcapitalproject.org/invest/3.7.0/InVEST_3.7.0_x86_Setup.exe",
-      "#latest-invest-mac": "http://releases.naturalcapitalproject.org/invest/3.7.0/InVEST-3.7.0-mac.zip",
-      "#latest-invest-userguide": "http://releases.naturalcapitalproject.org/invest-userguide/latest/",
-    }
-    dist_url_base = 'gs://releases.naturalcapitalproject.org/invest/9.9.9'  # this number doesn't matter
-    public_url_base = dist_url_base.replace('gs://', 'http://')
-
-    def get_updated_lookup(outgoing_filename):
-        f, fname = tempfile.mkstemp()
-        os.close(f)
-        with open(fname, 'wb') as file:
-            json.dump(lookup, file)
-
-        main(fname, [outgoing_filename], dist_url_base)
-        with open(fname, 'r') as file:
-            updated_lookup = json.load(file)
-        return updated_lookup
-
-
-    # when version # is greater, assert lookup value == outgoing filename
-    outgoing_filename = "InVEST_3.8.0_x86_Setup.exe"
-    updated_lookup = get_updated_lookup(outgoing_filename)
-    assert(updated_lookup["#latest-invest-windows"] == '/'.join((public_url_base, outgoing_filename)))
-
-    # when version # is less than, assert lookup value == same as original
-    updated_lookup = get_updated_lookup("InVEST_3.6.0_x86_Setup.exe")
-    assert(updated_lookup["#latest-invest-windows"] == lookup["#latest-invest-windows"])
-
-    # when version # is ==, assert lookup value == same as original
-    updated_lookup = get_updated_lookup("InVEST_3.7.0_x86_Setup.exe")
-    assert(updated_lookup["#latest-invest-windows"] == lookup["#latest-invest-windows"])
-
-    # when outgoing is a release and more recent than latest dev, compare and update the dev too.
-    outgoing_filename = "InVEST_3.7.0_x86_Setup.exe"
-    updated_lookup = get_updated_lookup(outgoing_filename)
-    assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((public_url_base, outgoing_filename)))
-
-    # when outgoing name includes 'post', assert chosen lookup key includes -dev
-    # when outgoing name excludes 'post', assert chosen lookup key excludes -dev
-
-    # when outgoing name includes exe, assert chosen lookup key includes windows
-    # when outgoing name includes zip, assert chosen lookup key includes mac
-
-    # what if outgoing filename does not match any of the regex?
-    # what are all the outcomes of parse_version? what if fails to parse?
-
-    # test with single outgoing file and multiple
-    # main(fname, (outgoing_filename), dist_url_base)
 
 if __name__ == '__main__':
-    # parser = argparse.ArgumentParser(description='')
-    # parser.add_argument('download_url', help='')
-    # args = parser.parse_args()
+    parser = argparse.ArgumentParser(description='')
+    parser.add_argument('json_file', type=str)
+    parser.add_argument('bucket_url', type=str)
+    parser.add_argument('artifacts', type=str, nargs='+')
+    args = parser.parse_args()
 
-    # $(WINDOWS_ISNTALLER_FILE)
-    # outgoing_filename = "InVEST_3.7.0.post13+h97f55543230e.d20190521_x86_Setup.exe"
-    # # $(DIST_URL_BASE)
-    # dist_url_base = 'gs://releases.naturalcapitalproject.org/invest/3.7.0.post13+h97f55543230e.d20190522'
-    # json_filename = "../latest.json"
-    # main(json_filename, (outgoing_filename), dist_url_base)
-    test_main()
+    main(args.json_file, args.bucket_url, args.artifacts)
