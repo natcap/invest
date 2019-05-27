@@ -277,7 +277,7 @@ def execute(args):
         task_name='pickle flood volume stats')
 
     target_watershed_result_vector_path = os.path.join(
-        args['workspace_dir'], 'flood_risk_service%s.gpkg' % file_suffix)
+        args['workspace_dir'], 'flood_risk_service%s.shp' % file_suffix)
 
     task_graph.add_task(
         func=add_zonal_stats,
@@ -360,9 +360,9 @@ def add_zonal_stats(
             to copy for the target vector.
         target_watershed_result_vector_path (str): path to target vector that
             will contain the additional fields:
-                * runoff_retention_index
-                * runoff_retention_m3
-                * Service_Build
+                * rnf_rt_idx
+                * rnf_rt_m3
+                * serv_bld
 
     Return:
         None.
@@ -392,7 +392,7 @@ def add_zonal_stats(
             "deleting existing target result at %s",
             target_watershed_result_vector_path)
         os.remove(target_watershed_result_vector_path)
-    gpkg_driver = gdal.GetDriverByName('GPKG')
+    gpkg_driver = gdal.GetDriverByName('ESRI Shapefile')
     target_watershed_vector = gpkg_driver.Create(
         target_watershed_result_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     layer_name = str(os.path.splitext(os.path.basename(
@@ -402,13 +402,13 @@ def add_zonal_stats(
         str(layer_name), base_sr, base_geom_type)
 
     target_watershed_layer.CreateField(
-        ogr.FieldDefn('Affected_Build', ogr.OFTReal))
+        ogr.FieldDefn('afft_bld', ogr.OFTReal))
     target_watershed_layer.CreateField(
-        ogr.FieldDefn('runoff_retention_index', ogr.OFTReal))
+        ogr.FieldDefn('rnf_rt_idx', ogr.OFTReal))
     target_watershed_layer.CreateField(
-        ogr.FieldDefn('runoff_retention_m3', ogr.OFTReal))
+        ogr.FieldDefn('rnf_rt_m3', ogr.OFTReal))
     target_watershed_layer.CreateField(
-        ogr.FieldDefn('Service_Build', ogr.OFTReal))
+        ogr.FieldDefn('serv_bld', ogr.OFTReal))
     target_layer_defn = target_watershed_layer.GetLayerDefn()
 
     for target_index, base_feature in enumerate(base_watershed_layer):
@@ -425,20 +425,20 @@ def add_zonal_stats(
                     runoff_retention_stats[feature_id]['sum'] /
                     float(pixel_count))
                 target_feature.SetField(
-                    'runoff_retention_index', float(mean_value))
+                    'rnf_rt_idx', float(mean_value))
 
         if feature_id in runoff_retention_vol_stats:
             target_feature.SetField(
-                'runoff_retention_m3', float(
+                'rnf_rt_m3', float(
                     runoff_retention_vol_stats[feature_id]['sum']))
 
         if feature_id in flood_vol_stats:
             pixel_count = flood_vol_stats[feature_id]['count']
             if pixel_count > 0:
-                affected_build = base_feature.GetField('Affected_Build')
-                target_feature.SetField('Affected_Build', affected_build)
+                affected_build = base_feature.GetField('aff_bld')
+                target_feature.SetField('aff_bld', affected_build)
                 target_feature.SetField(
-                    'Service_Build', affected_build * float(
+                    'serv_bld', affected_build * float(
                         runoff_retention_vol_stats[feature_id]['sum']))
 
         target_watershed_layer.CreateFeature(target_feature)
@@ -467,7 +467,7 @@ def build_affected_vector(
             containing at least the integer field 'Type'.
         target_watershed_result_vector_path (str): path to desired target
             watershed result vector that will have an additional field called
-            'Affected_Build'.
+            'aff_bld'.
 
     Returns:
         None.
@@ -535,7 +535,7 @@ def build_affected_vector(
     watershed_vector = gdal.OpenEx(
         target_watershed_result_vector_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
     watershed_layer = watershed_vector.GetLayer()
-    watershed_layer.CreateField(ogr.FieldDefn('Affected_Build', ogr.OFTReal))
+    watershed_layer.CreateField(ogr.FieldDefn('aff_bld', ogr.OFTReal))
     watershed_layer.SyncToDisk()
 
     last_time = time.time()
@@ -564,7 +564,7 @@ def build_affected_vector(
                             'damage'])
 
         if damage_type_map:
-            watershed_feature.SetField('Affected_Build', total_damage)
+            watershed_feature.SetField('aff_bld', total_damage)
         watershed_layer.SetFeature(watershed_feature)
     watershed_layer.SyncToDisk()
     watershed_layer = None
