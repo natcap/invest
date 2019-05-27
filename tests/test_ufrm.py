@@ -6,7 +6,6 @@ import shutil
 import os
 
 from osgeo import gdal
-from osgeo import osr
 import numpy
 
 
@@ -23,33 +22,68 @@ class UFRMTests(unittest.TestCase):
         """Override tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
+    def _make_args(self):
+        """Create args list for UFRM."""
+        args = {
+            'aoi_watersheds_path': './data/invest-test-data/ufrm/watersheds.gpkg',
+            'built_infrastructure_vector_path': './data/invest-test-data/ufrm/infrastructure.gpkg',
+            'curve_number_table_path': './data/invest-test-data/ufrm/Biophysical_water_SF.csv',
+            'infrastructure_damage_loss_table_path': './data/invest-test-data/ufrm/Damage.csv',
+            'lulc_path': './data/invest-test-data/ufrm/lulc.tif',
+            'rainfall_depth': 40,
+            'results_suffix': 'Test1',
+            'soils_hydrological_group_raster_path': './data/invest-test-data/ufrm/soilgroup.tif',
+            'workspace_dir': self.workspace_dir,
+        }
+        return args
+
     def test_ufrm_regression(self):
         """UFRM: regression test."""
         from natcap.invest import urban_flood_risk_mitigation
-
-        args = {
-            'aoi_watersheds_path': './data/invest-test-dat/ufrm/watersheds.gpkg',
-            'built_infrastructure_vector_path': './data/invest-test-dat/ufrm/infrastructure.gpkg',
-            'curve_number_table_path': './data/invest-test-dat/ufrm/Biophysical_water_SF.csv',
-            'infrastructure_damage_loss_table_path': './data/invest-test-dat/ufrm/Damage.csv',
-            'lulc_path': './data/invest-test-dat/ufrm/lulc.tif',
-            'rainfall_depth': 40,
-            'results_suffix': 'test',
-            'soils_hydrological_group_raster_path': './data/invest-test-dat/ufrm/soilgroup.tif',
-            'workspace_dir': self.workspace_dir,
-        }
-
+        args = self._make_args()
+        args['workspace_dir'] = 'regression_workspace'
         urban_flood_risk_mitigation.execute(args)
 
         result_vector = gdal.OpenEx(os.path.join(
-            args['workspace_dir'], 'flood_risk_service_Test1.shp'))
+            args['workspace_dir'], 'flood_risk_service_Test1.shp'),
+        gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
         result_feature = next(result_layer)
         result_val = result_feature.GetField('serv_bld')
-        result_feature  = None
+        result_feature = None
         result_layer = None
         result_vector = None
-
         # expected result observed from regression run.
         expected_result = 13253548128279.762
-        self.assertClose(result_val, expected_result)
+        self.assertAlmostEqual(result_val, expected_result, places=0)
+
+    def test_ufrm_regression_no_infrastructure(self):
+        """UFRM: regression for no infrastructure."""
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+        del args['built_infrastructure_vector_path']
+        args['workspace_dir'] = 'no_infrastructure_workspace'
+        urban_flood_risk_mitigation.execute(args)
+
+        result_raster = gdal.OpenEx(os.path.join(
+            args['workspace_dir'], 'Runoff_retention_m3_Test1.tif'),
+            gdal.OF_RASTER)
+        band = result_raster.GetRasterBand(1)
+        array = band.ReadAsArray()
+        nodata = band.GetNoDataValue()
+        band = None
+        result_raster = None
+        result_sum = numpy.sum(array[~numpy.isclose(array, nodata)])
+        # expected result observed from regression run.
+        expected_result = 156070.36
+        self.assertAlmostEqual(result_sum, expected_result, places=2)
+
+    def test_ufrm_regression_no_damage_table(self):
+        """UFRM: regression for no damage table."""
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+        del args['infrastructure_damage_loss_table_path']
+        args['workspace_dir'] = 'no_damage_table_workspace'
+        with self.assertRaises(ValueError) as cm:
+            urban_flood_risk_mitigation.execute(args)
+        self.assertTrue('no damage loss table' in str(cm.exception))
