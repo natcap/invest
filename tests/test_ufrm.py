@@ -46,7 +46,7 @@ class UFRMTests(unittest.TestCase):
 
         result_vector = gdal.OpenEx(os.path.join(
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
-        gdal.OF_VECTOR)
+            gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
         result_feature = next(result_layer)
         result_val = result_feature.GetField('serv_bld')
@@ -87,3 +87,34 @@ class UFRMTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
         self.assertTrue('no damage loss table' in str(cm.exception))
+
+    def test_validate(self):
+        """UFRM: test validate function."""
+        from natcap.invest import urban_flood_risk_mitigation
+        args = self._make_args()
+        self.assertEqual(
+            len(urban_flood_risk_mitigation.validate(args)), 0)
+
+        del args['workspace_dir']
+        with self.assertRaises(KeyError) as cm:
+            urban_flood_risk_mitigation.validate(args)
+        self.assertTrue('keys were expected' in str(cm.exception))
+
+        args['workspace_dir'] = ''
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(result[0][1], 'parameter has no value')
+
+        args = self._make_args()
+        args['lulc_path'] = 'fake/path/notfound.tif'
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(result[0][1], 'not found on disk')
+
+        args = self._make_args()
+        args['lulc_path'] = args['aoi_watersheds_path']
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(result[0][1], 'not a raster')
+
+        args = self._make_args()
+        args['aoi_watersheds_path'] = args['lulc_path']
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(result[0][1], 'not a vector')
