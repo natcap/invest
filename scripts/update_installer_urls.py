@@ -33,6 +33,10 @@ class InstallerURLTests(unittest.TestCase):
         """Helper for the tests that creates the initial lookup file
         and opens the udpated file for easy comparison back to original.
 
+        Parameters:
+            outgoing_filenames (list): A list of strings passed to main as
+                the list of outgoing artifact filenames.
+
         Return: dict.
 
         """
@@ -49,46 +53,46 @@ class InstallerURLTests(unittest.TestCase):
         """Test outgoing release > than existing dev and release."""
         outgoing_filename = "InVEST_3.8.0_x86_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_filename)))
-        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
-        assert(updated_lookup["#latest-invest-mac"] == self.lookup["#latest-invest-mac"])
+        self.assertEqual(updated_lookup["#latest-invest-windows"], '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-windows-dev"], '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-mac"], self.lookup["#latest-invest-mac"])
 
     def test_older_release(self):
         """Test outgoing release < existing release and dev."""
         updated_lookup = InstallerURLTests.do_update(self, ["InVEST_3.6.0_x86_Setup.exe"])
-        assert(updated_lookup == self.lookup)
+        self.assertEqual(updated_lookup, self.lookup)
 
     def test_equal_versions(self):
-        """Test outgoing release == existing release."""
+        """Test outgoing release, existing release."""
         updated_lookup = InstallerURLTests.do_update(self, ["InVEST_3.7.0_x86_Setup.exe"])
-        assert(updated_lookup == self.lookup)
+        self.assertEqual(updated_lookup, self.lookup)
 
     def test_newer_dev(self):
         """Test outgoing dev > existing dev and release."""
         outgoing_filename = "InVEST_3.7.0.post9999+h31b10cfee0d4_x86_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup["#latest-invest-windows"] == self.lookup["#latest-invest-windows"])
-        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-windows"], self.lookup["#latest-invest-windows"])
+        self.assertEqual(updated_lookup["#latest-invest-windows-dev"], '/'.join((self.public_url_base, outgoing_filename)))
 
     def test_older_dev(self):
         """Test outgoing dev < existing dev and release."""
         outgoing_filename = "InVEST_3.6.0.post9999+h31b10cfee0d4_x86_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup == self.lookup)
+        self.assertEqual(updated_lookup, self.lookup)
 
     def test_mac(self):
         """Test outgoing mac release > existing release."""
         outgoing_filename = "InVEST-3.8.0-mac.zip"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup["#latest-invest-mac"] == '/'.join((self.public_url_base, outgoing_filename)))
-        assert(updated_lookup["#latest-invest-windows-dev"] == self.lookup["#latest-invest-windows-dev"])
-        assert(updated_lookup["#latest-invest-windows"] == self.lookup["#latest-invest-windows"])
+        self.assertEqual(updated_lookup["#latest-invest-mac"], '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-windows-dev"], self.lookup["#latest-invest-windows-dev"])
+        self.assertEqual(updated_lookup["#latest-invest-windows"], self.lookup["#latest-invest-windows"])
 
     def test_bogus_filename(self):
         """Test outgoing filename is totally bogus."""
         outgoing_filename = "adfadfa.zip"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup == self.lookup)
+        self.assertEqual(updated_lookup, self.lookup)
 
     def test_bogus_version(self):
         """Test outgoing filename looks valid but version string is bogus.
@@ -98,27 +102,36 @@ class InstallerURLTests(unittest.TestCase):
         """
         outgoing_filename = "InVEST_???_x86_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup == self.lookup)
+        self.assertEqual(updated_lookup, self.lookup)
 
     def test_multiple_artifacts(self):
         """Test with multiple outgoing files."""
         outgoing_mac = "InVEST-3.8.0-mac.zip"
         outgoing_windows = "InVEST_3.8.0_x86_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_mac, outgoing_windows])
-        assert(updated_lookup["#latest-invest-mac"] == '/'.join((self.public_url_base, outgoing_mac)))
-        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_windows)))
-        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_windows)))
+        self.assertEqual(updated_lookup["#latest-invest-mac"], '/'.join((self.public_url_base, outgoing_mac)))
+        self.assertEqual(updated_lookup["#latest-invest-windows-dev"], '/'.join((self.public_url_base, outgoing_windows)))
+        self.assertEqual(updated_lookup["#latest-invest-windows"], '/'.join((self.public_url_base, outgoing_windows)))
 
     def test_arch(self):
         """Test exe with an architecture different than existing exe."""
         outgoing_filename = "InVEST_3.8.0_x64_Setup.exe"
         updated_lookup = InstallerURLTests.do_update(self, [outgoing_filename])
-        assert(updated_lookup["#latest-invest-windows"] == '/'.join((self.public_url_base, outgoing_filename)))
-        assert(updated_lookup["#latest-invest-windows-dev"] == '/'.join((self.public_url_base, outgoing_filename)))
-        assert(updated_lookup["#latest-invest-mac"] == self.lookup["#latest-invest-mac"])
+        self.assertEqual(updated_lookup["#latest-invest-windows"], '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-windows-dev"], '/'.join((self.public_url_base, outgoing_filename)))
+        self.assertEqual(updated_lookup["#latest-invest-mac"], self.lookup["#latest-invest-mac"])
+
+    def test_string_instead_of_list(self):
+        """Test passing a string instead of a list of outgoing filenames.
+
+        Because of the use of argparse, this shouldn't be possible when
+        running with command-line args, but it's an easy mistake otherwise..
+        """
+        updated_lookup = InstallerURLTests.do_update(self, "InVEST_3.6.0_x86_Setup.exe")
+        self.assertEqual(updated_lookup, self.lookup)
 
 
-def is_dev_build(filename):
+def _is_dev_build(filename):
     x = False
     if re.search('post', filename):
         x = True
@@ -126,7 +139,29 @@ def is_dev_build(filename):
 
 
 def main(json_file, dist_url_base, outgoing_filenames):
-    """Key a download location to a static url fragment identifier."""
+    """Index a download location for an S3 object to a static url fragment id.
+
+    This function checks the existing lookup table of fragment ids and
+    object names and compares version strings in existing object names
+    with those in `outgoing_filenames`. If outgoing versions are more recent,
+    the lookup table is updated with the more recent filenames.
+
+    Parameters:
+        json_file (string): path to json file holding the existing lookup
+            of fragment id keys and download URL values.
+        dist_url_base (string): public domain name of bucket where artifacts
+            are deployed.
+        outgoing_filenames (list): A list of strings passed to main as
+            the list of outgoing artifact filenames.
+
+    Side effects:
+        If updates to the json_file are needed, json_file is overwritten
+        with the updated lookup table.
+
+    Returns:
+        None
+
+    """
 
     # To extract version strings from filenames and
     # validate filenames are installers.
@@ -139,8 +174,9 @@ def main(json_file, dist_url_base, outgoing_filenames):
 
     with open(json_file) as file:
         lookup = json.load(file)
-        # pprint(lookup)
-        # print '\n'
+
+    if isinstance(outgoing_filenames, str):
+        outgoing_filenames = [outgoing_filenames]
 
     for outgoing_filename in outgoing_filenames:
         # Which OS is the outgoing artifact, and is it a valid installer?
@@ -165,13 +201,13 @@ def main(json_file, dist_url_base, outgoing_filenames):
 
                 if parse_version(outgoing_version) > parse_version(existing_version):
 
-                    if not is_dev_build(outgoing_filename):
+                    if not _is_dev_build(outgoing_filename):
                         # Official release, update both release and dev URLs
                         lookup[frag_id] = '/'.join(
                             (public_url_base, outgoing_filename))
                     else:
                         # Dev build, only update the dev URL
-                        if is_dev_build(existing_filename):
+                        if _is_dev_build(existing_filename):
                             lookup[frag_id] = '/'.join(
                                 (public_url_base, outgoing_filename))
 
