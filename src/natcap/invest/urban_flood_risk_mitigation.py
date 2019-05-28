@@ -327,7 +327,19 @@ def _pickle_zonal_stats(
 
 def _flood_vol_op(
         rainfall_depth, q_pi_array, q_pi_nodata, pixel_area, target_nodata):
-    """Calculate vol of flood water."""
+    """Calculate vol of flood water.
+
+    Parmeters:
+        rainfall_depth (float): depth of rainfal in mm.
+        q_pi_array (numpy.ndarray): quick flow array.
+        q_pi_nodata (float): nodata for q_pi.
+        pixel_area (float): area of pixel in m^2.
+        target_nodata (float): output nodata value.
+
+    Returns:
+        numpy array of flood volume per pixel.
+
+    """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = q_pi_array != q_pi_nodata
@@ -339,7 +351,19 @@ def _flood_vol_op(
 def _runoff_retention_ret_vol_op(
         runoff_retention_array, runoff_retention_nodata, p_value,
         cell_area, target_nodata):
-    """Calculate peak flow retention as a vol (R_i*Qpi*cell_size)."""
+    """Calculate peak flow retention as a vol.
+
+    Parameters:
+        runoff_retention_array (numpy.ndarray): proportion of pixel retention.
+        runoff_retention_nodata (float): nodata value for corresponding array.
+        p_value (float): precipitation depth in mm.
+        cell_area (float): area of cell in m^2.
+        target_nodata (float): target nodata to write.
+
+    Returns:
+        (R_i*Qpi*p_val*cell_size/1000.)
+
+    """
     result = numpy.empty(runoff_retention_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = runoff_retention_array != runoff_retention_nodata
@@ -578,7 +602,18 @@ def _build_affected_vector(
 
 
 def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
-    """Calculate peak flow retention."""
+    """Calculate peak flow retention.
+
+    Parameters:
+        q_pi_array (numpy.ndarray): quick flow array.
+        p_value (float): precipition in mm.
+        q_pi_nodata (float): nodata for q_pi.
+        pixel_area (float): area of pixel in m^2.
+        target_nodata (float): output nodata value.
+
+    Returns:
+        1.0 - q_pi/p
+    """
     result = numpy.empty_like(q_pi_array)
     result[:] = result_nodata
     valid_mask = numpy.ones(q_pi_array.shape, dtype=numpy.bool)
@@ -589,7 +624,18 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
 
 
 def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
-    """Calculate peak flow Q (mm) with the Curve Number method."""
+    """Calculate peak flow Q (mm) with the Curve Number method.
+
+    Parameters:
+        p_value (float): precipitation in mm.
+        s_max_array (numpy.ndarray): max S value per pixel.
+        s_max_nodata (float): nodata value for s_max_array.
+        result_nodata (float): return value nodata.
+
+    Returns:
+        ndarray of peak flow.
+
+    """
     lam = 0.2  # this value of lambda is hard-coded in the design doc.
     result = numpy.empty_like(s_max_array)
     result[:] = result_nodata
@@ -610,7 +656,17 @@ def _q_pi_op(p_value, s_max_array, s_max_nodata, result_nodata):
 
 
 def _s_max_op(cn_array, cn_nodata, result_nodata):
-    """Calculate S_max from the curve number."""
+    """Calculate S_max from the curve number.
+
+    Parameters:
+        cn_array (numpy.ndarray): curve number array.
+        cn_nodata (float): nodata value for cn_array.
+        result_nodata (float): output nodata value.
+
+    Return:
+        ndarray of Smax calcualted from curve number.
+
+    """
     result = numpy.empty_like(cn_array)
     result[:] = result_nodata
     zero_mask = cn_array == 0
@@ -625,7 +681,21 @@ def _s_max_op(cn_array, cn_nodata, result_nodata):
 def _lu_to_cn_op(
         lucode_array, soil_type_array, lucode_nodata, soil_type_nodata,
         cn_nodata, lucode_to_cn_table):
-    """Map combination landcover soil type map to curve number raster."""
+    """Map combination landcover soil type map to curve number raster.
+
+    Parameters:
+        lucode_array (numpy.ndarray): array of landcover codes.
+        soil_type_array (numpy.ndarray): array of soil type values.
+        lucode_nodata  (float): nodata value for corresponding array.
+        soil_type_nodata (float): nodata value for corresponding array.
+        cn_nodata (float): nodata value for return value array.
+        lucode_to_cn_table
+
+    Returns:
+        ndarray of curve numbers by looking up landcover type to soil type
+        to then soil value.
+
+    """
     result = numpy.empty_like(lucode_array, dtype=numpy.float32)
     result[:] = cn_nodata
     valid_mask = numpy.ones(lucode_array.shape, dtype=numpy.bool)
