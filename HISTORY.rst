@@ -8,6 +8,7 @@ Unreleased Changes
 * Fixed a file cache flushing issue observed on Debian in
   ``utils.exponential_decay_kernel_raster`` that would cause an exponential
   kernel raster to contain random values rather than expected value.
+* Added a new InVEST model: Urban Flood Risk Mitigation.
 
 3.7.0 (2019-05-09)
 ------------------
