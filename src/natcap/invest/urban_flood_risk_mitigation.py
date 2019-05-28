@@ -78,8 +78,8 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
-    task_graph = taskgraph.TaskGraph(
-        temporary_working_dir, -1)  # max(1, multiprocessing.cpu_count()))
+    # forcing n workers to -1 since I have timing that expects that.
+    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
