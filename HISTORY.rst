@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in Coastal Vulnerability model's task graph that sometimes 
+  caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
   rasters if all the ``relative_abundance`` fields in the guild table were
   integers.
