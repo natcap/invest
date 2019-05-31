@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 
+import pygeoprocessing
 import numpy
 from osgeo import ogr
 from osgeo import osr
@@ -209,6 +210,54 @@ class SDRTests(unittest.TestCase):
         }
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
+        assert_expected_results_in_vector(expected_results, vector_path)
+
+    def test_regression_with_undefined_nodata(self):
+        """SDR base regression test with undefined nodata values.
+
+        Execute SDR with sample data with all rasters having undefined nodata
+        values.
+        """
+        from natcap.invest import sdr
+
+        # use predefined directory so test can clean up files during teardown
+        args = SDRTests.generate_base_args(self.workspace_dir)
+
+        # set all input rasters to have undefined nodata values
+        tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')
+        os.makedirs(tmp_dir)
+        for path_key in ['erodibility_path', 'erosivity_path', 'lulc_path']:
+            target_path = os.path.join(
+                tmp_dir, os.path.basename(args[path_key]))
+            datatype = pygeoprocessing.get_raster_info(
+                args[path_key])['datatype']
+            pygeoprocessing.new_raster_from_base(
+                args[path_key], target_path, datatype, [None])
+
+            base_raster = gdal.OpenEx(args[path_key], gdal.OF_RASTER)
+            base_band = base_raster.GetRasterBand(1)
+            base_array = base_band.ReadAsArray()
+            base_band = None
+            base_raster = None
+
+            target_raster = gdal.OpenEx(
+                target_path, gdal.OF_RASTER | gdal.GA_Update)
+            target_band = target_raster.GetRasterBand(1)
+            target_band.WriteArray(base_array)
+
+            target_band = None
+            target_raster = None
+            args[path_key] = target_path
+
+        sdr.execute(args)
+        expected_results = {
+            'sed_retent': 392771.84375,
+            'sed_export': 0.77038854361,
+            'usle_tot': 12.69931602478,
+        }
+        vector_path = os.path.join(
+            args['workspace_dir'], 'watershed_results_sdr.shp')
+        # make args explicit that this is a base run of SWY
         assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_non_square_dem(self):
