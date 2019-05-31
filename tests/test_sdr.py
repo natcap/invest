@@ -222,12 +222,10 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
-        # make args explicit that this is a base run of SWY
-        sdr.execute(args)
 
+        # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')
         os.makedirs(tmp_dir)
-        # set all input rasters to have undefined nodata values
         for path_key in ['erodibility_path', 'erosivity_path', 'lulc_path']:
             target_path = os.path.join(
                 tmp_dir, os.path.basename(args[path_key]))
@@ -251,6 +249,7 @@ class SDRTests(unittest.TestCase):
             target_raster = None
             args[path_key] = target_path
 
+        sdr.execute(args)
         expected_results = {
             'sed_retent': 392771.84375,
             'sed_export': 0.77038854361,
@@ -258,6 +257,7 @@ class SDRTests(unittest.TestCase):
         }
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
+        # make args explicit that this is a base run of SWY
         assert_expected_results_in_vector(expected_results, vector_path)
 
     def test_non_square_dem(self):
