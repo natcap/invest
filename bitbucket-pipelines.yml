@@ -1,6 +1,13 @@
 pipelines:
     options:
         max-time: 20
+    default:
+        - step:
+            name: Test udpate_installer_urls.py
+            image: python:2.7
+            script: 
+                - pip install pytest
+                - python -m pytest scripts/update_installer_urls.py
     custom:
         appveyor-trigger:
           - step:
