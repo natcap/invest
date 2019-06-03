@@ -2,12 +2,16 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in Coastal Vulnerability model's task graph that sometimes 
+  caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
   rasters if all the ``relative_abundance`` fields in the guild table were
   integers.
 * Fixed a file cache flushing issue observed on Debian in
   ``utils.exponential_decay_kernel_raster`` that would cause an exponential
   kernel raster to contain random values rather than expected value.
+* Fixed an issue in the SDR model that would cause an unhandled exception
+  if either the erosivity or erodibility raster had an undefined nodata value.
 
 3.7.0 (2019-05-09)
 ------------------

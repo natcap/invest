@@ -75,10 +75,11 @@ pipelines:
                             -r requirements-gui.txt
                             -r requirements-dev.txt
                             -r requirements.txt
-                        - wine make PYTHON=env/scripts/python.exe binaries
+                        - wine make PYTHON=env/scripts/python.exe binaries python_packages
                     artifacts:
                         - dist/invest/**
-                        - dist/*.whl
+                        - dist/natcap.invest*.whl
+                        - dist/natcap.invest*.zip
             - step:
                 name: NSIS Installer
                 image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
