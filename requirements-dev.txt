@@ -10,7 +10,6 @@
 # scripts/convert-requirements-to-conda-yml.py as though it can only be found
 # on pip.
 
-Cython
 virtualenv>=12.0.1
 nose
 nose-timer
