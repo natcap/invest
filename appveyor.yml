@@ -12,10 +12,11 @@ environment:
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test"
 
+    - PYTHON: "C:\\Python27-x64"
+      TESTTARGET: "test"
+
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
-
-
 
 install:
     # We need wheel installed to build wheels
