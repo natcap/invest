@@ -115,14 +115,18 @@ def execute(args):
             rasters to this projection.
         args['target_pixel_size'] (list): requested target pixel size in
             local projection coordinate system.
+        args['biophysical_table_lucode_field'] (str): optional, if exists
+            use this instead of 'lucode'.
 
     Returns:
         None.
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
+    lufield_id = 'lucode'
+    if 'biophysical_table_lucode_field' in args:
+        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+        args['biophysical_table_path'], lufield_id)
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
