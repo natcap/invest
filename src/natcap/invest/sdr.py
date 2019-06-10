@@ -690,10 +690,12 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != _TARGET_NODATA) &
-            ~numpy.isclose(erosivity, erosivity_nodata) &
-            ~numpy.isclose(erodibility, erodibility_nodata) &
-            (stream != stream_nodata))
+            (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
+        if erosivity_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
+        if erodibility_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
