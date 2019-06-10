@@ -185,8 +185,8 @@ def execute(args):
     target_sr_wkt = dem_raster_info['projection']
     if 'local_projection_epsg' in args:
         local_srs = osr.SpatialReference()
-        target_sr_wkt = (
-            local_srs.ImportFromEPSG(args['local_projection_epsg']))
+        local_srs.ImportFromEPSG(args['local_projection_epsg'])
+        target_sr_wkt = local_srs.ExportToWkt()
         target_pixel_size = args['target_pixel_size']
 
     vector_mask_options = {'mask_vector_path': args['watersheds_path']}
@@ -1132,20 +1132,21 @@ def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
         watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, and sed retention fields."""
-    field_summaries = {
-        'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watersheds_path),
-        'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watersheds_path),
-        'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watersheds_path),
-        }
-
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
     layer = datasource_copy.GetLayer()
+    layer.SyncToDisk()
+
+    field_summaries = {
+        'usle_tot': pygeoprocessing.zonal_statistics(
+            (usle_path, 1), watershed_results_sdr_path),
+        'sed_export': pygeoprocessing.zonal_statistics(
+            (sed_export_path, 1), watershed_results_sdr_path),
+        'sed_retent': pygeoprocessing.zonal_statistics(
+            (sed_retention_path, 1), watershed_results_sdr_path),
+        }
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
