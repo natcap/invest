@@ -613,6 +613,7 @@ def _runoff_retention_op(q_pi_array, p_value, q_pi_nodata, result_nodata):
 
     Returns:
         1.0 - q_pi/p
+
     """
     result = numpy.empty_like(q_pi_array)
     result[:] = result_nodata
