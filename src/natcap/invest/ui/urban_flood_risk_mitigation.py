@@ -27,8 +27,6 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
             label=u'Depth of rainfall in mm',
             validator=self.validator)
         self.add_input(self.rainfall_depth)
-        # set default value:
-        self.rainfall_depth.set_value("257.0")
 
         self.lulc_path = inputs.File(
             args_key=u'lulc_path',
