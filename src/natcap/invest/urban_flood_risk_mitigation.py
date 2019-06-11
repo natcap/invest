@@ -728,11 +728,11 @@ def _lu_to_cn_op(
 
 @validation.invest_validator
 def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
+    """Validate args to ensure they conform to ``execute``'s contract.
 
     Parameters:
         args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
+            values are specified in ``execute`` docstring.
         limit_to (str): (optional) if not None indicates that validation
             should only occur on the args[limit_to] value. The intent that
             individual key validation could be significantly less expensive
