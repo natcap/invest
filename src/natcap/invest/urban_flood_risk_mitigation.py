@@ -411,8 +411,9 @@ def _add_zonal_stats(
 
     with open(runoff_retention_pickle_path, 'rb') as runoff_retention_file:
         runoff_retention_stats = pickle.load(runoff_retention_file)
-    with open(flood_vol_pickle_path, 'rb') as flood_vol_pickle_file:
-        runoff_retention_vol_stats = pickle.load(flood_vol_pickle_file)
+    with open(runoff_retention_ret_vol_pickle_path, 'rb') as (
+            runoff_retention_ret_vol_file):
+        runoff_retention_vol_stats = pickle.load(runoff_retention_ret_vol_file)
     with open(flood_vol_pickle_path, 'rb') as flood_vol_pickle_file:
         flood_vol_stats = pickle.load(flood_vol_pickle_file)
 
