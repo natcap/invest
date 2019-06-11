@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in Coastal Vulnerability model's task graph that sometimes
+  caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
   rasters if all the ``relative_abundance`` fields in the guild table were
   integers.
@@ -9,6 +11,8 @@ Unreleased Changes
   ``utils.exponential_decay_kernel_raster`` that would cause an exponential
   kernel raster to contain random values rather than expected value.
 * Added a new InVEST model: Urban Flood Risk Mitigation.
+* Fixed an issue in the SDR model that would cause an unhandled exception
+  if either the erosivity or erodibility raster had an undefined nodata value.
 
 3.7.0 (2019-05-09)
 ------------------
@@ -17,8 +21,8 @@ Unreleased Changes
   raster-based. Fewer input datasets are required for the same functionality.
   Runtime in sycnhronous mode is similar to previous versions, but runtime can
   be reduced with multiprocessing. CV also supports avoided recomputation for
-  successive runs in the same workspace, even if a different file suffix is used.
-  Output vector files are in CSV and geopackage formats.
+  successive runs in the same workspace, even if a different file suffix is
+  used. Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with the Coastal Blue Carbon preprocessor where
