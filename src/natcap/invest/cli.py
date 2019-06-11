@@ -437,10 +437,14 @@ def main():
                     if model_warnings:
                         LOGGER.warn('Warnings found: \n%s',
                                     pprint.pformat(model_warnings))
+                        if args.dryrun:
+                            # raise error in --dry-run mode because
+                            # the whole point is to just do validation
+                            raise ValueError('Warnings found: \n%s',
+                                             pprint.pformat(model_warnings))
 
             if args.dryrun:
-                # This option lets us validate inputs, above
-                # but skip model execution by returning here.
+                # If validation passed, above, still skip execution
                 return
 
             if not args.workspace:
