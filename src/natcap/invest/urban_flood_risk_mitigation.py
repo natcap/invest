@@ -447,7 +447,7 @@ def _add_zonal_stats(
 
     target_layer_defn = target_watershed_layer.GetLayerDefn()
 
-    for target_index, base_feature in enumerate(base_watershed_layer):
+    for base_feature in base_watershed_layer:
         feature_id = base_feature.GetFID()
         target_feature = ogr.Feature(target_layer_defn)
         base_geom_ref = base_feature.GetGeometryRef()
