@@ -66,8 +66,11 @@ class UFRMTests(unittest.TestCase):
         result_layer = None
         result_vector = None
         # expected result observed from regression run.
-        expected_result = 13253548128279.762
-        self.assertAlmostEqual(result_val, expected_result, places=0)
+        expected_result = 13253546667257.65
+        places_to_round = (
+            int(round(numpy.log(expected_result)/numpy.log(10)))-6)
+        self.assertAlmostEqual(
+            result_val, expected_result, places=-places_to_round)
 
     def test_ufrm_regression_no_infrastructure(self):
         """UFRM: regression for no infrastructure."""
@@ -88,15 +91,6 @@ class UFRMTests(unittest.TestCase):
         # expected result observed from regression run.
         expected_result = 156070.36
         self.assertAlmostEqual(result_sum, expected_result, places=2)
-
-    def test_ufrm_regression_no_damage_table(self):
-        """UFRM: regression for no damage table."""
-        from natcap.invest import urban_flood_risk_mitigation
-        args = self._make_args()
-        del args['infrastructure_damage_loss_table_path']
-        with self.assertRaises(ValueError) as cm:
-            urban_flood_risk_mitigation.execute(args)
-        self.assertTrue('no damage loss table' in str(cm.exception))
 
     def test_validate(self):
         """UFRM: test validate function."""
@@ -128,3 +122,9 @@ class UFRMTests(unittest.TestCase):
         args['aoi_watersheds_path'] = args['lulc_path']
         result = urban_flood_risk_mitigation.validate(args)
         self.assertEqual(result[0][1], 'not a vector')
+
+        args = self._make_args()
+        del args['infrastructure_damage_loss_table_path']
+        result = urban_flood_risk_mitigation.validate(args)
+        self.assertTrue('no damage loss table' in result[0][1])
+
