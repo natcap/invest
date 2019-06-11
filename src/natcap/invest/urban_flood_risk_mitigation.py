@@ -64,14 +64,8 @@ def execute(args):
     """
     if 'built_infrastructure_vector_path' in args and (
             args['built_infrastructure_vector_path'] != ''):
-        if 'infrastructure_damage_loss_table_path' not in args or (
-                args['infrastructure_damage_loss_table_path'] == ''):
-            raise ValueError(
-                "A built infrastructure vector was provided but no damage "
-                "loss table to go with it.")
-        else:
-            infrastructure_damage_loss_table_path = (
-                args['infrastructure_damage_loss_table_path'])
+        infrastructure_damage_loss_table_path = (
+            args['infrastructure_damage_loss_table_path'])
 
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
@@ -784,6 +778,14 @@ def validate(args, limit_to=None):
     if len(no_value_list) > 0:
         validation_error_list.append(
             (no_value_list, 'parameter has no value'))
+
+    if 'built_infrastructure_vector_path' in args and (
+            args['built_infrastructure_vector_path'] != ''):
+        if 'infrastructure_damage_loss_table_path' not in args or (
+                args['infrastructure_damage_loss_table_path'] == ''):
+            validation_error_list.append(
+                "A built infrastructure vector was provided but no damage "
+                "loss table to go with it.")
 
     file_type_list = [
         ('aoi_watersheds_path', 'vector'),
