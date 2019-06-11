@@ -343,12 +343,13 @@ def _flood_vol_op(
         target_nodata (float): output nodata value.
 
     Returns:
-        numpy array of flood volume per pixel.
+        numpy array of flood volume per pixel in m^3.
 
     """
     result = numpy.empty(q_pi_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = q_pi_array != q_pi_nodata
+    # 0.001 converts mm (rainfall depth) to m (pixel area units)
     result[valid_mask] = (
         0.001 * (rainfall_depth - q_pi_array[valid_mask]) * pixel_area)
     return result
