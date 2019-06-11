@@ -41,7 +41,6 @@ class UFRMTests(unittest.TestCase):
         """UFRM: regression test."""
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
-        args['workspace_dir'] = 'regression_workspace'
         urban_flood_risk_mitigation.execute(args)
 
         result_vector = gdal.OpenEx(os.path.join(
@@ -62,7 +61,6 @@ class UFRMTests(unittest.TestCase):
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
         del args['built_infrastructure_vector_path']
-        args['workspace_dir'] = 'no_infrastructure_workspace'
         urban_flood_risk_mitigation.execute(args)
 
         result_raster = gdal.OpenEx(os.path.join(
@@ -83,7 +81,6 @@ class UFRMTests(unittest.TestCase):
         from natcap.invest import urban_flood_risk_mitigation
         args = self._make_args()
         del args['infrastructure_damage_loss_table_path']
-        args['workspace_dir'] = 'no_damage_table_workspace'
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
         self.assertTrue('no damage loss table' in str(cm.exception))
