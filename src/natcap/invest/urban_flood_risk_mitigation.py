@@ -52,7 +52,11 @@ def execute(args):
             path to a a CSV table with columns 'Type' and 'Damage' with values
             of built infrastructure type from the 'Type' field in
             `args['built_infrastructure_vector_path']` and potential damage
-            loss (in $/m^2). If it exists this
+            loss (in $/m^2).
+        args['n_workers'] (int): (optional) if present, indicates how many
+            worker processes should be used in parallel processing. -1
+            indicates single process mode, 0 is single process but
+            non-blocking mode, and >= 1 is number of processes.
 
     Returns:
         None.
@@ -78,8 +82,10 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
-    # forcing n workers to -1 since I have timing that expects that.
-    task_graph = taskgraph.TaskGraph(temporary_working_dir, -1)
+    n_workers = -1
+    if 'n_workers' in args and args['n_workers'] != '':
+        n_workers = int(args['n_workers'])
+    task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
 
     # Align LULC with soils
     aligned_lulc_path = os.path.join(
