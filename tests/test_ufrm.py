@@ -24,15 +24,26 @@ class UFRMTests(unittest.TestCase):
 
     def _make_args(self):
         """Create args list for UFRM."""
+        base_dir = os.path.dirname(__file__)
         args = {
-            'aoi_watersheds_path': './data/invest-test-data/ufrm/watersheds.gpkg',
-            'built_infrastructure_vector_path': './data/invest-test-data/ufrm/infrastructure.gpkg',
-            'curve_number_table_path': './data/invest-test-data/ufrm/Biophysical_water_SF.csv',
-            'infrastructure_damage_loss_table_path': './data/invest-test-data/ufrm/Damage.csv',
-            'lulc_path': './data/invest-test-data/ufrm/lulc.tif',
+            'aoi_watersheds_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm',
+                'watersheds.gpkg'),
+            'built_infrastructure_vector_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm',
+                'infrastructure.gpkg'),
+            'curve_number_table_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm',
+                'Biophysical_water_SF.csv'),
+            'infrastructure_damage_loss_table_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm', 'Damage.csv'),
+            'lulc_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm', 'lulc.tif'),
             'rainfall_depth': 40,
             'results_suffix': 'Test1',
-            'soils_hydrological_group_raster_path': './data/invest-test-data/ufrm/soilgroup.tif',
+            'soils_hydrological_group_raster_path': os.path.join(
+                base_dir, 'data', 'invest-test-data', 'ufrm',
+                'soilgroup.tif'),
             'workspace_dir': self.workspace_dir,
         }
         return args
