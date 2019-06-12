@@ -15,6 +15,8 @@ environment:
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
 
+    - PYTHON: "C:\\Python27"
+      TESTTARGET: "validate_sampledata"
 
 
 install:

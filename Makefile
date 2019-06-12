@@ -95,6 +95,7 @@ DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
+DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
@@ -143,6 +144,10 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 
 test_ui:
 	$(TESTRUNNER) ui_tests
+
+validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
+	$(DATAVALIDATOR)
+
 
 clean:
 	$(PYTHON) setup.py clean
