@@ -6,6 +6,7 @@ import tempfile
 import logging
 import platform
 import pprint
+import argparse
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autovalidate.py')
@@ -75,22 +76,30 @@ def validate_datastack(modelname, binary, workspace, datastack):
     return (modelname, error_code, error_output)
 
 
-pairs = []
-for name, datastacks in DATASTACKS.iteritems():
-    # if not name.startswith(args.prefix):
-    #     continue
-    for datastack_index, datastack in enumerate(datastacks):
-        pairs.append((name, datastack, datastack_index))
+def main(sampledatadir):
+    pairs = []
+    for name, datastacks in DATASTACKS.iteritems():
+        # if not name.startswith(args.prefix):
+        #     continue
+        for datastack_index, datastack in enumerate(datastacks):
+            pairs.append((name, datastack, datastack_index))
 
-warnings_list = []
-for modelname, datastack, datastack_index in pairs:
-    # datastack = os.path.join(args.cwd, datastack)
-    datastack = os.path.join('../data/invest-sample-data', datastack)
+    warnings_list = []
+    for modelname, datastack, datastack_index in pairs:
+        # datastack = os.path.join(args.cwd, datastack)
+        datastack = os.path.join(sampledatadir, datastack)
 
-    workspace = tempfile.mkdtemp()
-    _, _, output = validate_datastack(modelname, 'invest', workspace, datastack)
-    if output:
-        warnings_list.append(output)
+        workspace = tempfile.mkdtemp()
+        _, _, output = validate_datastack(modelname, 'invest', workspace, datastack)
+        if output:
+            warnings_list.append(output)
 
-if warnings_list:
-    raise ValueError('Validation failed with %s' % pprint.pformat(warnings_list))
+    if warnings_list:
+        raise ValueError('Validation failed with %s' % pprint.pformat(warnings_list))
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('sampledatadir', type=str)
+    args = parser.parse_args()
+    main(args.sampledatadir)
