@@ -15,7 +15,19 @@ LOGGER = logging.getLogger('invest-autovalidate.py')
 
 
 def validate_datastack(modelname, binary, workspace, datastack):
-    """Run an InVEST model, checking the error code of the process."""
+    """Run an InVEST model's validate function on a datastack.
+
+    Parameters:
+        modelname (string): the name or alias specified in cli.py
+        binary (string): path to invest binary.
+        workspace (string): path to workspace for the model run.
+        datastack (string): path to json datastack file for the model.
+
+    Returns:
+        Error message from cli.py. When run in dry-run mode, cli.py
+        raises a ValueError if validate() issues any warnings.
+
+    """
     # Using a list here allows subprocess to handle escaping of paths.
     command = [binary, '--workspace', workspace, '--datastack', datastack,
                '--dry-run', '--debug', '--headless', '--overwrite', modelname]
@@ -28,19 +40,17 @@ def validate_datastack(modelname, binary, workspace, datastack):
     try:
         _ = subprocess.check_output(command, shell=True)
     except subprocess.CalledProcessError as error_obj:
-        error_code = error_obj.returncode
         error_output = error_obj.output
     else:
-        error_code = 0
         error_output = ''
-    return (modelname, error_code, error_output)
+    return error_output
 
 
 def main(sampledatadir):
     pairs = []
     for name, datastacks in DATASTACKS.iteritems():
-        # if not name.startswith(args.prefix):
-        #     continue
+
+        # some models have multiple datastacks
         for datastack_index, datastack in enumerate(datastacks):
             pairs.append((name, datastack, datastack_index))
 
@@ -49,12 +59,13 @@ def main(sampledatadir):
         datastack = os.path.join(sampledatadir, datastack)
 
         workspace = tempfile.mkdtemp()
-        _, _, output = validate_datastack(modelname, 'invest', workspace, datastack)
+        output = validate_datastack(modelname, 'invest', workspace, datastack)
         if output:
             warnings_list.append(output)
 
     if warnings_list:
-        raise ValueError('Validation failed with %s' % pprint.pformat(warnings_list))
+        raise ValueError(
+            'Validation failed with %s' % pprint.pformat(warnings_list))
 
 
 if __name__ == '__main__':
