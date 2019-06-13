@@ -341,7 +341,7 @@ cdef class _ManagedRaster:
 
 
 def calculate_sediment_deposition(
-        mfd_flow_direction_path, e_prime_path, sdr_path,
+        mfd_flow_direction_path, e_prime_path, f_path, sdr_path,
         target_sediment_deposition_path):
     """Calculate sediment deposition layer
 
@@ -350,6 +350,8 @@ def calculate_sediment_deposition(
                 pygeoprocessing.routing MFD flow direction values.
             e_prime_path (string): path to a raster that shows sources of
                 sediment that wash off a pixel but do not reach the stream.
+            f_path (string): path to a raster that shows the sediment flux
+                on a pixel for sediment that does not reach the stream.
             sdr_path (string): path to Sediment Delivery Ratio raster.
             target_sediment_deposition_path (string): path to created that
                 shows where the E' sources end up across the landscape.
@@ -363,12 +365,16 @@ def calculate_sediment_deposition(
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
         gdal.GDT_Float32, [sediment_deposition_nodata])
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, f_path,
+        gdal.GDT_Float32, [sediment_deposition_nodata])
 
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
     cdef _ManagedRaster e_prime_raster = _ManagedRaster(
         e_prime_path, 1, False)
     cdef _ManagedRaster sdr_raster = _ManagedRaster(sdr_path, 1, False)
+    cdef _ManagedRaster f_raster = _ManagedRaster(f_path, 1, True)
     cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
@@ -441,8 +447,8 @@ def calculate_sediment_deposition(
                     global_row = flat_index / n_cols
                     global_col = flat_index % n_cols
 
-                    # calculate the upstream Rj contribution to this pixel
-                    r_j_weighted_sum = 0
+                    # calculate the upstream Fj contribution to this pixel
+                    f_j_weighted_sum = 0
                     for j in range(8):
                         neighbor_row = global_row + row_offsets[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
@@ -458,14 +464,13 @@ def calculate_sediment_deposition(
                         neighbor_flow_weight = (
                             neighbor_flow_val >> (inflow_offsets[j]*4)) & 0xF
                         if neighbor_flow_weight > 0:
-                            r_j = sediment_deposition_raster.get(
-                                neighbor_col, neighbor_row)
+                            f_j = f_raster.get(neighbor_col, neighbor_row)
                             neighbor_flow_sum = 0
                             for k in range(8):
                                 neighbor_flow_sum += (
                                     neighbor_flow_val >> (k*4)) & 0xF
                             p_val = neighbor_flow_weight / neighbor_flow_sum
-                            r_j_weighted_sum += p_val * r_j
+                            f_j_weighted_sum += p_val * f_j
 
                     # calculate the differential downstream change in sdr
                     # from this pixel
@@ -487,6 +492,11 @@ def calculate_sediment_deposition(
                         flow_weight = (flow_val >> (j*4)) & 0xF
                         if flow_weight > 0:
                             sdr_j = sdr_raster.get(neighbor_col, neighbor_row)
+                            if sdr_j == 0.0:
+                                # this means it's a stream, for SDR deposition
+                                # purposes, we set sdr to 1 to indicate this
+                                # is the last step on which to retain sediment
+                                sdr_j = 1.0
                             if sdr_j == sdr_nodata:
                                 sdr_j = 0.0
                             p_j = flow_weight / flow_sum
@@ -540,12 +550,11 @@ def calculate_sediment_deposition(
                         # i think this happens because of our low resolution
                         # flow direction, it's okay to zero out.
                         downstream_sdr_weighted_sum = sdr_i
-                    if sdr_i != 0:
-                        r_i = (e_prime_i + r_j_weighted_sum) * (
-                            1 - (downstream_sdr_weighted_sum - sdr_i))
-                    else:
-                        r_i = 0
+                    d_ri = (downstream_sdr_weighted_sum - sdr_i) / (1 - sdr_i)
+                    r_i = d_ri * (e_prime_i + f_j_weighted_sum)
+                    f_i = (1-d_ri) * (e_prime_i + f_j_weighted_sum)
                     sediment_deposition_raster.set(
                         global_col, global_row, r_i)
+                    f_raster.set(global_col, global_row, f_i)
 
     sediment_deposition_raster.close()

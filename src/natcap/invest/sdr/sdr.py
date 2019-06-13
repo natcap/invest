@@ -44,6 +44,7 @@ _INTERMEDIATE_BASE_FILES = {
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
     'd_up_path': 'd_up.tif',
     'dem_offset_path': 'dem_offset.tif',
+    'f_path': 'f.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
     'ic_bare_soil_path': 'ic_bare_soil.tif',
@@ -447,7 +448,9 @@ def execute(args):
         func=sdr_core.calculate_sediment_deposition,
         args=(
             f_reg['flow_direction_path'], f_reg['e_prime_path'],
-            f_reg['sdr_path'], f_reg['sediment_deposition_path']),
+            f_reg['f_path'], f_reg['sdr_path'],
+            f_reg['sediment_deposition_path']),
+        dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['sediment_deposition_path']],
