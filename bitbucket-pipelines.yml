@@ -82,7 +82,7 @@ pipelines:
                         - dist/natcap.invest*.zip
             - step:
                 name: NSIS Installer
-                image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
+                image: natcap/py27-wine-build:3177b8530b70035d10ee75b9a52bf9085c797300
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
@@ -99,6 +99,12 @@ pipelines:
                     # Need to set PYTHON_ARCH because for some reason the
                     # string isn't being correctly set.
                     - wine make PYTHON_ARCH=x86 windows_installer
+
+                    # Code-signing
+                    # Authenticate with the service account key and upload files to bucket.
+                    - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
+                    - gcloud auth activate-service-account --key-file=client-secret.json
+                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} signcode 
                 artifacts:
                     - dist/*.exe
             - step:
