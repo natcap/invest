@@ -6,7 +6,7 @@ GIT_SAMPLE_DATA_REPO_REV    := 3ec55ae54770ff89c195aeaf64d07767ff0074b1
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 8d7a258fab9427d988398cad9bdb7c6f46ab8846
+GIT_TEST_DATA_REPO_REV      := a1f73ff44b1ddcfc6af6a0c09ac92d45a87ff3e1
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
@@ -337,7 +337,7 @@ deploy:
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
     ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces
 		gsutil cp "$(BUCKET)/fragment_id_redirections.json" "$(BUILD_DIR)/fragment_id_redirections.json"
-		$(PYTHON) scripts/update_installer_urls.py "$(BUILD_DIR)/fragment_id_redirections.json" $(BUCKET) $(notdir $(WINDOWS_INSTALLER_FILE)) $(notdir $(MAC_BINARIES_ZIP_FILE))
+		$(PYTHON) scripts/update_installer_urls.py "$(BUILD_DIR)/fragment_id_redirections.json" $(BUCKET) $(notdir $(WINDOWS_INSTALLER_FILE)) $(notdir $(patsubst "%",%,$(MAC_BINARIES_ZIP_FILE)))
 		gsutil cp "$(BUILD_DIR)/fragment_id_redirections.json" "$(BUCKET)/fragment_id_redirections.json"
     endif
 
