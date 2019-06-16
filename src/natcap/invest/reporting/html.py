@@ -1,4 +1,4 @@
-'''Utilities for creating simple HTML report files.'''
+"""Utilities for creating simple HTML report files."""
 
 import collections
 import locale
@@ -14,7 +14,7 @@ except Exception:
 
 
 class HTMLDocument(object):
-    '''Utility class for creating simple HTML files.
+    """Utility class for creating simple HTML files.
 
     Example usage:
         # Create the document object.
@@ -36,7 +36,7 @@ class HTMLDocument(object):
 
         # Create the file.
         doc.flush()
-    '''
+    """
 
     def __init__(self, uri, title, header):
         self.uri = uri
@@ -54,34 +54,34 @@ class HTMLDocument(object):
         self.headers = collections.OrderedDict()
 
     def add(self, elem):
-        '''Add an arbitrary element to the body of the document.
+        """Add an arbitrary element to the body of the document.
 
         elem - any object that has a method html() to output HTML markup
 
         Return the added element for convenience.
-        '''
+        """
         return self.body.add(elem)
 
     def insert_table_of_contents(self, max_header_level=2):
-        '''Insert an auto-generated table of contents.
+        """Insert an auto-generated table of contents.
 
         The table of contents is based on the headers in the document.
-        '''
+        """
         self.body.add(_TableOfContents(self.headers, max_header_level))
 
     def write_header(self, text, level=2):
-        '''Convenience method to write a header.'''
+        """Convenience method to write a header."""
         elem_id = 'id_%d' % self.id_counter
         self.id_counter += 1
         self.body.add(Element(('h%d' % level), text, id=elem_id))
         self.headers[elem_id] = (level, text)
 
     def write_paragraph(self, text):
-        '''Convenience method to write a paragraph.'''
+        """Convenience method to write a paragraph."""
         self.body.add(Element('p', text))
 
     def flush(self):
-        '''Create a file with the contents of this document.'''
+        """Create a file with the contents of this document."""
         outfile = open(self.uri, 'w')
         outfile.write('<!DOCTYPE html>')
         outfile.write(self.html_elem.html())
@@ -89,7 +89,7 @@ class HTMLDocument(object):
 
 
 class Element(object):
-    '''Represents a generic HTML element.
+    """Represents a generic HTML element.
 
     Any Element object can be passed to HTMLDocument.add()
 
@@ -98,7 +98,7 @@ class Element(object):
         details_elem = doc.add(html.Element('details'))
         details_elem.add(
             html.Element('img', src='images/my_pic.png', end_tag=False))
-    '''
+    """
     def __init__(self, tag, content='', end_tag=True, **attrs):
         self.tag = tag
         self.content = content
@@ -107,12 +107,12 @@ class Element(object):
         self.elems = []
 
     def add(self, elem):
-        '''Add a child element (which is returned for convenience).'''
+        """Add a child element (which is returned for convenience)."""
         self.elems.append(elem)
         return elem
 
     def html(self):
-        '''Returns an HTML string for this element (and its children).'''
+        """Returns an HTML string for this element (and its children)."""
         if self.attrs:
             attr_str = ' ' + ' '.join(
                 '%s="%s"' % (key, val) for key, val in self.attrs.items())
@@ -128,19 +128,19 @@ class Element(object):
 
 
 class Table(object):
-    '''Represents and renders HTML tables.'''
+    """Represents and renders HTML tables."""
 
     def __init__(self, **attr):
         self.table_elem = Element('table', **attr)
 
     def add_row(self, cells, is_header=False, cell_attr=None,
                 do_formatting=True):
-        '''Writes a table row with the given cell data.
+        """Writes a table row with the given cell data.
 
         cell_attr - attributes for each cell. If provided, it must be the
             same length as cells. Each entry should be a dictionary mapping
             attribute key to value.
-        '''
+        """
         row = Element('tr')
         cell_tag = 'th' if is_header else 'td'
         for i, cell in enumerate(cells):
@@ -185,19 +185,19 @@ class Table(object):
 
 
     def html(self):
-        '''Return the HTML string for the table.'''
+        """Return the HTML string for the table."""
         return self.table_elem.html()
 
 
 class _TableOfContents(object):
-    '''Represents a Table of Contents for the document.'''
+    """Represents a Table of Contents for the document."""
 
     def __init__(self, headers, max_header_level):
         self.headers = headers
         self.max_header_level = max_header_level
 
     def html(self):
-        '''Return the HTML string for the Table of Contents.'''
+        """Return the HTML string for the Table of Contents."""
         # Generate a header.
         header = Element('h2', 'Table of Contents')
 
@@ -226,9 +226,9 @@ def cell_format(data):
 
 
 def _get_style_css():
-    '''Return a string with CSS styling rules.'''
+    """Return a string with CSS styling rules."""
 
-    return '''
+    return """
       body {
           background-color: #EFECCA;
           color: #002F2F
@@ -262,4 +262,4 @@ def _get_style_css():
       img {
           margin: 20px;
       }
-      '''
+      """

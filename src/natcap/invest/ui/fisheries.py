@@ -11,7 +11,7 @@ class Fisheries(model.InVESTModel):
             label=u'Fisheries',
             target=fisheries.execute,
             validator=fisheries.validate,
-            localdoc=u'../documentation/fisheries.html')
+            localdoc=u'fisheries.html')
 
         self.alpha_only = inputs.Label(
             text=(
@@ -318,7 +318,7 @@ class FisheriesHST(model.InVESTModel):
             label=u'Fisheries Habitat Scenario Tool',
             target=fisheries_hst.execute,
             validator=fisheries_hst.validate,
-            localdoc=u'../documentation/fisheries.html')
+            localdoc=u'fisheries.html')
 
         self.alpha_only = inputs.Label(
             text=(

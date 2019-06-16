@@ -12,7 +12,6 @@ class SDR(model.InVESTModel):
             target=natcap.invest.sdr.sdr.execute,
             validator=natcap.invest.sdr.sdr.validate,
             localdoc=u'../documentation/sdr.html')
-
         self.dem_path = inputs.File(
             args_key=u'dem_path',
             helptext=(

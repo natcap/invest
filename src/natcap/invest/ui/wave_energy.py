@@ -11,7 +11,7 @@ class WaveEnergy(model.InVESTModel):
             label=u'Wave Energy',
             target=natcap.invest.wave_energy.execute,
             validator=natcap.invest.wave_energy.validate,
-            localdoc=u'../documentation/wave_energy.html')
+            localdoc=u'wave_energy.html')
 
         self.results_suffix = inputs.Text(
             args_key=u'suffix',

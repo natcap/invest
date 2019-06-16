@@ -1,6 +1,13 @@
 pipelines:
     options:
         max-time: 20
+    default:
+        - step:
+            name: Test udpate_installer_urls.py
+            image: python:2.7
+            script: 
+                - pip install pytest
+                - python -m pytest scripts/update_installer_urls.py
     custom:
         appveyor-trigger:
           - step:
@@ -12,7 +19,7 @@ pipelines:
               script:
                 - apt-get update && apt-get install -y curl mercurial
                 - |
-                  curl --header "Authorization: Bearer $APPVEYOR_API_KEY" \
+                  curl --fail --header "Authorization: Bearer $APPVEYOR_API_KEY" \
                     --header "Content-Type: application/json" \
                     --data "{'accountName': '$APPVEYOR_ACC_NAME',
                              'projectSlug': '$APPVEYOR_PROJ_SLUG',
@@ -39,9 +46,14 @@ pipelines:
                     name: Sample Data
                     image: debian:9.7
                     script:
-                        - apt-get update && apt-get install -y git
-                            mercurial build-essential zip python-setuptools
-                            python-numpy python-setuptools-scm cython
+                        - |
+                          apt-get update &&
+                          apt-get install -y git curl mercurial build-essential \
+                            zip python-setuptools python-numpy python-setuptools-scm \
+                            cython
+                        - |
+                          curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh | bash &&
+                          apt-get install -y git-lfs && git lfs install
                         - make sampledata
                     artifacts:
                         - dist/data/*
@@ -63,10 +75,11 @@ pipelines:
                             -r requirements-gui.txt
                             -r requirements-dev.txt
                             -r requirements.txt
-                        - wine make PYTHON=env/scripts/python.exe binaries
+                        - wine make PYTHON=env/scripts/python.exe binaries python_packages
                     artifacts:
                         - dist/invest/**
-                        - dist/*.whl
+                        - dist/natcap.invest*.whl
+                        - dist/natcap.invest*.zip
             - step:
                 name: NSIS Installer
                 image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996

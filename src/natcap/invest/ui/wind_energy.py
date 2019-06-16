@@ -11,7 +11,7 @@ class WindEnergy(model.InVESTModel):
             label=u'Wind Energy',
             target=wind_energy.execute,
             validator=wind_energy.validate,
-            localdoc=u'../documentation/wind_energy.html',
+            localdoc=u'wind_energy.html',
             suffix_args_key='suffix'
         )
 

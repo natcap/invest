@@ -14,6 +14,7 @@ import logging
 
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import numpy
 
 import pygeoprocessing
@@ -114,15 +115,23 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
+        args['local_projection_epsg'] (str): if present, projects all input
+            rasters to this projection.
+        args['target_pixel_size'] (list): requested target pixel size in
+            local projection coordinate system.
+        args['biophysical_table_lucode_field'] (str): optional, if exists
+            use this instead of 'lucode'.
 
     Returns:
         None.
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
+    lufield_id = 'lucode'
+    if 'biophysical_table_lucode_field' in args:
+        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+        args['biophysical_table_path'], lufield_id)
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
@@ -178,15 +187,24 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
+    target_sr_wkt = dem_raster_info['projection']
+    if 'local_projection_epsg' in args:
+        local_srs = osr.SpatialReference()
+        local_srs.ImportFromEPSG(args['local_projection_epsg'])
+        target_sr_wkt = local_srs.ExportToWkt()
+        target_pixel_size = args['target_pixel_size']
+
+    vector_mask_options = {'mask_vector_path': args['watersheds_path']}
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': dem_raster_info['projection'],
+            'target_sr_wkt': target_sr_wkt,
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
+            'vector_mask_options': vector_mask_options,
             },
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
@@ -703,10 +721,12 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != _TARGET_NODATA) &
-            ~numpy.isclose(erosivity, erosivity_nodata) &
-            ~numpy.isclose(erodibility, erodibility_nodata) &
-            (stream != stream_nodata))
+            (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
+        if erosivity_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
+        if erodibility_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
@@ -1161,20 +1181,21 @@ def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
         watershed_results_sdr_path):
     """Create shapefile with USLE, sed export, and sed retention fields."""
-    field_summaries = {
-        'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watersheds_path),
-        'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watersheds_path),
-        'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watersheds_path),
-        }
-
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
     layer = datasource_copy.GetLayer()
+    layer.SyncToDisk()
+
+    field_summaries = {
+        'usle_tot': pygeoprocessing.zonal_statistics(
+            (usle_path, 1), watershed_results_sdr_path),
+        'sed_export': pygeoprocessing.zonal_statistics(
+            (sed_export_path, 1), watershed_results_sdr_path),
+        'sed_retent': pygeoprocessing.zonal_statistics(
+            (sed_retention_path, 1), watershed_results_sdr_path),
+        }
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)

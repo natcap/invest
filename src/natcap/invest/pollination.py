@@ -723,26 +723,26 @@ def execute(args):
                 _TOTAL_FARM_YIELD_FIELD_ID,
                 1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
-                    total_farm_results[fid]['count']))
+                    float(total_farm_results[fid]['count'])))
 
             # this is PYW ('pdep_y_w')
             farm_feature.SetField(
                 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
                 (wild_pollinator_yield_aggregate[fid]['sum'] /
-                 wild_pollinator_yield_aggregate[fid]['count']))
+                 float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is YW ('y_wild')
             farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
                 nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
-                      wild_pollinator_yield_aggregate[fid]['count']))
+                      float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
                 pollinator_abundance_results[farm_season][fid]['sum'] /
-                pollinator_abundance_results[farm_season][fid]['count'])
+                float(pollinator_abundance_results[farm_season][fid]['count']))
 
         target_farm_layer.SetFeature(farm_feature)
     target_farm_layer.SyncToDisk()
@@ -1009,7 +1009,7 @@ def _parse_scenario_variables(args):
     for species in result['species_list']:
         result['species_abundance'][species] = (
             guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
-            total_relative_abundance)
+            float(total_relative_abundance))
 
     # map the relative foraging activity of a species during a certain season
     # (species, season)
@@ -1021,7 +1021,7 @@ def _parse_scenario_variables(args):
         for season in result['season_list']:
             result['species_foraging_activity'][(species, season)] = (
                 guild_table[species][_FORAGING_ACTIVITY_PATTERN % season] /
-                total_activity)
+                float(total_activity))
 
     # * landcover_substrate_index[substrate][landcover] (float)
     result['landcover_substrate_index'] = collections.defaultdict(dict)
