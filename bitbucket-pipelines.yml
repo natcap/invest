@@ -101,10 +101,11 @@ pipelines:
                     - wine make PYTHON_ARCH=x86 windows_installer
 
                     # Code-signing
-                    # Authenticate with the service account key and upload files to bucket.
+                    # Authenticate with the service account key to get certificate from bucket.
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
-                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} signcode 
+                    - export INSTALLER="dist/InVEST*.exe"
+                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} BIN_TO_SIGN=$INSTALLER signcode 
                 artifacts:
                     - dist/*.exe
             - step:
