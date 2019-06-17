@@ -104,7 +104,7 @@ pipelines:
                     # Authenticate with the service account key to get certificate from bucket.
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
-                    - export INSTALLER="dist/InVEST*.exe"
+                    - export INSTALLER=$(find dist -name 'InVEST*.exe')
                     - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} BIN_TO_SIGN=$INSTALLER signcode 
                 artifacts:
                     - dist/*.exe
