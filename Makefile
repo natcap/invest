@@ -333,7 +333,9 @@ KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
 signcode:
 	gsutil cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
 	gsutil cp gs://stanford_cert/$(KEY_FILE) $(BUILD_DIR)/$(KEY_FILE)
-	osslsigncode -certs $(BUILD_DIR)/$(CERT_FILE) -key $(BUILD_DIR)/$(KEY_FILE) -pass $(CERT_KEY_PASS) -in $(BIN_TO_SIGN) -out $(BIN_TO_SIGN)
+	# On some OS (including our build container), osslsigncode fails with Bus error if we overwrite the binary when signing.
+	osslsigncode -certs $(BUILD_DIR)/$(CERT_FILE) -key $(BUILD_DIR)/$(KEY_FILE) -pass $(CERT_KEY_PASS) -in $(BIN_TO_SIGN) -out "signed.exe"
+	mv "signed.exe" $(BIN_TO_SIGN)
 	rm $(BUILD_DIR)/$(CERT_FILE)
 	rm $(BUILD_DIR)/$(KEY_FILE)
 	@echo "Installer was signed"
