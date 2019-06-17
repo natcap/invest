@@ -30,7 +30,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
     watershed_results_feature = None
     for key in expected_results:
         numpy.testing.assert_almost_equal(
-            expected_results[key], actual_results[key])
+            expected_results[key], actual_results[key], decimal=5)
 
 
 class SDRTests(unittest.TestCase):

@@ -12,28 +12,34 @@ environment:
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test"
 
+    - PYTHON: "C:\\Python27-x64"
+      TESTTARGET: "test"
+
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
 
     - PYTHON: "C:\\Python27"
       TESTTARGET: "validate_sampledata"
 
-
 install:
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+    - "python --version"
     # We need wheel installed to build wheels
-    - "%PYTHON%\\python.exe -m pip install wheel"
-    - "%PYTHON%\\python.exe -m pip install pipwin"
-    - "%PYTHON%\\python.exe -m pipwin install gdal"
-    - "%PYTHON%\\python.exe -m pipwin install shapely"
-    - "%PYTHON%\\python.exe -m pipwin install rtree"
-    - "%PYTHON%\\python.exe -m pipwin install pyqt4"
-    - "%PYTHON%\\python.exe -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
-    - "%PYTHON%\\python.exe setup.py sdist bdist_wheel"
+    - "python -m pip install wheel"
+    - "python -m pip install pipwin"
+    - "python -m pipwin install gdal"
+    - "python -m pipwin install shapely"
+    - "python -m pipwin install rtree"
+    - "python -m pipwin install pyqt4"
+    - "python -m pip install cython"
+    - "python -m pip install numpy"
+    - "python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    - "python setup.py sdist bdist_wheel"
 
     # Need to install with -I because pip thinks that cwd is a valid installation directory.
     # It's not (in our case).  Adding --no-deps because that's what all of the above
     # with pipwin and pip is for.
-    - "%PYTHON%\\python.exe -m pip install -I --no-deps natcap.invest --find-links dist"
+    - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
 
 build: off
