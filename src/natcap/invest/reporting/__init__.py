@@ -8,7 +8,8 @@ from types import StringType
 import copy
 
 from ... import invest
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
+from .. import utils
+from osgeo import gdal
 import table_generator
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
@@ -325,14 +326,14 @@ def build_table(param_args):
     # accordingly
     if data_type == 'shapefile':
         key = param_args['key']
-        data_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.extract_datasource_table_by_key(
+        data_dict = extract_datasource_table_by_key(
             input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
-        data_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_lookup_from_csv(input_data, key)
+        data_dict = utils.build_lookup_from_csv(input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
@@ -381,6 +382,49 @@ def build_table(param_args):
     # Call generate table passing in the final dictionary and attribute
     # dictionary. Return the generate string
     return table_generator.generate_table(table_dict)
+
+
+def extract_datasource_table_by_key(datasource_uri, key_field):
+    """Return vector attribute table of first layer as dictionary.
+
+    Create a dictionary lookup table of the features in the attribute table
+    of the datasource referenced by datasource_uri.
+
+    Args:
+        datasource_uri (string): a uri to an OGR datasource
+        key_field: a field in datasource_uri that refers to a key value
+            for each row such as a polygon id.
+
+    Returns:
+        attribute_dictionary (dict): returns a dictionary of the
+            form {key_field_0: {field_0: value0, field_1: value1}...}
+    """
+    # Pull apart the datasource
+    datasource = gdal.OpenEx(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    # Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in xrange(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    # Loop through each feature and build up the dictionary representing the
+    # attribute table
+    attribute_dictionary = {}
+    for feature_index in xrange(layer.GetFeatureCount()):
+        feature = layer.GetFeature(feature_index)
+        feature_fields = {}
+        for field_name in field_names:
+            feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    # Explictly clean up the layers so the files close
+    layer = None
+    datasource = None
+    return attribute_dictionary
 
 
 def data_dict_to_list(data_dict):
