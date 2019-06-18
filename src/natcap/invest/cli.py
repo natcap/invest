@@ -331,13 +331,9 @@ def main():
                                    help=('Overwrite the workspace without '
                                          'prompting for confirmation'))
     cli_options_group.add_argument('-n', '--no-validate', action='store_true',
-                                   dest='no_validate', default=False,
+                                   dest='validate', default=True,
                                    help=('Do not validate inputs before '
                                          'running the model.'))
-    cli_options_group.add_argument('-u', '--dry-run', action='store_true',
-                                   dest='dryrun', default=False,
-                                   help=('Use without --no-validate to validate '
-                                         'a datastack without running model.'))
 
     list_group.add_argument('model', action=SelectModelAction, nargs='?',
                             help=('The model/tool to run. Use --list to show '
@@ -347,6 +343,7 @@ def main():
                                   'launcher window.'))
 
     args = parser.parse_args()
+
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter(
@@ -422,7 +419,7 @@ def main():
             LOGGER.log(datastack.ARGS_LOG_LEVEL,
                        datastack.format_args_dict(paramset.args,
                                                   paramset.model_name))
-            if args.no_validate:
+            if not args.validate:
                 LOGGER.info('Skipping validation by user request')
             else:
                 model_warnings = []
@@ -437,15 +434,6 @@ def main():
                     if model_warnings:
                         LOGGER.warn('Warnings found: \n%s',
                                     pprint.pformat(model_warnings))
-                        if args.dryrun:
-                            # raise error in --dry-run mode because
-                            # the whole point is to just do validation
-                            raise ValueError('Warnings found: \n%s',
-                                             pprint.pformat(model_warnings))
-
-            if args.dryrun:
-                # If validation passed, above, still skip execution
-                return
 
             if not args.workspace:
                 args.workspace = os.getcwd()
