@@ -25,14 +25,15 @@ class ValidateExceptionTests(unittest.TestCase):
         datastack_path = os.path.join(
             self.workspace, 'dummy.invs.json')
         with open(datastack_path, 'wb') as file:
-            file.write('"args": {"something":"else"}, "model_name": natcap.invest.carbon')
+            file.write('"args": {"something":"else"},')
+            file.write('"model_name": natcap.invest.carbon')
 
     def tearDown(self):
-        """Overriding tearDown function to remove temporary file."""
+        """Overriding tearDown function to remove temporary dir."""
         shutil.rmtree(self.workspace)
 
     def test_exception_on_invalid_data(self):
-        """"""
+        """Test ValueError is raised on invalid datastack."""
         with self.assertRaises(ValueError):
             main(self.workspace)
 
@@ -44,7 +45,6 @@ def main(sampledatadir):
 
         paramset = datastack.extract_parameter_set(datastack_path)
         paramset.args['workspace_dir'] = tempfile.mkdtemp()  # missing from some sample datastacks
-        # module_name = paramset.model_name
         model_module = importlib.import_module(name=paramset.model_name)
 
         try:
@@ -68,7 +68,8 @@ def main(sampledatadir):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Validate all sample datastacks using InVEST modules' `validate`")
+        description="Validate all sample datastacks "
+                    "using InVEST modules' `validate`")
     parser.add_argument('sampledatadir', type=str)
     args = parser.parse_args()
     main(args.sampledatadir)
