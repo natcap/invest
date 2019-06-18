@@ -90,7 +90,7 @@ class UFRMTests(unittest.TestCase):
         result_sum = numpy.sum(array[~numpy.isclose(array, nodata)])
         # expected result observed from regression run.
         expected_result = 156070.36
-        self.assertAlmostEqual(result_sum, expected_result, places=2)
+        self.assertAlmostEqual(result_sum, expected_result, places=0)
 
     def test_validate(self):
         """UFRM: test validate function."""
