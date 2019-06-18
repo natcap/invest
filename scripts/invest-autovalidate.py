@@ -1,68 +1,66 @@
 #!python
 
-import subprocess
 import os
 import tempfile
 import logging
-import platform
 import argparse
+import unittest
+import glob
+import importlib
+import shutil
+import pprint
 
-from model_datastack_dictionary import DATASTACKS
+from natcap.invest import datastack
 
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('invest-autovalidate.py')
 
 
-def validate_datastack(modelname, binary, workspace, datastack):
-    """Run an InVEST model's validate function on a datastack.
+class ValidateExceptionTests(unittest.TestCase):
+    """Tests for updating latest installer URLs."""
 
-    Parameters:
-        modelname (string): the name or alias specified in cli.py
-        binary (string): path to invest binary.
-        workspace (string): path to workspace for the model run.
-        datastack (string): path to json datastack file for the model.
+    def setUp(self):
+        """Overriding setUp function to create temp file."""
+        self.workspace = tempfile.mkdtemp()
+        datastack_path = os.path.join(
+            self.workspace, 'dummy.invs.json')
+        with open(datastack_path, 'wb') as file:
+            file.write('"args": {"something":"else"}, "model_name": natcap.invest.carbon')
 
-    Returns:
-        Error message from cli.py. When run in dry-run mode, cli.py
-        raises a ValueError if validate() issues any warnings.
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary file."""
+        shutil.rmtree(self.workspace)
 
-    """
-    # Using a list here allows subprocess to handle escaping of paths.
-    command = [binary, '--workspace', workspace, '--datastack', datastack,
-               '--dry-run', '--debug', '--headless', '--overwrite', modelname]
-
-    # Subprocess on linux/mac seems to prefer a list of args, but path escaping
-    # (by passing the command as a list) seems to work better on Windows.
-    if platform.system() != 'Windows':
-        command = ' '.join(command)
-    LOGGER.info('validating %s ', datastack)
-    try:
-        _ = subprocess.check_output(command, shell=True)
-    except subprocess.CalledProcessError as error_obj:
-        error_output = error_obj.output
-        LOGGER.error(error_output)
-    else:
-        error_output = ''
-    return error_output
+    def test_exception_on_invalid_data(self):
+        """"""
+        with self.assertRaises(ValueError):
+            main(self.workspace)
 
 
 def main(sampledatadir):
     """Do validation for each datastack and store error messages."""
-    pairs = []
-    for name, datastacks in DATASTACKS.iteritems():
-
-        # some models have multiple datastacks
-        for datastack_index, datastack in enumerate(datastacks):
-            pairs.append((name, datastack, datastack_index))
-
     validation_messages = ''
-    for modelname, datastack, datastack_index in pairs:
-        datastack = os.path.join(sampledatadir, datastack)
-        workspace = tempfile.mkdtemp()
+    for datastack_path in glob.glob(os.path.join(sampledatadir, '*invs.json')):
 
-        output = validate_datastack(modelname, 'invest', workspace, datastack)
-        if output:
-            validation_messages += output + os.linesep
+        paramset = datastack.extract_parameter_set(datastack_path)
+        paramset.args['workspace_dir'] = tempfile.mkdtemp()  # missing from some sample datastacks
+        # module_name = paramset.model_name
+        model_module = importlib.import_module(name=paramset.model_name)
+
+        try:
+            LOGGER.info('validating %s ', datastack_path)
+            model_warnings = getattr(
+                model_module, 'validate')(paramset.args)
+        except AttributeError:
+            LOGGER.warn(
+                '%s does not have a defined validation function.',
+                paramset.model_name)
+        finally:
+            if model_warnings:
+                LOGGER.error(model_warnings)
+                validation_messages += (
+                    os.linesep + datastack_path + ': ' +
+                    pprint.pformat(model_warnings))
 
     if validation_messages:
         raise ValueError(validation_messages)
