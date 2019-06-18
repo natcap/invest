@@ -3,11 +3,12 @@ pipelines:
         max-time: 20
     default:
         - step:
-            name: Test udpate_installer_urls.py
+            name: Test various scripts
             image: python:2.7
             script: 
                 - pip install pytest
                 - python -m pytest scripts/update_installer_urls.py
+                - python -m pytest scripts/invest-autovalidate.py
     custom:
         appveyor-trigger:
           - step:
