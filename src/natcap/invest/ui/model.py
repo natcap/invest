@@ -44,8 +44,7 @@ ICON_ALERT = qtawesome.icon('fa.exclamation-triangle', color='orange')
 ICON_UPDATE = qtawesome.icon('fa.refresh', color='orange')
 
 _ONLINE_DOCS_LINK = (
-    'http://data.naturalcapitalproject.org/nightly-build/'
-    'invest-users-guide/html/')
+    'http://releases.naturalcapitalproject.org/invest-userguide/latest/')
 _DATASTACK_BASE_FILENAME = 'datastack.invest.%s'
 _DATASTACK_DIALOG_TITLE = 'Select where to save the datastack'
 _DATASTACK_PARAMETER_SET = 'Parameter set (saves parameter values only)'
@@ -521,8 +520,8 @@ class AboutDialog(QtWidgets.QDialog):
             <h1>InVEST</h1>
             <b>Version {version}</b> <br/> <br/>
 
-            Documentation: <a href="http://data.naturalcapitalproject.org/
-            nightly-build/invest-users-guide/html/">online</a><br/>
+            Documentation: <a href="http://releases.naturalcapitalproject.org/
+            invest-userguide/latest/">online</a><br/>
             Homepage: <a href="http://naturalcapitalproject.org">
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
@@ -1489,7 +1488,8 @@ class InVESTModel(QtWidgets.QMainWindow):
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
-            local_path = os.path.abspath(self.localdoc)
+            local_path = os.path.abspath(
+                os.path.join('./documentation/userguide/', self.localdoc))
             if not os.path.exists(local_path):
                 LOGGER.warning('Could not find local docs path %s',
                                local_path)

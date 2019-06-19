@@ -132,7 +132,7 @@ def execute(args):
 
 
 def format_ops_table(op_path, farm_ID, ff_aqua_args):
-    '''Takes in the path to the operating parameters table as well as the
+    """Takes in the path to the operating parameters table as well as the
     keyword to look for to identify the farm number to go with the parameters,
     and outputs a 2D dictionary that contains all parameters by farm and
     description. The outer key is farm number, and the inner key is a string
@@ -152,7 +152,7 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
             inner keys are strings of parameter names.
 
     Returns nothing.
-    '''
+    """
 
     #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
     #do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm
@@ -220,7 +220,7 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
 
 
 def format_temp_table(temp_path, ff_aqua_args):
-    ''' This function is doing much the same thing as format_ops_table- it
+    """ This function is doing much the same thing as format_ops_table- it
     takes in information from a temperature table, and is formatting it into a
     2D dictionary as an output.
 
@@ -236,7 +236,7 @@ def format_temp_table(temp_path, ff_aqua_args):
             manually shift down by 1, and the inner keys are farm ID numbers.
 
     Returns nothing.
-    '''
+    """
 
     #EXPLICIT STRINGS FROM "Temp_Daily"
     water_temp_file = open(temp_path)

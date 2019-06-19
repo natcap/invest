@@ -672,10 +672,12 @@ def _calculate_rkls(
         """
         rkls = numpy.empty(ls_factor.shape, dtype=numpy.float32)
         nodata_mask = (
-            (ls_factor != _TARGET_NODATA) &
-            ~numpy.isclose(erosivity, erosivity_nodata) &
-            ~numpy.isclose(erodibility, erodibility_nodata) &
-            (stream != stream_nodata))
+            (ls_factor != _TARGET_NODATA) & (stream != stream_nodata))
+        if erosivity_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erosivity, erosivity_nodata)
+        if erodibility_nodata is not None:
+            nodata_mask &= ~numpy.isclose(erodibility, erodibility_nodata)
+
         valid_mask = nodata_mask & (stream == 0)
         rkls[:] = _TARGET_NODATA
 
@@ -717,7 +719,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
         slope_m = slope[valid_slope] / 100.0
         slope_m[slope_m < 0.005] = 0.005
         slope_m[slope_m > 1.0] = 1.0
-        result = numpy.empty(valid_slope.shape)
+        result = numpy.empty(valid_slope.shape, dtype=numpy.float32)
         result[:] = slope_nodata
         result[valid_slope] = slope_m
         return result
@@ -818,7 +820,7 @@ def _calculate_usle(
 
     def usle_op(rkls, cp_factor, drainage):
         """Calculate USLE."""
-        result = numpy.empty(rkls.shape)
+        result = numpy.empty(rkls.shape, dtype=numpy.float32)
         result[:] = _TARGET_NODATA
         valid_mask = (rkls != _TARGET_NODATA) & (cp_factor != _TARGET_NODATA)
         result[valid_mask] = rkls[valid_mask] * cp_factor[valid_mask] * (
@@ -867,7 +869,7 @@ def _calculate_bar_factor(
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
-        result = numpy.empty(base_accumulation.shape)
+        result = numpy.empty(base_accumulation.shape, dtype=numpy.float32)
         valid_mask = (
             ~numpy.isclose(base_accumulation, _TARGET_NODATA) &
             ~numpy.isclose(flow_accumulation, flow_accumulation_nodata))
@@ -897,7 +899,7 @@ def _calculate_d_up(
         valid_mask = (
             (w_bar != _TARGET_NODATA) & (s_bar != _TARGET_NODATA) &
             (flow_accumulation != flow_accumulation_nodata))
-        d_up_array = numpy.empty(valid_mask.shape)
+        d_up_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         d_up_array[:] = _TARGET_NODATA
         d_up_array[valid_mask] = (
             w_bar[valid_mask] * s_bar[valid_mask] * numpy.sqrt(
@@ -990,7 +992,7 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
         valid_mask = (
             (d_up != _TARGET_NODATA) & (d_dn != d_dn_nodata) & (d_dn != 0) &
             (d_up != 0))
-        ic_array = numpy.empty(valid_mask.shape)
+        ic_array = numpy.empty(valid_mask.shape, dtype=numpy.float32)
         ic_array[:] = _IC_NODATA
         ic_array[valid_mask] = numpy.log10(
             d_up[valid_mask] / d_dn[valid_mask])

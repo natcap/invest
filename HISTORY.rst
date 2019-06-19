@@ -2,10 +2,30 @@
 
 Unreleased Changes
 ------------------
-* Correcting an issue with the Coastal Blue Carbon preprocessor where
-  using misaligned landcover rasters would cause an exception to be raised.
+* Fixed a bug in Coastal Vulnerability model's task graph that sometimes 
+  caused an early task to re-execute when it should be deemed pre-calculated.
+* Fixed a bug in the pollination model that would cause outputs to be all 0
+  rasters if all the ``relative_abundance`` fields in the guild table were
+  integers.
+* Fixed a file cache flushing issue observed on Debian in
+  ``utils.exponential_decay_kernel_raster`` that would cause an exponential
+  kernel raster to contain random values rather than expected value.
+* Fixed an issue in the SDR model that would cause an unhandled exception
+  if either the erosivity or erodibility raster had an undefined nodata value.
+
+3.7.0 (2019-05-09)
+------------------
+* Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and
+  Pygeoprocessing >=1.6.1. The model is now largely vector-based instead of
+  raster-based. Fewer input datasets are required for the same functionality.
+  Runtime in sycnhronous mode is similar to previous versions, but runtime can
+  be reduced with multiprocessing. CV also supports avoided recomputation for
+  successive runs in the same workspace, even if a different file suffix is used.
+  Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
+* Correcting an issue with the Coastal Blue Carbon preprocessor where
+  using misaligned landcover rasters would cause an exception to be raised.
 * Correcting an issue with RouteDEM where runs of the tool with Flow Direction
   enabled would cause the tool to crash if ``n_workers > 0``.
 * Correcting an issue with Habitat Quality's error checking where nodata values
@@ -25,7 +45,7 @@ Unreleased Changes
   Multiprocessing offered by taskgraph means server-side PUD calculations
   and client-side predictor data processing can happen in parallel. Some
   output filenames have changed.
-* Upgrade to SDR to use new PyGeoprocessing multiflow routing, DEM pit
+* Upgrading to SDR to use new PyGeoprocessing multiflow routing, DEM pit
   filling, contiguous stream extraction, and TaskGraph integration. This
   also includes a new TaskGraph feature that avoids recomputation by copying
   results from previous runs so long as the expected result would be
@@ -37,11 +57,16 @@ Unreleased Changes
   Pygeoprocessing >= 1.6.1. The HRA Proprocessor is removed and its previous
   functionality was simplified and merged into the HRA model itself.
   The model will no longer generate HTML plots and tables.
-* Add a software update notification button, dialog, and a link to the download
-  page on the User Interface when a new InVEST version is available.
-* Migrate the subversion sample and test data repositories to Git LFS
+* Adding a software update notification button, dialog, and a link to the
+  download page on the User Interface when a new InVEST version is available.
+* Migrating the subversion sample and test data repositories to Git LFS
   repositories on BitBucket. Update the repository URL and fetch commands on
   Makefile accordingly.
+* Fixing a bug in Habitat Quality UI where the absence of the required
+  half_saturation_constant variable did not raise an exception.
+* Adding encoding='utf-8-sig' to pandas.read_csv() to support
+  utils.build_lookup_from_csv() to read CSV files encoded with UTF-8 BOM
+  (byte-order mark) properly.
 
 3.6.0 (2019-01-30)
 ------------------
@@ -745,7 +770,7 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Nutrient 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
         than the original ArcGIS model, but may have memory issues with
@@ -754,20 +779,20 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Wind Energy:
       - A new offshore wind energy model.  This is a standalone-only model
         available under the windows start menu.
   - *new* Recreation Alpha:
       - This is a working demo of our soon to be released future land and near
         shore recreation model.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
+        be used as a demo or by NatCap partners that know what they're doing.
   - *new* Habitat Risk Assessment 3.0 Alpha:
       - This is a working demo of our soon to be released 3.0 version of habitat
         risk assessment.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
-	Users that need to use the habitat risk assessment should use the ArcGIS
-	version of this model.
+    	be used as a demo or by NatCap partners that know what they're doing.
+    	Users that need to use the habitat risk assessment should use the
+        ArcGIS version of this model.
 
   - Improvements to the InVEST 2.x ArcGIS-based toolset:
       - Bug fixes to the ArcGIS based Coastal Protection toolset.

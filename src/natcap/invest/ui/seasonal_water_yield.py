@@ -11,7 +11,7 @@ class SeasonalWaterYield(model.InVESTModel):
             label=u'Seasonal Water Yield',
             target=seasonal_water_yield.execute,
             validator=seasonal_water_yield.validate,
-            localdoc=u'../documentation/seasonal_water_yield.html')
+            localdoc=u'seasonal_water_yield.html')
 
         self.threshold_flow_accumulation = inputs.Text(
             args_key=u'threshold_flow_accumulation',

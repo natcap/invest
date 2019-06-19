@@ -1,7 +1,7 @@
-'''
+"""
 The Fisheries module contains the high-level code for executing the fisheries
 model
-'''
+"""
 from __future__ import absolute_import
 import logging
 import csv

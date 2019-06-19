@@ -336,13 +336,21 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
 
     # Need to flush the kernel's cache to disk before opening up a new Dataset
     # object in interblocks()
+    kernel_band.FlushCache()
     kernel_dataset.FlushCache()
 
-    for block_data, kernel_block in pygeoprocessing.iterblocks(
-            (kernel_filepath, 1)):
+    for block_data in pygeoprocessing.iterblocks(
+            (kernel_filepath, 1), offset_only=True):
+        kernel_block = kernel_band.ReadAsArray(**block_data)
         kernel_block /= integration
         kernel_band.WriteArray(kernel_block, xoff=block_data['xoff'],
                                yoff=block_data['yoff'])
+
+    kernel_band.FlushCache()
+    kernel_dataset.FlushCache()
+    kernel_band = None
+    kernel_dataset = None
+
 
 
 def build_file_registry(base_file_path_list, file_suffix):
@@ -441,7 +449,15 @@ def build_lookup_from_csv(
         if `to_lower` all strings including key_fields and values are
         converted to lowercase unicode.
     """
-    table = pandas.read_csv(table_path, sep=None, engine='python')
+    # Check if the file encoding is UTF-8 BOM first, related to issue
+    # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+    encoding = None
+    with open(table_path) as file_obj:
+        first_line = file_obj.readline()
+        if first_line.startswith('\xef\xbb\xbf'):
+            encoding = 'utf-8-sig'
+    table = pandas.read_csv(
+        table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
     key_field = unicode(key_field)
     if to_lower:
