@@ -413,8 +413,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
     # Loop through each feature and build up the dictionary representing the
     # attribute table
     attribute_dictionary = {}
-    for feature_index in xrange(layer.GetFeatureCount()):
-        feature = layer.GetFeature(feature_index)
+    for feature in layer:
         feature_fields = {}
         for field_name in field_names:
             feature_fields[field_name] = feature.GetField(field_name)
