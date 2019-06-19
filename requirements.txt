@@ -21,7 +21,7 @@ scipy>=0.16.1
 Shapely>=1.6.4
 six
 # pygeoprocessing>=1.6.1
-hg+https://bitbucket.org/jdouglass/pygeoprocessing@92299dfe3e5b
+hg+https://bitbucket.org/jdouglass/pygeoprocessing@8a184213b833
 taskgraph[niced_processes]>=0.8.2
 psutil<5.6.0
 chardet>=3.0.4
