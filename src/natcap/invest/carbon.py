@@ -6,6 +6,7 @@ import collections
 import logging
 import os
 import time
+from functools import reduce
 
 from osgeo import gdal
 from osgeo import ogr
@@ -248,8 +249,8 @@ def execute(args):
             tifs_to_summarize.add(file_registry[output_key])
 
     # Report aggregate results
-    tasks_to_report = (sum_rasters_task_lookup.values()
-                       + diff_rasters_task_lookup.values()
+    tasks_to_report = (list(sum_rasters_task_lookup.values())
+                       + list(diff_rasters_task_lookup.values())
                        + calculate_npv_tasks)
     generate_report_task = graph.add_task(
         _generate_report,
@@ -297,7 +298,7 @@ def _generate_carbon_map(
     pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
         (lulcid, stock * pixel_area / 10**4)
-        for lulcid, stock in carbon_pool_by_type.iteritems()])
+        for lulcid, stock in carbon_pool_by_type.items()])
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
@@ -426,7 +427,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         # Report input arguments
         report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
-        for key, value in model_args.iteritems():
+        for key, value in model_args.items():
             report_doc.write(u'<tr><td>%s</td><td>%s</td></tr>' % (key, value))
         report_doc.write('</table>')
 
