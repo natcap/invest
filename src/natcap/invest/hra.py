@@ -18,6 +18,12 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
+
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables
@@ -2741,7 +2747,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     overlap_df = pandas.DataFrame(
         # Data values on each row corresponds to each column header
         data=[[0, 0, {}, 0, 0, {}]
-              for _ in xrange(len(habitat_names)*len(stressor_names))],
+              for _ in range(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
     # Start iterating from row indicating the beginning of habitat and stressor
@@ -2905,7 +2911,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     # Create the dataframe whose data is 0 for numerators and denominators,
     # None for raster paths, and an empty dict for spatially explicit criteria.
     recovery_df = pandas.DataFrame(
-        data=[[0, 0, {}, None, None] for i in xrange(len(habitat_names))],
+        data=[[0, 0, {}, None, None] for _ in range(len(habitat_names))],
         index=habitat_names, columns=recovery_column_headers)
 
     i = 0

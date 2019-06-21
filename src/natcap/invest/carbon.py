@@ -2,7 +2,6 @@
 """Carbon Storage and Sequestration."""
 from __future__ import absolute_import
 import codecs
-import collections
 import logging
 import os
 import time
