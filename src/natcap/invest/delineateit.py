@@ -282,6 +282,8 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
+# TODO: move component vectors to their own folder
+# TODO: simplify geometry with nyquist theorem.
 # TODO: verify geometry integrity and repair if possible
 def split_vector(outflow_vector_path, index_range, target_vector_path):
     # Copy all of the features in fid_range (min, max-1) over to the target_vector_path.
