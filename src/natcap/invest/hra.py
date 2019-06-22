@@ -662,7 +662,7 @@ def execute(args):
     habitats_info_df = info_df.loc[info_df.TYPE == _HABITAT_TYPE]
 
     # Calculate and pickle zonal stats to files
-    for region_name, zonal_raster_path in zonal_rasters.iteritems():
+    for region_name, zonal_raster_path in zonal_rasters.items():
         # Compute zonal E and C stats on each habitat-stressor pair
         for hab_str_idx, row in overlap_df.iterrows():
             # Get habitat-stressor name without extension
@@ -1139,7 +1139,7 @@ def _create_rasters_from_geometries(
         open(geom_pickle_path, 'rb'))
     raster_paths_by_field = {}
 
-    for field_value, shapely_geoms_wkb in geom_sets_by_field.iteritems():
+    for field_value, shapely_geoms_wkb in geom_sets_by_field.items():
         # Create file basename based on field value
         if not isinstance(field_value, basestring):
             field_value = str(field_value)
@@ -2409,8 +2409,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 
     for column_name, criteria_type in {
             'TOT_E_RASTER_PATH': '_E_',
-            'TOT_C_RASTER_PATH': '_C_'}.iteritems():
-        suffix_front = 'TOTAL'+criteria_type  # front suffix for file names
+            'TOT_C_RASTER_PATH': '_C_'}.items():
+        suffix_front = 'TOTAL' + criteria_type  # front suffix for file names
         # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
@@ -2673,7 +2673,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
     """
     for key, value in {
             _DQ_KEY: dq,
-            _WEIGHT_KEY: weight}.iteritems():
+            _WEIGHT_KEY: weight}.items():
 
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
@@ -2731,10 +2731,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     """
     # Create column headers and initialize default values in numerator,
     # denominator, and spatial columns
-    column_headers = ['_NUM', '_DENOM', '_SPATIAL']
-    len_header = len(column_headers)
-    overlap_column_headers = map(
-        str.__add__, ['E']*len_header + ['C']*len_header, column_headers*2)
+    overlap_column_headers = [
+        'E_NUM', 'E_DENOM', 'E_SPATIAL', 'C_NUM', 'C_DENOM', 'C_SPATIAL']
 
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
@@ -2764,15 +2762,12 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         elif stressor and row_idx:
             criteria_name = row_idx
             criteria_type = row_data[_CRITERIA_TYPE_HEADER]
-            if isinstance(criteria_type, unicode):
-                criteria_type = criteria_type.encode('utf-8').upper()
-            else:
-                criteria_type = criteria_type.upper()
+            criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
 
-            for idx, (row_key, row_value) in enumerate(row_data.iteritems()):
+            for idx, (row_key, row_value) in enumerate(row_data.items()):
                 # The first value in the criteria row should be a rating value
                 # with habitat name as key, after a stressor was found
                 if idx % 3 == 0:
@@ -2859,7 +2854,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception
     for criteria_type, criteria_type_long in {
-            'E': 'exposure', 'C': 'consequence'}.iteritems():
+            'E': 'exposure', 'C': 'consequence'}.items():
         if (overlap_df[criteria_type + '_DENOM'] == 0).any():
             raise ValueError(
                 'The following stressor-habitat pair(s) do not have at least '
@@ -3138,7 +3133,7 @@ def validate(args, limit_to=None):
 
     for key, key_values in {
             'risk_eq': ['Euclidean', 'Multiplicative'],
-            'decay_eq': ['Linear', 'Exponential', 'None']}.iteritems():
+            'decay_eq': ['Linear', 'Exponential', 'None']}.items():
         if limit_to is None or limit_to == key:
             if args[key] not in key_values:
                 validation_error_list.append(

@@ -585,7 +585,7 @@ class HraUnitTests(unittest.TestCase):
                 bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
-        expected_message = "'NAME', 'STRESSOR BUFFER (METERS)'"
+        expected_message = 'Missing column header(s) from the Info CSV file:'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
