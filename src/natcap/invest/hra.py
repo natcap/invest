@@ -843,16 +843,15 @@ def _raster_to_geojson(
     base_sr_wkt = raster.GetProjectionRef()
     base_sr.ImportFromWkt(base_sr_wkt)
 
-    layer_name = layer_name.encode('utf-8')
     if target_sr_wkt and base_sr_wkt != target_sr_wkt:
         target_sr = osr.SpatialReference()
         target_sr.ImportFromWkt(target_sr_wkt)
-        vector_layer = vector.CreateLayer(layer_name, target_sr, ogr.wkbPolygon)
+        vector_layer = vector.CreateLayer(str(layer_name), target_sr, ogr.wkbPolygon)
     else:
-        vector_layer = vector.CreateLayer(layer_name, base_sr, ogr.wkbPolygon)
+        vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
-    field_defn = ogr.FieldDefn(field_name.encode('utf-8'), ogr.OFTInteger)
+    field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
     field_defn.SetWidth(3)
     field_defn.SetPrecision(0)
     vector_layer.CreateField(field_defn)
@@ -1144,7 +1143,7 @@ def _create_rasters_from_geometries(
         if not isinstance(field_value, basestring):
             field_value = str(field_value)
 
-        field_value = field_value.encode('utf-8')
+        field_value = field_value
         file_basename = 'rasterized_' + field_value
         target_raster_path = os.path.join(working_dir, file_basename + '.tif')
 
@@ -1531,7 +1530,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
             habitat existence and 0's non-existence.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_expo_arr (array): an exposure float array calculated by dividing
@@ -1555,8 +1555,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
     tot_denom = 0
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -1592,7 +1592,8 @@ def _total_consequence_op(
             score.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_conseq_arr (array): a consequence float array calculated by
@@ -1614,8 +1615,8 @@ def _total_consequence_op(
     tot_denom = recov_denom
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -2993,16 +2994,13 @@ def _simplify_geometry(
             # Find the first field name, case-insensitive
             if base_field_name == preserved_field_name:
                 # Create a target field definition with lowercased field name
-                target_field_name = preserved_field_name.encode('utf-8')
+                target_field_name = str(preserved_field_name)
                 target_field = ogr.FieldDefn(
                     target_field_name, preserved_field[1])
                 break
 
-    # Convert a Unicode string into UTF-8 standard to avoid TypeError when
-    # creating layer with the basename
     target_layer_name = os.path.splitext(
         os.path.basename(target_simplified_vector_path))[0]
-    target_layer_name = target_layer_name.encode('utf-8')
 
     if os.path.exists(target_simplified_vector_path):
         os.remove(target_simplified_vector_path)
@@ -3012,7 +3010,7 @@ def _simplify_geometry(
     target_simplified_vector = gpkg_driver.Create(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
-        target_layer_name,
+        str(target_layer_name),
         base_layer.GetSpatialRef(), ogr.wkbPolygon)
 
     target_simplified_vector.StartTransaction()
