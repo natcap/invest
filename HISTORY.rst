@@ -2,6 +2,13 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in Recreation model that did not apply ``results_suffix`` to
+  the monthly_table.csv output.
+* Various fixes in Coastal Vulnerability Model. CSV output files now
+  have FID column for joining to vector outputs. ``results_suffix`` can be
+  used without triggering task re-execution. Raster processing maintains original
+  resolution of the input raster so long as it is projected. Otherwise resamples 
+  to ``model_resolution``.
 * Fixed a bug in Coastal Vulnerability model's task graph that sometimes
   caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
