@@ -119,18 +119,18 @@ def execute(args):
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
-    flow_accumulation_task = graph.add_task(
-        pygeoprocessing.routing.flow_accumulation_d8,
-        args=((file_registry['flow_dir_d8'], 1),
-              file_registry['flow_accumulation']),
-        target_path_list=[file_registry['flow_accumulation']],
-        dependent_task_list=[flow_dir_task],
-        task_name='flow_accumulation')
-
-    flow_accumulation_task.join()
-    delineation_dependent_tasks = [flow_accumulation_task]
+    delineation_dependent_tasks = []
     outflow_vector_path = args['outlet_vector_path']
     if 'snap_points' in args and args['snap_points']:
+        flow_accumulation_task = graph.add_task(
+            pygeoprocessing.routing.flow_accumulation_d8,
+            args=((file_registry['flow_dir_d8'], 1),
+                  file_registry['flow_accumulation']),
+            target_path_list=[file_registry['flow_accumulation']],
+            dependent_task_list=[flow_dir_task],
+            task_name='flow_accumulation')
+        delineation_dependent_tasks.append(flow_accumulation_task)
+
         snap_distance = int(args['snap_distance'])
         flow_threshold = int(args['flow_threshold'])
 
