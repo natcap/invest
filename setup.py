@@ -45,10 +45,6 @@ setup(
         'natcap.invest.routing',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
-        'natcap.invest.pygeoprocessing_0_3_3',
-        'natcap.invest.pygeoprocessing_0_3_3.routing',
-        'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
-        'natcap.invest.pygeoprocessing_0_3_3.testing',
     ],
     package_dir={
         'natcap': 'src/natcap'
