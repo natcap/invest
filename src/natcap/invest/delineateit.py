@@ -83,6 +83,7 @@ def execute(args):
 
     Returns:
         ``None``
+
     """
     output_directory = args['workspace_dir']
     utils.make_directories([output_directory])
@@ -261,7 +262,18 @@ def join_watershed_vectors(vector_paths, target_path):
     target_vector = None
 
 
-def _vector_may_contain_points(vector_path):
+def _vector_may_contain_points(vector_path, layer_id=0):
+    """Test if a vector layer may contain points.
+
+    Parameters:
+        vector_path (string): The path to a vector on disk.
+        layer_id=0 (int or string): The ID or name of the layer to check.
+
+    Returns:
+        A ``bool`` indicating whether a vector contains points.  ``False`` if
+        the vector cannot be opened at all.
+
+    """
     vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
     if vector is None:
         return False
@@ -273,7 +285,27 @@ def _vector_may_contain_points(vector_path):
 
 
 def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
-    out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.int8)
+    """Identify stream pixels based on a user-defined threshold.
+
+    This is an ``op`` to ``pygeoprocessing.raster_calculator``.  Any non-nodata
+    pixels in ``flow_accum`` greater than the value of ``threshold`` are
+    marked as stream pixels.  Any non-nodata pixels below ``threshold`` are
+    marked as non-stream pixels.
+
+    Parameters:
+        flow_accum (numpy array): A numpy array of flow accumulation values.
+        src_nodata (number): A number indicating the nodata value of the
+            flow accumulation array.
+        out_nodata (number): A number indicating the nodata value of the
+            target array.
+        threshold (number): A numeric threshold over which a flow
+            accumulation pixel will be marked as a stream.
+
+    Returns:
+        A ``numpy.uint8`` array with values of 0, 1 or ``out_nodata``.
+
+    """
+    out_matrix = numpy.empty(flow_accum.shape, dtype=numpy.uint8)
     out_matrix[:] = out_nodata
     valid_pixels = ~numpy.isclose(src_nodata, flow_accum)
     over_threshold = flow_accum > threshold
@@ -464,6 +496,7 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
     missing_key_list = []
     no_value_list = []
