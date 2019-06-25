@@ -288,15 +288,19 @@ def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
             LOGGER.info('Snapped %s of %s points', index, n_features)
             last_time = time.time()
 
-        point_geometry = point_feature.GetGeometryRef()
+        source_geometry = point_feature.GetGeometryRef()
 
         # If the geometry is not a primitive point, just create the new feature
         # as it is now in the new vector.
-        if point_geometry.GetGeometryName() != 'POINT':
-            snapped_layer.CreateFeature(point_feature.Clone())
+        if source_geometry.GetGeometryName() != 'POINT':
+            new_feature = ogr.Feature(snapped_layer.GetLayerDefn())
+            new_feature.SetGeometry(source_geometry)
+            for field_name, field_value in point_feature.items().items():
+                new_feature.SetField(field_name, field_value)
+            snapped_layer.CreateFeature(new_feature)
             continue
 
-        point = shapely.wkb.loads(point_geometry.ExportToWkb())
+        point = shapely.wkb.loads(source_geometry.ExportToWkb())
         x_index = (point.x - geotransform[0]) // geotransform[1]
         y_index = (point.y - geotransform[3]) // geotransform[5]
         if (x_index < 0 or x_index > n_cols or

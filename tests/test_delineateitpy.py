@@ -6,7 +6,7 @@ import os
 
 import shapely.wkt
 import shapely.wkb
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 import numpy
 from osgeo import osr
 from osgeo import gdal
@@ -44,7 +44,7 @@ class DelineateItTests(unittest.TestCase):
             'snap_distance': '20',
             'flow_threshold': '500',
             'results_suffix': 'w',
-            'n_workers': -1,
+            'n_workers': None,  # Trigger error and default to -1
         }
         delineateit.execute(args)
 
@@ -146,26 +146,37 @@ class DelineateItTests(unittest.TestCase):
             filename=stream_raster_path)
 
         source_points_path = os.path.join(self.workspace_dir,
-                                          'source_points.geojson')
-        source_points = [
+                                          'source_features.geojson')
+        source_features = [
             Point(-1, -1),  # off the edge of the stream raster.
             Point(3, -5),
             Point(7, -9),
-            Point(13, -5)]
+            Point(13, -5),
+            box(-2, -2, -1, -1),  # Off the edge
+        ]
         pygeoprocessing.testing.create_vector_on_disk(
-            source_points, wkt,
+            source_features, wkt,
             fields={'foo': 'int',
                     'bar': 'string'},
             attributes=[
                 {'foo': 0, 'bar': 0.1},
                 {'foo': 1, 'bar': 1.1},
                 {'foo': 2, 'bar': 2.1},
-                {'foo': 3, 'bar': 3.1}],
+                {'foo': 3, 'bar': 3.1},
+                {'foo': 4, 'bar': 4.1}],
             filename=source_points_path)
 
-        snap_distance = 10  # large enough to get multiple streams per point.
         snapped_points_path = os.path.join(self.workspace_dir,
                                            'snapped_points.gpkg')
+
+        snap_distance = -1
+        with self.assertRaises(ValueError) as cm:
+            delineateit.snap_points_to_nearest_stream(
+                source_points_path, (stream_raster_path, 1),
+                snap_distance, snapped_points_path)
+        self.assertTrue('must be >= 0' in str(cm.exception))
+
+        snap_distance = 10  # large enough to get multiple streams per point.
         delineateit.snap_points_to_nearest_stream(
             source_points_path, (stream_raster_path, 1),
             snap_distance, snapped_points_path)
@@ -173,7 +184,9 @@ class DelineateItTests(unittest.TestCase):
         snapped_points_vector = gdal.OpenEx(snapped_points_path,
                                             gdal.OF_VECTOR)
         snapped_points_layer = snapped_points_vector.GetLayer()
-        self.assertEqual(3, snapped_points_layer.GetFeatureCount())
+
+        # snapped layer will include 3 valid points and one polygon.
+        self.assertEqual(4, snapped_points_layer.GetFeatureCount())
 
         expected_geometries_and_fields = [
             (Point(5, -5), {'foo': 1, 'bar': '1.1'}),
