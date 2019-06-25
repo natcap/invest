@@ -26,8 +26,6 @@ _OUTPUT_FILES = {
     'flow_accumulation': 'flow_accumulation.tif',
     'streams': 'streams.tif',
     'snapped_outlets': 'snapped_outlets.gpkg',
-    'component_vector': 'component_vector_%s.gpkg',
-    'component_watersheds': 'component_watersheds_%s.gpkg',
     'watersheds': 'watersheds.gpkg',
 }
 
@@ -163,103 +161,18 @@ def execute(args):
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outflow_vector_path = file_registry['snapped_outlets']
 
-    if args.get('max_features_per_delineation', None) in ('', None):
-        watershed_delineation_task = graph.add_task(
-            pygeoprocessing.routing.delineate_watersheds_trivial_d8,
-            args=((file_registry['flow_dir_d8'], 1),
-                  outflow_vector_path,
-                  file_registry['watersheds']),
-            kwargs={'working_dir': output_directory},
-            target_path_list=[file_registry['watersheds']],
-            dependent_task_list=delineation_dependent_tasks,
-            task_name='delineate_watersheds_single_worker')
-    else:
-        outflow_vector = gdal.OpenEx(outflow_vector_path, gdal.OF_VECTOR)
-        outflow_layer = outflow_vector.GetLayer()
-        n_features = outflow_layer.GetFeatureCount()
-        outflow_layer = None
-        outflow_vector = None
-
-        n_features_per_vector = int(args['max_features_per_delineation'])
-        n_vectors = math.ceil(
-            n_features / float(args['max_features_per_delineation']))
-
-        component_vector_tasks = []
-        component_delineated_vector_paths = []
-        for component_index in range(int(n_vectors)):
-            component_start_index = component_index * n_features_per_vector
-
-            component_vector_path = file_registry['component_vector'] % component_index
-            chunk_task = graph.add_task(
-                split_vector,
-                args=(outflow_vector_path,
-                      (component_start_index, component_start_index + n_features_per_vector),
-                      component_vector_path),
-                target_path_list=[component_vector_path],
-                task_name='split_vector_into_component_%s' % component_index)
-
-            component_delineated_vector_path = (
-                file_registry['component_watersheds'] % component_index)
-            chunk_delineation_task = graph.add_task(
-                pygeoprocessing.routing.delineate_watersheds_trivial_d8,
-                args=((file_registry['flow_dir_d8'], 1),
-                      component_vector_path,
-                      component_delineated_vector_path),
-                kwargs={'working_dir': output_directory},
-                target_path_list=[component_delineated_vector_path],
-                dependent_task_list=delineation_dependent_tasks + [chunk_task],
-                task_name='delineate_watersheds_component_%s' % component_index)
-
-            component_delineated_vector_paths.append(
-                component_delineated_vector_path)
-            component_vector_tasks.append(chunk_delineation_task)
-
-        reassembly_task = graph.add_task(
-            join_watershed_vectors,
-            args=(component_delineated_vector_paths,
-                  file_registry['watersheds']),
-            target_path_list=[file_registry['watersheds']],
-            dependent_task_list=component_vector_tasks,
-            task_name='join_watershed_vectors')
+    watershed_delineation_task = graph.add_task(
+        pygeoprocessing.routing.delineate_watersheds_d8,
+        args=((file_registry['flow_dir_d8'], 1),
+              outflow_vector_path,
+              file_registry['watersheds']),
+        kwargs={'working_dir': output_directory},
+        target_path_list=[file_registry['watersheds']],
+        dependent_task_list=delineation_dependent_tasks,
+        task_name='delineate_watersheds_single_worker')
 
     graph.close()
     graph.join()
-
-
-def join_watershed_vectors(vector_paths, target_path):
-    gpkg_driver = gdal.GetDriverByName('GPKG')
-    target_vector = gpkg_driver.Create(target_path, 0, 0, 0, gdal.GDT_Unknown)
-    sample_vector_path = vector_paths[0]
-    vector_info = pygeoprocessing.get_vector_info(sample_vector_path)
-    vector_srs = osr.SpatialReference()
-    vector_srs.ImportFromWkt(vector_info['projection'])
-
-    # Using the unknown datatype because it is possible for a delineated
-    # watershed to be either a polygon or a multipolygon.
-    target_layer = target_vector.CreateLayer(
-        'watersheds', vector_srs, ogr.wkbUnknown)
-
-    sample_vector = gdal.OpenEx(sample_vector_path, gdal.OF_VECTOR)
-    sample_layer = sample_vector.GetLayer()
-    target_layer.CreateFields(sample_layer.schema)
-    sample_layer = None
-    sample_vector = None
-
-    for vector_path in vector_paths:
-        component_vector = gdal.OpenEx(vector_path, gdal.OF_VECTOR)
-        component_layer = component_vector.GetLayer()
-        target_layer.StartTransaction()
-        for component_feature in component_layer:
-            new_feature = ogr.Feature(target_layer.GetLayerDefn())
-            new_feature.SetGeometry(component_feature.GetGeometryRef())
-            for field_name, field_value in component_feature.items().items():
-                new_feature.SetField(field_name, field_value)
-            target_layer.CreateFeature(new_feature)
-
-        target_layer.CommitTransaction()
-
-    target_layer = None
-    target_vector = None
 
 
 def _vector_may_contain_points(vector_path, layer_id=0):
@@ -317,41 +230,6 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 # TODO: move component vectors to their own folder
 # TODO: simplify geometry with nyquist theorem.
 # TODO: verify geometry integrity and repair if possible
-def split_vector(outflow_vector_path, index_range, target_vector_path):
-    # Copy all of the features in fid_range (min, max-1) over to the target_vector_path.
-    # Outflow vector path may be any file type
-    # target vector_path will be a geopackage.
-
-    outflow_vector = gdal.OpenEx(outflow_vector_path, gdal.OF_VECTOR)
-    outflow_layer = outflow_vector.GetLayer()
-
-    gpkg_driver = gdal.GetDriverByName('GPKG')
-    target_vector = gpkg_driver.Create(target_vector_path, 0, 0, 0, gdal.GDT_Unknown)
-    target_layer = target_vector.CreateLayer(
-        outflow_layer.GetName(), outflow_layer.GetSpatialRef(),
-        outflow_layer.GetGeomType())
-    target_layer.CreateFields(outflow_layer.schema)
-
-    target_layer.StartTransaction()
-    for feature_index, feature in enumerate(outflow_layer):
-        if feature_index < index_range[0]:
-            continue
-
-        if feature_index >= index_range[1]:
-            break
-
-        target_feature = ogr.Feature(outflow_layer.GetLayerDefn())
-        target_feature.SetGeometry(feature.GetGeometryRef())
-        for field_name, field_value in feature.items().items():
-            target_feature.SetField(field_name, field_value)
-        target_layer.CreateFeature(target_feature)
-
-    target_layer.CommitTransaction()
-
-    target_layer = None
-    target_vector = None
-
-
 # TODO: if two streams are the same distance from a pixel, pick the one with the higher flow accumulation.
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):

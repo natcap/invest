@@ -61,22 +61,6 @@ class Delineateit(model.InVESTModel):
                 u"not points (such as Lines and Polygons) will not be "
                 u"snapped.  MultiPoints will also not be snapped."),
             validator=self.validator)
-
-        #self.features_per_vector = inputs.Text(
-        #    args_key=u'max_features_per_delineation',
-        #    label=u'Limit delineation to this many features',
-        #    helptext=(
-        #        u"If provided, the maximum number of features to pass to "
-        #        u"watershed delineation in a single call.  Useful in "
-        #        u"combination with the n_workers parameter (in InVEST "
-        #        u"settings) for batch-processing large numbers of outflow "
-        #        u"features.  Leave this box unchecked to delineate all "
-        #        u"watersheds in a single delineation run."),
-        #    hideable=True,
-        #    validator=self.validator)
-        #self.features_per_vector.set_hidden(True)
-        #self.add_input(self.features_per_vector)
-
         self.snap_points_container.add_input(self.snap_distance)
 
     def _enable_point_snapping_container(self, input_valid):
@@ -99,7 +83,5 @@ class Delineateit(model.InVESTModel):
             self.flow_threshold.args_key: self.flow_threshold.value(),
             self.snap_distance.args_key: self.snap_distance.value(),
         }
-        #if not self.features_per_vector.hidden():
-        #    args[self.features_per_vector.args_key] = self.features_per_vector.value()
 
         return args
