@@ -97,18 +97,6 @@ setup(
             sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++")
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
     entry_points={
