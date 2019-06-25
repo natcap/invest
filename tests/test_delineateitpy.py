@@ -31,26 +31,44 @@ class DelineateItTests(unittest.TestCase):
         """Overriding tearDown function to remove temporary directory."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_routedem_multi_threshold(self):
+    def test_delineateit_willamette(self):
         """DelineateIt: regression testing full run."""
         from natcap.invest import delineateit
 
         args = {
-            'dem_uri': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
-            'flow_threshold': '500',
-            'outlet_shapefile_uri': os.path.join(
+            'dem_path': os.path.join(REGRESSION_DATA, 'input', 'dem.tif'),
+            'outlet_vector_path': os.path.join(
                 REGRESSION_DATA, 'input', 'outlets.shp'),
-            'snap_distance': '20',
             'workspace_dir': self.workspace_dir,
+            'snap_points': True,
+            'snap_distance': '20',
+            'flow_threshold': '500',
+            'results_suffix': 'w',
+            'n_workers': -1,
         }
         delineateit.execute(args)
 
-        DelineateItTests._test_same_files(
-            os.path.join(REGRESSION_DATA, 'expected_file_list.txt'),
-            args['workspace_dir'])
-        pygeoprocessing.testing.assert_vectors_equal(
-            os.path.join(REGRESSION_DATA, 'watersheds.shp'),
-            os.path.join(self.workspace_dir, 'watersheds.shp'), 1e-6)
+        vector = gdal.OpenEx(os.path.join(args['workspace_dir'],
+                                          'watersheds_w.gpkg'), gdal.OF_VECTOR)
+        layer = vector.GetLayer('watersheds')
+        self.assertEqual(layer.GetFeatureCount(), 3)
+
+        expected_areas_by_id = {
+            1: 143631000.0,
+            2: 474300.0,
+            3: 3247200.0,
+        }
+        areas_by_id = {}
+        for feature in layer:
+            geom = feature.GetGeometryRef()
+            areas_by_id[feature.GetField('id')] = geom.Area()
+
+        for id_key, expected_area in expected_areas_by_id.items():
+            self.assertAlmostEqual(expected_area, areas_by_id[id_key],
+                                   delta=1e-4)
+
+    def test_delineateit_validate(self):
+        pass
 
     def test_point_snapping(self):
         from natcap.invest import delineateit
@@ -97,7 +115,7 @@ class DelineateItTests(unittest.TestCase):
 
         snap_distance = 10  # large enough to get multiple streams per point.
         snapped_points_path = os.path.join(self.workspace_dir,
-                                           'snapped_points.shp')
+                                           'snapped_points.gpkg')
         delineateit.snap_points_to_nearest_stream(
             source_points_path, (stream_raster_path, 1),
             snap_distance, snapped_points_path)
