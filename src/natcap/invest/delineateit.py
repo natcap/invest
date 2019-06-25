@@ -414,6 +414,10 @@ def validate(args, limit_to=None):
     with utils.capture_gdal_logging():
         for key, key_type in file_type_list:
             if (limit_to in [None, key]) and key in required_keys:
+                if args[key] is None:
+                    # Error should already have been caught above
+                    # os.path.exists will throw an error if passed None
+                    continue
                 if not os.path.exists(args[key]):
                     validation_error_list.append(
                         ([key], 'not found on disk'))

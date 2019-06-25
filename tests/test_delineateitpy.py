@@ -68,7 +68,57 @@ class DelineateItTests(unittest.TestCase):
                                    delta=1e-4)
 
     def test_delineateit_validate(self):
-        pass
+        from natcap.invest import delineateit
+        missing_keys = {}
+        with self.assertRaises(KeyError) as cm:
+            delineateit.validate(missing_keys)
+        self.assertTrue('keys were expected' in str(cm.exception))
+
+        missing_values_args = {
+            'workspace_dir': '',
+            'dem_path': None,
+            'outlet_vector_path': '',
+            'snap_points': False,
+        }
+        validation_warnings = delineateit.validate(missing_values_args)
+        self.assertEqual(len(validation_warnings), 2)
+        self.assertEqual(len(validation_warnings[0][0]), 3)
+        self.assertTrue('parameter has no value' in validation_warnings[0][1])
+
+        file_not_found_args = {
+            'workspace_dir': os.path.join(self.workspace_dir),
+            'dem_path': os.path.join(self.workspace_dir, 'dem-not-here.tif'),
+            'outlet_vector_path': os.path.join(self.workspace_dir,
+                                               'outlets-not-here.shp'),
+            'snap_points': False,
+        }
+        validation_warnings = delineateit.validate(file_not_found_args)
+        self.assertEqual(
+            validation_warnings,
+            [(['dem_path'], 'not found on disk'),
+             (['outlet_vector_path'], 'not found on disk')])
+
+        bad_spatial_files_args = {
+            'workspace_dir': self.workspace_dir,
+            'dem_path': os.path.join(self.workspace_dir, 'dem-not-here.tif'),
+            'outlet_vector_path': os.path.join(self.workspace_dir,
+                                               'outlets-not-here.shp'),
+            # Also testing point snapping args
+            'snap_points': True,
+            'flow_threshold': -1,
+            'snap_distance': 'fooooo',
+        }
+        for key in ('dem_path', 'outlet_vector_path'):
+            with open(bad_spatial_files_args[key], 'w') as spatial_file:
+                spatial_file.write('not a spatial file')
+
+        validation_warnings = delineateit.validate(bad_spatial_files_args)
+        self.assertEqual(
+            validation_warnings,
+            [(['dem_path'], 'not a raster'),
+             (['outlet_vector_path'], 'not a vector'),
+             (['flow_threshold'], 'must be a positive integer'),
+             (['snap_distance'], 'must be an integer')])
 
     def test_point_snapping(self):
         from natcap.invest import delineateit
