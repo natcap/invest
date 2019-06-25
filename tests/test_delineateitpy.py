@@ -9,6 +9,7 @@ import shapely.wkb
 from shapely.geometry import Point, box
 import numpy
 from osgeo import osr
+from osgeo import ogr
 from osgeo import gdal
 import pygeoprocessing.testing
 
@@ -68,6 +69,7 @@ class DelineateItTests(unittest.TestCase):
                                    delta=1e-4)
 
     def test_delineateit_validate(self):
+        """DelineateIt: test validation function."""
         from natcap.invest import delineateit
         missing_keys = {}
         with self.assertRaises(KeyError) as cm:
@@ -121,6 +123,8 @@ class DelineateItTests(unittest.TestCase):
              (['snap_distance'], 'must be an integer')])
 
     def test_point_snapping(self):
+        """DelineateIt: test point snapping."""
+
         from natcap.invest import delineateit
 
         srs = osr.SpatialReference()
@@ -200,3 +204,41 @@ class DelineateItTests(unittest.TestCase):
 
             self.assertTrue(shapely_feature.equals(expected_geom))
             self.assertEqual(expected_fields, feature.items())
+
+    def test_vector_may_contain_points(self):
+        """DelineateIt: Check whether a layer contains points."""
+        from natcap.invest import delineateit
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+
+        # Verify invalid filepath returns False.
+        invalid_filepath = os.path.join(self.workspace_dir, 'nope.foo')
+        self.assertFalse(
+            delineateit._vector_may_contain_points(invalid_filepath))
+
+        # Verify invalid layer ID returns False
+        gpkg_driver = gdal.GetDriverByName('GPKG')
+        new_vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
+        new_vector = gpkg_driver.Create(
+            new_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+        point_layer = new_vector.CreateLayer(
+            'point_layer', srs, ogr.wkbPoint)
+        polygon_layer = new_vector.CreateLayer(
+            'polygon_layer', srs, ogr.wkbPolygon)
+        unknown_layer = new_vector.CreateLayer(
+            'unknown_type_layer', srs, ogr.wkbUnknown)
+
+        unknown_layer = None
+        polygon_layer = None
+        point_layer = None
+        new_vector = None
+
+        self.assertTrue(delineateit._vector_may_contain_points(
+                        new_vector_path, 'point_layer'))
+        self.assertFalse(delineateit._vector_may_contain_points(
+                         new_vector_path, 'polygon_layer'))
+        self.assertTrue(delineateit._vector_may_contain_points(
+                        new_vector_path, 'unknown_type_layer'))
+        self.assertFalse(delineateit._vector_may_contain_points(
+                         new_vector_path, 'NOT A LAYER'))
