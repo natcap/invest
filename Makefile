@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 2d615534d52e345ee7dc8bc898571c36b47dc6f1
+GIT_SAMPLE_DATA_REPO_REV    := 3ec55ae54770ff89c195aeaf64d07767ff0074b1
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := fd39f62d3cb69d0cd5604c3d76e4a4079b08deeb
+GIT_TEST_DATA_REPO_REV      := a1f73ff44b1ddcfc6af6a0c09ac92d45a87ff3e1
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := d96a8d657a85
+HG_UG_REPO_REV              := 12fcefd18548
 
 
 ENV = env
@@ -95,6 +95,8 @@ DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
+DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
+TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
@@ -143,6 +145,10 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 
 test_ui:
 	$(TESTRUNNER) ui_tests
+
+validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
+	$(TEST_DATAVALIDATOR)
+	$(DATAVALIDATOR)
 
 clean:
 	$(PYTHON) setup.py clean
@@ -272,6 +278,7 @@ ZIPDIRS = Aquaculture \
 		  ScenicQuality \
 		  seasonal_water_yield \
 		  storm_impact \
+		  UrbanFloodMitigation \
 		  WaveEnergy \
 		  WindEnergy
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
