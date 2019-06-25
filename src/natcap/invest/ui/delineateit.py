@@ -26,7 +26,7 @@ class Delineateit(model.InVESTModel):
             helptext=(
                 u"This is a layer of geometries representing watershed "
                 u"outlets such as municipal water intakes or lakes."),
-            label=u'Outlet Geometries (Vector)',
+            label=u'Outlet Features (Vector)',
             validator=self.validator)
         self.add_input(self.outlet_vector_path)
         self.outlet_vector_path.value_changed.connect(
