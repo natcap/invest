@@ -773,8 +773,8 @@ class HraRegressionTests(unittest.TestCase):
 
         # Also test relative file paths in Info CSV file
         _make_info_csv(
-            args['info_table_path'], self.workspace_dir, rel_path=True)
-        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
+            args['info_table_path'], args['workspace_dir'], rel_path=True)
+        _make_criteria_csv(args['criteria_table_path'], args['workspace_dir'])
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
 
@@ -792,7 +792,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(self.workspace_dir, 'outputs', raster_name + '.tif')
+            os.path.join(args['workspace_dir'], 'outputs', raster_name + '.tif')
             for raster_name in output_rasters]
         expected_raster_paths = [os.path.join(
             TEST_DATA, raster_name + '_euc_lin.tif') for raster_name in
@@ -800,7 +800,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Append a intermediate raster to test the linear decay equation
         output_raster_paths.append(
-            os.path.join(self.workspace_dir, 'intermediate_outputs',
+            os.path.join(args['workspace_dir'], 'intermediate_outputs',
                          'C_habitat_0_stressor_1.tif'))
         expected_raster_paths.append(
             os.path.join(TEST_DATA, 'C_habitat_0_stressor_1_euc_lin.tif'))
@@ -812,7 +812,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
-            self.workspace_dir, 'visualization_outputs',
+            args['workspace_dir'], 'visualization_outputs',
             vector_name + '.geojson') for vector_name in output_vectors]
         expected_vector_paths = [
             os.path.join(TEST_DATA, vector_name + '_euc_lin.geojson') for
@@ -825,7 +825,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
+            args['workspace_dir'], 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(
