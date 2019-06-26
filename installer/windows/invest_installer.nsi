@@ -315,6 +315,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -482,6 +483,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
+    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 694
   SectionGroupEnd
 SectionGroupEnd
 
