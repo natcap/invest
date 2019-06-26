@@ -815,7 +815,10 @@ def _raster_to_geojson(
         target_sr_wkt=None):
     """Convert a raster to a GeoJSON file with layer and field name.
 
-    The GeoJSON file will be in the shape and projection of the raster.
+    Typically the base raster will be projected and the target GeoJSON should
+    end up with geographic coordinates (EPSG: 4326 per the GeoJSON spec).
+    So a GPKG serves as intermediate storage for the polygonized projected
+    features.
 
     Parameters:
         base_raster_path (str): the raster that needs to be turned into a
@@ -834,21 +837,20 @@ def _raster_to_geojson(
     band = raster.GetRasterBand(1)
     mask = band.GetMaskBand()
 
-    driver = gdal.GetDriverByName('GeoJSON')
-    vector = driver.Create(target_geojson_path, 0, 0, 0, gdal.GDT_Unknown)
-    vector.StartTransaction()
-
-    # Use raster projection wkt for the GeoJSON
+    # Use raster SRS for the temp GPKG
     base_sr = osr.SpatialReference()
     base_sr_wkt = raster.GetProjectionRef()
     base_sr.ImportFromWkt(base_sr_wkt)
 
-    if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        target_sr = osr.SpatialReference()
-        target_sr.ImportFromWkt(target_sr_wkt)
-        vector_layer = vector.CreateLayer(str(layer_name), target_sr, ogr.wkbPolygon)
-    else:
-        vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
+    # Polygonize onto a GPKG
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    temp_gpkg_path = os.path.join(
+        os.path.dirname(target_geojson_path),
+        os.path.splitext(target_geojson_path)[0] + '.gpkg')
+    vector = gpkg_driver.Create(temp_gpkg_path, 0, 0, 0, gdal.GDT_Unknown)
+
+    vector.StartTransaction()
+    vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
     field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
@@ -864,21 +866,16 @@ def _raster_to_geojson(
     band = None
     raster = None
 
-    # Reproject the vector to target projection
+    # Convert GPKG to GeoJSON, reprojecting if necessary
     if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        vector = gdal.OpenEx(
-            target_geojson_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
-        vector.StartTransaction()
-        vector_layer = vector.GetLayer()
-        coord_trans = osr.CoordinateTransformation(base_sr, target_sr)
-        for feat in vector_layer:
-            geom = feat.GetGeometryRef()
-            geom.Transform(coord_trans)
-            feat.SetGeometry(geom)
-            vector_layer.SetFeature(feat)
-        vector.CommitTransaction()
-        vector_layer = None
-        vector = None
+        pygeoprocessing.reproject_vector(
+            temp_gpkg_path, target_sr_wkt, target_geojson_path,
+            driver_name='GeoJSON')
+    else:
+        geojson_driver = gdal.GetDriverByName('GeoJSON')
+        geojson_driver.CreateCopy(target_geojson_path, temp_gpkg_path)
+
+    os.remove(temp_gpkg_path)
 
 
 def _calc_and_pickle_zonal_stats(
