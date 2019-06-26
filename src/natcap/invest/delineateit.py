@@ -21,6 +21,7 @@ from . import validation
 LOGGER = logging.getLogger(__name__)
 
 _OUTPUT_FILES = {
+    'preprocessed_geometries': 'preprocessed_geometries.gpkg',
     'filled_dem': 'filled_dem.tif',
     'flow_dir_d8': 'flow_direction.tif',
     'flow_accumulation': 'flow_accumulation.tif',
@@ -117,8 +118,17 @@ def execute(args):
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
-    delineation_dependent_tasks = []
     outflow_vector_path = args['outlet_vector_path']
+    check_geometries_task = graph.add_task(
+        check_geometries,
+        args=(outflow_vector_path,
+              file_registry['filled_dem'],
+              file_registry['preprocessed_geometries']),
+        dependent_task_list=[fill_pits_task],
+        target_path_list=[file_registry['preprocessed_geometries']],
+        task_name='check_geometries')
+
+    delineation_dependent_tasks = []
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
             pygeoprocessing.routing.flow_accumulation_d8,
@@ -133,6 +143,7 @@ def execute(args):
         flow_threshold = int(args['flow_threshold'])
 
         out_nodata = 255
+        flow_accumulation_task.join()  # wait so we can read the nodata value
         flow_accumulation_nodata = pygeoprocessing.get_raster_info(
             file_registry['flow_accumulation'])['nodata']
         streams_task = graph.add_task(
@@ -232,9 +243,109 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
-# TODO: move component vectors to their own folder
-# TODO: simplify geometry with nyquist theorem.
-# TODO: verify geometry integrity and repair if possible
+def check_geometries(outflow_vector_path, dem_path, target_vector_path):
+    """Perform reasonable checks and repairs on the incoming vector.
+
+    This function will iterate through the vector at ``outflow_vector_path``
+    and validate geometries, putting the geometries into a new geopackage
+    at ``target_vector_path``.
+
+    The vector at ``target_vector_path`` will include features that:
+
+        * Have valid geometries
+        * Are simplified to 1/2 the DEM pixel size
+        * Intersect the bounding box of the DEM
+
+    Any geometries that are empty or do not intersect the DEM will not be
+    included in ``target_vector_path``.
+
+    Parameters:
+        outflow_vector_path (string): The path to an outflow vector.  The first
+            layer of the vector only will be inspected.
+        dem_path (string): The path to a DEM on disk.
+        target_vector_path (string): The target path to where the output
+            geopackage should be written.
+
+    Returns:
+        ``None``
+
+    """
+    dem_info = pygeoprocessing.get_raster_info(dem_path)
+    dem_minx, dem_maxx, dem_miny, dem_maxy = dem_info['bounding_box']
+    nyquist_limit = numpy.mean(numpy.abs(dem_info['pixel_size'])) / 2.
+
+    dem_srs = osr.SpatialReference()
+    dem_srs.ImportFromWkt(dem_info['projection'])
+
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    target_vector = gpkg_driver.Create(target_vector_path, 0, 0, 0,
+                                       gdal.GDT_Unknown)
+    target_layer = target_vector.CreateLayer(
+        'verified_geometries', dem_srs, ogr.wkbUnknown)  # Use source layer type?
+
+    outflow_vector = gdal.OpenEx(outflow_vector_path, gdal.OF_VECTOR)
+    outflow_layer = outflow_vector.GetLayer()
+    target_layer.CreateFields(outflow_layer.schema)
+
+    target_layer.StartTransaction()
+    for feature in outflow_layer:
+        original_geometry = feature.GetGeometryRef()
+        if original_geometry.IsEmpty():
+            LOGGER.warn('Feature %s has no geometry. Skipping', feature.GetFID())
+            continue
+
+        geom_minx, geom_maxx, geom_miny, geom_maxy = (
+            original_geometry.GetEnvelope())
+
+        # Check that the geometry at least partially overlaps the dem
+        if (geom_minx > dem_maxx or
+                geom_miny > dem_maxy or
+                geom_maxx < dem_minx or
+                geom_maxy < dem_maxy):
+            LOGGER.debug('Feature %s does not intersect the DEM. Skipping.',
+                         feature.GetFID())
+            continue
+
+        # Check validity and attempt to repair.  Only know how to (possibly)
+        # repair geometries for polygons.
+        if not original_geometry.IsValid():
+            if 'POLYGON' in original_geometry.GetGeometryName():
+                fixed_geometry = original_geometry.Buffer(0)
+                if not fixed_geometry.IsValid():
+                    fixed_geometry = fixed_geometry.CloseRings()
+
+                if not fixed_geometry.IsValid():
+                    LOGGER.warn(
+                        'Attempted repair of invalid geometry of feature '
+                        '%s failed. Using as-is.', feature.GetFID())
+            else:
+                LOGGER.warn(
+                    'Geometry of feature %s is invalid but no repair method '
+                    'implemented. Using as-is.', feature.GetFID())
+                fixed_geometry = original_geometry
+        else:
+            fixed_geometry = original_geometry
+
+        # Geometry should be valid by this point, attempt to simplify if it's
+        # not a point.
+        if original_geometry.GetGeometryName() != 'POINT':
+            simplified_geometry = fixed_geometry.Simplify(nyquist_limit)
+        else:
+            simplified_geometry = fixed_geometry
+
+        new_feature = ogr.Feature(target_layer.GetLayerDefn())
+        new_feature.SetGeometry(simplified_geometry)
+        for field_name, field_value in feature.items().items():
+            new_feature.SetField(field_name, field_value)
+        target_layer.CreateFeature(new_feature)
+
+    target_layer.CommitTransaction()
+    outflow_layer = None
+    outflow_vector = None
+    target_layer = None
+    target_vector = None
+
+
 # TODO: if two streams are the same distance from a pixel, pick the one with the higher flow accumulation.
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):
