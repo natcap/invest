@@ -271,7 +271,7 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
 
     """
     dem_info = pygeoprocessing.get_raster_info(dem_path)
-    dem_minx, dem_maxx, dem_miny, dem_maxy = dem_info['bounding_box']
+    dem_minx, dem_miny, dem_maxx, dem_maxy = dem_info['bounding_box']
     nyquist_limit = numpy.mean(numpy.abs(dem_info['pixel_size'])) / 2.
 
     dem_srs = osr.SpatialReference()
@@ -290,6 +290,7 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
     target_layer.StartTransaction()
     for feature in outflow_layer:
         original_geometry = feature.GetGeometryRef()
+
         if original_geometry.IsEmpty():
             LOGGER.warn('Feature %s has no geometry. Skipping', feature.GetFID())
             continue
@@ -310,9 +311,23 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
         # repair geometries for polygons.
         if not original_geometry.IsValid():
             if 'POLYGON' in original_geometry.GetGeometryName():
-                fixed_geometry = original_geometry.Buffer(0)
-                if not fixed_geometry.IsValid():
-                    fixed_geometry = fixed_geometry.CloseRings()
+
+                # Geometries that are only self-intersecting can be fixed by
+                # Buffering by 0.
+                buffered_geom = original_geometry.Buffer(0)
+                if buffered_geom is None:
+                    # If a geometry does not form a closed linear ring,
+                    # buffering by 0 will return ``None``.  If this happens,
+                    # we can close the ring and then buffer by 0 again.
+                    closed_ring_geom = original_geometry.Clone()
+                    closed_ring_geom.CloseRings()
+
+                    if not closed_ring_geom.IsValid():
+                        buffered_geom = closed_ring_geom.Buffer(0)
+                    else:
+                        buffered_geom = closed_ring_geom
+
+                fixed_geometry = buffered_geom
 
                 if not fixed_geometry.IsValid():
                     LOGGER.warn(

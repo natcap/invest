@@ -242,3 +242,103 @@ class DelineateItTests(unittest.TestCase):
                         new_vector_path, 'unknown_type_layer'))
         self.assertFalse(delineateit._vector_may_contain_points(
                          new_vector_path, 'NOT A LAYER'))
+
+    def test_check_geometries(self):
+        """DelineateIt: Check that we can reasonably repair geometries."""
+        from natcap.invest import delineateit
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84/UTM zone 31s
+
+        dem_matrix = numpy.array(
+            [[0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 1, 1, 1, 1],
+             [0, 1, 0, 0, 0, 0],
+             [0, 1, 0, 0, 0, 0]], dtype=numpy.int8)
+        dem_raster_path = os.path.join(self.workspace_dir, 'dem.tif')
+        pygeoprocessing.testing.create_raster_on_disk(
+            [dem_matrix],
+            origin=(2, -2),
+            pixel_size=(2, -2),
+            projection_wkt=srs.ExportToWkt(),
+            nodata=255,  # byte datatype
+            filename=dem_raster_path)
+
+        # empty geometry
+        invalid_geometry = ogr.CreateGeometryFromWkt('POLYGON EMPTY')
+        self.assertTrue(invalid_geometry.IsEmpty())
+
+        # point outside of the DEM bbox
+        invalid_point = ogr.CreateGeometryFromWkt('POINT (-100 -100)')
+
+        # line intersects the DEM but is not contained by it
+        valid_line = ogr.CreateGeometryFromWkt(
+            'LINESTRING (-100 100, 100 -100)')
+
+        # invalid polygon fixed by buffering by 0
+        invalid_bowtie_polygon = ogr.CreateGeometryFromWkt(
+            'POLYGON ((2 -2, 6 -2, 2 -6, 6 -6, 2 -2))')
+        self.assertFalse(invalid_bowtie_polygon.IsValid())
+
+        invalid_alt_bowtie_polygon = ogr.CreateGeometryFromWkt(
+            'POLYGON ((2 -2, 6 -2, 4 -4, 6 -6, 2 -6, 4 -4, 2 -2))')
+        self.assertFalse(invalid_alt_bowtie_polygon.IsValid())
+
+        # invalid polygon fixed by closing rings
+        invalid_open_ring_polygon = ogr.CreateGeometryFromWkt(
+            'POLYGON ((2 -2, 6 -2, 6 -6, 2 -6))')
+        self.assertFalse(invalid_open_ring_polygon.IsValid())
+
+        gpkg_driver = gdal.GetDriverByName('GPKG')
+        outflow_vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
+        outflow_vector = gpkg_driver.Create(
+            outflow_vector_path, 0, 0, 0, gdal.GDT_Unknown)
+        outflow_layer = outflow_vector.CreateLayer(
+            'outflow_layer', srs, ogr.wkbUnknown)
+        outflow_layer.CreateField(ogr.FieldDefn('geom_id', ogr.OFTInteger))
+
+        outflow_layer.StartTransaction()
+        for index, geometry in enumerate((invalid_geometry,
+                                          invalid_point,
+                                          valid_line,
+                                          invalid_bowtie_polygon,
+                                          invalid_alt_bowtie_polygon,
+                                          invalid_open_ring_polygon)):
+            if geometry is None:
+                self.fail('Geometry could not be created')
+
+            outflow_feature = ogr.Feature(outflow_layer.GetLayerDefn())
+            outflow_feature.SetField('geom_id', index)
+            outflow_feature.SetGeometry(geometry)
+            outflow_layer.CreateFeature(outflow_feature)
+        outflow_layer.CommitTransaction()
+
+        self.assertEquals(outflow_layer.GetFeatureCount(), 6)
+        outflow_layer = None
+        outflow_vector = None
+
+        target_vector_path = os.path.join(self.workspace_dir, 'checked_geometries.gpkg')
+        delineateit.check_geometries(
+            outflow_vector_path, dem_raster_path, target_vector_path)
+
+        # I only expect to see 3 features in the output layer.
+        expected_geom_areas = {
+            2: 0,
+            3: 4.,
+            4: 8,
+            5: 16.,
+        }
+
+        target_vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
+        target_layer = target_vector.GetLayer()
+        self.assertEqual(target_layer.GetFeatureCount(), len(expected_geom_areas))
+
+        for feature in target_layer:
+            geom = feature.GetGeometryRef()
+            self.assertAlmostEqual(
+                geom.Area(), expected_geom_areas[feature.GetField('geom_id')])
+
+        target_layer = None
+        target_vector = None
