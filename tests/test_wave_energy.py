@@ -495,7 +495,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['workspace_dir'] = 'C:/Users/dmf/projects/invest_dev/pgp170_update/wave'
         wave_energy.execute(args)
 
         raster_results = [
