@@ -118,17 +118,17 @@ def execute(args):
         dependent_task_list=[fill_pits_task],
         task_name='flow_direction')
 
-    outflow_vector_path = args['outlet_vector_path']
     check_geometries_task = graph.add_task(
         check_geometries,
-        args=(outflow_vector_path,
+        args=(args['outlet_vector_path'],
               file_registry['filled_dem'],
               file_registry['preprocessed_geometries']),
         dependent_task_list=[fill_pits_task],
         target_path_list=[file_registry['preprocessed_geometries']],
         task_name='check_geometries')
+    outlet_vector_path = file_registry['preprocessed_geometries']
 
-    delineation_dependent_tasks = []
+    delineation_dependent_tasks = [flow_dir_task]
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
             pygeoprocessing.routing.flow_accumulation_d8,
@@ -162,7 +162,7 @@ def execute(args):
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
-            args=(args['outlet_vector_path'],
+            args=(outlet_vector_path,
                   (file_registry['streams'], 1),
                   snap_distance,
                   file_registry['snapped_outlets']),
@@ -170,12 +170,12 @@ def execute(args):
             dependent_task_list=[streams_task],
             task_name='snapped_outflow_points')
         delineation_dependent_tasks.append(snapped_outflow_points_task)
-        outflow_vector_path = file_registry['snapped_outlets']
+        outlet_vector_path = file_registry['snapped_outlets']
 
     watershed_delineation_task = graph.add_task(
         pygeoprocessing.routing.delineate_watersheds_d8,
         args=((file_registry['flow_dir_d8'], 1),
-              outflow_vector_path,
+              outlet_vector_path,
               file_registry['watersheds']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['watersheds']],
@@ -243,10 +243,10 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
-def check_geometries(outflow_vector_path, dem_path, target_vector_path):
+def check_geometries(outlet_vector_path, dem_path, target_vector_path):
     """Perform reasonable checks and repairs on the incoming vector.
 
-    This function will iterate through the vector at ``outflow_vector_path``
+    This function will iterate through the vector at ``outlet_vector_path``
     and validate geometries, putting the geometries into a new geopackage
     at ``target_vector_path``.
 
@@ -260,7 +260,7 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
     included in ``target_vector_path``.
 
     Parameters:
-        outflow_vector_path (string): The path to an outflow vector.  The first
+        outlet_vector_path (string): The path to an outflow vector.  The first
             layer of the vector only will be inspected.
         dem_path (string): The path to a DEM on disk.
         target_vector_path (string): The target path to where the output
@@ -283,8 +283,10 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
     target_layer = target_vector.CreateLayer(
         'verified_geometries', dem_srs, ogr.wkbUnknown)  # Use source layer type?
 
-    outflow_vector = gdal.OpenEx(outflow_vector_path, gdal.OF_VECTOR)
+    outflow_vector = gdal.OpenEx(outlet_vector_path, gdal.OF_VECTOR)
     outflow_layer = outflow_vector.GetLayer()
+    LOGGER.info('Checking %s geometries from source vector',
+                outflow_layer.GetFeatureCount())
     target_layer.CreateFields(outflow_layer.schema)
 
     target_layer.StartTransaction()
@@ -295,7 +297,7 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
             LOGGER.warn('Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
-        geom_minx, geom_maxx, geom_miny, geom_maxy = (
+        geom_minx, geom_miny, geom_maxx, geom_maxy = (
             original_geometry.GetEnvelope())
 
         # Check that the geometry at least partially overlaps the dem
@@ -361,7 +363,6 @@ def check_geometries(outflow_vector_path, dem_path, target_vector_path):
     target_vector = None
 
 
-# TODO: if two streams are the same distance from a pixel, pick the one with the higher flow accumulation.
 def snap_points_to_nearest_stream(points_vector_path, stream_raster_path_band,
                                   snap_distance, snapped_points_vector_path):
     """Adjust the location of points to the nearest stream pixel.
