@@ -20,6 +20,7 @@ import codecs
 import multiprocessing
 import threading
 
+import PySide2
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui

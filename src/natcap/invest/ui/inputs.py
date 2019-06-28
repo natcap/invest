@@ -13,8 +13,7 @@ import sys
 import atexit
 import itertools
 
-import sip
-sip.setapi('QString', 2)
+import PySide2
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -31,6 +30,12 @@ except (ImportError, AttributeError):
     # ImportError when faulthandler not installed
     # AttributeError happens all the time on jenkins.
     pass
+
+try:
+    unicode
+except NameError:
+    unicode = str
+
 
 from . import execution
 
@@ -1004,7 +1009,16 @@ class InVESTModelInput(QtCore.QObject):
         Returns:
             ``None``
         """
-        QtCore.QObject.__init__(self)
+        try:
+            QtCore.QObject.__init__(self)
+        except RuntimeError:
+            # Happens when we initialize the object more than once.
+            # This is known to happen when initializing the Container class.
+            # I'm not currently sure how to work around this other than
+            # catching this exception at the moment.  This wasn't an issue
+            # with PyQt4.
+            pass
+
         self.label = label
         self.widgets = []
         self.dirty = False
@@ -2196,7 +2210,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         QtWidgets.QGroupBox.__init__(self)
         InVESTModelInput.__init__(self, label=label, interactive=interactive,
-                       args_key=args_key)
+                                  args_key=args_key)
         self.widgets = [self]
         self.setCheckable(expandable)
         if expandable:

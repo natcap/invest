@@ -18,8 +18,7 @@ import json
 
 import faulthandler
 faulthandler.enable()
-import sip
-sip.setapi('QString', 2)  # qtpy assumes api version 2
+import PySide2
 import qtpy
 from qtpy import QtCore
 from qtpy import QtGui
@@ -97,7 +96,7 @@ class _SettingsSandbox(_QtTest):
         _QtTest.tearDown(self)
         from natcap.invest.ui import inputs
         inputs.INVEST_SETTINGS.clear()
-        for key, value in self.settings.iteritems():
+        for key, value in self.settings.items():
             inputs.INVEST_SETTINGS.setValue(key, value)
 
 
@@ -506,7 +505,7 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('gr\xe9gory')  # Latin-1 bytestring
         self.assertEqual(input_instance.value(),
-                         unicode('gr\xc3\xa9gory', 'utf-8'))
+                         'gr\xc3\xa9gory'.decode('utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_str(self):
@@ -514,17 +513,15 @@ class TextTest(GriddedInputTest):
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('fooДЖЩя')  # UTF-8 encoded bytestring
         self.assertEqual(input_instance.value(),
-                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
-                                 'utf-8'))
+                         'foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f'.decode('utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_unicode(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value(u'fooДЖЩя')  # already UTF-8 unicode
+        input_instance.set_value('fooДЖЩя'.decode('utf-8'))  # already UTF-8 unicode
         self.assertEqual(input_instance.value(),
-                         unicode('foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f',
-                                 'utf-8'))
+                         'foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f'.decode('utf-8'))
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_int(self):
@@ -3397,10 +3394,10 @@ class IsProbablyDatastackTests(unittest.TestCase):
         with open(filepath, 'w') as logfile:
             logfile.write(textwrap.dedent(
                 """Arguments:
-		   carbon_pools_path file_a.csv
-		   lulc_cur_path     file_b.tif
-		   workspace_dir     new_workspace_dir"""))
-	self.assertTrue(model.is_probably_datastack(filepath))
+                carbon_pools_path file_a.csv
+                lulc_cur_path     file_b.tif
+                workspace_dir     new_workspace_dir"""))
+        self.assertTrue(model.is_probably_datastack(filepath))
 
 
     def test_csv_not_a_parameter(self):
