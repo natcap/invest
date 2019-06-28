@@ -196,7 +196,7 @@ class PollinationTests(unittest.TestCase):
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
-        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+        with open(bad_guild_table_path, 'w') as bad_guild_table:
             bad_guild_table.write(
                 'species,nesting_suitability_cavity_index,alpha,'
                 'relative_abundance\n')
@@ -225,7 +225,7 @@ class PollinationTests(unittest.TestCase):
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_biophysical_table_path = os.path.join(
             temp_path, 'bad_biophysical_table.csv')
-        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+        with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
                 'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
                 '1,0.3,0.2\n')
@@ -251,12 +251,12 @@ class PollinationTests(unittest.TestCase):
         bad_biophysical_table_path = os.path.join(
             temp_path, 'bad_biophysical_table.csv')
         # one table has only spring the other has only fall.
-        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+        with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
                 'lucode,nesting_cavity_availability_index,nesting_ground_index,floral_resources_spring_index\n'
                 '1,0.3,0.2,0.2\n')
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
-        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+        with open(bad_guild_table_path, 'w') as bad_guild_table:
             bad_guild_table.write(
                 'species,nesting_suitability_cavity_index,'
                 'foraging_activity_fall_index,alpha,relative_abundance\n')
