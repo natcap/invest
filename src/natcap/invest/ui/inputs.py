@@ -749,7 +749,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(six.text_type(filename)))
+                                 os.path.dirname(unicode(filename)))
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
@@ -793,7 +793,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(six.text_type(filename)))
+                                 os.path.dirname(unicode(filename)))
         return filename
 
     def open_folder(self, title, start_dir=None):
