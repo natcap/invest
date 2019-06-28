@@ -25,7 +25,7 @@ import Pyro4
 import mock
 
 SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-data')
+    os.path.dirname(__file__), '..', 'data', 'invest-sample-data')
 
 
 class ModelLoggingTests(unittest.TestCase):
