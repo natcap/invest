@@ -2184,7 +2184,7 @@ class ModelTests(_QtTest):
 
             def __del__(self):
                 # clear the settings for future runs.
-                self.settings.clear()
+                model.InVESTModel.settings.clear()
                 model.InVESTModel.__del__(self)
 
         return _TestInVESTModel()

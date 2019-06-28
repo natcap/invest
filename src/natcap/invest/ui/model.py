@@ -396,7 +396,7 @@ class SettingsDialog(OptionsDialog):
             helptext=('Where local files will be stored.'
                       'Default value: %s') % cache_dir)
         self.cache_directory.set_value(inputs.INVEST_SETTINGS.value(
-            'cache_dir', cache_dir, unicode))
+            'cache_dir', cache_dir))
         self._global_opts_container.add_input(self.cache_directory)
 
         logging_options = (
@@ -414,7 +414,7 @@ class SettingsDialog(OptionsDialog):
                       'run dialog. Default: INFO'),
             options=logging_options)
         self.dialog_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/run_dialog', 'INFO', unicode))
+            'logging/run_dialog', 'INFO'))
         self._global_opts_container.add_input(self.dialog_logging_level)
 
         self.logfile_logging_level = inputs.Dropdown(
@@ -425,7 +425,7 @@ class SettingsDialog(OptionsDialog):
                       'logfile. Default: NOTSET'),
             options=logging_options)
         self.logfile_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/logfile', 'NOTSET', unicode))
+            'logging/logfile', 'NOTSET'))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
         self.taskgraph_logging_level = inputs.Dropdown(
@@ -436,7 +436,7 @@ class SettingsDialog(OptionsDialog):
                       'written to the logfile. Default: ERROR'),
             options=logging_options)
         self.taskgraph_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/taskgraph', 'ERROR', unicode))
+            'logging/taskgraph', 'ERROR'))
         self._global_opts_container.add_input(self.taskgraph_logging_level)
 
         # Taskgraph n_workers settings.
@@ -469,7 +469,7 @@ class SettingsDialog(OptionsDialog):
                 n_workers_values.items(), key=lambda x: int(x[1]))],
             return_value_map=n_workers_values)
         self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', '-1', unicode))
+            'taskgraph/n_workers', '-1'))
         self._global_opts_container.add_input(self.taskgraph_n_workers)
 
     def postprocess(self, exitcode):
@@ -1618,7 +1618,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                     'n_workers defined in args. It should not be defined.')
 
             args['n_workers'] = inputs.INVEST_SETTINGS.value(
-                'taskgraph/n_workers', '-1', unicode)
+                'taskgraph/n_workers', '-1')
 
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
