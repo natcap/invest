@@ -81,7 +81,9 @@ class LoggingServer(object):
             else:
                 data_copy['ip_address'] = 'local'
 
-            urlopen(Request(url, urlencode(data_copy)))
+            # The data must be a python string of bytes.  This will be ``str``
+            # in python2, ``bytes`` in python3.
+            urlopen(Request(url, urlencode(data_copy).encode('utf-8')))
         except:
             # print something locally for our log and raise back to client
             LOGGER.exception("log_invest_run failed")

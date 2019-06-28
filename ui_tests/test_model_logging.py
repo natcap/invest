@@ -92,7 +92,7 @@ class ModelLoggingTests(unittest.TestCase):
         self.assertEqual(mock_obj.call_count, 2)
         sample_data['ip_address'] = 'local'
         self.assertEqual(
-            sorted(mock_obj.call_args[0][0].data.split('&')),
+            sorted(mock_obj.call_args[0][0].data.decode('utf-8').split('&')),
             sorted(urlencode(sample_data).split('&')))
 
         exit_sample_data = dict(
@@ -105,7 +105,7 @@ class ModelLoggingTests(unittest.TestCase):
         self.assertEqual(mock_obj.call_count, 2)
         exit_sample_data['ip_address'] = 'local'
         self.assertEqual(
-            sorted(mock_obj.call_args[0][0].data.split('&')),
+            sorted(mock_obj.call_args[0][0].data.decode('utf-8').split('&')),
             sorted(urlencode(exit_sample_data).split('&')))
 
     def test_unknown_mode(self):
