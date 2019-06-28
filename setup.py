@@ -42,7 +42,6 @@ setup(
         'natcap.invest.ndr',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
-        'natcap.invest.routing',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
     ],
