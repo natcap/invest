@@ -84,6 +84,7 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
+    @unittest.skip("skipping until we resolve (issue #3899)")
     def test_base_regression(self):
         """NDR base regression test on sample data.
 
@@ -120,7 +121,7 @@ class NDRTests(unittest.TestCase):
         # should not raise an exception
         ndr.validate(args)
 
-        with self.assertRaises(KeyError)  as context:
+        with self.assertRaises(KeyError) as context:
             del args['workspace_dir']
             ndr.validate(args)
         self.assertTrue(
