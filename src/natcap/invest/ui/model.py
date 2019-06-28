@@ -1745,7 +1745,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                        self.inputs)
         LOGGER.debug(pprint.pformat(_inputs))
 
-        for args_key, args_value in datastack_args.iteritems():
+        for args_key, args_value in datastack_args.items():
             try:
                 _inputs[args_key].set_value(args_value)
             except KeyError:
@@ -1968,7 +1968,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         with codecs.open(save_filepath, 'w', encoding='utf-8') as py_file:
             cast_args = dict((unicode(key), value) for (key, value)
-                             in self.assemble_args().iteritems())
+                             in self.assemble_args().items())
             args = pprint.pformat(cast_args,
                                   indent=4)  # 4 spaces
 

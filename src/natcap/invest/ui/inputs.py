@@ -2056,7 +2056,7 @@ class Dropdown(GriddedInput):
         if return_value_map is not None:
             return_value_map = dict(
                 (_cast_value(key), _cast_value(value)) for (key, value) in
-                return_value_map.iteritems())
+                return_value_map.items())
         self.return_value_map = return_value_map
 
         self.dropdown.clear()
@@ -2107,7 +2107,7 @@ class Dropdown(GriddedInput):
         inverted_map = None
         if self.return_value_map is not None:
             inverted_map = dict((v, k) for (k, v) in
-                                self.return_value_map.iteritems())
+                                self.return_value_map.items())
 
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
