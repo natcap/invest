@@ -14,11 +14,11 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-
 # Python3 doesn't know about basestring, only str.
-if 'basestring' not in dir(__builtins__):
+try:
+    basestring
+except NameError:
     basestring = str
-
 
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = (

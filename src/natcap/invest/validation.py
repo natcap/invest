@@ -6,7 +6,9 @@ import pprint
 
 
 # Python3 doesn't know about basestring, only str.
-if 'basestring' not in dir(__builtins__):
+try:
+    basestring
+except NameError:
     basestring = str
 
 
