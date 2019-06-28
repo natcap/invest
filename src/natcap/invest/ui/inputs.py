@@ -405,7 +405,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
             A string.
         """
         return 'Messages (%s and higher):' % (
-            INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode))
+            INVEST_SETTINGS.value('logging/run_dialog', 'INFO'))
 
     def __del__(self):
         """Delete/deregister required objects."""
@@ -415,7 +415,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
     def start(self, window_title, out_folder):
         """Set the state of the dialog to indicate processing has started."""
         logging_level = INVEST_SETTINGS.value(
-            'logging/run_dialog', 'INFO', unicode)
+            'logging/run_dialog', 'INFO')
         self.loghandler.setLevel(getattr(logging, logging_level))
 
         # set the label atop the messages pane to include the currently-set
@@ -726,7 +726,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -773,7 +773,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -810,7 +810,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
         dialog_title = 'Select folder: ' + title
 
         dirname = self.file_dialog.getExistingDirectory(
@@ -866,8 +866,7 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
         self._dialog_kwargs = {
             'title': self.dialog_title,
             'start_dir': INVEST_SETTINGS.value('last_dir',
-                                               DEFAULT_LASTDIR,
-                                               unicode),
+                                               DEFAULT_LASTDIR),
         }
 
     def _get_path(self):

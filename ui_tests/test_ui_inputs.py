@@ -1421,7 +1421,7 @@ class FileDialogTest(_SettingsSandbox):
             dialog.file_dialog.getSaveFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar'))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode),
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', ''),
                          u'/new')
 
     def test_save_file_defined_savefile(self):
@@ -1462,7 +1462,7 @@ class FileDialogTest(_SettingsSandbox):
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar', ''))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', ''), '/new')
 
     def test_open_file_qt4(self):
         from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
@@ -1487,7 +1487,7 @@ class FileDialogTest(_SettingsSandbox):
             dialog.file_dialog.getOpenFileName.call_args[0],  # pos. args
             (dialog.file_dialog, 'foo', '/tmp/foo/bar', ''))
         self.assertEqual(out_file, '/new/file')
-        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode), '/new')
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', ''), '/new')
 
     def test_open_folder(self):
         from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
@@ -1504,7 +1504,7 @@ class FileDialogTest(_SettingsSandbox):
         self.assertEqual(dialog.file_dialog.getExistingDirectory.call_args[0],
                          (dialog.file_dialog, 'Select folder: foo', '/tmp/foo/bar'))
         self.assertEqual(new_folder, '/existing/folder')
-        self.assertEqual(INVEST_SETTINGS.value('last_dir', '', unicode),
+        self.assertEqual(INVEST_SETTINGS.value('last_dir', ''),
                          '/existing/folder')
 
 
@@ -2450,7 +2450,7 @@ class ModelTests(_QtTest):
         from natcap.invest.ui import inputs
 
         n_workers_setting = inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', '-1', unicode)
+            'taskgraph/n_workers', '-1')
 
         def target_func(args):
             """n_workers is required in args."""
@@ -2488,7 +2488,7 @@ class ModelTests(_QtTest):
         from natcap.invest import validation
 
         n_workers_setting = inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', 1, unicode)
+            'taskgraph/n_workers', 1)
 
         def target_func(args):
             raise AssertionError(
