@@ -10,6 +10,14 @@ import urllib
 import os
 import logging
 
+try:
+    from io import StringIO
+    from urllib.parse import urlencode
+except ImportError:
+    str = unicode
+    from StringIO import StringIO
+    from urllib import urlencode
+
 from pygeoprocessing.testing import scm
 import numpy.testing
 
@@ -74,26 +82,31 @@ class ModelLoggingTests(unittest.TestCase):
             (key_field, key_field) for key_field in
             usage_logger.LoggingServer._LOG_FIELD_NAMES)
 
+        # This mock needs only to return a valid json string with the expected
+        # key-value pairs.
+        json_string = str('{"START": "http://foo.bar", "FINISH": "http://foo.bar"}')
         with mock.patch(
-                'natcap.invest.ui.usage_logger.urllib2.urlopen') as mock_obj:
+                'natcap.invest.ui.usage_logger.urlopen',
+                return_value=StringIO(json_string)) as mock_obj:
             logging_server.log_invest_run(sample_data, 'log')
-        mock_obj.assert_called_once()
+        self.assertEqual(mock_obj.call_count, 2)
         sample_data['ip_address'] = 'local'
         self.assertEqual(
-            sorted(mock_obj.call_args[0][0].get_data().split('&')),
-            sorted(urllib.urlencode(sample_data).split('&')))
+            sorted(mock_obj.call_args[0][0].data.split('&')),
+            sorted(urlencode(sample_data).split('&')))
 
         exit_sample_data = dict(
             (key_field, key_field) for key_field in
             usage_logger.LoggingServer._EXIT_LOG_FIELD_NAMES)
         with mock.patch(
-                'natcap.invest.ui.usage_logger.urllib2.urlopen') as mock_obj:
+                'natcap.invest.ui.usage_logger.urlopen',
+                return_value=StringIO(json_string)) as mock_obj:
             logging_server.log_invest_run(exit_sample_data, 'exit')
-        mock_obj.assert_called_once()
+        self.assertEqual(mock_obj.call_count, 2)
         exit_sample_data['ip_address'] = 'local'
         self.assertEqual(
-            sorted(mock_obj.call_args[0][0].get_data().split('&')),
-            sorted(urllib.urlencode(exit_sample_data).split('&')))
+            sorted(mock_obj.call_args[0][0].data.split('&')),
+            sorted(urlencode(exit_sample_data).split('&')))
 
     def test_unknown_mode(self):
         """Usage logger test that an unknown mode raises an exception."""
