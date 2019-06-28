@@ -49,7 +49,7 @@ def _make_empty_files(workspace_dir):
             os.makedirs(folder_path)
 
         for file_name in folder_files:
-            with open(os.path.join(folder_path, file_name), 'wb') as open_file:
+            with open(os.path.join(folder_path, file_name), 'w') as open_file:
                 open_file.write('')
 
 
