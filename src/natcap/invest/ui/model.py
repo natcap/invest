@@ -1595,11 +1595,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.validation_report_dialog.exec_()
             return
 
-        # If the workspace exists, confirm the overwrite.
+        # If the workspace exists and contains files, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
-            button_pressed = self.workspace_overwrite_confirm_dialog.exec_()
-            if button_pressed != QtWidgets.QMessageBox.Yes:
-                return
+            if len(os.listdir(args['workspace_dir'])) > 0:
+                button_pressed = (
+                    self.workspace_overwrite_confirm_dialog.exec_())
+                if button_pressed != QtWidgets.QMessageBox.Yes:
+                    return
 
         # This is the thread that the UI is executing within.
         ui_thread_name = threading.current_thread().name
