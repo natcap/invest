@@ -16,6 +16,11 @@ import imp
 import uuid
 import json
 
+try:
+    basestring
+except NameError:
+    basestring = str
+
 import faulthandler
 faulthandler.enable()
 import PySide2
@@ -211,9 +216,9 @@ class InVESTModelInputTest(_QtTest):
                     input_instance.value()
                 except NotImplementedError:
                     input_instance.value = lambda: 'Value!'
-                input_instance.value_changed.emit(six.text_type('value', 'utf-8'))
+                input_instance.value_changed.emit('value')
 
-            callback.assert_called_with(six.text_type('value', 'utf-8'))
+            callback.assert_called_with('value')
         finally:
             input_instance.value_changed.disconnect(callback)
 
@@ -503,25 +508,23 @@ class TextTest(GriddedInputTest):
     def test_set_value_latin1(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('gr\xe9gory')  # Latin-1 bytestring
-        self.assertEqual(input_instance.value(),
-                         'gr\xc3\xa9gory'.decode('utf-8'))
+        input_instance.set_value('gr\xe9gory')  # Latin-1 encoded string
+        self.assertEqual(input_instance.value().encode('utf-8'),
+                         b'gr\xc3\xa9gory')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_str(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
         input_instance.set_value('fooДЖЩя')  # UTF-8 encoded bytestring
-        self.assertEqual(input_instance.value(),
-                         'foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f'.decode('utf-8'))
+        self.assertEqual(input_instance.value(), 'fooДЖЩя')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_cyrillic_unicode(self):
         input_instance = self.__class__.create_input(label='text')
         self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('fooДЖЩя'.decode('utf-8'))  # already UTF-8 unicode
-        self.assertEqual(input_instance.value(),
-                         'foo\xd0\x94\xd0\x96\xd0\xa9\xd1\x8f'.decode('utf-8'))
+        input_instance.set_value('fooДЖЩя')  # already UTF-8 unicode
+        self.assertEqual(input_instance.value(), 'fooДЖЩя')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_int(self):
@@ -694,15 +697,16 @@ class PathTest(TextTest):
         input_instance = self.__class__.create_input(label='foo')
         # Only run this test on subclasses of path
         if input_instance.__class__.__name__ != '_Path':
+            input_instance.set_value(u'/tmp/fooДЖЩя')
             input_instance.path_select_button.path_selected.emit(
-                u'/tmp/fooДЖЩя'.encode('cp1251'))
-            self.assertTrue(input_instance.value(), u'/tmp/fooДЖЩя')
+                u'/tmp/fooДЖЩя')
+            self.assertEquals(input_instance.value(), u'/tmp/fooДЖЩя')
 
     def test_textfield_drag_n_drop(self):
         input_instance = self.__class__.create_input(label='text')
 
         mime_data = QtCore.QMimeData()
-        mime_data.setText(u'Hello world!ДЖЩя'.encode('cp1251'))
+        mime_data.setText('Hello world!ДЖЩя')
 
         event = QtGui.QDragEnterEvent(
             input_instance.textfield.pos(),
@@ -719,7 +723,7 @@ class PathTest(TextTest):
 
         mime_data = QtCore.QMimeData()
         mime_data.setText(u'Hello world!ДЖЩя')
-        mime_data.setUrls([QtCore.QUrl(u'/foo/bar/ДЖЩя'.encode('cp1251'))])
+        mime_data.setUrls([QtCore.QUrl('/foo/bar/ДЖЩя')])
 
         event = QtGui.QDragEnterEvent(
             input_instance.textfield.pos(),

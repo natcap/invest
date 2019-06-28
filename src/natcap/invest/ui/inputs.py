@@ -1581,6 +1581,7 @@ class Text(GriddedInput):
             # the console and allow the user to provide their own input
             # directly to the text element.
             LOGGER.exception('Could determine encoding; using value as-is.')
+            encoded_value = value
 
         if len(encoded_value) > 0 and self.hideable:
             self.set_hidden(False)

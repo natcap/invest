@@ -20,6 +20,11 @@ import codecs
 import multiprocessing
 import threading
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
 import PySide2
 from qtpy import QtWidgets
 from qtpy import QtCore
