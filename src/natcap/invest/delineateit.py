@@ -110,7 +110,9 @@ def execute(args):
               file_registry['filled_dem']),
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['filled_dem']],
-        task_name='fill_pits')
+        task_name='fill_pits',
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True)
 
     flow_dir_task = graph.add_task(
         pygeoprocessing.routing.flow_dir_d8,
@@ -119,7 +121,9 @@ def execute(args):
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['flow_dir_d8']],
         dependent_task_list=[fill_pits_task],
-        task_name='flow_direction')
+        task_name='flow_direction',
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True)
 
     check_geometries_task = graph.add_task(
         check_geometries,
@@ -129,7 +133,9 @@ def execute(args):
               args.get('crash_on_invalid_geometry', False)),
         dependent_task_list=[fill_pits_task],
         target_path_list=[file_registry['preprocessed_geometries']],
-        task_name='check_geometries')
+        task_name='check_geometries',
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True)
     outlet_vector_path = file_registry['preprocessed_geometries']
 
     delineation_dependent_tasks = [flow_dir_task, check_geometries_task]
@@ -162,7 +168,9 @@ def execute(args):
                   out_nodata),
             target_path_list=[file_registry['streams']],
             dependent_task_list=[flow_accumulation_task],
-            task_name='threshold_streams')
+            task_name='threshold_streams',
+            hash_algorithm='md5',
+            copy_duplicate_artifact=True)
 
         snapped_outflow_points_task = graph.add_task(
             snap_points_to_nearest_stream,
@@ -172,7 +180,9 @@ def execute(args):
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
             dependent_task_list=[streams_task, check_geometries_task],
-            task_name='snapped_outflow_points')
+            task_name='snapped_outflow_points',
+            hash_algorithm='md5',
+            copy_duplicate_artifact=True)
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outlet_vector_path = file_registry['snapped_outlets']
 
@@ -184,7 +194,9 @@ def execute(args):
         kwargs={'working_dir': output_directory},
         target_path_list=[file_registry['watersheds']],
         dependent_task_list=delineation_dependent_tasks,
-        task_name='delineate_watersheds_single_worker')
+        task_name='delineate_watersheds_single_worker',
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True)
 
     graph.close()
     graph.join()
