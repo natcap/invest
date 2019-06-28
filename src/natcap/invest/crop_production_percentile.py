@@ -612,7 +612,7 @@ def aggregate_to_polygons(
     pygeoprocessing.reproject_vector(
         base_aggregate_vector_path,
         landcover_raster_projection,
-        target_aggregate_vector_path, layer_index=0,
+        target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
 
     # loop over every crop and query with pgp function

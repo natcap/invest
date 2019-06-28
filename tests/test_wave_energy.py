@@ -411,18 +411,14 @@ class WaveEnergyRegressionTests(unittest.TestCase):
     def generate_base_args(workspace_dir):
         """Generate an args list that is consistent across regression tests."""
         args = {
-            'workspace_dir':
-            workspace_dir,
-            'wave_base_data_path':
-            os.path.join(SAMPLE_DATA, 'WaveData'),
-            'analysis_area_path':
-            'West Coast of North America and Hawaii',
-            'machine_perf_path':
-            os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
-            'machine_param_path':
-            os.path.join(SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
-            'dem_path':
-            os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif'),
+            'workspace_dir': workspace_dir,
+            'wave_base_data_path': os.path.join(SAMPLE_DATA, 'WaveData'),
+            'analysis_area_path': 'West Coast of North America and Hawaii',
+            'machine_perf_path': os.path.join(
+                SAMPLE_DATA, 'Machine_Pelamis_Performance.csv'),
+            'machine_param_path': os.path.join(
+                SAMPLE_DATA, 'Machine_Pelamis_Parameter.csv'),
+            'dem_path': os.path.join(SAMPLE_DATA, 'resampled_global_dem.tif'),
             'n_workers': -1
         }
         return args
@@ -499,7 +495,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wave_energy
 
         args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
         wave_energy.execute(args)
 
         raster_results = [
