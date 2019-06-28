@@ -132,7 +132,7 @@ def execute(args):
         task_name='check_geometries')
     outlet_vector_path = file_registry['preprocessed_geometries']
 
-    delineation_dependent_tasks = [flow_dir_task]
+    delineation_dependent_tasks = [flow_dir_task, check_geometries_task]
     if 'snap_points' in args and args['snap_points']:
         flow_accumulation_task = graph.add_task(
             pygeoprocessing.routing.flow_accumulation_d8,
@@ -171,7 +171,7 @@ def execute(args):
                   snap_distance,
                   file_registry['snapped_outlets']),
             target_path_list=[file_registry['snapped_outlets']],
-            dependent_task_list=[streams_task],
+            dependent_task_list=[streams_task, check_geometries_task],
             task_name='snapped_outflow_points')
         delineation_dependent_tasks.append(snapped_outflow_points_task)
         outlet_vector_path = file_registry['snapped_outlets']
@@ -326,7 +326,8 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
                 target_vector = None
                 raise ValueError(
                     "The geometry at feature %s is invalid.  Check the logs "
-                    "for details and try re-running.", feature.GetFID())
+                    "for details and try re-running with repaired geometry."
+                    % feature.GetFID())
             else:
                 LOGGER.warn(
                     "The geometry at feature %s is invalid and will not be "
@@ -354,6 +355,11 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         target_layer.CreateFeature(new_feature)
 
     target_layer.CommitTransaction()
+
+    LOGGER.info('%s features copied to %s from the original %s features',
+                target_layer.GetFeatureCount(),
+                os.path.basename(target_vector_path),
+                outflow_layer.GetFeatureCount())
     outflow_layer = None
     outflow_vector = None
     target_layer = None
