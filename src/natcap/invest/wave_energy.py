@@ -454,23 +454,20 @@ def execute(args):
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_power_raster_task])
 
-    # Clip wave energy and power rasters to the aoi vector
     clip_energy_raster_task = task_graph.add_task(
-        func=pygeoprocessing.warp_raster,
-        args=(interpolated_energy_raster_path, target_pixel_size,
-              energy_raster_path, _TARGET_RESAMPLE_METHOD),
-        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
-                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        func=pygeoprocessing.mask_raster,
+        args=((interpolated_energy_raster_path, 1), aoi_vector_path,
+              energy_raster_path,),
+        kwargs={'all_touched': True},
         target_path_list=[energy_raster_path],
         task_name='clip_energy_raster',
         dependent_task_list=[interpolate_energy_points_task])
 
     clip_power_raster_task = task_graph.add_task(
-        func=pygeoprocessing.warp_raster,
-        args=(interpolated_power_raster_path, target_pixel_size,
-              wave_power_raster_path, _TARGET_RESAMPLE_METHOD),
-        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
-                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        func=pygeoprocessing.mask_raster,
+        args=((interpolated_power_raster_path, 1), aoi_vector_path,
+              wave_power_raster_path,),
+        kwargs={'all_touched': True},
         target_path_list=[wave_power_raster_path],
         task_name='clip_power_raster',
         dependent_task_list=[interpolate_power_points_task])
@@ -686,14 +683,12 @@ def _create_npv_raster(
         _TARGET_RESAMPLE_METHOD)
 
     # Clip the raster to the AOI vector
-    LOGGER.info('Clipping NPV raster with AOI vector.')
-    pygeoprocessing.warp_raster(
-        inter_npv_raster_path,
-        target_pixel_size,
+    LOGGER.info('Masking NPV raster with AOI vector.')
+    pygeoprocessing.mask_raster(
+        (inter_npv_raster_path, 1),
+        base_aoi_vector_path,
         target_npv_raster_path,
-        _TARGET_RESAMPLE_METHOD,
-        vector_mask_options={'mask_vector_path': base_aoi_vector_path},
-        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
+        all_touched=True)
 
 
 def _get_npv_results(captured_wave_energy, depth, number_of_machines,
