@@ -8,6 +8,8 @@ import math
 from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
+import shapely.errors
+import shapely.geometry
 import shapely.wkb
 import numpy
 import pygeoprocessing
@@ -243,7 +245,8 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
     return out_matrix
 
 
-def check_geometries(outlet_vector_path, dem_path, target_vector_path):
+def check_geometries(outlet_vector_path, dem_path, target_vector_path,
+                     crash_on_invalid_geometry=True):
     """Perform reasonable checks and repairs on the incoming vector.
 
     This function will iterate through the vector at ``outlet_vector_path``
@@ -265,13 +268,19 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path):
         dem_path (string): The path to a DEM on disk.
         target_vector_path (string): The target path to where the output
             geopackage should be written.
+        crash_on_invalid_geometry (bool): Whether to raise an exception
+            when invalid geometry is found.  If ``True``, an exception
+            will be raised when the first invalid geometry is found.
+            If ``False``, the invalid geometry will be not be included
+            in the output vector but any other valid geometries will.
 
     Returns:
         ``None``
 
     """
     dem_info = pygeoprocessing.get_raster_info(dem_path)
-    dem_minx, dem_miny, dem_maxx, dem_maxy = dem_info['bounding_box']
+    dem_bbox = shapely.prepared.prep(
+        shapely.geometry.box(*dem_info['bounding_box']))
     nyquist_limit = numpy.mean(numpy.abs(dem_info['pixel_size'])) / 2.
 
     dem_srs = osr.SpatialReference()
@@ -293,65 +302,42 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path):
     for feature in outflow_layer:
         original_geometry = feature.GetGeometryRef()
 
-        if original_geometry.IsEmpty():
+        try:
+            shapely_geom = shapely.wkb.loads(original_geometry.ExportToWkb())
+
+            # The classic bowtie polygons will load but require a separate
+            # check for validity.
+            if not shapely_geom.is_valid:
+                raise ValueError('Shapely geom is invalid.')
+        except (shapely.errors.ReadingError, ValueError):
+            # Parent class for shapely GEOS errors
+            # Raised when the geometry is invalid.
+            if crash_on_invalid_geometry:
+                raise ValueError(
+                    "The geometry at feature %s is invalid.  Check the logs "
+                    "for details and try re-running.", feature.GetFID())
+            else:
+                LOGGER.warn(
+                    "The geometry at feature %s is invalid and will not be "
+                    "included in the set of features to be delineated.",
+                    feature.GetFID())
+                continue
+
+        if shapely_geom.is_empty:
             LOGGER.warn('Feature %s has no geometry. Skipping', feature.GetFID())
             continue
 
-        geom_minx, geom_miny, geom_maxx, geom_maxy = (
-            original_geometry.GetEnvelope())
-
-        # Check that the geometry at least partially overlaps the dem
-        if (geom_minx > dem_maxx or
-                geom_miny > dem_maxy or
-                geom_maxx < dem_minx or
-                geom_maxy < dem_maxy):
-            LOGGER.debug('Feature %s does not intersect the DEM. Skipping.',
+        shapely_bbox = shapely.geometry.box(*shapely_geom.bounds)
+        if not dem_bbox.intersects(shapely_bbox):
+            LOGGER.warn('Feature %s does not intersect the DEM. Skipping.',
                          feature.GetFID())
             continue
 
-        # Check validity and attempt to repair.  Only know how to (possibly)
-        # repair geometries for polygons.
-        if not original_geometry.IsValid():
-            if 'POLYGON' in original_geometry.GetGeometryName():
-
-                # Geometries that are only self-intersecting can be fixed by
-                # Buffering by 0.
-                buffered_geom = original_geometry.Buffer(0)
-                if buffered_geom is None:
-                    # If a geometry does not form a closed linear ring,
-                    # buffering by 0 will return ``None``.  If this happens,
-                    # we can close the ring and then buffer by 0 again.
-                    closed_ring_geom = original_geometry.Clone()
-                    closed_ring_geom.CloseRings()
-
-                    if not closed_ring_geom.IsValid():
-                        buffered_geom = closed_ring_geom.Buffer(0)
-                    else:
-                        buffered_geom = closed_ring_geom
-
-                fixed_geometry = buffered_geom
-
-                if not fixed_geometry.IsValid():
-                    LOGGER.warn(
-                        'Attempted repair of invalid geometry of feature '
-                        '%s failed. Using as-is.', feature.GetFID())
-            else:
-                LOGGER.warn(
-                    'Geometry of feature %s is invalid but no repair method '
-                    'implemented. Using as-is.', feature.GetFID())
-                fixed_geometry = original_geometry
-        else:
-            fixed_geometry = original_geometry
-
-        # Geometry should be valid by this point, attempt to simplify if it's
-        # not a point.
-        if original_geometry.GetGeometryName() != 'POINT':
-            simplified_geometry = fixed_geometry.Simplify(nyquist_limit)
-        else:
-            simplified_geometry = fixed_geometry
+        simplified_geometry = shapely_geom.simplify(nyquist_limit)
 
         new_feature = ogr.Feature(target_layer.GetLayerDefn())
-        new_feature.SetGeometry(simplified_geometry)
+        new_feature.SetGeometry(ogr.CreateGeometryFromWkb(
+            simplified_geometry.wkb))
         for field_name, field_value in feature.items().items():
             new_feature.SetField(field_name, field_value)
         target_layer.CreateFeature(new_feature)

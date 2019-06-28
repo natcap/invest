@@ -277,16 +277,18 @@ class DelineateItTests(unittest.TestCase):
         valid_line = ogr.CreateGeometryFromWkt(
             'LINESTRING (-100 100, 100 -100)')
 
-        # invalid polygon fixed by buffering by 0
+        # invalid polygon coult fixed by buffering by 0
         invalid_bowtie_polygon = ogr.CreateGeometryFromWkt(
             'POLYGON ((2 -2, 6 -2, 2 -6, 6 -6, 2 -2))')
         self.assertFalse(invalid_bowtie_polygon.IsValid())
 
+        # Bowtie polygon with vertex in the middle, could be fixed
+        # by buffering by 0
         invalid_alt_bowtie_polygon = ogr.CreateGeometryFromWkt(
             'POLYGON ((2 -2, 6 -2, 4 -4, 6 -6, 2 -6, 4 -4, 2 -2))')
         self.assertFalse(invalid_alt_bowtie_polygon.IsValid())
 
-        # invalid polygon fixed by closing rings
+        # invalid polygon could be fixed by closing rings
         invalid_open_ring_polygon = ogr.CreateGeometryFromWkt(
             'POLYGON ((2 -2, 6 -2, 6 -6, 2 -6))')
         self.assertFalse(invalid_open_ring_polygon.IsValid())
@@ -320,15 +322,22 @@ class DelineateItTests(unittest.TestCase):
         outflow_vector = None
 
         target_vector_path = os.path.join(self.workspace_dir, 'checked_geometries.gpkg')
-        delineateit.check_geometries(
-            outflow_vector_path, dem_raster_path, target_vector_path)
+        with self.assertRaises(ValueError) as cm:
+            delineateit.check_geometries(
+                outflow_vector_path, dem_raster_path, target_vector_path,
+                crash_on_invalid_geometry=True
+            )
+        self.assertTrue('is invalid' in str(cm.exception))
 
-        # I only expect to see 3 features in the output layer.
+        delineateit.check_geometries(
+            outflow_vector_path, dem_raster_path, target_vector_path,
+            crash_on_invalid_geometry=False
+        )
+
+        # I only expect to see 1 feature in the output layer, as there's only 1
+        # valid geometry.
         expected_geom_areas = {
             2: 0,
-            3: 4.,
-            4: 8,
-            5: 16.,
         }
 
         target_vector = gdal.OpenEx(target_vector_path, gdal.OF_VECTOR)
