@@ -280,6 +280,11 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         ``None``
 
     """
+    if os.path.exists(target_vector_path):
+        LOGGER.debug('Target vector path %s exists on disk; removing.',
+                     target_vector_path)
+        os.remove(target_vector_path)
+
     dem_info = pygeoprocessing.get_raster_info(dem_path)
     dem_bbox = shapely.prepared.prep(
         shapely.geometry.box(*dem_info['bounding_box']))
@@ -315,6 +320,10 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
             # Parent class for shapely GEOS errors
             # Raised when the geometry is invalid.
             if crash_on_invalid_geometry:
+                outflow_layer = None
+                outflow_vector = None
+                target_layer = None
+                target_vector = None
                 raise ValueError(
                     "The geometry at feature %s is invalid.  Check the logs "
                     "for details and try re-running.", feature.GetFID())
