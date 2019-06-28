@@ -11,7 +11,6 @@ Unreleased Changes
   used without triggering task re-execution. Raster processing maintains original
   resolution of the input raster so long as it is projected. Otherwise resamples 
   to ``model_resolution``.
->>>>>>> merge rev
 * Fixed a bug in Coastal Vulnerability model's task graph that sometimes
   caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
