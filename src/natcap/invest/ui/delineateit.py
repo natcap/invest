@@ -31,6 +31,16 @@ class Delineateit(model.InVESTModel):
         self.add_input(self.outlet_vector_path)
         self.outlet_vector_path.value_changed.connect(
             self._enable_point_snapping_container)
+        self.skip_invalid_geometry = inputs.Checkbox(
+            args_key='crash_on_invalid_geometry',
+            helptext=(
+                'If this box is checked, any invalid geometries encountered '
+                'in the outlet vector will not be included in the '
+                'delineation.  If this box is unchecked, an invalid '
+                'geometry will cause DelineateIt to crash.'),
+            label='Crash on invalid geometries',
+            validator=self.validator)
+        self.add_input(self.skip_invalid_geometry)
 
         self.snap_points_container = inputs.Container(
             label='Snap points to the nearest stream',
@@ -82,6 +92,8 @@ class Delineateit(model.InVESTModel):
                 self.snap_points_container.value()),
             self.flow_threshold.args_key: self.flow_threshold.value(),
             self.snap_distance.args_key: self.snap_distance.value(),
+            self.skip_invalid_geometry.args_key: (
+                not self.skip_invalid_geometry.value()),
         }
 
         return args

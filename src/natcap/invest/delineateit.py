@@ -74,11 +74,12 @@ def execute(args):
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM.
         args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points
-        args['max_features_per_delineation'] (int or None): The maximum number
-            of features to include in a single chunk.  Useful for parallelizing
-            large jobs when used with ``args['n_workers']``.  If ``None``, all
-            features will be handled in the same process, which does produce
-            more interesting and accurate progress logging.
+        args['crash_on_invalid_geometry'] (bool): Whether to crash when an
+            invalid geometry is passed or skip it, including all valid
+            geometries in the vector to be passed to delineation.
+            If ``True``, this tool will crash if an invalid geometry is
+            found.  If ``False``, invalid geometries will be left out of
+            the vector to be delineated.
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
 
@@ -124,7 +125,8 @@ def execute(args):
         check_geometries,
         args=(args['outlet_vector_path'],
               file_registry['filled_dem'],
-              file_registry['preprocessed_geometries']),
+              file_registry['preprocessed_geometries'],
+              args.get('crash_on_invalid_geometry', False)),
         dependent_task_list=[fill_pits_task],
         target_path_list=[file_registry['preprocessed_geometries']],
         task_name='check_geometries')
