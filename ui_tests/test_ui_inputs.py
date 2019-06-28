@@ -1310,7 +1310,7 @@ class MultiTest(ContainerTest):
             callable_=self.__class__.create_sample_callable(label='foo'))
 
         # Add a few text inputs to this multi
-        for _ in xrange(3):
+        for _ in range(3):
             input_instance.add_item()
 
         input_instance.clear()
@@ -3175,7 +3175,7 @@ class ModelTests(_QtTest):
         model_ui = ModelTests.build_model()
         try:
             # synthesize a recent datastack path by adding it to the right setting.
-            deep_directory = os.path.join(*[str(uuid.uuid4()) for x in xrange(10)])
+            deep_directory = os.path.join(*[str(uuid.uuid4()) for x in range(10)])
             filepath = os.path.join(deep_directory, 'something.invest.json')
             model_ui._add_to_open_menu(filepath)
 

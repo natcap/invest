@@ -2252,8 +2252,8 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         for layout_item in (self.layout().itemAtPosition(*coords)
                             for coords in itertools.product(
-                                xrange(1, self.layout().rowCount()),
-                                xrange(1, self.layout().columnCount()))):
+                                range(1, self.layout().rowCount()),
+                                range(1, self.layout().columnCount()))):
             if layout_item and self.isVisible():
                 layout_item.widget().setVisible(self.isChecked())
 
