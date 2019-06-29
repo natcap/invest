@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed a bug in Recreation Model that was causing server-side code
+  to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to
   the monthly_table.csv output.
 * Various fixes in Coastal Vulnerability Model. CSV output files now
