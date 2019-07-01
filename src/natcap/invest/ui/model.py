@@ -1414,7 +1414,6 @@ class InVESTModel(QtWidgets.QMainWindow):
                 self._load_recent_datastack_from_action)
             self.open_menu.addAction(datastack_action)
 
-    @QtCore.Slot()
     def _load_recent_datastack_from_action(self):
         """Load a recent datastack when an action is triggered.
 

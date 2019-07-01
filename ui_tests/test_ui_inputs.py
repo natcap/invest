@@ -665,7 +665,8 @@ class PathTest(TextTest):
                     popup.close()
                 except AttributeError:
                     # When popup is None
-                    QTest.qWait(25)
+                    self.ui_app.processEvents()
+                    time.sleep(0.25)
 
         QtCore.QTimer.singleShot(25, _click_out_of_contextmenu)
         input_instance.textfield.contextMenuEvent(event)
@@ -2844,8 +2845,11 @@ class ModelTests(_QtTest):
             # singleshot timers in model.run().
             QtCore.QTimer.singleShot(1000, _confirm_workspace_overwrite)
             model_ui.run(quickrun=True)
-            while model_ui.isVisible():
-                QTest.qWait(1000)
+            try:
+                QTest.qWaitForWindowShown(model_ui)
+            except AttributeError:
+                # pyqt5 has different wait methods.
+                QTest.qWaitForWindowExposed(model_ui)
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
@@ -3228,6 +3232,8 @@ class ModelTests(_QtTest):
             model_ui.workspace.set_value('some_other_workspace')
             self.assertEqual(model_ui.workspace.value(), 'some_other_workspace')
 
+            # Check to make sure that the loaded datastack was added to the
+            # last-run menu.
             last_run_datastack_actions = []
             for action in model_ui.open_menu.actions():
                 if action.isSeparator() or action is model_ui.open_file_action:
@@ -3247,11 +3253,13 @@ class ModelTests(_QtTest):
                         QtWidgets.QMessageBox.Yes),
                     QtCore.Qt.LeftButton)
 
-            QtCore.QTimer.singleShot(50, _accept_parameter_overwrite)
-            action.trigger()
+            QtCore.QTimer.singleShot(25, _accept_parameter_overwrite)
+            action.activate(QtWidgets.QAction.Trigger)
+            self.qt_app.processEvents()
+            time.sleep(0.25)
             self.qt_app.processEvents()
 
-            self.assertEqual(model_ui.workspace.value(), 'workspace_foo')
+            self.assertEqual(model_ui.workspace.value(), args['workspace_dir'])
         finally:
             model_ui.close(prompt=False)
             model_ui.destroy()
