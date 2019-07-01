@@ -707,7 +707,12 @@ class FileDialog(object):
 
     def __del__(self):
         """Destructor for the FileDialog instance."""
-        self.file_dialog.deleteLater()
+        try:
+            self.file_dialog.deleteLater()
+        except RuntimeError:
+            # Raised when the file dialog has already been deleted.
+            LOGGER.debug('File dialog object %s already deleted.',
+                         repr(self))
 
     def save_file(self, title, start_dir=None, savefile=None):
         """Prompt the user to save a file.

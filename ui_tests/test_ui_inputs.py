@@ -2365,6 +2365,9 @@ class ModelTests(_QtTest):
                     localdoc='sometextfile.html'
                 )
                 model_ui.assemble_args()
+            except Exception:
+                LOGGER.exception('Could not create the model UI')
+                raise
             finally:
                 model_ui.close(prompt=False)
                 model_ui.destroy()

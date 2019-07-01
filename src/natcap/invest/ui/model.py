@@ -663,11 +663,7 @@ class WindowTitle(QtCore.QObject):
     # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
 
-    # Python strings are immutable; this can be accessed like an instance
-    # variable.
-    format_string = "{modelname}: {filename}{modified}"
-
-    def __init__(self, modelname=None, filename=None, modified=False):
+    def __init__(self, modelname='', filename='', modified=''):
         """Initialize the WindowTitle.
 
         Parameters:
@@ -675,12 +671,17 @@ class WindowTitle(QtCore.QObject):
             filename (string or None): The filename to use.
             modified (bool): Whether the datastack file has been modified.
         """
-        QtCore.QObject.__init__(self)
+        super(WindowTitle, self).__init__()
+
         self.modelname = modelname
         self.filename = filename
         self.modified = modified
 
-    def __setattr__(self, name, value):
+        # Python strings are immutable; this can be accessed like an instance
+        # variable.
+        self._format_string = "{modelname}: {filename}{modified}"
+
+    def set_title_attr(self, name, value):
         """Attribute setter.
 
         Set the given attribute and emit the ``title_changed`` signal with
@@ -693,7 +694,7 @@ class WindowTitle(QtCore.QObject):
         """
         LOGGER.info('__setattr__: %s, %s', name, value)
         old_attr = getattr(self, name, 'None')
-        QtCore.QObject.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
         if old_attr != value:
             new_value = repr(self)
             LOGGER.info('Emitting new title %s', new_value)
@@ -706,7 +707,7 @@ class WindowTitle(QtCore.QObject):
             The string wundow title.
         """
         try:
-            return WindowTitle.format_string.format(
+            return self._format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
                 filename=self.filename if self.filename else 'new datastack',
                 modified='*' if self.modified else '')
@@ -1250,7 +1251,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.window_title = WindowTitle()
         self.window_title.title_changed.connect(self.setWindowTitle)
-        self.window_title.modelname = self.label
+        self.window_title.set_title_attr('modelname', self.label)
 
         # Add InVEST version update button and links at the top of the window.
         self.links_layout = QtWidgets.QHBoxLayout()
@@ -1496,7 +1497,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if isinstance(value, inputs.InVESTModelInput):
             self.inputs.add(value)
-        QtWidgets.QMainWindow.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
@@ -1553,7 +1554,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
         self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
-        self.window_title.filename = os.path.basename(save_filepath)
+        self.window_title.set_title_attr('filename',
+                                         os.path.basename(save_filepath))
 
     def add_input(self, input_obj):
         """Add an input to the model.
@@ -1736,7 +1738,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             raise ValueError('Unknown stack type "%s"' % stack_type)
 
         self.load_args(args)
-        self.window_title.filename = window_title_filename
+        self.window_title.set_title_attr('filename', window_title_filename)
 
         self._add_to_open_menu(datastack_path)
         self.statusBar().showMessage(
@@ -2023,7 +2025,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      STATUSBAR_MSG_DURATION)
-        self.window_title.filename = 'loaded from autosave'
+        self.window_title.set_title_attr('filename', 'loaded from autosave')
 
     def dragEnterEvent(self, event):
         """Handle the event where something has been dragged into the window.
