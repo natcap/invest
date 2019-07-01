@@ -330,7 +330,7 @@ def execute(args):
             # are the time steps for the lifespan of the farm and values
             # are adjusted based on the rate of change
             price_list = []
-            for time_step in xrange(time + 1):
+            for time_step in range(time + 1):
                 price_list.append(wind_price * (1 + change_rate)**(time_step))
 
     # Hub Height to use for setting Weibull parameters
@@ -1061,7 +1061,7 @@ def _calculate_npv_levelized_rasters(
 
         # Calculate the total NPV and the levelized cost over the lifespan of
         # the wind farm. Starting at year 1, because year 0 yields no revenue
-        for year in xrange(1, len(price_list)):
+        for year in range(1, len(price_list)):
             # Dollar per kiloWatt hour of that year
             dollar_per_kwh = float(price_list[year])
 
@@ -1735,10 +1735,10 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
                                              ogr.wkbPoint)
 
     # Outer unique keys
-    outer_keys = base_dict_data.keys()
+    outer_keys = list(base_dict_data.keys())
 
     # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = base_dict_data[outer_keys[0]].keys()
+    field_list = list(base_dict_data[outer_keys[0]])
 
     # Create a dictionary to store what variable types the fields are
     type_dict = {}
@@ -1759,7 +1759,7 @@ def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
 
     # For each inner dictionary (for each point) create a point and set its
     # fields
-    for point_dict in base_dict_data.itervalues():
+    for point_dict in base_dict_data.values():
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
 
@@ -2004,7 +2004,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
             layer_name, target_sr, ogr.wkbPoint)
 
     # Construct a list of fields to add from the keys of the inner dictionary
-    field_list = wind_data[wind_data.keys()[0]].keys()
+    field_list = list(wind_data[list(wind_data.keys())[0]])
 
     # For the two fields that we computed and added to the dictionary, move
     # them to the last
@@ -2022,7 +2022,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
 
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
-    for point_dict in wind_data.itervalues():
+    for point_dict in wind_data.values():
         geom = ogr.Geometry(ogr.wkbPoint)
         latitude = float(point_dict['LATI'])
         longitude = float(point_dict['LONG'])
@@ -2475,14 +2475,14 @@ def validate(args, limit_to=None):
                 args['wind_data_path'], 'REF')
 
             missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) - set(
-                table_dict.itervalues().next().keys()))
+                list(table_dict.values())[0].keys()))
             if missing_fields:
                 warnings.append((['wind_data_path'],
                                  ('CSV missing required fields: %s' %
                                   (', '.join(missing_fields)))))
 
             try:
-                for ref_key, record in table_dict.iteritems():
+                for ref_key, record in table_dict.items():
                     try:
                         if float(ref_key) != int(float(ref_key)):
                             raise ValueError()
@@ -2564,7 +2564,7 @@ def validate(args, limit_to=None):
                 args['grid_points_path'], 'id')
 
             missing_fields = (set(['long', 'lati', 'id', 'type']) - set(
-                table_dict.itervalues().next().keys()))
+                list(table_dict.values())[0].keys()))
             if missing_fields:
                 warnings.append((['grid_points_path'],
                                  ('CSV missing required fields: %s' %
@@ -2577,7 +2577,7 @@ def validate(args, limit_to=None):
                     'is required to clip and reproject the grid points.'))
 
             try:
-                for id_key, record in table_dict.iteritems():
+                for id_key, record in table_dict.items():
                     try:
                         if float(id_key) != int(float(id_key)):
                             raise ValueError()
