@@ -1114,8 +1114,8 @@ class InVESTModelInput(QtCore.QObject):
             ``None``
         """
         self._visible_hint = visible_hint
-        if any(widget.parent().isVisible() for widget in self.widgets
-               if widget and widget.parent()):
+        if any([widget.parent().isVisible() for widget in self.widgets
+                if widget is not None and widget.parent() is not None]):
             for widget in self.widgets:
                 if not widget:
                     continue
