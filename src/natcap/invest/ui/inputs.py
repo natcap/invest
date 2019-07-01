@@ -282,7 +282,10 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         Returns:
             ``None``
         """
-        self.message_received.emit(message)
+        try:
+            self.message_received.emit(message)
+        except RuntimeError:
+            pass
 
     def _write(self, message):
         """Write the message provided to the message pane.
@@ -410,7 +413,11 @@ class FileSystemRunDialog(QtWidgets.QDialog):
     def __del__(self):
         """Delete/deregister required objects."""
         self.logger.removeHandler(self.loghandler)
-        self.deleteLater()
+        try:
+            self.deleteLater()
+        except RuntimeError:
+            # When this dialog has already been deleted.
+            LOGGER.debug('This FileSystemRunDialog has already been deleted.')
 
     def start(self, window_title, out_folder):
         """Set the state of the dialog to indicate processing has started."""
@@ -711,8 +718,7 @@ class FileDialog(object):
             self.file_dialog.deleteLater()
         except RuntimeError:
             # Raised when the file dialog has already been deleted.
-            LOGGER.debug('File dialog object %s already deleted.',
-                         repr(self))
+            LOGGER.debug('File dialog object %s already deleted.')
 
     def save_file(self, title, start_dir=None, savefile=None):
         """Prompt the user to save a file.

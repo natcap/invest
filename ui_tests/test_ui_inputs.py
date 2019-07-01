@@ -2184,8 +2184,10 @@ class ModelTests(_QtTest):
 
             def __del__(self):
                 # clear the settings for future runs.
-                model.InVESTModel.settings.clear()
-                model.InVESTModel.__del__(self)
+                try:
+                    self.settings.clear()
+                except RuntimeError:
+                    pass
 
         return _TestInVESTModel()
 
@@ -2234,7 +2236,11 @@ class ModelTests(_QtTest):
         model_ui = ModelTests.build_model()
         try:
             model_ui.show()
-            QTest.qWait(25)
+            try:
+                QTest.qWaitForWindowShown(model_ui)
+            except AttributeError:
+                # pyqt5 has different wait methods.
+                QTest.qWaitForWindowExposed(model_ui)
 
             threading_event = threading.Event()
 
@@ -2251,9 +2257,10 @@ class ModelTests(_QtTest):
 
             QtCore.QTimer.singleShot(25, _tests)
             model_ui.close()
-            QTest.qWait(25)
+            self.qt_app.processEvents()
 
             threading_event.wait(0.5)
+            self.qt_app.processEvents()
 
             # verify the 'remember inputs' state
             self.assertEqual(model_ui.settings.value('remember_lastrun'),
@@ -2521,8 +2528,10 @@ class ModelTests(_QtTest):
 
             def __del__(self):
                 # clear the settings for future runs.
-                self.settings.clear()
-                model.InVESTModel.__del__(self)
+                try:
+                    self.settings.clear()
+                except RuntimeError:
+                    pass
 
         model_ui = _TestInVESTModel()
         model_ui.workspace.set_value(os.path.join(self.workspace, 'new_dir'))

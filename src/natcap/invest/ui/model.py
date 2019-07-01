@@ -1933,7 +1933,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if self.prompt_on_close:
             starting_checkstate = self.settings.value(
-                'remember_lastrun', True, bool)
+                'remember_lastrun', True)
             button_pressed = self.quit_confirm_dialog.exec_(
                 starting_checkstate)
             if button_pressed != QtWidgets.QMessageBox.Yes:
