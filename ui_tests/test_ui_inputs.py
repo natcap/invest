@@ -659,13 +659,19 @@ class PathTest(TextTest):
             # In case the popup isn't shown until after the callback is called,
             # we should be sure to wait for when it is shown.
             popup = None
+            n_tries = 0
             while True:
+                if n_tries > 5:
+                    raise RuntimeError(
+                        'Something happened where we could not get the '
+                        'context menu')
                 popup = self.qt_app.activePopupWidget()
                 try:
                     popup.close()
                     break
                 except AttributeError:
                     # When popup is None
+                    n_tries += 1
                     self.qt_app.processEvents()
                     time.sleep(0.25)
 
