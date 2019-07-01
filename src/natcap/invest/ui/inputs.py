@@ -1530,7 +1530,6 @@ class Text(GriddedInput):
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
-    @QtCore.Slot(unicode)
     def _text_changed(self, new_text):
         """A slot to emit the ``value_changed`` signal and trigger validation.
 

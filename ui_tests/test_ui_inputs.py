@@ -1734,7 +1734,7 @@ class OpenWorkspaceTest(_QtTest):
 
     def test_error_in_subprocess(self):
         from natcap.invest.ui.inputs import open_workspace
-        with mock.patch('subprocess.Popen',
+        with mock.patch('natcap.invest.ui.inputs.subprocess.Popen',
                         side_effect=OSError('error message')) as patch:
             with mock.patch('os.path.normpath', return_value='/foo/bar'):
                 open_workspace('/foo/bar')
