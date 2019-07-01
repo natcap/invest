@@ -153,7 +153,7 @@ class InVESTModelInputTest(_QtTest):
 
     def test_interactivity_changed(self):
         input_instance = self.__class__.create_input(label='foo', interactive=False)
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.interactivity_changed.connect(callback)
 
         with wait_on_signal(self.qt_app, input_instance.interactivity_changed):
@@ -190,7 +190,7 @@ class InVESTModelInputTest(_QtTest):
 
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='some_label')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         if input_instance.__class__.__name__ in ('InVESTModelInput', 'GriddedInput'):
@@ -207,7 +207,7 @@ class InVESTModelInputTest(_QtTest):
 
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         try:
@@ -224,7 +224,7 @@ class InVESTModelInputTest(_QtTest):
 
     def test_interactivity_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.interactivity_changed.connect(callback)
 
         with wait_on_signal(self.qt_app, input_instance.interactivity_changed):
@@ -296,7 +296,7 @@ class GriddedInputTest(InVESTModelInputTest):
         self.assertEqual(label_text, 'foo')
 
     def test_validator(self):
-        _callback = mock.MagicMock()
+        _callback = mock.Mock()
         input_instance = self.__class__.create_input(
             label='foo', validator=_callback)
         self.assertEqual(input_instance.validator_ref, _callback)
@@ -325,7 +325,7 @@ class GriddedInputTest(InVESTModelInputTest):
 
     def test_validate_passes(self):
         #"""UI: Validation that passes should affect validity."""
-        _validation_func = mock.MagicMock(return_value=[])
+        _validation_func = mock.Mock(return_value=[])
         input_instance = self.__class__.create_input(
             label='some_label', args_key='some_key',
             validator=_validation_func)
@@ -344,7 +344,7 @@ class GriddedInputTest(InVESTModelInputTest):
         input_instance = self.__class__.create_input(
             label='some_label')
 
-        input_instance.value = mock.MagicMock(
+        input_instance.value = mock.Mock(
             input_instance, return_value=u'something')
 
         # Verify we're starting with an unvalidated input
@@ -359,7 +359,7 @@ class GriddedInputTest(InVESTModelInputTest):
 
     def test_validate_fails(self):
         #"""UI: Validation that fails should affect validity."""
-        _validation_func = mock.MagicMock(
+        _validation_func = mock.Mock(
             return_value=[('some_key', 'some warning')])
         input_instance = self.__class__.create_input(
             label='some_label', args_key='some_key',
@@ -380,7 +380,7 @@ class GriddedInputTest(InVESTModelInputTest):
             label='some_label', args_key='foo'
         )
 
-        input_instance.value = mock.MagicMock(
+        input_instance.value = mock.Mock(
             input_instance, return_value=u'something')
 
         # Verify we're starting with an unvalidated input
@@ -400,10 +400,10 @@ class GriddedInputTest(InVESTModelInputTest):
             validator=lambda args, limit_to=None: []
         )
 
-        input_instance.value = mock.MagicMock(
+        input_instance.value = mock.Mock(
             input_instance, return_value=u'something')
 
-        input_instance._validator.validate = mock.MagicMock(
+        input_instance._validator.validate = mock.Mock(
             input_instance._validator.validate, side_effect=ValueError('foo'))
 
         with self.assertRaises(ValueError):
@@ -466,7 +466,7 @@ class GriddedInputTest(InVESTModelInputTest):
     def test_hidden_change_signal(self):
         input_instance = self.__class__.create_input(
             label='some_label', hideable=True)
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.hidden_changed.connect(callback)
         self.assertEqual(input_instance.hidden(), True)
 
@@ -552,7 +552,7 @@ class TextTest(GriddedInputTest):
 
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='text')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         self.assertEqual(input_instance.value(), '')
@@ -571,7 +571,7 @@ class TextTest(GriddedInputTest):
 
     def test_textfield_settext_signal(self):
         input_instance = self.__class__.create_input(label='text')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         with wait_on_signal(self.qt_app, input_instance.value_changed):
@@ -647,7 +647,7 @@ class PathTest(TextTest):
     def test_path_context_menu_coverage(self):
         input_instance = self.__class__.create_input(label='foo')
 
-        _callback = mock.MagicMock()
+        _callback = mock.Mock()
         input_instance.textfield.textChanged.connect(_callback)
 
         event = QtGui.QContextMenuEvent(
@@ -834,7 +834,7 @@ class CheckboxTest(GriddedInputTest):
 
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(label='new_label')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
 
@@ -845,7 +845,7 @@ class CheckboxTest(GriddedInputTest):
 
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='new_label')
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         with wait_on_signal(self.qt_app, input_instance.value_changed):
@@ -873,7 +873,7 @@ class CheckboxTest(GriddedInputTest):
             label='some_label', args_key='foo'
         )
 
-        input_instance.value = mock.MagicMock(
+        input_instance.value = mock.Mock(
             input_instance, return_value=u'something')
 
         # Verify we're starting with an unvalidated input
@@ -893,7 +893,7 @@ class CheckboxTest(GriddedInputTest):
         input_instance = self.__class__.create_input(
             label='some_label')
 
-        input_instance.value = mock.MagicMock(
+        input_instance.value = mock.Mock(
             input_instance, return_value=u'something')
 
         # Verify we're starting with an unvalidated input
@@ -1049,7 +1049,7 @@ class DropdownTest(GriddedInputTest):
     def test_value_changed_signal_emitted(self):
         input_instance = self.__class__.create_input(
             label='label', options=('foo', 'bar', 'baz'))
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), u'foo')
 
@@ -1152,7 +1152,7 @@ class ContainerTest(InVESTModelInputTest):
     def test_value_changed_signal(self):
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True)
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
 
         with wait_on_signal(self.qt_app, input_instance.value_changed):
@@ -1164,7 +1164,7 @@ class ContainerTest(InVESTModelInputTest):
         input_instance = self.__class__.create_input(label='foo',
                                                      expandable=True,
                                                      expanded=False)
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), False)
 
@@ -1247,7 +1247,7 @@ class MultiTest(ContainerTest):
             label='foo',
             callable_=self.__class__.create_sample_callable(label='foo'))
 
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
 
@@ -1261,7 +1261,7 @@ class MultiTest(ContainerTest):
             label='foo',
             callable_=self.__class__.create_sample_callable(label='foo'))
 
-        callback = mock.MagicMock()
+        callback = mock.Mock()
         input_instance.value_changed.connect(callback)
         self.assertEqual(input_instance.value(), [])
 
@@ -1337,7 +1337,7 @@ class MultiTest(ContainerTest):
 class ValidationWorkerTest(_QtTest):
     def test_run(self):
         from natcap.invest.ui.inputs import ValidationWorker
-        _callable = mock.MagicMock(return_value=[])
+        _callable = mock.Mock(return_value=[])
         worker = ValidationWorker(
             target=_callable,
             args={'foo': 'bar'},
@@ -1350,7 +1350,7 @@ class ValidationWorkerTest(_QtTest):
 
     def test_error(self):
         from natcap.invest.ui.inputs import ValidationWorker
-        _callable = mock.MagicMock(side_effect=KeyError('missing'))
+        _callable = mock.Mock(side_effect=KeyError('missing'))
         worker = ValidationWorker(
             target=_callable,
             args={'foo': 'bar'},
@@ -1369,8 +1369,8 @@ class FileButtonTest(_QtTest):
 
         # Patch up the open_method to return a known path.
         # Would block on user input otherwise.
-        button.open_method = mock.MagicMock(return_value='/some/path')
-        _callback = mock.MagicMock()
+        button.open_method = mock.Mock(return_value='/some/path')
+        _callback = mock.Mock()
         button.path_selected.connect(_callback)
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
@@ -1392,8 +1392,8 @@ class FolderButtonTest(_QtTest):
 
         # Patch up the open_method to return a known path.
         # Would block on user input otherwise.
-        button.open_method = mock.MagicMock(return_value='/some/path')
-        _callback = mock.MagicMock()
+        button.open_method = mock.Mock(return_value='/some/path')
+        _callback = mock.Mock()
         button.path_selected.connect(_callback)
 
         QTest.mouseClick(button, QtCore.Qt.LeftButton)
@@ -1411,7 +1411,7 @@ class FileDialogTest(_SettingsSandbox):
     def test_save_file_title_and_last_selection(self):
         from natcap.invest.ui.inputs import FileDialog, INVEST_SETTINGS
         dialog = FileDialog()
-        dialog.file_dialog.getSaveFileName = mock.MagicMock(
+        dialog.file_dialog.getSaveFileName = mock.Mock(
             spec=dialog.file_dialog.getSaveFileName,
             return_value='/new/file')
 
@@ -1428,7 +1428,7 @@ class FileDialogTest(_SettingsSandbox):
     def test_save_file_defined_savefile(self):
         from natcap.invest.ui.inputs import FileDialog
         dialog = FileDialog()
-        dialog.file_dialog.getSaveFileName = mock.MagicMock(
+        dialog.file_dialog.getSaveFileName = mock.Mock(
             spec=dialog.file_dialog.getSaveFileName,
             return_value=os.path.join('/new','file'))
 
@@ -1450,7 +1450,7 @@ class FileDialogTest(_SettingsSandbox):
         try:
             _old_qtpy_version = qtpy.QT_VERSION
             qtpy.QT_VERSION = ('5', '5', '5')
-            dialog.file_dialog.getOpenFileName = mock.MagicMock(
+            dialog.file_dialog.getOpenFileName = mock.Mock(
                 spec=dialog.file_dialog.getOpenFileName,
                 return_value=('/new/file', 'filter'))
 
@@ -1475,7 +1475,7 @@ class FileDialogTest(_SettingsSandbox):
         try:
             _old_qtpy_version = qtpy.QT_VERSION
             qtpy.QT_VERSION = ('4', '5', '6')
-            dialog.file_dialog.getOpenFileName = mock.MagicMock(
+            dialog.file_dialog.getOpenFileName = mock.Mock(
                 spec=dialog.file_dialog.getOpenFileName,
                 return_value='/new/file')
 
@@ -1495,7 +1495,7 @@ class FileDialogTest(_SettingsSandbox):
         dialog = FileDialog()
 
         # patch up the Qt method to get the path to the file to open
-        dialog.file_dialog.getExistingDirectory = mock.MagicMock(
+        dialog.file_dialog.getExistingDirectory = mock.Mock(
             spec=dialog.file_dialog.getExistingDirectory,
             return_value='/existing/folder')
 
@@ -1541,7 +1541,7 @@ class FormTest(_QtTest):
 
     def test_run_button_pressed(self):
         form = FormTest.make_ui()
-        mock_object = mock.MagicMock()
+        mock_object = mock.Mock()
         form.submitted.connect(mock_object)
 
         QTest.mouseClick(form.run_button,
@@ -1585,7 +1585,7 @@ class FormTest(_QtTest):
 
         # patch open_workspace to avoid lots of open file dialogs.
         with mock.patch('natcap.invest.ui.inputs.open_workspace',
-                        mock.MagicMock(return_value=None)) as open_workspace:
+                        mock.Mock(return_value=None)) as open_workspace:
             with wait_on_signal(self.qt_app, form.run_finished):
                 form.run(target=target)
 
@@ -1750,8 +1750,8 @@ class ExecutionTest(_QtTest):
         def _waiting_func(*args, **kwargs):
             thread_event.wait()
 
-        target = mock.MagicMock(wraps=_waiting_func)
-        callback = mock.MagicMock()
+        target = mock.Mock(wraps=_waiting_func)
+        callback = mock.Mock()
         args = ('a', 'b', 'c')
         kwargs = {'d': 1, 'e': 2, 'f': 3}
 
@@ -1785,8 +1785,8 @@ class ExecutionTest(_QtTest):
             thread_event.wait()
             raise ValueError('Some demo exception')
 
-        target = mock.MagicMock(wraps=_waiting_func)
-        callback = mock.MagicMock()
+        target = mock.Mock(wraps=_waiting_func)
+        callback = mock.Mock()
         args = ('a', 'b', 'c')
         kwargs = {'d': 1, 'e': 2, 'f': 3}
 
@@ -1819,7 +1819,7 @@ class ExecutionTest(_QtTest):
     def test_default_args(self):
         from natcap.invest.ui.execution import Executor
 
-        executor = Executor(target=mock.MagicMock())
+        executor = Executor(target=mock.Mock())
 
         # We didn't define args or kwargs (which default to None), so verify
         # that the parameters are set correctly.
