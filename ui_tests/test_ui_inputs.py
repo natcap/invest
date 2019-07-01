@@ -1712,7 +1712,7 @@ class FormTest(_QtTest):
 class OpenWorkspaceTest(_QtTest):
     def test_windows(self):
         from natcap.invest.ui.inputs import open_workspace
-        with mock.patch('subprocess.Popen') as method:
+        with mock.patch('natcap.invest.ui.inputs.subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Windows'):
                 with mock.patch('os.path.normpath', return_value='/foo\\bar'):
                     open_workspace(os.path.join('/foo', 'bar'))
@@ -1720,7 +1720,7 @@ class OpenWorkspaceTest(_QtTest):
 
     def test_mac(self):
         from natcap.invest.ui.inputs import open_workspace
-        with mock.patch('subprocess.Popen') as method:
+        with mock.patch('natcap.invest.ui.inputs.subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Darwin'):
                 with mock.patch('os.path.normpath', return_value='/foo/bar'):
                     open_workspace('/foo/bar')
@@ -1728,7 +1728,7 @@ class OpenWorkspaceTest(_QtTest):
 
     def test_linux(self):
         from natcap.invest.ui.inputs import open_workspace
-        with mock.patch('subprocess.Popen') as method:
+        with mock.patch('natcap.invest.ui.inputs.subprocess.Popen') as method:
             with mock.patch('platform.system', return_value='Linux'):
                 with mock.patch('os.path.normpath', return_value='/foo/bar'):
                     open_workspace('/foo/bar')
