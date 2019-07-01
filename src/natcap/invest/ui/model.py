@@ -108,7 +108,7 @@ def is_probably_datastack(filepath):
         return True
 
     # Is it a datastack parameter set?
-    with open(filepath) as opened_file:
+    with codecs.open(filepath, encoding='UTF-8') as opened_file:
         # Valid JSON starts with '{'
         if opened_file.read(1) == '{':
             return True
@@ -116,8 +116,14 @@ def is_probably_datastack(filepath):
         # Is it a logfile?
         # "Arguments" might be at the very beginning of the file.
         opened_file.seek(0)
-        if 'Arguments' in ' '.join(opened_file.readlines(200)):
-            return True
+        try:
+            if 'Arguments' in ' '.join(opened_file.readlines(200)):
+                return True
+        except UnicodeDecodeError:
+            # When ``filepath`` is a .tar.gz, the text read in probably won't
+            # be valid UTF-8, which will raise a UnicodeDecodeError when python
+            # tries to decode it.
+            pass
 
     try:
         # If we can open it as a .tar.gz, assume it's a datastack

@@ -1,3 +1,4 @@
+# coding=UTF-8
 """Functions for reading and writing InVEST model parameters.
 
 A **datastack** for InVEST is a compressed archive that includes the
@@ -480,8 +481,11 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
         'invest_version': __version__,
         'args': _recurse(args)
     }
-    json.dump(parameter_data, codecs.open(paramset_path, 'w', encoding='UTF-8'),
-              encoding='UTF-8', indent=4, sort_keys=True)
+    with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
+        paramset_file.write(
+            json.dumps(parameter_data,
+                       indent=4,
+                       sort_keys=True))
 
 
 def extract_parameter_set(paramset_path):
