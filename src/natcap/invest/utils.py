@@ -14,6 +14,12 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
+# Python3 doesn't know about basestring, only str.
+try:
+    basestring
+except NameError:
+    basestring = str
+
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = (
     "%(asctime)s "
@@ -392,7 +398,7 @@ def build_file_registry(base_file_path_list, file_suffix):
         return full_path
 
     for base_file_dict, path in base_file_path_list:
-        for file_key, file_payload in base_file_dict.iteritems():
+        for file_key, file_payload in base_file_dict.items():
             # check for duplicate keys
             if file_key in f_reg:
                 duplicate_keys.add(file_key)

@@ -5,6 +5,13 @@ import logging
 import pprint
 
 
+# Python3 doesn't know about basestring, only str.
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None
@@ -123,7 +130,7 @@ def invest_validator(validate_func):
             assert limit_to in args, ('limit_to key "%s" must exist in args.'
                                       % limit_to)
 
-        for key, value in args.iteritems():
+        for key, value in args.items():
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 

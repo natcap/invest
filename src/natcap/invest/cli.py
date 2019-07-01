@@ -48,8 +48,8 @@ _MODEL_UIS = {
         gui='crop_production.CropProductionRegression',
         aliases=('cpr',)),
     'delineateit': _UIMETA(
-        pyname='natcap.invest.routing.delineateit',
-        gui='routing.Delineateit',
+        pyname='natcap.invest.delineateit',
+        gui='delineateit.Delineateit',
         aliases=()),
     'finfish_aquaculture': _UIMETA(
         pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
@@ -123,6 +123,10 @@ _MODEL_UIS = {
         pyname='natcap.invest.wave_energy',
         gui='wave_energy.WaveEnergy',
         aliases=()),
+    'urban_flood_risk_mitigation': _UIMETA(
+        pyname='natcap.invest.urban_flood_risk_mitigation',
+        gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
+        aliases=('ufrm',)),
 }
 
 # Build up an index mapping aliase to modelname.

@@ -9,6 +9,15 @@ Unreleased Changes
   configuration of a nodata value would result in ``-inf`` values in
   output rasters.  Now, any values without a defined reclassification
   rule that make it past validation will be written out as nodata.
+* Fixed a bug in Recreation Model that was causing server-side code
+  to execute twice for every client-side call.
+* Fixed a bug in Recreation model that did not apply ``results_suffix`` to
+  the monthly_table.csv output.
+* Various fixes in Coastal Vulnerability Model. CSV output files now
+  have FID column for joining to vector outputs. ``results_suffix`` can be
+  used without triggering task re-execution. Raster processing maintains original
+  resolution of the input raster so long as it is projected. Otherwise resamples
+  to ``model_resolution``.
 * Fixed a bug in Coastal Vulnerability model's task graph that sometimes
   caused an early task to re-execute when it should be deemed pre-calculated.
 * Fixed a bug in the pollination model that would cause outputs to be all 0
@@ -17,6 +26,7 @@ Unreleased Changes
 * Fixed a file cache flushing issue observed on Debian in
   ``utils.exponential_decay_kernel_raster`` that would cause an exponential
   kernel raster to contain random values rather than expected value.
+* Added a new InVEST model: Urban Flood Risk Mitigation.
 * Fixed an issue in the SDR model that would cause an unhandled exception
   if either the erosivity or erodibility raster had an undefined nodata value.
 
@@ -27,8 +37,8 @@ Unreleased Changes
   raster-based. Fewer input datasets are required for the same functionality.
   Runtime in sycnhronous mode is similar to previous versions, but runtime can
   be reduced with multiprocessing. CV also supports avoided recomputation for
-  successive runs in the same workspace, even if a different file suffix is used.
-  Output vector files are in CSV and geopackage formats.
+  successive runs in the same workspace, even if a different file suffix is
+  used. Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with the Coastal Blue Carbon preprocessor where
