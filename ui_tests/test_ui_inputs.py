@@ -665,7 +665,7 @@ class PathTest(TextTest):
                     popup.close()
                 except AttributeError:
                     # When popup is None
-                    self.ui_app.processEvents()
+                    self.qt_app.processEvents()
                     time.sleep(0.25)
 
         QtCore.QTimer.singleShot(25, _click_out_of_contextmenu)
