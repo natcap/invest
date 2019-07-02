@@ -24,8 +24,9 @@ try:
     unicode
 except NameError:
     unicode = str
+    # PySide2 seems to be the only package that works with qtpy under python3.
+    import PySide2
 
-import PySide2
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
