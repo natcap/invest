@@ -13,7 +13,14 @@ import sys
 import atexit
 import itertools
 
-import PySide2
+try:
+    unicode
+except NameError:
+    # Need to explicitly import PySide2 when on python3.  It's the only Qt
+    # binding I can seem to get to work under python3.
+    import PySide2
+    unicode = str
+
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -30,12 +37,6 @@ except (ImportError, AttributeError):
     # ImportError when faulthandler not installed
     # AttributeError happens all the time on jenkins.
     pass
-
-try:
-    unicode
-except NameError:
-    unicode = str
-
 
 from . import execution
 
