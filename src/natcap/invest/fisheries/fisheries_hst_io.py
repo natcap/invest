@@ -228,7 +228,7 @@ def _parse_population_csv(path, sexsp):
     csv_data = []
     pop_dict = {}
 
-    with open(path, 'rb') as csvfile:
+    with open(path, 'r') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -389,7 +389,7 @@ def _parse_habitat_dep_csv(args):
     csv_data = []
     habitat_dep_dict = {}
 
-    with open(path, 'rb') as csvfile:
+    with open(path, 'r') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -495,7 +495,7 @@ def _parse_habitat_chg_csv(args):
     csv_data = []
     habitat_chg_dict = {}
 
-    with open(path, 'rb') as csvfile:
+    with open(path, 'r') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -602,7 +602,7 @@ def _get_table_col_end_indexes(lsts, top):
 def _vectorize_attribute(lst, rows):
     d = {}
     a = np.array(lst[1:], dtype=np.float_)
-    a = np.reshape(a, (rows, a.shape[0] / rows))
+    a = np.reshape(a, (rows, a.shape[0] // rows))
     d[lst[0].strip().capitalize()] = a
     return d
 
@@ -715,7 +715,7 @@ def save_population_csv(vars_dict):
         vars_dict['population_csv_path']))
     filename = basename + '_modified' + ext
     output_path = os.path.join(vars_dict['output_dir'], filename)
-    f = open(output_path, 'wb')
+    f = open(output_path, 'w')
     wr = csv.writer(f)
     for row in l:
         wr.writerow(row)

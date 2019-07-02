@@ -39,7 +39,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
             'timestep', 'is_equilibrated', 'spawners', and 'harvest'.
         """
         filename = os.path.join(workspace, 'output', filename)
-        with open(filename) as results_csv:
+        with open(filename, 'r') as results_csv:
             last_line = results_csv.readlines()[-1].strip().split(',')
             timestep, is_equilibrated, spawners, harvest = last_line
             try:
@@ -208,12 +208,12 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'total_timesteps': 300,
             u'val_cont': False,
             u'results_suffix': 'foo',
-            u'workspace_dir': self.workspace_dir,
+            u'workspace_dir': 'C:/Users/dmf/projects/invest_dev/py36_compatibility/fisheries_27',
 
         }
         fisheries.execute(args)
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
-            self.workspace_dir, 'results_table_foo.csv')
+            args['workspace_dir'], 'results_table_foo.csv')
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
