@@ -28,7 +28,7 @@ install:
     - "python --version"
     # We need wheel installed to build wheels
     - "python -m pip install wheel"
-    - "python -m %PIP_INSTALL% -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    - "python -m %PIP_INSTALL% pyqt4 -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
     # Need to install with -I because pip thinks that cwd is a valid installation directory.
