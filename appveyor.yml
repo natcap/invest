@@ -29,8 +29,8 @@ environment:
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
-    # We need wheel installed to build wheels
-    - "python -m pip install wheel"
+    # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
+    - "python -m %PIP_INSTALL% wheel numpy"
     - "python -m %PIP_INSTALL% pyqt4 -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
