@@ -5,7 +5,7 @@ skip_non_tags: false  # we want to build untagged revisions.
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
 environment:
-  PIP_INSTALL: "pip install --extra-index-url pypi.naturalcapitalproject.org/simple/ --trusted-host pypi.naturalcapitalproject.org"
+  PIP_INSTALL: "pip install --extra-index-url http://pypi.naturalcapitalproject.org/simple/ --trusted-host pypi.naturalcapitalproject.org"
 
   matrix:
     # For Python versions available on Appveyor, see
