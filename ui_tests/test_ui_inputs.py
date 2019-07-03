@@ -16,10 +16,14 @@ import imp
 import uuid
 import json
 
-try:
-    basestring
-except NameError:
+if sys.version_info >= (3,):
+    # Need to force PySide2 import in python3.  It's the only set of bindings I
+    # can seem to get to work here.
+    import PySide2
     basestring = str
+    import unittest.mock as mock
+else:
+    import mock
 
 try:
     import PyQt4
@@ -34,11 +38,6 @@ from qtpy import QtGui
 from qtpy import QtWidgets
 from qtpy.QtTest import QTest
 import six
-
-if sys.version_info >= (3,):
-    import unittest.mock as mock
-else:
-    import mock
 
 LOGGER = logging.getLogger(__name__)
 
