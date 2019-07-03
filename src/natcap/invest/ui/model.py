@@ -24,6 +24,10 @@ try:
     unicode
 except NameError:
     unicode = str
+
+try:
+    import PyQt4
+except ImportError:
     # PySide2 seems to be the only package that works with qtpy under python3.
     import PySide2
 

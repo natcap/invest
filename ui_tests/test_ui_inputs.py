@@ -21,9 +21,13 @@ try:
 except NameError:
     basestring = str
 
+try:
+    import PyQt4
+except ImportError:
+    import PySide2
+
 import faulthandler
 faulthandler.enable()
-import PySide2
 import qtpy
 from qtpy import QtCore
 from qtpy import QtGui
@@ -511,20 +515,6 @@ class TextTest(GriddedInputTest):
         input_instance.set_value('gr\xe9gory')  # Latin-1 encoded string
         self.assertEqual(input_instance.value().encode('utf-8'),
                          b'gr\xc3\xa9gory')
-        self.assertTrue(isinstance(input_instance.value(), six.text_type))
-
-    def test_set_value_cyrillic_str(self):
-        input_instance = self.__class__.create_input(label='text')
-        self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('fooДЖЩя')  # UTF-8 encoded bytestring
-        self.assertEqual(input_instance.value(), 'fooДЖЩя')
-        self.assertTrue(isinstance(input_instance.value(), six.text_type))
-
-    def test_set_value_cyrillic_unicode(self):
-        input_instance = self.__class__.create_input(label='text')
-        self.assertEqual(input_instance.value(), '')
-        input_instance.set_value('fooДЖЩя')  # already UTF-8 unicode
-        self.assertEqual(input_instance.value(), 'fooДЖЩя')
         self.assertTrue(isinstance(input_instance.value(), six.text_type))
 
     def test_set_value_int(self):

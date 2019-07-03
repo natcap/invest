@@ -13,7 +13,11 @@ import sys
 import atexit
 import itertools
 
-import PySide2
+try:
+    import PyQt4
+except ImportError:
+    import PySide2
+
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
