@@ -92,7 +92,8 @@ def fetch_args(args):
         "Mismatch between Habitat names in Habitat Paramater CSV files.")
 
     del habitat_dep_dict['Habitats']
-    habitat_dict = dict(habitat_chg_dict.items() + habitat_dep_dict.items())
+    habitat_dict = dict(list(habitat_chg_dict.items()) +
+                        list(habitat_dep_dict.items()))
 
     # Check that classes and regions match
     P_Classes = [x.lower() for x in pop_dict['Classes']]
@@ -107,7 +108,8 @@ def fetch_args(args):
         "Mismatch between region names in Population and Habitat CSV files")
 
     # Combine Data
-    vars_dict = dict(args.items() + pop_dict.items() + habitat_dict.items())
+    vars_dict = dict(list(args.items()) + list(pop_dict.items()) +
+                     list(habitat_dict.items()))
 
     return vars_dict
 
@@ -243,7 +245,7 @@ def _parse_population_csv(path, sexsp):
 
     pop_dict["Classes"] = classes[1:]
     if sexsp == 2:
-        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
+        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])//2]
 
     regions = _get_row(csv_data, start_cols[0])[0: end_cols[0]+1]
 
@@ -262,8 +264,8 @@ def _parse_population_csv(path, sexsp):
 
     elif sexsp == 2:
         # Sex Specific
-        female = np.array(surv_table[0:len(surv_table)/sexsp], dtype=np.float_)
-        male = np.array(surv_table[len(surv_table)/sexsp:], dtype=np.float_)
+        female = np.array(surv_table[0:len(surv_table)//sexsp], dtype=np.float_)
+        male = np.array(surv_table[len(surv_table)//sexsp:], dtype=np.float_)
         pop_dict['Surv_nat_xsa'] = np.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
@@ -409,8 +411,8 @@ def _parse_habitat_dep_csv(args):
         csv_data, start_rows[0]+1, start_cols[0]+1)
 
     # Standardize capitalization
-    Habitats = map(lambda x: x.capitalize(), Habitats)
-    Hab_classes = map(lambda x: x.capitalize(), Hab_classes)
+    Habitats = [x.capitalize() for x in Habitats]
+    Hab_classes = [x.capitalize() for x in Hab_classes]
 
     # Reformat and add data to dictionary
     habitat_dep_dict['Habitats'] = Habitats
@@ -515,8 +517,8 @@ def _parse_habitat_chg_csv(args):
         csv_data, start_rows[0]+1, start_cols[0]+1)
 
     # Standardize capitalization
-    Habitats = map(lambda x: x.capitalize(), Habitats)
-    Hab_regions = map(lambda x: x.capitalize(), Hab_regions)
+    Habitats = [x.capitalize() for x in Habitats]
+    Hab_regions = [x.capitalize() for x in Hab_regions]
 
     # Reformat and add data to dictionary
     habitat_chg_dict['Habitats'] = Habitats

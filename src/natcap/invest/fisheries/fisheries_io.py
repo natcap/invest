@@ -346,7 +346,7 @@ def _parse_population_csv(path, sexsp):
 
     pop_dict["Classes"] = [x.lower() for x in classes[1:]]
     if sexsp == 2:
-        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
+        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])//2]
 
     regions = _get_row(csv_data, start_cols[0])[0: end_cols[0]+1]
 
@@ -365,8 +365,8 @@ def _parse_population_csv(path, sexsp):
             [surv_table], dtype=numpy.float_).swapaxes(1, 2).swapaxes(0, 1)
     elif sexsp == 2:
         # Sex Specific
-        female = numpy.array(surv_table[0:len(surv_table)/sexsp], dtype=numpy.float_)
-        male = numpy.array(surv_table[len(surv_table)/sexsp:], dtype=numpy.float_)
+        female = numpy.array(surv_table[0:len(surv_table)//sexsp], dtype=numpy.float_)
+        male = numpy.array(surv_table[len(surv_table)//sexsp:], dtype=numpy.float_)
         pop_dict['Survnaturalfrac'] = numpy.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
