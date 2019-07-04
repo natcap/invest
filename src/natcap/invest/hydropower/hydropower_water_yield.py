@@ -469,7 +469,7 @@ def create_vector_output(
     watershed_vector = None
 
     for pickle_path, key_name in stats_path_list:
-        with open(pickle_path, 'r') as picklefile:
+        with open(pickle_path, 'rb') as picklefile:
             ws_stats_dict = pickle.load(picklefile)
 
             if key_name == 'wyield_mn':
@@ -536,7 +536,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     """
     ws_stats_dict = pygeoprocessing.zonal_statistics(
         (raster_path, 1), base_vector_path, ignore_nodata=True)
-    with open(target_stats_pickle, 'w') as picklefile:
+    with open(target_stats_pickle, 'wb') as picklefile:
         picklefile.write(pickle.dumps(ws_stats_dict))
 
 
