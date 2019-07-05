@@ -8,3 +8,4 @@ qtawesome
 requests
 faulthandler; python_version<'3.0'
 PySide2; python_version>='3.0'
+pyqt4; python_version<'3.0'
