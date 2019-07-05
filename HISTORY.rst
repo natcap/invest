@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
+  and also to support the PySide2 bindings to Qt5.
 * Fixed a bug in Recreation Model that was causing server-side code
   to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to
