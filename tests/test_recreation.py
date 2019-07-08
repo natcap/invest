@@ -4,7 +4,6 @@ import glob
 import zipfile
 import socket
 import threading
-import Queue
 import unittest
 import tempfile
 import shutil
@@ -23,6 +22,12 @@ import taskgraph
 
 from natcap.invest import utils
 
+try:
+    import queue
+except ImportError:
+    # python 2 uses capital Q
+    import Queue as queue
+
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(
@@ -37,8 +42,8 @@ def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
     def timeout_decorator(target):
         """Wrap the original function."""
-        work_queue = Queue.Queue()
-        result_queue = Queue.Queue()
+        work_queue = queue.Queue()
+        result_queue = queue.Queue()
 
         def worker():
             """Read one func,args,kwargs tuple and execute."""
@@ -63,7 +68,7 @@ def _timeout(max_timeout):
                 if isinstance(result, Exception):
                     raise result
                 return result
-            except Queue.Empty:
+            except queue.Empty:
                 raise RuntimeError("Timeout of %f exceeded" % max_timeout)
         return func_wrapper
     return timeout_decorator
@@ -378,10 +383,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = Queue.Queue()
+        poly_test_queue = queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = Queue.Queue()
+        pud_poly_feature_queue = queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
@@ -408,10 +413,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = Queue.Queue()
+        poly_test_queue = queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = Queue.Queue()
+        pud_poly_feature_queue = queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
@@ -425,10 +430,10 @@ class TestRecServer(unittest.TestCase):
         """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
 
-        block_offset_size_queue = Queue.Queue()
+        block_offset_size_queue = queue.Queue()
         block_offset_size_queue.put((0, 2**10))
         block_offset_size_queue.put('STOP')
-        numpy_array_queue = Queue.Queue()
+        numpy_array_queue = queue.Queue()
         recmodel_server._parse_input_csv(
             block_offset_size_queue, self.resampled_data_path,
             numpy_array_queue)
@@ -955,7 +960,7 @@ class RecreationRegressionTests(unittest.TestCase):
              'raster_mean'),
             ]
 
-        with open(predictor_table_path, 'wb') as table_file:
+        with open(predictor_table_path, 'w') as table_file:
             table_file.write('id,path,type\n')
             for predictor_id, path, predictor_type in predictor_list:
                 table_file.write(
@@ -1023,7 +1028,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2219',  # start year ridiculously out of range
+            'start_year': '1219',  # start year ridiculously out of range
             'end_year': '2014',
             'grid_aoi': True,
             'grid_type': 'hexagon',
