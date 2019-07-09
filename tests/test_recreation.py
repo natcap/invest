@@ -1095,7 +1095,7 @@ def _assert_vector_attributes_eq(
                         av, ev, decimal=tolerance_places)
                 else:
                     # Could happen when a raster predictor is only nodata
-                    assert(numpy.isnan(ev))
+                    assert(ev is None)
             feature = None
             actual_feature = None
     finally:
