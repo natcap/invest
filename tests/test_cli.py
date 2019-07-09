@@ -83,3 +83,29 @@ class CLIHeadlessTests(unittest.TestCase):
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main(['--list'])
         self.assertEqual(exit_cm.exception.code, 0)
+
+
+class CLIGUITests(unittest.TestCase):
+    def setUp(self):
+        """Use a temporary workspace for all tests in this class."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test run."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_run_fisheries(self):
+        """CLI-GUI: Run the fisheries model through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        cli.main([
+            'fisheries',  # uses an exact modelname
+            '--debug',  # set logging
+            '--datastack', parameter_set_path,
+            '--workspace', self.workspace_dir,
+            '--quickrun',
+            '--overwrite',
+        ])
