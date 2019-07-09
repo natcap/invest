@@ -38,7 +38,7 @@ from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
 # This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
+RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
