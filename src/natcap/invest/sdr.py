@@ -121,7 +121,7 @@ def execute(args):
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
-        for (lulc_code, table) in biophysical_table.iteritems():
+        for (lulc_code, table) in biophysical_table.items():
             try:
                 float_value = float(table[table_key])
                 if float_value < 0 or float_value > 1:
