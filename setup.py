@@ -13,12 +13,14 @@ import Cython.Build
 import numpy
 
 
-# Read in requirements.txt and populate the python readme with the non-comment
-# contents.
-_REQUIREMENTS = [req for req in open('requirements.txt').readlines()
-                 if not req.startswith(('#', 'hg+')) and len(req) > 0]
-_GUI_REQUIREMENTS = [req for req in open('requirements-gui.txt').readlines()
-                     if not req.startswith(('#', 'hg+')) and len(req) > 0]
+# Read in requirements.txt and populate the python readme with the
+# non-comment, non-environment-specifier contents.
+_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
+                 open('requirements.txt').readlines()
+                 if not req.startswith(('#', 'hg+')) and len(req.strip()) > 0]
+_GUI_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
+                     open('requirements-gui.txt').readlines()
+                     if not req.startswith(('#', 'hg+')) and len(req.strip()) > 0]
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 

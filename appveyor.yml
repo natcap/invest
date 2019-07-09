@@ -5,6 +5,8 @@ skip_non_tags: false  # we want to build untagged revisions.
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
 environment:
+  PIP_INSTALL: "pip install --extra-index-url http://pypi.naturalcapitalproject.org/simple/ --trusted-host pypi.naturalcapitalproject.org --prefer-binary"
+
   matrix:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/#python
@@ -26,14 +28,7 @@ install:
     - "python --version"
     # We need wheel installed to build wheels
     - "python -m pip install wheel"
-    - "python -m pip install pipwin"
-    - "python -m pipwin install gdal"
-    - "python -m pipwin install shapely"
-    - "python -m pipwin install rtree"
-    - "python -m pipwin install pyqt4"
-    - "python -m pip install cython"
-    - "python -m pip install numpy"
-    - "python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    - "python -m %PIP_INSTALL% pyqt4 -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
     # Need to install with -I because pip thinks that cwd is a valid installation directory.
