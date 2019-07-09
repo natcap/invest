@@ -264,7 +264,7 @@ class TestRecServer(unittest.TestCase):
             out_workspace_dir)
         pygeoprocessing.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     @_timeout(30.0)
     def test_empty_server(self):
@@ -357,7 +357,7 @@ class TestRecServer(unittest.TestCase):
         expected_vector_path = os.path.join(
             REGRESSION_DATA, 'test_aoi_for_subset_pud.shp')
         pygeoprocessing.testing.assert_vectors_equal(
-            expected_vector_path, result_vector_path, 1e-6)
+            expected_vector_path, result_vector_path, 1E-6)
 
         # ensure the remote workspace is as expected
         workspace_zip_binary = recreation_server.fetch_workspace_aoi(
@@ -369,7 +369,7 @@ class TestRecServer(unittest.TestCase):
         zipfile.ZipFile(workspace_zip_path, 'r').extractall(out_workspace_dir)
         pygeoprocessing.testing.assert_vectors_equal(
             aoi_path,
-            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1e-6)
+            os.path.join(out_workspace_dir, 'test_aoi_for_subset.shp'), 1E-6)
 
     def test_local_calc_poly_pud(self):
         """Recreation test single threaded local PUD calculation."""
@@ -560,15 +560,15 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        _assert_vector_attributes_eq(#pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 6)
+        _assert_vector_attributes_eq(
+            out_grid_vector_path, expected_grid_vector_path, 3)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        _assert_vector_attributes_eq(#pygeoprocessing.testing.assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 6)
+        _assert_vector_attributes_eq(
+            out_scenario_path, expected_scenario_path, 3)
 
 
 class TestLocalRecServer(unittest.TestCase):
@@ -753,7 +753,7 @@ class RecreationRegressionTests(unittest.TestCase):
         for key in expected_results:
             numpy.testing.assert_allclose(results[key], expected_results[key])
 
-    @unittest.skip("skipping to avoid remote server call (issue #3753)")
+    # @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
@@ -818,7 +818,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    @unittest.skip("skipping to avoid remote server call (issue #3753)")
+    # @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
@@ -929,7 +929,7 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        _assert_vector_attributes_eq(#pygeoprocessing.testing.assert_vectors_equal(
+        _assert_vector_attributes_eq(
             out_coefficient_vector_path, expected_coeff_vector_path, 6)
 
     def test_predictor_table_absolute_paths(self):
