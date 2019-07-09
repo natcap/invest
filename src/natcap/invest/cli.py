@@ -255,17 +255,20 @@ class SelectModelAction(argparse.Action):
             elif values in _MODEL_ALIASES:  # match an alias
                 modelname = _MODEL_ALIASES[values]
             elif len(matching_models) == 0:
-                parser.exit("Error: '%s' not a known model" % values)
+                parser.exit(status=1, message=(
+                    "Error: '%s' not a known model" % values))
             else:
-                parser.exit((
-                    "Model string '{model}' is ambiguous:\n"
-                    "    {matching_models}").format(
-                        model=values,
-                        matching_models=' '.join(matching_models)))
+                parser.exit(
+                    status=1,
+                    message=(
+                        "Model string '{model}' is ambiguous:\n"
+                        "    {matching_models}").format(
+                            model=values,
+                            matching_models=' '.join(matching_models)))
         setattr(namespace, self.dest, modelname)
 
 
-def main():
+def main(user_args=None):
     """CLI entry point for launching InVEST runs.
 
     This command-line interface supports two methods of launching InVEST models
@@ -346,7 +349,7 @@ def main():
                                   'specify "launcher" to reveal a model '
                                   'launcher window.'))
 
-    args = parser.parse_args()
+    args = parser.parse_args(user_args)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
