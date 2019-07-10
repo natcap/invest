@@ -570,6 +570,54 @@ class TestRecServer(unittest.TestCase):
         _assert_vector_attributes_eq(
             out_scenario_path, expected_scenario_path, 3)
 
+    def test_results_suffix_on_serverside_files(self):
+        """Recreation test suffix gets added to files created on server."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': self.resampled_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2014,
+            'max_year': 2015,
+            'max_points_per_node': 200,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
+        server_thread.start()
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+            'compute_regression': False,
+            'start_year': '2014',
+            'end_year': '2015',
+            'grid_aoi': False,
+            'results_suffix': u'hello',
+            'workspace_dir': self.workspace_dir,
+            'hostname': server_args['hostname'],
+            'port': server_args['port'],
+        }
+        recmodel_client.execute(args)
+
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
+
 
 class TestLocalRecServer(unittest.TestCase):
     """Tests using a local rec server."""

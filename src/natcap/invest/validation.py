@@ -11,6 +11,13 @@ except ImportError:
     basestring = str
 
 
+# Python3 doesn't know about basestring, only str.
+try:
+    basestring
+except NameError:
+    basestring = str
+
+
 #: A flag to pass to the validation context manager indicating that all keys
 #: should be checked.
 CHECK_ALL_KEYS = None

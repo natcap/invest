@@ -221,6 +221,7 @@ def execute(args):
               file_registry['compressed_aoi_path'],
               args['start_year'], args['end_year'],
               os.path.basename(file_registry['pud_results_path']),
+              os.path.basename(file_registry['monthly_table_path']),
               file_registry['compressed_pud_path'],
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
@@ -302,8 +303,8 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 def _retrieve_photo_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        pud_results_filename, compressed_pud_path, output_dir, server_url,
-        server_version_pickle):
+        pud_results_filename, monthly_table_filename, compressed_pud_path,
+        output_dir, server_url, server_version_pickle):
     """Calculate photo-user-days (PUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
@@ -316,6 +317,7 @@ def _retrieve_photo_user_days(
         start_year (int/string): lower limit of date-range for PUD queries
         end_year (int/string): upper limit of date-range for PUD queries
         pud_results_filename (string): filename for a shapefile to hold results
+        monthly_table_filename (string): filename for monthly PUD results CSV
         compressed_pud_path (string): path to zip file storing compressed PUD
             results, including 'pud_results.shp' and 'monthly_table.csv'.
         output_dir (string): path to output workspace where results are
@@ -387,6 +389,10 @@ def _retrieve_photo_user_days(
     for filename in os.listdir(temporary_output_dir):
         shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
     shutil.rmtree(temporary_output_dir)
+    # the monthly table is returned from the server without a results_suffix.
+    shutil.move(
+        os.path.join(output_dir, 'monthly_table.csv'),
+        os.path.join(output_dir, monthly_table_filename))
 
     LOGGER.info('connection release')
     recmodel_server._pyroRelease()

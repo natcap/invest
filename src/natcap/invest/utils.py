@@ -14,10 +14,10 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
+# Python3 doesn't know about basestring, only str.
 try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
+    basestring
+except NameError:
     basestring = str
 
 LOGGER = logging.getLogger(__name__)

@@ -212,20 +212,24 @@ def execute(args):
                 try:
                     max_radius = math.fabs(point.GetField(fieldname))
                     break
-                except ValueError:
+                except (ValueError, KeyError):
                     # When this field is not present.
+                    # ValueError was changed to KeyError between GDAL 2.2 and
+                    # 2.4.
                     pass
 
             try:
                 viewpoint_height = math.fabs(point.GetField('HEIGHT'))
-            except ValueError:
+            except (ValueError, KeyError):
                 # When height field is not present, assume height of 0.0
+                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
                 viewpoint_height = 0.0
 
             try:
                 weight = float(point.GetField('WEIGHT'))
-            except ValueError:
+            except (ValueError, KeyError):
                 # When no weight provided, set scale to 1
+                # ValueError was changed to KeyError between GDAL 2.2 and 2.4.
                 weight = 1.0
 
             viewpoint_tuples.append((viewpoint, max_radius, weight,
@@ -725,7 +729,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
 
         """
         dem = args[0]
-        n_visibility_arrays = (len(args) - 1) / 2
+        n_visibility_arrays = (len(args) - 1) // 2
         visibility_rasters = args[1: n_visibility_arrays + 1]
         weights = args[n_visibility_arrays + 1:]
 
@@ -736,8 +740,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
         visibility_sum[valid_mask] = 0
 
         # Weight and sum the outputs.
-        for visibility_matrix, weight in itertools.izip(
-                visibility_rasters, weights):
+        for visibility_matrix, weight in zip(visibility_rasters, weights):
             visible_mask = (valid_mask & (visibility_matrix == 1))
             visibility_sum[visible_mask] += (visibility_matrix[visible_mask] *
                                              weight)

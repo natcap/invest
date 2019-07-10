@@ -50,7 +50,7 @@ class ValidateExceptionTests(unittest.TestCase):
 
 def main(sampledatadir):
     """Do validation for each datastack and store error messages.
-    
+
     Parameters:
         sampledatadir (string): path to the invest-sample-data repository,
             where '*invs.json' datastack files are expected to be in the root.
@@ -76,6 +76,7 @@ def main(sampledatadir):
             paramset.args['workspace_dir'] = tempfile.mkdtemp()
         model_module = importlib.import_module(name=paramset.model_name)
 
+        model_warnings = []  # define here in case of uncaught exception.
         try:
             LOGGER.info('validating %s ', datastack_path)
             model_warnings = getattr(
