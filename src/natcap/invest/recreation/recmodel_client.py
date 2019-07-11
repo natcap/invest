@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 
 import json
-import uuid
 import os
 import zipfile
 import time
@@ -12,6 +11,7 @@ import pickle
 import urllib
 import tempfile
 import shutil
+import sys
 
 import rtree
 import Pyro4
@@ -37,8 +37,14 @@ from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
+
 # This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
+if sys.version_info >= (3,):
+    # This avoids "ValueError: bad marshal data (unknown type code)"
+    # when a Python 2 Pyro tries to shake hands with Python 3 Pyro
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
+else:
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'

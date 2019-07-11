@@ -162,7 +162,10 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        self.assertEqual(file_hash, 'c8054b109d7a9d2a')
+        # The exact encoded string that is hashed is dependent on python version,
+        # with Python 3 including b prefix and \n suffix.
+        # these hashes are for [py2.7, py3.6]
+        self.assertIn(file_hash, ['c052e7a0a4c5e528', 'c8054b109d7a9d2a'])
 
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
@@ -801,7 +804,7 @@ class RecreationRegressionTests(unittest.TestCase):
         for key in expected_results:
             numpy.testing.assert_allclose(results[key], expected_results[key])
 
-    # @unittest.skip("skipping to avoid remote server call (issue #3753)")
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_base_regression(self):
         """Recreation base regression test on fast sample data.
 
@@ -866,7 +869,7 @@ class RecreationRegressionTests(unittest.TestCase):
         pygeoprocessing.testing.assert_vectors_equal(
             out_grid_vector_path, expected_grid_vector_path, 1E-6)
 
-    # @unittest.skip("skipping to avoid remote server call (issue #3753)")
+    @unittest.skip("skipping to avoid remote server call (issue #3753)")
     def test_no_grid_regression(self):
         """Recreation base regression on ungridded AOI."""
         from natcap.invest.recreation import recmodel_client
