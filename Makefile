@@ -329,7 +329,7 @@ build/vcredist_x86.exe: | build
 jenkins:
 	$(JENKINS_BUILD_SCRIPT)
 
-jenkins_test_ui: env
+jenkins_test_ui: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
 jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)

@@ -9,9 +9,16 @@ import platform
 import sys
 import threading
 import traceback
-import urllib
-import urllib2
 import uuid
+
+try:
+    from urllib.request import urlopen, Request
+    from urllib.parse import urlencode
+    string_types = (str,)
+except ImportError:
+    from urllib2 import urlopen, Request
+    from urllib import urlencode
+    string_types = (str, unicode)
 
 from osgeo import gdal
 from osgeo import osr
@@ -123,7 +130,7 @@ def _calculate_args_bounding_box(args_dict):
             bounding boxes are None.
         """
         def _is_spatial(arg):
-            if isinstance(arg, (str, unicode)) and os.path.exists(arg):
+            if isinstance(arg, string_types) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
                     dataset = gdal.OpenEx(arg)
                     if dataset is not None:
@@ -137,7 +144,7 @@ def _calculate_args_bounding_box(args_dict):
 
         if isinstance(arg, dict):
             # if dict, grab the bb's for all the members in it
-            for value in arg.itervalues():
+            for value in arg.values():
                 bb_intersection, bb_union = _merge_local_bounding_boxes(
                     value, bb_intersection, bb_union)
         elif isinstance(arg, list):
@@ -213,11 +220,10 @@ def _log_exit_status(session_id, status):
             'session_id': session_id,
             'status': status,
         }
-        log_finish_url = json.loads(urllib.urlopen(
+        log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        urllib2.urlopen(urllib2.Request(log_finish_url,
-                                        urllib.urlencode(payload)))
+        urlopen(Request(log_finish_url, urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
@@ -264,11 +270,10 @@ def _log_model(model_name, model_args, session_id=None):
             'bounding_box_union': str(bounding_box_union),
             'session_id': session_id,
         }
-        log_start_url = json.loads(urllib.urlopen(
+        log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        urllib2.urlopen(urllib2.Request(log_start_url,
-                                        urllib.urlencode(payload)))
+        urlopen(Request(log_start_url, urlencode(payload)))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(

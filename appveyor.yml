@@ -25,6 +25,11 @@ environment:
 
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
+      EXTRAPKGS: "pyqt4"
+
+    - PYTHON: "C:\\Python36"
+      TESTTARGET: "test_ui"
+      EXTRAPKGS: "pyqt4"
 
     - PYTHON: "C:\\Python27"
       TESTTARGET: "validate_sampledata"
@@ -32,11 +37,9 @@ environment:
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
-    # We need wheel installed to build wheels
-    - "python -m pip install wheel"
-    # Because pygeoprocessing's setup.py imports numpy (ImportError only seen in Python36)
-    - "python -m %PIP_INSTALL% numpy"
-    - "python -m %PIP_INSTALL% pyqt4 -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
+    - "python -m %PIP_INSTALL% wheel numpy %EXTRAPKGS%"
+    - "python -m %PIP_INSTALL% -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
     # Need to install with -I because pip thinks that cwd is a valid installation directory.

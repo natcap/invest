@@ -1,9 +1,14 @@
 """Functions to assist with remote logging of InVEST usage."""
 
 import logging
-import urllib
-import urllib2
 import json
+
+try:
+    from urllib.request import urlopen, Request
+    from urllib.parse import urlencode
+except ImportError:
+    from urllib2 import urlopen, Request
+    from urllib import urlencode
 
 import Pyro4
 
@@ -58,8 +63,7 @@ class LoggingServer(object):
         Returns:
             None
         """
-        endpoints = json.loads(urllib.urlopen(
-            _ENDPOINTS_INDEX_URL).read().strip())
+        endpoints = json.loads(urlopen(_ENDPOINTS_INDEX_URL).read().strip())
 
         try:
             if mode == 'log':
@@ -77,8 +81,9 @@ class LoggingServer(object):
             else:
                 data_copy['ip_address'] = 'local'
 
-            urllib2.urlopen(
-                urllib2.Request(url, urllib.urlencode(data_copy)))
+            # The data must be a python string of bytes.  This will be ``str``
+            # in python2, ``bytes`` in python3.
+            urlopen(Request(url, urlencode(data_copy).encode('utf-8')))
         except:
             # print something locally for our log and raise back to client
             LOGGER.exception("log_invest_run failed")

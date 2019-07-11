@@ -132,7 +132,7 @@ _MODEL_UIS = {
 # Build up an index mapping aliase to modelname.
 # ``modelname`` is the key to the _MODEL_UIS dict, above.
 _MODEL_ALIASES = {}
-for _modelname, _meta in _MODEL_UIS.iteritems():
+for _modelname, _meta in _MODEL_UIS.items():
     for _alias in _meta.aliases:
         assert _alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
@@ -240,7 +240,7 @@ class SelectModelAction(argparse.Action):
             parser.print_help()
             parser.exit(1, message=build_model_list_table())
         else:
-            known_models = sorted(_MODEL_UIS.keys() + ['launcher'])
+            known_models = sorted(list(_MODEL_UIS.keys()) + ['launcher'])
 
             matching_models = [model for model in known_models if
                                model.startswith(values)]
@@ -255,17 +255,20 @@ class SelectModelAction(argparse.Action):
             elif values in _MODEL_ALIASES:  # match an alias
                 modelname = _MODEL_ALIASES[values]
             elif len(matching_models) == 0:
-                parser.exit("Error: '%s' not a known model" % values)
+                parser.exit(status=1, message=(
+                    "Error: '%s' not a known model" % values))
             else:
-                parser.exit((
-                    "Model string '{model}' is ambiguous:\n"
-                    "    {matching_models}").format(
-                        model=values,
-                        matching_models=' '.join(matching_models)))
+                parser.exit(
+                    status=1,
+                    message=(
+                        "Model string '{model}' is ambiguous:\n"
+                        "    {matching_models}").format(
+                            model=values,
+                            matching_models=' '.join(matching_models)))
         setattr(namespace, self.dest, modelname)
 
 
-def main():
+def main(user_args=None):
     """CLI entry point for launching InVEST runs.
 
     This command-line interface supports two methods of launching InVEST models
@@ -346,7 +349,7 @@ def main():
                                   'specify "launcher" to reveal a model '
                                   'launcher window.'))
 
-    args = parser.parse_args()
+    args = parser.parse_args(user_args)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
