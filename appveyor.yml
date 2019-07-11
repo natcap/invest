@@ -34,6 +34,8 @@ install:
     - "python --version"
     # We need wheel installed to build wheels
     - "python -m pip install wheel"
+    # Because pygeoprocessing's setup.py imports numpy (ImportError only seen in Python36)
+    - "python -m %PIP_INSTALL% numpy"
     - "python -m %PIP_INSTALL% pyqt4 -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
