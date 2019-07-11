@@ -18,8 +18,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Run the fisheries model through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         cli.main([
             'fisheries',  # uses an exact modelname
@@ -34,8 +34,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
@@ -52,8 +52,8 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
 
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'cbc_galveston_bay.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'coastal_blue_carbon', 'cbc_galveston_bay_2.invs.json')
 
         cli.main([
             'cbc',  # uses an alias
@@ -98,8 +98,8 @@ class CLIGUITests(unittest.TestCase):
         """CLI-GUI: Run the fisheries model through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         cli.main([
             'fisheries',  # uses an exact modelname
