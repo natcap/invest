@@ -19,7 +19,6 @@ import json
 if sys.version_info >= (3,):
     # Need to force PySide2 import in python3.  It's the only set of bindings I
     # can seem to get to work here.
-    import PySide2
     basestring = str
     import unittest.mock as mock
 else:
