@@ -19,9 +19,11 @@ environment:
 
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
+      EXTRAPKGS: "pyqt4"
 
     - PYTHON: "C:\\Python36"
       TESTTARGET: "test_ui"
+      EXTRAPKGS: "pyqt4"
 
     - PYTHON: "C:\\Python27"
       TESTTARGET: "validate_sampledata"
@@ -30,7 +32,7 @@ install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
     # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
-    - "python -m %PIP_INSTALL% wheel numpy"
+    - "python -m %PIP_INSTALL% wheel numpy %EXTRAPKGS%"
     - "python -m %PIP_INSTALL% -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
