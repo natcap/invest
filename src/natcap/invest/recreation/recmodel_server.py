@@ -60,7 +60,6 @@ def _try_except_wrapper(mesg):
         """Raw decorator function."""
         def try_except_wrapper(*args, **kwargs):
             """General purpose try/except wrapper."""
-            func(*args, **kwargs)
             try:
                 return func(*args, **kwargs)
             except Exception as exc_obj:

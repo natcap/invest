@@ -1,6 +1,13 @@
 pipelines:
     options:
         max-time: 20
+    default:
+        - step:
+            name: Test udpate_installer_urls.py
+            image: python:2.7
+            script: 
+                - pip install pytest
+                - python -m pytest scripts/update_installer_urls.py
     custom:
         appveyor-trigger:
           - step:
@@ -75,7 +82,7 @@ pipelines:
                         - dist/natcap.invest*.zip
             - step:
                 name: NSIS Installer
-                image: natcap/py27-wine-build:88e34494b14387af9bb66bf00232340848b5f996
+                image: natcap/py27-wine-build:3177b8530b70035d10ee75b9a52bf9085c797300
                 script:
                     # First, need to put the vcredist into the right place (no powershell under WINE)
                     - make build
@@ -92,6 +99,13 @@ pipelines:
                     # Need to set PYTHON_ARCH because for some reason the
                     # string isn't being correctly set.
                     - wine make PYTHON_ARCH=x86 windows_installer
+
+                    # Code-signing
+                    # Authenticate with the service account key to get certificate from bucket.
+                    - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
+                    - gcloud auth activate-service-account --key-file=client-secret.json
+                    - export INSTALLER=$(find dist -name 'InVEST*.exe')
+                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} BIN_TO_SIGN=$INSTALLER signcode 
                 artifacts:
                     - dist/*.exe
             - step:

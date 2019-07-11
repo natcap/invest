@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 2d615534d52e345ee7dc8bc898571c36b47dc6f1
+GIT_SAMPLE_DATA_REPO_REV    := 544b4822fe3193679723b6218f8b0618ae46f432
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 8787f370a191c311d74253ed53c6375315209cc0
+GIT_TEST_DATA_REPO_REV      := 97f3e92f91baaf57d4b91c437c1efca8e1afb9a9
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := aac0d4a95f33
+HG_UG_REPO_REV              := 0a6730f99679
 
 
 ENV = env
@@ -95,6 +95,8 @@ DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
 TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
 
+DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
+TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py
 
 # Target names.
 INVEST_BINARIES_DIR := $(DIST_DIR)/invest
@@ -108,7 +110,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -143,6 +145,10 @@ test: $(GIT_TEST_DATA_REPO_PATH)
 
 test_ui:
 	$(TESTRUNNER) ui_tests
+
+validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
+	$(TEST_DATAVALIDATOR)
+	$(DATAVALIDATOR)
 
 clean:
 	$(PYTHON) setup.py clean
@@ -272,6 +278,7 @@ ZIPDIRS = Aquaculture \
 		  ScenicQuality \
 		  seasonal_water_yield \
 		  storm_impact \
+		  UrbanFloodMitigation \
 		  WaveEnergy \
 		  WindEnergy
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
@@ -328,12 +335,29 @@ jenkins_test_ui: env
 jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test
 
+CERT_FILE := StanfordUniversity.crt
+KEY_FILE := Stanford-natcap-code-signing-2019-03-07.key.pem
+signcode:
+	gsutil cp gs://stanford_cert/$(CERT_FILE) $(BUILD_DIR)/$(CERT_FILE)
+	gsutil cp gs://stanford_cert/$(KEY_FILE) $(BUILD_DIR)/$(KEY_FILE)
+	# On some OS (including our build container), osslsigncode fails with Bus error if we overwrite the binary when signing.
+	osslsigncode -certs $(BUILD_DIR)/$(CERT_FILE) -key $(BUILD_DIR)/$(KEY_FILE) -pass $(CERT_KEY_PASS) -in $(BIN_TO_SIGN) -out "signed.exe"
+	mv "signed.exe" $(BIN_TO_SIGN)
+	rm $(BUILD_DIR)/$(CERT_FILE)
+	rm $(BUILD_DIR)/$(KEY_FILE)
+	@echo "Installer was signed"
+
 deploy:
 	gsutil -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
 	gsutil -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	gsutil -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
+    ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces
+		gsutil cp "$(BUCKET)/fragment_id_redirections.json" "$(BUILD_DIR)/fragment_id_redirections.json"
+		$(PYTHON) scripts/update_installer_urls.py "$(BUILD_DIR)/fragment_id_redirections.json" $(BUCKET) $(notdir $(WINDOWS_INSTALLER_FILE)) $(notdir $(patsubst "%",%,$(MAC_BINARIES_ZIP_FILE)))
+		gsutil cp "$(BUILD_DIR)/fragment_id_redirections.json" "$(BUCKET)/fragment_id_redirections.json"
+    endif
 
 
 # Notes on Makefile development

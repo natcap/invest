@@ -27,8 +27,6 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
             label=u'Depth of rainfall in mm',
             validator=self.validator)
         self.add_input(self.rainfall_depth)
-        # set default value:
-        self.rainfall_depth.set_value("257.0")
 
         self.lulc_path = inputs.File(
             args_key=u'lulc_path',
@@ -50,9 +48,10 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
         self.curve_number_table_path = inputs.File(
             args_key=u'curve_number_table_path',
             helptext=(
-                u"Path to a CSV table that contains at least the headers "
-                u"'lucode', 'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
-            label=u'Landcover to Curve Number Table',
+                u"Path to a CSV table that to map landcover codes to curve "
+                u"numbers and contains at least the headers 'lucode', "
+                u"'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
+            label=u'Biophysical Table',
             validator=self.validator)
         self.add_input(self.curve_number_table_path)
 
@@ -62,7 +61,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 u"Path to a vector with built infrastructure footprints. "
                 u"Attribute table contains a column 'Type' with integers "
                 u"(e.g. 1=residential, 2=office, etc.)."),
-            label=u'Built Infrastructure Vector',
+            label=u'Built Infrastructure Vector (optional)',
             validator=self.validator)
         self.add_input(self.built_infrastructure_vector_path)
 
@@ -73,7 +72,7 @@ class UrbanFloodRiskMitigation(model.InVESTModel):
                 u"with values of built infrastructure type from the 'Type' "
                 "field in the 'Built Infrastructure Vector' and potential "
                 u"damage loss (in $/m^2)."),
-            label=u'Built Infrastructure Damage Loss Table',
+            label=u'Built Infrastructure Damage Loss Table (optional)',
             validator=self.validator)
         self.add_input(self.infrastructure_damage_loss_table_path)
 

@@ -825,7 +825,7 @@ class ViewshedTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     @staticmethod
-    def create_dem(matrix, filepath, pixel_size=(1, -1), nodata=-1):
+    def create_dem(matrix, filepath, pixel_size=(1, 1), nodata=-1):
         """Create a DEM in WGS84 coordinate system.
 
         Parameters:
