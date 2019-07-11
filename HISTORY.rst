@@ -4,6 +4,13 @@ Unreleased Changes
 ------------------
 * Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
   and also to support the PySide2 bindings to Qt5.
+* InVEST Coastal Blue Carbon model now writes out a net present value
+  raster for the year of the current landcover, each transition year,
+  and the final analysis year (if provided).
+* Correcting an issue with InVEST Coastal Blue Carbon where incorrect
+  configuration of a nodata value would result in ``-inf`` values in
+  output rasters.  Now, any values without a defined reclassification
+  rule that make it past validation will be written out as nodata.
 * Fixed a bug in Recreation Model that was causing server-side code
   to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to
@@ -11,7 +18,7 @@ Unreleased Changes
 * Various fixes in Coastal Vulnerability Model. CSV output files now
   have FID column for joining to vector outputs. ``results_suffix`` can be
   used without triggering task re-execution. Raster processing maintains original
-  resolution of the input raster so long as it is projected. Otherwise resamples 
+  resolution of the input raster so long as it is projected. Otherwise resamples
   to ``model_resolution``.
 * Fixed a bug in Coastal Vulnerability model's task graph that sometimes
   caused an early task to re-execute when it should be deemed pre-calculated.
