@@ -694,7 +694,7 @@ def _lu_to_cn_op(
         lucode_nodata  (float): nodata value for corresponding array.
         soil_type_nodata (float): nodata value for corresponding array.
         cn_nodata (float): nodata value for return value array.
-        lucode_to_cn_table
+        lucode_to_cn_table (scipy.sparse.csr.csr_matrix): 
 
     Returns:
         ndarray of curve numbers by looking up landcover type to soil type
@@ -713,7 +713,7 @@ def _lu_to_cn_op(
     # pixel and the rows are the curve number index for the landcover
     # type under that pixel (0..3 are CN_A..CN_D and 4 is "unknown")
     per_pixel_cn_array = (
-        lucode_to_cn_table[lucode_array[valid_mask]].toarray().reshape(
+        lucode_to_cn_table[lucode_array[valid_mask].astype(int)].toarray().reshape(
             (-1, 4))).transpose()
 
     # this is the soil type array with values ranging from 0..4 that will
