@@ -5,6 +5,7 @@ The Fisheries IO module contains functions for handling inputs and outputs
 import logging
 import os
 import csv
+import io
 
 import numpy
 from osgeo import ogr
@@ -13,6 +14,12 @@ import pygeoprocessing.testing
 
 from .. import reporting
 from .. import utils
+
+try:
+    unicode
+except NameError:
+    # No unicode in Python 3
+    unicode = str
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 
@@ -752,40 +759,41 @@ def _create_results_csv(vars_dict):
     Regions = vars_dict['Regions']
 
     with open(path, 'w') as csv_file:
-        csv_writer = csv.writer(csv_file)
 
         total_timesteps = vars_dict['total_timesteps']
 
         #Header for final results table
-        csv_writer.writerow(
-            ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
-                ' Time Steps'])
-        csv_writer.writerow([])
+        csv_file.write(','.join(['Final Harvest by Subregion after ' +
+                                 str(total_timesteps-1) +
+                                 ' Time Steps']) + os.linesep)
+        csv_file.write(os.linesep)
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
         sum_headers_row = ['Subregion', 'Harvest']
         if vars_dict['val_cont']:
             sum_headers_row.append('Valuation')
-        csv_writer.writerow(sum_headers_row)
+        csv_file.write(','.join(sum_headers_row) + os.linesep)
+
         for i in range(0, len(H_tx[-1])):  # i is a cycle
             line = [Regions[i], "%.2f" % H_tx[-1, i]]
             if vars_dict['val_cont']:
                 line.append("%.2f" % V_tx[-1, i])
-            csv_writer.writerow(line)
+            csv_file.write(','.join(line) + os.linesep)
         line = ['Total', "%.2f" % H_tx[-1].sum()]
+
         if vars_dict['val_cont']:
             line.append("%.2f" % V_tx[-1].sum())
-        csv_writer.writerow(line)
-        csv_writer.writerow([])
+        csv_file.write(','.join(line) + os.linesep)
+        csv_file.write(os.linesep)
 
         # Give Total Harvest for Each Cycle
-        csv_writer.writerow(['Time Step Breakdown'])
-        csv_writer.writerow([])
+        csv_file.write('Time Step Breakdown' + os.linesep)
+        csv_file.write(os.linesep)
         line = ['Time Step', 'Equilibrated?', 'Spawners', 'Harvest']
-        csv_writer.writerow(line)
+        csv_file.write(','.join(line) + os.linesep)
 
         for i in range(0, len(H_tx)):  # i is a cycle
-            line = [i]
+            line = [str(i)]
             if equilibrate_timestep and i >= equilibrate_timestep:
                 line.append('Y')
             else:
@@ -797,7 +805,7 @@ def _create_results_csv(vars_dict):
             else:
                 line.append("%.2f" % Spawners_t[i])
             line.append("%.2f" % H_tx[i].sum())
-            csv_writer.writerow(line)
+            csv_file.write(','.join(line) + os.linesep)
 
 
 def _create_results_html(vars_dict):

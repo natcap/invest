@@ -7,6 +7,7 @@ import logging
 import os
 import csv
 import copy
+import io
 
 import numpy as np
 
@@ -695,7 +696,10 @@ def save_population_csv(vars_dict):
             vector = vector[0] + vector[1]
         else:
             vector = vector[0]
-        map(lambda l, v: l.append(v), l[1:], vector)
+        i = 1  # skip the first list in l, it's a header
+        for v in vector:
+            l[i].append(v)
+            i += 1
 
     # Add row of spaces
     l.append([])
@@ -717,7 +721,7 @@ def save_population_csv(vars_dict):
         vars_dict['population_csv_path']))
     filename = basename + '_modified' + ext
     output_path = os.path.join(vars_dict['output_dir'], filename)
-    f = open(output_path, 'w')
-    wr = csv.writer(f)
-    for row in l:
-        wr.writerow(row)
+    with open(output_path, 'w') as f:
+        wr = csv.writer(f)
+        for row in l:
+            wr.writerow(row)
