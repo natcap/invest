@@ -386,7 +386,7 @@ def validate(args, limit_to=None):
                     warnings.append(
                         ([float_key],
                          'Value cannot be greater than %s' % max_value))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 warnings.append(([float_key],
                                  'Value must be a number.'))
             except KeyError:

@@ -5,7 +5,7 @@ pipelines:
         - step:
             name: Test udpate_installer_urls.py
             image: python:2.7
-            script: 
+            script:
                 - pip install pytest
                 - python -m pytest scripts/update_installer_urls.py
     custom:
@@ -15,9 +15,8 @@ pipelines:
               # as expected with appveyor.  It's added here in case we need to retrigger
               # an appveyor build after-the-fact.
               name: "Retrigger AppVeyor"
-              image: debian:9.7
+              image: atlassian/default-image:2
               script:
-                - apt-get update && apt-get install -y curl mercurial
                 - |
                   curl --fail --header "Authorization: Bearer $APPVEYOR_API_KEY" \
                     --header "Content-Type: application/json" \
@@ -105,7 +104,7 @@ pipelines:
                     - echo ${GOOGLE_SERVICE_ACC_KEY} > client-secret.json
                     - gcloud auth activate-service-account --key-file=client-secret.json
                     - export INSTALLER=$(find dist -name 'InVEST*.exe')
-                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} BIN_TO_SIGN=$INSTALLER signcode 
+                    - make CERT_KEY_PASS=${STANFORD_CERT_KEY_PASS} BIN_TO_SIGN=$INSTALLER signcode
                 artifacts:
                     - dist/*.exe
             - step:
