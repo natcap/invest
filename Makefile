@@ -143,7 +143,7 @@ $(BUILD_DIR) $(DATA_DIR) $(DIST_DIR) $(DIST_DATA_DIR):
 test: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) tests
 
-test_ui:
+test_ui: $(GIT_TEST_DATA_REPO_PATH)
 	$(TESTRUNNER) ui_tests
 
 validate_sampledata: $(GIT_SAMPLE_DATA_REPO_PATH)
@@ -329,7 +329,7 @@ build/vcredist_x86.exe: | build
 jenkins:
 	$(JENKINS_BUILD_SCRIPT)
 
-jenkins_test_ui: env $(GIT_TEST_DATA_REPO_PATH)
+jenkins_test_ui: env
 	$(MAKE) PYTHON=$(ENV_SCRIPTS)/python test_ui
 
 jenkins_test: env $(GIT_TEST_DATA_REPO_PATH)

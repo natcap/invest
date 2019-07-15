@@ -53,7 +53,7 @@ class CLIHeadlessTests(unittest.TestCase):
 
         parameter_set_path = os.path.join(
             os.path.dirname(__file__), '..', 'data', 'invest-test-data',
-            'coastal_blue_carbon', 'cbc_galveston_bay_2.invs.json')
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         cli.main([
             'cbc',  # uses an alias
