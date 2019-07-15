@@ -904,7 +904,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Creating new vector')
     output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
     output_vector = output_driver.CreateDataSource(target_vector_path)
-    target_layer = output_vector.CreateLayer(layer_name, target_sr,
+    target_layer = output_vector.CreateLayer(str(layer_name), target_sr,
                                              ogr.wkbPoint)
 
     # Construct a dictionary of field names and their corresponding types
