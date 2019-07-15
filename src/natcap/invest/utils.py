@@ -308,13 +308,13 @@ def exponential_decay_kernel_raster(expected_distance, kernel_filepath):
     n_row_blocks = int(math.ceil(n_rows / float(rows_per_block)))
 
     integration = 0.0
-    for row_block_index in xrange(n_row_blocks):
+    for row_block_index in range(n_row_blocks):
         row_offset = row_block_index * rows_per_block
         row_block_width = n_rows - row_offset
         if row_block_width > rows_per_block:
             row_block_width = rows_per_block
 
-        for col_block_index in xrange(n_col_blocks):
+        for col_block_index in range(n_col_blocks):
             col_offset = col_block_index * cols_per_block
             col_block_width = n_cols - col_offset
             if col_block_width > cols_per_block:
@@ -465,7 +465,10 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    key_field = unicode(key_field)
+    try:  # no unicode() in python 3
+        key_field = unicode(key_field)
+    except NameError:
+        pass
     if to_lower:
         key_field = key_field.lower()
         header_row = [
