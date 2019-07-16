@@ -31,6 +31,7 @@ Unreleased Changes
 * Added a new InVEST model: Urban Flood Risk Mitigation.
 * Fixed an issue in the SDR model that would cause an unhandled exception
   if either the erosivity or erodibility raster had an undefined nodata value.
+* Added a new InVEST model: Urban Cooling Model.
 
 3.7.0 (2019-05-09)
 ------------------
