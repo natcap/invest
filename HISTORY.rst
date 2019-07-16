@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue with Habitat Quality where convolutions over threat rasters
+  were not excluding nodata values, leading to incorrect ouputs.  Nodata values
+  are now handled correctly and excluded from the convolution entirely.
 * Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
   and also to support the PySide2 bindings to Qt5.
 * InVEST Coastal Blue Carbon model now writes out a net present value
