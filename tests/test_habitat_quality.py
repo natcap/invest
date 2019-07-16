@@ -217,7 +217,7 @@ def assert_array_sum(base_raster_path, desired_sum):
     base_band = base_raster.GetRasterBand(1)
     base_array = base_band.ReadAsArray()
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=4)
+    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
 
 
 class HabitatQualityTests(unittest.TestCase):
