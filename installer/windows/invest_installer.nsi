@@ -485,6 +485,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
     !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 694
+    !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip"
   SectionGroupEnd
 SectionGroupEnd
 
