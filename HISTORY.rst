@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
+  and also to support the PySide2 bindings to Qt5.
 * InVEST Coastal Blue Carbon model now writes out a net present value
   raster for the year of the current landcover, each transition year,
   and the final analysis year (if provided).

@@ -13,8 +13,18 @@ import sys
 import atexit
 import itertools
 
-import sip
-sip.setapi('QString', 2)
+try:
+    import PyQt4
+except ImportError:
+    # Need to explicitly import PySide2 when on python3.  It's the only Qt
+    # binding I can seem to get to work under python3.
+    import PySide2
+
+try:
+    unicode
+except NameError:
+    unicode = str
+
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -277,7 +287,10 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
         Returns:
             ``None``
         """
-        self.message_received.emit(message)
+        try:
+            self.message_received.emit(message)
+        except RuntimeError:
+            pass
 
     def _write(self, message):
         """Write the message provided to the message pane.
@@ -400,17 +413,21 @@ class FileSystemRunDialog(QtWidgets.QDialog):
             A string.
         """
         return 'Messages (%s and higher):' % (
-            INVEST_SETTINGS.value('logging/run_dialog', 'INFO', unicode))
+            INVEST_SETTINGS.value('logging/run_dialog', 'INFO'))
 
     def __del__(self):
         """Delete/deregister required objects."""
         self.logger.removeHandler(self.loghandler)
-        self.deleteLater()
+        try:
+            self.deleteLater()
+        except RuntimeError:
+            # When this dialog has already been deleted.
+            LOGGER.debug('This FileSystemRunDialog has already been deleted.')
 
     def start(self, window_title, out_folder):
         """Set the state of the dialog to indicate processing has started."""
         logging_level = INVEST_SETTINGS.value(
-            'logging/run_dialog', 'INFO', unicode)
+            'logging/run_dialog', 'INFO')
         self.loghandler.setLevel(getattr(logging, logging_level))
 
         # set the label atop the messages pane to include the currently-set
@@ -702,7 +719,11 @@ class FileDialog(object):
 
     def __del__(self):
         """Destructor for the FileDialog instance."""
-        self.file_dialog.deleteLater()
+        try:
+            self.file_dialog.deleteLater()
+        except RuntimeError:
+            # Raised when the file dialog has already been deleted.
+            LOGGER.debug('File dialog object %s already deleted.')
 
     def save_file(self, title, start_dir=None, savefile=None):
         """Prompt the user to save a file.
@@ -721,7 +742,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -744,7 +765,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(six.text_type(filename)))
+                                 os.path.dirname(unicode(filename)))
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
@@ -768,7 +789,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
 
         # Allow us to open folders with spaces in them.
         os.path.normpath(start_dir)
@@ -788,7 +809,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(six.text_type(filename)))
+                                 os.path.dirname(unicode(filename)))
         return filename
 
     def open_folder(self, title, start_dir=None):
@@ -805,7 +826,7 @@ class FileDialog(object):
         """
         if not start_dir:
             start_dir = os.path.expanduser(
-                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR, unicode))
+                INVEST_SETTINGS.value('last_dir', DEFAULT_LASTDIR))
         dialog_title = 'Select folder: ' + title
 
         dirname = self.file_dialog.getExistingDirectory(
@@ -861,8 +882,7 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
         self._dialog_kwargs = {
             'title': self.dialog_title,
             'start_dir': INVEST_SETTINGS.value('last_dir',
-                                               DEFAULT_LASTDIR,
-                                               unicode),
+                                               DEFAULT_LASTDIR),
         }
 
     def _get_path(self):
@@ -1004,7 +1024,16 @@ class InVESTModelInput(QtCore.QObject):
         Returns:
             ``None``
         """
-        QtCore.QObject.__init__(self)
+        try:
+            QtCore.QObject.__init__(self)
+        except RuntimeError:
+            # Happens when we initialize the object more than once.
+            # This is known to happen when initializing the Container class.
+            # I'm not currently sure how to work around this other than
+            # catching this exception at the moment.  This wasn't an issue
+            # with PyQt4.
+            pass
+
         self.label = label
         self.widgets = []
         self.dirty = False
@@ -1090,8 +1119,8 @@ class InVESTModelInput(QtCore.QObject):
             ``None``
         """
         self._visible_hint = visible_hint
-        if any(widget.parent().isVisible() for widget in self.widgets
-               if widget and widget.parent()):
+        if any([widget.parent().isVisible() for widget in self.widgets
+                if widget is not None and widget.parent() is not None]):
             for widget in self.widgets:
                 if not widget:
                     continue
@@ -1506,7 +1535,6 @@ class Text(GriddedInput):
         self.textfield.textChanged.connect(self._text_changed)
         self.widgets[2] = self.textfield
 
-    @QtCore.Slot(unicode)
     def _text_changed(self, new_text):
         """A slot to emit the ``value_changed`` signal and trigger validation.
 
@@ -1567,6 +1595,7 @@ class Text(GriddedInput):
             # the console and allow the user to provide their own input
             # directly to the text element.
             LOGGER.exception('Could determine encoding; using value as-is.')
+            encoded_value = value
 
         if len(encoded_value) > 0 and self.hideable:
             self.set_hidden(False)
@@ -2056,7 +2085,7 @@ class Dropdown(GriddedInput):
         if return_value_map is not None:
             return_value_map = dict(
                 (_cast_value(key), _cast_value(value)) for (key, value) in
-                return_value_map.iteritems())
+                return_value_map.items())
         self.return_value_map = return_value_map
 
         self.dropdown.clear()
@@ -2107,7 +2136,7 @@ class Dropdown(GriddedInput):
         inverted_map = None
         if self.return_value_map is not None:
             inverted_map = dict((v, k) for (k, v) in
-                                self.return_value_map.iteritems())
+                                self.return_value_map.items())
 
         # Handle case where value is of the type provided by the user,
         # and the case where it's been converted to a utf-8 string.
@@ -2196,7 +2225,7 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         QtWidgets.QGroupBox.__init__(self)
         InVESTModelInput.__init__(self, label=label, interactive=interactive,
-                       args_key=args_key)
+                                  args_key=args_key)
         self.widgets = [self]
         self.setCheckable(expandable)
         if expandable:
@@ -2238,8 +2267,8 @@ class Container(QtWidgets.QGroupBox, InVESTModelInput):
         """
         for layout_item in (self.layout().itemAtPosition(*coords)
                             for coords in itertools.product(
-                                xrange(1, self.layout().rowCount()),
-                                xrange(1, self.layout().columnCount()))):
+                                range(1, self.layout().rowCount()),
+                                range(1, self.layout().columnCount()))):
             if layout_item and self.isVisible():
                 layout_item.widget().setVisible(self.isChecked())
 

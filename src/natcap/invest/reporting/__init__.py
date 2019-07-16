@@ -4,13 +4,18 @@ import os
 import logging
 import codecs
 import re
-from types import StringType
 import copy
 
 from ... import invest
 from .. import utils
 from osgeo import gdal
-import table_generator
+from . import table_generator
+
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
 REPORTING_DATA = os.path.join(invest.local_dir(__file__), 'reporting_data/')
@@ -18,7 +23,15 @@ JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
-u = lambda string: unicode(string, 'utf-8')
+
+def u(string):
+    if type(string) is basestring:
+        try:
+            return unicode(string, 'utf-8')
+        except NameError:
+            # Python 3 has no unicode function
+            return string
+    return string
 
 
 def generate_report(args):
@@ -231,7 +244,7 @@ def write_html(html_obj, out_uri):
 
         for element in sect_elements:
             # Add each element to the html string
-            if type(element) is StringType:
+            if type(element) is basestring:
                 element = u(element)
             html_str += element
 
@@ -406,7 +419,7 @@ def extract_datasource_table_by_key(datasource_uri, key_field):
 
     # Build up a list of field names for the datasource table
     field_names = []
-    for field_id in xrange(layer_def.GetFieldCount()):
+    for field_id in range(layer_def.GetFieldCount()):
         field_def = layer_def.GetFieldDefn(field_id)
         field_names.append(field_def.GetName())
 
@@ -437,7 +450,7 @@ def data_dict_to_list(data_dict):
         returns - a list of dictionaries, or empty list if data_dict is empty"""
 
     data_list = []
-    data_keys = data_dict.keys()
+    data_keys = list(data_dict)
     data_keys.sort()
     for key in data_keys:
         data = data_dict[key]
@@ -502,7 +515,7 @@ def add_head_element(param_args):
 
     attr = ''
     if 'attributes' in param_args:
-        for key, val in param_args['attributes'].iteritems():
+        for key, val in param_args['attributes'].items():
             attr += '%s="%s" ' % (key, val)
 
     # List of regular expression strings to search against

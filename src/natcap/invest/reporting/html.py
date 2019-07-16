@@ -6,6 +6,11 @@ import logging
 
 LOGGER = logging.getLogger('natcap.invest.reporting.html')
 
+try:
+    from builtins import long
+except ImportError:
+    # Python3 doesn't have a long.
+    long = int
 
 try:
     locale.setlocale(locale.LC_ALL, '')
