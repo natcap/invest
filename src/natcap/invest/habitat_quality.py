@@ -322,7 +322,8 @@ def execute(args):
                 inter_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
-                filtered_threat_raster_path)
+                filtered_threat_raster_path,
+                ignore_nodata=True)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
