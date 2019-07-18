@@ -4,15 +4,10 @@
 Installing InVEST
 =================
 
-.. note::
-
-    The ``natcap.invest`` python package is currently only supported in Python
-    2.7.  Other versions of python may be supported at a later date.
-
 .. warning::
 
     Python 2.7.11 or later is required to be able to use the InVEST
-    Recreation model on Windows.
+    Recreation model on Windows.  Python 3.6 or later is recommended.
 
 
 .. _BinaryDependencies:
@@ -20,7 +15,7 @@ Installing InVEST
 Binary Dependencies
 -------------------
 
-InVEST itself depends only on python packages, but many of these package 
+InVEST itself depends only on python packages, but many of these package
 dependencies depend on low-level libraries or have complex build processes.
 In recent history, some of these packages (notably, numpy and scipy) have
 started to release precompiled binary packages of their own, removing the
@@ -34,7 +29,7 @@ Linux
 
 Linux users have it easy, as almost every package required to use
 natcap.invest is available in the package repositories. The provided
-commands will install only the libararies and binaries that are needed, allowing
+commands will install only the libraries and binaries that are needed, allowing
 ``pip`` to install the rest.
 
 
@@ -44,7 +39,7 @@ Ubuntu & Debian
 .. attention::
     The package versions in the debian:stable repositories often lag far
     behind the latest releases.  It may be necessary to install a later
-    version of a libarary from a different package repository, or else build
+    version of a library from a different package repository, or else build
     the library from source.
 
 
@@ -59,7 +54,7 @@ Fedora
 ::
 
     $ sudo yum install python-devel python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
-   
+
 .. _InstallingOnMac:
 
 Mac OS X
@@ -81,7 +76,7 @@ Windows
 
 While many packages are available for Windows on the Python Package Index, some
 may need to be fetched from a different source. Many are available from
-Christogh Gohlke's unofficial build page: 
+Christogh Gohlke's unofficial build page:
 http://www.lfd.uci.edu/~gohlke/pythonlibs/
 
 PyQt4 installers can also be downloaded from the `Riverbank Computing website <https://www.riverbankcomputing.com/software/pyqt/download>`_.
@@ -103,7 +98,7 @@ Optional Qt User Interface
 
 InVEST's user interface is built with PyQt.  Because of the hefty binary
 requirement of Qt and the relative difficulty of installing PyQt, these
-dependencies will not be installed with the standard 
+dependencies will not be installed with the standard
 ``pip install natcap.invest``.  Several of these dependencies are available
 as extras, however, and can be installed via pip::
 
@@ -122,6 +117,8 @@ by defining an environment variable before launching the UI::
 
     $ QT_API=pyqt4 invest pollination
 
+We have had the best luck running the UI under PyQt4 and PySide2.
+
 
 .. _installing-from-source:
 
@@ -130,20 +127,23 @@ Installing from Source
 
 .. note::
 
-    Windows users will find best compilation results by using the MSVC
-    compiler, which can be downloaded from 
+    Python 2.7 users will find best compilation results by using the MSVC
+    compiler, which can be downloaded from
     `the Microsoft website <https://www.microsoft.com/download/details.aspx?id=44266>`_.
+
+    Python 3.6 users will need to install Microsoft Visual Studio 2017, or at
+    least the Build Tools for Visual Studio 2017.
     See the `python wiki page on compilation under Windows <https://wiki.python.org/moin/WindowsCompilers>`_
     for more information.
 
 Assuming you have a C/C++ compiler installed and configured for your system, and
-dependencies installed, the easiest way to install InVEST as a python package 
+dependencies installed, the easiest way to install InVEST as a python package
 is::
 
     $ pip install natcap.invest
 
 If you are working within virtual environments, there is a `documented issue
-with namespaces 
+with namespaces
 <https://bitbucket.org/pypa/setuptools/issues/250/develop-and-install-single-version>`_
 in setuptools that may cause problems when importing packages within the
 ``natcap`` namespace.  The current workaround is to use these extra pip flags::
