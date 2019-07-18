@@ -223,7 +223,9 @@ def _log_exit_status(session_id, status):
         log_finish_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['FINISH']
 
-        urlopen(Request(log_finish_url, urlencode(payload)))
+        # The data must be a python string of bytes.  This will be ``str``
+        # in python2, ``bytes`` in python3.
+        urlopen(Request(log_finish_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
@@ -252,7 +254,8 @@ def _log_model(model_name, model_args, session_id=None):
         }
         md5 = hashlib.md5()
         # a json dump will handle non-ascii encodings
-        md5.update(json.dumps(data))
+        # but then data must be encoded before hashing in Python 3.
+        md5.update(json.dumps(data).encode('utf-8'))
         return md5.hexdigest()
 
     try:
@@ -273,7 +276,9 @@ def _log_model(model_name, model_args, session_id=None):
         log_start_url = json.loads(urlopen(
             _ENDPOINTS_INDEX_URL).read().strip())['START']
 
-        urlopen(Request(log_start_url, urlencode(payload)))
+        # The data must be a python string of bytes.  This will be ``str``
+        # in python2, ``bytes`` in python3.
+        urlopen(Request(log_start_url, urlencode(payload).encode('utf-8')))
     except Exception as exception:
         # An exception was thrown, we don't care.
         logger.warn(
