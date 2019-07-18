@@ -18,6 +18,12 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
+
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables
@@ -656,7 +662,7 @@ def execute(args):
     habitats_info_df = info_df.loc[info_df.TYPE == _HABITAT_TYPE]
 
     # Calculate and pickle zonal stats to files
-    for region_name, zonal_raster_path in zonal_rasters.iteritems():
+    for region_name, zonal_raster_path in zonal_rasters.items():
         # Compute zonal E and C stats on each habitat-stressor pair
         for hab_str_idx, row in overlap_df.iterrows():
             # Get habitat-stressor name without extension
@@ -809,7 +815,10 @@ def _raster_to_geojson(
         target_sr_wkt=None):
     """Convert a raster to a GeoJSON file with layer and field name.
 
-    The GeoJSON file will be in the shape and projection of the raster.
+    Typically the base raster will be projected and the target GeoJSON should
+    end up with geographic coordinates (EPSG: 4326 per the GeoJSON spec).
+    So a GPKG serves as intermediate storage for the polygonized projected
+    features.
 
     Parameters:
         base_raster_path (str): the raster that needs to be turned into a
@@ -828,25 +837,23 @@ def _raster_to_geojson(
     band = raster.GetRasterBand(1)
     mask = band.GetMaskBand()
 
-    driver = gdal.GetDriverByName('GeoJSON')
-    vector = driver.Create(target_geojson_path, 0, 0, 0, gdal.GDT_Unknown)
-    vector.StartTransaction()
-
-    # Use raster projection wkt for the GeoJSON
+    # Use raster SRS for the temp GPKG
     base_sr = osr.SpatialReference()
     base_sr_wkt = raster.GetProjectionRef()
     base_sr.ImportFromWkt(base_sr_wkt)
 
-    layer_name = layer_name.encode('utf-8')
-    if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        target_sr = osr.SpatialReference()
-        target_sr.ImportFromWkt(target_sr_wkt)
-        vector_layer = vector.CreateLayer(layer_name, target_sr, ogr.wkbPolygon)
-    else:
-        vector_layer = vector.CreateLayer(layer_name, base_sr, ogr.wkbPolygon)
+    # Polygonize onto a GPKG
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    temp_gpkg_path = os.path.join(
+        os.path.dirname(target_geojson_path),
+        os.path.splitext(target_geojson_path)[0] + '.gpkg')
+    vector = gpkg_driver.Create(temp_gpkg_path, 0, 0, 0, gdal.GDT_Unknown)
+
+    vector.StartTransaction()
+    vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
-    field_defn = ogr.FieldDefn(field_name.encode('utf-8'), ogr.OFTInteger)
+    field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
     field_defn.SetWidth(3)
     field_defn.SetPrecision(0)
     vector_layer.CreateField(field_defn)
@@ -859,21 +866,16 @@ def _raster_to_geojson(
     band = None
     raster = None
 
-    # Reproject the vector to target projection
+    # Convert GPKG to GeoJSON, reprojecting if necessary
     if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        vector = gdal.OpenEx(
-            target_geojson_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
-        vector.StartTransaction()
-        vector_layer = vector.GetLayer()
-        coord_trans = osr.CoordinateTransformation(base_sr, target_sr)
-        for feat in vector_layer:
-            geom = feat.GetGeometryRef()
-            geom.Transform(coord_trans)
-            feat.SetGeometry(geom)
-            vector_layer.SetFeature(feat)
-        vector.CommitTransaction()
-        vector_layer = None
-        vector = None
+        pygeoprocessing.reproject_vector(
+            temp_gpkg_path, target_sr_wkt, target_geojson_path,
+            driver_name='GeoJSON')
+    else:
+        geojson_driver = gdal.GetDriverByName('GeoJSON')
+        geojson_driver.CreateCopy(target_geojson_path, temp_gpkg_path)
+
+    os.remove(temp_gpkg_path)
 
 
 def _calc_and_pickle_zonal_stats(
@@ -1133,12 +1135,12 @@ def _create_rasters_from_geometries(
         open(geom_pickle_path, 'rb'))
     raster_paths_by_field = {}
 
-    for field_value, shapely_geoms_wkb in geom_sets_by_field.iteritems():
+    for field_value, shapely_geoms_wkb in geom_sets_by_field.items():
         # Create file basename based on field value
         if not isinstance(field_value, basestring):
             field_value = str(field_value)
 
-        field_value = field_value.encode('utf-8')
+        field_value = field_value
         file_basename = 'rasterized_' + field_value
         target_raster_path = os.path.join(working_dir, file_basename + '.tif')
 
@@ -1525,7 +1527,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
             habitat existence and 0's non-existence.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_expo_arr (array): an exposure float array calculated by dividing
@@ -1549,8 +1552,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
     tot_denom = 0
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -1586,7 +1589,8 @@ def _total_consequence_op(
             score.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_conseq_arr (array): a consequence float array calculated by
@@ -1608,8 +1612,8 @@ def _total_consequence_op(
     tot_denom = recov_denom
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -2403,8 +2407,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 
     for column_name, criteria_type in {
             'TOT_E_RASTER_PATH': '_E_',
-            'TOT_C_RASTER_PATH': '_C_'}.iteritems():
-        suffix_front = 'TOTAL'+criteria_type  # front suffix for file names
+            'TOT_C_RASTER_PATH': '_C_'}.items():
+        suffix_front = 'TOTAL' + criteria_type  # front suffix for file names
         # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
@@ -2667,7 +2671,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
     """
     for key, value in {
             _DQ_KEY: dq,
-            _WEIGHT_KEY: weight}.iteritems():
+            _WEIGHT_KEY: weight}.items():
 
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
@@ -2725,10 +2729,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     """
     # Create column headers and initialize default values in numerator,
     # denominator, and spatial columns
-    column_headers = ['_NUM', '_DENOM', '_SPATIAL']
-    len_header = len(column_headers)
-    overlap_column_headers = map(
-        str.__add__, ['E']*len_header + ['C']*len_header, column_headers*2)
+    overlap_column_headers = [
+        'E_NUM', 'E_DENOM', 'E_SPATIAL', 'C_NUM', 'C_DENOM', 'C_SPATIAL']
 
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
@@ -2741,7 +2743,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     overlap_df = pandas.DataFrame(
         # Data values on each row corresponds to each column header
         data=[[0, 0, {}, 0, 0, {}]
-              for _ in xrange(len(habitat_names)*len(stressor_names))],
+              for _ in range(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
     # Start iterating from row indicating the beginning of habitat and stressor
@@ -2758,15 +2760,12 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         elif stressor and row_idx:
             criteria_name = row_idx
             criteria_type = row_data[_CRITERIA_TYPE_HEADER]
-            if isinstance(criteria_type, unicode):
-                criteria_type = criteria_type.encode('utf-8').upper()
-            else:
-                criteria_type = criteria_type.upper()
+            criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
 
-            for idx, (row_key, row_value) in enumerate(row_data.iteritems()):
+            for idx, (row_key, row_value) in enumerate(row_data.items()):
                 # The first value in the criteria row should be a rating value
                 # with habitat name as key, after a stressor was found
                 if idx % 3 == 0:
@@ -2853,7 +2852,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception
     for criteria_type, criteria_type_long in {
-            'E': 'exposure', 'C': 'consequence'}.iteritems():
+            'E': 'exposure', 'C': 'consequence'}.items():
         if (overlap_df[criteria_type + '_DENOM'] == 0).any():
             raise ValueError(
                 'The following stressor-habitat pair(s) do not have at least '
@@ -2905,7 +2904,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     # Create the dataframe whose data is 0 for numerators and denominators,
     # None for raster paths, and an empty dict for spatially explicit criteria.
     recovery_df = pandas.DataFrame(
-        data=[[0, 0, {}, None, None] for i in xrange(len(habitat_names))],
+        data=[[0, 0, {}, None, None] for _ in range(len(habitat_names))],
         index=habitat_names, columns=recovery_column_headers)
 
     i = 0
@@ -2992,16 +2991,13 @@ def _simplify_geometry(
             # Find the first field name, case-insensitive
             if base_field_name == preserved_field_name:
                 # Create a target field definition with lowercased field name
-                target_field_name = preserved_field_name.encode('utf-8')
+                target_field_name = str(preserved_field_name)
                 target_field = ogr.FieldDefn(
                     target_field_name, preserved_field[1])
                 break
 
-    # Convert a Unicode string into UTF-8 standard to avoid TypeError when
-    # creating layer with the basename
     target_layer_name = os.path.splitext(
         os.path.basename(target_simplified_vector_path))[0]
-    target_layer_name = target_layer_name.encode('utf-8')
 
     if os.path.exists(target_simplified_vector_path):
         os.remove(target_simplified_vector_path)
@@ -3011,7 +3007,7 @@ def _simplify_geometry(
     target_simplified_vector = gpkg_driver.Create(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
-        target_layer_name,
+        str(target_layer_name),
         base_layer.GetSpatialRef(), ogr.wkbPolygon)
 
     target_simplified_vector.StartTransaction()
@@ -3132,7 +3128,7 @@ def validate(args, limit_to=None):
 
     for key, key_values in {
             'risk_eq': ['Euclidean', 'Multiplicative'],
-            'decay_eq': ['Linear', 'Exponential', 'None']}.iteritems():
+            'decay_eq': ['Linear', 'Exponential', 'None']}.items():
         if limit_to is None or limit_to == key:
             if args[key] not in key_values:
                 validation_error_list.append(

@@ -140,7 +140,7 @@ def make_threats_raster(folder_path, make_empty_raster=False):
     for suffix in ['_c', '_f']:
         for i, threat in enumerate(['threat_1', 'threat_2']):
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
-            threat_array[100/(i+1):, :] = 1  # making variations among threats
+            threat_array[100//(i+1):, :] = 1  # making variations among threats
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
@@ -160,14 +160,14 @@ def make_sensitivity_samp_csv(csv_path,
 
     """
     if include_threat:
-        with open(csv_path, 'wb') as open_table:
+        with open(csv_path, 'w') as open_table:
             open_table.write('LULC,NAME,HABITAT,L_threat_1,L_threat_2\n')
             open_table.write('0,"lulc 0",1,1,1\n')
             if not missing_lines:
                 open_table.write('1,"lulc 1",0.5,0.5,1\n')
                 open_table.write('2,"lulc 2",0,0.3,1\n')
     else:
-        with open(csv_path, 'wb') as open_table:
+        with open(csv_path, 'w') as open_table:
             open_table.write('LULC,NAME,HABITAT\n')
             open_table.write('0,"lulc 0",1\n')
             if not missing_lines:
@@ -191,7 +191,7 @@ def make_threats_csv(csv_path,
         None.
 
     """
-    with open(csv_path, 'wb') as open_table:
+    with open(csv_path, 'w') as open_table:
         open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
         if include_invalid_decay:
             open_table.write('0.9,0.7,threat_1,invalid\n')
@@ -274,7 +274,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
-        }.iteritems():
+        }.items():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),
                 assert_value)

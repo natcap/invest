@@ -233,7 +233,7 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
 
     """
     # Make a Shapefile and a GeoTIFF file for each layer and write to the table
-    with open(info_table_path, 'wb') as table:
+    with open(info_table_path, 'w') as table:
         if missing_columns:
             table.write('missing habitat,PATH,TYPE,"missing buffer"\n')
         else:
@@ -274,9 +274,9 @@ def _make_info_csv(info_table_path, workspace_dir, missing_columns=False,
                     table.write(',3')
 
             # Create a tiff for habitat_1 and stressor_1
-            size = 10
-            array = numpy.zeros((size, size), dtype=numpy.int8)
-            array[size/2:, :] = 1
+            size = 5
+            array = numpy.zeros((size * 2, size * 2), dtype=numpy.int8)
+            array[size:, :] = 1
             abs_raster_path = os.path.join(
                 workspace_dir, layer_type + '_1') + '.tif'
             if projected:
@@ -350,16 +350,16 @@ def _make_criteria_csv(
     # Create spatially explicit criteria raster and vector files in workspace.
     # Make a rating raster file on criteria 1 of habitat_0
     abs_rating_raster_path = os.path.join(workspace_dir, 'hab_0_crit_1.tif')
-    size = 10
-    array = numpy.full((size, size), 2, dtype=numpy.int8)
-    array[size / 2:, :] = 3
+    size = 5
+    array = numpy.full((size * 2, size * 2), 2, dtype=numpy.int8)
+    array[size:, :] = 3
     _make_raster_from_array(array, abs_rating_raster_path)
 
     # Make a rating shapefile on criteria 3 of habitat_1
     abs_rating_vector_path = os.path.join(workspace_dir, 'hab_1_crit_3.shp')
     _make_rating_vector(abs_rating_vector_path)
 
-    with open(criteria_table_path, 'wb') as table:
+    with open(criteria_table_path, 'w') as table:
         if missing_index:
             table.write(
                 '"missing index",habitat_0,,,habitat_1,,,"CRITERIA TYPE",\n')
@@ -492,7 +492,8 @@ class HraUnitTests(unittest.TestCase):
             _get_criteria_dataframe(bad_criteria_table_path)
 
         expected_message = (
-            "'HABITAT NAME', 'HABITAT STRESSOR OVERLAP PROPERTIES'")
+            'The Criteria table is missing the following '
+            'value(s) in the first column:')
         actual_message = str(cm.exception)
         self.assertTrue(
             expected_message in actual_message, actual_message)
@@ -584,7 +585,7 @@ class HraUnitTests(unittest.TestCase):
                 bad_info_table_path, self.workspace_dir, self.workspace_dir,
                 self.workspace_dir, '')
 
-        expected_message = "'NAME', 'STRESSOR BUFFER (METERS)'"
+        expected_message = 'Missing column header(s) from the Info CSV file:'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -772,8 +773,8 @@ class HraRegressionTests(unittest.TestCase):
 
         # Also test relative file paths in Info CSV file
         _make_info_csv(
-            args['info_table_path'], self.workspace_dir, rel_path=True)
-        _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
+            args['info_table_path'], args['workspace_dir'], rel_path=True)
+        _make_criteria_csv(args['criteria_table_path'], args['workspace_dir'])
         _make_aoi_vector(args['aoi_vector_path'])
         args['n_workers'] = ''  # tests empty string for `n_workers`
 
@@ -791,7 +792,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert rasters are equal
         output_raster_paths = [
-            os.path.join(self.workspace_dir, 'outputs', raster_name + '.tif')
+            os.path.join(args['workspace_dir'], 'outputs', raster_name + '.tif')
             for raster_name in output_rasters]
         expected_raster_paths = [os.path.join(
             TEST_DATA, raster_name + '_euc_lin.tif') for raster_name in
@@ -799,7 +800,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Append a intermediate raster to test the linear decay equation
         output_raster_paths.append(
-            os.path.join(self.workspace_dir, 'intermediate_outputs',
+            os.path.join(args['workspace_dir'], 'intermediate_outputs',
                          'C_habitat_0_stressor_1.tif'))
         expected_raster_paths.append(
             os.path.join(TEST_DATA, 'C_habitat_0_stressor_1_euc_lin.tif'))
@@ -811,7 +812,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert GeoJSON vectors are equal
         output_vector_paths = [os.path.join(
-            self.workspace_dir, 'visualization_outputs',
+            args['workspace_dir'], 'visualization_outputs',
             vector_name + '.geojson') for vector_name in output_vectors]
         expected_vector_paths = [
             os.path.join(TEST_DATA, vector_name + '_euc_lin.geojson') for
@@ -824,7 +825,7 @@ class HraRegressionTests(unittest.TestCase):
 
         # Assert summary statistics CSV equal
         output_csv_path = os.path.join(
-            self.workspace_dir, 'outputs', 'SUMMARY_STATISTICS.csv')
+            args['workspace_dir'], 'outputs', 'SUMMARY_STATISTICS.csv')
         expected_csv_path = os.path.join(
             TEST_DATA, 'SUMMARY_STATISTICS_euc_lin.csv')
         pygeoprocessing.testing.assert_csv_equal(

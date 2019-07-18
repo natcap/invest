@@ -161,7 +161,7 @@ class FileRegistryUtilsTests(unittest.TestCase):
     def _norm_dict(path_dict):
         """Take a dictionary of paths and normalize the paths."""
         result_dict = {}
-        for key, path in path_dict.iteritems():
+        for key, path in path_dict.items():
             if isinstance(path, str):
                 result_dict[key] = os.path.normpath(path)
             elif isinstance(path, list):

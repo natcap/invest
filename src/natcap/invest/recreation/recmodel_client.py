@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 
 import json
-import uuid
 import os
 import zipfile
 import time
@@ -12,6 +11,7 @@ import pickle
 import urllib
 import tempfile
 import shutil
+import sys
 
 import rtree
 import Pyro4
@@ -37,8 +37,14 @@ from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
+
 # This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
+if sys.version_info >= (3,):
+    # This avoids "ValueError: bad marshal data (unknown type code)"
+    # when a Python 2 Pyro tries to shake hands with Python 3 Pyro
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
+else:
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
@@ -165,8 +171,13 @@ def execute(args):
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        server_url = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
-
+        try:
+            server_url = urllib.urlopen(
+                RECREATION_SERVER_URL).read().rstrip()
+        except AttributeError:
+            # Python 3 packaging:
+            server_url = urllib.request.urlopen(
+                RECREATION_SERVER_URL).read().decode('utf-8').rstrip()
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
@@ -487,8 +498,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     else:
         raise ValueError('Unknown polygon type: %s' % grid_type)
 
-    for row_index in xrange(n_rows):
-        for col_index in xrange(n_cols):
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
             polygon_points = _generate_polygon(col_index, row_index)
             ring = ogr.Geometry(ogr.wkbLinearRing)
             for xoff, yoff in polygon_points:
@@ -683,7 +694,7 @@ def _json_to_shp_table(
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
-        for feature_id, value in predictor_results.iteritems():
+        for feature_id, value in predictor_results.items():
             feature = layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
             layer.SetFeature(feature)
@@ -727,7 +738,7 @@ def _raster_sum_mean(
     # remove results for a feature when the pixel count is 0.
     # we don't have non-nodata predictor values for those features.
     aggregate_results = {
-        str(fid): stats for fid, stats in aggregate_results.iteritems()
+        str(fid): stats for fid, stats in aggregate_results.items()
         if stats['count'] != 0}
     if not aggregate_results:
         LOGGER.warn('raster predictor does not intersect with vector AOI')
@@ -792,7 +803,7 @@ def _polygon_area(
     polygon_coverage_lookup = {}  # map FID to point count
 
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         if time.time() - start_time > 5.0:
             LOGGER.info(
                 "%s polygon area: %.2f%% complete",
@@ -852,7 +863,7 @@ def _line_intersect_length(
 
     feature_count = None
     for feature_count, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s line intersect length: %.2f%% complete",
@@ -898,7 +909,7 @@ def _point_nearest_distance(
 
     index = None
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, 5.0, lambda: LOGGER.info(
                 "%s point distance: %.2f%% complete",
@@ -940,7 +951,7 @@ def _point_count(
 
     index = None
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s point count: %.2f%% complete",
@@ -1222,11 +1233,11 @@ def _calculate_scenario(
 
     y_intercept = predictor_estimates.pop("(Intercept)")
 
-    for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
+    for feature_id in range(scenario_coefficient_layer.GetFeatureCount()):
         feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
         try:
-            for predictor_id, coefficient in predictor_estimates.iteritems():
+            for predictor_id, coefficient in predictor_estimates.items():
                 response_value += (
                     coefficient *
                     feature.GetField(str(predictor_id)))
@@ -1452,7 +1463,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        print missing_key_list
+        print(missing_key_list)
         raise KeyError(
             "The following keys were expected in `args` but were missing " +
             ', '.join(missing_key_list))

@@ -91,7 +91,7 @@ def execute(args):
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = sensitivity_dict.items()[0][1].keys()
+    sens_header_list = list(sensitivity_dict[0])
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
         h for h in required_sens_header_list if h not in sens_header_list]
@@ -207,7 +207,7 @@ def execute(args):
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
 
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
-    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+    for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
             inter_dir, os.path.basename(lulc_path).replace(
                 '.tif', '_aligned.tif'))
@@ -242,14 +242,14 @@ def execute(args):
 
     # calculate the weight sum which is the sum of all the threats' weights
     weight_sum = 0.0
-    for threat_data in threat_dict.itervalues():
+    for threat_data in threat_dict.values():
         # Sum weight of threats
         weight_sum = weight_sum + threat_data['WEIGHT']
 
     LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+    for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
@@ -271,7 +271,7 @@ def execute(args):
         exit_landcover = False
 
         # adjust each threat/threat raster for distance, weight, and access
-        for threat, threat_data in threat_dict.iteritems():
+        for threat, threat_data in threat_dict.items():
             LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
                         (threat, threat_data))
 
@@ -370,7 +370,7 @@ def execute(args):
             # so we handle each filtered threat and sensitivity raster
             # in pairs
             sum_degradation = numpy.zeros(raster[0].shape)
-            for index in range(len(raster) / 2):
+            for index in range(len(raster) // 2):
                 step = index * 2
                 sum_degradation += (
                     raster[step] * raster[step + 1] * weight_list[index])
@@ -513,7 +513,7 @@ def execute(args):
             # compute rarity index for each lulc code
             # define 0.0 if an lulc code is found in the cur/fut landcover
             # but not the baseline
-            for code in lulc_code_count_x.iterkeys():
+            for code in lulc_code_count_x:
                 if code in lulc_code_count_b:
                     numerator = lulc_code_count_x[code] * lulc_area
                     denominator = lulc_code_count_b[code] * base_area
@@ -680,9 +680,9 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
-    col_index = numpy.array(xrange(kernel_size))
+    col_index = numpy.array(range(kernel_size))
     integration = 0.0
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         distance_kernel_row = numpy.sqrt(
             (row_index - max_distance) ** 2 +
             (col_index - max_distance) ** 2).reshape(1, kernel_size)
@@ -692,7 +692,7 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         kernel_row = kernel_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration

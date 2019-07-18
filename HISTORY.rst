@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
+  environment. Also tested all models against GDAL versions 2.2.4 and 2.4.1. 
 * Fixed an issue with Habitat Quality where convolutions over threat rasters
   were not excluding nodata values, leading to incorrect ouputs.  Nodata values
   are now handled correctly and excluded from the convolution entirely.

@@ -102,7 +102,7 @@ class NDRTests(unittest.TestCase):
         with open(
                 os.path.join(self.workspace_dir, 'watershed_results_ndr.shp'),
                 'wb') as f:
-            f.write('')
+            f.write(b'')
 
         # make args explicit that this is a base run of SWY
         ndr.execute(args)
@@ -188,7 +188,7 @@ class NDRTests(unittest.TestCase):
         result_layer = result_vector.GetLayer()
 
         error_results = collections.defaultdict(dict)
-        with open(agg_results_path, 'rb') as agg_result_file:
+        with open(agg_results_path, 'r') as agg_result_file:
             for line in agg_result_file:
                 (fid, surf_p_ld, sub_p_ld, p_exp_tot,
                  surf_n_ld, sub_n_ld, n_exp_tot) = [

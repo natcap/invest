@@ -17,6 +17,12 @@ environment:
     - PYTHON: "C:\\Python27-x64"
       TESTTARGET: "test"
 
+    - PYTHON: "C:\\Python36"
+      TESTTARGET: "test"
+
+    - PYTHON: "C:\\Python36-x64"
+      TESTTARGET: "test"
+
     - PYTHON: "C:\\Python27"
       TESTTARGET: "test_ui"
       EXTRAPKGS: "pyqt4"

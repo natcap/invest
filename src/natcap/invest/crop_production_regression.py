@@ -192,7 +192,7 @@ def execute(args):
 
     crop_lucodes = [
         x[_EXPECTED_LUCODE_TABLE_HEADER]
-        for x in crop_to_landcover_table.itervalues()]
+        for x in crop_to_landcover_table.values()]
 
     unique_lucodes = numpy.array([])
     for _, lu_band_data in pygeoprocessing.iterblocks(
@@ -280,7 +280,7 @@ def execute(args):
                     crop_regression_table[bin_id][header.lower()] = 0.0
 
         yield_regression_headers = [
-            x for x in crop_regression_table.itervalues().next()
+            x for x in list(crop_regression_table.values())[0]
             if x != 'climate_bin']
 
         regression_parameter_raster_path_lookup = {}
@@ -637,7 +637,7 @@ def tabulate_regression_results(
         nutrient_id + '_' + mode
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for mode in ['modeled', 'observed']]
-    with open(target_table_path, 'wb') as result_table:
+    with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,production_modeled,' +
             ','.join(nutrient_headers) + '\n')
@@ -790,7 +790,7 @@ def aggregate_regression_results_to_polygons(
     # report everything to a table
     aggregate_table_path = os.path.join(
         output_dir, _AGGREGATE_TABLE_FILE_PATTERN % file_suffix)
-    with open(aggregate_table_path, 'wb') as aggregate_table:
+    with open(aggregate_table_path, 'w') as aggregate_table:
         # write header
         aggregate_table.write('FID,')
         aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
@@ -799,11 +799,11 @@ def aggregate_regression_results_to_polygons(
                 '%s_%s' % (nutrient_id, model_type)
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
                 for model_type in sorted(
-                    total_nutrient_table.itervalues().next())]))
+                    list(total_nutrient_table.values())[0])]))
         aggregate_table.write('\n')
 
         # iterate by polygon index
-        for id_index in total_yield_lookup.itervalues().next():
+        for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
                 str(total_yield_lookup[yield_header][id_index]['sum'])
@@ -811,7 +811,7 @@ def aggregate_regression_results_to_polygons(
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for model_type in sorted(
-                        total_nutrient_table.itervalues().next()):
+                        list(total_nutrient_table.values())[0]):
                     aggregate_table.write(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])

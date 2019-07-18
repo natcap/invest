@@ -1,7 +1,6 @@
 """InVEST Recreation Server."""
 
 import subprocess
-import Queue
 import os
 import multiprocessing
 import uuid
@@ -13,7 +12,6 @@ import time
 import threading
 import collections
 import logging
-import StringIO
 
 import Pyro4
 import numpy
@@ -28,6 +26,25 @@ import shapely.prepared
 from ... import invest
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
+
+try:
+    import queue
+except ImportError:
+    # python 2 uses capital Q
+    import Queue as queue
+
+try:
+    from io import StringIO
+except ImportError:
+    # python 2 packaging:
+    from StringIO import StringIO
+
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
+
 
 BLOCKSIZE = 2 ** 21
 GLOBAL_MAX_POINTS_PER_NODE = 10000  # Default max points in quadtree to split
@@ -393,7 +410,7 @@ class RecModel(object):
         n_poly_tested = 0
 
         monthly_table_path = os.path.join(workspace_path, 'monthly_table.csv')
-        monthly_table = open(monthly_table_path, 'wb')
+        monthly_table = open(monthly_table_path, 'w')
         date_range_year = [
             date.tolist().timetuple().tm_year for date in date_range]
         table_headers = [
@@ -459,7 +476,7 @@ def _parse_input_csv(
         None
     """
     for file_offset, chunk_size in iter(block_offset_size_queue.get, 'STOP'):
-        csv_file = open(csv_filepath, 'rb')
+        csv_file = open(csv_filepath, 'r')
         csv_file.seek(file_offset, 0)
         chunk_string = csv_file.read(chunk_size)
         csv_file.close()
@@ -469,8 +486,13 @@ def _parse_input_csv(
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
         pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
+        try:
+            chunk_string = unicode(chunk_string)
+        except NameError:
+            # Python 3, it's already unicode
+            pass
         result = numpy.fromregex(
-            StringIO.StringIO(chunk_string), pattern,
+            StringIO(chunk_string), pattern,
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
              ('lng', 'f4')])
 
@@ -709,7 +731,7 @@ def _calc_poly_pud(
                 year = str(timetuple.tm_year)
                 month = str(timetuple.tm_mon)
                 day = str(timetuple.tm_mday)
-                pud_hash = user_hash + '%s-%s-%s' % (year, month, day)
+                pud_hash = str(user_hash) + '%s-%s-%s' % (year, month, day)
                 pud_set.add(pud_hash)
                 pud_monthly_set[month].add(pud_hash)
                 pud_monthly_set["%s-%s" % (year, month)].add(pud_hash)
@@ -797,7 +819,7 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     """
     def _read_file(file_path, file_buffer_queue, blocksize, fast_hash=False):
         """Read one blocksize at a time and adds to the file buffer queue."""
-        with open(file_path, 'rb') as file_to_hash:
+        with open(file_path, 'r') as file_to_hash:
             if fast_hash:
                 # fast hash reads the first and last blocks and uses the
                 # modified stamp and filesize
@@ -822,10 +844,10 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
         """Process file_buffer_queue one buf at a time."""
         hasher = hashlib.sha1()
         for row_buffer in iter(file_buffer_queue.get, "STOP"):
-            hasher.update(row_buffer)
+            hasher.update(row_buffer.encode('utf-8'))
         file_buffer_queue.put(hasher.hexdigest()[:16])
 
-    file_buffer_queue = Queue.Queue(100)
+    file_buffer_queue = queue.Queue(100)
     read_file_process = threading.Thread(
         target=_read_file, args=(
             file_path, file_buffer_queue, blocksize, fast_hash))
@@ -837,7 +859,7 @@ def _hashfile(file_path, blocksize=2**20, fast_hash=False):
     hash_blocks_process.start()
     read_file_process.join()
     hash_blocks_process.join()
-    file_hash = file_buffer_queue.get()
+    file_hash = str(file_buffer_queue.get())
     if fast_hash:
         file_hash += '_fast_hash'
     return file_hash
