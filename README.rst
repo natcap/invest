@@ -1,31 +1,6 @@
 InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 ================================================================
 
-+-----------------------+-------------------------------+
-| Build type            | Windows                       |
-+=======================+===============================+
-| Nightly Binary builds | |nightly_binary_build_badge|  |
-+-----------------------+-------------------------------+
-| Dev builds            | |dev_windows_build_badge|     |
-+-----------------------+-------------------------------+
-| Tests                 | |windows_test_badge|          |
-+-----------------------+-------------------------------+
-| Test coverage         | |windows_test_coverage_badge| |
-+-----------------------+-------------------------------+
-
-.. |nightly_binary_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
-  :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
-
-.. |dev_windows_build_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=natcap.invest/label=GCE-windows-1
-  :target: http://builds.naturalcapitalproject.org/job/natcap.invest/label=GCE-windows-1
-
-.. |windows_test_badge| image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=test-natcap.invest/label=GCE-windows-1
-  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
-
-.. |windows_test_coverage_badge| image:: http://builds.naturalcapitalproject.org:9931/jenkins/c/http/builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1/
-  :target: http://builds.naturalcapitalproject.org/job/test-natcap.invest/label=GCE-windows-1
-
-
 InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is a family
 of tools for quantifying the values of natural capital in clear, credible, and
 practical ways. In promising a return (of societal benefits) on investments in
@@ -89,8 +64,9 @@ Or on Windows, use the following instead from a CMD prompt::
     > .\env\bin\activate
 
 This makefile target is included for convenience ... you may of course choose to
-manage your own virtual environment.  ``requirements.txt`` and
-``requirements-dev.txt`` list the python dependencies needed.
+manage your own virtual environment.  ``requirements.txt``,
+``requirements-dev.txt`` and ``requirements-gui.txt`` list the python
+dependencies needed.
 
 Using a different environment name
 """"""""""""""""""""""""""""""""""
