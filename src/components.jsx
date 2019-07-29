@@ -12,12 +12,28 @@ export class InvestJob extends React.Component {
             workspace: null,
             jobid: null,
             status: 'invalid',
+        };
+    }
+
+    checkArgs(event) {
+        const target = event.target;
+        console.log('from checkArgs');
+        console.log(target);
+        // if all required args have values:
+        if (target) {
+            this.setState(
+                {status: 'valid'}
+            );
         }
     }
 
     renderForm() {
+        console.log('from InvestJob:')
+        console.log(JSON.stringify(this.state));
         return(
-            <ArgsForm args={this.state.args} />
+            <ArgsForm 
+                args={this.state.args}
+                onChange={this.checkArgs} />
         );
     }
 
@@ -32,15 +48,6 @@ export class InvestJob extends React.Component {
 }
 
 export class ArgsForm extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = {
-        aoi_vector_path: '',
-        workspace_dir: '',
-    };
-
-    this.handleChange = this.handleChange.bind(this);
-  }
 
   handleChange(event) {
     const target = event.target;
@@ -53,7 +60,8 @@ export class ArgsForm extends React.Component {
   }
 
   render() {
-    console.log(JSON.stringify(this.state));
+    // console.log(JSON.stringify({this.props}));
+    // const args = this.props.args
     return (
       <form>
         <label>
@@ -61,7 +69,7 @@ export class ArgsForm extends React.Component {
           <input 
             name='aoi_vector_path'
             type="text"
-            value={this.state.aoi_vector_path}
+            value={this.props.args.aoi_vector_path}
             onChange={this.handleChange} />
         </label>
         <br />
@@ -70,7 +78,7 @@ export class ArgsForm extends React.Component {
           <input 
             name='workspace_dir'
             type="text"
-            value={this.state.workspace_dir}
+            value={this.props.args.workspace_dir}
             onChange={this.handleChange} />
         </label>
       </form>
