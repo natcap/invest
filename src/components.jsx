@@ -1,122 +1,127 @@
 import React from 'react';
 
-// export function ParameterList(props) {
-//     const numbers = ['1', '2', '3', '4', '5'];
-//     const listItems = numbers.map((number) =>
-//         <li>{number}</li>
-//     );
-//     return (
-//         <ul>{listItems}</ul>
-//     );
-// }
 
-// export class InvestModel extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = {
-//             valid: false,
-//             executing: null, // todo
-//             complete: null, // todo
-//             parameters: {},//Array(nParameters).fill(null),
-//         }
-//     }
-
-//     handleArgs(args) {  // validation on the inputs happened already
-//         const current_parameters = this.state.parameters
-//         let parameters = Object.assign(args, current_parameters);
-//         this.setState({
-//             parameters: parameters
-//         })
-//     }
-
-//     render() {
-//         if (isModelValid(this.state.parameters)) {
-//             status = 'Ready to execute'
-//         } else {
-//             status = 'not ready to execute'
-//         }
-//         return (
-//             <ArgsForm
-//                 onChange={(args) => this.handleArgs(args)}
-//             />
-//             <div>{status}</div>
-//         );
-//     }
-// }
-
-// export class ArgsForm extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = {};
-//     }
-
-//     render() {
-//         const arguments = this
-
-//         return(
-//             <FileInput
-//                 argument={}
-//             />
-//         );
-//     }
-// }
-
-
-// export class FileInput extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = {
-//             key: '',
-//             value: '',
-//         };
-//         this.handleChange = this.handleChange.bind(this);
-//     }
-
-//     handleChange(event) {
-//         this.setState({value: event.target.value})
-//     }
-
-//     render() {
-//         return(
-//             <input type='text' value={this.state.value}
-//             onChange={this.handleChange} />
-//         );
-//     }
-// }
-
-// function isModelValid(parameters){
-//     let status = false;
-//     if (parameters.every(true)) {
-//         status = true
-//     }
-//     return(status)
-// }
-
-// // todo, maybe just store keys here, not sample values.
-// function nParameters(datastack) {
-//     return(Object.keys(datastack).length)
-// }
-
-const datastack = {
-    "aoi_vector_path": "HabitatRiskAssess/Input/subregions.shp",
-    "criteria_table_path": "HabitatRiskAssess/Input/exposure_consequence_criteria.csv",
-    "decay_eq": "Linear",
-    "info_table_path": "HabitatRiskAssess/Input/habitat_stressor_info.csv",
-    "max_rating": "3",
-    "resolution": "500",
-    "results_suffix": "",
-    "risk_eq": "Euclidean",
-    "visualize_outputs": true
-}
-
-class ParameterForm extends React.Component {
+export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            isReady: false,
-            args: {},
+            args: {
+                aoi_vector_path: 'something.shp',
+                workspace_dir: 'workspace'
+            },
+            workspace: null,
+            jobid: null,
+            status: 'invalid',
         }
     }
+
+    renderForm() {
+        return(
+            <ArgsForm args={this.state.args} />
+        );
+    }
+
+    render () {
+        return(
+            <div>
+              {this.renderForm()}
+            </div>   
+        );
+
+    }
+}
+
+export class ArgsForm extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+        aoi_vector_path: '',
+        workspace_dir: '',
+    };
+
+    this.handleChange = this.handleChange.bind(this);
+  }
+
+  handleChange(event) {
+    const target = event.target;
+    const value = target.value;
+    const name = target.name;
+
+    this.setState(
+        {[name]: value}
+    );
+  }
+
+  render() {
+    console.log(JSON.stringify(this.state));
+    return (
+      <form>
+        <label>
+          AOI:
+          <input 
+            name='aoi_vector_path'
+            type="text"
+            value={this.state.aoi_vector_path}
+            onChange={this.handleChange} />
+        </label>
+        <br />
+        <label>
+          Workspace:
+          <input 
+            name='workspace_dir'
+            type="text"
+            value={this.state.workspace_dir}
+            onChange={this.handleChange} />
+        </label>
+      </form>
+    );
+  }
+}
+
+
+// const datastack = {
+//     "aoi_vector_path": "HabitatRiskAssess/Input/subregions.shp",
+//     "criteria_table_path": "HabitatRiskAssess/Input/exposure_consequence_criteria.csv",
+//     "decay_eq": "Linear",
+//     "info_table_path": "HabitatRiskAssess/Input/habitat_stressor_info.csv",
+//     "max_rating": "3",
+//     "resolution": "500",
+//     "results_suffix": "",
+//     "risk_eq": "Euclidean",
+//     "visualize_outputs": true
+// }
+
+class FormStuff extends React.Component {
+	// state = {
+	// 	values = this.props.initialValues || {},
+	// 	touched = {},
+	// 	errors = {},
+	// };
+
+	// handleChange() {
+
+ //    }
+ //    render() {
+ //    	// return(
+ //    	console.log(this.props.children);
+ //    	console.log(this.state);
+	// //     return this.props.children({
+	// // 		...this.state,
+	// // 		handleChange: this.handleChange,
+	// // });
+	// }
+}
+
+
+// class ParameterForm extends React.Component {
+//     constructor(props) {
+//         super(props);
+//         this.state = {
+//             isReady: false,
+//             args: {},
+//         }
+//     }
+// }
 
     // const parameter_set = [
     //     {key: "aoi_vector_path", type:"text", required:true},
@@ -142,24 +147,24 @@ class ParameterForm extends React.Component {
 
     //     </form>
     // );
-    render () {    
-        return (
-            <div>
-                <Workspace args_key='workspace_dir' required='true' />
-                <File args_key='aoi_vector_path' required='true' />
-                <File args_key='criteria_table_path' required='true' />
-                <Dropdown args_key='decay_eq'
-                    options={['euclidean', 'exponential']}
-                    required='true' />
-                <File args_key='info_table_path' required='true' />
-                <Integer args_key='max_rating' required='true' />
-                <Integer args_key='resolution' required='true' />
-                <Text args_key='results_suffix' required='false' />
-                <Dropdown args_key='risk_eq'
-                    options={['linear', 'multiplicative']}
-                    required='true' />
-                <Checkbox args_key='visualize_outputs' required='true' />
-            </div>
-        );
-    }
-}
+//     render () {    
+//         return (
+//             <div>
+//                 <Workspace args_key='workspace_dir' required='true' />
+//                 <File args_key='aoi_vector_path' required='true' />
+//                 <File args_key='criteria_table_path' required='true' />
+//                 <Dropdown args_key='decay_eq'
+//                     options={['euclidean', 'exponential']}
+//                     required='true' />
+//                 <File args_key='info_table_path' required='true' />
+//                 <Integer args_key='max_rating' required='true' />
+//                 <Integer args_key='resolution' required='true' />
+//                 <Text args_key='results_suffix' required='false' />
+//                 <Dropdown args_key='risk_eq'
+//                     options={['linear', 'multiplicative']}
+//                     required='true' />
+//                 <Checkbox args_key='visualize_outputs' required='true' />
+//             </div>
+//         );
+//     }
+// }
