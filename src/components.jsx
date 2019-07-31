@@ -16,15 +16,15 @@ export class InvestJob extends React.Component {
     }
 
     checkArgs(event) {
-        const target = event.target;
+        // const target = event.target;
         console.log('from checkArgs');
-        console.log(target);
+        console.log(event);
         // if all required args have values:
-        if (target) {
-            this.setState(
-                {status: 'valid'}
-            );
-        }
+        // if (target) {
+        //     this.setState(
+        //         {status: 'valid'}
+        //     );
+        // }
     }
 
     renderForm() {
@@ -48,16 +48,17 @@ export class InvestJob extends React.Component {
 }
 
 export class ArgsForm extends React.Component {
+  // hold state of args here
 
-  handleChange(event) {
-    const target = event.target;
-    const value = target.value;
-    const name = target.name;
+  // handleChange(event) {
+  //   const target = event.target;
+  //   const value = target.value;
+  //   const name = target.name;
 
-    this.setState(
-        {[name]: value}
-    );
-  }
+  //   this.setState(
+  //       {[name]: value}
+  //   );
+  // }
 
   render() {
     // console.log(JSON.stringify({this.props}));
@@ -67,19 +68,22 @@ export class ArgsForm extends React.Component {
         <label>
           AOI:
           <input 
-            name='aoi_vector_path'
+            name="aoi_vector_path"
+            required={true}
             type="text"
             value={this.props.args.aoi_vector_path}
-            onChange={this.handleChange} />
+            // onChange={this.handleChange}
+          />
         </label>
         <br />
         <label>
           Workspace:
           <input 
-            name='workspace_dir'
+            name="workspace_dir"
             type="text"
             value={this.props.args.workspace_dir}
-            onChange={this.handleChange} />
+            // onChange={this.handleChange} 
+          />
         </label>
       </form>
     );
