@@ -1,14 +1,27 @@
 import React from 'react';
 
+const HRA_args = {
+  aoi_vector_path: {
+    argname: 'aoi_vector_path',
+    value:'something.shp',
+    valid:false,
+    touched:false,
+    validationRules:'filepath'
+  },
+  workspace_dir: {
+    argname: 'workspace_dir',
+    value: 'workspace',
+    valid:false,
+    touched:false,
+    validationRules:'directory'
+  },
+}
 
 export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            args: {
-                aoi_vector_path: 'something.shp',
-                workspace_dir: 'workspace'
-            },
+            args: HRA_args,
             workspace: null,
             jobid: null,
             status: 'invalid',
@@ -21,23 +34,24 @@ export class InvestJob extends React.Component {
       const target = event.target;
       const value = target.value;
       const name = target.name;
+      const required = target.required;
       console.log(event);
 
-      let current_args = Object.assign({}, this.state.args)
-      current_args[name] = value
+      let current_args = Object.assign({}, this.state.args);
+      current_args[name]['value'] = value
 
       this.setState(
           {args: current_args}
       );
       // do validation. if valid, check entire args obj
+      if (required) {
+
+      }
+
       this.checkArgs(this.state.args)
     }
 
     checkArgs(args) {
-        // const target = event.target;
-        // console.log('from checkArgs');
-        // console.log(event);
-        // if all required args have values:
         if (args) {
           console.log('args are checked');
             this.setState(
@@ -68,44 +82,31 @@ export class InvestJob extends React.Component {
 }
 
 export class ArgsForm extends React.Component {
-  // hold state of args here
-
-  // handleChange(event) {
-  //   const target = event.target;
-  //   const value = target.value;
-  //   const name = target.name;
-
-  //   this.setState(
-  //       {[name]: value}
-  //   );
-  // }
 
   render() {
     // console.log(JSON.stringify({this.props}));
     // const args = this.props.args
+    const current_args = Object.assign({}, this.props.args)
+    let formItems = [];
+    for (const arg in current_args) {
+      let argument = current_args[arg];
+      console.log(argument);
+      formItems.push(
+        <form>
+            <label>
+                {argument.argname}
+                <input 
+                    name={argument.argname}
+                    type="text"
+                    value={argument.value}
+                    // valid={argument.valid}
+                    onChange={this.props.handleChange} />
+            </label>
+        </form>)
+    }
+
     return (
-      <form>
-        <label>
-          AOI:
-          <input 
-            name="aoi_vector_path"
-            required={true}
-            type="text"
-            value={this.props.args.aoi_vector_path}
-            onChange={this.props.handleChange}
-          />
-        </label>
-        <br />
-        <label>
-          Workspace:
-          <input 
-            name="workspace_dir"
-            type="text"
-            value={this.props.args.workspace_dir}
-            onChange={this.props.handleChange} 
-          />
-        </label>
-      </form>
+      <div>{formItems}</div>
     );
   }
 }
@@ -123,37 +124,7 @@ export class ArgsForm extends React.Component {
 //     "visualize_outputs": true
 // }
 
-class FormStuff extends React.Component {
-	// state = {
-	// 	values = this.props.initialValues || {},
-	// 	touched = {},
-	// 	errors = {},
-	// };
 
-	// handleChange() {
-
- //    }
- //    render() {
- //    	// return(
- //    	console.log(this.props.children);
- //    	console.log(this.state);
-	// //     return this.props.children({
-	// // 		...this.state,
-	// // 		handleChange: this.handleChange,
-	// // });
-	// }
-}
-
-
-// class ParameterForm extends React.Component {
-//     constructor(props) {
-//         super(props);
-//         this.state = {
-//             isReady: false,
-//             args: {},
-//         }
-//     }
-// }
 
     // const parameter_set = [
     //     {key: "aoi_vector_path", type:"text", required:true},
@@ -167,18 +138,7 @@ class FormStuff extends React.Component {
     //     {key: "visualize_outputs", type:"checkbox", required:true}
     // ]
     
-    // const formItems = parameter_set.map((parameter) =>
-    //     <form>
-    //         <label>
-    //             {parameter.key}
-    //             <input 
-    //                 name={parameter.key}
-    //                 type={parameter.type}
-    //                 onChange={this.handleInputChange} />
-    //         </label>
-
-    //     </form>
-    // );
+    
 //     render () {    
 //         return (
 //             <div>
