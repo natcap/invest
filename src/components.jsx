@@ -13,18 +13,37 @@ export class InvestJob extends React.Component {
             jobid: null,
             status: 'invalid',
         };
+        this.handleChange = this.handleChange.bind(this);
+        this.checkArgs = this.checkArgs.bind(this);
     }
 
-    checkArgs(event) {
+    handleChange(event) {
+      const target = event.target;
+      const value = target.value;
+      const name = target.name;
+      console.log(event);
+
+      let current_args = Object.assign({}, this.state.args)
+      current_args[name] = value
+
+      this.setState(
+          {args: current_args}
+      );
+      // do validation. if valid, check entire args obj
+      this.checkArgs(this.state.args)
+    }
+
+    checkArgs(args) {
         // const target = event.target;
-        console.log('from checkArgs');
-        console.log(event);
+        // console.log('from checkArgs');
+        // console.log(event);
         // if all required args have values:
-        // if (target) {
-        //     this.setState(
-        //         {status: 'valid'}
-        //     );
-        // }
+        if (args) {
+          console.log('args are checked');
+            this.setState(
+                {status: 'valid'}
+            );
+        }
     }
 
     renderForm() {
@@ -33,7 +52,8 @@ export class InvestJob extends React.Component {
         return(
             <ArgsForm 
                 args={this.state.args}
-                onChange={this.checkArgs} />
+                handleChange={this.handleChange} 
+            />
         );
     }
 
@@ -72,7 +92,7 @@ export class ArgsForm extends React.Component {
             required={true}
             type="text"
             value={this.props.args.aoi_vector_path}
-            // onChange={this.handleChange}
+            onChange={this.props.handleChange}
           />
         </label>
         <br />
@@ -82,7 +102,7 @@ export class ArgsForm extends React.Component {
             name="workspace_dir"
             type="text"
             value={this.props.args.workspace_dir}
-            // onChange={this.handleChange} 
+            onChange={this.props.handleChange} 
           />
         </label>
       </form>
