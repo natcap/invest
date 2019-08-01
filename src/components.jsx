@@ -1,24 +1,6 @@
 import React from 'react';
 import fs from 'fs';
-
-const HRA_args = {
-  aoi_vector_path: {
-    argname: 'aoi_vector_path',
-    value:'something.shp',
-    valid:false,
-    touched:false,
-    validationRules:'filepath',
-    required:true
-  },
-  workspace_dir: {
-    argname: 'workspace_dir',
-    value: 'workspace',
-    valid:false,
-    touched:false,
-    validationRules:'directory',
-    required:true
-  },
-}
+import HRA_ARGS from './HRA_args';
 
 function validate(value, rules) {
   // func to validate a single input value
@@ -27,16 +9,16 @@ function validate(value, rules) {
     console.log(rules);
 
   if (rules === 'filepath') {
-    console.log(fs.existsSync(value));
+    // console.log(fs.existsSync(value));
     return fs.existsSync(value)
   }
 
   if (rules === 'directory') {
-    console.log(fs.existsSync(value));
+    // console.log(fs.existsSync(value));
     return fs.existsSync(value)
   }
 
-  // err here because all rules should get caught
+  throw 'Validation rule is not defined'
 
 
 }
@@ -45,13 +27,19 @@ export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            args: HRA_args,
+            args: HRA_ARGS,
             workspace: null,
             jobid: null,
-            status: 'invalid',
+            argStatus: 'invalid', // (invalid, valid)
+            jobStatus: 'incomplete' // (incomplete, running, success, error)
         };
         this.handleChange = this.handleChange.bind(this);
-        this.checkArgs = this.checkArgs.bind(this);
+        this.checkArgStatus = this.checkArgStatus.bind(this);
+        this.executeModel = this.executeModel.bind(this);
+    }
+
+    executeModel() {
+        alert(JSON.stringify('executing'));
     }
 
     handleChange(event) {
@@ -59,11 +47,10 @@ export class InvestJob extends React.Component {
       const value = target.value;
       const name = target.name;
       const required = target.required;
-      console.log(required);
 
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
-      console.log(!required & value !== '');
+      // console.log(!required & value !== '');
       if (!required & value !== '') {
         current_args[name]['valid'] = true  
       } else {
@@ -74,19 +61,25 @@ export class InvestJob extends React.Component {
           {args: current_args}
       );      
 
-      this.checkArgs(this.state.args)
+      this.checkArgStatus(this.state.args)
     }
 
-    checkArgs(args) {
+    checkArgStatus(args) {
       let valids = [];
+      let argStatus = '';
+
       for (const key in args) {
         valids.push(args[key]['valid'])
       }
+
       if (valids.every(Boolean)) {
-          this.setState(
-              {status: 'valid'}
-          );
-      }
+          argStatus = 'valid';
+      } else {
+          argStatus = 'invalid';
+      }    
+      this.setState(
+          {argStatus: argStatus}
+      );
     }
 
     renderForm() {
@@ -101,10 +94,26 @@ export class InvestJob extends React.Component {
     }
 
     render () {
+        const argStatus = this.state.argStatus;
+        const args = this.state.args;
+        let submit = <button 
+            onClick={this.executeModel}
+            disabled>
+                execute
+            </button>
+        
+        if (argStatus === 'valid') {
+            submit = <button 
+            onClick={this.executeModel}>
+                execute
+            </button>
+        }
+
         return(
             <div>
               {this.renderForm()}
-            </div>   
+              {submit}
+            </div>
         );
     }
 }
