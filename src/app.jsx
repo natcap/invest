@@ -1,5 +1,5 @@
 import React from 'react';
-import {InvestJob, ArgsForm} from './components'
+import {InvestJob} from './components'
 
 export default class App extends React.Component {
 	render() {

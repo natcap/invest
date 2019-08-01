@@ -2,25 +2,31 @@ import React from 'react';
 import fs from 'fs';
 import HRA_ARGS from './HRA_args';
 
-function validate(value, rules) {
+function validate(value, rule) {
   // func to validate a single input value
   // returns boolean
-    console.log(value);
-    console.log(rules);
 
-  if (rules === 'filepath') {
-    // console.log(fs.existsSync(value));
-    return fs.existsSync(value)
+  if (rule === 'filepath') {
+    return fs.existsSync(value);
   }
 
-  if (rules === 'directory') {
-    // console.log(fs.existsSync(value));
-    return fs.existsSync(value)
+  if (rule === 'directory') {
+    return (fs.existsSync(value) && fs.lstatSync(value).isDirectory());
   }
 
-  throw 'Validation rule is not defined'
+  if (rule === 'integer') {
+    return Number.isInteger(value);
+  }
 
+  if (rule === 'string') {
+    return true; // for the results_suffix, anything goes?
+  }
 
+  if (['select', 'checkbox'].includes(rule)) {
+    return true;  // dropdowns and checkboxes are always valid
+  }
+
+  throw 'Validation rule is not defined';
 }
 
 export class InvestJob extends React.Component {
@@ -51,7 +57,7 @@ export class InvestJob extends React.Component {
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
       // console.log(!required & value !== '');
-      if (!required & value !== '') {
+      if (!required && value !== '') {
         current_args[name]['valid'] = true  
       } else {
         current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
@@ -96,14 +102,14 @@ export class InvestJob extends React.Component {
     render () {
         const argStatus = this.state.argStatus;
         const args = this.state.args;
-        let submit = <button 
+        let submitButton = <button 
             onClick={this.executeModel}
             disabled>
                 execute
             </button>
         
         if (argStatus === 'valid') {
-            submit = <button 
+            submitButton = <button 
             onClick={this.executeModel}>
                 execute
             </button>
@@ -112,13 +118,13 @@ export class InvestJob extends React.Component {
         return(
             <div>
               {this.renderForm()}
-              {submit}
+              {submitButton}
             </div>
         );
     }
 }
 
-export class ArgsForm extends React.Component {
+class ArgsForm extends React.Component {
 
   render() {
     // console.log(JSON.stringify({this.props}));
@@ -128,19 +134,36 @@ export class ArgsForm extends React.Component {
     for (const arg in current_args) {
       const argument = current_args[arg];
       // console.log(argument);
-      formItems.push(
-        <form>
+      if (argument.type !== 'select') {
+        formItems.push(
+          <form>
             <label>
-                {argument.argname}
-                <input 
-                    name={argument.argname}
-                    type="text"
-                    value={argument.value}
-                    required={argument.required}
-                    // valid={argument.valid}
-                    onChange={this.props.handleChange} />
+              {argument.argname}
+              <input 
+                name={argument.argname}
+                type={argument.type}
+                value={argument.value}
+                required={argument.required}
+                onChange={this.props.handleChange}/>
             </label>
-        </form>)
+          </form>)
+      } else {
+        formItems.push(
+          <form>
+            <label>
+              {argument.argname}
+              <select 
+                name={argument.argname}
+                value={argument.value}
+                required={argument.required}
+                onChange={this.props.handleChange}>
+                  {argument.options.map(opt =>
+                    <option value={opt}>{opt}</option>
+                  )}
+              </select>
+            </label>
+          </form>)
+      }
     }
 
     return (
@@ -160,41 +183,4 @@ export class ArgsForm extends React.Component {
 //     "results_suffix": "",
 //     "risk_eq": "Euclidean",
 //     "visualize_outputs": true
-// }
-
-
-
-    // const parameter_set = [
-    //     {key: "aoi_vector_path", type:"text", required:true},
-    //     {key: "criteria_table_path", type:"text", required:true},
-    //     {key: "decay_eq", type:"select", required:true},
-    //     {key: "info_table_path", type:"text", required:true},
-    //     {key: "max_rating", type:"number", required:true},
-    //     {key: "resolution", type:"number", required:true},
-    //     {key: "results_suffix", type:"text", required:false},
-    //     {key: "risk_eq", type:"select", required:true},
-    //     {key: "visualize_outputs", type:"checkbox", required:true}
-    // ]
-    
-    
-//     render () {    
-//         return (
-//             <div>
-//                 <Workspace args_key='workspace_dir' required='true' />
-//                 <File args_key='aoi_vector_path' required='true' />
-//                 <File args_key='criteria_table_path' required='true' />
-//                 <Dropdown args_key='decay_eq'
-//                     options={['euclidean', 'exponential']}
-//                     required='true' />
-//                 <File args_key='info_table_path' required='true' />
-//                 <Integer args_key='max_rating' required='true' />
-//                 <Integer args_key='resolution' required='true' />
-//                 <Text args_key='results_suffix' required='false' />
-//                 <Dropdown args_key='risk_eq'
-//                     options={['linear', 'multiplicative']}
-//                     required='true' />
-//                 <Checkbox args_key='visualize_outputs' required='true' />
-//             </div>
-//         );
-//     }
 // }
