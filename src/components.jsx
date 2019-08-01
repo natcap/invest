@@ -1,4 +1,5 @@
 import React from 'react';
+import fs from 'fs';
 
 const HRA_args = {
   aoi_vector_path: {
@@ -6,15 +7,38 @@ const HRA_args = {
     value:'something.shp',
     valid:false,
     touched:false,
-    validationRules:'filepath'
+    validationRules:'filepath',
+    required:true
   },
   workspace_dir: {
     argname: 'workspace_dir',
     value: 'workspace',
     valid:false,
     touched:false,
-    validationRules:'directory'
+    validationRules:'directory',
+    required:true
   },
+}
+
+function validate(value, rules) {
+  // func to validate a single input value
+  // returns boolean
+    console.log(value);
+    console.log(rules);
+
+  if (rules === 'filepath') {
+    console.log(fs.existsSync(value));
+    return fs.existsSync(value)
+  }
+
+  if (rules === 'directory') {
+    console.log(fs.existsSync(value));
+    return fs.existsSync(value)
+  }
+
+  // err here because all rules should get caught
+
+
 }
 
 export class InvestJob extends React.Component {
@@ -35,34 +59,39 @@ export class InvestJob extends React.Component {
       const value = target.value;
       const name = target.name;
       const required = target.required;
-      console.log(event);
+      console.log(required);
 
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
+      console.log(!required & value !== '');
+      if (!required & value !== '') {
+        current_args[name]['valid'] = true  
+      } else {
+        current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
+      }
 
       this.setState(
           {args: current_args}
-      );
-      // do validation. if valid, check entire args obj
-      if (required) {
-
-      }
+      );      
 
       this.checkArgs(this.state.args)
     }
 
     checkArgs(args) {
-        if (args) {
-          console.log('args are checked');
-            this.setState(
-                {status: 'valid'}
-            );
-        }
+      let valids = [];
+      for (const key in args) {
+        valids.push(args[key]['valid'])
+      }
+      if (valids.every(Boolean)) {
+          this.setState(
+              {status: 'valid'}
+          );
+      }
     }
 
     renderForm() {
         console.log('from InvestJob:')
-        console.log(JSON.stringify(this.state));
+        console.log(JSON.stringify(this.state, null, 2));
         return(
             <ArgsForm 
                 args={this.state.args}
@@ -77,7 +106,6 @@ export class InvestJob extends React.Component {
               {this.renderForm()}
             </div>   
         );
-
     }
 }
 
@@ -89,8 +117,8 @@ export class ArgsForm extends React.Component {
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
     for (const arg in current_args) {
-      let argument = current_args[arg];
-      console.log(argument);
+      const argument = current_args[arg];
+      // console.log(argument);
       formItems.push(
         <form>
             <label>
@@ -99,6 +127,7 @@ export class ArgsForm extends React.Component {
                     name={argument.argname}
                     type="text"
                     value={argument.value}
+                    required={argument.required}
                     // valid={argument.valid}
                     onChange={this.props.handleChange} />
             </label>
