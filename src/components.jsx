@@ -3,51 +3,20 @@
 import React from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
-// import HRA_ARGS from './HRA_args';
+
+// import MODEL_ARGS from './HRA_args';
 import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
+import validate from './validate';
 
-const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
+// const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
+const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-env/Scripts/invest.exe'
 const TEMP_DIR = 'C:/Users/dmf/projects/workbench_proto/invest-electron/'
-
-function validate(value, rule) {
-  // func to validate a single input value
-  // returns boolean
-
-  if (rule === 'filepath') {
-    return fs.existsSync(value);
-  }
-
-  if (rule === 'directory') {
-    // todo: workspace need not be pre-existing
-    return (fs.existsSync(value) && fs.lstatSync(value).isDirectory());
-  }
-
-  if (rule === 'integer') {
-    return Number.isInteger(parseInt(value));
-  }
-
-  if (rule === 'string') {
-    return true; // for the results_suffix, anything goes?
-  }
-
-  if (['select', 'checkbox'].includes(rule)) {
-    return true;  // dropdowns and checkboxes are always valid
-  }
-
-  throw 'Validation rule is not defined';
-}
 
 function argsToJSON(currentArgs) {
   // make simple args json for passing to python cli
   let args_dict = {};
   for (const argname in currentArgs) {
-    let value = currentArgs[argname]['value']
-
-    if (['false', 'true'].includes(value)) {
-      value = value[0].toUpperCase() + value.slice(1) // for python
-    }
-
-    args_dict[argname] = value
+    args_dict[argname] = currentArgs[argname]['value']
   }
   const datastack = { // keys expected by datastack.py
     args: args_dict,
@@ -105,13 +74,11 @@ export class InvestJob extends React.Component {
       // first write args to datastack file
       argsToJSON(this.state.args);
 
-      // const python = spawn(INVEST_EXE, ['--usage']);
-      const cmdArgs = [MODEL_NAME, '--headless -y', '-d ' + TEMP_DIR + 'datastack.json']
       const options = {
         cwd: TEMP_DIR,
         shell: true, // without this, IOError when datastack.py loads json
       };
-      // console.log(INVEST_EXE +' '+ cmdArgs);
+      const cmdArgs = [MODEL_NAME, '--headless -y -vvv', '-d ' + TEMP_DIR + 'datastack.json']
       const python = spawn(INVEST_EXE, cmdArgs, options);
 
       python.stdout.on('data', (data) => {
@@ -123,12 +90,11 @@ export class InvestJob extends React.Component {
       });
 
       python.on('close', (code) => {
-        // todo, lots of different codes coming out here
         this.setState({
           jobStatus: code,
-        })
-        console.log('from execute close:');
-        console.log(JSON.stringify(this.state, null, 2));
+        });
+        // console.log('from execute close:');
+        // console.log(JSON.stringify(this.state, null, 2));
       });
     }
 
@@ -140,7 +106,7 @@ export class InvestJob extends React.Component {
 
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
-      // todo, maybe handle this logic withing validate?
+      // todo, maybe handle this logic within validate?
       if (!required && value !== '') {
         current_args[name]['valid'] = true  
       } else {
@@ -173,8 +139,8 @@ export class InvestJob extends React.Component {
     }
 
     renderForm() {
-        // console.log('from InvestJob:')
-        // console.log(JSON.stringify(this.state, null, 2));
+        console.log('from InvestJob:')
+        console.log(JSON.stringify(this.state, null, 2));
         return(
             <ArgsForm 
                 args={this.state.args}

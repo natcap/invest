@@ -79,7 +79,7 @@ const MODEL_ARGS = {
   },
   visualize_outputs: {
     argname: 'visualize_outputs',
-    value: 'false',
+    value: true, 
     type: 'checkbox',
     valid: true,
     validationRules: 'checkbox',

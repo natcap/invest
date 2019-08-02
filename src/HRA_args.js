@@ -1,4 +1,4 @@
-const HRA_ARGS = {
+const MODEL_ARGS = {
   aoi_vector_path: {
     argname: 'aoi_vector_path',
     value: 'something.shp',
@@ -83,4 +83,4 @@ const HRA_ARGS = {
   },
 };
 
-export default HRA_ARGS;
+export default MODEL_ARGS;
