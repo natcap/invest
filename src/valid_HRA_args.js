@@ -1,6 +1,8 @@
-const SAMPLE_DATA = '/home/dmf/invest-sample-data/HabitatRiskAssess/Input/'
+const SAMPLE_DATA = 'C:/Users/dmf/projects/invest/data/invest-sample-data/HabitatRiskAssess/Input/'
 
-const HRA_ARGS = {
+const MODEL_NAME = 'habitat_risk_assessment'
+
+const MODEL_ARGS = {
   aoi_vector_path: {
     argname: 'aoi_vector_path',
     value: SAMPLE_DATA + 'subregions.shp',
@@ -85,4 +87,4 @@ const HRA_ARGS = {
   },
 };
 
-export default HRA_ARGS;
+export {MODEL_ARGS, MODEL_NAME};

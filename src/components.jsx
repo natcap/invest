@@ -4,7 +4,10 @@ import React from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
 // import HRA_ARGS from './HRA_args';
-import HRA_ARGS from './valid_HRA_args'; // just for testing
+import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
+
+const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
+const TEMP_DIR = 'C:/Users/dmf/projects/workbench_proto/invest-electron/'
 
 function validate(value, rule) {
   // func to validate a single input value
@@ -15,6 +18,7 @@ function validate(value, rule) {
   }
 
   if (rule === 'directory') {
+    // todo: workspace need not be pre-existing
     return (fs.existsSync(value) && fs.lstatSync(value).isDirectory());
   }
 
@@ -33,15 +37,43 @@ function validate(value, rule) {
   throw 'Validation rule is not defined';
 }
 
+function argsToJSON(currentArgs) {
+  // make simple args json for passing to python cli
+  let args_dict = {};
+  for (const argname in currentArgs) {
+    let value = currentArgs[argname]['value']
+
+    if (['false', 'true'].includes(value)) {
+      value = value[0].toUpperCase() + value.slice(1) // for python
+    }
+
+    args_dict[argname] = value
+  }
+  const datastack = { // keys expected by datastack.py
+    args: args_dict,
+    model_name: MODEL_NAME,
+    invest_version: '3.7.0',
+  };
+
+  const jsonContent = JSON.stringify(datastack, null, 2);
+  fs.writeFile(TEMP_DIR + 'datastack.json', jsonContent, 'utf8', function (err) {
+    if (err) {
+        console.log("An error occured while writing JSON Object to File.");
+        return console.log(err);
+    }
+    console.log("JSON file has been saved.");
+  });
+}
+
 export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            args: HRA_ARGS,
+            args: MODEL_ARGS,
             workspace: null,
             jobid: null,
             argStatus: 'invalid', // (invalid, valid)
-            jobStatus: 'incomplete' // (incomplete, running, success, error)
+            jobStatus: 'incomplete' // (incomplete, 0=success, 1=error, cli returns some strange codes though)
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
@@ -64,20 +96,23 @@ export class InvestJob extends React.Component {
       this.setState(
           {args: openingArgs}
       );      
-      this.checkArgStatus(this.state.args)
-      console.log('from DidMount:')
-      console.log(JSON.stringify(this.state, null, 2));
+      this.checkArgStatus(this.state.args);
+      // console.log('from DidMount:');
+      // console.log(JSON.stringify(this.state, null, 2));
     }
 
-
-    // todo: validate all args on ComponentDidMount?
-    // right now validation only happens on onChange
-
     executeModel() {
-      // todo, execute from callback? child_process async
-      // set job state as running
-      // on exit, set state as exit code
-      const python = spawn('python', ['foo.py']);
+      // first write args to datastack file
+      argsToJSON(this.state.args);
+
+      // const python = spawn(INVEST_EXE, ['--usage']);
+      const cmdArgs = [MODEL_NAME, '--headless -y', '-d ' + TEMP_DIR + 'datastack.json']
+      const options = {
+        cwd: TEMP_DIR,
+        shell: true, // without this, IOError when datastack.py loads json
+      };
+      // console.log(INVEST_EXE +' '+ cmdArgs);
+      const python = spawn(INVEST_EXE, cmdArgs, options);
 
       python.stdout.on('data', (data) => {
         console.log(`stdout: ${data}`);
@@ -88,10 +123,11 @@ export class InvestJob extends React.Component {
       });
 
       python.on('close', (code) => {
+        // todo, lots of different codes coming out here
         this.setState({
           jobStatus: code,
         })
-        console.log('from execute close:')
+        console.log('from execute close:');
         console.log(JSON.stringify(this.state, null, 2));
       });
     }
@@ -137,8 +173,8 @@ export class InvestJob extends React.Component {
     }
 
     renderForm() {
-        console.log('from InvestJob:')
-        console.log(JSON.stringify(this.state, null, 2));
+        // console.log('from InvestJob:')
+        // console.log(JSON.stringify(this.state, null, 2));
         return(
             <ArgsForm 
                 args={this.state.args}
