@@ -77,7 +77,7 @@ const HRA_ARGS = {
     argname: 'visualize_outputs',
     value: '',
     type: 'checkbox',
-    valid: false,
+    valid: true,
     validationRules: 'checkbox',
     required: true,
   },

@@ -1,6 +1,10 @@
+// {} needed when module does not export default, I think.
+// Uncaught TypeError: ... is not a function
 import React from 'react';
 import fs from 'fs';
-import HRA_ARGS from './HRA_args';
+import {spawn} from 'child_process';
+// import HRA_ARGS from './HRA_args';
+import HRA_ARGS from './valid_HRA_args'; // just for testing
 
 function validate(value, rule) {
   // func to validate a single input value
@@ -15,7 +19,7 @@ function validate(value, rule) {
   }
 
   if (rule === 'integer') {
-    return Number.isInteger(value);
+    return Number.isInteger(parseInt(value));
   }
 
   if (rule === 'string') {
@@ -44,8 +48,52 @@ export class InvestJob extends React.Component {
         this.executeModel = this.executeModel.bind(this);
     }
 
+    componentDidMount() {
+      // nice to validate on load, if it's possible to load with default args.
+      // todo, a lot of this is duplicated in handleChange.
+      let openingArgs = this.state.args
+      for (const arg in openingArgs) {
+        const argument = openingArgs[arg];
+        if (!argument.required && argument.value !== '') {
+          openingArgs[arg]['valid'] = true  
+        } else {
+          openingArgs[arg]['valid'] = validate(argument.value, argument.validationRules)
+        }
+      }
+
+      this.setState(
+          {args: openingArgs}
+      );      
+      this.checkArgStatus(this.state.args)
+      console.log('from DidMount:')
+      console.log(JSON.stringify(this.state, null, 2));
+    }
+
+
+    // todo: validate all args on ComponentDidMount?
+    // right now validation only happens on onChange
+
     executeModel() {
-        alert(JSON.stringify('executing'));
+      // todo, execute from callback? child_process async
+      // set job state as running
+      // on exit, set state as exit code
+      const python = spawn('python', ['foo.py']);
+
+      python.stdout.on('data', (data) => {
+        console.log(`stdout: ${data}`);
+      });
+
+      python.stderr.on('data', (data) => {
+        console.log(`stderr: ${data}`);
+      });
+
+      python.on('close', (code) => {
+        this.setState({
+          jobStatus: code,
+        })
+        console.log('from execute close:')
+        console.log(JSON.stringify(this.state, null, 2));
+      });
     }
 
     handleChange(event) {
@@ -56,7 +104,7 @@ export class InvestJob extends React.Component {
 
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
-      // console.log(!required & value !== '');
+      // todo, maybe handle this logic withing validate?
       if (!required && value !== '') {
         current_args[name]['valid'] = true  
       } else {
@@ -127,13 +175,10 @@ export class InvestJob extends React.Component {
 class ArgsForm extends React.Component {
 
   render() {
-    // console.log(JSON.stringify({this.props}));
-    // const args = this.props.args
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
     for (const arg in current_args) {
       const argument = current_args[arg];
-      // console.log(argument);
       if (argument.type !== 'select') {
         formItems.push(
           <form>
@@ -172,15 +217,3 @@ class ArgsForm extends React.Component {
   }
 }
 
-
-// const datastack = {
-//     "aoi_vector_path": "HabitatRiskAssess/Input/subregions.shp",
-//     "criteria_table_path": "HabitatRiskAssess/Input/exposure_consequence_criteria.csv",
-//     "decay_eq": "Linear",
-//     "info_table_path": "HabitatRiskAssess/Input/habitat_stressor_info.csv",
-//     "max_rating": "3",
-//     "resolution": "500",
-//     "results_suffix": "",
-//     "risk_eq": "Euclidean",
-//     "visualize_outputs": true
-// }
