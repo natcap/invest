@@ -21,8 +21,8 @@ function validate(value, rule) {
     return true; // for the results_suffix, anything goes?
   }
 
-  if (['select', 'checkbox'].includes(rule)) {
-    return true;  // dropdowns and checkboxes are always valid
+  if (['select'].includes(rule)) {
+    return true;  // dropdowns are always valid
   }
 
   throw 'Validation rule is not defined';
