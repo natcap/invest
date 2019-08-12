@@ -9,7 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --cache --color --ext .jsx,.js src"
+    "lint": "eslint --cache --color --ext .jsx,.js src",
+    "test": "jest"
   },
   "keywords": [],
   "author": "dmf",
@@ -65,6 +66,7 @@
     "eslint-config-airbnb": "^15.1.0",
     "eslint-plugin-import": "^2.18.2",
     "eslint-plugin-jsx-a11y": "^5.1.1",
-    "eslint-plugin-react": "^7.14.3"
+    "eslint-plugin-react": "^7.14.3",
+    "jest": "^24.8.0"
   }
 }
