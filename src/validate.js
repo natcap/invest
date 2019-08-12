@@ -1,27 +1,41 @@
 import fs from 'fs';
+import path from 'path';
 
 function validate(value, rule) {
-  // func to validate a single input value
-  // returns boolean
+  // This function validates a single input value given a rule.
+  //
+  // Parameters:
+  //   value (string): the value to validate
+  //   rule (object):  {required: bool, rule: 'some rule'} 
+  // Returns:
+  //   boolean
 
-  if (rule === 'filepath') {
+  if (value === '') {
+    return (rule.required ? false : true)  // empty is valid for optional args
+  }
+
+  if (rule.rule === 'filepath') {
     return fs.existsSync(value);
   }
 
-  if (rule === 'directory') {
-    // todo: invest workspace need not be pre-existing
+  if (rule.rule === 'directory') {
     return (fs.existsSync(value) && fs.lstatSync(value).isDirectory());
   }
 
-  if (rule === 'integer') {
+  if (rule.rule === 'workspace') {
+    const dirname = path.dirname(value);
+    return (fs.existsSync(dirname) && fs.lstatSync(dirname).isDirectory());
+  }
+
+  if (rule.rule === 'integer') {
     return Number.isInteger(parseInt(value));
   }
 
-  if (rule === 'string') {
+  if (rule.rule === 'string') {
     return true; // for the results_suffix, anything goes?
   }
 
-  if (['select'].includes(rule)) {
+  if (rule.rule === 'select') {
     return true;  // dropdowns are always valid
   }
 
