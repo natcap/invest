@@ -67,7 +67,9 @@ export class InvestJob extends React.Component {
 
     executeModel() {
       argsToJSON(this.state.args);  // first write args to datastack file
-
+      this.setState(
+        {jobStatus: 'running'}
+      );
       const options = {
         cwd: TEMP_DIR,
         shell: true, // without this, IOError when datastack.py loads json
@@ -139,8 +141,10 @@ export class InvestJob extends React.Component {
     }
 
     render () {
-        const argStatus = this.state.argStatus;
         const args = this.state.args;
+        const argStatus = this.state.argStatus;
+        const jobStatus = this.state.jobStatus;
+        let renderedLog = <div>{'NOTHING TO LOG HERE'}</div>
         let submitButton = <button 
             onClick={this.executeModel}
             disabled>
@@ -154,10 +158,15 @@ export class InvestJob extends React.Component {
             </button>
         }
 
+        if (jobStatus !== 'incomplete') {
+            renderedLog = <div>{'NOW LOGGING HERE'}</div>
+        }
+
         return(
             <div>
               {this.renderForm()}
               {submitButton}
+              {renderedLog}
             </div>
         );
     }
