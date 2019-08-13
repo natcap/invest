@@ -1,12 +1,12 @@
 import React from 'react';
-import {InvestJob} from './components'
+import {InvestJob} from './components';
 
 export default class App extends React.Component {
-	render() {
-		return (
-		    <div>
-		    	<InvestJob />
-		    </div>
-	    );
+  render() {
+  	return (
+  	  <div>
+  	   	<InvestJob />
+    	</div>
+    );
 	};
 }
