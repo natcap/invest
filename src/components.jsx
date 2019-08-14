@@ -42,7 +42,7 @@ export class InvestJob extends React.Component {
             workspace: null,
             jobid: null,
             argStatus: 'invalid', // (invalid, valid)
-            jobStatus: 'incomplete' // (incomplete, 0=success, 1=error, cli returns some strange codes though)
+            jobStatus: 'incomplete' // (incomplete, then whatever exit code returned by cli.py)
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
@@ -51,15 +51,10 @@ export class InvestJob extends React.Component {
 
     componentDidMount() {
       // nice to validate on load, if it's possible to load with default args.
-      // todo, a lot of this is duplicated in handleChange.
       let openingArgs = this.state.args
-      for (const arg in openingArgs) {
-        const argument = openingArgs[arg];
-        if (!argument.required && argument.value !== '') {
-          openingArgs[arg]['valid'] = true  
-        } else {
-          openingArgs[arg]['valid'] = validate(argument.value, argument.validationRules)
-        }
+      for (const argname in openingArgs) {
+        const argument = openingArgs[argname];
+        openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
       }
 
       this.setState(
@@ -71,8 +66,7 @@ export class InvestJob extends React.Component {
     }
 
     executeModel() {
-      // first write args to datastack file
-      argsToJSON(this.state.args);
+      argsToJSON(this.state.args);  // first write args to datastack file
 
       const options = {
         cwd: TEMP_DIR,
@@ -106,12 +100,7 @@ export class InvestJob extends React.Component {
 
       let current_args = Object.assign({}, this.state.args);
       current_args[name]['value'] = value
-      // todo, maybe handle this logic within validate?
-      if (!required && value !== '') {
-        current_args[name]['valid'] = true  
-      } else {
-        current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
-      }
+      current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
 
       this.setState(
           {args: current_args}
