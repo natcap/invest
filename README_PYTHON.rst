@@ -67,7 +67,8 @@ is:
 Installing the latest development version
 -----------------------------------------
 
-The latest development version of InVEST can be installed from our source tree:
+The latest development version of InVEST can be installed from our mercurial
+source tree:
 
 .. code-block:: console
 
@@ -83,9 +84,7 @@ entry point:
 .. code-block:: console
 
     $ invest --help
-    usage: invest [-h] [--version] [-v | --debug] [--list] [-l] [-d [DATASTACK]]
-                  [-w [WORKSPACE]] [-q] [-y] [-n]
-                  [model]
+    usage: invest [-h] [-v | --debug] {list,launch,run,quickrun,validate} ...
 
     Integrated Valuation of Ecosystem Services and Tradeoffs. InVEST (Integrated
     Valuation of Ecosystem Services and Tradeoffs) is a family of tools for
@@ -100,44 +99,20 @@ entry point:
     python environment.
 
     positional arguments:
-      model                 The model/tool to run. Use --list to show available
-                            models/tools. Identifiable model prefixes may also be
-                            used. Alternatively,specify "launcher" to reveal a
-                            model launcher window.
+      {list,launch,run,quickrun,validate}
+        list                List the available InVEST models
+        launch              Start the InVEST launcher window
+        run                 Run an InVEST model
+        quickrun            Run through a model with a specific datastack, exiting
+                            immediately upon completion
+        validate            Validate the parameters of a datastack
 
     optional arguments:
       -h, --help            show this help message and exit
-      --version             show program's version number and exit
-      -v, --verbose         Increase verbosity. Affects how much is printed to the
-                            console and (if running in headless mode) how much is
-                            written to the logfile.
+      -v, --verbose         Increase verbosity. Affects how much logging is
+                            printed to the console and (if running in headless
+                            mode) how much is written to the logfile.
       --debug               Enable debug logging. Alias for -vvvvv
-      --list                List available models
-      -l, --headless        Attempt to run InVEST without its GUI.
-      -d [DATASTACK], --datastack [DATASTACK]
-                            Run the specified model with this datastack
-      -w [WORKSPACE], --workspace [WORKSPACE]
-                            The workspace in which outputs will be saved
-
-    gui options:
-      These options are ignored if running in headless mode
-
-      -q, --quickrun        Run the target model without validating and quit with
-                            a nonzero exit status if an exception is encountered
-
-    headless options:
-      -y, --overwrite       Overwrite the workspace without prompting for
-                            confirmation
-      -n, --no-validate     Do not validate inputs before running the model.
-
-
-
-
-To list the available models:
-
-.. code-block:: console
-
-    $ invest --list
 
 
 Development
