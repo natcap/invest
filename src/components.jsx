@@ -9,7 +9,7 @@ import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
 import validate from './validate';
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
-const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-env/Scripts/invest.exe'
+const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe'
 const TEMP_DIR = 'C:/Users/dmf/projects/workbench_proto/invest-electron/'
 
 function argsToJSON(currentArgs) {
@@ -42,7 +42,9 @@ export class InvestJob extends React.Component {
             workspace: null,
             jobid: null,
             argStatus: 'invalid', // (invalid, valid)
-            jobStatus: 'incomplete' // (incomplete, then whatever exit code returned by cli.py)
+            jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
+            logStdErr: '',
+            logStdOut: ''
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
@@ -77,12 +79,22 @@ export class InvestJob extends React.Component {
       const cmdArgs = [MODEL_NAME, '--headless -y -vvv', '-d ' + TEMP_DIR + 'datastack.json']
       const python = spawn(INVEST_EXE, cmdArgs, options);
 
+      let stdout = this.state.logStdOut
       python.stdout.on('data', (data) => {
         console.log(`stdout: ${data}`);
+        stdout += data
+        this.setState({
+          // logStdOut: `${data}`,
+          logStdOut: stdout,
+        });
       });
 
       python.stderr.on('data', (data) => {
         console.log(`stderr: ${data}`);
+        this.setState({
+          // logStdErr: `${data}`,
+          logStdErr: data,
+        });
       });
 
       python.on('close', (code) => {
@@ -130,21 +142,29 @@ export class InvestJob extends React.Component {
     }
 
     renderForm() {
-        console.log('from InvestJob:')
-        console.log(JSON.stringify(this.state, null, 2));
-        return(
-            <ArgsForm 
-                args={this.state.args}
-                handleChange={this.handleChange} 
-            />
-        );
+      console.log('from InvestJob:')
+      console.log(JSON.stringify(this.state, null, 2));
+      return(
+        <ArgsForm 
+          args={this.state.args}
+          handleChange={this.handleChange} 
+        />
+      );
+    }
+
+    renderLog() {
+      return(
+        <LogDisplay 
+          jobStatus={this.state.jobStatus}
+          logStdOut={this.state.logStdOut}
+          logStdErr={this.state.logStdErr}
+        />
+      );
     }
 
     render () {
         const args = this.state.args;
         const argStatus = this.state.argStatus;
-        const jobStatus = this.state.jobStatus;
-        let renderedLog = <div>{'NOTHING TO LOG HERE'}</div>
         let submitButton = <button 
             onClick={this.executeModel}
             disabled>
@@ -158,18 +178,34 @@ export class InvestJob extends React.Component {
             </button>
         }
 
-        if (jobStatus !== 'incomplete') {
-            renderedLog = <div>{'NOW LOGGING HERE'}</div>
-        }
-
         return(
             <div>
               {this.renderForm()}
               {submitButton}
-              {renderedLog}
+              {this.renderLog()}
             </div>
         );
     }
+}
+
+class LogDisplay extends React.Component {
+
+  render() {
+    const job_status = this.props.jobStatus;
+    const current_out = this.props.logStdOut;
+    const current_err = this.props.logStdErr;
+    let renderedLog;
+
+    if (job_status === 'incomplete') {
+      renderedLog = <div>{'NOT LOGGING YET'}</div>
+    } else {
+      renderedLog = <div>
+          {'STDOUT:'}<br/>{`${current_out}`}<br/>
+          {'STDERR:'}<br/>{`${current_err}`}<br/>
+        </div>
+    }
+    return (<div>{renderedLog}</div>);
+  }
 }
 
 class ArgsForm extends React.Component {

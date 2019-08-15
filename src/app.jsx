@@ -4,7 +4,7 @@ import {InvestJob} from './components';
 export default class App extends React.Component {
   render() {
   	return (
-  	  <div>
+  	  <div style={{overflow:'scroll'}}>
   	   	<InvestJob />
     	</div>
     );
