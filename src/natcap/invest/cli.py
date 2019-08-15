@@ -14,9 +14,12 @@ import json
 
 try:
     from . import utils
+    from . import datastack
 except ValueError:
     # When we're in a pyinstaller build, this isn't a module.
     from natcap.invest import utils
+    from natcap.invest import datastack
+
 
 
 DEFAULT_EXIT_CODE = 1
@@ -259,21 +262,6 @@ class ListModelsAction(argparse.Action):
         parser.exit(message=build_model_list_table())
 
 
-class DatastackAction(argparse.Action):
-    def __call__(self, parser, namespace, values, option_string=None):
-        # This action is only called when a datastack is provided.
-        from natcap.invest import datastack
-
-        try:
-            parsed_datastack = datastack.extract_parameter_set(values)
-        except Exception as error:
-            parser.exit(
-                1, "Error when parsing JSON datastack file:\n    " + str(error))
-
-        setattr(namespace, self.dest, parsed_datastack)
-
-
-
 class SelectModelAction(argparse.Action):
     """Given a possily-ambiguous model string, identify the model to run.
 
@@ -363,12 +351,16 @@ def main2(user_args=None):
         'open-source python environment.'),
         prog='invest'
     )
-    parser.add_argument(
+    verbosity_group = parser.add_mutually_exclusive_group()
+    verbosity_group.add_argument(
         '-v', '--verbose', dest='verbosity', default=0, action='count',
         help=('Increase verbosity.  Affects how much logging is printed to '
               'the console and (if running in headless mode) how much is '
               'written to the logfile.'))
-    import natcap.invest
+    verbosity_group.add_argument(
+        '--debug', dest='log_level', default=logging.CRITICAL,
+        action='store_const', const=logging.DEBUG,
+        help='Enable debug logging. Alias for -vvvvv')
 
     subparsers = parser.add_subparsers(dest='subcommand')
 
@@ -388,7 +380,6 @@ def main2(user_args=None):
               'Requires a datastack and a workspace.'))
     run_subparser.add_argument(
         '-d', '--datastack', default=None, nargs='?',
-        action=DatastackAction,
         help=('Run the specified model with this JSON datastack. '
               'Required if using --headless'))
     run_subparser.add_argument(
@@ -402,6 +393,30 @@ def main2(user_args=None):
 
     args = parser.parse_args(user_args)
     print args
+
+    root_logger = logging.getLogger()
+    handler = logging.StreamHandler(sys.stdout)
+    formatter = logging.Formatter(
+        fmt='%(asctime)s %(name)-18s %(levelname)-8s %(message)s',
+        datefmt='%m/%d/%Y %H:%M:%S ')
+    handler.setFormatter(formatter)
+
+    # Set the log level based on what the user provides in the available
+    # arguments.  Verbosity: the more v's the lower the logging threshold.
+    # If --debug is used, the logging threshold is 10.
+    # If the user goes lower than logging.DEBUG, default to logging.DEBUG.
+    log_level = min(args.log_level, logging.CRITICAL - (args.verbosity*10))
+    handler.setLevel(max(log_level, logging.DEBUG))  # don't go lower than DEBUG
+    root_logger.addHandler(handler)
+    LOGGER.info('Setting handler log level to %s', log_level)
+
+    # FYI: Root logger by default has a level of logging.WARNING.
+    # To capture ALL logging produced in this system at runtime, use this:
+    # logging.getLogger().setLevel(logging.DEBUG)
+    # Also FYI: using logging.DEBUG means that the logger will defer to
+    # the setting of the parent logger.
+    logging.getLogger('natcap').setLevel(logging.DEBUG)
+
     if args.subcommand == 'list':
         if args.json:
             parser.exit(message=build_model_list_json())
@@ -412,7 +427,85 @@ def main2(user_args=None):
         parser.exit(launcher.main())
 
     if args.subcommand == 'run':
-        pass
+        if args.headless:
+            if not args.datastack:
+                parser.exit(1, 'Datastack required for headless execution.')
+
+            try:
+                parsed_datastack = datastack.extract_parameter_set(args.datastack)
+            except Exception as error:
+                parser.exit(
+                    1, "Error when parsing JSON datastack file:\n    " + str(error))
+
+            if not args.workspace:
+                if ('workspace_dir' not in parsed_datastack.args or
+                        parsed_datastack.args['workspace_dir'] in ['', None]):
+                    parser.exit(
+                        1, ('Workspace must be defined at the command line '
+                            'or in the datastack file'))
+            else:
+                parsed_datastack.args['workspace_dir'] = args.workspace
+
+            target_model = _MODEL_UIS[args.model].pyname
+            model_module = importlib.import_module(name=target_model)
+            LOGGER.info('Imported target %s from %s',
+                       model_module.__name__, model_module)
+
+            with utils.prepare_workspace(args.workspace,
+                                         name=parsed_datastack.model_name,
+                                         logging_level=log_level):
+                LOGGER.log(datastack.ARGS_LOG_LEVEL,
+                           datastack.format_args_dict(parsed_datastack.args,
+                                                      parsed_datastack.model_name))
+
+                # We're deliberately not validating here because the user
+                # can just call ``invest validate <datastack>`` to validate.
+                getattr(model_module, 'execute')(parsed_datastack.args)
+
+        else:
+            from natcap.invest.ui import inputs
+
+            gui_class = _MODEL_UIS[args.model].gui
+            module_name, classname = gui_class.split('.')
+            module = importlib.import_module(
+                name='.ui.%s' % module_name,
+                package='natcap.invest')
+
+            # Instantiate the form
+            model_form = getattr(module, classname)()
+
+            # load the datastack if one was provided
+            try:
+                if args.datastack:
+                    model_form.load_datastack(args.datastack)
+            except Exception as error:
+                # If we encounter an exception while loading the datastack, log the
+                # exception (so it can be seen if we're running with appropriate
+                # verbosity) and exit the argparse application with exit code 1 and
+                # a helpful error message.
+                LOGGER.exception('Could not load datastack')
+                parser.exit(DEFAULT_EXIT_CODE,
+                            'Could not load datastack: %s\n' % str(error))
+
+            if args.workspace:
+                model_form.workspace.set_value(args.workspace)
+
+            # Run the UI's event loop
+            model_form.run()
+            app_exitcode = inputs.QT_APP.exec_()
+
+            # Handle a graceful exit
+            if model_form.form.run_dialog.messageArea.error:
+                parser.exit(DEFAULT_EXIT_CODE,
+                            'Model %s: run failed\n' % args.model)
+
+            if app_exitcode != 0:
+                parser.exit(app_exitcode,
+                            'App terminated with exit code %s\n' % app_exitcode)
+
+
+
+
 
 
 
@@ -657,7 +750,8 @@ def main(user_args=None):
             model_form.workspace.set_value(args.workspace)
 
         # Run the UI's event loop
-        model_form.run(quickrun=args.quickrun)
+        #model_form.run(quickrun=args.quickrun)
+        model_form.run()
         app_exitcode = inputs.QT_APP.exec_()
 
         # Handle a graceful exit
