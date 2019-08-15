@@ -259,6 +259,21 @@ class ListModelsAction(argparse.Action):
         parser.exit(message=build_model_list_table())
 
 
+class DatastackAction(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        # This action is only called when a datastack is provided.
+        from natcap.invest import datastack
+
+        try:
+            parsed_datastack = datastack.extract_parameter_set(values)
+        except Exception as error:
+            parser.exit(
+                1, "Error when parsing JSON datastack file:\n    " + str(error))
+
+        setattr(namespace, self.dest, parsed_datastack)
+
+
+
 class SelectModelAction(argparse.Action):
     """Given a possily-ambiguous model string, identify the model to run.
 
@@ -373,12 +388,17 @@ def main2(user_args=None):
               'Requires a datastack and a workspace.'))
     run_subparser.add_argument(
         '-d', '--datastack', default=None, nargs='?',
+        action=DatastackAction,
         help=('Run the specified model with this JSON datastack. '
               'Required if using --headless'))
     run_subparser.add_argument(
         '-w', '--workspace', default=None, nargs='?',
         help=('The workspace in which outputs will be saved. '
               'Required if using --headless'))
+    run_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model to run.  Use "invest list" to list the available '
+              'models.'))
 
     args = parser.parse_args(user_args)
     print args
@@ -393,6 +413,8 @@ def main2(user_args=None):
 
     if args.subcommand == 'run':
         pass
+
+
 
 
 
