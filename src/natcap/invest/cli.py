@@ -370,6 +370,11 @@ def main2(user_args=None):
             parser.exit(message=build_model_list_json())
         parser.exit(message=build_model_list_table())
 
+    if args.subcommand == 'launch':
+        from natcap.invest.ui import launcher
+        parser.exit(launcher.main())
+
+
 
 def main(user_args=None):
     """CLI entry point for launching InVEST runs.
