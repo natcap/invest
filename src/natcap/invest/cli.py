@@ -10,6 +10,7 @@ import sys
 import collections
 import pprint
 import multiprocessing
+import json
 
 try:
     from . import utils
@@ -224,6 +225,27 @@ def build_model_list_table():
     return '\n'.join(strings) + '\n'
 
 
+def build_model_list_json():
+    """Build a json object of relevant information for the CLI.
+
+    The json object returned uses the human-readable model names for keys
+    and the values are another dict containing the internal python name
+    of the model and the aliases recognized by the CLI.
+
+    Returns:
+        A string representation of the JSON object.
+
+    """
+    json_object = {}
+    for internal_model_name, model_data in _MODEL_UIS.items():
+        json_object[model_data.humanname] = {
+            'internal_name': internal_model_name,
+            'aliases': model_data.aliases
+        }
+
+    return json.dumps(json_object)
+
+
 class ListModelsAction(argparse.Action):
     """An argparse action to list the available models."""
     def __call__(self, parser, namespace, values, option_string=None):
@@ -295,6 +317,58 @@ class SelectModelAction(argparse.Action):
                             model=values,
                             matching_models=' '.join(matching_models)))
         setattr(namespace, self.dest, modelname)
+
+
+def main2(user_args=None):
+    """CLI entry point for launching InVEST runs.
+
+    This command-line interface supports two methods of launching InVEST models
+    from the command-line:
+
+        * through its GUI
+        * in headless mode, without its GUI.
+
+    Running in headless mode allows us to bypass all GUI functionality,
+    so models may be run in this way wthout having GUI packages
+    installed.
+    """
+
+    parser = argparse.ArgumentParser(description=(
+        'Integrated Valuation of Ecosystem Services and Tradeoffs.  '
+        'InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is '
+        'a family of tools for quantifying the values of natural capital in '
+        'clear, credible, and practical ways. In promising a return (of '
+        'societal benefits) on investments in nature, the scientific community '
+        'needs to deliver knowledge and tools to quantify and forecast this '
+        'return. InVEST enables decision-makers to quantify the importance of '
+        'natural capital, to assess the tradeoffs associated with alternative '
+        'choices, and to integrate conservation and human development.  \n\n'
+        'Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox '
+        'environment, but have almost all been ported over to a purely '
+        'open-source python environment.'),
+        prog='invest'
+    )
+    import natcap.invest
+
+    subparsers = parser.add_subparsers(
+        dest='subcommand',
+        help=(
+            'some helpful documentation on subparsers'))
+
+    listmodels_subparser = subparsers.add_parser(
+        'list', help='List the available InVEST models')
+    listmodels_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
+
+    launcher_subparser = subparsers.add_parser(
+        'launch', help='Start the InVEST launcher window.')
+
+    args = parser.parse_args(user_args)
+    print args
+    if args.subcommand == 'list':
+        if args.json:
+            parser.exit(message=build_model_list_json())
+        parser.exit(message=build_model_list_table())
 
 
 def main(user_args=None):
@@ -549,4 +623,4 @@ def main(user_args=None):
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    main()
+    main2()
