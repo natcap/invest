@@ -348,12 +348,14 @@ def main2(user_args=None):
         'open-source python environment.'),
         prog='invest'
     )
+    parser.add_argument(
+        '-v', '--verbose', dest='verbosity', default=0, action='count',
+        help=('Increase verbosity.  Affects how much logging is printed to '
+              'the console and (if running in headless mode) how much is '
+              'written to the logfile.'))
     import natcap.invest
 
-    subparsers = parser.add_subparsers(
-        dest='subcommand',
-        help=(
-            'some helpful documentation on subparsers'))
+    subparsers = parser.add_subparsers(dest='subcommand')
 
     listmodels_subparser = subparsers.add_parser(
         'list', help='List the available InVEST models')
@@ -361,7 +363,22 @@ def main2(user_args=None):
         '--json', action='store_true', help='Write output as a JSON object')
 
     launcher_subparser = subparsers.add_parser(
-        'launch', help='Start the InVEST launcher window.')
+        'launch', help='Start the InVEST launcher window')
+
+    run_subparser = subparsers.add_parser(
+        'run', help='Run an InVEST model')
+    run_subparser.add_argument(
+        '-l', '--headless', action='store_true',
+        help=('Run an InVEST model without its GUI. '
+              'Requires a datastack and a workspace.'))
+    run_subparser.add_argument(
+        '-d', '--datastack', default=None, nargs='?',
+        help=('Run the specified model with this JSON datastack. '
+              'Required if using --headless'))
+    run_subparser.add_argument(
+        '-w', '--workspace', default=None, nargs='?',
+        help=('The workspace in which outputs will be saved. '
+              'Required if using --headless'))
 
     args = parser.parse_args(user_args)
     print args
@@ -373,6 +390,10 @@ def main2(user_args=None):
     if args.subcommand == 'launch':
         from natcap.invest.ui import launcher
         parser.exit(launcher.main())
+
+    if args.subcommand == 'run':
+        pass
+
 
 
 
