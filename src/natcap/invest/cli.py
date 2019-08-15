@@ -391,6 +391,28 @@ def main2(user_args=None):
         help=('The model to run.  Use "invest list" to list the available '
               'models.'))
 
+    quickrun_subparser = subparsers.add_parser(
+        'quickrun', help=(
+            'Run through a model with a specific datastack, exiting '
+            'immediately upon completion'))
+    quickrun_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model to run.  Use "invest list" to list the available '
+              'models.'))
+    quickrun_subparser.add_argument(
+        'datastack', help=('Run the model with this JSON datastack.'))
+    quickrun_subparser.add_argument(
+        '-w', '--workspace', default=None, nargs='?',
+        help=('The workspace in which outputs will be saved.'))
+
+    validate_subparser = subparsers.add_parser(
+        'validate', help=(
+            'Validate the parameters of a datastack'))
+    validate_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
+    validate_subparser.add_argument(
+        'datastack', help=('Run the model with this JSON datastack.'))
+
     args = parser.parse_args(user_args)
     print args
 
@@ -426,43 +448,80 @@ def main2(user_args=None):
         from natcap.invest.ui import launcher
         parser.exit(launcher.main())
 
-    if args.subcommand == 'run':
-        if args.headless:
-            if not args.datastack:
-                parser.exit(1, 'Datastack required for headless execution.')
+    if args.subcommand == 'validate':
+        try:
+            parsed_datastack = datastack.extract_parameter_set(args.datastack)
+        except Exception as error:
+            parser.exit(
+                1, "Error when parsing JSON datastack file:\n    " + str(error))
 
-            try:
-                parsed_datastack = datastack.extract_parameter_set(args.datastack)
-            except Exception as error:
-                parser.exit(
-                    1, "Error when parsing JSON datastack file:\n    " + str(error))
+        model_module = importlib.import_module(
+            name=parsed_datastack.model_name)
 
-            if not args.workspace:
-                if ('workspace_dir' not in parsed_datastack.args or
-                        parsed_datastack.args['workspace_dir'] in ['', None]):
-                    parser.exit(
-                        1, ('Workspace must be defined at the command line '
-                            'or in the datastack file'))
+        try:
+            validation_result = getattr(
+                model_module, 'validate')(parsed_datastack.args)
+        except KeyError as missing_keys:
+            if args.json:
+                message = json.dumps({str(missing_keys): 'Key is missing'})
             else:
-                parsed_datastack.args['workspace_dir'] = args.workspace
+                message = ('Datastack is missing keys:\n    ' +
+                           str(missing_keys))
 
-            target_model = _MODEL_UIS[args.model].pyname
-            model_module = importlib.import_module(name=target_model)
-            LOGGER.info('Imported target %s from %s',
-                       model_module.__name__, model_module)
+            # Missing keys have an exit code of 1 because that would indicate
+            # probably programmer error.
+            parser.exit(1, message)
+        except Exception as error:
+            parser.exit(
+                1, ('Datastack could not be validated:\n    ' +
+                    str(missing_keys)))
 
-            with utils.prepare_workspace(args.workspace,
-                                         name=parsed_datastack.model_name,
-                                         logging_level=log_level):
-                LOGGER.log(datastack.ARGS_LOG_LEVEL,
-                           datastack.format_args_dict(parsed_datastack.args,
-                                                      parsed_datastack.model_name))
-
-                # We're deliberately not validating here because the user
-                # can just call ``invest validate <datastack>`` to validate.
-                getattr(model_module, 'execute')(parsed_datastack.args)
-
+        # Even validation errors will have an exit code of 0
+        if args.json:
+            message = json.dumps(validation_result, indent=4, sort_keys=True)
         else:
+            message = pprint.pformat(validation_result)
+
+        parser.exit(0, message)
+
+    if args.subcommand == 'run' and args.headless:
+        if not args.datastack:
+            parser.exit(1, 'Datastack required for headless execution.')
+
+        try:
+            parsed_datastack = datastack.extract_parameter_set(args.datastack)
+        except Exception as error:
+            parser.exit(
+                1, "Error when parsing JSON datastack file:\n    " + str(error))
+
+        if not args.workspace:
+            if ('workspace_dir' not in parsed_datastack.args or
+                    parsed_datastack.args['workspace_dir'] in ['', None]):
+                parser.exit(
+                    1, ('Workspace must be defined at the command line '
+                        'or in the datastack file'))
+        else:
+            parsed_datastack.args['workspace_dir'] = args.workspace
+
+        target_model = _MODEL_UIS[args.model].pyname
+        model_module = importlib.import_module(name=target_model)
+        LOGGER.info('Imported target %s from %s',
+                   model_module.__name__, model_module)
+
+        with utils.prepare_workspace(args.workspace,
+                                     name=parsed_datastack.model_name,
+                                     logging_level=log_level):
+            LOGGER.log(datastack.ARGS_LOG_LEVEL,
+                       datastack.format_args_dict(parsed_datastack.args,
+                                                  parsed_datastack.model_name))
+
+            # We're deliberately not validating here because the user
+            # can just call ``invest validate <datastack>`` to validate.
+            getattr(model_module, 'execute')(parsed_datastack.args)
+
+    if (args.subcommend == 'run' and not args.headless or
+            args.subcommand == 'quickrun'):
+
             from natcap.invest.ui import inputs
 
             gui_class = _MODEL_UIS[args.model].gui
@@ -491,7 +550,10 @@ def main2(user_args=None):
                 model_form.workspace.set_value(args.workspace)
 
             # Run the UI's event loop
-            model_form.run()
+            quickrun = False
+            if subcommand == 'quickrun':
+                quickrun = True
+            model_form.run(quickrun=quickrun)
             app_exitcode = inputs.QT_APP.exec_()
 
             # Handle a graceful exit
