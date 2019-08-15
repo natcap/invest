@@ -322,7 +322,7 @@ class SelectModelAction(argparse.Action):
         setattr(namespace, self.dest, modelname)
 
 
-def main2(user_args=None):
+def main(user_args=None):
     """CLI entry point for launching InVEST runs.
 
     This command-line interface supports two methods of launching InVEST models
@@ -478,7 +478,7 @@ def main2(user_args=None):
 
         # Even validation errors will have an exit code of 0
         if args.json:
-            message = json.dumps(validation_result, indent=4, sort_keys=True)
+            message = json.dumps(validation_result)
         else:
             message = pprint.pformat(validation_result)
 
@@ -542,6 +542,8 @@ def main2(user_args=None):
                 # exception (so it can be seen if we're running with appropriate
                 # verbosity) and exit the argparse application with exit code 1 and
                 # a helpful error message.
+
+
                 LOGGER.exception('Could not load datastack')
                 parser.exit(DEFAULT_EXIT_CODE,
                             'Could not load datastack: %s\n' % str(error))
@@ -566,15 +568,7 @@ def main2(user_args=None):
                             'App terminated with exit code %s\n' % app_exitcode)
 
 
-
-
-
-
-
-
-
-
-def main(user_args=None):
+def main_old(user_args=None):
     """CLI entry point for launching InVEST runs.
 
     This command-line interface supports two methods of launching InVEST models
@@ -827,4 +821,4 @@ def main(user_args=None):
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    main2()
+    main()
