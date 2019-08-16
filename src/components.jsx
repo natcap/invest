@@ -3,6 +3,7 @@
 import React from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
+// import Button from 'react-bootstrap/Button';
 
 // import MODEL_ARGS from './HRA_args';
 import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
@@ -10,7 +11,7 @@ import validate from './validate';
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
 const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe'
-const TEMP_DIR = 'C:/Users/dmf/projects/workbench_proto/invest-electron/'
+const TEMP_DIR = '.'
 
 function argsToJSON(currentArgs) {
   // make simple args json for passing to python cli
@@ -43,7 +44,7 @@ export class InvestJob extends React.Component {
             jobid: null,
             argStatus: 'invalid', // (invalid, valid)
             jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
-            logStdErr: '',
+            logStdErr: '', 
             logStdOut: ''
         };
         this.handleChange = this.handleChange.bind(this);
@@ -81,19 +82,21 @@ export class InvestJob extends React.Component {
 
       let stdout = this.state.logStdOut
       python.stdout.on('data', (data) => {
-        console.log(`stdout: ${data}`);
-        stdout += data
+        // console.log(`stdout: ${data}`);
+        stdout += `${data}`
         this.setState({
           // logStdOut: `${data}`,
           logStdOut: stdout,
         });
       });
 
+      let stderr = this.state.logStdErr
       python.stderr.on('data', (data) => {
-        console.log(`stderr: ${data}`);
+        // console.log(`stderr: ${data}`);
+        stderr += `${data}`
         this.setState({
           // logStdErr: `${data}`,
-          logStdErr: data,
+          logStdErr: stderr,
         });
       });
 
@@ -196,12 +199,16 @@ class LogDisplay extends React.Component {
     const current_err = this.props.logStdErr;
     let renderedLog;
 
+    const logStyle = {
+      whiteSpace: 'pre-line'
+    };
+
     if (job_status === 'incomplete') {
       renderedLog = <div>{'NOT LOGGING YET'}</div>
     } else {
-      renderedLog = <div>
-          {'STDOUT:'}<br/>{`${current_out}`}<br/>
-          {'STDERR:'}<br/>{`${current_err}`}<br/>
+      renderedLog = <div style={logStyle}>
+          {'STDOUT:'}<br/>{current_out}<br/>
+          {'STDERR:'}<br/>{current_err}<br/>
         </div>
     }
     return (<div>{renderedLog}</div>);
