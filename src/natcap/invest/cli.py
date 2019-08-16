@@ -249,19 +249,6 @@ def build_model_list_json():
     return json.dumps(json_object)
 
 
-class ListModelsAction(argparse.Action):
-    """An argparse action to list the available models."""
-    def __call__(self, parser, namespace, values, option_string=None):
-        """Print the available models and quit the argparse parser.
-
-        See https://docs.python.org/2.7/library/argparse.html#action-classes
-        for the full documentation for argparse classes.
-
-        Overridden from argparse.Action.__call__"""
-        setattr(namespace, self.dest, self.const)
-        parser.exit(message=build_model_list_table())
-
-
 class SelectModelAction(argparse.Action):
     """Given a possily-ambiguous model string, identify the model to run.
 
