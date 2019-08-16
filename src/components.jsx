@@ -3,7 +3,8 @@
 import React from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
-// import Button from 'react-bootstrap/Button';
+import Button from 'react-bootstrap/Button';
+import Form from 'react-bootstrap/Form';
 
 // import MODEL_ARGS from './HRA_args';
 import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
@@ -146,7 +147,7 @@ export class InvestJob extends React.Component {
 
     renderForm() {
       console.log('from InvestJob:')
-      console.log(JSON.stringify(this.state, null, 2));
+      // console.log(JSON.stringify(this.state, null, 2));
       return(
         <ArgsForm 
           args={this.state.args}
@@ -168,17 +169,17 @@ export class InvestJob extends React.Component {
     render () {
         const args = this.state.args;
         const argStatus = this.state.argStatus;
-        let submitButton = <button 
+        let submitButton = <Button 
             onClick={this.executeModel}
             disabled>
                 execute
-            </button>
+            </Button>
         
         if (argStatus === 'valid') {
-            submitButton = <button 
+            submitButton = <Button 
             onClick={this.executeModel}>
                 execute
-            </button>
+            </Button>
         }
 
         return(
@@ -224,33 +225,40 @@ class ArgsForm extends React.Component {
       const argument = current_args[arg];
       if (argument.type !== 'select') {
         formItems.push(
-          <form>
-            <label>
+          <Form>
+            <Form.Label>
               {argument.argname}
-              <input 
-                name={argument.argname}
-                type={argument.type}
-                value={argument.value}
-                required={argument.required}
-                onChange={this.props.handleChange}/>
-            </label>
-          </form>)
+            </Form.Label>
+            <Form.Control 
+              name={argument.argname}
+              type={argument.type}
+              value={argument.value}
+              required={argument.required}
+              onChange={this.props.handleChange}
+              isValid={argument.valid}
+              isInvalid={!argument.valid}
+            />
+            <Form.Control.Feedback type='invalid'>
+              {argument.validationRules.rule}
+            </Form.Control.Feedback>
+          </Form>)
       } else {
         formItems.push(
-          <form>
-            <label>
+          <Form>
+            <Form.Label>
               {argument.argname}
-              <select 
-                name={argument.argname}
-                value={argument.value}
-                required={argument.required}
-                onChange={this.props.handleChange}>
-                  {argument.options.map(opt =>
-                    <option value={opt}>{opt}</option>
-                  )}
-              </select>
-            </label>
-          </form>)
+            </Form.Label>
+            <Form.Control as='select'
+              name={argument.argname}
+              value={argument.value}
+              required={argument.required}
+              onChange={this.props.handleChange}
+            >
+              {argument.options.map(opt =>
+                <option value={opt}>{opt}</option>
+              )}
+            </Form.Control>
+          </Form>)
       }
     }
 
