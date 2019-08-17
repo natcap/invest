@@ -1,13 +1,12 @@
-// {} needed when module does not export default, I think.
-// Uncaught TypeError: ... is not a function
-import React from 'react';
+import React, {useState} from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import Tabs from 'react-bootstrap/Tabs';
+import Tab from 'react-bootstrap/Tab';
 
-// import MODEL_ARGS from './HRA_args';
-import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args'; // just for testing
+import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args';
 import validate from './validate';
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
@@ -46,33 +45,33 @@ export class InvestJob extends React.Component {
             argStatus: 'invalid', // (invalid, valid)
             jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
-            logStdOut: ''
+            logStdOut: '',
+            tabKey: 'log'
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
         this.executeModel = this.executeModel.bind(this);
+        this.updateArgs = this.updateArgs.bind(this);
+        this.switchTabs = this.switchTabs.bind(this);
     }
 
-    componentDidMount() {
-      // nice to validate on load, if it's possible to load with default args.
-      let openingArgs = this.state.args
-      for (const argname in openingArgs) {
-        const argument = openingArgs[argname];
-        openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
-      }
 
+    updateArgs(args) {
       this.setState(
-          {args: openingArgs}
+        {args: args}
       );      
       this.checkArgStatus(this.state.args);
-      // console.log('from DidMount:');
-      // console.log(JSON.stringify(this.state, null, 2));
     }
 
     executeModel() {
       argsToJSON(this.state.args);  // first write args to datastack file
       this.setState(
-        {jobStatus: 'running'}
+        {
+          jobStatus: 'running',
+          tabKey: 'log',
+          logStdErr: '',
+          logStdOut: ''
+        }
       );
       const options = {
         cwd: TEMP_DIR,
@@ -145,51 +144,78 @@ export class InvestJob extends React.Component {
       );
     }
 
-    renderForm() {
-      console.log('from InvestJob:')
-      // console.log(JSON.stringify(this.state, null, 2));
-      return(
-        <ArgsForm 
-          args={this.state.args}
-          handleChange={this.handleChange} 
-        />
-      );
-    }
-
-    renderLog() {
-      return(
-        <LogDisplay 
-          jobStatus={this.state.jobStatus}
-          logStdOut={this.state.logStdOut}
-          logStdErr={this.state.logStdErr}
-        />
+    switchTabs(key) {
+      this.setState(
+        {tabKey: key}
       );
     }
 
     render () {
-        const args = this.state.args;
-        const argStatus = this.state.argStatus;
-        let submitButton = <Button 
-            onClick={this.executeModel}
+        const tabKey = this.state.tabKey;
+
+        return(
+          <Tabs id="controlled-tab-example" activeKey={tabKey} onSelect={this.switchTabs}>
+            <Tab eventKey="setup" title="Setup">
+              <SetupArguments
+                args={this.state.args}
+                argStatus={this.state.argStatus}
+                updateArgs={this.updateArgs}
+                handleChange={this.handleChange}
+                executeModel={this.executeModel}
+              />
+            </Tab>
+            <Tab eventKey="log" title="Log">
+              <LogDisplay 
+                jobStatus={this.state.jobStatus}
+                logStdOut={this.state.logStdOut}
+                logStdErr={this.state.logStdErr}
+              />
+            </Tab>
+            <Tab eventKey="viz" title="Viz" disabled>
+              <LogDisplay />
+            </Tab>
+          </Tabs>
+        );
+    }
+}
+
+class SetupArguments extends React.Component {
+
+  componentDidMount() {
+    // nice to validate on load, if it's possible to load with default args.
+    let openingArgs = this.props.args
+    for (const argname in openingArgs) {
+      const argument = openingArgs[argname];
+      openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
+    }
+
+    this.props.updateArgs(openingArgs)
+  }
+
+  render () {
+
+    let submitButton = <Button 
+            onClick={this.props.executeModel}
             disabled>
                 execute
             </Button>
         
-        if (argStatus === 'valid') {
-            submitButton = <Button 
-            onClick={this.executeModel}>
-                execute
-            </Button>
-        }
-
-        return(
-            <div>
-              {this.renderForm()}
-              {submitButton}
-              {this.renderLog()}
-            </div>
-        );
+    if (this.props.argStatus === 'valid') {
+        submitButton = <Button 
+        onClick={this.props.executeModel}>
+            execute
+        </Button>
     }
+
+    return (
+      <div>
+        <ArgsForm 
+          args={this.props.args}
+          handleChange={this.props.handleChange} 
+        />
+        {submitButton}
+      </div>);
+  }
 }
 
 class LogDisplay extends React.Component {
@@ -213,8 +239,10 @@ class LogDisplay extends React.Component {
         </div>
     }
     return (<div>{renderedLog}</div>);
+    // {this.renderLog()}
   }
 }
+
 
 class ArgsForm extends React.Component {
 
