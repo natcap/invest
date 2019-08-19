@@ -1,12 +1,15 @@
-import React, {useState} from 'react';
 import fs from 'fs';
 import {spawn} from 'child_process';
+
+import React, {useState} from 'react';
+import express from 'express';
+
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 
-import {MODEL_ARGS, MODEL_NAME} from './valid_HRA_args';
+import {MODEL_ARGS, MODEL_NAME, MODEL_DOCS} from './valid_HRA_args';
 import validate from './validate';
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
@@ -46,7 +49,8 @@ export class InvestJob extends React.Component {
             jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
-            tabKey: 'log'
+            tabKey: 'log',
+            docs: MODEL_DOCS
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
@@ -174,9 +178,27 @@ export class InvestJob extends React.Component {
             <Tab eventKey="viz" title="Viz" disabled>
               <LogDisplay />
             </Tab>
+            <Tab eventKey="docs" title="Docs">
+              <UserGuide 
+                docs={this.state.docs}
+              />
+            </Tab>
           </Tabs>
         );
     }
+}
+
+class UserGuide extends React.Component {
+
+  render () {
+    const html = fs.readFileSync(this.props.docs, 'utf8');
+    const docStyle = {
+      whiteSpace: 'pre-line'
+    };
+    return(
+        <div><p dangerouslySetInnerHTML={{__html: html}}/></div>
+      );
+  }
 }
 
 class SetupArguments extends React.Component {
