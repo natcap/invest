@@ -368,3 +368,14 @@ class FreestyleStringValidation(unittest.TestCase):
         self.assertTrue('did not match expected pattern' in error_msg)
 
 
+class OptionStringValidation(unittest.TestCase):
+    def test_valid_option(self):
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_option_string(
+            'foo', options=['foo', 'bar', 'Baz']))
+
+    def test_invalid_option(self):
+        from natcap.invest import validation
+        error_msg = validation.check_option_string(
+            'FOO', options=['foo', 'bar', 'Baz'])
+        self.assertTrue('must be one of' in error_msg)
