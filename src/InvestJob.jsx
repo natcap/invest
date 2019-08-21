@@ -1,8 +1,9 @@
 import fs from 'fs';
 import {spawn} from 'child_process';
 
-import React, {useState} from 'react';
-import express from 'express';
+import React from 'react';
+import { createStore } from 'redux';
+import { Provider } from 'react-redux';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -11,10 +12,17 @@ import Tab from 'react-bootstrap/Tab';
 
 import {MODEL_ARGS, MODEL_NAME, MODEL_DOCS} from './valid_HRA_args';
 import validate from './validate';
+import HraApp from './HraApp'
+import rootReducer from './reducers';
+// need the HraApp's index.css?
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
 const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe'
 const TEMP_DIR = '.'
+
+// Only the HraApp uses this redux store
+// TODO refactor HraApp to not depend on redux.
+const store = createStore(rootReducer)
 
 function argsToJSON(currentArgs) {
   // make simple args json for passing to python cli
@@ -175,8 +183,10 @@ export class InvestJob extends React.Component {
                 logStdErr={this.state.logStdErr}
               />
             </Tab>
-            <Tab eventKey="viz" title="Viz" disabled>
-              <LogDisplay />
+            <Tab eventKey="viz" title="Viz">
+            <Provider store={store}>
+              <HraApp />
+            </Provider>
             </Tab>
             <Tab eventKey="docs" title="Docs">
               <UserGuide 
