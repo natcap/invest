@@ -377,6 +377,16 @@ def main(user_args=None):
     validate_subparser.add_argument(
         'datastack', help=('Run the model with this JSON datastack.'))
 
+    getspec_subparser = subparsers.add_parser(
+        'getspec', help=(
+            'Get the spec of the arguments of a model.'))
+    getspec_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model for which to get the spec.  Use "invest list" to '
+              'list the available models.'))
+    getspec_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
+
     args = parser.parse_args(user_args)
     print args
 
@@ -411,6 +421,18 @@ def main(user_args=None):
     if args.subcommand == 'launch':
         from natcap.invest.ui import launcher
         parser.exit(launcher.main())
+
+    if args.subcommand == 'getspec':
+        target_model = _MODEL_UIS[args.model].pyname
+        model_module = importlib.import_module(name=target_model)
+        LOGGER.info('Imported target %s from %s',
+                   model_module.__name__, model_module)
+        args_spec = getattr(model_module, 'ARGS_SPEC')
+
+        if args.json:
+            parser.exit(message=json.dumps(args_spec))
+        else:
+            parser.exit(message=pprint.pformat(args_spec))
 
     if args.subcommand == 'validate':
         try:
