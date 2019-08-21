@@ -450,7 +450,9 @@ def main(user_args=None):
                 model_module, 'validate')(parsed_datastack.args)
         except KeyError as missing_keys:
             if args.json:
-                message = json.dumps({str(missing_keys): 'Key is missing'})
+                message = json.dumps(
+                    {'validation_results': {
+                        str(missing_keys): 'Key is missing'}})
             else:
                 message = ('Datastack is missing keys:\n    ' +
                            str(missing_keys))
@@ -466,7 +468,8 @@ def main(user_args=None):
 
         # Even validation errors will have an exit code of 0
         if args.json:
-            message = json.dumps(validation_result)
+            message = json.dumps({
+                'validation_results': validation_result})
         else:
             message = pprint.pformat(validation_result)
 

@@ -212,6 +212,46 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertTrue(len(stdout_stream.getvalue()) == 0)
         self.assertEqual(exit_cm.exception.code, 1)
 
+    def test_validate_fisheries_json(self):
+        """CLI: Validate the fisheries model inputs as JSON through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        # The InVEST sample data JSON arguments don't have a workspace, so I
+        # need to add it in.
+        datastack_dict = json.load(open(parameter_set_path))
+        datastack_dict['args']['workspace_dir'] = self.workspace_dir
+
+        # In this case, I also want to set one of the inputs to an invalid path
+        # to test the presentation of a validation error.
+        datastack_dict['args']['aoi_vector_path'] = os.path.join(
+            self.workspace_dir, 'not-a-vector.shp')
+
+        new_parameter_set_path = os.path.join(
+            self.workspace_dir, 'paramset.invs.json')
+        with open(new_parameter_set_path, 'w') as parameter_set_file:
+            parameter_set_file.write(
+                json.dumps(datastack_dict, indent=4, sort_keys=True))
+
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'validate',
+                    new_parameter_set_path,
+                    '--json',
+                ])
+        stdout = stdout_stream.getvalue()
+        stdout_json = json.loads(stdout)
+        self.assertEqual(len(stdout_json), 1)
+        self.assertEqual(len(stdout_json['validation_results']), 2)
+
+        # Validation returned successfully, so error code 0 even though there
+        # are warnings.
+        self.assertEqual(exit_cm.exception.code, 0)
+
+
 
 class CLIGUITests(unittest.TestCase):
     def setUp(self):
