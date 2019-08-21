@@ -898,32 +898,3 @@ def validate(args, limit_to=None):
                             ([key], 'not a vector'))
                     del vector
     return validation_error_list
-
-    context = validation.ValidationContext(args, limit_to)
-    if context.is_arg_complete('model_data_path', require=True):
-        # Implement validation for model_data_path here
-        pass
-
-    if context.is_arg_complete('landcover_raster_path', require=True):
-        # Implement validation for landcover_raster_path here
-        pass
-
-    if context.is_arg_complete('landcover_to_crop_table_path', require=True):
-        # Implement validation for landcover_to_crop_table_path here
-        pass
-
-    if context.is_arg_complete('fertilization_rate_table_path', require=True):
-        # Implement validation for fertilization_rate_table_path here
-        pass
-
-    if context.is_arg_complete('aggregate_polygon_path', require=False):
-        # Implement validation for aggregate_polygon_path here
-        pass
-
-    if limit_to is None:
-        # Implement any validation that uses multiple inputs here.
-        # Report multi-input warnings with:
-        # context.warn(<warning>, keys=<keys_iterable>)
-        pass
-
-    return context.warnings
