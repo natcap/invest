@@ -194,6 +194,24 @@ class CLIHeadlessTests(unittest.TestCase):
         self.assertEqual(len(json.loads(stdout)), 1)  # workspace_dir invalid
         self.assertEqual(exit_cm.exception.code, 1)
 
+    def test_validate_invalid_json(self):
+        """CLI: Validate invalid json files set an error code."""
+        from natcap.invest import cli
+
+        paramset_path = os.path.join(self.workspace_dir, 'invalid.json')
+        with open(paramset_path, 'w') as opened_file:
+            opened_file.write('not a json object')
+
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'validate',
+                    paramset_path,
+                    '--json',
+                ])
+        self.assertTrue(len(stdout_stream.getvalue()) == 0)
+        self.assertEqual(exit_cm.exception.code, 1)
+
 
 class CLIGUITests(unittest.TestCase):
     def setUp(self):
