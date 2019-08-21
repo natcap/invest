@@ -384,7 +384,6 @@ def main(user_args=None):
         '--json', action='store_true', help='Write output as a JSON object')
 
     args = parser.parse_args(user_args)
-    print args
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -411,8 +410,12 @@ def main(user_args=None):
 
     if args.subcommand == 'list':
         if args.json:
-            parser.exit(message=build_model_list_json())
-        parser.exit(message=build_model_list_table())
+            message = build_model_list_json()
+        else:
+            message = build_model_list_table()
+
+        sys.stdout.write(message)
+        parser.exit()
 
     if args.subcommand == 'launch':
         from natcap.invest.ui import launcher
@@ -426,9 +429,11 @@ def main(user_args=None):
         args_spec = getattr(model_module, 'ARGS_SPEC')
 
         if args.json:
-            parser.exit(message=json.dumps(args_spec))
+            message = json.dumps(args_spec)
         else:
-            parser.exit(message=pprint.pformat(args_spec))
+            message = pprint.pformat(args_spec)
+        sys.stdout.write(message)
+        parser.exit()
 
     if args.subcommand == 'validate':
         try:
@@ -464,7 +469,8 @@ def main(user_args=None):
         else:
             message = pprint.pformat(validation_result)
 
-        parser.exit(0, message)
+        sys.stdout.write(message)
+        parser.exit(0)
 
     if args.subcommand == 'run' and args.headless:
         if not args.datastack:
