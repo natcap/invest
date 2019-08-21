@@ -11,6 +11,7 @@ import { getFileSuffix } from "../../actions/index";
 import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
 import React, { Component } from "react";
 
+// 
 <style>
   import "font-awesome/css/font-awesome.min.css";
   import "leaflet/dist/leaflet.css";}
@@ -93,6 +94,15 @@ class Hramap extends Component {
   componentDidMount() {
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
+    this.mapApi.invalidateSize();
+    console.log('map invalidated');
+  }
+
+  componentDidUpdate() {
+    // The map loads with the wrong center when it has been initialized
+    // prior to the div that will contain it. So call this function to have 
+    // the map check it's container size after that div exists.
+    // this.mapApi.invalidateSize();
   }
 
   // Read the target files from the event listener when users upload folder,
@@ -518,12 +528,11 @@ class Hramap extends Component {
 
   render() {
     return (
-      <div>
         <Map ref={this.mapRef} id={this.state.mapid} className="map"
           maxZoom={this.state.maxZoom} minZoom={this.state.minZoom}
           onMouseMove={this.renderMouseCoords.bind(this)}
           onMouseOut={this.removeCoords.bind(this)}
-          style={{backgroundColor: "#aad3df"}} bounds={this.state.maxBbox}>
+          bounds={this.state.maxBbox}>
 
         <Control position="topleft">
           <button id="zoom-btn" title="Zoom To AOI" aria-label="Zoom To AOI"
@@ -593,7 +602,6 @@ class Hramap extends Component {
 
         <ScaleControl position={"bottomleft"} maxWidth={100}/>
         </Map>
-      </div>
     );
   }
 }

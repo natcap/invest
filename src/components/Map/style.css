@@ -1,8 +1,6 @@
 #mapdiv {
-  height: 90vh;
-  width: 65%;
-  float: left;
-  background-color: #aad3df;
+  height: 800px;
+  width:auto;
 }
 
 .coords {
@@ -28,7 +26,7 @@
   shape-rendering: crispEdges;
 }
 
-.leaflet-container .leaflet-control-attribution,
+.leaflet-control-attribution,
 .leaflet-container .leaflet-control-scale {
   font-size: 14px;
   margin-left: 10px;
@@ -36,6 +34,8 @@
 
 .leaflet-control-attribution {
   background-color: rgba(255, 255, 255, 0.4);
+  overflow-x: auto;
+  max-width: 470px;
 }
 
 .leaflet-control-layers {
@@ -182,11 +182,6 @@ input[type="button"]:hover{
 
 input[type="button"]:active{
   background: rgba(148, 152, 177, 0.7);
-}
-
-.leaflet-control-attribution {
-  overflow-x: auto;
-  max-width: 470px;
 }
 
 .bold-font {

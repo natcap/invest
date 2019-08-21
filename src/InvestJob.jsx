@@ -165,6 +165,12 @@ export class InvestJob extends React.Component {
     render () {
         const tabKey = this.state.tabKey;
 
+        // todo: get this outta here
+        const viztabStyle = {
+          height: '500px',
+          width: '500px'
+        };
+
         return(
           <Tabs id="controlled-tab-example" activeKey={tabKey} onSelect={this.switchTabs}>
             <Tab eventKey="setup" title="Setup">
