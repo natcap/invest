@@ -52,6 +52,56 @@ class CLIHeadlessTests(unittest.TestCase):
             ])
         patched_model.assert_called_once()
 
+    def test_run_fisheries_no_workspace(self):
+        """CLI: Run the fisheries model through the cli without a workspace."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main([
+                '--debug',  # set logging
+                'run',
+                'fisheries',  # uses an exact modelname
+                '--datastack', parameter_set_path,
+                '--headless',
+            ])
+        self.assertEqual(exit_cm.exception.code, 1)
+
+    def test_run_fisheries_no_datastack(self):
+        """CLI: Run the fisheries model through the cli without a datastack."""
+        from natcap.invest import cli
+
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main([
+                '--debug',  # set logging
+                'run',
+                'fisheries',  # uses an exact modelname
+                '--headless',
+                '--workspace', self.workspace_dir,
+            ])
+        self.assertEqual(exit_cm.exception.code, 1)
+
+    def test_run_fisheries_invalid_datastack(self):
+        """CLI: Run the fisheries model through the cli invalid datastack."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            self.workspace_dir, 'bad-paramset.invs.json')
+
+        with open(parameter_set_path, 'w') as paramset_file:
+            paramset_file.write('not a json object')
+
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main([
+                '--debug',  # set logging
+                'run',
+                'fisheries',  # uses an exact modelname
+                '--datastack', parameter_set_path,
+                '--headless',
+            ])
+        self.assertEqual(exit_cm.exception.code, 1)
+
     def test_run_ambiguous_modelname(self):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli
