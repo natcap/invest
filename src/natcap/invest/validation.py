@@ -162,7 +162,7 @@ def check_raster(filepath, projected=False, projection_units=None):
 
 @check_before((check_file, {'permissions': 'r'}))
 def check_vector(filepath, required_fields=None, projected=False,
-                    projected_units=None):
+                 projection_units=None):
     gdal.PushErrorHandler('CPLQuietErrorHandler')
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     gdal.PopErrorHandler()
@@ -170,14 +170,15 @@ def check_vector(filepath, required_fields=None, projected=False,
     if gdal_dataset is None:
         return "File could not be opened as a GDAL vector"
 
-    fieldnames = set([defn.GetName().upper() for defn in layer.schema])
-    missing_fields = fieldnames - set(field.upper() for field in required_fields)
-    if missing_fields:
-        return "Fields are missing from the first layer: %s" % sorted(
-            missing_fields)
-
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
+
+    if required_fields:
+        fieldnames = set([defn.GetName().upper() for defn in layer.schema])
+        missing_fields = set(field.upper() for field in required_fields) - fieldnames
+        if missing_fields:
+            return "Fields are missing from the first layer: %s" % sorted(
+                missing_fields)
 
     projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:

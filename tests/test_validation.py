@@ -3,7 +3,7 @@ import unittest
 import os
 import shutil
 
-from osgeo import gdal, osr
+from osgeo import gdal, osr, ogr
 
 
 class ValidatorTest(unittest.TestCase):
@@ -241,9 +241,9 @@ class RasterValidation(unittest.TestCase):
         driver = gdal.GetDriverByName('GTiff')
         filepath = os.path.join(self.workspace_dir, 'raster.tif')
         raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
-        wgs84_srs = osr.SpatialReference()
-        wgs84_srs.ImportFromEPSG(32731)
-        raster.SetProjection(wgs84_srs.ExportToWkt())
+        meters_srs = osr.SpatialReference()
+        meters_srs.ImportFromEPSG(32731)
+        raster.SetProjection(meters_srs.ExportToWkt())
         raster = None
 
         for unit in ('m', 'meter', 'metre', 'meters', 'metres'):
@@ -274,9 +274,76 @@ class RasterValidation(unittest.TestCase):
         self.assertTrue('must be projected in meters' in error_msg)
 
 
+class VectorValidation(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
 
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
 
+    def test_file_not_found(self):
+        from natcap.invest import validation
 
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+        error_msg = validation.check_raster(filepath)
+        self.assertTrue('not found' in error_msg)
 
+    def test_invalid_vector(self):
+        from natcap.invest import validation
+
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+        with open(filepath, 'w') as bad_vector:
+            bad_vector.write('not a vector')
+
+        error_msg = validation.check_vector(filepath)
+        self.assertTrue('could not be opened as a GDAL vector' in error_msg)
+
+    def test_missing_fieldnames(self):
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GPKG')
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        layer = vector.CreateLayer('sample_layer', wgs84_srs, ogr.wkbUnknown)
+
+        for field_name, field_type in (('COL_A', ogr.OFTInteger),
+                                       ('col_b', ogr.OFTString)):
+            layer.CreateField(ogr.FieldDefn(field_name, field_type))
+
+        new_feature = ogr.Feature(layer.GetLayerDefn())
+        new_feature.SetField('COL_A', 1)
+        new_feature.SetField('col_b', 'hello')
+        layer.CreateFeature(new_feature)
+
+        new_feature = None
+        layer = None
+        vector = None
+
+        error_msg = validation.check_vector(
+            filepath, required_fields=['col_a', 'COL_B', 'col_c'])
+        self.assertTrue('Fields are missing' in error_msg)
+        self.assertTrue('col_c'.upper() in error_msg)
+
+    def test_vector_projected_in_m(self):
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GPKG')
+        filepath = os.path.join(self.workspace_dir, 'vector.gpkg')
+        vector = driver.Create(filepath, 0, 0, 0, gdal.GDT_Unknown)
+        meters_srs = osr.SpatialReference()
+        meters_srs.ImportFromEPSG(32731)
+        layer = vector.CreateLayer('sample_layer', meters_srs, ogr.wkbUnknown)
+
+        layer = None
+        vector = None
+
+        error_msg = validation.check_vector(
+            filepath, projected=True, projection_units='feet')
+        self.assertTrue('projected in feet' in error_msg)
+
+        self.assertEqual(None, validation.check_vector(
+            filepath, projected=True, projection_units='m'))
 
 
