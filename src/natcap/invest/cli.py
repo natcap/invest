@@ -501,7 +501,7 @@ def main(user_args=None):
             # can just call ``invest validate <datastack>`` to validate.
             getattr(model_module, 'execute')(parsed_datastack.args)
 
-    if (args.subcommend == 'run' and not args.headless or
+    if (args.subcommand == 'run' and not args.headless or
             args.subcommand == 'quickrun'):
 
             from natcap.invest.ui import inputs
@@ -535,7 +535,7 @@ def main(user_args=None):
 
             # Run the UI's event loop
             quickrun = False
-            if subcommand == 'quickrun':
+            if args.subcommand == 'quickrun':
                 quickrun = True
             model_form.run(quickrun=quickrun)
             app_exitcode = inputs.QT_APP.exec_()
