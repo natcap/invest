@@ -1,0 +1,224 @@
+import sys
+import os
+import shutil
+import tempfile
+import unittest
+import contextlib
+import json
+
+import mock
+
+
+# TODO: Remove this context manage once we migrate to Python 3.6
+# Python 3.4 added a redirect_stdout() CM to contextlib.
+if not hasattr(contextlib, 'redirect_stdout'):
+    from StringIO import StringIO
+    @contextlib.contextmanager
+    def redirect_stdout():
+        """Redirect stdout to a stream, which is then yielded."""
+        old_stdout = sys.stdout
+        stdout_buffer = StringIO()
+        sys.stdout = stdout_buffer
+        yield stdout_buffer
+        sys.stdout = old_stdout
+
+
+class CLIHeadlessTests(unittest.TestCase):
+    def setUp(self):
+        """Use a temporary workspace for all tests in this class."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test run."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_run_fisheries(self):
+        """CLI: Run the fisheries model through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        with mock.patch(
+                'natcap.invest.fisheries.fisheries.execute',
+                return_value=None) as patched_model:
+            cli.main([
+                '--debug',  # set logging
+                'run',
+                'fisheries',  # uses an exact modelname
+                '--datastack', parameter_set_path,
+                '--headless',
+                '--workspace', self.workspace_dir,
+            ])
+        patched_model.assert_called_once()
+
+    def test_run_ambiguous_modelname(self):
+        """CLI: Raise an error when an ambiguous model name used."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main([
+                'run',
+                'fish',  # ambiguous substring
+                '--datastack', parameter_set_path,
+                '--headless',
+                '--workspace', self.workspace_dir,
+            ])
+            self.assertEqual(exit_cm.exception.code, 1)
+
+    def test_model_alias(self):
+        """CLI: Use a model alias through the CLI."""
+        from natcap.invest import cli
+
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'cbc_galveston_bay.invs.json')
+
+        with mock.patch(
+                'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
+                return_value=None) as patched_model:
+            cli.main([
+                'run',
+                'cbc',  # uses an alias
+                '--datastack', parameter_set_path,
+                '--headless',
+                '--workspace', self.workspace_dir,
+            ])
+        patched_model.assert_called_once()
+
+    def test_no_model_given(self):
+        """CLI: Raise an error when no model name given."""
+        from natcap.invest import cli
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main(['run'])
+        self.assertEqual(exit_cm.exception.code, 2)
+
+    def test_no_model_matches(self):
+        """CLI: raise an error when no model name matches what's given."""
+        from natcap.invest import cli
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main(['run', 'qwerty'])
+        self.assertEqual(exit_cm.exception.code, 1)
+
+    def test_list(self):
+        """CLI: Verify no error when listing models."""
+        from natcap.invest import cli
+        with self.assertRaises(SystemExit) as exit_cm:
+            cli.main(['list'])
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_list_json(self):
+        """CLI: Verify no error when listing models as JSON."""
+        from natcap.invest import cli
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main(['list', '--json'])
+
+        # Verify that we can load the JSON object without errir
+        stdout_value = stdout_stream.getvalue()
+        loaded_list_object = json.loads(stdout_value)
+        self.assertEqual(type(loaded_list_object), dict)
+
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_validate_bad_datastack(self):
+        """CLI: Verify failure when a bad datastack provided."""
+
+    def test_validate_fisheries(self):
+        """CLI: Validate the fisheries model inputs through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        # The InVEST sample data JSON arguments don't have a workspace, so I
+        # need to add it in.
+        datastack_dict = json.load(open(parameter_set_path))
+        datastack_dict['args']['workspace_dir'] = self.workspace_dir
+        new_parameter_set_path = os.path.join(
+            self.workspace_dir, 'paramset.invs.json')
+        with open(new_parameter_set_path, 'w') as parameter_set_file:
+            parameter_set_file.write(
+                json.dumps(datastack_dict, indent=4, sort_keys=True))
+
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'validate',
+                    new_parameter_set_path,
+                ])
+        self.assertTrue(len(stdout_stream.getvalue()) > 0)
+        self.assertEqual(exit_cm.exception.code, 0)
+
+    def test_validate_fisheries_missing_workspace(self):
+        """CLI: Validate the fisheries model inputs through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        # The InVEST sample data JSON arguments don't have a workspace.  In
+        # this case, I want to leave it out and verify validation catches it.
+
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'validate',
+                    parameter_set_path,
+                ])
+        self.assertTrue(len(stdout_stream.getvalue()) > 0)
+        self.assertEqual(exit_cm.exception.code, 1)
+
+    def test_validate_fisheries_missing_workspace_json(self):
+        """CLI: Validate the fisheries model inputs through the cli."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'spiny_lobster_belize.invs.json')
+
+        # The InVEST sample data JSON arguments don't have a workspace.  In
+        # this case, I want to leave it out and verify validation catches it.
+
+        with redirect_stdout() as stdout_stream:
+            with self.assertRaises(SystemExit) as exit_cm:
+                cli.main([
+                    'validate',
+                    parameter_set_path,
+                    '--json',
+                ])
+        stdout = stdout_stream.getvalue()
+        self.assertTrue(len(stdout) > 0)
+        self.assertEqual(len(json.loads(stdout)), 1)  # workspace_dir invalid
+        self.assertEqual(exit_cm.exception.code, 1)
+
+
+class CLIGUITests(unittest.TestCase):
+    def setUp(self):
+        """Use a temporary workspace for all tests in this class."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test run."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_run_model(self):
+        """CLI-GUI: Run a model GUI through the cli."""
+        from natcap.invest import cli
+        from natcap.invest import delineateit
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
+            'delineateit_willamette.invs.json')
+
+        # I tried patching the model import via mock, but GUI would hang.  I'd
+        # rather have a reliable test that takes a few more seconds than a test
+        # that hangs.
+        cli.main([
+            '--debug',  # set logging
+            'quickrun',
+            'delineateit',  # uses an exact modelname
+            parameter_set_path,
+            '--workspace', self.workspace_dir,
+        ])
