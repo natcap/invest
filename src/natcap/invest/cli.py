@@ -457,7 +457,8 @@ def main(user_args=None):
 
             # Missing keys have an exit code of 1 because that would indicate
             # probably programmer error.
-            parser.exit(1, message)
+            sys.stdout.write(message)
+            parser.exit(1)
         except Exception as error:
             parser.exit(
                 1, ('Datastack could not be validated:\n    ' +
