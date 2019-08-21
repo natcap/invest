@@ -3,6 +3,9 @@ import collections
 import inspect
 import logging
 import pprint
+import os
+
+from osgeo import gdal, osr
 
 try:
     from builtins import basestring
@@ -82,7 +85,7 @@ def check_directory(dirpath, exists=False, permissions='rx'):
     if not os.path.isdir(dirpath):
         return "Path is not a directory"
 
-    permissions_warning = validate_permissions(dirpath, permissions)
+    permissions_warning = check_permissions(dirpath, permissions)
     if permissions_warning:
         return permissions_warning
 
@@ -91,11 +94,11 @@ def check_file(filepath, permissions='r'):
     if not os.path.exists(filepath):
         return "File not found"
 
-    permissions_warning = validate_permissions(filepath, permissions)
+    permissions_warning = check_permissions(filepath, permissions)
     if permissions_warning:
         return permissions_warning
 
-def check_permissions(path, permissions)
+def check_permissions(path, permissions):
     for letter, mode, descriptor in (
             ('r', os.R_OK, 'read'),
             ('w', os.W_OK, 'write'),
@@ -113,6 +116,8 @@ def check_before(func):
                     return warning_string
 
             return func(*validation_args, **validation_kwargs)
+        return wrapped_validator
+    return decorator
 
 
 def _check_projection(srs, projected, projection_units):
@@ -134,7 +139,7 @@ def _check_projection(srs, projected, projection_units):
     return None
 
 
-@validate_before((validate_file, {'permissions': 'r'}))
+@check_before((check_file, {'permissions': 'r'}))
 def check_raster(filepath, projected=False, projection_units=None):
     gdal.PushErrorHandler('CPLQuietErrorHandler')
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
@@ -155,7 +160,7 @@ def check_raster(filepath, projected=False, projection_units=None):
     return None
 
 
-@validate_before((validate_file, {'permissions': 'r'}))
+@check_before((check_file, {'permissions': 'r'}))
 def check_vector(filepath, required_fields=None, projected=False,
                     projected_units=None):
     gdal.PushErrorHandler('CPLQuietErrorHandler')
@@ -183,7 +188,7 @@ def check_vector(filepath, required_fields=None, projected=False,
 
 def check_freestyle_string(value, regexp=None):
     try:
-        str(value):
+        str(value)
     except (ValueError, TypeError):
         return "Could not convert value to a string"
 
@@ -242,7 +247,7 @@ def check_boolean(value):
 
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
-    'csv': check_csv,
+    #'csv': check_csv,
     'file': check_file,
     'folder': check_directory,
     'freestyle_string': check_freestyle_string,

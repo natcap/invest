@@ -132,7 +132,6 @@ ARGS_SPEC = {
                 "Each of these represents an option of a risk calculation "
                 "equation. This will determine the numeric output of risk "
                 "for every habitat and stressor overlap area."),
-            ),
             "type": "options_string",
             "required": True,
             "validation_options": {

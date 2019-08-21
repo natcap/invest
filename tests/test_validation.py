@@ -1,4 +1,7 @@
+import tempfile
 import unittest
+import os
+import shutil
 
 
 class ValidatorTest(unittest.TestCase):
@@ -127,3 +130,40 @@ class ValidatorTest(unittest.TestCase):
         self.assertEqual(len(validation_errors), 1)
         self.assertTrue(validation_errors[0][0] == ['n_workers'])
         self.assertTrue('must be an integer' in validation_errors[0][1])
+
+class DirectoryValidation(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_exists(self):
+        from natcap.invest import validation
+
+        self.assertEqual(None, validation.check_directory(
+            self.workspace_dir, exists=True))
+
+    def test_not_exists(self):
+        from natcap.invest import validation
+
+        dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
+        validation_warning = validation.check_directory(
+            dirpath, exists=True)
+        self.assertTrue('not found' in validation_warning)
+
+    def test_file(self):
+        from natcap.invest import validation
+
+        filepath = os.path.join(self.workspace_dir, 'some_file.txt')
+        with open(filepath, 'w') as opened_file:
+            opened_file.write('the text itself does not matter.')
+
+        validation_warning = validation.check_directory(
+            filepath, exists=True)
+
+    def test_valid_permissions(self):
+        from natcap.invest import validation
+
+        self.assertEquals(None, validation.check_directory(
+            self.workspace_dir, exists=True, permissions='rwx'))
