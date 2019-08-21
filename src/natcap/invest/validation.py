@@ -74,74 +74,183 @@ N_WORKERS_SPEC = {
 }
 
 
-class ValidationContext(object):
-    """An object to represent a validation context.
+def check_directory(dirpath, exists=False, permissions='rx'):
+    if exists:
+        if not os.path.exists(dirpath):
+            return "Directory not found"
 
-    A validation context reduces the amount of boilerplate code needed within
-    an InVEST validation function to produce validation warnings that are
-    consistent with the InVEST Validation API.
-    """
-    def __init__(self, args, limit_to):
-        """Create a ValidationContext object.
+    if not os.path.isdir(dirpath):
+        return "Path is not a directory"
 
-        Parameters:
-            args (dict): The args dict to validate.
-            limit_to (string or None): If a string, the args key that should be
-                validated.  If ``None``, all args key-value pairs will be
-                validated.
-        """
-        self.args = args
-        self.limit_to = limit_to
-        self.warnings = []
+    permissions_warning = validate_permissions(dirpath, permissions)
+    if permissions_warning:
+        return permissions_warning
 
-    def warn(self, message, keys):
-        """Record a warning in the internal warnings list.
 
-        Parameters:
-            message (string): The message of the warning to log.
-            keys (iterable): An iterable of string keys that the message
-                refers to.
-        """
-        if isinstance(keys, basestring):
-            keys = (keys,)
-        keys = tuple(sorted(keys))
-        self.warnings.append((keys, message))
+def check_file(filepath, permissions='r'):
+    if not os.path.exists(filepath):
+        return "File not found"
 
-    def is_arg_complete(self, key, require=False):
-        """Test if a given argument is complete and should be validated.
+    permissions_warning = validate_permissions(filepath, permissions)
+    if permissions_warning:
+        return permissions_warning
 
-        An argument is complete if:
+def check_permissions(path, permissions)
+    for letter, mode, descriptor in (
+            ('r', os.R_OK, 'read'),
+            ('w', os.W_OK, 'write'),
+            ('x', os.X_OK, 'execute')):
+        if letter in permissions and not os.access(path, mode):
+            return 'You must have %s access to this file' % descriptor
 
-            * The value associated with ``key`` is neither ``''`` or ``None``
-            * The key-value pair is in ``self.args``
-            * The key should be validated (the key matches the value of
-              ``self.limit_to`` or ``self.limit_to == None``)
+def check_before(func):
+    def decorator(*pre_validation_funcs):
+        def wrapped_validator(*validation_args, **validation_kwargs):
+            for pre_validator, validator_kwargs in pre_validation_funcs:
+                warning_string = pre_validation_func(
+                    *validation_args, **validator_kwargs)
+                if warning_string:
+                    return warning_string
 
-        If the argument is incomplete and ``require == True``, a warning is
-        recorded in the ValidationContext's warnings list.
+            return func(*validation_args, **validation_kwargs)
 
-        Parameters:
-            key (string): The key to test.
-            require=False (bool): Whether the parameter is required.
 
-        Returns:
-            A ``bool``, indicating whether the argument is complete.
-        """
+def _check_projection(srs, projected, projection_units):
+    if projected:
+        if not srs.IsProjected():
+            return "Vector must be projected in linear units."
+
+    if projected_units:
+        valid_meter_units = set('m', 'meter', 'meters', 'metre', 'metres')
+        layer_units_name = srs.GetLinearUnitsName().lower()
+
+        if projected_units in valid_meter_units:
+            if not layer_units_name in valid_meter_units:
+                return "Layer must be projected in meters"
+        else:
+            if not layer_units_name != projected_units:
+                return "Layer must be projected in %s" % projected_units
+
+    return None
+
+
+@validate_before((validate_file, {'permissions': 'r'}))
+def check_raster(filepath, projected=False, projection_units=None):
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
+    gdal.PopErrorHandler()
+
+    if gdal_dataset is None:
+        return "File could not be opened as a GDAL raster"
+    else:
+        gdal_dataset = None
+
+    srs = osr.SpatialReference()
+    srs.ImportFromWkt(gdal_dataset.GetProjection())
+
+    projection_warning = _check_projected(srs, projected, projection_units)
+    if projection_warning:
+        return projection_warning
+
+    return None
+
+
+@validate_before((validate_file, {'permissions': 'r'}))
+def check_vector(filepath, required_fields=None, projected=False,
+                    projected_units=None):
+    gdal.PushErrorHandler('CPLQuietErrorHandler')
+    gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+    gdal.PopErrorHandler()
+
+    if gdal_dataset is None:
+        return "File could not be opened as a GDAL vector"
+
+    fieldnames = set([defn.GetName().upper() for defn in layer.schema])
+    missing_fields = fieldnames - set(field.upper() for field in required_fields)
+    if missing_fields:
+        return "Fields are missing from the first layer: %s" % sorted(
+            missing_fields)
+
+    layer = gdal_dataset.GetLayer()
+    srs = layer.GetSpatialRef()
+
+    projection_warning = _check_projected(srs, projected, projection_units)
+    if projection_warning:
+        return projection_warning
+
+    return None
+
+
+def check_freestyle_string(value, regexp=None):
+    try:
+        str(value):
+    except (ValueError, TypeError):
+        return "Could not convert value to a string"
+
+    if regexp:
+        flags = 0
+        if 'case_sensitive' in regexp:
+            if regexp['case_sensitive']:
+                flags = re.IGNORECASE
+        matches = re.findall(regexp['pattern'], str(value), flags)
+        if not matches:
+            return "Value did not match expected pattern %s", regexp['pattern']
+
+    return None
+
+
+def check_option_string(value, options):
+    if value not in options:
+        return "Value must be one of: %s" % sorted(options)
+
+
+def check_number(value, regexp=None, expression=None):
+    try:
+        float(value)
+    except (TypeError, ValueError):
+        return "Value could not be interpreted as a number"
+
+    if expression:
+        # Check to make sure that 'value' is in the expression.
+        if 'value' not in sympy.parsing.sympy_parser.parse_expr(
+                expression).free_symbols:
+            raise AssertionError('Value is not used in this expression')
+
+        # Expression is assumed to return a boolean, something like
+        # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
+        # be raised if sympy can't evaluate the expression.
+        if not sympy.lambdify(['value'], expression, 'numpy')(value):
+            return "Value does not meet condition %s" % expression
+
+    return None
+
+
+def check_boolean(value):
+    value = value.strip()
+    if isinstance(str, value):
+        if value.lower() not in ("true", "false"):
+            return "Value must be one of 'True' or 'False'"
+
+    else:
         try:
-            value = self.args[key]
-            if isinstance(value, basestring):
-                value = value.strip()
-        except KeyError:
-            value = None
+            bool(value)
+        except (ValueError, TypeError):
+            return "Value could not be cast to a boolean."
 
-        if (value in ('', None) or
-                self.limit_to not in (key, None)):
-            if require:
-                self.warn(
-                    'Parameter is required but is missing or has no value',
-                    keys=(key,))
-            return False
-        return True
+    return None
+
+
+_VALIDATION_FUNCS = {
+    'boolean': check_boolean,
+    'csv': check_csv,
+    'file': check_file,
+    'folder': check_directory,
+    'freestyle_string': check_freestyle_string,
+    'number': check_number,
+    'option_string': check_option_string,
+    'raster': check_raster,
+    'vector': check_vector,
+}
 
 
 def invest_validator(validate_func):
