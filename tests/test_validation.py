@@ -3,6 +3,8 @@ import unittest
 import os
 import shutil
 
+from osgeo import gdal, osr
+
 
 class ValidatorTest(unittest.TestCase):
     def test_args_wrong_type(self):
@@ -167,3 +169,114 @@ class DirectoryValidation(unittest.TestCase):
 
         self.assertEquals(None, validation.check_directory(
             self.workspace_dir, exists=True, permissions='rwx'))
+
+
+class FileValidation(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_file_exists(self):
+        from natcap.invest import validation
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+        with open(filepath, 'w') as new_file:
+            new_file.write("Here's some text.")
+
+        self.assertEqual(None, validation.check_file(filepath))
+
+    def test_file_not_found(self):
+        from natcap.invest import validation
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+
+        error_msg = validation.check_file(filepath)
+
+        self.assertTrue('File not found' in error_msg)
+
+
+class RasterValidation(unittest.TestCase):
+    def setUp(self):
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        shutil.rmtree(self.workspace_dir)
+
+    def test_file_not_found(self):
+        from natcap.invest import validation
+
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+        error_msg = validation.check_raster(filepath)
+        self.assertTrue('not found' in error_msg)
+
+    def test_invalid_raster(self):
+        from natcap.invest import validation
+
+        filepath = os.path.join(self.workspace_dir, 'file.txt')
+        with open(filepath, 'w') as bad_raster:
+            bad_raster.write('not a raster')
+
+        error_msg = validation.check_raster(filepath)
+        self.assertTrue('could not be opened as a GDAL raster' in error_msg)
+
+    def test_raster_not_projected(self):
+        from natcap.invest import validation
+
+        # use WGS84 as not linearly projected.
+        driver = gdal.GetDriverByName('GTiff')
+        filepath = os.path.join(self.workspace_dir, 'raster.tif')
+        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(4326)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        error_msg = validation.check_raster(filepath, projected=True)
+        self.assertTrue('must be projected in linear units' in error_msg)
+
+    def test_raster_projected_in_m(self):
+        from natcap.invest import validation
+
+        # Use EPSG:32731  # WGS84 / UTM zone 31s
+        driver = gdal.GetDriverByName('GTiff')
+        filepath = os.path.join(self.workspace_dir, 'raster.tif')
+        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(32731)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        for unit in ('m', 'meter', 'metre', 'meters', 'metres'):
+            error_msg = validation.check_raster(
+                filepath, projected=True, projection_units=unit)
+            self.assertEqual(error_msg, None)
+
+        # Check error message when we validate that the raster should be
+        # projected in feet.
+        error_msg = validation.check_raster(
+            filepath, projected=True, projection_units='feet')
+        self.assertTrue('projected in feet' in error_msg)
+
+    def test_raster_incorrect_units(self):
+        from natcap.invest import validation
+
+        # Use EPSG:32066  # NAD27 / BLM 16N (in US Feet)
+        driver = gdal.GetDriverByName('GTiff')
+        filepath = os.path.join(self.workspace_dir, 'raster.tif')
+        raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+        wgs84_srs = osr.SpatialReference()
+        wgs84_srs.ImportFromEPSG(32066)
+        raster.SetProjection(wgs84_srs.ExportToWkt())
+        raster = None
+
+        error_msg = validation.check_raster(
+            filepath, projected=True, projection_units='m')
+        self.assertTrue('must be projected in meters' in error_msg)
+
+
+
+
+
+
+
+

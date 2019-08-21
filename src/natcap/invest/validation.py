@@ -106,11 +106,11 @@ def check_permissions(path, permissions):
         if letter in permissions and not os.access(path, mode):
             return 'You must have %s access to this file' % descriptor
 
-def check_before(func):
-    def decorator(*pre_validation_funcs):
+def check_before(*pre_validation_funcs):
+    def decorator(func):
         def wrapped_validator(*validation_args, **validation_kwargs):
             for pre_validator, validator_kwargs in pre_validation_funcs:
-                warning_string = pre_validation_func(
+                warning_string = pre_validator(
                     *validation_args, **validator_kwargs)
                 if warning_string:
                     return warning_string
@@ -125,16 +125,16 @@ def _check_projection(srs, projected, projection_units):
         if not srs.IsProjected():
             return "Vector must be projected in linear units."
 
-    if projected_units:
-        valid_meter_units = set('m', 'meter', 'meters', 'metre', 'metres')
+    if projection_units:
+        valid_meter_units = set(('m', 'meter', 'meters', 'metre', 'metres'))
         layer_units_name = srs.GetLinearUnitsName().lower()
 
-        if projected_units in valid_meter_units:
+        if projection_units in valid_meter_units:
             if not layer_units_name in valid_meter_units:
                 return "Layer must be projected in meters"
         else:
-            if not layer_units_name != projected_units:
-                return "Layer must be projected in %s" % projected_units
+            if layer_units_name.lower() != projection_units.lower():
+                return "Layer must be projected in %s" % projection_units.lower()
 
     return None
 
@@ -147,16 +147,16 @@ def check_raster(filepath, projected=False, projection_units=None):
 
     if gdal_dataset is None:
         return "File could not be opened as a GDAL raster"
-    else:
-        gdal_dataset = None
 
     srs = osr.SpatialReference()
     srs.ImportFromWkt(gdal_dataset.GetProjection())
 
-    projection_warning = _check_projected(srs, projected, projection_units)
+    projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:
+        gdal_dataset = None
         return projection_warning
 
+    gdal_dataset = None
     return None
 
 
@@ -179,7 +179,7 @@ def check_vector(filepath, required_fields=None, projected=False,
     layer = gdal_dataset.GetLayer()
     srs = layer.GetSpatialRef()
 
-    projection_warning = _check_projected(srs, projected, projection_units)
+    projection_warning = _check_projection(srs, projected, projection_units)
     if projection_warning:
         return projection_warning
 
