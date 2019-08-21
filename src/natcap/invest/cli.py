@@ -13,10 +13,12 @@ import multiprocessing
 import json
 
 try:
+    from . import __version__
     from . import utils
     from . import datastack
 except ValueError:
     # When we're in a pyinstaller build, this isn't a module.
+    from natcap.invest import __version__
     from natcap.invest import utils
     from natcap.invest import datastack
 
@@ -311,6 +313,8 @@ def main(user_args=None):
         'open-source python environment.'),
         prog='invest'
     )
+    parser.add_argument('--version', action='version',
+                        version=__version__)
     verbosity_group = parser.add_mutually_exclusive_group()
     verbosity_group.add_argument(
         '-v', '--verbose', dest='verbosity', default=0, action='count',
