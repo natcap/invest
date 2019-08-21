@@ -4,6 +4,7 @@ import inspect
 import logging
 import pprint
 import os
+import re
 
 from osgeo import gdal, osr
 
@@ -188,11 +189,6 @@ def check_vector(filepath, required_fields=None, projected=False,
 
 
 def check_freestyle_string(value, regexp=None):
-    try:
-        str(value)
-    except (ValueError, TypeError):
-        return "Could not convert value to a string"
-
     if regexp:
         flags = 0
         if 'case_sensitive' in regexp:
@@ -200,7 +196,7 @@ def check_freestyle_string(value, regexp=None):
                 flags = re.IGNORECASE
         matches = re.findall(regexp['pattern'], str(value), flags)
         if not matches:
-            return "Value did not match expected pattern %s", regexp['pattern']
+            return "Value did not match expected pattern %s" % regexp['pattern']
 
     return None
 

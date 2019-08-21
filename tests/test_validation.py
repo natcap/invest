@@ -347,3 +347,24 @@ class VectorValidation(unittest.TestCase):
             filepath, projected=True, projection_units='m'))
 
 
+class FreestyleStringValidation(unittest.TestCase):
+    def test_int(self):
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_freestyle_string(1234))
+
+    def test_float(self):
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_freestyle_string(1.234))
+
+    def test_regexp(self):
+        from natcap.invest import validation
+
+        self.assertEqual(None, validation.check_freestyle_string(
+            1.234, regexp={'pattern': '^1.[0-9]+$', 'case_sensitive': True}))
+
+        error_msg = validation.check_freestyle_string(
+            'foobar12', regexp={'pattern': '^[a-zA-Z]+$',
+                                'case_sensitive':True})
+        self.assertTrue('did not match expected pattern' in error_msg)
+
+
