@@ -254,35 +254,31 @@ class SelectModelAction(argparse.Action):
         method.
 
         Overridden from argparse.Action.__call__"""
-        if values in ['', None]:
-            parser.print_help()
-            parser.exit(1, message=build_model_list_table())
+        known_models = sorted(list(_MODEL_UIS.keys()))
+
+        matching_models = [model for model in known_models if
+                           model.startswith(values)]
+
+        exact_matches = [model for model in known_models if
+                         model == values]
+
+        if len(matching_models) == 1:  # match an identifying substring
+            modelname = matching_models[0]
+        elif len(exact_matches) == 1:  # match an exact modelname
+            modelname = exact_matches[0]
+        elif values in _MODEL_ALIASES:  # match an alias
+            modelname = _MODEL_ALIASES[values]
+        elif len(matching_models) == 0:
+            parser.exit(status=1, message=(
+                "Error: '%s' not a known model" % values))
         else:
-            known_models = sorted(list(_MODEL_UIS.keys()) + ['launcher'])
-
-            matching_models = [model for model in known_models if
-                               model.startswith(values)]
-
-            exact_matches = [model for model in known_models if
-                             model == values]
-
-            if len(matching_models) == 1:  # match an identifying substring
-                modelname = matching_models[0]
-            elif len(exact_matches) == 1:  # match an exact modelname
-                modelname = exact_matches[0]
-            elif values in _MODEL_ALIASES:  # match an alias
-                modelname = _MODEL_ALIASES[values]
-            elif len(matching_models) == 0:
-                parser.exit(status=1, message=(
-                    "Error: '%s' not a known model" % values))
-            else:
-                parser.exit(
-                    status=1,
-                    message=(
-                        "Model string '{model}' is ambiguous:\n"
-                        "    {matching_models}").format(
-                            model=values,
-                            matching_models=' '.join(matching_models)))
+            parser.exit(
+                status=1,
+                message=(
+                    "Model string '{model}' is ambiguous:\n"
+                    "    {matching_models}").format(
+                        model=values,
+                        matching_models=' '.join(matching_models)))
         setattr(namespace, self.dest, modelname)
 
 
