@@ -1,0 +1,50 @@
+.plot-container {
+  height: 90vh;
+  width: 35%;
+  float: left;
+  overflow: auto;
+  text-align: center;
+}
+
+.label {
+  fill: black;
+  font-weight: bold;
+}
+
+.header {
+  display: inline-block;
+}
+
+/*not working?!*/
+.axis .label: {
+  font-size: 12px;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
+    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
+    sans-serif;
+}
+
+.tooltip-title {
+  font-weight: bold;
+}
+
+.legend-container {
+  width: 500px;
+}
+
+.plot-container svg {
+  height: 350px;
+}
+
+.default-p {
+  padding-left: 60px;
+  padding-right: 60px;
+  float: left;
+  text-align: left;
+}
+
+.legend-div {
+  position: relative;
+  display: inline-block;
+  min-width: 100%;
+  text-align: center;
+}
