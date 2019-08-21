@@ -25,6 +25,55 @@ MESSAGE_REQUIRED = 'Parameter is required but is missing or has no value'
 LOGGER = logging.getLogger(__name__)
 
 
+WORKSPACE_SPEC = {
+    "name": "Workspace",
+    "about": (
+        "The folder where all intermediate and output files of the model "
+        "will be written.  If this folder does not exist, it will be "
+        "created."),
+    "type": "directory",
+    "required": True,
+    "validation_options": {
+        "exists": True,
+        "permissions": "rwx",
+    }
+}
+
+SUFFIX_SPEC = {
+    "name": "File suffix",
+    "about": (
+        'A string that will be added to the end of all files '
+        'written to the workspace.'),
+    "type": "freestyle_string",
+    "required": False,
+    "validation_options": {
+        "regexp": {
+            "pattern": "[a-zA-Z0-9_-]*",
+            "case_sensitive": False,
+        }
+    }
+}
+
+N_WORKERS_SPEC = {
+    "name": "Taskgraph n_workers parameter",
+    "about": (
+        "The n_workers parameter to provide to taskgraph. "
+        "-1 will cause all jobs to run synchronously. "
+        "0 will run all jobs in the same process, but scheduling will take "
+        "place asynchronously. Any other positive integer will cause that "
+        "many processes to be spawned to execute tasks."),
+    "type": "number",
+    "required": False,
+    "validation_options": {
+        "regexp": {
+            "pattern": "-?[0-9]+",
+            "case_sensitive": False
+        },
+        "expression": "value >= -1"
+    }
+}
+
+
 class ValidationContext(object):
     """An object to represent a validation context.
 
