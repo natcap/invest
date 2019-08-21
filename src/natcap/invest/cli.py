@@ -170,29 +170,6 @@ for _modelname, _meta in _MODEL_UIS.items():
         _MODEL_ALIASES[_alias] = _modelname
 
 
-# metadata for models: full modelname, first released, full citation,
-# local documentation name.
-
-# Goal: allow InVEST models to be run at the command-line, without a UI.
-#   problem: how to identify which models have Qt UIs available?
-#       1.  If we can't import the ui infrastructure, we don't have any qt uis.
-#       2.  We could iterate through all the model UI files and Identify the
-#           model from its name and attributes.
-#       3.  We could access a pre-processed list of models available, perhaps
-#           written to a file during the setuptools build step.
-#   problem: how to identify which models are available to the API?
-#       1.  Recursively import natcap.invest and look for modules with execute
-#           functions available.
-#       2.  Import all of the execute functions to a known place (an __init__
-#           file?).
-#   problem: how to provide parameters?
-#       1.  If execute is parseable, just extract parameters from the docstring
-#           and allow each param to be provided as a CLI flag.
-#       2.  Allow parameters to be passed as a JSON file
-#       3.  Allow model to run with a datastack file.
-#       PS: Optionally, don't validate inputs, but do validate by default.
-
-
 def build_model_list_table():
     """Build a table of model names, aliases and other details.
 
