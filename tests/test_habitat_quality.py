@@ -217,7 +217,7 @@ def assert_array_sum(base_raster_path, desired_sum):
     base_band = base_raster.GetRasterBand(1)
     base_array = base_band.ReadAsArray()
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_almost_equal(raster_sum, desired_sum)
+    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -268,10 +268,10 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 10.728817,
-                'deg_sum_f_regression.tif': 16.461340,
-                'quality_c_regression.tif': 7499.9975586,
-                'quality_f_regression.tif': 4999.9995117,
+                'deg_sum_c_regression.tif': 1792.8088,
+                'deg_sum_f_regression.tif': 2308.9636,
+                'quality_c_regression.tif': 6928.5293,
+                'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
         }.items():
@@ -436,7 +436,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
-            7499.9931641)
+            5951.2827)
 
     def test_habitat_quality_nodata_fut(self):
         """Habitat Quality: on missing future LULC raster."""
@@ -469,7 +469,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
-            7499.9931641)
+            5951.2827)
 
     def test_habitat_quality_missing_lucodes_in_table(self):
         """Habitat Quality: on missing lucodes in the sensitivity table."""

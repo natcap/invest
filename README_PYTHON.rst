@@ -1,9 +1,6 @@
 ================================================================
-InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
+InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 ================================================================
-
-.. image:: http://builds.naturalcapitalproject.org/buildStatus/icon?job=invest-nightly-develop
-  :target: http://builds.naturalcapitalproject.org/job/invest-nightly-develop
 
 About  InVEST
 =============
@@ -49,15 +46,17 @@ Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
 Additionally, a python binding for Qt is needed to use the InVEST GUI, but is
 not required for development against ``natcap.invest``.  InVEST uses the
-interface library ``qtpy`` to support ``PyQt4``, ``PyQt5``, and ``PySide``.
-One of these bindings for Qt must be installed in order to use the GUI.
+interface library ``qtpy`` to support ``PyQt4``, ``PyQt5``, ``PySide``, and
+``PySide2``.  In our experience, ``PyQt4`` and ``PySide2`` have been easiest
+to work with.  One of these bindings for Qt must be installed in order to use
+the GUI.
 
 
 Installing from Source
 ----------------------
 
 If you have a compiler installed and configured for your system, and
-dependencies installed, the easiest way to install InVEST as a python package 
+dependencies installed, the easiest way to install InVEST as a python package
 is:
 
 .. code-block:: console
@@ -99,13 +98,13 @@ entry point:
     Older versions of InVEST ran as script tools in the ArcGIS ArcToolBox
     environment, but have almost all been ported over to a purely open-source
     python environment.
-    
+
     positional arguments:
       model                 The model/tool to run. Use --list to show available
                             models/tools. Identifiable model prefixes may also be
                             used. Alternatively,specify "launcher" to reveal a
                             model launcher window.
-    
+
     optional arguments:
       -h, --help            show this help message and exit
       --version             show program's version number and exit
@@ -119,24 +118,24 @@ entry point:
                             Run the specified model with this datastack
       -w [WORKSPACE], --workspace [WORKSPACE]
                             The workspace in which outputs will be saved
-    
+
     gui options:
       These options are ignored if running in headless mode
-    
+
       -q, --quickrun        Run the target model without validating and quit with
                             a nonzero exit status if an exception is encountered
-    
+
     headless options:
       -y, --overwrite       Overwrite the workspace without prompting for
                             confirmation
       -n, --no-validate     Do not validate inputs before running the model.
- 
+
 
 
 
 To list the available models:
 
-.. code-block:: console 
+.. code-block:: console
 
     $ invest --list
 
@@ -145,12 +144,13 @@ Development
 ===========
 
 Dependencies for developing InVEST are listed in ``requirements.txt`` and in
-``requirements-dev.txt``.
+``requirements-dev.txt``.  If you're running a GUI, you'll need a Qt binding
+(see above) and the packages installed in ``requirements-gui.txt``.
 
 Support
 =======
 
 Participate in the NatCap forums here:
-http://forums.naturalcapitalproject.org
+http://community.naturalcapitalproject.org
 
 Bugs may be reported at http://bitbucket.org/natcap/invest
