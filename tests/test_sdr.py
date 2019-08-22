@@ -113,8 +113,7 @@ class SDRTests(unittest.TestCase):
         args = {}
         with self.assertRaises(KeyError) as context:
             validate_result = sdr.validate(args, limit_to=None)
-        self.assertTrue(
-            'The following keys were expected' in str(context.exception))
+        self.assertEquals(len(context.exception.args), 11)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""
