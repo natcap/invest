@@ -155,6 +155,21 @@ def check_permissions(path, permissions):
 
 
 def _check_projection(srs, projected, projection_units):
+    """Validate a GDAL projection.
+
+    Parameters:
+        srs (osr.SpatialReference): A GDAL Spatial Reference object
+            representing the spatial reference of a GDAL dataset.
+        projected (bool): Whether the spatial reference must be projected in
+            linear units.
+        projection_units (string): The string label (case-insensitive)
+            indicating the required linear units of the projection.  Note that
+            "m", "meters", "meter", "metre" and "metres" are all synonymous.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     if projected:
         if not srs.IsProjected():
             return "Vector must be projected in linear units."
@@ -174,6 +189,21 @@ def _check_projection(srs, projected, projection_units):
 
 
 def check_raster(filepath, projected=False, projection_units=None):
+    """Validate a GDAL Raster on disk.
+
+    Parameters:
+        filepath (string): The path to the raster on disk.  The file must exist
+            and be readable.
+        projected=False (bool): Whether the spatial reference must be projected
+            in linear units.
+        projection_units=None (string): The string label (case-insensitive)
+            indicating the required linear units of the projection.  If
+            ``None``, the projection units will not be checked.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
@@ -199,6 +229,28 @@ def check_raster(filepath, projected=False, projection_units=None):
 
 def check_vector(filepath, required_fields=None, projected=False,
                  projection_units=None):
+    """Validate a GDAL vector on disk.
+
+    Note:
+        If the provided vector has multiple layers, only the first layer will
+        be checked.
+
+    Parameters:
+        filepath (string): The path to the vector on disk.  The file must exist
+            and be readable.
+        required_fields=None (list): The string fieldnames (case-insensitive)
+            that must be present in the vector layer's table.  If None,
+            fieldnames will not be checked.
+        projected=False (bool): Whether the spatial reference must be projected
+            in linear units.  If None, the projection will not be checked.
+        projection_units=None (string): The string label (case-insensitive)
+            indicating the required linear units of the projection.  If
+            ``None``, the projection units will not be checked.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     file_warning = check_file(filepath, permissions='r')
     if file_warning:
         return file_warning
@@ -228,6 +280,21 @@ def check_vector(filepath, required_fields=None, projected=False,
 
 
 def check_freestyle_string(value, regexp=None):
+    """Validate an arbitrary string.
+
+    Parameters:
+        value: The value to check.  Must be able to be cast to a string.
+        regexp=None (dict): A dict representing validation parameters for a
+            regular expression.  ``regexp['pattern']`` is required, and its
+            value must be a string regular expression.
+            ``regexp['case_sensitive']`` may also be provided and is expected
+            to be a boolean value.  If ``True`` or truthy, the regular
+            expression will ignore case.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     if regexp:
         flags = 0
         if 'case_sensitive' in regexp:
@@ -241,11 +308,36 @@ def check_freestyle_string(value, regexp=None):
 
 
 def check_option_string(value, options):
+    """Validate that a string is in a list of options.
+
+    Parameters:
+        value (string): The string value to test.
+        options (list): A list of strings to test against.
+
+    Returns:
+        A string error message if ``value`` is not in ``options``.  ``None``
+        otherwise.
+
+    """
     if value not in options:
         return "Value must be one of: %s" % sorted(options)
 
 
 def check_number(value, expression=None):
+    """Validate numbers.
+
+    Parameters:
+        value: A python value. This should be able to be cast to a float.
+        expression=None (string): A string expression to be evaluated with the
+            intent of determining that the value is within a specific range.
+            The expression must contain the string ``value``, which will
+            represent the user-provided value (after it has been cast to a
+            float).  Example expression: ``"(value >= 0) & (value <= 1)"``.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     try:
         float(value)
     except (TypeError, ValueError):
@@ -268,6 +360,19 @@ def check_number(value, expression=None):
 
 
 def check_boolean(value):
+    """Validate a boolean value.
+
+    The strings "True" and "False" (case-insensitive) will evaluate to True and
+    False, respectively.  If ``value`` is a string and does not match this
+    pattern, an error will be returned.
+
+    Parameters:
+        value: The value to evaluate.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     if isinstance(value, str):
         value = value.strip()
         if value.lower() not in ("true", "false"):
