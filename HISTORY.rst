@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Breaking change: the InVEST CLI has been completely rebuilt to divide
+  functionality into various topic-specific subcommands.  The various internal
+  consumers of this API have been updated accordingly.  ``invest --help`` will
+  contain details of the new interface.
 * Updated trove classifiers to indicate support for python versions 2.7, 3.6
   and 3.7.
 * Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
