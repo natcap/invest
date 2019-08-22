@@ -93,7 +93,7 @@ DOWNLOAD_DIR_URL := $(subst gs://,https://storage.googleapis.com/,$(DIST_URL_BAS
 DATA_BASE_URL := $(DOWNLOAD_DIR_URL)/data
 
 
-TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --logging-level=DEBUG --with-timer
+TESTRUNNER := $(PYTHON) -m nose -vsP --with-coverage --cover-package=natcap.invest --cover-erase --with-xunit --cover-tests --cover-html --cover-xml --with-timer
 
 DATAVALIDATOR := $(PYTHON) scripts/invest-autovalidate.py $(GIT_SAMPLE_DATA_REPO_PATH)
 TEST_DATAVALIDATOR := $(PYTHON) -m nose -vsP scripts/invest-autovalidate.py

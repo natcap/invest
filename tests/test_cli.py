@@ -43,7 +43,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 'natcap.invest.fisheries.fisheries.execute',
                 return_value=None) as patched_model:
             cli.main([
-                '--debug',  # set logging
                 'run',
                 'fisheries',  # uses an exact modelname
                 '--datastack', parameter_set_path,
@@ -61,7 +60,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
-                '--debug',  # set logging
                 'run',
                 'fisheries',  # uses an exact modelname
                 '--datastack', parameter_set_path,
@@ -75,7 +73,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
-                '--debug',  # set logging
                 'run',
                 'fisheries',  # uses an exact modelname
                 '--headless',
@@ -94,7 +91,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
-                '--debug',  # set logging
                 'run',
                 'fisheries',  # uses an exact modelname
                 '--datastack', parameter_set_path,
@@ -321,7 +317,6 @@ class CLIGUITests(unittest.TestCase):
         # rather have a reliable test that takes a few more seconds than a test
         # that hangs.
         cli.main([
-            '--debug',  # set logging
             'quickrun',
             'delineateit',  # uses an exact modelname
             parameter_set_path,
