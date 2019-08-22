@@ -429,11 +429,11 @@ def main(user_args=None):
         try:
             validation_result = getattr(
                 model_module, 'validate')(parsed_datastack.args)
-        except KeyError as missing_keys:
+        except KeyError as missing_keys_error:
             if args.json:
                 message = json.dumps(
                     {'validation_results': {
-                        str(missing_keys): 'Key is missing'}})
+                        missing_keys_error.args: 'Key is missing'}})
             else:
                 message = ('Datastack is missing keys:\n    ' +
                            str(missing_keys))

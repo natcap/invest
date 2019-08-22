@@ -1154,7 +1154,7 @@ def _build_regression(
     n_features = data_matrix.shape[0]
     y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
     coefficients, _, _, _ = numpy.linalg.lstsq(
-        data_matrix[:, 1:], y_factors) 
+        data_matrix[:, 1:], y_factors)
 
     ssres = numpy.sum((
         y_factors -
@@ -1463,10 +1463,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        print(missing_key_list)
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(
