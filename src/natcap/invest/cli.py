@@ -445,7 +445,7 @@ def main(user_args=None):
         except Exception as error:
             parser.exit(
                 1, ('Datastack could not be validated:\n    ' +
-                    str(missing_keys)))
+                    str(error)))
 
         # Even validation errors will have an exit code of 0
         if args.json:
