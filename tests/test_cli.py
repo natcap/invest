@@ -174,9 +174,6 @@ class CLIHeadlessTests(unittest.TestCase):
 
         self.assertEqual(exit_cm.exception.code, 0)
 
-    def test_validate_bad_datastack(self):
-        """CLI: Verify failure when a bad datastack provided."""
-
     def test_validate_fisheries(self):
         """CLI: Validate the fisheries model inputs through the cli."""
         from natcap.invest import cli
