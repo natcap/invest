@@ -359,7 +359,8 @@ def main(user_args=None):
     quickrun_subparser = subparsers.add_parser(
         'quickrun', help=(
             'Run through a model with a specific datastack, exiting '
-            'immediately upon completion'))
+            'immediately upon completion. This subcommand is only intended '
+            'to be used by automated testing scripts.'))
     quickrun_subparser.add_argument(
         'model', action=SelectModelAction,  # Assert valid model name
         help=('The model to run.  Use "invest list" to list the available '
@@ -492,6 +493,11 @@ def main(user_args=None):
             # can just call ``invest validate <datastack>`` to validate.
             getattr(model_module, 'execute')(parsed_datastack.args)
 
+    # If we're running in a GUI (either through ``invest run`` or
+    # ``invest quickrun``), we'll need to load the Model's GUI class,
+    # populate parameters and then (if in a quickrun) exit when the model
+    # completes.  Quickrun functionality is primarily useful for automated
+    # testing of the model interfaces.
     if (args.subcommand == 'run' and not args.headless or
             args.subcommand == 'quickrun'):
 
