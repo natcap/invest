@@ -167,7 +167,7 @@ class CLIHeadlessTests(unittest.TestCase):
             with self.assertRaises(SystemExit) as exit_cm:
                 cli.main(['list', '--json'])
 
-        # Verify that we can load the JSON object without errir
+        # Verify that we can load the JSON object without error
         stdout_value = stdout_stream.getvalue()
         loaded_list_object = json.loads(stdout_value)
         self.assertEqual(type(loaded_list_object), dict)
