@@ -61,13 +61,15 @@ def main():
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model in sorted(cli._MODEL_UIS.keys()):
+    for model, model_data in sorted(cli._MODEL_UIS.items()):
         row = layout.rowCount()
         label = QtWidgets.QLabel()
         button = ModelLaunchButton('Launch', model)
         labels_and_buttons.append((label, button))
 
-        layout.addWidget(QtWidgets.QLabel(model), row, 0, QtCore.Qt.AlignRight)
+        layout.addWidget(
+            QtWidgets.QLabel(model_data.humanname), row, 0,
+            QtCore.Qt.AlignRight)
         layout.addWidget(button, row, 1)
 
     version_label = QtWidgets.QLabel(
