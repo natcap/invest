@@ -17,7 +17,7 @@ try:
     from . import utils
     from . import datastack
 except ValueError:
-    # When we're in a pyinstaller build, this isn't a module.
+    # When we're in a PyInstaller build, this isn't a module.
     from natcap.invest import __version__
     from natcap.invest import utils
     from natcap.invest import datastack
@@ -75,7 +75,7 @@ _MODEL_UIS = {
         gui='fisheries.Fisheries',
         aliases=()),
     'fisheries_hst': _UIMETA(
-        humanname="Fisheries: Habitate Scenario Tool",
+        humanname="Fisheries: Habitat Scenario Tool",
         pyname='natcap.invest.fisheries.fisheries_hst',
         gui='fisheries.FisheriesHST',
         aliases=()),
@@ -105,7 +105,7 @@ _MODEL_UIS = {
         gui='hydropower.HydropowerWaterYield',
         aliases=('hwy',)),
     'ndr': _UIMETA(
-        humanname="Nutrient Delinvery Ratio",
+        humanname="Nutrient Delivery Ratio",
         pyname='natcap.invest.ndr.ndr',
         gui='ndr.Nutrient',
         aliases=()),
@@ -130,7 +130,7 @@ _MODEL_UIS = {
         gui='scenario_gen.ScenarioGenProximity',
         aliases=('sgp',)),
     'scenic_quality': _UIMETA(
-        humanname="Unubstructed Views: Scenic Quality Provision",
+        humanname="Unobstructed Views: Scenic Quality Provision",
         pyname='natcap.invest.scenic_quality.scenic_quality',
         gui='scenic_quality.ScenicQuality',
         aliases=('sq',)),
@@ -161,7 +161,7 @@ _MODEL_UIS = {
         aliases=('ufrm',)),
 }
 
-# Build up an index mapping aliase to modelname.
+# Build up an index mapping aliases to modelname.
 # ``modelname`` is the key to the _MODEL_UIS dict, above.
 _MODEL_ALIASES = {}
 for _modelname, _meta in _MODEL_UIS.items():
@@ -229,7 +229,7 @@ def build_model_list_json():
 
 
 class SelectModelAction(argparse.Action):
-    """Given a possily-ambiguous model string, identify the model to run.
+    """Given a possibly-ambiguous model string, identify the model to run.
 
     This is a subclass of ``argparse.Action`` and is executed when the argparse
     interface detects that the user has attempted to select a model by name.
@@ -294,11 +294,12 @@ def main(user_args=None):
         * in headless mode, without its GUI.
 
     Running in headless mode allows us to bypass all GUI functionality,
-    so models may be run in this way wthout having GUI packages
+    so models may be run in this way without having GUI packages
     installed.
     """
 
-    parser = argparse.ArgumentParser(description=(
+    parser = argparse.ArgumentParser(
+        description=(
         'Integrated Valuation of Ecosystem Services and Tradeoffs.  '
         'InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is '
         'a family of tools for quantifying the values of natural capital in '
@@ -494,50 +495,48 @@ def main(user_args=None):
     if (args.subcommand == 'run' and not args.headless or
             args.subcommand == 'quickrun'):
 
-            from natcap.invest.ui import inputs
+        from natcap.invest.ui import inputs
 
-            gui_class = _MODEL_UIS[args.model].gui
-            module_name, classname = gui_class.split('.')
-            module = importlib.import_module(
-                name='.ui.%s' % module_name,
-                package='natcap.invest')
+        gui_class = _MODEL_UIS[args.model].gui
+        module_name, classname = gui_class.split('.')
+        module = importlib.import_module(
+            name='.ui.%s' % module_name,
+            package='natcap.invest')
 
-            # Instantiate the form
-            model_form = getattr(module, classname)()
+        # Instantiate the form
+        model_form = getattr(module, classname)()
 
-            # load the datastack if one was provided
-            try:
-                if args.datastack:
-                    model_form.load_datastack(args.datastack)
-            except Exception as error:
-                # If we encounter an exception while loading the datastack, log the
-                # exception (so it can be seen if we're running with appropriate
-                # verbosity) and exit the argparse application with exit code 1 and
-                # a helpful error message.
+        # load the datastack if one was provided
+        try:
+            if args.datastack:
+                model_form.load_datastack(args.datastack)
+        except Exception as error:
+            # If we encounter an exception while loading the datastack, log the
+            # exception (so it can be seen if we're running with appropriate
+            # verbosity) and exit the argparse application with exit code 1 and
+            # a helpful error message.
+            LOGGER.exception('Could not load datastack')
+            parser.exit(DEFAULT_EXIT_CODE,
+                        'Could not load datastack: %s\n' % str(error))
 
+        if args.workspace:
+            model_form.workspace.set_value(args.workspace)
 
-                LOGGER.exception('Could not load datastack')
-                parser.exit(DEFAULT_EXIT_CODE,
-                            'Could not load datastack: %s\n' % str(error))
+        # Run the UI's event loop
+        quickrun = False
+        if args.subcommand == 'quickrun':
+            quickrun = True
+        model_form.run(quickrun=quickrun)
+        app_exitcode = inputs.QT_APP.exec_()
 
-            if args.workspace:
-                model_form.workspace.set_value(args.workspace)
+        # Handle a graceful exit
+        if model_form.form.run_dialog.messageArea.error:
+            parser.exit(DEFAULT_EXIT_CODE,
+                        'Model %s: run failed\n' % args.model)
 
-            # Run the UI's event loop
-            quickrun = False
-            if args.subcommand == 'quickrun':
-                quickrun = True
-            model_form.run(quickrun=quickrun)
-            app_exitcode = inputs.QT_APP.exec_()
-
-            # Handle a graceful exit
-            if model_form.form.run_dialog.messageArea.error:
-                parser.exit(DEFAULT_EXIT_CODE,
-                            'Model %s: run failed\n' % args.model)
-
-            if app_exitcode != 0:
-                parser.exit(app_exitcode,
-                            'App terminated with exit code %s\n' % app_exitcode)
+        if app_exitcode != 0:
+            parser.exit(app_exitcode,
+                        'App terminated with exit code %s\n' % app_exitcode)
 
 
 if __name__ == '__main__':
