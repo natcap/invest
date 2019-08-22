@@ -379,3 +379,27 @@ class OptionStringValidation(unittest.TestCase):
         error_msg = validation.check_option_string(
             'FOO', options=['foo', 'bar', 'Baz'])
         self.assertTrue('must be one of' in error_msg)
+
+
+class NumberValidation(unittest.TestCase):
+    def test_string(self):
+        from natcap.invest import validation
+        error_msg = validation.check_number('this is a string')
+        self.assertTrue('could not be interpreted as a number' in error_msg)
+
+    def test_expression(self):
+        from natcap.invest import validation
+        self.assertEqual(
+            None, validation.check_number(
+                35, '(value < 100) & (value > 4)'))
+
+    def test_expression_missing_value(self):
+        from natcap.invest import validation
+        with self.assertRaises(AssertionError):
+            error_msg = validation.check_number(35, 'foo < 5')
+
+    def test_expression_failure(self):
+        from natcap.invest import validation
+        error_msg = validation.check_number(
+            35, 'value < 0')
+        self.assertTrue('does not meet condition' in error_msg)

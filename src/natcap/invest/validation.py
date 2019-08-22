@@ -6,6 +6,8 @@ import pprint
 import os
 import re
 
+import sympy
+import sympy.parsing.sympy_parser
 from osgeo import gdal, osr
 
 try:
@@ -206,7 +208,7 @@ def check_option_string(value, options):
         return "Value must be one of: %s" % sorted(options)
 
 
-def check_number(value, regexp=None, expression=None):
+def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
@@ -214,8 +216,9 @@ def check_number(value, regexp=None, expression=None):
 
     if expression:
         # Check to make sure that 'value' is in the expression.
-        if 'value' not in sympy.parsing.sympy_parser.parse_expr(
-                expression).free_symbols:
+        if 'value' not in [str(x) for x in
+                           sympy.parsing.sympy_parser.parse_expr(
+                               expression).free_symbols]:
             raise AssertionError('Value is not used in this expression')
 
         # Expression is assumed to return a boolean, something like
