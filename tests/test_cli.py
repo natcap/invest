@@ -8,19 +8,19 @@ import json
 
 import mock
 
-
-# TODO: Remove this context manage once we migrate to Python 3.6
-# Python 3.4 added a redirect_stdout() CM to contextlib.
-if not hasattr(contextlib, 'redirect_stdout'):
+try:
     from StringIO import StringIO
-    @contextlib.contextmanager
-    def redirect_stdout():
-        """Redirect stdout to a stream, which is then yielded."""
-        old_stdout = sys.stdout
-        stdout_buffer = StringIO()
-        sys.stdout = stdout_buffer
-        yield stdout_buffer
-        sys.stdout = old_stdout
+except ImportError:
+    from io import StringIO
+
+@contextlib.contextmanager
+def redirect_stdout():
+    """Redirect stdout to a stream, which is then yielded."""
+    old_stdout = sys.stdout
+    stdout_buffer = StringIO()
+    sys.stdout = stdout_buffer
+    yield stdout_buffer
+    sys.stdout = old_stdout
 
 
 class CLIHeadlessTests(unittest.TestCase):
@@ -40,8 +40,8 @@ class CLIHeadlessTests(unittest.TestCase):
             'fisheries', 'spiny_lobster_belize.invs.json')
 
         with mock.patch(
-                'natcap.invest.fisheries.fisheries.execute',
-                return_value=None) as patched_model:
+            'natcap.invest.fisheries.fisheries.execute',
+            return_value=None) as patched_model:
             cli.main([
                 'run',
                 'fisheries',  # uses an exact modelname
