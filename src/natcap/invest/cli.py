@@ -434,10 +434,10 @@ def main(user_args=None):
             if args.json:
                 message = json.dumps(
                     {'validation_results': {
-                        missing_keys_error.args: 'Key is missing'}})
+                        str(list(missing_keys_error.args)): 'Key is missing'}})
             else:
                 message = ('Datastack is missing keys:\n    ' +
-                           str(missing_keys))
+                           str(missing_keys_error.args))
 
             # Missing keys have an exit code of 1 because that would indicate
             # probably programmer error.

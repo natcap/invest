@@ -74,7 +74,7 @@ class DelineateItTests(unittest.TestCase):
         missing_keys = {}
         with self.assertRaises(KeyError) as cm:
             delineateit.validate(missing_keys)
-        self.assertTrue('keys were expected' in str(cm.exception))
+        self.assertTrue(isinstance(cm.exception, KeyError))
 
         missing_values_args = {
             'workspace_dir': '',
