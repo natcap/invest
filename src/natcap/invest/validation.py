@@ -81,6 +81,21 @@ N_WORKERS_SPEC = {
 
 
 def check_directory(dirpath, exists=False, permissions='rx'):
+    """Validate a directory.
+
+    Parameters:
+        dirpath (string): The directory path to validate.
+        exists=False (bool): If ``True``, the directory at ``dirpath``
+            must already exist on the filesystem.
+        permissions='rx' (string): A string that includes the lowercase
+            characters ``r``, ``w`` and/or ``x`` indicating required
+            permissions for this folder .  See ``check_permissions`` for
+            details.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     if exists:
         if not os.path.exists(dirpath):
             return "Directory not found"
@@ -94,6 +109,19 @@ def check_directory(dirpath, exists=False, permissions='rx'):
 
 
 def check_file(filepath, permissions='r'):
+    """Validate a single file.
+
+    Parameters:
+        filepath (string): The filepath to validate.
+        permissions='r' (string): A string that includes the lowercase
+            characters ``r``, ``w`` and/or ``x`` indicating required
+            permissions for this file.  See ``check_permissions`` for
+            details.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     if not os.path.exists(filepath):
         return "File not found"
 
@@ -101,26 +129,29 @@ def check_file(filepath, permissions='r'):
     if permissions_warning:
         return permissions_warning
 
+
 def check_permissions(path, permissions):
+    """Validate permissions on a filesystem object.
+
+    This function uses ``os.access`` to determine permissions access.
+
+    Parameters:
+        path (string): The path to examine for permissions.
+        permissions (string): a string including the characters ``r``, ``w``
+            and/or ``x`` (lowercase), indicating read, write, and execute
+            permissions (respectively) that the filesystem object at ``path``
+            must have.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
     for letter, mode, descriptor in (
             ('r', os.R_OK, 'read'),
             ('w', os.W_OK, 'write'),
             ('x', os.X_OK, 'execute')):
         if letter in permissions and not os.access(path, mode):
             return 'You must have %s access to this file' % descriptor
-
-def check_before(*pre_validation_funcs):
-    def decorator(func):
-        def wrapped_validator(*validation_args, **validation_kwargs):
-            for pre_validator, validator_kwargs in pre_validation_funcs:
-                warning_string = pre_validator(
-                    *validation_args, **validator_kwargs)
-                if warning_string:
-                    return warning_string
-
-            return func(*validation_args, **validation_kwargs)
-        return wrapped_validator
-    return decorator
 
 
 def _check_projection(srs, projected, projection_units):
@@ -142,8 +173,11 @@ def _check_projection(srs, projected, projection_units):
     return None
 
 
-@check_before((check_file, {'permissions': 'r'}))
 def check_raster(filepath, projected=False, projection_units=None):
+    file_warning = check_file(filepath, permissions='r')
+    if file_warning:
+        return file_warning
+
     gdal.PushErrorHandler('CPLQuietErrorHandler')
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_RASTER)
     gdal.PopErrorHandler()
@@ -163,9 +197,12 @@ def check_raster(filepath, projected=False, projection_units=None):
     return None
 
 
-@check_before((check_file, {'permissions': 'r'}))
 def check_vector(filepath, required_fields=None, projected=False,
                  projection_units=None):
+    file_warning = check_file(filepath, permissions='r')
+    if file_warning:
+        return file_warning
+
     gdal.PushErrorHandler('CPLQuietErrorHandler')
     gdal_dataset = gdal.OpenEx(filepath, gdal.OF_VECTOR)
     gdal.PopErrorHandler()

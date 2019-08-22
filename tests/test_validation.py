@@ -135,18 +135,22 @@ class ValidatorTest(unittest.TestCase):
 
 class DirectoryValidation(unittest.TestCase):
     def setUp(self):
+        """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
     def test_exists(self):
+        """Validation: when a folder must exist and does."""
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_directory(
             self.workspace_dir, exists=True))
 
     def test_not_exists(self):
+        """Validation: when a folder must exist but does not."""
         from natcap.invest import validation
 
         dirpath = os.path.join(self.workspace_dir, 'nonexistent_dir')
@@ -155,6 +159,7 @@ class DirectoryValidation(unittest.TestCase):
         self.assertTrue('not found' in validation_warning)
 
     def test_file(self):
+        """Validation: when a file is given to folder validation."""
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'some_file.txt')
@@ -165,6 +170,7 @@ class DirectoryValidation(unittest.TestCase):
             filepath, exists=True)
 
     def test_valid_permissions(self):
+        """Validation: folder permissions."""
         from natcap.invest import validation
 
         self.assertEquals(None, validation.check_directory(
@@ -173,12 +179,15 @@ class DirectoryValidation(unittest.TestCase):
 
 class FileValidation(unittest.TestCase):
     def setUp(self):
+        """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
     def test_file_exists(self):
+        """Validation: test that a file exists."""
         from natcap.invest import validation
         filepath = os.path.join(self.workspace_dir, 'file.txt')
         with open(filepath, 'w') as new_file:
@@ -187,6 +196,7 @@ class FileValidation(unittest.TestCase):
         self.assertEqual(None, validation.check_file(filepath))
 
     def test_file_not_found(self):
+        """Validation: test when a file is not found."""
         from natcap.invest import validation
         filepath = os.path.join(self.workspace_dir, 'file.txt')
 
@@ -197,12 +207,15 @@ class FileValidation(unittest.TestCase):
 
 class RasterValidation(unittest.TestCase):
     def setUp(self):
+        """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
     def test_file_not_found(self):
+        """Validation: test that a raster exists."""
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
@@ -210,6 +223,7 @@ class RasterValidation(unittest.TestCase):
         self.assertTrue('not found' in error_msg)
 
     def test_invalid_raster(self):
+        """Validation: test when a raster format is invalid."""
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
@@ -220,6 +234,7 @@ class RasterValidation(unittest.TestCase):
         self.assertTrue('could not be opened as a GDAL raster' in error_msg)
 
     def test_raster_not_projected(self):
+        """Validation: test when a raster is not linearly projected."""
         from natcap.invest import validation
 
         # use WGS84 as not linearly projected.
@@ -235,6 +250,7 @@ class RasterValidation(unittest.TestCase):
         self.assertTrue('must be projected in linear units' in error_msg)
 
     def test_raster_projected_in_m(self):
+        """Validation: test when a raster is projected in meters."""
         from natcap.invest import validation
 
         # Use EPSG:32731  # WGS84 / UTM zone 31s
@@ -258,6 +274,7 @@ class RasterValidation(unittest.TestCase):
         self.assertTrue('projected in feet' in error_msg)
 
     def test_raster_incorrect_units(self):
+        """Validation: test when a raster projection has wrong units."""
         from natcap.invest import validation
 
         # Use EPSG:32066  # NAD27 / BLM 16N (in US Feet)
@@ -276,12 +293,15 @@ class RasterValidation(unittest.TestCase):
 
 class VectorValidation(unittest.TestCase):
     def setUp(self):
+        """Create a new workspace to use for each test."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
+        """Remove the workspace created for this test."""
         shutil.rmtree(self.workspace_dir)
 
     def test_file_not_found(self):
+        """Validation: test when a vector file is not found."""
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
@@ -289,6 +309,7 @@ class VectorValidation(unittest.TestCase):
         self.assertTrue('not found' in error_msg)
 
     def test_invalid_vector(self):
+        """Validation: test when a vector's format is invalid."""
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
@@ -299,6 +320,7 @@ class VectorValidation(unittest.TestCase):
         self.assertTrue('could not be opened as a GDAL vector' in error_msg)
 
     def test_missing_fieldnames(self):
+        """Validation: test when a vector is missing fields."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
@@ -327,6 +349,7 @@ class VectorValidation(unittest.TestCase):
         self.assertTrue('col_c'.upper() in error_msg)
 
     def test_vector_projected_in_m(self):
+        """Validation: test that a vector's projection has expected units."""
         from natcap.invest import validation
 
         driver = gdal.GetDriverByName('GPKG')
@@ -349,14 +372,17 @@ class VectorValidation(unittest.TestCase):
 
 class FreestyleStringValidation(unittest.TestCase):
     def test_int(self):
+        """Validation: test that an int can be a valid string."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_freestyle_string(1234))
 
     def test_float(self):
+        """Validation: test that a float can be a valid string."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_freestyle_string(1.234))
 
     def test_regexp(self):
+        """Validation: test that we can check regex patterns on strings."""
         from natcap.invest import validation
 
         self.assertEqual(None, validation.check_freestyle_string(
@@ -370,11 +396,13 @@ class FreestyleStringValidation(unittest.TestCase):
 
 class OptionStringValidation(unittest.TestCase):
     def test_valid_option(self):
+        """Validation: test that a string is a valid option."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_option_string(
             'foo', options=['foo', 'bar', 'Baz']))
 
     def test_invalid_option(self):
+        """Validation: test when a string is not a valid option."""
         from natcap.invest import validation
         error_msg = validation.check_option_string(
             'FOO', options=['foo', 'bar', 'Baz'])
@@ -383,22 +411,26 @@ class OptionStringValidation(unittest.TestCase):
 
 class NumberValidation(unittest.TestCase):
     def test_string(self):
+        """Validation: test when a string is not a number."""
         from natcap.invest import validation
         error_msg = validation.check_number('this is a string')
         self.assertTrue('could not be interpreted as a number' in error_msg)
 
     def test_expression(self):
+        """Validation: test that we can use numeric expressions."""
         from natcap.invest import validation
         self.assertEqual(
             None, validation.check_number(
                 35, '(value < 100) & (value > 4)'))
 
     def test_expression_missing_value(self):
+        """Validation: test the expression string for the 'value' term."""
         from natcap.invest import validation
         with self.assertRaises(AssertionError):
             error_msg = validation.check_number(35, 'foo < 5')
 
     def test_expression_failure(self):
+        """Validation: test when a number does not meet the expression."""
         from natcap.invest import validation
         error_msg = validation.check_number(
             35, 'value < 0')
@@ -407,11 +439,13 @@ class NumberValidation(unittest.TestCase):
 
 class BooleanValidation(unittest.TestCase):
     def test_actual_bool(self):
+        """Validation: test when boolean type objects are passed."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_boolean(True))
         self.assertEqual(None, validation.check_boolean(False))
 
     def test_string_boolean(self):
+        """Validation: test when valid strings are passed."""
         from natcap.invest import validation
         self.assertEqual(None, validation.check_boolean('True'))
         self.assertEqual(None, validation.check_boolean('False'))
@@ -421,6 +455,7 @@ class BooleanValidation(unittest.TestCase):
         self.assertEqual(None, validation.check_boolean('FALSE'))
 
     def test_invalid_string(self):
+        """Validation: test when invalid strings are passed."""
         from natcap.invest import validation
         error_msg = validation.check_boolean('not clear')
         self.assertTrue("must be one of 'True' or 'False'" in error_msg)
