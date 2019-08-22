@@ -44,7 +44,7 @@ class ModelLaunchButton(QtWidgets.QPushButton):
             cwd = None  # subprocess.Popen default value for cwd.
             command = 'invest'
         LOGGER.info('Launching %s from CWD %s', self._model, cwd)
-        subprocess.Popen('%s %s' % (command, self._model), shell=True, cwd=cwd)
+        subprocess.Popen('%s run %s' % (command, self._model), shell=True, cwd=cwd)
 
 
 def main():
