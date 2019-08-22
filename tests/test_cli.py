@@ -36,8 +36,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Run the fisheries model through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         with mock.patch(
                 'natcap.invest.fisheries.fisheries.execute',
@@ -55,8 +55,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Run the fisheries model through the cli without a workspace."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
@@ -102,8 +102,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Raise an error when an ambiguous model name used."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         with self.assertRaises(SystemExit) as exit_cm:
             cli.main([
@@ -120,8 +120,8 @@ class CLIHeadlessTests(unittest.TestCase):
         from natcap.invest import cli
 
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'cbc_galveston_bay.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'coastal_blue_carbon', 'cbc_galveston_bay.invs.json')
 
         with mock.patch(
                 'natcap.invest.coastal_blue_carbon.coastal_blue_carbon.execute',
@@ -174,8 +174,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Validate the fisheries model inputs through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace, so I
         # need to add it in.
@@ -200,8 +200,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Validate the fisheries model inputs through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace.  In
         # this case, I want to leave it out and verify validation catches it.
@@ -219,8 +219,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Validate the fisheries model inputs through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace.  In
         # this case, I want to leave it out and verify validation catches it.
@@ -259,8 +259,8 @@ class CLIHeadlessTests(unittest.TestCase):
         """CLI: Validate the fisheries model inputs as JSON through the cli."""
         from natcap.invest import cli
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'spiny_lobster_belize.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         # The InVEST sample data JSON arguments don't have a workspace, so I
         # need to add it in.
