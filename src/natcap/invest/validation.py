@@ -231,17 +231,14 @@ def check_number(value, expression=None):
 
 
 def check_boolean(value):
-    value = value.strip()
-    if isinstance(str, value):
+    if isinstance(value, str):
+        value = value.strip()
         if value.lower() not in ("true", "false"):
             return "Value must be one of 'True' or 'False'"
 
-    else:
-        try:
-            bool(value)
-        except (ValueError, TypeError):
-            return "Value could not be cast to a boolean."
-
+    # Python's truthiness rules allow for basically anything to be cast to a
+    # boolean, so there's no error here that we can check for unless it's
+    # one of the string cases above.
     return None
 
 

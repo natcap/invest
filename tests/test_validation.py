@@ -403,3 +403,24 @@ class NumberValidation(unittest.TestCase):
         error_msg = validation.check_number(
             35, 'value < 0')
         self.assertTrue('does not meet condition' in error_msg)
+
+
+class BooleanValidation(unittest.TestCase):
+    def test_actual_bool(self):
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_boolean(True))
+        self.assertEqual(None, validation.check_boolean(False))
+
+    def test_string_boolean(self):
+        from natcap.invest import validation
+        self.assertEqual(None, validation.check_boolean('True'))
+        self.assertEqual(None, validation.check_boolean('False'))
+        self.assertEqual(None, validation.check_boolean('true'))
+        self.assertEqual(None, validation.check_boolean('false'))
+        self.assertEqual(None, validation.check_boolean('TRUE'))
+        self.assertEqual(None, validation.check_boolean('FALSE'))
+
+    def test_invalid_string(self):
+        from natcap.invest import validation
+        error_msg = validation.check_boolean('not clear')
+        self.assertTrue("must be one of 'True' or 'False'" in error_msg)
