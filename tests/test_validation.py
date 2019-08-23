@@ -586,6 +586,21 @@ class CSVValidation(unittest.TestCase):
         self.assertEquals(None, validation.check_csv(
             target_file, required_fields=['foo', 'bar']))
 
+    def test_csv_bom_fieldnames(self):
+        """Validation: test that we can check fieldnames in a CSV with BOM."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'foo': 1, 'bar': 2, 'baz': 3},
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.csv')
+        df.to_csv(target_file, encoding='utf-8-sig')
+
+        self.assertEquals(None, validation.check_csv(
+            target_file, required_fields=['foo', 'bar']))
+
     def test_csv_missing_fieldnames(self):
         """Validation: test that we can check missing fieldnames in a CSV."""
         from natcap.invest import validation
