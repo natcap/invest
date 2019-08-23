@@ -5,6 +5,7 @@ import shutil
 
 from osgeo import gdal, osr, ogr
 import pandas
+import mock
 
 
 class ValidatorTest(unittest.TestCase):
@@ -585,6 +586,7 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEquals([], validation.validate(args, spec))
 
     def test_requirement_missing(self):
+        """Validation: verify absolute requirement on missing key."""
         from natcap.invest import validation
         spec = {
             "number_a": {
@@ -601,6 +603,7 @@ class TestValidationFromSpec(unittest.TestCase):
             validation.validate(args, spec))
 
     def test_requirement_no_value(self):
+        """Validation: verify absolute requirement without value."""
         from natcap.invest import validation
         spec = {
             "number_a": {
@@ -622,6 +625,7 @@ class TestValidationFromSpec(unittest.TestCase):
             validation.validate(args, spec))
 
     def test_invalid_value(self):
+        """Validation: verify invalidity."""
         from natcap.invest import validation
         spec = {
             "number_a": {
@@ -638,6 +642,7 @@ class TestValidationFromSpec(unittest.TestCase):
             validation.validate(args, spec))
 
     def test_conditionally_required_no_value(self):
+        """Validation: verify conditional requirement when no value."""
         from natcap.invest import validation
         spec = {
             "number_a": {
@@ -659,3 +664,60 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEquals(
             [(['string_a'], 'Key is required but has no value')],
             validation.validate(args, spec))
+
+    def test_conditionally_required_invalid(self):
+        """Validation: verify conditional validity behavior when invalid."""
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            },
+            "string_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "option_string",
+                "required": "number_a",
+                "validation_options": {
+                    "options": ['AAA', 'BBB']
+                }
+            }
+        }
+
+        args = {'string_a': "ZZZ", "number_a": 1}
+
+        self.assertEquals(
+            [(['string_a'], "Value must be one of: ['AAA', 'BBB']")],
+            validation.validate(args, spec))
+
+    def test_validation_exception(self):
+        """Validation: Verify error when an unexpected exception occurs."""
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            },
+        }
+
+        args = {'number_a': 1}
+        try:
+            # Patch in a new function that raises an exception into the
+            # validation functions dictionary.
+            patched_function = mock.Mock(side_effect=ValueError('foo'))
+            validation._VALIDATION_FUNCS['number'] = patched_function
+
+            validation_warnings = validation.validate(args, spec)
+        finally:
+            # No matter what happens with this test, always restore the state
+            # of the validation functions dict.
+            validation._VALIDATION_FUNCS['number'] = (
+                validation.check_number)
+
+        self.assertEquals(
+            validation_warnings,
+            [(['number_a'], 'An unexpected error occurred in validation')])
