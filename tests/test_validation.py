@@ -4,6 +4,7 @@ import os
 import shutil
 
 from osgeo import gdal, osr, ogr
+import pandas
 
 
 class ValidatorTest(unittest.TestCase):
@@ -459,3 +460,68 @@ class BooleanValidation(unittest.TestCase):
         from natcap.invest import validation
         error_msg = validation.check_boolean('not clear')
         self.assertTrue("must be one of 'True' or 'False'" in error_msg)
+
+
+class CSVValidation(unittest.TestCase):
+    def setUp(self):
+        """Create a new workspace to use for each test."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the workspace created for this test."""
+        shutil.rmtree(self.workspace_dir, ignore_errors=True)
+
+    def test_file_not_found(self):
+        """Validation: test when a file is not found."""
+        from natcap.invest import validation
+
+        nonexistent_file = os.path.join(self.workspace_dir, 'nope.txt')
+        error_msg = validation.check_csv(nonexistent_file)
+        self.assertTrue('not found' in error_msg)
+
+    def test_csv_fieldnames(self):
+        """Validation: test that we can check fieldnames in a CSV."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'foo': 1, 'bar': 2, 'baz': 3},
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.csv')
+        df.to_csv(target_file)
+
+        self.assertEquals(None, validation.check_csv(
+            target_file, required_fields=['foo', 'bar']))
+
+    def test_csv_missing_fieldnames(self):
+        """Validation: test that we can check missing fieldnames in a CSV."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'foo': 1, 'bar': 2, 'baz': 3},
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.csv')
+        df.to_csv(target_file)
+
+        error_msg = validation.check_csv(
+            target_file, required_fields=['field_a'])
+        self.assertTrue('missing from this table' in error_msg)
+
+    def test_excel_missing_fieldnames(self):
+        """Validation: test that we can check missing fieldnames in excel."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'foo': 1, 'bar': 2, 'baz': 3},
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.xls')
+        df.to_excel(target_file)
+
+        error_msg = validation.check_csv(
+            target_file, required_fields=['field_a'], excel_ok=True)
+        self.assertTrue('missing from this table' in error_msg)

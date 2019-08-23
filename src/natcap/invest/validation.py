@@ -6,6 +6,8 @@ import pprint
 import os
 import re
 
+import pandas
+import xlrd
 import sympy
 import sympy.parsing.sympy_parser
 from osgeo import gdal, osr
@@ -384,9 +386,57 @@ def check_boolean(value):
     return None
 
 
+def check_csv(filepath, required_fields=None, excel_ok=False):
+    """Validate a table.
+
+    Parameters:
+        filepath (string): The string filepath to the table.
+        required_fields=None (list): A case-insensitive list of fieldnames that
+            must exist in the table.  If None, fieldnames will not be checked.
+        excel_ok=False (boolean): Whether it's OK for the file to be an Excel
+            table.  This is not a common case.
+
+    Returns:
+        A string error message if an error was found.  ``None`` otherwise.
+
+    """
+    file_warning = check_file(filepath, permissions='r')
+    if file_warning:
+        return file_warning
+
+    try:
+        # Check if the file encoding is UTF-8 BOM first, related to issue
+        # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+        encoding = None
+        with open(filepath) as file_obj:
+            first_line = file_obj.readline()
+            if first_line.startswith('\xef\xbb\xbf'):
+                encoding = 'utf-8-sig'
+        dataframe = pandas.read_csv(
+            filepath, sep=None, engine='python', encoding=encoding)
+    except Exception:
+        if excel_ok:
+            try:
+                dataframe = pandas.read_excel(filepath)
+            except xlrd.biffh.XLRDError:
+                return "File could not be opened as an Excel table"
+        else:
+            return "File could not be opened as a CSV"
+
+    if required_fields:
+        fields_in_table = set([name.upper() for name in dataframe.columns])
+        missing_fields = (
+            set(field.upper() for field in required_fields) - fields_in_table)
+
+        if missing_fields:
+            return ("Fields are missing from this table: %s" %
+                sorted(missing_fields))
+    return None
+
+
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
-    #'csv': check_csv,
+    'csv': check_csv,
     'file': check_file,
     'folder': check_directory,
     'freestyle_string': check_freestyle_string,

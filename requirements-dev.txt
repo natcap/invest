@@ -25,6 +25,7 @@ PyInstaller==3.3.1  # pip-only
 setuptools_scm
 requests
 coverage
+xlwt
 
 # Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
 # with some other package versions, but I haven't had time to try to get
