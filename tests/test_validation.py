@@ -529,6 +529,7 @@ class CSVValidation(unittest.TestCase):
 
 class TestValidationFromSpec(unittest.TestCase):
     def test_conditional_requirement(self):
+        """Validation: check that conditional requirements works."""
         from natcap.invest import validation
 
         spec = {
@@ -568,7 +569,60 @@ class TestValidationFromSpec(unittest.TestCase):
             "number_a": 123,
             "number_b": 456,
         }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEquals(validation_warnings, [
+            (['number_c'], 'Key is missing from the args dict'),
+            (['number_d'], 'Key is missing from the args dict'),
+        ])
 
-        self.assertEquals(None, validation.validate(args, spec))
+        args = {
+            "number_a": 123,
+            "number_b": 456,
+            "number_c": 1,
+            "number_d": 3,
+            "number_e": 4,
+        }
+        self.assertEquals([], validation.validate(args, spec))
+
+    def test_requirement_missing(self):
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            }
+        }
+
+        args = {}
+        self.assertEquals(
+            [(['number_a'], 'Key is missing from the args dict')],
+            validation.validate(args, spec))
+
+    def test_requirement_no_value(self):
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            }
+        }
+
+        args = {'number_a': ''}
+        self.assertEquals(
+            [(['number_a'], 'Key is required but has no value')],
+            validation.validate(args, spec))
+
+        args = {'number_a': None}
+        self.assertEquals(
+            [(['number_a'], 'Key is required but has no value')],
+            validation.validate(args, spec))
+
+
+
+
 
 
