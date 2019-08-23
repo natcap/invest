@@ -6,6 +6,7 @@ import pprint
 import os
 import re
 
+import pygeoprocessing
 import pandas
 import xlrd
 import sympy
@@ -434,6 +435,40 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
     return None
 
 
+def check_spatial_overlap(spatial_filepaths_list, reference_srs_wkt=None):
+    """Check that the given spatial files spatially overlap.
+
+    Parameters:
+        spatial_filepaths_list (list): A list of files that can be opened with
+            GDAL.  Must be on the local filesystem.
+        reference_srs_wkt=None (string): A WKT string representing the target
+            SRS.  If provided, all provided spatial filepaths will have their
+            bounding boxes warped to this SRS before intersection is verified.
+
+    Returns:
+        A string error message if an error is found.  ``None`` otherwise.
+
+    """
+    bounding_boxes = []
+    for filepath in spatial_filepaths_list:
+        try:
+            info = pygeoprocessing.get_raster_info(filepath)
+        except ValueError:
+            info = pygeoprocessing.get_vector_info(filepath)
+        bounding_box = info['bounding_box']
+
+        if reference_srs_wkt:
+            bounding_box = pygeoprocessing.transform_bounding_box(
+                bounding_box, info['projection'], reference_srs_wkt)
+        bounding_boxes.append(bounding_box)
+
+    try:
+        pygeoprocessing.merge_bounding_box_list(bounding_boxes, 'intersection')
+    except ValueError as error:
+        return str(error)
+    return None
+
+
 _VALIDATION_FUNCS = {
     'boolean': check_boolean,
     'csv': check_csv,
@@ -448,7 +483,7 @@ _VALIDATION_FUNCS = {
 }
 
 
-def validate(args, spec):
+def validate(args, spec, spatial_overlap_opts=None):
     validation_warnings = []
 
     # step 1: check absolute requirement
@@ -540,6 +575,39 @@ def validate(args, spec):
                 if args[key] in ('', None):
                     validation_warnings.append(
                         ([key], "Key is required but has no value"))
+
+    if spatial_overlap_opts:
+        spatial_keys = set(spatial_overlap_opts['spatial_keys'])
+
+        # Only test for spatial overlap if all other validation passes.
+        if spatial_keys.difference(invalid_keys) == spatial_keys:
+            spatial_files = []
+            for key in spatial_keys:
+                try:
+                    if key in args and args[key] not in ('', None):
+                        spatial_files.append(args[key])
+                except KeyError:
+                    pass
+
+            if 'reference_key' in spatial_overlap_opts:
+                reference_key = spatial_overlap_opts['reference_key']
+                if (reference_key in args and
+                        args[reference_key] not in ('', None)):
+                    reference_path = args[reference_key]
+
+                    try:
+                        reference_srs_wkt = pygeoprocessing.get_raster_info(
+                            reference_path)['projection']
+                    except ValueError:
+                        reference_srs_wkt = pygeoprocessing.get_vector_info(
+                            reference_path)['projection']
+
+            spatial_overlap_error = check_spatial_overlap(
+                spatial_files, reference_srs_wkt)
+            if spatial_overlap_error:
+                validation_warnings.append(
+                    (sorted(spatial_keys), spatial_overlap_error))
+
     return validation_warnings
 
 

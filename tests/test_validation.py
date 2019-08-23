@@ -9,6 +9,96 @@ import pandas
 import mock
 
 
+class SpatialOverlapTest(unittest.TestCase):
+    def setUp(self):
+        """Create a new workspace to use for each test."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the workspace created for this test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_no_overlap_no_reference(self):
+        """Validation: verify lack of overlap without a reference."""
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        for filepath, geotransform in (
+                (filepath_1, [1, 1, 0, 1, 0, 1]),
+                (filepath_2, [100, 1, 0, 100, 0, 1])):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(4326)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        error_msg = validation.check_spatial_overlap([filepath_1, filepath_2])
+        self.assertTrue('Bounding boxes do not intersect' in error_msg)
+
+    def test_overlap_no_reference(self):
+        """Validation: verify overlap without a reference."""
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+
+        for filepath, geotransform in (
+                (filepath_1, [1, 1, 0, 1, 0, 1]),
+                (filepath_2, [2, 1, 0, 2, 0, 1])):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(4326)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        self.assertEqual(
+            None, validation.check_spatial_overlap([filepath_1, filepath_2]))
+
+    def test_no_overlap_with_reference(self):
+        """Validation: verify lack of overlap given reference projection."""
+        from natcap.invest import validation
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+        reference_filepath = os.path.join(self.workspace_dir, 'reference.gpkg')
+
+        # Filepaths 1 and 2 are obviously outside of UTM zone 31N.
+        for filepath, geotransform, epsg_code in (
+                (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
+                (filepath_2, [100, 1, 0, 100, 0, 1], 4326)):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(epsg_code)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        gpkg_driver = gdal.GetDriverByName('GPKG')
+        vector = gpkg_driver.Create(reference_filepath, 0, 0, 0,
+                                    gdal.GDT_Unknown)
+        vector_srs = osr.SpatialReference()
+        vector_srs.ImportFromEPSG(32731)  # UTM 31N
+        layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
+        new_feature = ogr.Feature(layer.GetLayerDefn())
+        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
+
+        new_feature = None
+        layer = None
+        vector = None
+
+        error_msg = validation.check_spatial_overlap(
+            [filepath_1, filepath_2, reference_filepath],
+            vector_srs.ExportToWkt())
+        self.assertTrue('Bounding boxes do not intersect' in error_msg)
+
+
 class ValidatorTest(unittest.TestCase):
     def test_args_wrong_type(self):
         """Validation: check for error when args is the wrong type."""
@@ -530,6 +620,14 @@ class CSVValidation(unittest.TestCase):
 
 
 class TestValidationFromSpec(unittest.TestCase):
+    def setUp(self):
+        """Create a new workspace to use for each test."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the workspace created for this test."""
+        shutil.rmtree(self.workspace_dir)
+
     def test_conditional_requirement(self):
         """Validation: check that conditional requirements works."""
         from natcap.invest import validation
@@ -761,3 +859,71 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEquals(
             [(['arg_J'], 'Key is missing from the args dict')],
             validation.validate(args, spec))
+
+    def test_spatial_overlap_error(self):
+        """Validation: check that we return an error on spatial mismatch."""
+        from natcap.invest import validation
+
+        spec = {
+            'raster_a': {
+                'type': 'raster',
+                'name': 'raster 1',
+                'about': 'raster 1',
+                'required': True,
+            },
+            'raster_b': {
+                'type': 'raster',
+                'name': 'raster 2',
+                'about': 'raster 2',
+                'required': True,
+            },
+            'vector_a': {
+                'type': 'vector',
+                'name': 'vector 1',
+                'about': 'vector 1',
+                'required': True,
+            }
+        }
+
+        driver = gdal.GetDriverByName('GTiff')
+        filepath_1 = os.path.join(self.workspace_dir, 'raster_1.tif')
+        filepath_2 = os.path.join(self.workspace_dir, 'raster_2.tif')
+        reference_filepath = os.path.join(self.workspace_dir, 'reference.gpkg')
+
+        # Filepaths 1 and 2 are obviously outside of UTM zone 31N.
+        for filepath, geotransform, epsg_code in (
+                (filepath_1, [1, 1, 0, 1, 0, 1], 4326),
+                (filepath_2, [100, 1, 0, 100, 0, 1], 4326)):
+            raster = driver.Create(filepath, 3, 3, 1, gdal.GDT_Int32)
+            wgs84_srs = osr.SpatialReference()
+            wgs84_srs.ImportFromEPSG(epsg_code)
+            raster.SetProjection(wgs84_srs.ExportToWkt())
+            raster.SetGeoTransform(geotransform)
+            raster = None
+
+        gpkg_driver = gdal.GetDriverByName('GPKG')
+        vector = gpkg_driver.Create(reference_filepath, 0, 0, 0,
+                                    gdal.GDT_Unknown)
+        vector_srs = osr.SpatialReference()
+        vector_srs.ImportFromEPSG(32731)  # UTM 31N
+        layer = vector.CreateLayer('layer', vector_srs, ogr.wkbPoint)
+        new_feature = ogr.Feature(layer.GetLayerDefn())
+        new_feature.SetGeometry(ogr.CreateGeometryFromWkt('POINT 1 1'))
+
+        new_feature = None
+        layer = None
+        vector = None
+
+        args = {
+            'raster_a': filepath_1,
+            'raster_b': filepath_2,
+            'vector_a': reference_filepath,
+        }
+
+        validation_warnings = validation.validate(
+            args, spec, {'spatial_keys': list(args.keys()),
+                         'reference_key': 'vector_a'})
+        self.assertEquals(len(validation_warnings), 1)
+        self.assertEquals(set(args.keys()), set(validation_warnings[0][0]))
+        self.assertTrue('Bounding boxes do not intersect' in
+                        validation_warnings[0][1])
