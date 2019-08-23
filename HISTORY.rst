@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Updated Coastal Vulnerability Model with significant speedups including
+  ~40x speedup for geomorphology process and ~3x speedup for wind exposure process.
+  Also saving an intermediate vector with wave energy values and a geomorphology
+  vector with points that were assigned the ``geomorphology_fill_value``.
 * Updated trove classifiers to indicate support for python versions 2.7, 3.6
   and 3.7.
 * Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
