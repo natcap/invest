@@ -398,7 +398,7 @@ class VectorValidation(unittest.TestCase):
         from natcap.invest import validation
 
         filepath = os.path.join(self.workspace_dir, 'file.txt')
-        error_msg = validation.check_raster(filepath)
+        error_msg = validation.check_vector(filepath)
         self.assertTrue('not found' in error_msg)
 
     def test_invalid_vector(self):

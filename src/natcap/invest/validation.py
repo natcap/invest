@@ -608,11 +608,8 @@ def validate(args, spec, spatial_overlap_opts=None):
         if spatial_keys.difference(invalid_keys) == spatial_keys:
             spatial_files = []
             for key in spatial_keys:
-                try:
-                    if key in args and args[key] not in ('', None):
-                        spatial_files.append(args[key])
-                except KeyError:
-                    pass
+                if key in args and args[key] not in ('', None):
+                    spatial_files.append(args[key])
 
             if 'reference_key' in spatial_overlap_opts:
                 reference_key = spatial_overlap_opts['reference_key']
