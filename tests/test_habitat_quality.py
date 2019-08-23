@@ -538,10 +538,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         with self.assertRaises(KeyError) as cm:
             habitat_quality.validate(args)
-        actual_message = str(cm.exception)
-        self.assertTrue(
-            'missing: lulc_cur_path, threats_table_path, sensitivity_table_path'
-            ', half_saturation_constant' in actual_message, actual_message)
+        self.assertEqual(len(cm.exception.args), 4)
 
         keys_without_value = [
             'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',

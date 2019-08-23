@@ -737,9 +737,7 @@ def validate(args, limit_to=None):
 
     if missing_key_list:
         # if there are missing keys, raise an exception
-        raise KeyError(
-            "The following keys were expected in `args` but were missing: " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     # if any value for required keys is empty, append to the validation
     # error list

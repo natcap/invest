@@ -1004,10 +1004,7 @@ class HraRegressionTests(unittest.TestCase):
 
         with self.assertRaises(KeyError) as cm:
             natcap.invest.hra.execute(args)
-
-        expected_message = 'missing: workspace_dir'
-        actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
+        self.assertEquals(len(cm.exception.args), 1)
 
     def test_validate(self):
         """HRA: testing validation."""

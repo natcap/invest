@@ -69,13 +69,12 @@ def sh(command, capture=True):
 def run_model(modelname, binary, workspace, datastack, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     # Using a list here allows subprocess to handle escaping of paths.
-    command = [binary, '--workspace', workspace, '--datastack', datastack,
-               modelname]
     if headless:
-        command.append('--headless')
-        command.append('--overwrite')
+        command = [binary, 'run', '--workspace', workspace,
+                   '--datastack', datastack, modelname]
     else:
-        command.append('--quickrun')
+        command = [binary, 'quickrun', '--workspace', workspace,
+                   modelname, datastack]
 
     # Subprocess on linux/mac seems to prefer a list of args, but path escaping
     # (by passing the command as a list) seems to work better on Windows.

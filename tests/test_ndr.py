@@ -124,8 +124,7 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(KeyError) as context:
             del args['workspace_dir']
             ndr.validate(args)
-        self.assertTrue(
-            'The following keys were expected' in str(context.exception))
+        self.assertEquals(len(context.exception.args), 1)
 
         args = NDRTests.generate_base_args(self.workspace_dir)
         args['workspace_dir'] = ''
