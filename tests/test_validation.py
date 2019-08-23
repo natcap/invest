@@ -2,6 +2,7 @@ import tempfile
 import unittest
 import os
 import shutil
+import string
 
 from osgeo import gdal, osr, ogr
 import pandas
@@ -721,3 +722,42 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEquals(
             validation_warnings,
             [(['number_a'], 'An unexpected error occurred in validation')])
+
+    def test_validation_other(self):
+        """Validation: verify no error when 'other' type."""
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "other",
+                "required": True,
+            },
+        }
+
+        args = {'number_a': 1}
+        self.assertEquals([], validation.validate(args, spec))
+
+    def test_conditional_validity_recursive(self):
+        """Validation: check that we can require from nested conditions."""
+        from natcap.invest import validation
+
+        spec = {}
+        previous_key = None
+        args = {}
+        for letter in string.ascii_uppercase[:10]:
+            key = 'arg_%s' % letter
+            spec[key] = {
+                'name': 'name ' + key,
+                'about': 'about ' + key,
+                'type': 'freestyle_string',
+                'required': previous_key
+            }
+            previous_key = key
+            args[key] = key
+
+        del args[previous_key]  # delete the last addition to the dict.
+
+        self.assertEquals(
+            [(['arg_J'], 'Key is missing from the args dict')],
+            validation.validate(args, spec))

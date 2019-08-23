@@ -444,7 +444,7 @@ _VALIDATION_FUNCS = {
     'option_string': check_option_string,
     'raster': check_raster,
     'vector': check_vector,
-    'other': None,  # completely user-defined validation
+    'other': None,  # Up to the user to define their validate()
 }
 
 
@@ -493,6 +493,10 @@ def validate(args, spec):
             validation_options = {}
 
         type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        if type_validation_func is None:
+            # Validation for 'other' type must be performed by the user.
+            continue
+
         try:
             warning_msg = type_validation_func(
                 args[key], **validation_options)
