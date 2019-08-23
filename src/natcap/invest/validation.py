@@ -430,7 +430,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
 
         if missing_fields:
             return ("Fields are missing from this table: %s" %
-                sorted(missing_fields))
+                    sorted(missing_fields))
     return None
 
 
@@ -444,7 +444,99 @@ _VALIDATION_FUNCS = {
     'option_string': check_option_string,
     'raster': check_raster,
     'vector': check_vector,
+    'other': None,  # completely user-defined validation
 }
+
+
+def validate(args, spec):
+    validation_warnings = []
+
+    # step 1: check absolute requirement
+    missing_keys = set()
+    keys_with_no_value = set()
+    conditionally_required_keys = set()
+    for key, parameter_spec in spec.items():
+        if parameter_spec['required'] is True:
+            if key not in args:
+                missing_keys.add(key)
+            else:
+                if args[key] in ('', None):
+                    keys_with_no_value.add(key)
+        elif isinstance(parameter_spec['required'], str):
+            conditionally_required_keys.add(key)
+
+    if missing_keys:
+        validation_warnings.append(
+            (sorted(missing_keys), "Key is missing from the args dict"))
+
+    if keys_with_no_value:
+        validation_warnings.append(
+            (sorted(keys_with_no_value), "Key is required but has no value"))
+
+    invalid_keys = missing_keys.union(keys_with_no_value)
+
+    # step 2: check primitive validity
+    for key, parameter_spec in spec.items():
+        if key in invalid_keys:
+            continue  # no need to validate a key we know is missing.
+
+        # If the key isn't present, no need to validate.
+        # If it's required and isn't present, we wouldn't have gotten to this
+        # point in the function.
+        if key not in args:
+            continue
+
+        # If no validation options specified, assume defaults.
+        try:
+            validation_options = parameter_spec['validation_options']
+        except KeyError:
+            validation_options = {}
+
+        type_validation_func = _VALIDATION_FUNCS[parameter_spec['type']]
+        try:
+            warning_msg = type_validation_func(
+                args[key], **validation_options)
+
+            if warning_msg:
+                validation_warnings.append(([key], warning_msg))
+                invalid_keys.add(key)
+        except Exception as error:
+            LOGGER.exception('Error when validating key %s with value %s')
+            validation_warnings.append(
+                ([key], 'An unexpected error occurred in validation'))
+
+    # step 3: check conditional requirement
+    # Need to evaluate sufficiency of inputs first.  An input is sufficient
+    # when it has a value and the value passes validation requirements.
+    sufficient_inputs = dict((_key, False) for _key in invalid_keys)
+    for key in spec.keys():
+        if key in invalid_keys:
+            continue  # We already know the input to be invalid
+        elif key not in args:
+            sufficient_inputs[key] = False
+        elif key in args and args[key] not in (None, ''):
+            sufficient_inputs[key] = True
+
+    sorted_args_keys = sorted(list(sufficient_inputs.keys()))
+    for key in conditionally_required_keys:
+        if key in invalid_keys:
+            continue  # no need to check requirement on already invalid input
+
+        # An input is conditionally required when the expression given
+        # evaluates to True.
+        is_conditionally_required = sympy.lambdify(
+            sorted_args_keys, spec[key]['required'], 'numpy')(
+                **sufficient_inputs)
+
+        if is_conditionally_required:
+            if key not in args:
+                validation_warnings.append(
+                    ([key], "Key is missing from the args dict"))
+            else:
+                if args[key] in ('', None):
+                    validation_warnings.append(
+                        ([key], "Key is required but has no value"))
+    return validation_warnings
 
 
 def invest_validator(validate_func):

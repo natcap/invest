@@ -525,3 +525,50 @@ class CSVValidation(unittest.TestCase):
         error_msg = validation.check_csv(
             target_file, required_fields=['field_a'], excel_ok=True)
         self.assertTrue('missing from this table' in error_msg)
+
+
+class TestValidationFromSpec(unittest.TestCase):
+    def test_conditional_requirement(self):
+        from natcap.invest import validation
+
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            },
+            "number_b": {
+                "name": "The second parameter",
+                "about": "About the second parameter",
+                "type": "number",
+                "required": False,
+            },
+            "number_c": {
+                "name": "The third parameter",
+                "about": "About the third parameter",
+                "type": "number",
+                "required": "number_b",
+            },
+            "number_d": {
+                "name": "The fourth parameter",
+                "about": "About the fourth parameter",
+                "type": "number",
+                "required": "number_b | number_c",
+            },
+            "number_e": {
+                "name": "The fifth parameter",
+                "about": "About the fifth parameter",
+                "type": "number",
+                "required": "number_b & number_d"
+            },
+        }
+
+        args = {
+            "number_a": 123,
+            "number_b": 456,
+        }
+
+        self.assertEquals(None, validation.validate(args, spec))
+
+
