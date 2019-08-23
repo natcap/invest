@@ -621,8 +621,41 @@ class TestValidationFromSpec(unittest.TestCase):
             [(['number_a'], 'Key is required but has no value')],
             validation.validate(args, spec))
 
+    def test_invalid_value(self):
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            }
+        }
 
+        args = {'number_a': 'not a number'}
+        self.assertEquals(
+            [(['number_a'], 'Value could not be interpreted as a number')],
+            validation.validate(args, spec))
 
+    def test_conditionally_required_no_value(self):
+        from natcap.invest import validation
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            },
+            "string_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "freestyle_string",
+                "required": "number_a",
+            }
+        }
 
+        args = {'string_a': None, "number_a": 1}
 
-
+        self.assertEquals(
+            [(['string_a'], 'Key is required but has no value')],
+            validation.validate(args, spec))
