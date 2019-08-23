@@ -618,6 +618,27 @@ class CSVValidation(unittest.TestCase):
             target_file, required_fields=['field_a'], excel_ok=True)
         self.assertTrue('missing from this table' in error_msg)
 
+    def test_wrong_filetype(self):
+        """Validation: verify CSV type does not open pickles."""
+        from natcap.invest import validation
+
+        df = pandas.DataFrame([
+            {'foo': 1, 'bar': 2, 'baz': 3},
+            {'foo': 2, 'bar': 3, 'baz': 4},
+            {'foo': 3, 'bar': 4, 'baz': 5}])
+
+        target_file = os.path.join(self.workspace_dir, 'test.pckl')
+        df.to_pickle(target_file)
+
+        error_msg = validation.check_csv(
+            target_file, required_fields=['field_a'], excel_ok=True)
+        self.assertTrue('could not be opened as a CSV or Excel file' in
+                        error_msg)
+
+        error_msg = validation.check_csv(
+            target_file, required_fields=['field_a'], excel_ok=False)
+        self.assertTrue('could not be opened as a CSV' in error_msg)
+
 
 class TestValidationFromSpec(unittest.TestCase):
     def setUp(self):

@@ -420,7 +420,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
             try:
                 dataframe = pandas.read_excel(filepath)
             except xlrd.biffh.XLRDError:
-                return "File could not be opened as an Excel table"
+                return "File could not be opened as a CSV or Excel file."
         else:
             return "File could not be opened as a CSV"
 
