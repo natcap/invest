@@ -57,7 +57,7 @@ export class InvestJob extends React.Component {
             jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
-            tabKey: 'log',
+            activeTab: 'setup',
             docs: MODEL_DOCS
         };
         this.handleChange = this.handleChange.bind(this);
@@ -66,7 +66,6 @@ export class InvestJob extends React.Component {
         this.updateArgs = this.updateArgs.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
     }
-
 
     updateArgs(args) {
       this.setState(
@@ -77,37 +76,35 @@ export class InvestJob extends React.Component {
 
     executeModel() {
       argsToJSON(this.state.args);  // first write args to datastack file
+      
       this.setState(
         {
           jobStatus: 'running',
-          tabKey: 'log',
+          activeTab: 'log',
           logStdErr: '',
           logStdOut: ''
         }
       );
+
       const options = {
         cwd: TEMP_DIR,
-        shell: true, // without this, IOError when datastack.py loads json
+        shell: true, // without true, IOError when datastack.py loads json
       };
       const cmdArgs = [MODEL_NAME, '--headless -y -vvv', '-d ' + TEMP_DIR + 'datastack.json']
       const python = spawn(INVEST_EXE, cmdArgs, options);
 
       let stdout = this.state.logStdOut
       python.stdout.on('data', (data) => {
-        // console.log(`stdout: ${data}`);
         stdout += `${data}`
         this.setState({
-          // logStdOut: `${data}`,
           logStdOut: stdout,
         });
       });
 
       let stderr = this.state.logStdErr
       python.stderr.on('data', (data) => {
-        // console.log(`stderr: ${data}`);
         stderr += `${data}`
         this.setState({
-          // logStdErr: `${data}`,
           logStdErr: stderr,
         });
       });
@@ -116,8 +113,6 @@ export class InvestJob extends React.Component {
         this.setState({
           jobStatus: code,
         });
-        // console.log('from execute close:');
-        // console.log(JSON.stringify(this.state, null, 2));
       });
     }
 
@@ -158,12 +153,15 @@ export class InvestJob extends React.Component {
 
     switchTabs(key) {
       this.setState(
-        {tabKey: key}
+        {activeTab: key}
       );
     }
 
     render () {
-        const tabKey = this.state.tabKey;
+        const activeTab = this.state.activeTab;
+        const jobStatus = this.state.jobStatus;
+        const logDisabled = Boolean(jobStatus === 'incomplete');
+        const vizDisabled = !Boolean(jobStatus === 0);
 
         // todo: get this outta here
         const viztabStyle = {
@@ -172,7 +170,7 @@ export class InvestJob extends React.Component {
         };
 
         return(
-          <Tabs id="controlled-tab-example" activeKey={tabKey} onSelect={this.switchTabs}>
+          <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
             <Tab eventKey="setup" title="Setup">
               <SetupArguments
                 args={this.state.args}
@@ -182,14 +180,14 @@ export class InvestJob extends React.Component {
                 executeModel={this.executeModel}
               />
             </Tab>
-            <Tab eventKey="log" title="Log">
+            <Tab eventKey="log" title="Log" disabled={logDisabled}>
               <LogDisplay 
                 jobStatus={this.state.jobStatus}
                 logStdOut={this.state.logStdOut}
                 logStdErr={this.state.logStdErr}
               />
             </Tab>
-            <Tab eventKey="viz" title="Viz">
+            <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
             <Provider store={store}>
               <HraApp />
             </Provider>
