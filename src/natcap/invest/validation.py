@@ -484,6 +484,31 @@ _VALIDATION_FUNCS = {
 
 
 def validate(args, spec, spatial_overlap_opts=None):
+    """Validate an args dict against a model spec.
+
+    Validates an arguments dictionary according to the rules laid out in
+    ``spec``.  If ``spatial_overlap_opts`` is also provided, valid spatial
+    inputs will be checked for spatial overlap.
+
+    Parameters:
+        args (dict): The InVEST model args dict to validate.
+        spec (dict): The InVEST model spec dict to validate against.
+        spatial_overlap_opts=None (dict): A dict.  If provided, the key
+        ``"spatial_keys"`` is required to be a list of keys that may be present
+            in the args dict and (if provided in args) will be checked for
+            overlap with all other keys in this list.  If the key
+            ``"reference_key"`` is also present in this dict, the bounding
+            boxes of each of the files represented by
+            ``spatial_overlap_opts["spatial_keys"]`` will be transformed to the
+            SRS of the dataset at this key.
+
+    Returns:
+        A list of tuples where the first element of the tuple is an iterable of
+        keys affected by the error in question and the second element of the
+        tuple is the string message of the error.  If no validation errors were
+        found, an empty list is returned.
+
+    """
     validation_warnings = []
 
     # step 1: check absolute requirement
