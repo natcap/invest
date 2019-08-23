@@ -18,8 +18,8 @@ class CLIGUITests(unittest.TestCase):
         from natcap.invest import cli
         from natcap.invest import delineateit
         parameter_set_path = os.path.join(
-            os.path.dirname(__file__), '..', 'data', 'invest-sample-data',
-            'delineateit_willamette.invs.json')
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
 
         # I tried patching the model import via mock, but GUI would hang.  I'd
         # rather have a reliable test that takes a few more seconds than a test
@@ -27,7 +27,7 @@ class CLIGUITests(unittest.TestCase):
         cli.main([
             '--debug',
             'quickrun',
-            'delineateit',  # uses an exact modelname
+            'fisheries',
             parameter_set_path,
             '--workspace', self.workspace_dir,
         ])
