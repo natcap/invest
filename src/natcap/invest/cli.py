@@ -482,7 +482,7 @@ def main(user_args=None):
         LOGGER.info('Imported target %s from %s',
                    model_module.__name__, model_module)
 
-        with utils.prepare_workspace(args.workspace,
+        with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
                                      name=parsed_datastack.model_name,
                                      logging_level=log_level):
             LOGGER.log(datastack.ARGS_LOG_LEVEL,

@@ -32,6 +32,33 @@ class CLIHeadlessTests(unittest.TestCase):
         """Remove the temporary workspace after a test run."""
         shutil.rmtree(self.workspace_dir)
 
+    def test_run_fisheries_workspace_in_json(self):
+        """CLI: Run the fisheries model with JSON-defined workspace."""
+        from natcap.invest import cli
+        parameter_set_path = os.path.join(
+            os.path.dirname(__file__), '..', 'data', 'invest-test-data',
+            'fisheries', 'spiny_lobster_belize.invs.json')
+
+        datastack_dict = json.load(open(parameter_set_path))
+        datastack_dict['args']['workspace_dir'] = self.workspace_dir
+        new_parameter_set_path = os.path.join(
+            self.workspace_dir, 'paramset.invs.json')
+        with open(new_parameter_set_path, 'w') as parameter_set_file:
+            parameter_set_file.write(
+                json.dumps(datastack_dict, indent=4, sort_keys=True))
+
+        with mock.patch(
+            'natcap.invest.fisheries.fisheries.execute',
+            return_value=None) as patched_model:
+            cli.main([
+                'run',
+                'fisheries',  # uses an exact modelname
+                '--datastack', new_parameter_set_path,
+                '--headless',
+            ])
+        patched_model.assert_called_once()
+
+
     def test_run_fisheries(self):
         """CLI: Run the fisheries model through the cli."""
         from natcap.invest import cli
