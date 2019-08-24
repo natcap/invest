@@ -1,4 +1,5 @@
 import fs from 'fs';
+import path from 'path';
 import {spawn} from 'child_process';
 
 import React from 'react';
@@ -10,21 +11,24 @@ import Form from 'react-bootstrap/Form';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 
-import {MODEL_ARGS, MODEL_NAME, MODEL_DOCS} from './valid_HRA_args';
+import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
+import { LogDisplay } from './components/LogDisplay';
 import HraApp from './HraApp'
 import rootReducer from './reducers';
 // need the HraApp's index.css?
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
 const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe'
-const TEMP_DIR = '.'
+const TEMP_DIR = './'
+const DATASTACK_JSON = 'datastack.json'
 
 // Only the HraApp uses this redux store
 // TODO refactor HraApp to not depend on redux.
 const store = createStore(rootReducer)
 
 function argsToJSON(currentArgs) {
+  // TODO: should this use the datastack.py API to create the json? 
   // make simple args json for passing to python cli
   let args_dict = {};
   for (const argname in currentArgs) {
@@ -32,12 +36,12 @@ function argsToJSON(currentArgs) {
   }
   const datastack = { // keys expected by datastack.py
     args: args_dict,
-    model_name: MODEL_NAME,
+    model_name: MODULE_NAME,
     invest_version: '3.7.0',
   };
 
   const jsonContent = JSON.stringify(datastack, null, 2);
-  fs.writeFile(TEMP_DIR + 'datastack.json', jsonContent, 'utf8', function (err) {
+  fs.writeFile(TEMP_DIR + DATASTACK_JSON, jsonContent, 'utf8', function (err) {
     if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
@@ -62,6 +66,7 @@ export class InvestJob extends React.Component {
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgStatus = this.checkArgStatus.bind(this);
+        this.investValidate = this.investValidate.bind(this);
         this.executeModel = this.executeModel.bind(this);
         this.updateArgs = this.updateArgs.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
@@ -72,6 +77,57 @@ export class InvestJob extends React.Component {
         {args: args}
       );      
       this.checkArgStatus(this.state.args);
+    }
+
+    investValidate(args) {
+      argsToJSON(args);  // first write args to datastack file
+
+      const options = {
+        cwd: TEMP_DIR,
+        shell: true, // without true, IOError when datastack.py loads json
+      };
+      const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
+      const cmdArgs = ['-vvv', 'validate', '--json', datastackPath]
+      const python = spawn(INVEST_EXE, cmdArgs, options);
+
+      let validationResult = this.state.investValidation
+      python.stdout.on('data', (data) => {
+        let results = JSON.parse(data.toString());
+        console.log(results);
+        if (Boolean(results.validation_results.length)) {
+          results.validation_results.forEach(x => {
+            const argkey = x[0][0];
+            const message = x[1];
+            args[argkey]['validationMessage'] = message
+            args[argkey]['valid'] = false
+            console.log(args);
+          });
+          // console.log(results);
+          // validationResult = `${data}`
+          this.setState({
+            args: args,
+            argStatus: 'invalid'
+          });
+        }
+      });
+
+      // let stderr = this.state.logStdErr
+      python.stderr.on('data', (data) => {
+        console.log(`${data}`);
+        // stderr += `${data}`
+        // this.setState({
+        //   logStdErr: stderr,
+        // });
+      });
+
+      python.on('close', (code) => {
+        console.log(code);
+        // this.setState({
+        //   jobStatus: code,
+        // });
+        console.log(this.state.args);
+      });
+
     }
 
     executeModel() {
@@ -90,7 +146,8 @@ export class InvestJob extends React.Component {
         cwd: TEMP_DIR,
         shell: true, // without true, IOError when datastack.py loads json
       };
-      const cmdArgs = [MODEL_NAME, '--headless -y -vvv', '-d ' + TEMP_DIR + 'datastack.json']
+      const datastackPath = path.join(TEMP_DIR, 'datastack.json')
+      const cmdArgs = ['-vvv', 'run', MODEL_NAME, '--headless', '-d ' + datastackPath]
       const python = spawn(INVEST_EXE, cmdArgs, options);
 
       let stdout = this.state.logStdOut
@@ -143,6 +200,7 @@ export class InvestJob extends React.Component {
 
       if (valids.every(Boolean)) {
           argStatus = 'valid';
+          this.investValidate(args);
       } else {
           argStatus = 'invalid';
       }    
@@ -254,39 +312,17 @@ class SetupArguments extends React.Component {
   }
 }
 
-class LogDisplay extends React.Component {
-
-  render() {
-    const job_status = this.props.jobStatus;
-    const current_out = this.props.logStdOut;
-    const current_err = this.props.logStdErr;
-    let renderedLog;
-
-    const logStyle = {
-      whiteSpace: 'pre-line'
-    };
-
-    if (job_status === 'incomplete') {
-      renderedLog = <div>{'NOT LOGGING YET'}</div>
-    } else {
-      renderedLog = <div style={logStyle}>
-          {'STDOUT:'}<br/>{current_out}<br/>
-          {'STDERR:'}<br/>{current_err}<br/>
-        </div>
-    }
-    return (<div>{renderedLog}</div>);
-    // {this.renderLog()}
-  }
-}
-
-
 class ArgsForm extends React.Component {
 
   render() {
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
+    let validationMessage = '';
     for (const arg in current_args) {
       const argument = current_args[arg];
+      if (argument.validationMessage) {
+        validationMessage = argument.validationMessage ;
+      }
       if (argument.type !== 'select') {
         formItems.push(
           <Form>
@@ -303,7 +339,7 @@ class ArgsForm extends React.Component {
               isInvalid={!argument.valid}
             />
             <Form.Control.Feedback type='invalid'>
-              {argument.validationRules.rule}
+              {argument.validationRules.rule + ' : ' + validationMessage}
             </Form.Control.Feedback>
           </Form>)
       } else {
@@ -322,6 +358,9 @@ class ArgsForm extends React.Component {
                 <option value={opt}>{opt}</option>
               )}
             </Form.Control>
+            <Form.Control.Feedback type='invalid'>
+              {argument.validationRules.rule + ' : ' + validationMessage}
+            </Form.Control.Feedback>
           </Form>)
       }
     }
