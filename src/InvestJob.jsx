@@ -13,13 +13,13 @@ import Tab from 'react-bootstrap/Tab';
 
 import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
-import { LogDisplay } from './components/LogDisplay';
+// import { LogDisplay } from './components/LogDisplay';
 import HraApp from './HraApp'
 import rootReducer from './reducers';
 // need the HraApp's index.css?
 
 // const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
-const INVEST_EXE = 'C:/Users/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe'
+const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
 const DATASTACK_JSON = 'datastack.json'
 
@@ -239,10 +239,10 @@ export class InvestJob extends React.Component {
               />
             </Tab>
             <Tab eventKey="log" title="Log" disabled={logDisabled}>
-              <LogDisplay 
-                jobStatus={this.state.jobStatus}
-                logStdOut={this.state.logStdOut}
-                logStdErr={this.state.logStdErr}
+              // <div 
+              //   jobStatus={this.state.jobStatus}
+              //   logStdOut={this.state.logStdOut}
+              //   logStdErr={this.state.logStdErr}
               />
             </Tab>
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
@@ -263,7 +263,10 @@ export class InvestJob extends React.Component {
 class UserGuide extends React.Component {
 
   render () {
-    const html = fs.readFileSync(this.props.docs, 'utf8');
+    let html = 'Local docs not found';
+    if (fs.existsSync(this.props.docs)) {
+      html = fs.readFileSync(this.props.docs, 'utf8');
+    }
     const docStyle = {
       whiteSpace: 'pre-line'
     };
