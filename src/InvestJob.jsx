@@ -13,7 +13,7 @@ import Tab from 'react-bootstrap/Tab';
 
 import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
-// import { LogDisplay } from './components/LogDisplay';
+import { LogDisplay } from './components/LogDisplay';
 import HraApp from './HraApp'
 import rootReducer from './reducers';
 // need the HraApp's index.css?
@@ -220,10 +220,10 @@ export class InvestJob extends React.Component {
               />
             </Tab>
             <Tab eventKey="log" title="Log" disabled={logDisabled}>
-              // <div 
-              //   jobStatus={this.state.jobStatus}
-              //   logStdOut={this.state.logStdOut}
-              //   logStdErr={this.state.logStdErr}
+              <div 
+                jobStatus={this.state.jobStatus}
+                logStdOut={this.state.logStdOut}
+                logStdErr={this.state.logStdErr}
               />
             </Tab>
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
