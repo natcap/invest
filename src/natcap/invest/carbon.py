@@ -16,7 +16,134 @@ import taskgraph
 from . import validation
 from . import utils
 
-LOGGER = logging.getLogger('natcap.invest.carbon')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "InVEST Carbon Model",
+    "module": __name__,
+    "userguide_html": "carbonstorage.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
+    },
+    "args_spec": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "lulc_cur_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster representing the land-cover of the"
+                "current scenario."),
+            "name": "Current Land Use/Land Cover"
+        },
+        "calc_sequestration": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "Check to enable sequestration analysis. This requires "
+                "inputs of Land Use/Land Cover maps for both current and "
+                "future scenarios."),
+            "name": "Calculate Sequestration"
+        },
+        "lulc_fut_path": {
+            "type": "raster",
+            "required": "calc_sequestration",
+            "about": (
+                "A GDAL-supported raster representing the land-cover of the "
+                "future scenario. If REDD scenario analysis is "
+                "enabled, this should be the reference, or baseline, future "
+                "scenario against which to compare the REDD policy "
+                "scenario."),
+            "name": "Future Landcover"
+        },
+        "do_redd": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "Check to enable REDD scenario analysis.  This requires "
+                "three Land Use/Land Cover maps: one for the current "
+                "scenario, one for the future baseline scenario, and one for "
+                "the future REDD policy scenario."),
+            "name": "REDD Scenario Analysis"
+        },
+        "lulc_redd_path": {
+            "type": "raster",
+            "required": "do_redd",
+            "about": (
+                "A GDAL-supported raster representing the land-cover of "
+                "the REDD policy future scenario.  This scenario will be "
+                "compared to the baseline future scenario."),
+            "name": "REDD Policy)"
+        },
+        "carbon_pools_path": {
+            "validation_options": {
+                "required_fields": ["LULC", "C_above", "C_below", "C_soil",
+                                    "C_dead"],
+            },
+            "type": "CSV",
+            "required": True,
+            "about": (
+                "A table that maps the land-cover IDs to carbon pools.  "
+                "The table must contain columns of 'LULC', 'C_above', "
+                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
+                "Guide.  The values in LULC must at least include the LULC "
+                "IDs in the land cover maps."),
+            "name": "Carbon Pools"
+        },
+        "lulc_cur_year": {
+            "validation_options": {
+                "expression": "int(value)"
+            },
+            "type": "number",
+            "required": "calc_sequestration",
+            "about": "The calendar year of the current scenario.",
+            "name": "Current Landcover Calendar Year"
+        },
+        "lulc_fut_year": {
+            "validation_options": {
+                "expression": "int(value)"
+            },
+            "type": "number",
+            "required": "calc_sequestration",
+            "about": "The calendar year of the future scenario.",
+            "name": "Future Landcover Calendar Year"
+        },
+        "do_valuation": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "if true then run the valuation model on available outputs.  "
+                "At a minimum will run on carbon stocks, if sequestration "
+                "with a future scenario is done and/or a REDD scenario "
+                "calculate NPV for either and report in final HTML "
+                "document."),
+            "name": "Run Valuation Model"
+        },
+        "price_per_metric_ton_of_c": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": (
+                "Is the present value of carbon per metric ton. Used if "
+                "``args['do_valuation']`` is present and True."),
+            "name": "Price/Metric ton of carbon"
+        },
+        "discount_rate": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": "The discount rate as a floating point percent.",
+            "name": "Market Discount in Price of Carbon (%)"
+        },
+        "rate_change": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": (
+                "The floating point percent increase of the price of "
+                "carbon per year."),
+            "name": "Annual Rate of Change in Price of Carbon (%)"
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'tot_c_cur': 'tot_c_cur.tif',
