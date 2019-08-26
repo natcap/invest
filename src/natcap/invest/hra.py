@@ -3194,9 +3194,7 @@ def validate(args, limit_to=None):
 
     if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in ``args`` but were missing: " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if no_value_list:
         validation_error_list.append(

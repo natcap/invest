@@ -694,7 +694,7 @@ def _lu_to_cn_op(
         lucode_nodata  (float): nodata value for corresponding array.
         soil_type_nodata (float): nodata value for corresponding array.
         cn_nodata (float): nodata value for return value array.
-        lucode_to_cn_table (scipy.sparse.csr.csr_matrix): 
+        lucode_to_cn_table (scipy.sparse.csr.csr_matrix):
 
     Returns:
         ndarray of curve numbers by looking up landcover type to soil type
@@ -773,9 +773,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

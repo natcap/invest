@@ -2,6 +2,12 @@
 
 Unreleased Changes
 ------------------
+* the InVEST CLI has been completely rebuilt to divide
+  functionality into various topic-specific subcommands.  The various internal
+  consumers of this API have been updated accordingly.  ``invest --help`` will
+  contain details of the new interface.
+* Updated the InVEST Launcher to list the human-readable model names rather
+  than the internal model identifiers.
 * Updated Coastal Vulnerability Model with significant speedups including
   ~40x speedup for geomorphology process and ~3x speedup for wind exposure process.
   Also saving an intermediate vector with wave energy values and a geomorphology
@@ -11,7 +17,7 @@ Unreleased Changes
 * Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
   environment. Also tested all models against GDAL versions 2.2.4 and 2.4.1.
 * Fixed an issue with Habitat Quality where convolutions over threat rasters
-  were not excluding nodata values, leading to incorrect ouputs.  Nodata values
+  were not excluding nodata values, leading to incorrect outputs.  Nodata values
   are now handled correctly and excluded from the convolution entirely.
 * Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
   and also to support the PySide2 bindings to Qt5.

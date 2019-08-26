@@ -646,9 +646,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if limit_to is None and (not args['calc_p'] and not args['calc_n']):
         validation_error_list.append(
