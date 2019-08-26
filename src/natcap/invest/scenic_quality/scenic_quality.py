@@ -170,7 +170,7 @@ def execute(args):
     Parameters:
         args['workspace_dir'] (string): (required) output directory for
             intermediate, temporary, and final files.
-        args['results_suffix] (string): (optional) string to append to any
+        args['results_suffix'] (string): (optional) string to append to any
             output file.
         args['aoi_path'] (string): (required) path to a vector that
             indicates the area over which the model should be run.
