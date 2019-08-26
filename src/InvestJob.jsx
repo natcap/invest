@@ -1,19 +1,19 @@
 import fs from 'fs';
 import path from 'path';
-import {spawn} from 'child_process';
+import { spawn } from 'child_process';
 
 import React from 'react';
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
 
-import Button from 'react-bootstrap/Button';
-import Form from 'react-bootstrap/Form';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 
 import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
+import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
+import { DocsTab } from './components/DocsTab';
 import HraApp from './HraApp'
 import rootReducer from './reducers';
 // need the HraApp's index.css?
@@ -57,7 +57,6 @@ export class InvestJob extends React.Component {
             args: MODEL_ARGS,
             workspace: null,
             jobid: null,
-            // argStatus: 'invalid', // (invalid, valid)
             jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
@@ -111,6 +110,7 @@ export class InvestJob extends React.Component {
         this.setState({
           jobStatus: code,
         });
+        console.log(this.state)
       });
     }
 
@@ -220,7 +220,7 @@ export class InvestJob extends React.Component {
               />
             </Tab>
             <Tab eventKey="log" title="Log" disabled={logDisabled}>
-              <div 
+              <LogDisplay 
                 jobStatus={this.state.jobStatus}
                 logStdOut={this.state.logStdOut}
                 logStdErr={this.state.logStdErr}
@@ -232,121 +232,12 @@ export class InvestJob extends React.Component {
             </Provider>
             </Tab>
             <Tab eventKey="docs" title="Docs">
-              <UserGuide 
+              <DocsTab 
                 docs={this.state.docs}
               />
             </Tab>
           </Tabs>
         );
     }
-}
-
-class UserGuide extends React.Component {
-
-  render () {
-    let html = 'Local docs not found';
-    if (fs.existsSync(this.props.docs)) {
-      html = fs.readFileSync(this.props.docs, 'utf8');
-    }
-    const docStyle = {
-      whiteSpace: 'pre-line'
-    };
-    return(
-        <div><p dangerouslySetInnerHTML={{__html: html}}/></div>
-      );
-  }
-}
-
-class SetupTab extends React.Component {
-
-  componentDidMount() {
-    // nice to validate on load, if it's possible to load with default args.
-    let openingArgs = this.props.args
-    for (const argname in openingArgs) {
-      const argument = openingArgs[argname];
-      openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
-    }
-
-    this.props.checkArgsReadyToValidate(openingArgs)
-  }
-
-  render () {
-
-    const status = this.props.jobStatus
-
-    return (
-      <div>
-        <ArgsForm 
-          args={this.props.args}
-          handleChange={this.props.handleChange} 
-        />
-        <Button 
-          variant="primary" 
-          size="lg"
-          onClick={this.props.executeModel}
-          disabled={status !== 'ready'}>
-              Execute
-        </Button>
-      </div>);
-  }
-}
-
-class ArgsForm extends React.Component {
-
-  render() {
-    const current_args = Object.assign({}, this.props.args)
-    let formItems = [];
-    let validationMessage = '';
-    for (const arg in current_args) {
-      const argument = current_args[arg];
-      if (argument.validationMessage) {
-        validationMessage = argument.validationMessage ;
-      }
-      if (argument.type !== 'select') {
-        formItems.push(
-          <Form.Group>
-            <Form.Label>
-              {argument.argname}
-            </Form.Label>
-            <Form.Control 
-              name={argument.argname}
-              type={argument.type}
-              value={argument.value}
-              required={argument.required}
-              onChange={this.props.handleChange}
-              isValid={argument.valid}
-              isInvalid={!argument.valid}
-            />
-            <Form.Control.Feedback type='invalid'>
-              {argument.validationRules.rule + ' : ' + validationMessage}
-            </Form.Control.Feedback>
-          </Form.Group>)
-      } else {
-        formItems.push(
-          <Form.Group>
-            <Form.Label>
-              {argument.argname}
-            </Form.Label>
-            <Form.Control as='select'
-              name={argument.argname}
-              value={argument.value}
-              required={argument.required}
-              onChange={this.props.handleChange}
-            >
-              {argument.options.map(opt =>
-                <option value={opt}>{opt}</option>
-              )}
-            </Form.Control>
-            <Form.Control.Feedback type='invalid'>
-              {argument.validationRules.rule + ' : ' + validationMessage}
-            </Form.Control.Feedback>
-          </Form.Group>)
-      }
-    }
-
-    return (
-      <Form validated={false}>{formItems}</Form>
-    );
-  }
 }
 
