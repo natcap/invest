@@ -57,77 +57,18 @@ export class InvestJob extends React.Component {
             args: MODEL_ARGS,
             workspace: null,
             jobid: null,
-            argStatus: 'invalid', // (invalid, valid)
-            jobStatus: 'incomplete', // (incomplete, running, then whatever exit code returned by cli.py)
+            // argStatus: 'invalid', // (invalid, valid)
+            jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
             activeTab: 'setup',
             docs: MODEL_DOCS
         };
         this.handleChange = this.handleChange.bind(this);
-        this.checkArgStatus = this.checkArgStatus.bind(this);
+        this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
         this.investValidate = this.investValidate.bind(this);
         this.executeModel = this.executeModel.bind(this);
-        this.updateArgs = this.updateArgs.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
-    }
-
-    updateArgs(args) {
-      this.setState(
-        {args: args}
-      );      
-      this.checkArgStatus(this.state.args);
-    }
-
-    investValidate(args) {
-      argsToJSON(args);  // first write args to datastack file
-
-      const options = {
-        cwd: TEMP_DIR,
-        shell: true, // without true, IOError when datastack.py loads json
-      };
-      const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
-      const cmdArgs = ['-vvv', 'validate', '--json', datastackPath]
-      const python = spawn(INVEST_EXE, cmdArgs, options);
-
-      let validationResult = this.state.investValidation
-      python.stdout.on('data', (data) => {
-        let results = JSON.parse(data.toString());
-        console.log(results);
-        if (Boolean(results.validation_results.length)) {
-          results.validation_results.forEach(x => {
-            const argkey = x[0][0];
-            const message = x[1];
-            args[argkey]['validationMessage'] = message
-            args[argkey]['valid'] = false
-            console.log(args);
-          });
-          // console.log(results);
-          // validationResult = `${data}`
-          this.setState({
-            args: args,
-            argStatus: 'invalid'
-          });
-        }
-      });
-
-      // let stderr = this.state.logStdErr
-      python.stderr.on('data', (data) => {
-        console.log(`${data}`);
-        // stderr += `${data}`
-        // this.setState({
-        //   logStdErr: stderr,
-        // });
-      });
-
-      python.on('close', (code) => {
-        console.log(code);
-        // this.setState({
-        //   jobStatus: code,
-        // });
-        console.log(this.state.args);
-      });
-
     }
 
     executeModel() {
@@ -173,6 +114,55 @@ export class InvestJob extends React.Component {
       });
     }
 
+    investValidate(args) {
+      argsToJSON(args);  // first write args to datastack file
+
+      const options = {
+        cwd: TEMP_DIR,
+        shell: true, // without true, IOError when datastack.py loads json
+      };
+      const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
+      const cmdArgs = ['-vvv', 'validate', '--json', datastackPath]
+      const validator = spawn(INVEST_EXE, cmdArgs, options);
+
+      let outgoingArgs = Object.assign({}, args);
+      let argsModified = false;
+      validator.stdout.on('data', (data) => {
+        let results = JSON.parse(data.toString());
+        console.log(results);
+        if (Boolean(results.validation_results.length)) {
+          argsModified = true
+          results.validation_results.forEach(x => {
+            const argkey = x[0][0];
+            const message = x[1];
+            outgoingArgs[argkey]['validationMessage'] = message
+            outgoingArgs[argkey]['valid'] = false
+            console.log(outgoingArgs);
+          });
+        }
+      });
+
+      validator.stderr.on('data', (data) => {
+        console.log(`${data}`);
+      });
+
+      validator.on('close', (code) => {
+        console.log(code);
+
+        if (argsModified) {
+          this.setState({
+            args: outgoingArgs,
+            jobStatus: 'invalid'
+          })
+        } else {
+          this.setState({
+            jobStatus: 'ready'
+          })
+        }
+        console.log(this.state);
+      });
+    }
+
     handleChange(event) {
       const target = event.target;
       const value = target.value;
@@ -187,25 +177,22 @@ export class InvestJob extends React.Component {
           {args: current_args}
       );      
 
-      this.checkArgStatus(this.state.args)
+      this.checkArgsReadyToValidate(this.state.args)
     }
 
-    checkArgStatus(args) {
-      let valids = [];
-      let argStatus = '';
-
+    checkArgsReadyToValidate(args) {
+      let argIsValidArray = [];
       for (const key in args) {
-        valids.push(args[key]['valid'])
+        argIsValidArray.push(args[key]['valid'])
       }
 
-      if (valids.every(Boolean)) {
-          argStatus = 'valid';
+      if (argIsValidArray.every(Boolean)) {
           this.investValidate(args);
-      } else {
-          argStatus = 'invalid';
-      }    
+          return
+      }
+      
       this.setState(
-          {argStatus: argStatus}
+          {jobStatus: 'invalid'}
       );
     }
 
@@ -218,22 +205,16 @@ export class InvestJob extends React.Component {
     render () {
         const activeTab = this.state.activeTab;
         const jobStatus = this.state.jobStatus;
-        const logDisabled = Boolean(jobStatus === 'incomplete');
-        const vizDisabled = !Boolean(jobStatus === 0);
-
-        // todo: get this outta here
-        const viztabStyle = {
-          height: '500px',
-          width: '500px'
-        };
+        const logDisabled = ['invalid', 'ready'].includes(jobStatus);  // enable during and after execution
+        const vizDisabled = !Boolean(jobStatus === 0);  // enable only on complete execute with no errors
 
         return(
           <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
             <Tab eventKey="setup" title="Setup">
-              <SetupArguments
+              <SetupTab
                 args={this.state.args}
-                argStatus={this.state.argStatus}
-                updateArgs={this.updateArgs}
+                jobStatus={this.state.jobStatus}
+                checkArgsReadyToValidate={this.checkArgsReadyToValidate}
                 handleChange={this.handleChange}
                 executeModel={this.executeModel}
               />
@@ -276,7 +257,7 @@ class UserGuide extends React.Component {
   }
 }
 
-class SetupArguments extends React.Component {
+class SetupTab extends React.Component {
 
   componentDidMount() {
     // nice to validate on load, if it's possible to load with default args.
@@ -286,23 +267,12 @@ class SetupArguments extends React.Component {
       openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
     }
 
-    this.props.updateArgs(openingArgs)
+    this.props.checkArgsReadyToValidate(openingArgs)
   }
 
   render () {
 
-    let submitButton = <Button 
-            onClick={this.props.executeModel}
-            disabled>
-                execute
-            </Button>
-        
-    if (this.props.argStatus === 'valid') {
-        submitButton = <Button 
-        onClick={this.props.executeModel}>
-            execute
-        </Button>
-    }
+    const status = this.props.jobStatus
 
     return (
       <div>
@@ -310,7 +280,13 @@ class SetupArguments extends React.Component {
           args={this.props.args}
           handleChange={this.props.handleChange} 
         />
-        {submitButton}
+        <Button 
+          variant="primary" 
+          size="lg"
+          onClick={this.props.executeModel}
+          disabled={status !== 'ready'}>
+              Execute
+        </Button>
       </div>);
   }
 }
@@ -328,7 +304,7 @@ class ArgsForm extends React.Component {
       }
       if (argument.type !== 'select') {
         formItems.push(
-          <Form>
+          <Form.Group>
             <Form.Label>
               {argument.argname}
             </Form.Label>
@@ -344,10 +320,10 @@ class ArgsForm extends React.Component {
             <Form.Control.Feedback type='invalid'>
               {argument.validationRules.rule + ' : ' + validationMessage}
             </Form.Control.Feedback>
-          </Form>)
+          </Form.Group>)
       } else {
         formItems.push(
-          <Form>
+          <Form.Group>
             <Form.Label>
               {argument.argname}
             </Form.Label>
@@ -364,12 +340,12 @@ class ArgsForm extends React.Component {
             <Form.Control.Feedback type='invalid'>
               {argument.validationRules.rule + ' : ' + validationMessage}
             </Form.Control.Feedback>
-          </Form>)
+          </Form.Group>)
       }
     }
 
     return (
-      <div>{formItems}</div>
+      <Form validated={false}>{formItems}</Form>
     );
   }
 }
