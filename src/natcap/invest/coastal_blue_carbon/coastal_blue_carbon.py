@@ -24,7 +24,6 @@ NODATA_FLOAT = -16777216
 
 LOGGER = logging.getLogger(__name__)
 
-# TODO: args with spatial overlap is interesting in this validation function.
 ARGS_SPEC = {
     "model_name": "InVEST Coastal Blue Carbon",
     "module": __name__,
@@ -1138,5 +1137,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+    return validation.validate(args, ARGS_SPEC['args'])
