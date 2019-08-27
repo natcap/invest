@@ -29,13 +29,13 @@ ARGS_SPEC = {
     "model_name": "InVEST Coastal Blue Carbon",
     "module": __name__,
     "userguide_html": "coastal_blue_carbon.html",
-    "args_spec": {
+    "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "lulc_lookup_uri": {
             "name": 'LULC Lookup Table',
-            "type": "CSV",
+            "type": "csv",
             "required": True,
             "validation_options": {
                 "required_fields": ["lulc-class", "code",
@@ -58,7 +58,7 @@ ARGS_SPEC = {
                 "left-most column represents the source lulc class, "
                 "and the top row represents the destination lulc "
                 "class."),
-            "type": "CSV",
+            "type": "csv",
         },
         "carbon_pool_initial_uri": {
             "name": 'Carbon Pool Initial Variables Table',
@@ -75,7 +75,7 @@ ARGS_SPEC = {
                 "assumed to contain no carbon.  The values for "
                 "‘biomass’, ‘soil’, and ‘litter’ should be given in "
                 "terms of Megatonnes CO2e/ha."),
-            "type": "CSV",
+            "type": "csv",
         },
         "carbon_pool_transient_uri": {
             "name": 'Carbon Pool Transient Variables Table',
@@ -98,7 +98,7 @@ ARGS_SPEC = {
                 "values must be given as a decimal percentage of stock "
                 "distrubed given a transition occurs away from a lulc- "
                 "class."),
-            "type": "CSV",
+            "type": "csv",
         },
         "lulc_baseline_map_uri": {
             "name": 'Baseline LULC Raster',
@@ -107,6 +107,12 @@ ARGS_SPEC = {
                 "A GDAL-supported raster representing the baseline "
                 "landscape/seascape."),
             "type": "raster",
+        },
+        "lulc_baseline_year": {
+            "name": "Year of baseline LULC raster",
+            "required": False,
+            "about": "The year of the baseline LULC raster.",
+            "type": "number",
         },
         "lulc_transition_maps_list": {
             "name": 'LULC Transition ("Snapshot") Rasters',
@@ -164,7 +170,7 @@ ARGS_SPEC = {
         },
         "price_table_uri": {
             "name": "Price Table",
-            "type": "CSV",
+            "type": "csv",
             "required": True,
             "validation_options": {
                 "required_fields": ["year", "price"],
@@ -1132,112 +1138,5 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-    missing_keys = []
-    keys_without_value = []
-    for required_key in ('workspace_dir',
-                         'lulc_transition_matrix_uri',
-                         'carbon_pool_initial_uri',
-                         'carbon_pool_transient_uri',
-                         'lulc_baseline_map_uri',
-                         'do_price_table',
-                         'price',
-                         'inflation_rate',
-                         'price_table_uri',
-                         'discount_rate'):
-        try:
-            if args[required_key] in ('', None):
-                keys_without_value.append(required_key)
-        except KeyError:
-            missing_keys.append(required_key)
-
-    if len(missing_keys) > 0:
-        raise KeyError('Keys are missing, but required: %s'
-                       % ', '.join(missing_keys))
-
-    if len(keys_without_value) > 0:
-        warnings.append((keys_without_value,
-                         'Parameter must have a value'))
-
-    for csv_key, required_fields in (
-            ('lulc_lookup_uri', ('lulc-class', 'code',
-                                 'is_coastal_blue_carbon_habitat')),
-            ('lulc_transition_matrix_uri', ('lulc-class',)),
-            ('carbon_pool_initial_uri', ('biomass', 'soil')),
-            ('carbon_pool_transient_uri', ('code', 'lulc-class',
-                                           'biomass-yearly-accumulation',
-                                           'soil-yearly-accumulation',
-                                           'biomass-half-life',
-                                           'soil-half-life')),
-            ('price_table_uri', ('year', 'price'))):
-        try:
-            table = pandas.read_csv(args[csv_key], sep=None, engine='python')
-            headers = list(header.lower() for header in table)
-            missing_headers = set(required_fields) - set(headers)
-            if missing_headers:
-                warnings.append((
-                    [csv_key],
-                    ('Table is missing required columns: %s'
-                     % ', '.join(sorted(missing_headers)))))
-        except IOError:
-            warnings.append(([csv_key], 'File not found.'))
-        except Exception as e:
-            warnings.append(([csv_key], 'Unknown exception %s' % e))
-
-    if limit_to in ('lulc_baseline_map_uri', None):
-        with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['lulc_baseline_map_uri'])
-        if raster is None:
-            warnings.append((['lulc_baseline_map_uri'],
-                             ('Parameter must be a filepath to a '
-                              'GDAL-compatible raster file.')))
-
-    for int_key in ('lulc_baseline_year', 'analysis_year'):
-        if limit_to not in (int_key, None):
-            continue
-
-        try:
-            if args[int_key] not in ('', None):
-                int(args[int_key])
-        except KeyError:
-            # not all of these are required.
-            pass
-        except ValueError:
-            warnings.append(([int_key],
-                             'Parameter must be an integer.'))
-
-    for float_key in ('price',
-                      'inflation_rate',
-                      'discount_rate'):
-        if limit_to in (float_key, None):
-            try:
-                float(args[float_key])
-            except ValueError:
-                warnings.append(([float_key],
-                                'Parameter must be a number'))
-
-    if limit_to in ('lulc_transition_maps_list', None):
-        with utils.capture_gdal_logging():
-            for index, raster_path in enumerate(
-                    args['lulc_transition_maps_list']):
-                raster = gdal.OpenEx(raster_path)
-                if raster is None:
-                    warnings.append((['lulc_transition_maps_list'],
-                                    ('Raster %s must be a path to a '
-                                     'GDAL-compatible raster on disk.')
-                                     % index))
-
-    if limit_to in ('lulc_transition_years_list', None):
-        for year in args['lulc_transition_years_list']:
-            try:
-                int(year)
-            except ValueError:
-                warnings.append((['lulc_transition_years_list'],
-                                 'Transition year %s must be an int.' % year))
-
-    if limit_to in ('do_price_table', None):
-        if args['do_price_table'] not in (True, False):
-            warnings.append((['do_price_table'],
-                             'Parameter must be eithe True or False.'))
-
-    return warnings
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
