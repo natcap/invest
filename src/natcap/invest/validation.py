@@ -5,6 +5,7 @@ import logging
 import pprint
 import os
 import re
+import importlib
 
 import pygeoprocessing
 import pandas
@@ -474,6 +475,7 @@ _VALIDATION_FUNCS = {
     'csv': check_csv,
     'file': check_file,
     'folder': check_directory,
+    'directory': check_directory,
     'freestyle_string': check_freestyle_string,
     'number': check_number,
     'option_string': check_option_string,
@@ -516,13 +518,22 @@ def validate(args, spec, spatial_overlap_opts=None):
     keys_with_no_value = set()
     conditionally_required_keys = set()
     for key, parameter_spec in spec.items():
-        if parameter_spec['required'] is True:
+        try:
+            required = parameter_spec['required']
+        except KeyError:
+            required = False
+        if required is True:  # Might be an args key, can't rely on truthiness
             if key not in args:
                 missing_keys.add(key)
             else:
                 if args[key] in ('', None):
                     keys_with_no_value.add(key)
-        elif isinstance(parameter_spec['required'], str):
+
+        # If ``required`` is a string, it must represent an expression of
+        # conditional requirement based on the satisfaction of various args
+        # keys.  We can only evaluate this later, after all other validation
+        # happens, so add this args key to a set for later.
+        elif isinstance(required, str):
             conditionally_required_keys.add(key)
 
     if missing_keys:
@@ -579,7 +590,13 @@ def validate(args, spec, spatial_overlap_opts=None):
         elif key not in args:
             sufficient_inputs[key] = False
         elif key in args and args[key] not in (None, ''):
-            sufficient_inputs[key] = True
+            # Boolean values are special in that their T/F state is equivalent
+            # to their satisfaction.  If a checkbox is checked, it is
+            # considered satisfied.
+            if spec[key]['type'] == 'boolean':
+                sufficient_inputs[key] = args[key]
+            else:
+                sufficient_inputs[key] = True
 
     sorted_args_keys = sorted(list(sufficient_inputs.keys()))
     for key in conditionally_required_keys:
@@ -678,38 +695,54 @@ def invest_validator(validate_func):
             assert isinstance(key, basestring), (
                 'All args keys must be strings.')
 
-        # Validate n_workers if requested.
-        common_warnings = []
-        if limit_to in ('n_workers', None):
-            try:
-                n_workers_float = float(args['n_workers'])
-                n_workers_int = int(n_workers_float)
-                if n_workers_float != n_workers_int:
-                    common_warnings.append(
-                        (['n_workers'],
-                         ('If provided, must be an integer ')))
-            except (ValueError, KeyError):
-                # ValueError When n_workers is an empty string.  Input is
-                # optional, so this is not erroneous behavior.
-                # KeyError for those models that don't use this input.
-                pass
+        # If the module has an ARGS_SPEC defined, validate against that.
+        model_module = importlib.import_module(validate_func.__module__)
+        if hasattr(model_module, 'ARGS_SPEC'):
+            LOGGER.debug('Using ARG_SPEC for validation')
+            args_spec = getattr(model_module, 'ARGS_SPEC')['args']
 
-        warnings_ = validate_func(args, limit_to)
+            if limit_to is None:
+                LOGGER.info('Starting whole-model validation with ARGS_SPEC')
+                warnings_ = validate(args, args_spec)
+            else:
+                LOGGER.info('Starting single-input validation with ARGS_SPEC')
+                args_key_spec = args_spec[limit_to]
+
+                args_value = args[limit_to]
+
+                # We're only validating a single input.  This is not officially
+                # supported in the validation function, but we can make it work
+                # within this decorator.
+                try:
+                    if args_key_spec['required'] is True:
+                        if args_value in ('', None):
+                            return "Value is required"
+                except KeyError:
+                    # If required is not defined in the args_spec, we default
+                    # to False.  If 'required' is an expression, we can't
+                    # validate that outside of whole-model validation.
+                    pass
+
+                input_type = args_key_spec['type']
+                validator_func = _VALIDATION_FUNCS[input_type]
+
+                try:
+                    validation_options = args_key_spec['validation_options']
+                except KeyError:
+                    validation_options = {}
+
+                error_msg = validator_func(args_value, **validation_options)
+                if error_msg is None:
+                    warnings_ = []
+                else:
+                    warnings_ = [([limit_to], error_msg)]
+        else:  # args_spec is not defined for this function.
+            LOGGER.warning('ARGS_SPEC not defined for this model')
+            warnings_ = validate_func(args, limit_to)
+
         LOGGER.debug('Validation warnings: %s',
                      pprint.pformat(warnings_))
 
-        assert isinstance(warnings_, list), (
-            'validate function must return a list of 2-tuples.')
-        for keys_iterable, error_string in warnings_:
-            assert (isinstance(keys_iterable, collections.Iterable) and not
-                    isinstance(keys_iterable, basestring)), (
-                        'Keys entry %s must be a non-string iterable' % (
-                            keys_iterable))
-            for key in keys_iterable:
-                assert key in args, 'Key %s (from %s) must be in args.' % (
-                    key, keys_iterable)
-            assert isinstance(error_string, basestring), (
-                'Error string must be a string, not a %s' % type(error_string))
-        return common_warnings + warnings_
+        return warnings_
 
     return _wrapped_validate_func
