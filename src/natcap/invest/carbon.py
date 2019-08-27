@@ -501,7 +501,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     Parameters:
         delta_carbon_path (string): path to change in carbon storage over
             time.
-        valulation_constant (float): value to multiply each carbon storage
+        valuation_constant (float): value to multiply each carbon storage
             value by to calculate NPV.
         npv_out_path (string): path to output net present value raster.
     Returns:
@@ -523,7 +523,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
 def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
-    Paramters:
+    Parameters:
         raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
