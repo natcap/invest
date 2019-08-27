@@ -44,7 +44,7 @@ WORKSPACE_SPEC = {
     "type": "directory",
     "required": True,
     "validation_options": {
-        "exists": True,
+        "exists": False,
         "permissions": "rwx",
     }
 }
@@ -104,8 +104,19 @@ def check_directory(dirpath, exists=False, permissions='rx'):
         if not os.path.exists(dirpath):
             return "Directory not found"
 
-    if not os.path.isdir(dirpath):
-        return "Path is not a directory"
+    if os.path.exists(dirpath):
+        if not os.path.isdir(dirpath):
+            return "Path must be a directory"
+    else:
+        # find the parent directory that does exist and check permissions
+        directory_hierarchy = os.path.normcase(dirpath).split(os.sep)
+        index = len(directory_hierarchy)
+        while index > 0:
+            dirpath = os.path.join(*directory_hierarchy[:index])
+            if os.path.exists(dirpath):
+                break
+            else:
+                index -= 1
 
     permissions_warning = check_permissions(dirpath, permissions)
     if permissions_warning:
