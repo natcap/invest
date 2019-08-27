@@ -84,6 +84,7 @@ N_WORKERS_SPEC = {
 }
 
 
+
 def check_directory(dirpath, exists=False, permissions='rx'):
     """Validate a directory.
 
@@ -240,6 +241,27 @@ def check_raster(filepath, projected=False, projection_units=None):
 
     gdal_dataset = None
     return None
+
+def load_fields_from_vector(filepath, layer_id=0):
+    """Load fieldnames from a given vector.
+
+    Parameters:
+        filepath (string): The path to a GDAL-compatible vector on disk.
+        layer_id=0 (string or int): The identifier for the layer to use.
+
+    Returns:
+        A list of string fieldnames within the target layer.
+
+    """
+    if not os.path.exists(filepath):
+        raise ValueError('File not found: %s' % filepath)
+
+    vector = gdal.OpenEx(filepath, gdal.OF_VECTOR)
+    layer = vector.GetLayer(layer_id)
+    fieldnames = [defn.GetName() for defn in layer.schema]
+    layer = None
+    vector = None
+    return fieldnames
 
 
 def check_vector(filepath, required_fields=None, projected=False,
