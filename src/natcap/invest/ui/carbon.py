@@ -7,10 +7,10 @@ import natcap.invest.carbon
 class Carbon(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(self,
-                             label=u'InVEST Carbon Model',
-                             target=natcap.invest.carbon.execute,
-                             validator=natcap.invest.carbon.validate,
-                             localdoc=u'carbonstorage.html')
+                                   label=u'InVEST Carbon Model',
+                                   target=natcap.invest.carbon.execute,
+                                   validator=natcap.invest.carbon.validate,
+                                   localdoc=u'carbonstorage.html')
 
         self.cur_lulc_raster = inputs.File(
             args_key=u'lulc_cur_path',

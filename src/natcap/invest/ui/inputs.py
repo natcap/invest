@@ -91,33 +91,6 @@ def _apply_sizehint(widget):
         widget.setMinimumSize(size_hint)
 
 
-# TODO: use this in the GriddedInput object (the lowest-level object that
-# supports validation) in place of the user-defined validator.
-# Maybe only use this function if the model doesn't have an ARGS_SPEC?
-def _validate_single_input(args, args_key_spec):
-    assert len(args) == 1
-
-    args_key, args_value = list(args.items())[0]
-
-    if args_key_spec['required']:
-        if args_value in ('', None):
-            return "Value is required"
-
-    input_type = args_key_spec['type']
-    validator_func = validation._VALIDATION_FUNCS[input_type]
-
-    try:
-        validation_options = args_key_spec['validation_options']
-    except KeyError:
-        validation_options = {}
-
-    error_msg = validator_func(args_value, **validation_options)
-    if error_msg is None:
-        return []
-    else:
-        return [([args_key], error_msg)]
-
-
 def open_workspace(dirname):
     """Call the correct program to open a folder on disk.
 

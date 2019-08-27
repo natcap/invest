@@ -25,7 +25,7 @@ ARGS_SPEC = {
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
     },
-    "args_spec": {
+    "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
@@ -78,10 +78,10 @@ ARGS_SPEC = {
         },
         "carbon_pools_path": {
             "validation_options": {
-                "required_fields": ["LULC", "C_above", "C_below", "C_soil",
+                "required_fields": ["LUCODE", "C_above", "C_below", "C_soil",
                                     "C_dead"],
             },
-            "type": "CSV",
+            "type": "csv",
             "required": True,
             "about": (
                 "A table that maps the land-cover IDs to carbon pools.  "
@@ -602,68 +602,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'lulc_cur_path',
-        'carbon_pools_path',
-        'do_valuation']
-
-    if 'calc_sequestration' in args and args['calc_sequestration']:
-        required_keys.extend(
-            ['lulc_cur_year', 'lulc_fut_path', 'lulc_fut_year', 'do_redd'])
-
-        if 'do_redd' in args and args['do_redd']:
-            required_keys.append('lulc_redd_path')
-
-    if 'do_valuation' in args and args['do_valuation']:
-        required_keys.extend(
-            ['price_per_metric_ton_of_c', 'discount_rate', 'rate_change'])
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('lulc_cur_path', 'raster'),
-        ('lulc_fut_path', 'raster'),
-        ('lulc_redd_path', 'raster'),
-        ('carbon_pools_path', 'table')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and key in required_keys):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.Open(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
