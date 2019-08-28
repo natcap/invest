@@ -390,8 +390,18 @@ def check_number(value, expression=None):
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if sympy can't evaluate the expression.
-        if not sympy.lambdify(['value'], expression, 'numpy')(float(value)):
+        result = sympy.lambdify(['value'], expression, 'numpy')(float(value))
+        if result is False:
             return "Value does not meet condition %s" % expression
+
+        # This error was raised when I passed a string value to
+        # ``sympy.lambdify`` (which is resolved by always passing a numeric
+        # type).  I'm leaving this handler in here for when we encounter
+        # another case where an invalid value was passed so we can more easily
+        # determine the cause.
+        elif result is NotImplemented:
+            raise AssertionError(
+                "Could not evaluate expression for value %s", float(value))
 
     return None
 
