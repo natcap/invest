@@ -17,12 +17,136 @@ from . import utils
 from . import validation
 
 
-LOGGER = logging.getLogger('natcap.invest.globio')
+LOGGER = logging.getLogger(__name__)
 
 # this value of sigma == 9.0 was derived by Justin Johnson as a good
 # approximation to use as a gaussian filter to replace the connectivity index.
 # I don't have any other documentation than his original code base.
 SIGMA = 9.0
+
+ARGS_SPEC = {
+    "model_name": "GLOBIO",
+    "module": __name__,
+    "userguide_html": "../documentation/globio.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": [
+            "lulc_path", "pasture_path", "potential_vegetation_path",
+            "aoi_path", "globio_lulc_path"],
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "predefined_globio": {
+            "type": "boolean",
+            "required": False,
+            "about": "if True then \"mode (b)\" else \"mode (a)\"",
+            "name": "Predefined land use map for GLOBIO"
+        },
+        "lulc_path": {
+            "type": "raster",
+            "required": "~predefined_globio",
+            "about": "used in \"mode (a)\" path to a base landcover map with integer codes",
+            "name": "Land Use/Cover (Raster)"
+        },
+        "lulc_to_globio_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "globio_lucode"],
+            },
+            "type": "csv",
+            "required": "~predefined_globio",
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'globio_lucode'.  "
+                "See the InVEST User's Guide for more information "
+                "about these fields."),
+            "name": "Landcover to GLOBIO Landcover Table"
+        },
+        "infrastructure_dir": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": True,
+            "about": (
+                "Used in \"mode (a) and (b)\" a path to a folder containing "
+                "maps of either GDAL compatible rasters or vectors. "
+                "These data will be used in the infrastructure "
+                "to calculation of MSA."),
+            "name": "Infrastructure Directory"
+        },
+        "pasture_path": {
+            "type": "raster",
+            "required": "~predefined_globio",
+            "about": "used in \"mode (a)\" path to pasture raster",
+            "name": "Pasture (Raster)"
+        },
+        "potential_vegetation_path": {
+            "type": "raster",
+            "required": "~predefined_globio",
+            "about": "used in \"mode (a)\" path to potential vegetation raster",
+            "name": "Potential Vegetation (Raster)"
+        },
+        "pasture_threshold": {
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
+            "type": "number",
+            "required": "~predefined_globio",
+            "about": "used in \"mode (a)\"",
+            "name": "Pasture Threshold"
+        },
+        "intensification_fraction": {
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "A value between 0 and 1 denoting proportion of total "
+                "agriculture that should be classified as 'high input'."),
+            "name": "Proportion of of Agriculture Intensified"
+        },
+        "primary_threshold": {
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
+            "type": "number",
+            "required": "~predefined_globio",
+            "about": "used in \"mode (a)\"",
+            "name": "Primary Threshold"
+        },
+        "msa_parameters_path": {
+            "validation_options": {
+                "required_fields": [
+                    "MSA_type", "measurement", "value", "msa_x", "se"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing MSA threshold values as defined in "
+                "the user's guide.  Provided for advanced users that may "
+                "wish to change those values."),
+            "name": "MSA Parameter Table"
+        },
+        "aoi_path": {
+            "type": "vector",
+            "required": False,
+            "about": (
+                "This is a set of polygons that can be used to aggregate MSA "
+                "sum and mean to a polygon."),
+            "name": "AOI",
+        },
+        "globio_lulc_path": {
+            "validation_options": {},
+            "type": "raster",
+            "required": "predefined_globio",
+            "about": "used in \"mode (b)\" path to predefined globio raster.",
+            "name": "GLOBIO Classified Land Use"
+        }
+    }
+}
 
 
 def execute(args):
@@ -866,73 +990,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'aoi_path',
-        'infrastructure_dir',
-        'intensification_fraction',
-        'msa_parameters_path']
-
-    if 'predefined_globio' in args:
-        if args['predefined_globio']:
-            required_keys.append('globio_lulc_path')
-        else:
-            required_keys.extend([
-                'lulc_to_globio_table_path',
-                'lulc_path',
-                'pasture_path',
-                'potential_vegetation_path',
-                'primary_threshold',
-                'pasture_threshold'])
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('aoi_path', 'vector'),
-        ('infrastructure_dir', 'directory'),
-        ('msa_parameters_path', 'table'),
-        ('globio_lulc_path', 'raster'),
-        ('lulc_to_globio_table_path', 'table'),
-        ('lulc_path', 'raster'),
-        ('pasture_path', 'raster'),
-        ('potential_vegetation_path', 'raster')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
