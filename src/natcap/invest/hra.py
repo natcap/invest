@@ -89,7 +89,7 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "validation_options": {
-                "required_fields": ["NAME", "PATH", "STRESSOR_BUFFER"],
+                "required_fields": ["NAME", "PATH", _BUFFER_HEADER],
             }
         },
         "criteria_table_path": {
@@ -162,7 +162,7 @@ ARGS_SPEC = {
             "required": True,
             "validation_options": {
                 "projected": True,
-                "projected_units": "m",
+                "projection_units": "m",
             }
         },
         "visualize_outputs": {
