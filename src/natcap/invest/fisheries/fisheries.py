@@ -1,7 +1,5 @@
-"""
-The Fisheries module contains the high-level code for executing the fisheries
-model
-"""
+"""Fisheries."""
+
 from __future__ import absolute_import
 import logging
 import csv
@@ -14,8 +12,267 @@ from . import fisheries_model as model
 from .. import utils
 from .. import validation
 
-LOGGER = logging.getLogger('natcap.invest.fisheries.fisheries')
+LOGGER = logging.getLogger(__name__)
 LABEL = 'Fisheries'
+
+ARGS_SPEC = {
+    "model_name": "Fisheries",
+    "module": __name__,
+    "userguide_html": "fisheries.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "aoi_vector_path": {
+            "validation_options": {
+                "required_fields": ["NAME"],
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "A GDAL-supported vector file used to display outputs within "
+                "the region(s) of interest. The layer should contain "
+                "one feature for every region of interest, each feature of "
+                "which should have a 'NAME' attribute.  The 'NAME' "
+                "attribute can be numeric or alphabetic, but must be unique "
+                "within the given file."),
+            "name": "Area of Interest"
+        },
+        "total_timesteps": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of time steps the simulation shall execute "
+                "before completion. Must be a positive integer."),
+            "name": "Number of Time Steps for Model Run"
+        },
+        "population_type": {
+            "validation_options": {
+                "options": ["Age-Based", "Stage-Based"],
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "Specifies whether the lifecycle classes provided in the "
+                "Population Parameters CSV file represent ages (uniform "
+                "duration) or stages. Age-based models (e.g. "
+                "Lobster, Dungeness Crab) are separated by uniform, "
+                "fixed-length time steps (usually representing a year). "
+                "Stage-based models (e.g. White Shrimp) allow "
+                "lifecycle-classes to have nonuniform durations based on the "
+                "assumed resolution of the provided time step. If the "
+                "stage-based model is selected, the Population Parameters "
+                "CSV file must include a 'Duration' vector "
+                "alongside the survival matrix that contains the number of "
+                "time steps that each stage lasts."),
+            "name": "Population Model Type"
+        },
+        "sexsp": {
+            "validation_options": {
+                "options": ["No", "Yes"]
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "Specifies whether or not the lifecycle classes provided in "
+                "the Population Parameters CSV file are distinguished by "
+                "sex."),
+            "name": "Population Classes are Sex-Specific"
+        },
+        "harvest_units": {
+            "validation_options": {
+                "options": ["Individuals", "Weight"],
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "Specifies whether the harvest output values are calculated "
+                "in terms of number of individuals or in terms of biomass "
+                "(weight). If 'Weight' is selected, the Population "
+                "Parameters CSV file must include a 'Weight' vector "
+                "alongside the survival matrix that contains the weight of "
+                "each lifecycle class and sex if model is sex-specific."),
+            "name": "Harvest by Individuals or Weight"
+        },
+        "do_batch": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "Specifies whether program will perform a single model run "
+                "or a batch (set) of model runs. For single model "
+                "runs, users submit a filepath pointing to a single "
+                "Population Parameters CSV file.  For batch model runs, "
+                "users submit a directory path pointing to a set of "
+                "Population Parameters CSV files."),
+            "name": "Batch Processing"
+        },
+        "population_csv_path": {
+            "type": "csv",
+            "required": "~do_batch",
+            "about": (
+                "The provided CSV file should contain all necessary "
+                "attributes for the sub-populations based on lifecycle "
+                "class, sex, and area - excluding possible migration "
+                "information. Please consult the documentation to learn "
+                "more about what content should be provided and how the "
+                "CSV file should be structured."),
+            "name": "Population Parameters File"
+        },
+        "population_csv_dir": {
+            "type": "directory",
+            "required": "do_batch",
+            "validation_options": {
+                "exists": True,
+            },
+            "about": (
+                "The provided CSV folder should contain a set of Population "
+                "Parameters CSV files with all necessary attributes for "
+                "sub-populations based on lifecycle class, sex, and area - "
+                "excluding possible migration information. The name "
+                "of each file will serve as the prefix of the outputs "
+                "created by the model run. Please consult the "
+                "documentation to learn more about what content should be "
+                "provided and how the CSV file should be structured."),
+            "name": "Population Parameters CSV Folder"
+        },
+        "spawn_units": {
+            "validation_options": {
+                "options": ["Weight", "Individuals"],
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "Specifies whether the spawner abundance used in the "
+                "recruitment function should be calculated in terms of "
+                "number of individuals or in terms of biomass (weight). "
+                "If 'Weight' is selected, the user must provide a 'Weight' "
+                "vector alongside the survival matrix in the Population "
+                "Parameters CSV file.  The 'Alpha' and 'Beta' parameters "
+                "provided by the user should correspond to the selected "
+                "choice. Used only for the Beverton-Holt and Ricker "
+                "recruitment functions."),
+            "name": "Spawners by Individuals or Weight (Beverton-Holt / Ricker)"
+        },
+        "total_init_recruits": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The initial number of recruits in the population model at "
+                "time equal to zero.<br><br>If the model contains multiple "
+                "regions of interest or is distinguished by sex, this value "
+                "will be evenly divided and distributed into each "
+                "sub-population."),
+            "name": "Total Initial Recruits"
+        },
+        "recruitment_type": {
+            "validation_options": {
+                "options": ["Beverton-Holt", "Ricker", "Fecundity", "Fixed"],
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "The selected equation is used to calculate recruitment into "
+                "the subregions at the beginning of each time step.  "
+                "Corresponding parameters must be specified with each "
+                "function: The Beverton- Holt and Ricker functions both "
+                "require arguments for the 'Alpha' and 'Beta' parameters. "
+                "The Fecundity function requires a 'Fecundity' vector "
+                "alongside the survival matrix in the Population Parameters "
+                "CSV file indicating the per-capita offspring for each "
+                "lifecycle class. The Fixed function requires an argument "
+                "for the 'Total Recruits per Time Step' parameter that "
+                "represents a single total recruitment value to be "
+                "distributed into the population model at the beginning of "
+                "each time step."),
+            "name": "Recruitment Function Type"
+        },
+        "alpha": {
+            "type": "number",
+            "required": False,
+            "about": (
+                "Specifies the shape of the stock-recruit curve. Used only "
+                "for the Beverton-Holt and Ricker recruitment functions. "
+                "Used only for the Beverton-Holt and Ricker recruitment "
+                "functions."),
+            "name": "Alpha (Beverton-Holt / Ricker)"
+        },
+        "beta": {
+            "type": "number",
+            "required": False,
+            "about": (
+                "Specifies the shape of the stock-recruit curve. Used only "
+                "for the Beverton-Holt and Ricker recruitment functions."),
+            "name": "Beta (Beverton-Holt / Ricker)"
+        },
+        "total_recur_recruits": {
+            "type": "number",
+            "required": False,
+            "about": (
+                "Specifies the total number of recruits that come into the "
+                "population at each time step (a fixed number). Used only "
+                "for the Fixed recruitment function."),
+            "name": "Total Recruits per Time Step (Fixed)"
+        },
+        "migr_cont": {
+            "type": "boolean",
+            "required": True,
+            "about": "if True, model uses migration.",
+            "name": "Migration Parameters"
+        },
+        "migration_dir": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": "migr_cont",
+            "about": (
+                "The selected folder contain CSV migration matrices to be "
+                "used in the simulation.  Each CSV file contains a single "
+                "migration matrix corresponding to an lifecycle class that "
+                "migrates. The folder should contain one CSV file for each "
+                "lifecycle class that migrates. The files may be "
+                "named anything, but must end with an underscore followed by "
+                "the name of the age or stage.  The name of the age or stage "
+                "must correspond to an age or stage within the Population "
+                "Parameters CSV file.  For example, a migration file might "
+                "be named 'migration_adult.csv'. Each matrix cell "
+                "should contain a decimal fraction indicating the percentage "
+                "of the population that will move from one area to another. "
+                "Each column should sum to one."),
+            "name": "Migration Matrix CSV Folder (Optional)"
+        },
+        "val_cont": {
+            "type": "boolean",
+            "required": True,
+            "about": "if True, model computes valuation.",
+            "name": "Valuation Parameters"
+        },
+        "frac_post_process": {
+            "validation_options": {},
+            "type": "number",
+            "required": "val_cont",
+            "about": (
+                "Decimal fraction indicating the percentage of harvested "
+                "catch remaining after post-harvest processing is complete."),
+            "name": "Fraction of Harvest Kept After Processing"
+        },
+        "unit_price": {
+            "type": "number",
+            "required": "val_cont",
+            "about": (
+                "Specifies the price per harvest unit. If 'Harvest by "
+                "Individuals or Weight' was set to 'Individuals', this should "
+                "be the price per individual. If set to 'Weight', this "
+                "should be the price per unit weight."),
+            "name": "Unit Price"
+        }
+    }
+}
 
 
 def execute(args, create_outputs=True):
@@ -262,148 +519,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-
-    missing_keys = set([])
-    keys_with_empty_values = set([])
-    required_key_list = [
-        ('workspace_dir', True),
-        ('results_suffix', False),
-        ('aoi_vector_path', False),
-        ('total_timesteps', True),
-        ('population_type', True),
-        ('sexsp', True),
-        ('harvest_units', True),
-        ('total_init_recruits', True),
-        ('recruitment_type', True),
-        ('spawn_units', True),
-        ('alpha', False),
-        ('beta', False),
-    ]
-
-    if 'do_batch' in args:
-        if bool(args['do_batch']):
-            # If we're doing batch processing, require the batch-processing
-            # directory.
-            required_key_list.append(('population_csv_dir', True))
-        else:
-            # If we're not doing batch processing, just require the one CSV.
-            required_key_list.append(('population_csv_path', True))
-
-    if 'val_cont' in args and bool(args['val_cont']):
-        required_key_list += [
-            ('frac_post_process', True),
-            ('unit_price', True),
-        ]
-
-    if 'migr_cont' in args and bool(args['migr_cont']):
-        required_key_list += [
-            ('migration_dir', True),
-        ]
-
-    if 'recruitment_type' in args and args['recruitment_type'] == 'Fixed':
-        required_key_list += [
-            ('total_recur_recruits', True),
-        ]
-
-    for key, required in required_key_list:
-        if limit_to in (None, key):
-            try:
-                if args[key] in ('', None) and required:
-                    keys_with_empty_values.add(key)
-            except KeyError:
-                if required:
-                    missing_keys.add(key)
-
-    if len(missing_keys) > 0:
-        raise KeyError(
-            'Args is missing required keys: %s' % ', '.join(
-                sorted(missing_keys)))
-
-    if len(keys_with_empty_values) > 0:
-        warnings.append((keys_with_empty_values,
-                         'Argument must have a value.'))
-
-    if (limit_to in ('aoi_vector_path', None) and
-            'aoi_vector_path' in args and args['aoi_vector_path'] != ''):
-        with utils.capture_gdal_logging():
-            dataset = gdal.OpenEx(args['aoi_vector_path'], gdal.OF_VECTOR)
-        if dataset is None:
-            warnings.append(
-                (['aoi_vector_path'],
-                 'AOI vector must be an OGR-compatible vector.'))
-        else:
-            layer = dataset.GetLayer()
-            column_names = [defn.GetName() for defn in layer.schema]
-            if 'Name' not in column_names:
-                warnings.append(
-                    (['aoi_vector_path'],
-                     'Case-sensitive column name "Name" is missing'))
-
-    if limit_to in ('do_batch', None):
-        if args['do_batch'] not in (True, False):
-            warnings.append((['do_batch'],
-                             'Parameter must be either True or False"'))
-
-    if limit_to in ('population_csv_path', None):
-        # Only validate the CSV if it's provided.
-        # Either the CSV or the batch-processing dir must be valid.
-        if ('population_csv_path' in args and
-                args['population_csv_path'] not in ('', None)):
-            try:
-                csv.reader(open(args['population_csv_path'], 'r'))
-            except (csv.Error, IOError):
-                warnings.append((['population_csv_path'],
-                                 'Parameter must be a valid CSV file.'))
-
-    for directory_key in ('population_csv_dir', 'migration_dir'):
-        try:
-            if all((limit_to in (directory_key, None),
-                    args['directory_key'] != '',
-                    not os.path.isdir(args[directory_key]))):
-                warnings.append(([directory_key],
-                                'Directory could not be found.'))
-        except KeyError:
-            # These parameters are not necessarily required, and may not be in
-            # args.
-            pass
-
-    for float_key, max_value in (('total_init_recruits', None),
-                                 ('alpha', None),
-                                 ('beta', None),
-                                 ('total_timesteps', None),
-                                 ('total_recur_recruits', None),
-                                 ('unit_price', None),
-                                 ('frac_post_process', 1.0)):
-        if limit_to in (float_key, None) and (float_key, True) in required_key_list:
-            try:
-                if float(args[float_key]) < 0:
-                    warnings.append(([float_key],
-                                     'Value must be positive'))
-
-                if (max_value is not None and
-                        float(args[float_key]) > max_value):
-                    warnings.append(
-                        ([float_key],
-                         'Value cannot be greater than %s' % max_value))
-            except (ValueError, TypeError):
-                warnings.append(([float_key],
-                                 'Value must be a number.'))
-            except KeyError:
-                # Parameter is not necessarily required.
-                pass
-
-    for options_key, options in (
-            ('recruitment_type', ('Beverton-Holt', 'Ricker', 'Fecundity',
-                                  'Fixed', 'Other')),
-            ('harvest_units', ('Individuals', 'Weight')),
-            ('spawn_units', ('Individuals', 'Weight')),
-            ('sexsp', ('Yes', 'No')),
-            ('population_type', ("Age-Based", "Stage-Based"))):
-        if (limit_to in (options_key, None) and
-                args[options_key] not in options):
-            warnings.append(
-                ([options_key],
-                    'Parameter must be one of %s' % ', '.join(options)))
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])
