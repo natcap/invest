@@ -20,13 +20,124 @@ import taskgraph
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.carbon_edge_effect')
+LOGGER = logging.getLogger(__name__)
 
 # grid cells are 100km. Becky says 500km is a good upper bound to search
 DISTANCE_UPPER_BOUND = 500e3
 
 # helpful to have a global nodata defined for all the carbon map rasters
 CARBON_MAP_NODATA = -9999
+
+ARGS_SPEC = {
+    "model_name": "Forest Carbon Edge Effect Model",
+    "module": __name__,
+    "userguide_html": "forest_carbon_edge_effect.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["aoi_vector_path", "lulc_raster_path"],
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "n_nearest_model_points": {
+            "validation_options": {
+                "expression": "int(value) > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "Used when calculating the biomass in a pixel.  This number "
+                "determines the number of closest regression models that are "
+                "used when calculating the total biomass.  Each local model "
+                "is linearly weighted by distance such that the biomass in "
+                "the pixel is a function of each of these points with the "
+                "closest point having the highest effect."),
+            "name": "Number of nearest model points to average"
+        },
+        "aoi_vector_path": {
+            "validation_options": {
+                "projected": True,
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "This is a set of polygons that will be used to aggregate "
+                "carbon values at the end of the run if provided."),
+            "name": "Service areas of interest"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": [
+                    "lucode", "is_tropical_forest", "c_above"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'is_tropical_forest', "
+                "'c_above'.  If the user selects 'all carbon pools' the "
+                "table must also contain entries for 'c_below', 'c_soil', "
+                "and 'c_dead'.  See the InVEST Forest Carbon User's Guide "
+                "for more information about these fields."),
+            "name": "Biophysical Table"
+        },
+        "lulc_raster_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file, with an integer LULC code for "
+                "each cell."),
+            "name": "Land-Use/Land-Cover Map"
+        },
+        "pools_to_calculate": {
+            "validation_options": {
+                "options": ["all", "above_ground"]
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "If 'all carbon pools' is selected then the headers "
+                "'c_above', 'c_below', 'c_dead', 'c_soil' are used in the "
+                "carbon pool calculation.  Otherwise only 'c_above' is "
+                "considered."),
+            "name": "Carbon Pools to Calculate"
+        },
+        "compute_forest_edge_effects": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "If selected, will use the Chaplin-Kramer, et. al method to "
+                "account for above ground carbon stocks in tropical forest "
+                "types indicated by a '1' in the 'is_tropical_forest' field "
+                "in the biophysical table."),
+            "name": "Compute forest edge effects"
+        },
+        "tropical_forest_edge_carbon_model_vector_path": {
+            "validation_options": {
+                "required_fields": ["method", "theta1", "theta2", "theta3"],
+            },
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A vector with fields 'method', 'theta1', 'theta2', "
+                "'theta3' describing the global forest carbon edge models.  "
+                "Provided as default data for the model."),
+            "name": "Global forest carbon edge regression models"
+        },
+        "biomass_to_carbon_conversion_factor": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "Number by which to scale forest edge biomass to convert to "
+                "carbon.  Default value is 0.47 (according to IPCC 2006). "
+                "This pertains to forest classes only; values in the "
+                "biophysical table for non-forest classes should already be "
+                "in terms of carbon, not biomass."),
+            "name": "Forest Edge Biomass to Carbon Conversion Factor"
+        }
+    }
+}
 
 
 def execute(args):
@@ -106,11 +217,9 @@ def execute(args):
                 * method 3 (linear regression)::
 
                     biomass = theta1 + theta2 * edge_dist_km
-
         args['biomass_to_carbon_conversion_factor'] (string/float): Number by
             which to multiply forest biomass to convert to carbon in the edge
             effect calculation.
-
         args['n_workers'] (int): (optional) The number of worker processes to
             use for processing this model.  If omitted, computation will take
             place in the current process.
@@ -787,71 +896,26 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
-    for key in [
-            'workspace_dir',
-            'lulc_raster_path',
-            'biophysical_table_path',
-            'pools_to_calculate',
-            'compute_forest_edge_effects',
-            'tropical_forest_edge_carbon_model_vector_path',
-            'n_nearest_model_points',
-            'biomass_to_carbon_conversion_factor',
-            ]:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
+    invalid_keys = set([])
+    for affected_keys, error_msg in validation_warnings:
+        for key in affected_keys:
+            invalid_keys.add(key)
 
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
+    if ('pools_to_calculate' not in invalid_keys and
+            'biophysical_table_path' not in invalid_keys):
+        if args['pools_to_calculate'] == 'all':
+            required_fields = (
+                ARGS_SPEC['args']['biophysical_table_path'][
+                    'validation_options']['required_fields'] +
+                ['c_below', 'c_soil' + 'c_dead'])
+            error_msg = validation.check_csv(
+                args['biophysical_table_path'],
+                required_fields=required_fields)
+            if error_msg:
+                validation_warnings.append(
+                    (['biophysical_table_path'], error_msg))
 
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    # check required files exist
-    for key in [
-            'lulc_raster_path',
-            'biophysical_table_path']:
-        if (limit_to is None or limit_to == key) and (
-                not os.path.exists(args[key])):
-            validation_error_list.append(
-                ([key], 'not found on disk'))
-
-    optional_file_type_list = [('lulc_raster_path', 'raster', True)]
-    if args['compute_forest_edge_effects']:
-        optional_file_type_list.extend(
-            [('tropical_forest_edge_carbon_model_vector_path', 'vector', True),
-             ('aoi_vector_path', 'vector', False)])
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type, required in optional_file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if len(args[key]) == 0 and not required:
-                    continue
-
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation_warnings
