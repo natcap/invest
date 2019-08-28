@@ -590,6 +590,11 @@ def validate(args, spec, spatial_overlap_opts=None):
         if key not in args:
             continue
 
+        # If the value is empty and it isn't required, then we don't need to
+        # validate it.
+        if args[key] in ('', None):
+            continue
+
         # If no validation options specified, assume defaults.
         try:
             validation_options = parameter_spec['validation_options']
@@ -609,7 +614,9 @@ def validate(args, spec, spatial_overlap_opts=None):
                 validation_warnings.append(([key], warning_msg))
                 invalid_keys.add(key)
         except Exception as error:
-            LOGGER.exception('Error when validating key %s with value %s')
+            LOGGER.exception(
+                'Error when validating key %s with value %s',
+                key, args[key])
             validation_warnings.append(
                 ([key], 'An unexpected error occurred in validation'))
 
@@ -742,6 +749,7 @@ def invest_validator(validate_func):
                 args_key_spec = args_spec[limit_to]
 
                 args_value = args[limit_to]
+                error_msg = None
 
                 # We're only validating a single input.  This is not officially
                 # supported in the validation function, but we can make it work
@@ -749,22 +757,26 @@ def invest_validator(validate_func):
                 try:
                     if args_key_spec['required'] is True:
                         if args_value in ('', None):
-                            return "Value is required"
+                            error_msg = "Value is required"
                 except KeyError:
                     # If required is not defined in the args_spec, we default
                     # to False.  If 'required' is an expression, we can't
                     # validate that outside of whole-model validation.
                     pass
 
-                input_type = args_key_spec['type']
-                validator_func = _VALIDATION_FUNCS[input_type]
+                # If the input is not required and does not have a value, no
+                # need to validate it.
+                if args_value not in ('', None):
+                    input_type = args_key_spec['type']
+                    validator_func = _VALIDATION_FUNCS[input_type]
 
-                try:
-                    validation_options = args_key_spec['validation_options']
-                except KeyError:
-                    validation_options = {}
+                    try:
+                        validation_options = args_key_spec['validation_options']
+                    except KeyError:
+                        validation_options = {}
 
-                error_msg = validator_func(args_value, **validation_options)
+                    error_msg = validator_func(args_value, **validation_options)
+
                 if error_msg is None:
                     warnings_ = []
                 else:
