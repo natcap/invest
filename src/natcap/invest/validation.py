@@ -390,7 +390,7 @@ def check_number(value, expression=None):
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if sympy can't evaluate the expression.
-        if not sympy.lambdify(['value'], expression, 'numpy')(value):
+        if not sympy.lambdify(['value'], expression, 'numpy')(float(value)):
             return "Value does not meet condition %s" % expression
 
     return None
