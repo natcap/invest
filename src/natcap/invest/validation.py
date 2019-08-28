@@ -391,7 +391,7 @@ def check_number(value, expression=None):
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
         # be raised if sympy can't evaluate the expression.
         result = sympy.lambdify(['value'], expression, 'numpy')(float(value))
-        if result is False:
+        if result == False:  # A numpy bool object is returned.
             return "Value does not meet condition %s" % expression
 
         # This error was raised when I passed a string value to
