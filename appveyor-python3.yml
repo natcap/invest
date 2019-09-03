@@ -1,0 +1,67 @@
+# Adapted from https://packaging.python.org/guides/supporting-windows-using-appveyor/
+
+skip_non_tags: false  # we want to build untagged revisions.
+
+image: "Visual Studio 2017"  # using this version because it has docker preloaded.
+
+version: "{branch}.{build}"  # Makes build version information more readable on appveyor
+
+environment:
+  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+  PIP_PREFER_BINARY: 1
+  PIP_INSTALL: "pip install"
+
+  DOCKER_RUN: 'docker run -t -v "%APPVEYOR_BUILD_FOLDER%:/home/natcap-build"'
+
+
+
+  matrix:
+    - PYTHON: "C:\\Python36"
+      EXTRAPKGS: "pyqt4"
+
+install:
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+    - "python --version"
+    # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
+    - "python -m pip install wheel numpy %EXTRAPKGS%"
+    - "python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    - "python setup.py sdist bdist_wheel"
+
+    # Need to install with -I because pip thinks that cwd is a valid installation directory.
+    # It's not (in our case).  Adding --no-deps because that's what all of the above
+    # with pipwin and pip is for.
+    - "python -m pip install -I --no-deps natcap.invest --find-links dist"
+    - "choco install make"
+
+    # Install NSIS plugins to their correct places.
+    -
+
+build: off
+test_script: off
+
+build_script:
+    - "%DOCKER_RUN% natcap/userguide-build:fba743220031e1ba99b528a8939a86c8201da949 make userguide"
+
+artifacts:
+    # bdist_wheel puts your built wheel in the dist directory
+    - path: dist\*
+
+# Cache-related items adapted from pyinstaller appveyor configuration.
+# https://github.com/pyinstaller/pyinstaller/blob/develop/appveyor.yml
+cache:
+  # Cache downloaded pip packages and built wheels.
+  - '%LOCALAPPDATA%\pip\Cache\http'
+  - '%LOCALAPPDATA%\pip\Cache\wheels'
+  - '%HOMEPATH%\pipwin'
+
+on_finish:
+  # Remove old or huge cache files to hopefully not exceed the 1GB cache limit.
+  #
+  # If the cache limit is reached, the cache will not be updated (of not even
+  # created in the first run). So this is a trade of between keeping the cache
+  # current and having a cache at all.
+  - C:\cygwin\bin\find "%LOCALAPPDATA%\pip" -type f -mtime +360 -delete
+  - C:\cygwin\bin\find "%LOCALAPPDATA%\pip" -empty -delete
+  # Show size of cache
+  - C:\cygwin\bin\du -hs "%LOCALAPPDATA%\pip\Cache"
