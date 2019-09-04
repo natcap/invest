@@ -2,7 +2,7 @@
 
 skip_non_tags: false  # we want to build untagged revisions.
 
-image: "Windows Server 2019"
+image: "Visual Studio 2019"
 
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
