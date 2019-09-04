@@ -2,7 +2,7 @@
 
 skip_non_tags: false  # we want to build untagged revisions.
 
-image: "Visual Studio 2017"  # using this version because it has docker preloaded.
+image: "Visual Studio 2019"  # using this version because it has docker preloaded.
 
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
