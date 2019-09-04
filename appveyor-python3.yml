@@ -22,7 +22,7 @@ environment:
 
 install:
     # Switch to Linux containers
-    - "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
+    - '"C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine'
 
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
