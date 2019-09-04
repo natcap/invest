@@ -21,6 +21,9 @@ environment:
       EXTRAPKGS: "pyqt4"
 
 install:
+    # Switch to Linux containers
+    - "C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine
+
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
     # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
@@ -34,8 +37,14 @@ install:
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
 
-    # Install NSIS plugins to their correct places.
-    -
+    # Download and install NSIS plugins to their correct places.
+    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
+    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip
+    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
+    - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
+    - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
+    - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll" Plugins\x86-ansi\INetC.dll
+    - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll" nsisunz\Release\nsisunz.dll
 
 build: off
 test_script: off
