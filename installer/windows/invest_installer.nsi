@@ -363,7 +363,6 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
-    File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""

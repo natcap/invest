@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 687c255960157079c2190869c78be606e4836dbf
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := 0a6730f99679
+HG_UG_REPO_REV              := 57e8575e6f8e
 
 
 ENV = env
@@ -60,7 +60,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git hg pdflatex latexmk
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git hg
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -103,7 +103,6 @@ INVEST_BINARIES_DIR := $(DIST_DIR)/invest
 APIDOCS_HTML_DIR := $(DIST_DIR)/apidocs
 APIDOCS_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_apidocs.zip
 USERGUIDE_HTML_DIR := $(DIST_DIR)/userguide
-USERGUIDE_PDF_FILE := $(DIST_DIR)/InVEST_$(VERSION)_Documentation.pdf
 USERGUIDE_ZIP_FILE := $(DIST_DIR)/InVEST_$(VERSION)_userguide.zip
 MAC_DISK_IMAGE_FILE := "$(DIST_DIR)/InVEST_$(VERSION).dmg"
 MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
@@ -118,19 +117,19 @@ print-%:
 	@echo "$* = $($*)"
 
 help:
-	@echo "Please use \`make <target>' where <target> is one of"
+	@echo "Please use make <target> where <target> is one of"
 	@echo "  check             to verify all needed programs and packages are installed"
 	@echo "  env               to create a virtualenv with packages from requirements.txt, requirements-dev.txt"
 	@echo "  fetch             to clone all managed repositories"
 	@echo "  install           to build and install a wheel of natcap.invest into the active python installation"
 	@echo "  binaries          to build pyinstaller binaries"
 	@echo "  apidocs           to build HTML API documentation"
-	@echo "  userguide         to build HTML and PDF versions of the user's guide"
+	@echo "  userguide         to build HTML version of the users guide"
 	@echo "  python_packages   to build natcap.invest wheel and source distributions"
 	@echo "  windows_installer to build an NSIS installer for distribution"
 	@echo "  mac_installer     to build a disk image for distribution"
 	@echo "  sampledata        to build sample data zipfiles"
-	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for 'advanced' NSIS install."
+	@echo "  sampledata_single to build a single self-contained data zipfile.  Used for advanced NSIS install."
 	@echo "  test              to run nosetests on the tests directory"
 	@echo "  test_ui           to run nosetests on the ui_tests directory"
 	@echo "  clean             to remove temporary directories and files (but not dist/)"
@@ -235,13 +234,7 @@ $(APIDOCS_HTML_DIR): | $(DIST_DIR)
 $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
-userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_PDF_FILE): $(HG_UG_REPO_PATH) | $(DIST_DIR)
-	-$(RMDIR) build/userguide/latex
-	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide latex
-	$(MAKE) -C build/userguide/latex all-pdf
-	$(CP) build/userguide/latex/InVEST*.pdf dist
-
+userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
@@ -307,7 +300,7 @@ else
 endif
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) $(USERGUIDE_PDF_FILE) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 
