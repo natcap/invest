@@ -14,7 +14,7 @@ environment:
 
   matrix:
     - PYTHON: "C:\\Python36"
-      EXTRAPKGS: "pyqt4"
+      EXTRAPKGS: "pyside2"
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
@@ -54,7 +54,7 @@ build_script:
     - make -j3 fetch
 
     # Attempt to zip things up in parallel
-    - make -j3 sampledata
+    #- make -j3 sampledata
 
     # Build the Windows installer, binaries.
     # Python packages were already built in the ``install`` step.
