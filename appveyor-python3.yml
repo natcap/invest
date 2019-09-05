@@ -12,18 +12,11 @@ environment:
   PIP_PREFER_BINARY: 1
   PIP_INSTALL: "pip install"
 
-  DOCKER_RUN: 'docker run -t -v "%APPVEYOR_BUILD_FOLDER%:/home/natcap-build"'
-
-
-
   matrix:
     - PYTHON: "C:\\Python36"
       EXTRAPKGS: "pyqt4"
 
 install:
-    # Switch to Linux containers
-    - '"C:\Program Files\Docker\Docker\DockerCli.exe" -SwitchLinuxEngine'
-
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
     # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
@@ -36,6 +29,9 @@ install:
     # with pipwin and pip is for.
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
+
+    # Our Makefile depends on zip rather than 7zip, so we need to get those binaries.
+    - choco install zip
 
     # Download and install NSIS plugins to their correct places.
     - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
@@ -50,7 +46,18 @@ build: off
 test_script: off
 
 build_script:
-    - "%DOCKER_RUN% natcap/userguide-build:fba743220031e1ba99b528a8939a86c8201da949 make userguide"
+    # Attempt to download repositories in parallel
+    - make -j3 fetch
+
+    # Attempt to zip things up in parallel
+    - make -j3 sampledata
+
+    # Build the Windows installer, binaries.
+    # Python packages were already built in the ``install`` step.
+    - make windows_installer
+
+    # TODO: sign the installer
+    # TODO: push the artifacts
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory
