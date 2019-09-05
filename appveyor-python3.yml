@@ -28,15 +28,15 @@ install:
     # It's not (in our case).  Adding --no-deps because that's what all of the above
     # with pipwin and pip is for.
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
-    - "choco install make"
+    - "choco install make wget"
 
     # Our Makefile depends on zip rather than 7zip, so we need to get those binaries.
     - choco install zip
 
     # Download and install NSIS plugins to their correct places.
-    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
-    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip
-    - C:\cygwin\bin\wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
+    - wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
+    - wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip
+    - wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
     - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
     - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
     - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll" Plugins\x86-ansi\INetC.dll
