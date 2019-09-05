@@ -4,6 +4,13 @@ import sys
 import subprocess
 import os
 
+try:
+    import PyQt4
+except ImportError:
+    # Need to explicitly import PySide2 when on python3.  It's the only Qt
+    # binding I can seem to get to work under python3.
+    import PySide2
+
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
