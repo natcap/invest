@@ -46,7 +46,14 @@ install:
     - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
     - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
 
-build: off
+      # Download and install the google cloud utilities.
+    - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64.zip
+    - unzip gcloud.zip
+    - .\google-cloud-sdk\install.bat
+    - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client_secret.json
+    -.\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
+
+
 test_script: off
 
 build_script:
@@ -54,14 +61,18 @@ build_script:
     - make -j3 fetch
 
     # Attempt to zip things up in parallel
-    #- make -j3 sampledata
+    - make -j3 sampledata
 
     # Build the Windows installer, binaries.
     # Python packages were already built in the ``install`` step.
     - make -j2 windows_installer
 
-    # TODO: sign the installer
-    # TODO: push the artifacts
+    # sign the installer
+    - ps: $installer_binary = @(gci dist/*.exe)[0] | Out-String
+    - ps: make CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode
+
+    # push the artifacts
+    - make deploy
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory
