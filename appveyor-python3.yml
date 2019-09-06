@@ -49,7 +49,7 @@ install:
       # Download, quietly unzip and install the google cloud utilities.
     - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64.zip
     - unzip -q gcloud.zip
-    - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client_secret.json
+    - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client-secret.json
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
 
 test_script: off
