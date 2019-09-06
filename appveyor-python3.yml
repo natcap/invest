@@ -43,8 +43,8 @@ install:
     - wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
     - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
     - 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
-    - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi\INetC.dll" Plugins\x86-ansi\INetC.dll
-    - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi\nsisunz.dll" nsisunz\Release\nsisunz.dll
+    - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
+    - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
 
 build: off
 test_script: off
