@@ -28,7 +28,7 @@ install:
     # It's not (in our case).  Adding --no-deps because that's what all of the above
     # with pipwin and pip is for.
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
-    - "choco install make wget vcredist140"
+    - "choco install make wget vcredist140 pandoc"
 
     # Our Makefile depends on zip rather than 7zip, so we need to get those binaries.
     - choco install zip
@@ -58,7 +58,7 @@ build_script:
 
     # Build the Windows installer, binaries.
     # Python packages were already built in the ``install`` step.
-    - make windows_installer
+    - make -j2 windows_installer
 
     # TODO: sign the installer
     # TODO: push the artifacts
