@@ -45,15 +45,15 @@ install:
     - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
     - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
 
-      # Download, quietly unzip and install the google cloud utilities.
+    # Download, quietly unzip and install the google cloud utilities.
     - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64-bundled-python.zip
     - unzip -q gcloud.zip
 
     # GCloud service account key conversion from base64 taken from https://stackoverflow.com/a/56140959/299084
     # Assumes that GOOGLE_SERVICE_ACC_KEY is a base64-encoded JSON service account key.
-    - ps: $content = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GOOGLE_SERVICE_ACC_KEY))
-    - ps: $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
-    - ps: [System.IO.File]::WriteAllLines('client-secret.json', $content, $Utf8NoBomEncoding)
+    - ps: "$content = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GOOGLE_SERVICE_ACC_KEY))"
+    - ps: "$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False"
+    - ps: "[System.IO.File]::WriteAllLines('client-secret.json', $content, $Utf8NoBomEncoding)"
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=%USERPROFILE%\client-secret.json
 
 test_script: off
