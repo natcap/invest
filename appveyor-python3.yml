@@ -11,10 +11,9 @@ environment:
   PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
   PIP_PREFER_BINARY: 1
   PIP_INSTALL: "pip install"
+  PYTHON: "C:\\Python36"
+  EXTRAPKGS: "pyside2"
 
-  matrix:
-    - PYTHON: "C:\\Python36"
-      EXTRAPKGS: "pyside2"
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
@@ -47,7 +46,7 @@ install:
     - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
 
       # Download, quietly unzip and install the google cloud utilities.
-    - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64.zip
+    - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64-bundled-python.zip
     - unzip -q gcloud.zip
     - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client-secret.json
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
