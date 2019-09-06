@@ -46,9 +46,9 @@ install:
     - 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
     - 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
 
-      # Download and install the google cloud utilities.
+      # Download, quietly unzip and install the google cloud utilities.
     - curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64.zip
-    - unzip gcloud.zip
+    - unzip -q gcloud.zip
     - .\google-cloud-sdk\install.bat
     - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client_secret.json
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
