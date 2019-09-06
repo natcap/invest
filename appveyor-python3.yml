@@ -62,19 +62,17 @@ build_script:
     # Attempt to download repositories in parallel
     - make -j3 fetch
 
-    # Attempt to zip things up in parallel
-    - make -j3 sampledata
-
     # Build the Windows installer, binaries.
+    # Attempt to zip things up in parallel
     # Python packages were already built in the ``install`` step.
-    - make -j2 windows_installer
+    - make -j3 sampledata windows_installer
 
     # sign the installer
     - ps: $installer_binary = @(gci dist/*.exe)[0] | Out-String
     - ps: make CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode
 
     # push the artifacts
-    - make deploy
+    - make GSUTIL=google-cloud-sdk/bin/gsutil deploy
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory

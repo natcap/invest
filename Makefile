@@ -69,6 +69,7 @@ PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
 
+GSUTIL := gsutil
 
 # Output directory names
 DIST_DIR := dist
@@ -341,15 +342,15 @@ signcode:
 	@echo "Installer was signed"
 
 deploy:
-	gsutil -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	gsutil -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
-	gsutil -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+	$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
     ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces
-		gsutil cp "$(BUCKET)/fragment_id_redirections.json" "$(BUILD_DIR)/fragment_id_redirections.json"
+		$(GSUTIL) cp "$(BUCKET)/fragment_id_redirections.json" "$(BUILD_DIR)/fragment_id_redirections.json"
 		$(PYTHON) scripts/update_installer_urls.py "$(BUILD_DIR)/fragment_id_redirections.json" $(BUCKET) $(notdir $(WINDOWS_INSTALLER_FILE)) $(notdir $(patsubst "%",%,$(MAC_BINARIES_ZIP_FILE)))
-		gsutil cp "$(BUILD_DIR)/fragment_id_redirections.json" "$(BUCKET)/fragment_id_redirections.json"
+		$(GSUTIL) cp "$(BUILD_DIR)/fragment_id_redirections.json" "$(BUCKET)/fragment_id_redirections.json"
     endif
 
 
