@@ -51,8 +51,7 @@ install:
     - unzip gcloud.zip
     - .\google-cloud-sdk\install.bat
     - ps: $env:GOOGLE_SERVICE_ACC_KEY | Out-File client_secret.json
-    -.\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
-
+    - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=client-secret.json
 
 test_script: off
 
