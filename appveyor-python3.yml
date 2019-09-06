@@ -53,7 +53,7 @@ install:
     # Assumes that GOOGLE_SERVICE_ACC_KEY is a base64-encoded JSON service account key.
     - ps: "$content = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($env:GOOGLE_SERVICE_ACC_KEY))"
     - ps: "$Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False"
-    - ps: "[System.IO.File]::WriteAllLines('client-secret.json', $content, $Utf8NoBomEncoding)"
+    - ps: "[System.IO.File]::WriteAllLines('C:\Users\appveyor\client-secret.json', $content, $Utf8NoBomEncoding)"
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=%USERPROFILE%\client-secret.json
 
 test_script: off
