@@ -69,7 +69,7 @@ build_script:
 
     # sign the installer
     - ps: $installer_binary = @(gci dist/*.exe)[0] | Out-String
-    - ps: make CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode
+    - ps: make GSUTIL=google-cloud-sdk/bin/gsutil CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode
 
     # push the artifacts
     - make GSUTIL=google-cloud-sdk/bin/gsutil deploy
