@@ -67,8 +67,8 @@ build_script:
     # Python packages were already built in the ``install`` step.
     - make -j3 sampledata windows_installer
 
-    # sign the installer
-    - ps: $installer_binary = @(gci dist/*.exe)[0] | Out-String
+    # get the path to the installer and sign it.
+    - ps: $installer_binary = @(gci dist/*.exe)[0] | Select-Object -ExpandProperty FullName
     - ps: make GSUTIL=.\google-cloud-sdk\bin\gsutil CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode
 
     # push the artifacts
