@@ -13,6 +13,7 @@ environment:
   PIP_INSTALL: "pip install"
   PYTHON: "C:\\Python36"
   EXTRAPKGS: "pyside2"
+  SIGNTOOL: "C:\\Program Files (x86)\\Windows Kits\\10\\bin\\10.0.18362.0\\x64\\signtool.exe"
 
 
 install:
@@ -69,7 +70,7 @@ build_script:
 
     # get the path to the installer and sign it.
     - ps: $installer_binary = @(gci dist/*.exe)[0] | Select-Object -ExpandProperty FullName
-    - ps: make GSUTIL=.\google-cloud-sdk\bin\gsutil CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary signcode_windows
+    - ps: make GSUTIL=.\google-cloud-sdk\bin\gsutil CERT_KEY_PASS=$env:STANFORD_CERT_KEY_PASS BIN_TO_SIGN=$installer_binary SIGNTOOL=$env:SIGNTOOL signcode_windows
 
     # push the artifacts
     - make GSUTIL=.\google-cloud-sdk\bin\gsutil deploy
