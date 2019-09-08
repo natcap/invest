@@ -339,7 +339,15 @@ signcode:
 	mv "signed.exe" $(BIN_TO_SIGN)
 	rm $(BUILD_DIR)/$(CERT_FILE)
 	rm $(BUILD_DIR)/$(KEY_FILE)
-	@echo "Installer was signed"
+	@echo "Installer was signed with osslsigncode"
+
+P12_FILE := Stanford-natcap-code-signing-2019-03-07.p12
+signcode_windows:
+	$(GSUTIL) cp gs://stanford_cert/$(P12_FILE) $(BUILD_DIR)/$(P12_FILE)
+	SignTool sign /f $(BUILD_DIR)\$(P12_FILE) /p $(CERT_KEY_PASS) $(BIN_TO_SIGN)
+	rm $(BUILD_DIR)/$(CERT_FILE)
+	rm $(BUILD_DIR)/$(KEY_FILE)
+	@echo "Installer was signed with signtool"
 
 deploy:
 	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
