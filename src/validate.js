@@ -1,6 +1,10 @@
 import fs from 'fs';
 import path from 'path';
 
+// TODO: if invalid, also return a helpful message
+// to use in Form.Control.Feedback.
+// Will require a new place in state to hold the message.
+
 function validate(value, rule) {
   // This function validates a single input value given a rule.
   //

@@ -1,0 +1,189 @@
+#mapdiv {
+  height: 800px;
+  width:auto;
+}
+
+.coords {
+  font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  background-color: rgba(255, 255, 255, 0.5);
+  color: black;
+  padding-left: 3px;
+  padding-right: 3px
+ }
+
+.tick {
+  font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;
+  font-size: 11px;
+  font-weight: 550;
+  text-shadow: -1.5px 0 white, 0 1.5px white, 1.5px 0 white, 0 -1.5px white;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: rgb(0, 0, 0);
+  shape-rendering: crispEdges;
+}
+
+.leaflet-control-attribution,
+.leaflet-container .leaflet-control-scale {
+  font-size: 14px;
+  margin-left: 10px;
+}
+
+.leaflet-control-attribution {
+  background-color: rgba(255, 255, 255, 0.4);
+  overflow-x: auto;
+  max-width: 470px;
+}
+
+.leaflet-control-layers {
+  background-color: rgba(255, 255, 255, 0.85);
+}
+
+.leaflet-control-layers-expanded {
+  min-width: 90px;
+}
+
+.leaflet-touch .leaflet-control-layers-toggle {
+  height: 32px;
+  width: 32px
+}
+
+.indent-box {
+  display: block;
+  overflow-y: auto;
+  overflow-x: auto;
+  max-height: 220px;
+  max-width: 180px;
+  text-indent: -1.5em;
+  padding-left: 1.5em;
+  word-break: break-all;
+}
+
+.indent-box::-webkit-scrollbar {
+  -webkit-appearance: none;
+}
+
+.indent-box::-webkit-scrollbar:vertical {
+  width: 8px;
+  position: relative;
+  top: -15px;
+}
+
+.indent-box::-webkit-scrollbar:horizontal {
+  height: 11px;
+}
+
+.indent-box::-webkit-scrollbar-thumb {
+  border-radius: 8px;
+  background-color: rgba(0, 0, 0, .5);
+}
+
+.indent-box::-webkit-scrollbar-track {
+  background-color: rgba(255, 255, 255, 0.6);
+  border-radius: 8px;
+}
+
+.control-layer-header {
+  text-align: center;
+  font-weight: bold;
+}
+
+ul.legend {
+  border-radius: 3px;
+  width: 140px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 5px 15px;
+  border: 1px solid gray;
+  list-style-type: none;
+}
+
+.legend-svg {
+  width: 28px;
+  height: 18px;
+  opacity: 1;
+  display: inline-block;
+  vertical-align: middle;
+  stroke: black;
+  stroke-width: 1px;
+  padding: 1px;
+}
+
+.legend-text {
+  padding-left: 5px;
+  display: inline-block;
+}
+
+.leaflet-control-zoom {
+  opacity: 0.85
+}
+
+#zoom-btn {
+  background-color: rgb(255, 255, 255);
+  border-color: rgba(0, 0, 0, 0.2);
+  background-clip: padding-box;
+  border-left-style: solid;
+  border-left-width: 1px;
+  border-right-style: solid;
+  border-right-width: 1px;
+  border-radius: 4px;
+  border-style: solid;
+  border-width: 2px;
+  cursor: pointer;
+  display: block;
+  font-weight: 400;
+  line-height: 30px;
+  pointer-events: auto;
+  padding-bottom: 1px;
+  padding-left: 9px;
+  padding-right: 9px;
+  padding-top: 1px;
+  outline: none;
+  opacity: 0.85
+}
+
+#zoom-btn:hover {
+  background-color: #f4f4f4;
+}
+
+#zoom-btn:active {
+  cursor: grabbing;
+}
+
+.upload-form {
+  width: 90px;
+  background-color: rgba(255, 255, 255, 0.8);
+  border-radius: 5px;
+  font-family: Helvetica;
+  font-weight: 600;
+  font-size: 12px;
+  padding: 7px;
+  text-align: center;
+  position: relative;
+  right: 11px;
+  padding: 2px;
+  padding-bottom: 4px;
+  margin-left: 6px;
+}
+
+input[type="button"]{
+  cursor: pointer;
+  outline: none;
+  width: 95%;
+  white-space: normal;
+  padding: 0;
+}
+
+input[type="button"]:hover{
+  background: rgba(148, 152, 177, 0.2);
+}
+
+input[type="button"]:active{
+  background: rgba(148, 152, 177, 0.7);
+}
+
+.bold-font {
+  font-weight: bold;
+}

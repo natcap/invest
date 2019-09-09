@@ -1,6 +1,8 @@
 const SAMPLE_DATA = 'C:/Users/dmf/projects/invest/data/invest-sample-data/HabitatRiskAssess/Input/'
 
+const MODULE_NAME = 'natcap.invest.hra'
 const MODEL_NAME = 'habitat_risk_assessment'
+const MODEL_DOCS = 'C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html'
 
 const MODEL_ARGS = {
   aoi_vector_path: {
@@ -78,4 +80,4 @@ const MODEL_ARGS = {
   },
 };
 
-export {MODEL_ARGS, MODEL_NAME};
+export {MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS};
