@@ -2,7 +2,9 @@
 
 Unreleased Changes
 ------------------
-* the InVEST CLI has been completely rebuilt to divide
+* Fixed an issue with Habitat Quality where the model was incorrectly
+  expecting the sensitivity table to have a landcover code of 0.
+* The InVEST CLI has been completely rebuilt to divide
   functionality into various topic-specific subcommands.  The various internal
   consumers of this API have been updated accordingly.  ``invest --help`` will
   contain details of the new interface.
