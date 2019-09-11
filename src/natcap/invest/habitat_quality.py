@@ -12,7 +12,7 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.habitat_quality')
+LOGGER = logging.getLogger(__name__)
 
 _OUT_NODATA = -1.0
 _RARITY_NODATA = -64329.0
@@ -77,12 +77,12 @@ ARGS_SPEC = {
                 "management of the landscape was relatively rare."),
             "name": "Baseline Land Cover"
         },
-        "threat_folder": {
+        "threat_raster_folder": {
             "validation_options": {
                 "exists": True,
             },
             "type": "directory",
-            "required": True
+            "required": True,
             "about": (
                 "A path to the directory that will contain all "
                 "threat rasters."),
@@ -195,8 +195,8 @@ def execute(args):
             (optional)
         lulc_bas_path (string): a path to an input land use/land cover raster
             (optional, but required for rarity calculations)
-        threat_folder (string): a path to the directory that will contain all
-            threat rasters (required)
+        threat_raster_folder (string): a path to the directory that will
+            contain all threat rasters (required)
         threats_table_path (string): a path to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
