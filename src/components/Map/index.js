@@ -1,15 +1,18 @@
+import fs from 'fs';
+import path from 'path';
+import glob from 'glob';
 import { bbox } from "@turf/turf"
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
-
 import chroma from "chroma-js";
 import Choropleth from "react-leaflet-choropleth";
+import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
+import React, { Component } from "react";
+
 import Control from "./Control";
 import { getCsvUrl } from "../../actions/index";
 import { getVectorsOnMap } from "../../actions/index";
 import { getFileSuffix } from "../../actions/index";
-import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
-import React, { Component } from "react";
 
 // 
 <style>
@@ -89,25 +92,35 @@ class Hramap extends Component {
 
     this.mapRef = React.createRef();
     this.layerControl = React.createRef();
+    this.onWorkspaceReady = this.onWorkspaceReady.bind(this);
   }
 
   componentDidMount() {
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
-    this.mapApi.invalidateSize();
-    console.log('map invalidated');
+
+    const workspace = this.props.workspace
+    let fileList = [];
+    // fs.readdir(workspace, (error, files) => {
+    //   console.log(error);
+    //   fileList = files
+    //   console.log(fileList);
+    // });
+    this.onWorkspaceReady(workspace);
+
+    // this.mapApi.invalidateSize();
+    // console.log('map invalidated');
   }
 
   componentDidUpdate() {
     // The map loads with the wrong center when it has been initialized
     // prior to the div that will contain it. So call this function to have 
     // the map check it's container size after that div exists.
-    // this.mapApi.invalidateSize();
+    this.mapApi.invalidateSize();
   }
 
   // Read the target files from the event listener when users upload folder,
-  // read the files within the folder and set states accordingly
-  onFileUpload(files, isSampleData) {
+  onWorkspaceReady(workspace) {
     let geojsonUrls = {};
     // let geotiffUrls = {};
     let csvUrl = null;
@@ -119,47 +132,54 @@ class Hramap extends Component {
       this.state.rasters[rasterName].removeFrom(this.mapApi);
     }
 
+    let fileList = [];
+    glob(path.join(workspace, 'visualization_outputs/*'), function(err, files){
+      console.log(files);
+      fileList = files;
+    });
+
+    
     // If the files are uploaded by user, store them as blob URL
-    if (!isSampleData) {
-      Object.values(files).forEach( fileObj => {
-        let filename = fileObj.name;
-        let fileExt = filename.split(".").pop();
-        let filenameNoExt = filename.replace("." + fileExt, "");
+    // if (!isSampleData) {
+    Object.values(fileList).forEach( filename => {
+      // let filename = filename;
+      let fileExt = filename.split(".").pop();
+      let filenameNoExt = filename.replace("." + fileExt, "");
 
-        // Use URLs to reference to the blob, and push them to the dictionary
-        if (fileExt === "geojson") {
-          // Use createObjectURL() to return blob URL as a string
-          geojsonUrls[filenameNoExt] = URL.createObjectURL(fileObj);
-        } else if (fileExt === "tif") {
-          //! do not render rasters for now yet because output files are GeoJSON
-          // geotiffUrls[filenameNoExt] = URL.createObjectURL(fileObj);
-        } else if (
-            fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
-          // Create CSV object URL
-          csvUrl = URL.createObjectURL(fileObj);
-          fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
-        }
-      });
+      // Use URLs to reference to the blob, and push them to the dictionary
+      if (fileExt === "geojson") {
+        // Use createObjectURL() to return blob URL as a string
+        geojsonUrls[filenameNoExt] = filename //URL.createObjectURL(filename);
+      } else if (fileExt === "tif") {
+        //! do not render rasters for now yet because output files are GeoJSON
+        // geotiffUrls[filenameNoExt] = URL.createObjectURL(fileObj);
+      } else if (
+          fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
+        // Create CSV object URL
+        csvUrl = filename //URL.createObjectURL(fileObj);
+        fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
+      }
+    });
 
-    } else {
-      // If users want to view sample files, save URLs of the hosted GeoJSON
-      // and CSV files
-      files.forEach( filepath => {
+    // } else {
+      // // If users want to view sample files, save URLs of the hosted GeoJSON
+      // // and CSV files
+      // files.forEach( filepath => {
 
-        // Save sample file names and paths to geojsonUrls
-        let fileExt = filepath.split(".").pop();
-        let filenameNoExt = filepath.split(".")[1].split("/").pop()
+      //   // Save sample file names and paths to geojsonUrls
+      //   let fileExt = filepath.split(".").pop();
+      //   let filenameNoExt = filepath.split(".")[1].split("/").pop()
 
-        if (fileExt === "geojson") {
-          geojsonUrls[filenameNoExt] = filepath;
-        } else if (fileExt === "csv") {
-          csvUrl = filepath;
-        } else if (fileExt === "tif") {
-          //! do not render rasters for now yet because output files are GeoJSON
-          // geotiffUrls[filenameNoExt] = filepath;
-        }
-      });
-    }
+      //   if (fileExt === "geojson") {
+      //     geojsonUrls[filenameNoExt] = filepath;
+      //   } else if (fileExt === "csv") {
+      //     csvUrl = filepath;
+      //   } else if (fileExt === "tif") {
+      //     //! do not render rasters for now yet because output files are GeoJSON
+      //     // geotiffUrls[filenameNoExt] = filepath;
+      //   }
+      // });
+    // }
 
     // When all object URLs are retrieved, clean up preexisting states
     // since we will update them when new data is rendered
@@ -189,11 +209,11 @@ class Hramap extends Component {
     this.props.getFileSuffix(fileSuffix);
   }
 
-  // Load sample files to the page when users click on the View Sample button
-  viewSample(e) {
-    const filepaths = SAMPLE_FILES.map(name => ("./sampledata/" + name) );
-    this.onFileUpload(filepaths, true);
-  }
+  // // Load sample files to the page when users click on the View Sample button
+  // viewSample(e) {
+  //   const filepaths = SAMPLE_FILES.map(name => ("./sampledata/" + name) );
+  //   this.onFileUpload(filepaths, true);
+  // }
 
   // Read GeoJSON files and save them in the vectors state.
   loadVectors(vectorUrls) {
@@ -569,27 +589,27 @@ class Hramap extends Component {
 
         {this.addLayerControls()}
 
-        <Control position="topleft">
-          <form className="leaflet-control-layers upload-form">
+{/*        <Control position="topleft">
+          // <form className="leaflet-control-layers upload-form">
 
-            Upload HRA Output Folder
-            <input type="file" ref="fileUpload"
-              onChange={e => this.onFileUpload(e.target.files, false)}
-              webkitdirectory="true" mozdirectory="true" msdirectory="true"
-              odirectory="true" directory="true"
-              style={{"display": "none"}} multiple />
-            <br />
+          //   Upload HRA Output Folder
+          //   <input type="file" ref="fileUpload"
+          //     onChange={e => this.onWorkspaceReady(e.target.files)}
+          //     webkitdirectory="true" mozdirectory="true" msdirectory="true"
+          //     odirectory="true" directory="true"
+          //     style={{"display": "none"}} multiple />
+          //   <br />
 
-            <input type="button" value="Select Folder"
-              onClick={e => this.refs.fileUpload.click()}/>
+          //   <input type="button" value="Select Folder"
+          //     onClick={e => this.refs.fileUpload.click()}/>
 
-            or View Sample
-            <input type="button" value="Sample Files"
-              onClick={e => this.viewSample(e)}/>
-          </form>
+          //   or View Sample
+          //   <input type="button" value="Sample Files"
+          //     onClick={e => this.viewSample(e)}/>
+          // </form>
 
         </Control>
-
+*/}
         <Control position="bottomleft">
           <div className="coords">{this.state.coordText}</div>
         </Control>
