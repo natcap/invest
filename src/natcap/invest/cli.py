@@ -379,6 +379,15 @@ def main(user_args=None):
     validate_subparser.add_argument(
         'datastack', help=('Run the model with this JSON datastack.'))
 
+    getspec_subparser = subparsers.add_parser(
+        'getspec', help=('Get the specification of a model.'))
+    getspec_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
+    getspec_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model for which the spec should be fetched.  Use "invest '
+              'list" to list the available models.'))
+
     args = parser.parse_args(user_args)
 
     root_logger = logging.getLogger()
@@ -455,6 +464,18 @@ def main(user_args=None):
         else:
             message = pprint.pformat(validation_result)
 
+        sys.stdout.write(message)
+        parser.exit(0)
+
+    if args.subcommand == 'getspec':
+        target_model = _MODEL_UIS[args.model].pyname
+        model_module = importlib.import_module(name=target_model)
+        spec = model_module.ARGS_SPEC
+
+        if args.json:
+            message = json.dumps(spec)
+        else:
+            message = pprint.pformat(spec)
         sys.stdout.write(message)
         parser.exit(0)
 
