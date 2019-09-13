@@ -1,4 +1,8 @@
-#mapdiv {
+/*#mapdiv {
+  height: 800px;
+  width:auto;
+}*/
+.map {
   height: 800px;
   width:auto;
 }
@@ -150,38 +154,6 @@ ul.legend {
 
 #zoom-btn:active {
   cursor: grabbing;
-}
-
-.upload-form {
-  width: 90px;
-  background-color: rgba(255, 255, 255, 0.8);
-  border-radius: 5px;
-  font-family: Helvetica;
-  font-weight: 600;
-  font-size: 12px;
-  padding: 7px;
-  text-align: center;
-  position: relative;
-  right: 11px;
-  padding: 2px;
-  padding-bottom: 4px;
-  margin-left: 6px;
-}
-
-input[type="button"]{
-  cursor: pointer;
-  outline: none;
-  width: 95%;
-  white-space: normal;
-  padding: 0;
-}
-
-input[type="button"]:hover{
-  background: rgba(148, 152, 177, 0.2);
-}
-
-input[type="button"]:active{
-  background: rgba(148, 152, 177, 0.7);
 }
 
 .bold-font {

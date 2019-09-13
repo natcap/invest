@@ -14,12 +14,13 @@ import { getCsvUrl } from "../../actions/index";
 import { getVectorsOnMap } from "../../actions/index";
 import { getFileSuffix } from "../../actions/index";
 
-// 
+/* 
 <style>
   import "font-awesome/css/font-awesome.min.css";
   import "leaflet/dist/leaflet.css";}
   import "./style.css";}
 </style>
+*/
 
 const { BaseLayer } = LayersControl;
 
@@ -94,18 +95,20 @@ class Hramap extends Component {
     this.layerControl = React.createRef();
     this.gatherWorkspaceFiles = this.gatherWorkspaceFiles.bind(this);
     this.loadVectors = this.loadVectors.bind(this);
+    this.zoomToMaxBbox = this.zoomToMaxBbox.bind(this);
   }
 
   componentDidMount() {
-    console.log('Map Mounts');
+    console.log(this.state);
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
+    this.mapApi.invalidateSize();
     this.renderLegend();
     const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
     this.loadVectors(fileMetadata.geojsonUrls);
     // Update csv url and file suffix reducers
     this.props.getCsvUrl(fileMetadata.csvUrl);
     this.props.getFileSuffix(fileMetadata.fileSuffix);
-    // this.mapApi.invalidateSize();
+    // this.zoomToMaxBbox();
     // console.log('map invalidated');
   }
 
@@ -118,7 +121,7 @@ class Hramap extends Component {
     //   console.log('new workspace!');
       
     // }
-    this.mapApi.invalidateSize();
+    // this.mapApi.invalidateSize();
   }
 
   // Read the target files from the event listener when users upload folder,
@@ -257,6 +260,7 @@ class Hramap extends Component {
             { // Update vectorsOnMap reducer
               this.props.getVectorsOnMap(this.state.vectorsOnMap);
               this.updateMaxBbox();
+              this.zoomToMaxBbox();
             });
           }
         });
@@ -271,7 +275,13 @@ class Hramap extends Component {
           maxlat = Math.max(...this.state.lats);
       let minlng = Math.min(...this.state.lngs),
           maxlng = Math.max(...this.state.lngs);
-      this.setState({maxBbox: [[minlat, minlng],[maxlat, maxlng]]});
+      this.setState({
+        maxBbox: [[minlat, minlng],[maxlat, maxlng]]
+      }, () => {
+        this.mapApi.invalidateSize();
+        this.zoomToMaxBbox()
+        console.log(this.state);
+      });
     }
   }
 
