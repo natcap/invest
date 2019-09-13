@@ -753,7 +753,7 @@ def invest_validator(validate_func):
 
             if limit_to is None:
                 LOGGER.info('Starting whole-model validation with ARGS_SPEC')
-                warnings_ = validate(args, args_spec)
+                warnings_ = validate_func(args)
             else:
                 LOGGER.info('Starting single-input validation with ARGS_SPEC')
                 args_key_spec = args_spec[limit_to]
