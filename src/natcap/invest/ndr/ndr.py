@@ -16,7 +16,164 @@ from .. import validation
 from .. import utils
 from . import ndr_core
 
-LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Nutrient Delivery Ratio Model (NDR)",
+    "module": __name__,
+    "userguide_html": "ndr.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
+                         "watersheds_path"],
+        "reference_key": "dem_path"
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing elevation values for "
+                "each cell.  Make sure the DEM is corrected by filling in "
+                "sinks, and if necessary burning hydrographic features into "
+                "the elevation model (recommended when unusual streams are "
+                "observed.) See the Working with the DEM section of the "
+                "InVEST User's Guide for more information."),
+            "name": "DEM"
+        },
+        "lulc_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing integer values "
+                "representing the LULC code for each cell.  The LULC code "
+                "should be an integer."),
+            "name": "Land Use"
+        },
+        "runoff_proxy_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "Weighting factor to nutrient loads.  Internally this value "
+                "is normalized by its average values so a variety of data "
+                "can be used including precipitation or quickflow."),
+            "name": "Nutrient Runoff Proxy"
+        },
+        "watersheds_path": {
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-supported vector file containing watersheds such "
+                "that each watershed contributes to a point of interest "
+                "where water quality will be analyzed.  It must have the "
+                "integer field 'ws_id' where the values uniquely identify "
+                "each watershed."),
+            "name": "Watersheds"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'load_n' (or p), 'eff_n' "
+                "(or p), and 'crit_len_n' (or p) depending on which "
+                "nutrients are selected."),
+            "name": "Biophysical Table"
+        },
+        "calc_p": {
+            "type": "boolean",
+            "required": True,
+            "about": "Select to calculate phosphorous export.",
+            "name": "Calculate phosphorous retention"
+        },
+        "calc_n": {
+            "type": "boolean",
+            "required": True,
+            "about": "Select to calcualte nitrogen export.",
+            "name": "Calculate Nitrogen Retention"
+        },
+        "threshold_flow_accumulation": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that "
+                "retention stops and the remaining export is exported to the "
+                "stream.  Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumluation"
+        },
+        "k_param": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "Calibration parameter that determines the shape of the "
+                "relationship between hydrologic connectivity (the degree of "
+                "connection from patches of land to the stream) and the "
+                "nutrient delivery ratio (percentage of nutrient that "
+                "actually reaches the stream)"),
+            "name": "Borselli k parameter",
+        },
+        "subsurface_critical_length_n": {
+            "type": "number",
+            "required": "calc_n",
+            "name": "Subsurface Critical Length (Nitrogen)",
+            "about": (
+                "The distance (traveled subsurface and downslope) after "
+                "which it is assumed that soil retains nutrient at its "
+                "maximum capacity, given in meters. If dissolved nutrients "
+                "travel a distance smaller than Subsurface Critical Length, "
+                "the retention efficiency will be lower than the Subsurface "
+                "Maximum Retention Efficiency value defined. Setting this "
+                "value to a distance smaller than the pixel size will result "
+                "in the maximum retention efficiency being reached within "
+                "one pixel only."),
+        },
+        "subsurface_critical_length_p": {
+            "type": "number",
+            "required": "calc_p",
+            "name": "Subsurface Critical Length (Phosphorous)",
+            "about": (
+                "The distance (traveled subsurface and downslope) after "
+                "which it is assumed that soil retains nutrient at its "
+                "maximum capacity, given in meters. If dissolved nutrients "
+                "travel a distance smaller than Subsurface Critical Length, "
+                "the retention efficiency will be lower than the Subsurface "
+                "Maximum Retention Efficiency value defined. Setting this "
+                "value to a distance smaller than the pixel size will result "
+                "in the maximum retention efficiency being reached within "
+                "one pixel only."),
+        },
+        "subsurface_eff_n": {
+            "type": "number",
+            "required": "calc_n",
+            "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
+            "about": (
+                "The maximum nutrient retention efficiency that can be "
+                "reached through subsurface flow, a floating point value "
+                "between 0 and 1. This field characterizes the retention due "
+                "to biochemical degradation in soils."),
+        },
+        "subsurface_eff_p": {
+            "type": "number",
+            "required": "calc_p",
+            "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+            "about": (
+                "The maximum nutrient retention efficiency that can be "
+                "reached through subsurface flow, a floating point value "
+                "between 0 and 1. This field characterizes the retention due "
+                "to biochemical degradation in soils."),
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
@@ -110,6 +267,35 @@ def execute(args):
             all output files
         args['threshold_flow_accumulation']: a number representing the flow
             accumulation in terms of upstream pixels.
+        args['k_param'] (number): The Borselli k parameter. This is a
+            calibration parameter that determines the shape of the
+            relationship between hydrologic connectivity.
+        args['subsurface_critical_length_n'] (number): The distance (traveled
+            subsurface and downslope) after which it is assumed that soil
+            retains nutrient at its maximum capacity, given in meters. If
+            dissolved nutrients travel a distance smaller than Subsurface
+            Critical Length, the retention efficiency will be lower than the
+            Subsurface Maximum Retention Efficiency value defined. Setting this
+            value to a distance smaller than the pixel size will result in the
+            maximum retention efficiency being reached within one pixel only.
+            Required if ``calc_n``.
+        args['subsurface_critical_length_p'] (number): The distance (traveled
+            subsurface and downslope) after which it is assumed that soil
+            retains nutrient at its maximum capacity, given in meters. If
+            dissolved nutrients travel a distance smaller than Subsurface
+            Critical Length, the retention efficiency will be lower than the
+            Subsurface Maximum Retention Efficiency value defined. Setting this
+            value to a distance smaller than the pixel size will result in the
+            maximum retention efficiency being reached within one pixel only.
+            Required if ``calc_p``.
+        args['subsurface_eff_n'] (number): The maximum nutrient retention
+            efficiency that can be reached through subsurface flow, a floating
+            point value between 0 and 1. This field characterizes the retention
+            due to biochemical degradation in soils.  Required if ``calc_n``.
+        args['subsurface_eff_p'] (number): The maximum nutrient retention
+            efficiency that can be reached through subsurface flow, a floating
+            point value between 0 and 1. This field characterizes the retention
+            due to biochemical degradation in soils.  Required if ``calc_p``.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
