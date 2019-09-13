@@ -799,79 +799,37 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
-    required_keys = [
-        'workspace_dir',
-        'dem_path',
-        'lulc_path',
-        'runoff_proxy_path',
-        'watersheds_path',
-        'biophysical_table_path',
-        'calc_p',
-        'calc_n',
-        'threshold_flow_accumulation',
-        'k_param']
+    invalid_keys = set([])
+    for affected_keys, error_msg in validation_warnings:
+        for key in affected_keys:
+            invalid_keys.add(key)
 
-    if 'calc_n' in args and args['calc_n']:
-        required_keys.extend([
-            'subsurface_critical_length_n', 'subsurface_eff_n'])
+    LOGGER.debug('Starting logging for biophysical table')
+    if 'biophysical_table_path' not in invalid_keys:
+        required_fields = ARGS_SPEC['args'][
+            'biophysical_table_path']['validation_options'][
+                'required_fields'][:]
+        for nutrient_letter in ('n', 'p'):
+            do_nutrient_key = 'calc_%s' % nutrient_letter
+            if do_nutrient_key in args and args[do_nutrient_key]:
+                required_fields += [
+                    'load_%s' % nutrient_letter,
+                    'eff_%s' % nutrient_letter,
+                    'crit_len_%s' % nutrient_letter,
+                ]
 
-    if 'calc_p' in args and args['calc_p']:
-        required_keys.extend([
-            'subsurface_critical_length_p', 'subsurface_eff_p'])
+        LOGGER.debug('Required keys in CSV: %s', required_fields)
+        error_msg = validation.check_csv(
+            args['biophysical_table_path'], required_fields=required_fields)
+        LOGGER.debug('Error: %s', error_msg)
+        if error_msg:
+            validation_warnings.append(
+                (['biophysical_table_path'], error_msg))
 
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if limit_to is None and (not args['calc_p'] and not args['calc_n']):
-        validation_error_list.append(
-            (['calc_p', 'calc_n', 'dem_path', 'lulc_path'],
-             "At least nitrogen or phosphorous must be selected"))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('lulc_path', 'raster'),
-        ('dem_path', 'raster'),
-        ('runoff_proxy_path', 'raster'),
-        ('biophysical_table_path', 'table'),
-        ('watersheds_path', 'vector')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation_warnings
 
 
 def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
