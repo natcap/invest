@@ -93,12 +93,15 @@ ARGS_SPEC = {
             }
         },
         "criteria_table_path": {
-            "name": "Criteria Scores CSV or Excel File",
+            "name": "Criteria Scores Table",
             "about": (
                 "A CSV or Excel file that contains the set of criteria "
                 "ranking  (rating, DQ and weight) of each stressor on each "
                 "habitat, as well as the habitat resilience attributes."),
-            "type": "csv",  # TODO: also support excel
+            "type": "csv",
+            "validation_options": {
+                "excel_ok": True,
+            },
             "required": True,
         },
         "resolution": {
@@ -3169,108 +3172,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-    max_rating_key = 'max_rating'
-    aoi_vector_key = 'aoi_vector_path'
-    resolution_key = 'resolution'
-    viz_option_key = 'visualize_outputs'
-
-    for key in [
-            'workspace_dir',
-            'info_table_path',
-            'criteria_table_path',
-            'resolution',
-            'max_rating',
-            'risk_eq',
-            'decay_eq',
-            'aoi_vector_path']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to is None or limit_to == viz_option_key:
-        if viz_option_key in args and not isinstance(
-                args[viz_option_key], bool):
-            validation_error_list.append(
-                ([viz_option_key], 'needs to be True or False'))
-
-    # Check if resolution is a positive number
-    if limit_to is None or limit_to == resolution_key:
-        resolution_value = args[resolution_key]
-        resolution_is_valid = True
-        if isinstance(resolution_value, basestring):
-            if not resolution_value.isdigit() or float(resolution_value) <= 0:
-                resolution_is_valid = False
-        elif (isinstance(resolution_value, (int, float))):
-            if resolution_value <= 0:
-                resolution_is_valid = False
-        if not resolution_is_valid:
-            validation_error_list.append(
-                ([resolution_key], 'should be a positive number'))
-
-    for key in [
-            'criteria_table_path', 'info_table_path']:
-        if (limit_to is None or limit_to == key):
-            if not os.path.exists(args[key]):
-                validation_error_list.append(([key], 'not found on disk'))
-
-            # Validate file type
-            file_ext = os.path.splitext(args[key])[1].lower()
-            if file_ext not in ['.csv', '.xlsx', '.xls']:
-                validation_error_list.append(
-                    ([key], 'not a CSV or an Excel file'))
-
-    for key, key_values in {
-            'risk_eq': ['Euclidean', 'Multiplicative'],
-            'decay_eq': ['Linear', 'Exponential', 'None']}.items():
-        if limit_to is None or limit_to == key:
-            if args[key] not in key_values:
-                validation_error_list.append(
-                    ([key], 'should be one of the following: %s, but is "%s" '
-                     'instead' % (key_values, args[key])))
-
-    if limit_to is None or limit_to == max_rating_key:
-        # If the argument isn't a number, check if it can be converted to a
-        # number
-        if not isinstance(args[max_rating_key], (int, float)):
-            if args[max_rating_key].lstrip("-").isdigit():
-                max_rating_value = float(args[max_rating_key])
-            else:
-                validation_error_list.append(
-                    ([max_rating_key], 'should be a number'))
-        else:
-            max_rating_value = args[max_rating_key]
-
-        # If the argument is a number, check if it's larger than 1
-        if 'max_rating_value' in locals() and max_rating_value <= 1:
-            validation_error_list.append(
-                ([max_rating_key], 'should be larger than 1'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        if ((limit_to is None or limit_to == aoi_vector_key) and
-                aoi_vector_key in args):
-            if not os.path.exists(args[aoi_vector_key]):
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not found on disk'))
-
-            vector = gdal.OpenEx(args[aoi_vector_key], gdal.OF_VECTOR)
-            if vector is None:
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not a vector'))
-            else:
-                vector = None
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'])
