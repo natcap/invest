@@ -84,136 +84,105 @@ class Hramap extends Component {
       rasters: {},
       rasterLength: null,
       rastersOnMap: [],
-      colorScale: [],
-      colorRange: [],
+      // colorScale: [],
+      // colorRange: [],
       ecosystemRiskLayer: ECOSYSTEM_LAYER, // Default layer on map when user choose to view sample files
       fileSuffix: "",
     };
 
     this.mapRef = React.createRef();
     this.layerControl = React.createRef();
-    this.onWorkspaceReady = this.onWorkspaceReady.bind(this);
+    this.gatherWorkspaceFiles = this.gatherWorkspaceFiles.bind(this);
+    this.loadVectors = this.loadVectors.bind(this);
   }
 
   componentDidMount() {
+    console.log('Map Mounts');
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
-
-    const workspace = this.props.workspace
-    let fileList = [];
-    // fs.readdir(workspace, (error, files) => {
-    //   console.log(error);
-    //   fileList = files
-    //   console.log(fileList);
-    // });
-    this.onWorkspaceReady(workspace);
-
+    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
+    this.loadVectors(fileMetadata.geojsonUrls);
+    // Update csv url and file suffix reducers
+    this.props.getCsvUrl(fileMetadata.csvUrl);
+    this.props.getFileSuffix(fileMetadata.fileSuffix);
     // this.mapApi.invalidateSize();
     // console.log('map invalidated');
   }
 
-  componentDidUpdate() {
+  componentDidUpdate(prevProps) {
     // The map loads with the wrong center when it has been initialized
     // prior to the div that will contain it. So call this function to have 
     // the map check it's container size after that div exists.
+    // console.log(prevProps);
+    // if (this.props.workspace !== prevProps.workspace) {
+    //   console.log('new workspace!');
+      
+    // }
     this.mapApi.invalidateSize();
   }
 
   // Read the target files from the event listener when users upload folder,
-  onWorkspaceReady(workspace) {
-    let geojsonUrls = {};
+  gatherWorkspaceFiles(workspace) {
+    let fileMetadata = {}
+    fileMetadata.geojsonUrls = {};
     // let geotiffUrls = {};
-    let csvUrl = null;
-    let fileSuffix = "";
+    fileMetadata.csvUrl = null;
+    fileMetadata.fileSuffix = "";
 
-    // Remove preexisting rasters from map
-    for (let i = 0; i < Object.keys(this.state.rastersOnMap).length; i++) {
-      let rasterName = this.state.rastersOnMap[i];
-      this.state.rasters[rasterName].removeFrom(this.mapApi);
-    }
+    // // Remove preexisting rasters from map
+    // for (let i = 0; i < Object.keys(this.state.rastersOnMap).length; i++) {
+    //   let rasterName = this.state.rastersOnMap[i];
+    //   this.state.rasters[rasterName].removeFrom(this.mapApi);
+    // }
 
-    let fileList = [];
-    glob(path.join(workspace, 'visualization_outputs/*'), function(err, files){
-      console.log(files);
-      fileList = files;
-    });
-
-    
-    // If the files are uploaded by user, store them as blob URL
-    // if (!isSampleData) {
-    Object.values(fileList).forEach( filename => {
+    // let fileList = [];
+    const files = glob.sync(path.join(workspace, 'visualization_outputs/*'));
+    console.log(files);
+    Object.values(files).forEach( filename => {
       // let filename = filename;
       let fileExt = filename.split(".").pop();
-      let filenameNoExt = filename.replace("." + fileExt, "");
+      let filenameNoExt = path.basename(filename).replace("." + fileExt, "");
 
       // Use URLs to reference to the blob, and push them to the dictionary
       if (fileExt === "geojson") {
         // Use createObjectURL() to return blob URL as a string
-        geojsonUrls[filenameNoExt] = filename //URL.createObjectURL(filename);
+        fileMetadata.geojsonUrls[filenameNoExt] = path.resolve(filename) //URL.createObjectURL(filename);
       } else if (fileExt === "tif") {
         //! do not render rasters for now yet because output files are GeoJSON
         // geotiffUrls[filenameNoExt] = URL.createObjectURL(fileObj);
       } else if (
           fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
         // Create CSV object URL
-        csvUrl = filename //URL.createObjectURL(fileObj);
-        fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
+        fileMetadata.csvUrl = path.resolve(filename) //URL.createObjectURL(fileObj);
+        fileMetadata.fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
       }
     });
-
-    // } else {
-      // // If users want to view sample files, save URLs of the hosted GeoJSON
-      // // and CSV files
-      // files.forEach( filepath => {
-
-      //   // Save sample file names and paths to geojsonUrls
-      //   let fileExt = filepath.split(".").pop();
-      //   let filenameNoExt = filepath.split(".")[1].split("/").pop()
-
-      //   if (fileExt === "geojson") {
-      //     geojsonUrls[filenameNoExt] = filepath;
-      //   } else if (fileExt === "csv") {
-      //     csvUrl = filepath;
-      //   } else if (fileExt === "tif") {
-      //     //! do not render rasters for now yet because output files are GeoJSON
-      //     // geotiffUrls[filenameNoExt] = filepath;
-      //   }
-      // });
-    // }
+    return(fileMetadata);
 
     // When all object URLs are retrieved, clean up preexisting states
     // since we will update them when new data is rendered
-    this.setState({
-      vectors: {},
-      vectorLength: null,
-      vectorsOnMap: [],
-      rasters: {},
-      rasterLength: null,
-      rastersOnMap: [],
-      lats: [],
-      lngs: [],
-      maxBbox: [[-90, -180], [90, 180]],
-      fileSuffix: fileSuffix,
-      ecosystemRiskLayer: "RECLASS_RISK_Ecosystem" + fileSuffix,
-    }, () =>
+    // this.setState({
+    //   vectors: {},
+    //   vectorLength: null,
+    //   vectorsOnMap: [],
+    //   rasters: {},
+    //   rasterLength: null,
+    //   rastersOnMap: [],
+    //   lats: [],
+    //   lngs: [],
+    //   maxBbox: [[-90, -180], [90, 180]],
+    //   fileSuffix: fileSuffix,
+    //   ecosystemRiskLayer: "RECLASS_RISK_Ecosystem" + fileSuffix,
+    // }, () =>
 
-    { // Fetch vector data and create styled polygons from the URLs
-      this.loadVectors(geojsonUrls);
+    // { // Fetch vector data and create styled polygons from the URLs
+    //   console.log('loading vectors');
+    //   this.loadVectors(geojsonUrls);
+    // });
 
-      //! do not render rasters for now yet because output files are GeoJSON
-      // this.loadAndRenderRasters(geotiffUrls);
-    });
 
-    // Update csv url and file suffix reducers
-    this.props.getCsvUrl(csvUrl);
-    this.props.getFileSuffix(fileSuffix);
   }
 
-  // // Load sample files to the page when users click on the View Sample button
-  // viewSample(e) {
-  //   const filepaths = SAMPLE_FILES.map(name => ("./sampledata/" + name) );
-  //   this.onFileUpload(filepaths, true);
-  // }
 
   // Read GeoJSON files and save them in the vectors state.
   loadVectors(vectorUrls) {
@@ -226,6 +195,8 @@ class Hramap extends Component {
     Object.keys(vectorUrls).forEach( vectorName => {
       // Fetch GeoJSON data via their path and store the data in vectors
       let vectorPath = vectorUrls[vectorName];
+      console.log(vectorName);
+      console.log(vectorPath);
 
       fetch(vectorPath)
         .then(response => response.json()) // parse the data as JSON
@@ -233,16 +204,14 @@ class Hramap extends Component {
 
           // Get suitable color scales and field name for rendering risk and
           // stressor vectors
+          let colorScale;
+          let colorRange;
           if (data.name.startsWith(RISK_PREFIX)) {
-            this.setState({
-              colorScale: RISK_COLOR_SCALE,
-              colorRange: RISK_VALUE_RANGE
-            });
+            colorScale = RISK_COLOR_SCALE;
+            colorRange = RISK_VALUE_RANGE;
           } else if (data.name.startsWith(STRESSOR_PREFIX)) {
-            this.setState({
-              colorScale: STRESS_COLOR_SCALE,
-              colorRange: STRESS_VALUE_RANGE
-            });
+            colorScale = STRESS_COLOR_SCALE;
+            colorRange = STRESS_VALUE_RANGE;
           }
 
           // Add gradient color to features based on the field names (either
@@ -260,9 +229,9 @@ class Hramap extends Component {
                     return feature.properties[STRESSOR_FIELD_NAME];
                   }
                 }}
-              scale={this.state.colorScale}
+              scale={colorScale}
               steps={COLOR_STEPS}
-              range={this.state.colorRange}
+              range={colorRange}
               mode="e"  // for equidistant color mode
               style={this.getPolygonStyle()}
               onEachFeature={
@@ -352,6 +321,7 @@ class Hramap extends Component {
 
   // Add titles and check boxes for raster and vector layers
   addLayerControls() {
+    // console.log('adding layer controls');
     // const rasters = this.state.rasters;
     const vectors = this.state.vectors;
     const vectorsOnMap = this.state.vectorsOnMap;
@@ -391,6 +361,7 @@ class Hramap extends Component {
       // If vector name starts with 'RECLASS_RISK' or 'STRESSOR_', put them on
       // the control box and remove the front suffix from the names
       Object.keys(vectors).forEach( vectorName => {
+        // console.log(vectorName);
         // If layer name is in the vectorsOnMap array, set it checked
         if (vectorName.startsWith(prefix) & vectorName !== ecosystemRiskLayer) {
           let defaultCheck = false; // Boolean variable for setting default layer check box
