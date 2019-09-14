@@ -229,7 +229,8 @@ export class InvestJob extends React.Component {
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
             <Provider store={store}>
               <HraApp
-                workspace={this.state.workspace}/>
+                workspace={this.state.workspace}
+                activeTab={activeTab}/> 
             </Provider>
             </Tab>
             <Tab eventKey="docs" title="Docs">

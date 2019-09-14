@@ -1,11 +1,11 @@
-/*#mapdiv {
-  height: 800px;
-  width:auto;
-}*/
-.map {
+#mapdiv {
   height: 800px;
   width:auto;
 }
+/*.map {
+  height: 800px;
+  width:auto;
+}*/
 
 .coords {
   font-family: "Helvetica Neue", Arial, Helvetica, sans-serif;

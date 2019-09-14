@@ -7,20 +7,12 @@ import { connect } from "react-redux";
 import chroma from "chroma-js";
 import Choropleth from "react-leaflet-choropleth";
 import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
-import React, { Component } from "react";
+import React from "react";
 
 import Control from "./Control";
 import { getCsvUrl } from "../../actions/index";
 import { getVectorsOnMap } from "../../actions/index";
 import { getFileSuffix } from "../../actions/index";
-
-/* 
-<style>
-  import "font-awesome/css/font-awesome.min.css";
-  import "leaflet/dist/leaflet.css";}
-  import "./style.css";}
-</style>
-*/
 
 const { BaseLayer } = LayersControl;
 
@@ -40,24 +32,6 @@ const STRESS_VALUE_RANGE = [1, 1];
 const RISK_FIELD_NAME = "Risk Score";
 const STRESSOR_FIELD_NAME = "Stressor"
 
-const SAMPLE_FILES = [
-  // Habitat risk vectors
-  "RECLASS_RISK_Ecosystem.geojson",
-  "RECLASS_RISK_eelgrass.geojson",
-  "RECLASS_RISK_kelp.geojson",
-  "RECLASS_RISK_hardbottom.geojson",
-  "RECLASS_RISK_softbottom.geojson",
-
-  // Stressor vectors
-  "STRESSOR_Docks_Wharves_Marinas.geojson",
-  "STRESSOR_Finfish_Aquaculture_Comm.geojson",
-  "STRESSOR_Rec_Fishing.geojson",
-  "STRESSOR_Shellfish_Aquaculture_Comm.geojson",
-
-  // Criteria score zonal statistics on each habitat-stressor pair
-  "SUMMARY_STATISTICS.csv"
-];
-
 // CSV file basename.
 const CSV_BASENAME = "SUMMARY_STATISTICS";
 
@@ -66,7 +40,7 @@ const STRESSOR_PREFIX = "STRESSOR_"
 const RISK_PREFIX = "RECLASS_RISK_"
 const ECOSYSTEM_LAYER = "RECLASS_RISK_Ecosystem"
 
-class Hramap extends Component {
+class Hramap extends React.Component {
 
   constructor(props) {
     super(props);
@@ -85,10 +59,9 @@ class Hramap extends Component {
       rasters: {},
       rasterLength: null,
       rastersOnMap: [],
-      // colorScale: [],
-      // colorRange: [],
       ecosystemRiskLayer: ECOSYSTEM_LAYER, // Default layer on map when user choose to view sample files
       fileSuffix: "",
+      isFirstRender: true
     };
 
     this.mapRef = React.createRef();
@@ -101,27 +74,28 @@ class Hramap extends Component {
   componentDidMount() {
     console.log(this.state);
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
-    this.mapApi.invalidateSize();
     this.renderLegend();
     const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
     this.loadVectors(fileMetadata.geojsonUrls);
     // Update csv url and file suffix reducers
     this.props.getCsvUrl(fileMetadata.csvUrl);
     this.props.getFileSuffix(fileMetadata.fileSuffix);
-    // this.zoomToMaxBbox();
-    // console.log('map invalidated');
   }
 
-  componentDidUpdate(prevProps) {
-    // The map loads with the wrong center when it has been initialized
-    // prior to the div that will contain it. So call this function to have 
-    // the map check it's container size after that div exists.
-    // console.log(prevProps);
-    // if (this.props.workspace !== prevProps.workspace) {
-    //   console.log('new workspace!');
-      
-    // }
-    // this.mapApi.invalidateSize();
+  componentDidUpdate() {
+    // The map loads with the wrong center if it was initialized
+    // prior to the div that will contain it. So here's a hack to 
+    // resize the map when the Viz tab is clicked and it's div's are created.
+    // And a hack to only to do this once, so if you switch tabs subsequently,
+    // the map stays where you left it.
+    const activeTab = this.props.activeTab;
+    if (this.state.isFirstRender & activeTab === 'viz') {
+      this.mapApi.invalidateSize();
+      this.updateMaxBbox(); // also zooms to it if the box changed.
+      this.setState({
+        isFirstRender: false
+      });
+    }
   }
 
   // Read the target files from the event listener when users upload folder,
@@ -138,11 +112,9 @@ class Hramap extends Component {
     //   this.state.rasters[rasterName].removeFrom(this.mapApi);
     // }
 
-    // let fileList = [];
     const files = glob.sync(path.join(workspace, 'visualization_outputs/*'));
     console.log(files);
     Object.values(files).forEach( filename => {
-      // let filename = filename;
       let fileExt = filename.split(".").pop();
       let filenameNoExt = path.basename(filename).replace("." + fileExt, "");
 
@@ -269,19 +241,21 @@ class Hramap extends Component {
 
   // Calculate the union of all the bounding boxes of geojson files.
   updateMaxBbox() {
+    const currentBox = this.state.maxBbox;
     if (this.state.lats.length > 0 && this.state.lngs.length > 0) {
       // Calculate the min and max longitude and latitude
       let minlat = Math.min(...this.state.lats),
           maxlat = Math.max(...this.state.lats);
       let minlng = Math.min(...this.state.lngs),
           maxlng = Math.max(...this.state.lngs);
-      this.setState({
-        maxBbox: [[minlat, minlng],[maxlat, maxlng]]
-      }, () => {
-        this.mapApi.invalidateSize();
-        this.zoomToMaxBbox()
-        console.log(this.state);
-      });
+      const newBox = [[minlat, minlng],[maxlat, maxlng]];
+      if (currentBox !== newBox) {
+        this.setState({
+          maxBbox: newBox
+        }, () => {
+          this.zoomToMaxBbox()
+        });
+      }
     }
   }
 
@@ -567,30 +541,8 @@ class Hramap extends Component {
         </LayersControl>
 
         {this.renderGeojsons()}
-
         {this.addLayerControls()}
 
-{/*        <Control position="topleft">
-          // <form className="leaflet-control-layers upload-form">
-
-          //   Upload HRA Output Folder
-          //   <input type="file" ref="fileUpload"
-          //     onChange={e => this.onWorkspaceReady(e.target.files)}
-          //     webkitdirectory="true" mozdirectory="true" msdirectory="true"
-          //     odirectory="true" directory="true"
-          //     style={{"display": "none"}} multiple />
-          //   <br />
-
-          //   <input type="button" value="Select Folder"
-          //     onClick={e => this.refs.fileUpload.click()}/>
-
-          //   or View Sample
-          //   <input type="button" value="Sample Files"
-          //     onClick={e => this.viewSample(e)}/>
-          // </form>
-
-        </Control>
-*/}
         <Control position="bottomleft">
           <div className="coords">{this.state.coordText}</div>
         </Control>

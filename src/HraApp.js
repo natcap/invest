@@ -23,7 +23,9 @@ class HraApp extends Component {
     if (this.props.workspace) {
       return (
         <div>
-          <HraMap workspace={this.props.workspace}/>
+          <HraMap 
+            workspace={this.props.workspace}
+            activeTab={this.props.activeTab}/>
           <Plot />
         </div>
       );
