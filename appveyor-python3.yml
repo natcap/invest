@@ -55,8 +55,6 @@ install:
     - ps: "[System.IO.File]::WriteAllLines('C:/Users/appveyor/client-secret.json', $content, $Utf8NoBomEncoding)"
     - .\google-cloud-sdk\bin\gcloud auth activate-service-account --key-file=%USERPROFILE%\client-secret.json
 
-test_script: off
-
 build_script:
     # Attempt to download repositories in parallel
     - make -j3 fetch
@@ -78,6 +76,9 @@ build_script:
 
     # push the artifacts
     - make GSUTIL=.\google-cloud-sdk\bin\gsutil deploy
+
+test_script:
+    - echo "This is a binary build only; nothing to test at the moment."
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory
