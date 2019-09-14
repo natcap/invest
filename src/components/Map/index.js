@@ -517,14 +517,14 @@ class Hramap extends React.Component {
         </Control>
 
         <LayersControl position="topleft">
-          <BaseLayer name="Open Street Map" checked={true}>
+          <BaseLayer name="Open Street Map">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="&copy; <a href=&quot;http://osm.org/copyright&quot;>
                 OpenStreetMap</a> contributors" />
           </BaseLayer>
 
-          <BaseLayer name="ESRI Ocean Map">
+          <BaseLayer name="ESRI Ocean Map" checked={true}>
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}"
               attribution="&copy;
