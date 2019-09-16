@@ -656,7 +656,7 @@ def execute(args):
     # Join here because zonal_rasters needs to be loaded from the pickle file
     task_graph.join()
     zonal_rasters = pickle.load(open(rasterized_aoi_pickle_path, 'rb'))
-    region_list = zonal_rasters.keys()
+    region_list = list(zonal_rasters)
 
     # Dependent task list used when converting all the calculated stats to CSV
     zonal_stats_dependent_tasks = []
