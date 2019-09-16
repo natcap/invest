@@ -9,6 +9,9 @@ Unreleased Changes
   Various python scripts involved in the distribution and release processes
   have been updated for compatibility with python 3.6 as a part of this
   migration.
+* Fixed taskgraph-related issues with Habitat Risk Assessment where
+  1) asynchronous mode was failing due to missing task dependencies and
+  2) avoided recomputation was confounded by two tasks modifying the same files.
 * Fixed an issue with Habitat Quality where the model was incorrectly
   expecting the sensitivity table to have a landcover code of 0.
 * The InVEST CLI has been completely rebuilt to divide
