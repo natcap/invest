@@ -294,7 +294,7 @@ def execute(args):
 
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
-    align_and_resize_dependent_tasks = []
+    align_and_resize_dependency_list = []
     for _, row in info_df.iterrows():
         if not row['IS_RASTER']:
             vector_name = row['NAME']
@@ -314,6 +314,7 @@ def execute(args):
                 target_path_list=[simplified_vector_path],
                 task_name='simplify_%s_vector' % vector_name)
 
+            rasterize_kwargs = {'burn_values': None, 'option_list': None}
             if vector_type == _SPATIAL_CRITERIA_TYPE:
                 # Fill value for the target raster should be nodata float,
                 # since criteria rating could be float
@@ -321,8 +322,7 @@ def execute(args):
 
                 # If it's a spatial criteria vector, burn the values from the
                 # ``rating`` attribute
-                rasterize_kwargs = {
-                    'option_list': ["ATTRIBUTE=" + _RATING_FIELD]}
+                rasterize_kwargs['option_list'] = ["ATTRIBUTE=" + _RATING_FIELD]
                 rasterize_nodata = _TARGET_NODATA_FLT
                 rasterize_pixel_type = _TARGET_PIXEL_FLT
 
@@ -332,28 +332,19 @@ def execute(args):
                 fill_value = _TARGET_NODATA_INT
 
                 # Fill the raster with 1s on where a vector geometry exists
-                rasterize_kwargs = {'burn_values': [1],
-                                    'option_list': ["ALL_TOUCHED=TRUE"]}
+                rasterize_kwargs['burn_values'] = [1]
+                rasterize_kwargs['option_list'] = ["ALL_TOUCHED=TRUE"]
                 rasterize_nodata = _TARGET_NODATA_INT
                 rasterize_pixel_type = _TARGET_PIXEL_INT
 
-            # Create raster from the simplified vector and fill with 0s
-            create_raster_task = task_graph.add_task(
-                func=pygeoprocessing.create_raster_from_vector_extents,
+            align_and_resize_dependency_list.append(task_graph.add_task(
+                func=_create_raster_and_rasterize_vector,
                 args=(simplified_vector_path, target_raster_path,
-                      target_pixel_size, rasterize_pixel_type, rasterize_nodata),
-                kwargs={'fill_value': fill_value},
-                target_path_list=[target_raster_path],
-                task_name='create_raster_from_%s' % vector_name,
-                dependent_task_list=[simplify_geometry_task])
-
-            align_and_resize_dependent_tasks.append(task_graph.add_task(
-                func=pygeoprocessing.rasterize,
-                args=(simplified_vector_path, target_raster_path),
-                kwargs=rasterize_kwargs,
+                      target_pixel_size, rasterize_pixel_type,
+                      rasterize_nodata, fill_value, rasterize_kwargs),
                 target_path_list=[target_raster_path],
                 task_name='rasterize_%s' % vector_name,
-                dependent_task_list=[create_raster_task]))
+                dependent_task_list=[simplify_geometry_task]))
 
     # Align and resize all the rasters, including rasters provided by the user,
     # and rasters created from the vectors.
@@ -369,7 +360,7 @@ def execute(args):
         kwargs={'target_sr_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
         task_name='align_and_resize_raster_task',
-        dependent_task_list=align_and_resize_dependent_tasks)
+        dependent_task_list=align_and_resize_dependency_list)
 
     # Make buffer stressors based on their impact distance and decay function
     align_stressor_raster_list = info_df[
@@ -811,6 +802,20 @@ def execute(args):
     LOGGER.info(
         'HRA model completed. Please visit http://marineapps.'
         'naturalcapitalproject.org/ to visualize your outputs.')
+
+
+def _create_raster_and_rasterize_vector(
+        simplified_vector_path, target_raster_path, target_pixel_size,
+        rasterize_pixel_type, rasterize_nodata, fill_value, rasterize_kwargs):
+    """Wrap these related operations so they can be captured in one task."""
+    pygeoprocessing.create_raster_from_vector_extents(
+        simplified_vector_path, target_raster_path,
+        target_pixel_size, rasterize_pixel_type, rasterize_nodata,
+        fill_value=fill_value)
+    pygeoprocessing.rasterize(
+        simplified_vector_path, target_raster_path,
+        burn_values=rasterize_kwargs['burn_values'],
+        option_list=rasterize_kwargs['option_list'])
 
 
 def _raster_to_geojson(
