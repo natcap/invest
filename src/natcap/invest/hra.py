@@ -847,9 +847,7 @@ def _raster_to_geojson(
 
     # Polygonize onto a GPKG
     gpkg_driver = gdal.GetDriverByName('GPKG')
-    temp_gpkg_path = os.path.join(
-        os.path.dirname(target_geojson_path),
-        os.path.splitext(target_geojson_path)[0] + '.gpkg')
+    temp_gpkg_path = os.path.splitext(target_geojson_path)[0] + '.gpkg'
     vector = gpkg_driver.Create(temp_gpkg_path, 0, 0, 0, gdal.GDT_Unknown)
 
     vector.StartTransaction()
