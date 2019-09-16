@@ -11,28 +11,17 @@ environment:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/#python
 
-    - PYTHON: "C:\\Python27"
-      TESTTARGET: "test"
-
-    - PYTHON: "C:\\Python27-x64"
-      TESTTARGET: "test"
-
     - PYTHON: "C:\\Python36"
-      TESTTARGET: "test"
+      TARGET: "test"
 
     - PYTHON: "C:\\Python36-x64"
-      TESTTARGET: "test"
+      TARGET: "test"
 
-    - PYTHON: "C:\\Python27"
-      TESTTARGET: "test_ui"
-      EXTRAPKGS: "pyqt4"
+    - PYTHON: "C:\\Python36-x64"
+      TARGET: "validate_sampledata"
 
     - PYTHON: "C:\\Python36"
-      TESTTARGET: "test_ui"
-      EXTRAPKGS: "pyqt4"
-
-    - PYTHON: "C:\\Python27"
-      TESTTARGET: "validate_sampledata"
+      TARGET: "appveyor_binaries"
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
@@ -48,10 +37,13 @@ install:
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
 
+    # If we're building appveyor binaries, run the extra install script.
+    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-binary-install.ps1)
+
 build: off
 
 test_script:
-    - "make %TESTTARGET%"
+    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-binary-build.ps1) else (make %TARGET%)
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory
