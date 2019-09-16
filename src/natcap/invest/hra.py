@@ -432,12 +432,14 @@ def execute(args):
             'R_NUM_RASTER_PATH']
         habitat_recovery_denom = habitat_recovery_df['R_DENOM']
 
-        task_graph.add_task(
-            func=_calc_habitat_recovery,
-            args=(habitat_raster_path, habitat_recovery_df, max_rating),
-            target_path_list=[recovery_raster_path, recovery_num_raster_path],
-            task_name='calculate_%s_recovery' % habitat,
-            dependent_task_list=[align_and_resize_rasters_task])
+        calc_habitat_recovery_task_list = []
+        calc_habitat_recovery_task_list.append(
+            task_graph.add_task(
+                func=_calc_habitat_recovery,
+                args=(habitat_raster_path, habitat_recovery_df, max_rating),
+                target_path_list=[recovery_raster_path, recovery_num_raster_path],
+                task_name='calculate_%s_recovery' % habitat,
+                dependent_task_list=[align_and_resize_rasters_task]))
 
         total_expo_dependent_tasks = []
         total_conseq_dependent_tasks = []
@@ -497,7 +499,8 @@ def execute(args):
                 target_path_list=pair_conseq_target_path_list,
                 task_name='calculate_%s_%s_consequence' % (habitat, stressor),
                 dependent_task_list=[
-                    align_and_resize_rasters_task, distance_transform_task])
+                    align_and_resize_rasters_task,
+                    distance_transform_task] + calc_habitat_recovery_task_list)
             total_conseq_dependent_tasks.append(pair_conseq_task)
 
             # Calculate pairwise habitat-stressor risks.
