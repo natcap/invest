@@ -18,7 +18,6 @@ import HraApp from './HraApp'
 import rootReducer from './reducers';
 // need the HraApp's index.css?
 
-// const INVEST_EXE = 'C:/InVEST_3.7.0_x86/invest-3-x86/invest.exe'
 const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
 const DATASTACK_JSON = 'datastack.json'
@@ -109,6 +108,7 @@ export class InvestJob extends React.Component {
       python.on('close', (code) => {
         this.setState({
           jobStatus: code,
+          workspace: this.state.args.workspace_dir.value
         });
         console.log(this.state)
       });
@@ -228,7 +228,9 @@ export class InvestJob extends React.Component {
             </Tab>
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
             <Provider store={store}>
-              <HraApp />
+              <HraApp
+                workspace={this.state.workspace}
+                activeTab={activeTab}/> 
             </Provider>
             </Tab>
             <Tab eventKey="docs" title="Docs">
