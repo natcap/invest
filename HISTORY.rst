@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed taskgraph-related issues with Habitat Risk Assessment where 
+  1) asynchronous mode was failing due to missing task dependencies and 
+  2) avoided recomputation was confounded by two tasks modifying the same files.
 * Fixed an issue with Habitat Quality where the model was incorrectly
   expecting the sensitivity table to have a landcover code of 0.
 * The InVEST CLI has been completely rebuilt to divide
