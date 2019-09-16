@@ -1,7 +1,7 @@
 .plot-container {
   height: 90vh;
-  width: 35%;
-  float: left;
+  width: 40%;
+  float: right;
   overflow: auto;
   text-align: center;
 }

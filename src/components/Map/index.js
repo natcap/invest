@@ -72,11 +72,10 @@ class Hramap extends React.Component {
   }
 
   componentDidMount() {
-    console.log(this.state);
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
     const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
-    this.loadVectors(fileMetadata.geojsonUrls);
+    this.loadVectors(fileMetadata.geojsonUrls); // fetch requests happening here
     // Update csv url and file suffix reducers
     this.props.getCsvUrl(fileMetadata.csvUrl);
     this.props.getFileSuffix(fileMetadata.fileSuffix);
@@ -98,68 +97,30 @@ class Hramap extends React.Component {
     }
   }
 
-  // Read the target files from the event listener when users upload folder,
+  // Get relevant filenames from the output workspace
   gatherWorkspaceFiles(workspace) {
     let fileMetadata = {}
     fileMetadata.geojsonUrls = {};
-    // let geotiffUrls = {};
     fileMetadata.csvUrl = null;
     fileMetadata.fileSuffix = "";
 
-    // // Remove preexisting rasters from map
-    // for (let i = 0; i < Object.keys(this.state.rastersOnMap).length; i++) {
-    //   let rasterName = this.state.rastersOnMap[i];
-    //   this.state.rasters[rasterName].removeFrom(this.mapApi);
-    // }
-
     const files = glob.sync(path.join(workspace, 'visualization_outputs/*'));
-    console.log(files);
     Object.values(files).forEach( filename => {
       let fileExt = filename.split(".").pop();
       let filenameNoExt = path.basename(filename).replace("." + fileExt, "");
 
-      // Use URLs to reference to the blob, and push them to the dictionary
       if (fileExt === "geojson") {
-        // Use createObjectURL() to return blob URL as a string
-        fileMetadata.geojsonUrls[filenameNoExt] = path.resolve(filename) //URL.createObjectURL(filename);
-      } else if (fileExt === "tif") {
-        //! do not render rasters for now yet because output files are GeoJSON
-        // geotiffUrls[filenameNoExt] = URL.createObjectURL(fileObj);
-      } else if (
-          fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
-        // Create CSV object URL
-        fileMetadata.csvUrl = path.resolve(filename) //URL.createObjectURL(fileObj);
+        fileMetadata.geojsonUrls[filenameNoExt] = path.resolve(filename) 
+      } else if (fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
+        fileMetadata.csvUrl = path.resolve(filename)
         fileMetadata.fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
       }
     });
     return(fileMetadata);
-
-    // When all object URLs are retrieved, clean up preexisting states
-    // since we will update them when new data is rendered
-    // this.setState({
-    //   vectors: {},
-    //   vectorLength: null,
-    //   vectorsOnMap: [],
-    //   rasters: {},
-    //   rasterLength: null,
-    //   rastersOnMap: [],
-    //   lats: [],
-    //   lngs: [],
-    //   maxBbox: [[-90, -180], [90, 180]],
-    //   fileSuffix: fileSuffix,
-    //   ecosystemRiskLayer: "RECLASS_RISK_Ecosystem" + fileSuffix,
-    // }, () =>
-
-    // { // Fetch vector data and create styled polygons from the URLs
-    //   console.log('loading vectors');
-    //   this.loadVectors(geojsonUrls);
-    // });
-
-
   }
 
 
-  // Read GeoJSON files and save them in the vectors state.
+  // Read GeoJSON files and generate Choropleth Components
   loadVectors(vectorUrls) {
     let lats = [];
     let lngs = [];
@@ -170,11 +131,9 @@ class Hramap extends React.Component {
     Object.keys(vectorUrls).forEach( vectorName => {
       // Fetch GeoJSON data via their path and store the data in vectors
       let vectorPath = vectorUrls[vectorName];
-      console.log(vectorName);
-      console.log(vectorPath);
 
       fetch(vectorPath)
-        .then(response => response.json()) // parse the data as JSON
+        .then(response => response.json())
         .then(data => {
 
           // Get suitable color scales and field name for rendering risk and
@@ -305,7 +264,6 @@ class Hramap extends React.Component {
 
   // Add titles and check boxes for raster and vector layers
   addLayerControls() {
-    // console.log('adding layer controls');
     // const rasters = this.state.rasters;
     const vectors = this.state.vectors;
     const vectorsOnMap = this.state.vectorsOnMap;
