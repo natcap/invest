@@ -71,7 +71,7 @@ def run_model(modelname, binary, workspace, datastack, headless=False):
     # Using a list here allows subprocess to handle escaping of paths.
     if headless:
         command = [binary, 'run', '--workspace', workspace,
-                   '--datastack', datastack, modelname]
+                   '--datastack', datastack, '--headless', modelname]
     else:
         command = [binary, 'quickrun', '--workspace', workspace,
                    modelname, datastack]
