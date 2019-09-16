@@ -17,7 +17,105 @@ import taskgraph
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.pollination')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Crop Pollination",
+    "module": __name__,
+    "userguide_html": "croppollination.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "landcover_raster_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "This is the landcover map that's used to map biophysical "
+                "properties about habitat and floral resources of landcover "
+                "types to a spatial layout."),
+            "name": "Land Cover Map"
+        },
+        "guild_table_path": {
+            "validation_options": {
+                "required_fields": ["species", "alpha", "relative_abundance"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A table indicating the bee species to analyze in this model "
+                "run.  Table headers must include:<br/>* 'species': a bee "
+                "species whose column string names will be referred to in "
+                "other tables and the model will output analyses per species."
+                "<br/> * any number of columns matching "
+                "_NESTING_SUITABILITY_PATTERN with values in the range "
+                "[0.0, 1.0] indicating the suitability of the given species "
+                "to nest in a particular substrate.<br/>* any number of "
+                "_FORAGING_ACTIVITY_PATTERN columns with values in the range "
+                "[0.0, 1.0] indicating the relative level of foraging "
+                "activity for that species during a particular season."
+                "<br/>* 'alpha': the sigma average flight distance of that "
+                "bee species in meters.<br/>* 'relative_abundance': a weight "
+                "indicating the relative abundance of the particular species "
+                "with respect to the sum of all relative abundance weights "
+                "in the table."),
+            "name": "Guild Table"
+        },
+        "landcover_biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table mapping landcover codes in the landcover raster "
+                "to indexes of nesting availability for each nesting "
+                "substrate referenced in guilds table as well as indexes of "
+                "abundance of floral resources on that landcover type per "
+                "season in the bee activity columns of the guild table."
+                "<br/>All indexes are in the range [0.0, 1.0].<br/>Columns "
+                "in the table must be at least<br/>* 'lucode': representing "
+                "all the unique landcover codes in the raster st "
+                "`args['landcover_path']`<br/>* For every nesting matching "
+                "_NESTING_SUITABILITY_PATTERN in the guild stable, a column "
+                "matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`."
+                "<br/>* For every season matching _FORAGING_ACTIVITY_PATTERN "
+                "in the guilds table, a column matching the pattern in "
+                "`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
+            "name": "Land Cover Biophysical Table"
+        },
+        "farm_vector_path": {
+            "validation_options": {
+                "required_fields": ["crop_type", "half_sat", "season", "p_dep",
+                                    "p_managed"],
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "This is a layer of polygons representing farm sites to be "
+                "analyzed.  The vector must have at least the following "
+                "fields:<br/><br/>* season (string): season in which the "
+                "farm needs pollination.<br/>* half_sat (float): a real in "
+                "the range [0.0, 1.0] representing the proportion of wild "
+                "pollinators to achieve a 50% yield of that crop.<br/>* "
+                "p_wild_dep (float): a number in the range [0.0, 1.0] "
+                "representing the proportion of yield dependent on "
+                "pollinators.<br/>* p_managed (float): proportion of "
+                "pollinators that come from non-native/managed hives.<br/>"
+                "* f_[season] (float): any number of fields that match this "
+                "pattern such that `season` also matches the season headers "
+                "in the biophysical and guild table.  Any areas that overlap "
+                "the landcover map will replace seasonal floral resources "
+                "with this value.  Ranges from 0..1.<br/>* n_[substrate] "
+                "(float): any number of fields that match this pattern such "
+                "that `substrate` also matches the nesting substrate headers "
+                "in the biophysical and guild table.  Any areas that "
+                "overlap the landcover map will replace nesting substrate "
+                "suitability with this value.  Ranges from 0..1."),
+            "name": "Farm Vector"
+        }
+    }
+}
 
 _INDEX_NODATA = -1.0
 
@@ -1360,60 +1458,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    for key in [
-            'workspace_dir',
-            'landcover_raster_path',
-            'guild_table_path',
-            'landcover_biophysical_table_path']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    for key in [
-            'landcover_raster_path',
-            'guild_table_path',
-            'landcover_biophysical_table_path']:
-        if (limit_to is None or limit_to == key) and (
-                not os.path.exists(args[key])):
-            validation_error_list.append(
-                ([key], 'not found on disk'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in [
-                ('landcover_raster_path', 'raster'),
-                ('farm_vector_path', 'vector')]:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and args[key] != ''):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    # Deliberately not validating the interrelationship of the columns between
+    # the biophysical table and the guilds table as the model itself already
+    # does extensive checking for this.
+    return validation.validate(args, ARGS_SPEC['args'])
