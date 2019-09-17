@@ -11,7 +11,7 @@ choco install zip
 
 # The binary build requires the shapely DLL to be named something specific.
 # /B copies the file as a binary file.
-copy /B $env:PYTHON\Lib\site-packages\shapely\DLLs\geos_c.dll $env:PYTHON\Lib\site-packages\shapely\DLLs\geos.dll
+cmd.exe --% /c copy /B %PYTHON%\Lib\site-packages\shapely\DLLs\geos_c.dll %PYTHON%\Lib\site-packages\shapely\DLLs\geos.dll
 
 # Download and install NSIS plugins to their correct places.
 wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
