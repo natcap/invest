@@ -13,12 +13,12 @@ export class SetupTab extends React.Component {
     // so we may not need this function.
 
     // For now, nice to validate on load if it's possible to load with default args.
-    let openingArgs = this.props.args
-    for (const argname in openingArgs) {
-      const argument = openingArgs[argname];
-      openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
-    }
-    this.props.checkArgsReadyToValidate(openingArgs)
+    // let openingArgs = this.props.args
+    // for (const argname in openingArgs) {
+    //   const argument = openingArgs[argname];
+    //   openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
+    // }
+    // this.props.checkArgsReadyToValidate(openingArgs)
   }
 
   render () {
@@ -29,7 +29,8 @@ export class SetupTab extends React.Component {
       <div>
         <ArgsForm 
           args={this.props.args}
-          handleChange={this.props.handleChange} 
+          handleChange={this.props.handleChange}
+          onDrop={this.props.onDrop}
         />
         <Button 
           variant="primary" 
@@ -48,20 +49,20 @@ class ArgsForm extends React.Component {
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
     let validationMessage = '';
-    for (const arg in current_args) {
-      const argument = current_args[arg];
+    for (const argname in current_args) {
+      const argument = current_args[argname];
       if (argument.validationMessage) {
         validationMessage = argument.validationMessage ;
       }
-      if (argument.type !== 'select') {
+      if (argument.type !== 'option_string') {
         formItems.push(
-          <Form.Group  key={argument.argname + 'Group'}>
+          <Form.Group  key={argname}>
             <Form.Label>
-              {argument.argname}
+              {argument.name}
             </Form.Label>
             <Form.Control
-              name={argument.argname}
-              type={argument.type}
+              name={argname}
+              type="text" //{argument.type}
               value={argument.value}
               required={argument.required}
               onChange={this.props.handleChange}
@@ -69,35 +70,45 @@ class ArgsForm extends React.Component {
               isInvalid={!argument.valid}
             />
             <Form.Control.Feedback type='invalid'>
-              {argument.validationRules.rule + ' : ' + validationMessage}
+              {argument.type + ' : ' + validationMessage}
             </Form.Control.Feedback>
           </Form.Group>)
       } else {
         formItems.push(
-          <Form.Group  key={argument.argname + 'Group'}>
+          <Form.Group  key={argname}>
             <Form.Label>
-              {argument.argname}
+              {argument.name}
             </Form.Label>
             <Form.Control
               as='select'
-              name={argument.argname}
+              name={argname}
               value={argument.value}
               required={argument.required}
               onChange={this.props.handleChange}
             >
-              {argument.options.map(opt =>
+              {argument.validation_options.options.map(opt =>
                 <option value={opt} key={opt}>{opt}</option>
               )}
             </Form.Control>
             <Form.Control.Feedback type='invalid'>
-              {argument.validationRules.rule + ' : ' + validationMessage}
+              {argument.type + ' : ' + validationMessage}
             </Form.Control.Feedback>
           </Form.Group>)
       }
     }
 
     return (
-      <Form validated={false}>{formItems}</Form>
+      <Form 
+        validated={false}
+        onDrop={this.props.onDrop}
+        onDragOver={dragover_handler}>
+        {formItems}
+      </Form>
     );
   }
+}
+
+function dragover_handler(ev) {
+ ev.preventDefault();
+ ev.dataTransfer.dropEffect = "move";
 }

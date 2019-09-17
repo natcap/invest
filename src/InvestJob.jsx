@@ -26,52 +26,31 @@ const DATASTACK_JSON = 'datastack.json'
 // TODO refactor HraApp to not depend on redux.
 const store = createStore(rootReducer)
 
-function argsToJSON(currentArgs) {
-  // TODO: should this use the datastack.py API to create the json? 
-  // make simple args json for passing to python cli
-  let args_dict = {};
-  for (const argname in currentArgs) {
-    args_dict[argname] = currentArgs[argname]['value']
-  }
-  const datastack = { // keys expected by datastack.py
-    args: args_dict,
-    model_name: MODULE_NAME,
-    invest_version: '3.7.0',
-  };
-
-  const jsonContent = JSON.stringify(datastack, null, 2);
-  fs.writeFile(TEMP_DIR + DATASTACK_JSON, jsonContent, 'utf8', function (err) {
-    if (err) {
-        console.log("An error occured while writing JSON Object to File.");
-        return console.log(err);
-    }
-    console.log("JSON file has been saved.");
-  });
-}
-
 export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            args: MODEL_ARGS,
+            modelSpec: {},
+            // args: MODEL_ARGS,
             workspace: null,
             jobid: null,
             jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
-            activeTab: 'setup',
+            activeTab: 'models',
             docs: MODEL_DOCS
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
-        this.investloadModelSpec = this.loadModelSpec.bind(this);
+        this.loadModelSpec = this.loadModelSpec.bind(this);
         this.investValidate = this.investValidate.bind(this);
         this.executeModel = this.executeModel.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
+        this.argsFromJsonDrop = this.argsFromJsonDrop.bind(this);
     }
 
     executeModel() {
-      argsToJSON(this.state.args);  // first write args to datastack file
+      argsToJSON(this.state.modelSpec.args);  // first write args to datastack file
       
       this.setState(
         {
@@ -109,7 +88,7 @@ export class InvestJob extends React.Component {
       python.on('close', (code) => {
         this.setState({
           jobStatus: code,
-          workspace: this.state.args.workspace_dir.value
+          workspace: this.state.modelSpec.args.workspace_dir.value
         });
         console.log(this.state)
       });
@@ -175,7 +154,9 @@ export class InvestJob extends React.Component {
       proc.stdout.on('data', (data) => {
         const results = JSON.parse(data.toString());
         console.log(results);
-        // this.setState({models:results});
+        this.setState({
+          modelSpec:results,
+        }, () => this.switchTabs('setup'));
       });
 
       proc.stderr.on('data', (data) => {
@@ -187,13 +168,37 @@ export class InvestJob extends React.Component {
       });
     }
 
+    argsFromJsonDrop(event) {
+      event.preventDefault();
+      
+      const fileList = event.dataTransfer.files;
+      if (fileList.length !== 1) {
+        throw alert('only drop one file at a time.')
+      }
+      const filepath = fileList[0].path;
+      const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+
+      let modelSpec = this.state.modelSpec
+      const model_name = this.state.modelSpec.module
+      if (model_name === modelParams.model_name) {
+        Object.keys(modelSpec.args).forEach(argkey => {
+          modelSpec.args[argkey].value = modelParams.args[argkey]
+        });
+        this.setState({
+          modelSpec: modelSpec
+        });
+      } else {
+        throw alert('parameter file does not match this model.')
+      }
+    }
+
     handleChange(event) {
       const target = event.target;
       const value = target.value;
       const name = target.name;
       const required = target.required;
 
-      let current_args = Object.assign({}, this.state.args);
+      let current_args = Object.assign({}, this.state.modelSpec.args);
       current_args[name]['value'] = value
       current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
 
@@ -201,7 +206,7 @@ export class InvestJob extends React.Component {
           {args: current_args}
       );      
 
-      this.checkArgsReadyToValidate(this.state.args)
+      this.checkArgsReadyToValidate(this.state.modelSpec.args)
     }
 
     checkArgsReadyToValidate(args) {
@@ -229,6 +234,7 @@ export class InvestJob extends React.Component {
     render () {
         const activeTab = this.state.activeTab;
         const jobStatus = this.state.jobStatus;
+        const setupDisabled = !Boolean(this.state.modelSpec.args); // enable once modelSpec has loaded
         const logDisabled = ['invalid', 'ready'].includes(jobStatus);  // enable during and after execution
         const vizDisabled = !Boolean(jobStatus === 0);  // enable only on complete execute with no errors
 
@@ -239,13 +245,14 @@ export class InvestJob extends React.Component {
                 loadModelSpec={this.loadModelSpec}
               />
             </Tab>
-            <Tab eventKey="setup" title="Setup">
+            <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
               <SetupTab
-                args={this.state.args}
+                args={this.state.modelSpec.args}
                 jobStatus={this.state.jobStatus}
                 checkArgsReadyToValidate={this.checkArgsReadyToValidate}
                 handleChange={this.handleChange}
                 executeModel={this.executeModel}
+                onDrop={this.argsFromJsonDrop}
               />
             </Tab>
             <Tab eventKey="log" title="Log" disabled={logDisabled}>
@@ -272,3 +279,25 @@ export class InvestJob extends React.Component {
     }
 }
 
+function argsToJSON(currentArgs) {
+  // TODO: should this use the datastack.py API to create the json? 
+  // make simple args json for passing to python cli
+  let args_dict = {};
+  for (const argname in currentArgs) {
+    args_dict[argname] = currentArgs[argname]['value']
+  }
+  const datastack = { // keys expected by datastack.py
+    args: args_dict,
+    model_name: MODULE_NAME,
+    invest_version: '3.7.0',
+  };
+
+  const jsonContent = JSON.stringify(datastack, null, 2);
+  fs.writeFile(TEMP_DIR + DATASTACK_JSON, jsonContent, 'utf8', function (err) {
+    if (err) {
+        console.log("An error occured while writing JSON Object to File.");
+        return console.log(err);
+    }
+    console.log("JSON file was saved.");
+  });
+}
