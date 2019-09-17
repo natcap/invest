@@ -21,7 +21,3 @@ wget -nv https://storage.googleapis.com/natcap-build-dependencies/windows/NsProc
 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
-
-# Download, quietly unzip and install the google cloud utilities.
-curl -o gcloud.zip https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-sdk-261.0.0-windows-x86_64-bundled-python.zip
-unzip -q gcloud.zip
