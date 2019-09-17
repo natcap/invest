@@ -49,14 +49,13 @@ build: off
 test_script:
     - if "%TARGET%"=="appveyor_binaries" (make -j3 sampledata windows_installer) else (make %TARGET%)
 
-artifacts:
-    # bdist_wheel puts your built wheel in the dist directory
-    - path: dist\*
-
-on_success:
     # If everything passed (and we're in a binary build), sign the installer
     # and upload to GCS
     - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-sign-and-upload.ps1)
+
+artifacts:
+    # bdist_wheel puts your built wheel in the dist directory
+    - path: dist\*
 
 # Cache-related items adapted from pyinstaller appveyor configuration.
 # https://github.com/pyinstaller/pyinstaller/blob/develop/appveyor.yml
