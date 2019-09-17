@@ -45,7 +45,7 @@ export class ModelsTab extends React.Component {
     let buttonItems = [];
     for (const model in investJSON) {
       buttonItems.push(
-        <Button
+        <Button key={model}
           value={investJSON[model]['internal_name']}
           onClick={this.props.loadModelSpec}
           variant="outline-success">

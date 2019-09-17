@@ -55,11 +55,11 @@ class ArgsForm extends React.Component {
       }
       if (argument.type !== 'select') {
         formItems.push(
-          <Form.Group>
+          <Form.Group  key={argument.argname + 'Group'}>
             <Form.Label>
               {argument.argname}
             </Form.Label>
-            <Form.Control 
+            <Form.Control
               name={argument.argname}
               type={argument.type}
               value={argument.value}
@@ -74,18 +74,19 @@ class ArgsForm extends React.Component {
           </Form.Group>)
       } else {
         formItems.push(
-          <Form.Group>
+          <Form.Group  key={argument.argname + 'Group'}>
             <Form.Label>
               {argument.argname}
             </Form.Label>
-            <Form.Control as='select'
+            <Form.Control
+              as='select'
               name={argument.argname}
               value={argument.value}
               required={argument.required}
               onChange={this.props.handleChange}
             >
               {argument.options.map(opt =>
-                <option value={opt}>{opt}</option>
+                <option value={opt} key={opt}>{opt}</option>
               )}
             </Form.Control>
             <Form.Control.Feedback type='invalid'>
