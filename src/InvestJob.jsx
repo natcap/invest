@@ -11,12 +11,12 @@ import Tab from 'react-bootstrap/Tab';
 
 import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
+import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
 import { DocsTab } from './components/DocsTab';
 import HraApp from './HraApp'
 import rootReducer from './reducers';
-// need the HraApp's index.css?
 
 const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
@@ -64,6 +64,7 @@ export class InvestJob extends React.Component {
         };
         this.handleChange = this.handleChange.bind(this);
         this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
+        this.investloadModelSpec = this.loadModelSpec.bind(this);
         this.investValidate = this.investValidate.bind(this);
         this.executeModel = this.executeModel.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
@@ -163,6 +164,29 @@ export class InvestJob extends React.Component {
       });
     }
 
+    loadModelSpec(event) {
+      const modulename = event.target.value;
+      const options = {
+        shell: true, // without true, IOError when datastack.py loads json
+      };
+      const cmdArgs = ['getspec', '--json', modulename]
+      const proc = spawn(INVEST_EXE, cmdArgs, options);
+
+      proc.stdout.on('data', (data) => {
+        const results = JSON.parse(data.toString());
+        console.log(results);
+        // this.setState({models:results});
+      });
+
+      proc.stderr.on('data', (data) => {
+        console.log(`${data}`);
+      });
+
+      proc.on('close', (code) => {
+        console.log(code);
+      });
+    }
+
     handleChange(event) {
       const target = event.target;
       const value = target.value;
@@ -210,6 +234,11 @@ export class InvestJob extends React.Component {
 
         return(
           <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
+            <Tab eventKey="models" title="Models">
+              <ModelsTab
+                loadModelSpec={this.loadModelSpec}
+              />
+            </Tab>
             <Tab eventKey="setup" title="Setup">
               <SetupTab
                 args={this.state.args}
