@@ -5,7 +5,11 @@ skip_non_tags: false  # we want to build untagged revisions.
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
 environment:
-  PIP_INSTALL: "pip install --extra-index-url http://pypi.naturalcapitalproject.org/simple/ --trusted-host pypi.naturalcapitalproject.org --prefer-binary"
+  # These variables allow us to install packages from the natcap PyPI bucket.
+  PIP_INSTALL: "pip install"
+  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+  PIP_PREFER_BINARY: 1
 
   matrix:
     # For Python versions available on Appveyor, see
@@ -27,7 +31,7 @@ install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
     - "python --version"
     # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
-    - "python -m %PIP_INSTALL% wheel numpy %EXTRAPKGS%"
+    - "python -m %PIP_INSTALL% wheel numpy"
     - "python -m %PIP_INSTALL% -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
     - "python setup.py sdist bdist_wheel"
 
