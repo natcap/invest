@@ -5,7 +5,7 @@ Unreleased Changes
 * The binary build process for InVEST on Windows (which includes binaries
   based on PyInstaller and an NSIS Installer package) has been migrated
   to 32-bit Python 3.6.  The build itself is taking place on AppVeyor, and
-  the configuration for this is contained within ``appveyor-python3.yml``.
+  the configuration for this is contained within ``appveyor.yml``.
   Various python scripts involved in the distribution and release processes
   have been updated for compatibility with python 3.6 as a part of this
   migration.
