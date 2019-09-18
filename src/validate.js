@@ -10,14 +10,21 @@ function validate(value, type, required) {
   //
   // Parameters:
   //   value (string): the value to validate
-  //   rule (object):  {required: bool, rule: 'some rule'} 
+  //   type (string):   
+  //   required (boolean or string): 
+  //        sometimes it's a bool, other times a string describing dependecies
   // Returns:
   //   boolean
 
   if (value === undefined || value === '') {
+    // if required is a string, we assume that means some sort of conditional
+    // requirement, and for simplicity we'll treat that as an optional input.
+    if (typeof required === 'string') {
+      required = false; 
+    }
     return (required ? false : true)  // empty is valid for optional args
   } else {
-    
+
     if (['csv', 'vector', 'raster'].includes(type)) {
       return fs.existsSync(value);
     }

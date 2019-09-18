@@ -54,17 +54,17 @@ class ArgsForm extends React.Component {
       if (argument.validationMessage) {
         validationMessage = argument.validationMessage ;
       }
-      if (argument.type !== 'option_string') {
+      
+      // These types need a text input and a file browser button
+      if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         formItems.push(
           <Form.Group  key={argname}>
-            <Form.Label>
-              {argument.name}
-            </Form.Label>
+            <Form.Label>{argument.name}</Form.Label>
             <Form.Control
               name={argname}
-              type="text" //{argument.type}
+              type="text" 
               value={argument.value || ''} // empty string is handled better than `undefined`
-              required={argument.required}
+              // required={argument.required}
               onChange={this.props.handleChange}
               isValid={argument.valid}
               isInvalid={!argument.valid}
@@ -73,17 +73,59 @@ class ArgsForm extends React.Component {
               {argument.type + ' : ' + validationMessage}
             </Form.Control.Feedback>
           </Form.Group>)
-      } else {
+      
+      // These types need a text input
+      } else if (['freestyle_string', 'number'].includes(argument.type)) {
         formItems.push(
           <Form.Group  key={argname}>
-            <Form.Label>
-              {argument.name}
-            </Form.Label>
+            <Form.Label>{argument.name}</Form.Label>
+            <Form.Control
+              name={argname}
+              type="text" 
+              value={argument.value || ''} // empty string is handled better than `undefined`
+              // required={argument.required}
+              onChange={this.props.handleChange}
+              isValid={argument.valid}
+              isInvalid={!argument.valid}
+            />
+            <Form.Control.Feedback type='invalid'>
+              {argument.type + ' : ' + validationMessage}
+            </Form.Control.Feedback>
+          </Form.Group>)
+      
+      // Radio select for boolean args
+      } else if (argument.type === 'boolean') {
+        formItems.push(
+          <Form.Group key={argname}>
+            <Form.Label>{argument.name}</Form.Label>
+            <Form.Check 
+              type="radio"
+              label="Yes"
+              value="true"
+              checked={argument.value === "true"}
+              onChange={this.props.handleChange}
+              name={argname}
+            />
+            <Form.Check
+              type="radio"
+              label="No"
+              value="false"
+              checked={argument.value === "false"}
+              onChange={this.props.handleChange}
+              name={argname}
+            />
+          </Form.Group>)
+
+      // Dropdown menus for args with options
+      } else if (argument.type === 'option_string') {
+        formItems.push(
+          <Form.Group  key={argname}>
+            <Form.Label>{argument.name}</Form.Label>
             <Form.Control
               as='select'
               name={argname}
               value={argument.value}
-              required={argument.required}
+              // required={argument.required}
               onChange={this.props.handleChange}
             >
               {argument.validation_options.options.map(opt =>

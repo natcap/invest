@@ -9,7 +9,7 @@ import { Provider } from 'react-redux';
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 
-import { MODEL_ARGS, MODULE_NAME, MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
+import { MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
@@ -31,7 +31,6 @@ export class InvestJob extends React.Component {
         super(props);
         this.state = {
             modelSpec: {},
-            // args: MODEL_ARGS,
             workspace: null,
             jobid: null,
             jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
@@ -50,7 +49,8 @@ export class InvestJob extends React.Component {
     }
 
     executeModel() {
-      argsToJSON(this.state.modelSpec.args);  // first write args to datastack file
+      // first write args to a datastack file
+      argsToJSON(this.state.modelSpec.args, this.state.modelSpec.module);
       
       this.setState(
         {
@@ -95,7 +95,7 @@ export class InvestJob extends React.Component {
     }
 
     investValidate(args) {
-      argsToJSON(args);  // first write args to datastack file
+      argsToJSON(args, this.state.modelSpec.module);  // first write args to datastack file
 
       const options = {
         cwd: TEMP_DIR,
@@ -201,17 +201,17 @@ export class InvestJob extends React.Component {
       const target = event.target;
       const value = target.value;
       const name = target.name;
-      const required = target.required;
+      // const required = target.required;
+      console.log(target);
+      console.log(value);
 
-      let current_args = Object.assign({}, this.state.modelSpec.args);
-      current_args[name]['value'] = value
-      current_args[name]['valid'] = validate(value, current_args[name].type, required)
+      let modelSpec = Object.assign({}, this.state.modelSpec);
+      modelSpec.args[name]['value'] = value
+      modelSpec.args[name]['valid'] = validate(value, modelSpec.args[name].type, modelSpec.args[name].required)
 
       this.setState(
-          {args: current_args}
+          {modelSpec: modelSpec}, () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
       );      
-
-      this.checkArgsReadyToValidate(this.state.modelSpec.args)
     }
 
     checkArgsReadyToValidate(args) {
@@ -284,7 +284,7 @@ export class InvestJob extends React.Component {
     }
 }
 
-function argsToJSON(currentArgs) {
+function argsToJSON(currentArgs, modulename) {
   // TODO: should this use the datastack.py API to create the json? 
   // make simple args json for passing to python cli
   let args_dict = {};
@@ -293,7 +293,7 @@ function argsToJSON(currentArgs) {
   }
   const datastack = { // keys expected by datastack.py
     args: args_dict,
-    model_name: MODULE_NAME,
+    model_name: modulename,
     invest_version: '3.7.0',
   };
 
