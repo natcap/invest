@@ -21,7 +21,109 @@ import taskgraph
 from . import validation
 from . import utils
 
-LOGGER = logging.getLogger('natcap.invest.scenario_generator_proximity_based')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Scenario Generator: Proximity Based",
+    "module": __name__,
+    "userguide_html": "scenario_gen_proximity.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": [],
+        "reference_key": ""
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "base_lulc_path": {
+            "validation_options": {},
+            "type": "raster",
+            "required": True,
+            "about": "Path to the base landcover map",
+            "name": "Base Land Use/Cover"
+        },
+        "replacment_lucode": {
+            "type": "number",
+            "required": True,
+            "about": "Code to replace when converting pixels",
+            "name": "Replacement Landcover Code"
+        },
+        "area_to_convert": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": "Max area (Ha) to convert",
+            "name": "Max area to convert"
+        },
+        "focal_landcover_codes": {
+            "validation_options": {
+                "regexp": "[0-9 ]+",
+            },
+            "type": "freestyle_string",
+            "required": True,
+            "about": (
+                "A space separated string of landcover codes that are used "
+                "to determine the proximity when referring to 'towards' or "
+                "'away' from the base landcover codes"),
+            "name": "Focal Landcover Codes"
+        },
+        "convertible_landcover_codes": {
+            "validation_options": {
+                "regexp": "[0-9 ]+",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "A space separated string of landcover codes that can be "
+                "converted in the generation phase found in "
+                "`args['base_lulc_path']`."),
+            "name": "Convertible Landcover Codes"
+        },
+        "n_fragmentation_steps": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "This parameter is used to divide the conversion simulation "
+                "into equal subareas of the requested max area.  During each "
+                "sub-step the distance transform is recalculated from the "
+                "base landcover codes.  This can affect the final result "
+                "if the base types are also convertible types."),
+            "name": "Number of Steps in Conversion"
+        },
+        "aoi_path": {
+            "type": "vector",
+            "required": True,
+            "about": (
+                "This is a set of polygons that will be used to aggregate "
+                "carbon values at the end of the run if provided."),
+            "name": "Area of interest"
+        },
+        "convert_farthest_from_edge": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "This scenario converts the convertible landcover codes "
+                "starting at the furthest pixel from the closest base "
+                "landcover codes and moves inward."),
+            "name": "Convert farthest from edge"
+        },
+        "convert_nearest_to_edge": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "This scenario converts the convertible landcover codes "
+                "starting at the closest pixel in the base landcover codes "
+                "and moves outward."),
+            "name": "Convert nearest to edge"
+        }
+    }
+}
+
 
 # This sets the largest number of elements that will be packed at once and
 # addresses a memory leak issue that happens when many arguments are passed
@@ -785,68 +887,16 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
 
-    required_keys = [
-        'workspace_dir',
-        'base_lulc_path',
-        'aoi_path',
-        'area_to_convert',
-        'focal_landcover_codes',
-        'convertible_landcover_codes',
-        'replacment_lucode',
-        'convert_farthest_from_edge',
-        'convert_nearest_to_edge',
-        'n_fragmentation_steps']
+    if ('convert_nearest_to_edge' not in invalid_keys and
+            'convert_farthest_from_edge' not in invalid_keys):
+        if (not args['convert_nearest_to_edge'] and
+                not args['convert_farthest_from_edge']):
+            validation_warnings.append((
+                ['convert_nearest_to_edge', 'convert_farthest_from_edge'],
+                ('One or more of "convert_nearest_to_edge" or '
+                 '"convert_farthest_from_edge" must be selected')))
 
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to is None and not (
-            args['convert_farthest_from_edge'] or
-            args['convert_nearest_to_edge']):
-        validation_error_list.append(
-            (['convert_farthest_from_edge', 'convert_nearest_to_edge'],
-             'At least "Farthest from edge" or "Nearest to edge" must be '
-             'selected.'))
-
-    file_type_list = [
-        ('base_lulc_path', 'raster'),
-        ('aoi_path', 'vector')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation_warnings

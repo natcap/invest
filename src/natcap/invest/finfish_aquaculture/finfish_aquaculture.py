@@ -475,11 +475,7 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the string validation warning.
     """
     validation_warnings = validation.validate(args, ARGS_SPEC['args'])
-
-    invalid_keys = set([])
-    for affected_keys, error_msg in validation_warnings:
-        for key in affected_keys:
-            invalid_keys.add(key)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     if 'ff_farm_loc' not in invalid_keys and 'farm_ID' not in invalid_keys:
         fieldnames = validation.load_fields_from_vector(

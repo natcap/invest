@@ -84,6 +84,25 @@ N_WORKERS_SPEC = {
 }
 
 
+def get_invalid_keys(validation_warnings):
+    """Get the invalid keys from a validation warnings list.
+
+    Parameters:
+        validation_warnings (list): A list of two-tuples where the first
+            item is an iterable of string args keys affected and the second
+            item is a string error message.
+
+    Returns:
+        A set of the string args keys found across all of the first elements in
+        the validation tuples.
+
+    """
+    invalid_keys = set([])
+    for affected_keys, error_msg in validation_warnings:
+        for key in affected_keys:
+            invalid_keys.add(key)
+    return invalid_keys
+
 
 def check_directory(dirpath, exists=False, permissions='rx'):
     """Validate a directory.
