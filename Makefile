@@ -24,7 +24,7 @@ ifeq ($(OS),Windows_NT)
 	MKDIR := powershell.exe mkdir -Force -Path
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
 	RMDIR := cmd /C "rmdir /S /Q"
-	# Windows doesn't install a python2 binary, just python.
+	# Windows doesn't install a python3 binary, just python.
 	PYTHON = python
 	# Just use what's on the PATH for make.  Avoids issues with escaping spaces in path.
 	MAKE := make
@@ -48,7 +48,7 @@ else
 	RMDIR := $(RM)
 	/ := /
 	# linux, mac distinguish between python2 and python3
-	PYTHON = python2
+	PYTHON = python3
 	RM_DATA_DIR := yes | rm -r $(DATA_DIR)
 
 	ifeq ($(shell sh -c 'uname -s 2>/dev/null || echo not'),Darwin)  # mac OSX
