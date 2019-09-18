@@ -20,7 +20,7 @@ import rootReducer from './reducers';
 
 const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
-const DATASTACK_JSON = 'datastack.json'
+const DATASTACK_JSON = 'datastack.json' // TODO: save this to the workspace, or treat it as temp and delete it.
 
 // Only the HraApp uses this redux store
 // TODO refactor HraApp to not depend on redux.
@@ -178,11 +178,16 @@ export class InvestJob extends React.Component {
       const filepath = fileList[0].path;
       const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
-      let modelSpec = this.state.modelSpec
-      const model_name = this.state.modelSpec.module
-      if (model_name === modelParams.model_name) {
+      let modelSpec = Object.assign({}, this.state.modelSpec);
+      if (modelSpec.module === modelParams.model_name) {
+        // important to loop through Spec rather than Params
+        // because we want to validate each input, whether it not it's getting a value now
         Object.keys(modelSpec.args).forEach(argkey => {
-          modelSpec.args[argkey].value = modelParams.args[argkey]
+          const value = modelParams.args[argkey]
+          modelSpec.args[argkey].value = value
+          // validate as we go because this onDrop function does not trigger handleChange for individual inputs.
+          const isValid = validate(value, modelSpec.args[argkey].type, modelSpec.args[argkey].required)
+          modelSpec.args[argkey].valid = isValid
         });
         this.setState({
           modelSpec: modelSpec
@@ -200,7 +205,7 @@ export class InvestJob extends React.Component {
 
       let current_args = Object.assign({}, this.state.modelSpec.args);
       current_args[name]['value'] = value
-      current_args[name]['valid'] = validate(value, current_args[name]['validationRules'])
+      current_args[name]['valid'] = validate(value, current_args[name].type, required)
 
       this.setState(
           {args: current_args}

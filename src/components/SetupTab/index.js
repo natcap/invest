@@ -48,9 +48,9 @@ class ArgsForm extends React.Component {
   render() {
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
-    let validationMessage = '';
     for (const argname in current_args) {
       const argument = current_args[argname];
+      let validationMessage = '';
       if (argument.validationMessage) {
         validationMessage = argument.validationMessage ;
       }
@@ -63,7 +63,7 @@ class ArgsForm extends React.Component {
             <Form.Control
               name={argname}
               type="text" //{argument.type}
-              value={argument.value}
+              value={argument.value || ''} // empty string is handled better than `undefined`
               required={argument.required}
               onChange={this.props.handleChange}
               isValid={argument.valid}

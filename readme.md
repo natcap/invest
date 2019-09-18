@@ -8,7 +8,7 @@ clone repo
 set path to invest executeable at launch:  
 
 windows:  
-set INVEST=C:\Users\dmf\Miniconda3\envs\invest-py36\Scripts\invest.exe && npm start  
+set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npm start  
   
 linux:  
-INVEST=C:\Users\dmf\Miniconda3\envs\invest-py36\Scripts\invest.exe npm start  
+INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start  
