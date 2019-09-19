@@ -193,9 +193,10 @@ export class InvestJob extends React.Component {
           const isValid = validate(value, modelSpec.args[argkey].type, modelSpec.args[argkey].required)
           modelSpec.args[argkey].valid = isValid
         });
-        this.setState({
-          modelSpec: modelSpec
-        });
+        this.setState(
+          {modelSpec: modelSpec},
+          () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
+        );
       } else {
         throw alert('parameter file does not match this model.')
       }
