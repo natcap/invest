@@ -1,7 +1,9 @@
 import React from 'react';
+import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
+import InputGroup from 'react-bootstrap/InputGroup';
 
 import validate from '../../validate';
 
@@ -29,8 +31,9 @@ export class SetupTab extends React.Component {
       <div>
         <ArgsForm 
           args={this.props.args}
-          handleChange={this.props.handleChange}
           onDrop={this.props.onDrop}
+          handleChange={this.props.handleChange}
+          selectFile={this.props.selectFile}
         />
         <Button 
           variant="primary" 
@@ -58,20 +61,30 @@ class ArgsForm extends React.Component {
       // These types need a text input and a file browser button
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         formItems.push(
-          <Form.Group  key={argname}>
+          <Form.Group key={argname}>
             <Form.Label>{argument.name}</Form.Label>
-            <Form.Control
-              name={argname}
-              type="text" 
-              value={argument.value || ''} // empty string is handled better than `undefined`
-              // required={argument.required}
-              onChange={this.props.handleChange}
-              isValid={argument.valid}
-              isInvalid={!argument.valid}
-            />
-            <Form.Control.Feedback type='invalid'>
-              {argument.type + ' : ' + validationMessage}
-            </Form.Control.Feedback>
+            <InputGroup>
+              <Form.Control
+                name={argname}
+                type="text" 
+                value={argument.value || ''} // empty string is handled better than `undefined`
+                onChange={this.props.handleChange}
+                isValid={argument.valid}
+                isInvalid={!argument.valid}
+              />
+              <InputGroup.Append>
+                <Button 
+                  variant="outline-secondary"
+                  value={argument.type}  // dialog will limit options to files or dirs accordingly
+                  name={argname}
+                  onClick={this.props.selectFile}>
+                  Browse
+                </Button>
+              </InputGroup.Append>
+              <Form.Control.Feedback type='invalid'>
+                {argument.type + ' : ' + validationMessage}
+              </Form.Control.Feedback>
+            </InputGroup>
           </Form.Group>)
       
       // These types need a text input
@@ -150,7 +163,9 @@ class ArgsForm extends React.Component {
   }
 }
 
-function dragover_handler(ev) {
- ev.preventDefault();
- ev.dataTransfer.dropEffect = "move";
+function dragover_handler(event) {
+ event.preventDefault();
+ event.dataTransfer.dropEffect = "move";
 }
+
+

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import Electron from 'electron';
 
 import React from 'react';
 import { createStore } from 'redux';
@@ -40,12 +41,14 @@ export class InvestJob extends React.Component {
             docs: MODEL_DOCS
         };
         this.handleChange = this.handleChange.bind(this);
+        this.selectFile = this.selectFile.bind(this);
         this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
         this.loadModelSpec = this.loadModelSpec.bind(this);
         this.investValidate = this.investValidate.bind(this);
         this.executeModel = this.executeModel.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
         this.argsFromJsonDrop = this.argsFromJsonDrop.bind(this);
+        this.updateArg = this.updateArg.bind(this);
     }
 
     executeModel() {
@@ -181,7 +184,7 @@ export class InvestJob extends React.Component {
       let modelSpec = Object.assign({}, this.state.modelSpec);
       if (modelSpec.module === modelParams.model_name) {
         // important to loop through Spec rather than Params
-        // because we want to validate each input, whether it not it's getting a value now
+        // because we want to validate each input, whether or not it's getting a value now
         Object.keys(modelSpec.args).forEach(argkey => {
           const value = modelParams.args[argkey]
           modelSpec.args[argkey].value = value
@@ -198,19 +201,37 @@ export class InvestJob extends React.Component {
     }
 
     handleChange(event) {
-      const target = event.target;
-      const value = target.value;
-      const name = target.name;
-      // const required = target.required;
-      console.log(target);
-      console.log(value);
+      // change handler for form text inputs
+      const value = event.target.value;
+      const name = event.target.name;
+      this.updateArg(name, value);
+    }
 
+    selectFile(event) {
+      // click handler for form browse-button inputs
+      const dialog = Electron.remote.dialog;
+      const argtype = event.target.value;
+      const argname = event.target.name;
+      const prop = (argtype === 'directory') ? 'openDirectory' : 'openFile'
+      // TODO: could add more filters based on argType (e.g. only show .csv)
+      dialog.showOpenDialog({
+        properties: [prop]
+      }, (filepath) => {
+        console.log(filepath);
+        this.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
+      })
+    }
+
+    updateArg(key, value) {
+      // state updater shared by the form event handlers
       let modelSpec = Object.assign({}, this.state.modelSpec);
-      modelSpec.args[name]['value'] = value
-      modelSpec.args[name]['valid'] = validate(value, modelSpec.args[name].type, modelSpec.args[name].required)
+      modelSpec.args[key]['value'] = value
+      modelSpec.args[key]['valid'] = validate(
+        value, modelSpec.args[key].type, modelSpec.args[key].required)
 
       this.setState(
-          {modelSpec: modelSpec}, () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
+          {modelSpec: modelSpec},
+          () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
       );      
     }
 
@@ -256,6 +277,7 @@ export class InvestJob extends React.Component {
                 jobStatus={this.state.jobStatus}
                 checkArgsReadyToValidate={this.checkArgsReadyToValidate}
                 handleChange={this.handleChange}
+                selectFile={this.selectFile}
                 executeModel={this.executeModel}
                 onDrop={this.argsFromJsonDrop}
               />
