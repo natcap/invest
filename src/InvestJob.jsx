@@ -106,14 +106,14 @@ export class InvestJob extends React.Component {
         shell: true, // without true, IOError when datastack.py loads json
       };
       const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
-      const cmdArgs = ['-vvv', 'validate', '--json', datastackPath]
+      // if we add -vvv flags, we risk getting more stdout 
+      // than expected by the results parser below.
+      const cmdArgs = ['validate', '--json', datastackPath]
       const validator = spawn(INVEST_EXE, cmdArgs, options);
 
       let warningsIssued = false;
       validator.stdout.on('data', (data) => {
-        console.log(data.toString());
         let results = JSON.parse(data.toString());
-        console.log(results);
         if (Boolean(results.validation_results.length)) {
           warningsIssued = true
           results.validation_results.forEach(x => {
