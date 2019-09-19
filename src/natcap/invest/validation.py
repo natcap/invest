@@ -129,7 +129,8 @@ def check_directory(dirpath, exists=False, permissions='rx'):
             return "Path must be a directory"
     else:
         # find the parent directory that does exist and check permissions
-        directory_hierarchy = os.path.normcase(dirpath).split(os.sep)
+        directory_hierarchy = os.path.normcase(
+            os.path.abspath(dirpath)).split(os.sep)
         index = len(directory_hierarchy)
         while index > 0:
             dirpath = os.path.join(*directory_hierarchy[:index])
