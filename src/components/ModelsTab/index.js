@@ -11,7 +11,6 @@ export class ModelsTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {models: {}};
-    this.makeInvestList = this.makeInvestList.bind(this);
   }
 
   componentDidMount() {

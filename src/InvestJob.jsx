@@ -98,7 +98,8 @@ export class InvestJob extends React.Component {
     }
 
     investValidate(args) {
-      argsToJSON(args, this.state.modelSpec.module);  // first write args to datastack file
+      let modelSpec = Object.assign({}, this.state.modelSpec);
+      argsToJSON(args, modelSpec.module);  // first write args to datastack file
 
       const options = {
         cwd: TEMP_DIR,
@@ -108,19 +109,19 @@ export class InvestJob extends React.Component {
       const cmdArgs = ['-vvv', 'validate', '--json', datastackPath]
       const validator = spawn(INVEST_EXE, cmdArgs, options);
 
-      let outgoingArgs = Object.assign({}, args);
-      let argsModified = false;
+      let warningsIssued = false;
       validator.stdout.on('data', (data) => {
+        console.log(data.toString());
         let results = JSON.parse(data.toString());
         console.log(results);
         if (Boolean(results.validation_results.length)) {
-          argsModified = true
+          warningsIssued = true
           results.validation_results.forEach(x => {
+            // TODO: test this indexing against all sorts of validation results
             const argkey = x[0][0];
             const message = x[1];
-            outgoingArgs[argkey]['validationMessage'] = message
-            outgoingArgs[argkey]['valid'] = false
-            console.log(outgoingArgs);
+            modelSpec.args[argkey]['validationMessage'] = message
+            modelSpec.args[argkey]['valid'] = false
           });
         }
       });
@@ -132,9 +133,9 @@ export class InvestJob extends React.Component {
       validator.on('close', (code) => {
         console.log(code);
 
-        if (argsModified) {
+        if (warningsIssued) {
           this.setState({
-            args: outgoingArgs,
+            modelSpec: modelSpec,
             jobStatus: 'invalid'
           })
         } else {
@@ -158,7 +159,7 @@ export class InvestJob extends React.Component {
         const results = JSON.parse(data.toString());
         console.log(results);
         this.setState({
-          modelSpec:results,
+          modelSpec: results,
         }, () => this.switchTabs('setup'));
       });
 
