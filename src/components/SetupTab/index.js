@@ -114,16 +114,16 @@ class ArgsForm extends React.Component {
             <Form.Check 
               type="radio"
               label="Yes"
-              value="true"
-              checked={argument.value === "true"}
+              value={true}//"true"
+              checked={argument.value}//{argument.value === "true"}
               onChange={this.props.handleChange}
               name={argname}
             />
             <Form.Check
               type="radio"
               label="No"
-              value="false"
-              checked={argument.value === "false"}
+              value={false}//"false"
+              checked={!argument.value}//{argument.value === "false"}
               onChange={this.props.handleChange}
               name={argname}
             />
