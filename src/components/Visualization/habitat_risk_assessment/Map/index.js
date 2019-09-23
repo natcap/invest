@@ -10,9 +10,7 @@ import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
 import React from "react";
 
 import Control from "./Control";
-import { getCsvUrl } from "../../actions/index";
-import { getVectorsOnMap } from "../../actions/index";
-import { getFileSuffix } from "../../actions/index";
+import { getCsvUrl, getVectorsOnMap, getFileSuffix } from "../actions/index";
 
 const { BaseLayer } = LayersControl;
 

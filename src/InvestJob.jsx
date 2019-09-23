@@ -16,16 +16,18 @@ import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
 import { DocsTab } from './components/DocsTab';
-import HraApp from './HraApp'
-import rootReducer from './reducers';
+import VizApp from './VizApp'
+
+// Only the HraApp uses this redux store
+// TODO refactor HraApp to not depend on redux.
+import rootReducer from './components/Visualization/habitat_risk_assessment/reducers';
+const store = createStore(rootReducer)
 
 const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
 const DATASTACK_JSON = 'datastack.json' // TODO: save this to the workspace, or treat it as temp and delete it.
 
-// Only the HraApp uses this redux store
-// TODO refactor HraApp to not depend on redux.
-const store = createStore(rootReducer)
+
 
 export class InvestJob extends React.Component {
     constructor(props) {
@@ -293,7 +295,8 @@ export class InvestJob extends React.Component {
             </Tab>
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
             <Provider store={store}>
-              <HraApp
+              <VizApp
+                model={MODEL_NAME} // TODO: later this will come from modelSpec
                 workspace={this.state.workspace}
                 activeTab={activeTab}/> 
             </Provider>

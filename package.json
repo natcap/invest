@@ -71,6 +71,8 @@
     "redux": "^4.0.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.6.0",
+    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "electron-forge": "^5.2.4",
     "electron-prebuilt-compile": "4.0.0",
     "eslint": "^3.19.0",
