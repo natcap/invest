@@ -1,5 +1,5 @@
 import React, { Component } from 'react';
-// import HraApp from './components/Visualization/habitat_risk_assessment';
+// import Visualization from './components/Visualization/habitat_risk_assessment';
 // import Plot from './components/Plot';
 
 // The tab where this component renders is only enabled
@@ -21,7 +21,8 @@ class VizApp extends Component {
 
   render() {
     const model = this.props.model;
-    import Visualization from './components/Visualization/' + {model}
+    const model_import_space = './components/Visualization/' + {model};
+    import Visualization from model_import_space;
     if (this.props.workspace) {
       return (
         <div>
