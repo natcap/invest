@@ -24,24 +24,30 @@
     rel="stylesheet"
     href="./components/Visualization/habitat_risk_assessment/Plot/style.css"
   />
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
+
 <body style="background-color: rgba(0,0,0,0); margin: 0; padding: 20px" >
   <div id="App"></div>
 </body>
-
-<script type="text/jsx">
+<script type="text/babel">
+console.log('before imports');
 import React from 'react';
 import ReactDOM from 'react-dom';
 import {AppContainer} from 'react-hot-loader';
+import App from './app';
 
 const render = () => {
-  const App = require('./app').default;
   ReactDOM.render(<AppContainer><App /></AppContainer>, document.getElementById('App'));
+  console.log('from render');
 }
 
 render();
 if (module.hot) {
+  console.log('if hot module');
   module.hot.accept(render);
 }
+
 </script>
+
 </html>

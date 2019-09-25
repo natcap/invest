@@ -1,4 +1,6 @@
 import React, { Component } from 'react';
+// import('./components/Visualization/habitat_risk_assessment');
+// const Visualization = React.lazy(() => import('./components/Visualization/habitat_risk_assessment'));
 // import Visualization from './components/Visualization/habitat_risk_assessment';
 // import Plot from './components/Plot';
 
@@ -22,7 +24,7 @@ class VizApp extends Component {
   render() {
     const model = this.props.model;
     const model_import_space = './components/Visualization/' + {model};
-    import Visualization from model_import_space;
+    // import Visualization from model_import_space;
     if (this.props.workspace) {
       return (
         <div>

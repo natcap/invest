@@ -1,8 +1,10 @@
 module.exports = {
   presets: [
-	  "@babel/preset-env",
-	  "@babel/preset-react"],
+    "@babel/preset-env",
+    "@babel/preset-react"
+    ],
   plugins: [
-	  "@babel/plugin-transform-runtime",
-	  "@babel/plugin-syntax-dynamic-import"]
+//     "babel-plugin-dynamic-import-node",
+	  "@babel/plugin-transform-runtime"
+  ]
 };

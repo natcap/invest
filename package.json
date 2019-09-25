@@ -5,7 +5,7 @@
   "description": "My Electron application description",
   "main": "src/index.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=development electron-forge start",
+    "start": "electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },
@@ -45,6 +45,7 @@
     }
   },
   "dependencies": {
+    "@babel/runtime": "^7.6.2",
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.0.4",
     "cross-env": "^5.2.0",
@@ -65,16 +66,12 @@
     "redux": "^4.0.4"
   },
   "devDependencies": {
-    "@babel/core": "^7.6.0",
-    "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "@babel/plugin-transform-runtime": "^7.6.2",
     "@babel/preset-env": "^7.6.2",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.6.2",
     "electron": "^6.0.10",
     "electron-devtools-installer": "^2.2.4",
-    "electron-forge": "^5.2.4",
-    "electron-prebuilt-compile": "4.0.0",
     "eslint": "^3.19.0",
     "eslint-config-airbnb": "^15.1.0",
     "eslint-plugin-import": "^2.18.2",
