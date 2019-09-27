@@ -22,14 +22,220 @@ from . import seasonal_water_yield_core
 
 gdal.SetCacheMax(2**26)
 
-LOGGER = logging.getLogger(
-    'natcap.invest.seasonal_water_yield.seasonal_water_yield')
+LOGGER = logging.getLogger(__name__)
 
 TARGET_NODATA = -1
 N_MONTHS = 12
 MONTH_ID_TO_LABEL = [
     'jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct',
     'nov', 'dec']
+
+ARGS_SPEC = {
+    "model_name": "Seasonal Water Yield",
+    "module": __name__,
+    "userguide_html": "seasonal_water_yield.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_raster_path", "lulc_raster_path",
+                         "soil_group_path", "aoi_path", "l_path",
+                         "monthly_alpha_path"],
+        "reference_key": "dem_raster_path"
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "threshold_flow_accumulation": {
+            "validation_options": {
+                "expression": "value > 0"
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that retention "
+                "stops and the remaining export is exported to the stream.  "
+                "Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumulation"
+        },
+        "et0_dir": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": "~user_defined_local_recharge",
+            "about": (
+                "The selected folder has a list of ET0 files with a "
+                "specified format."),
+            "name": "ET0 Directory"
+        },
+        "precip_dir": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": "~user_defined_local_recharge",
+            "about": (
+                "The selected folder has a list of monthly precipitation "
+                "files with a specified format."),
+            "name": "Precipitation Directory"
+        },
+        "dem_raster_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file with an elevation value for "
+                "each cell.  Make sure the DEM is corrected by filling in "
+                "sinks, and if necessary burning hydrographic features into "
+                "the elevation model (recommended when unusual streams are "
+                "observed.) See the 'Working with the DEM' section of the "
+                "InVEST User's Guide for more information."),
+            "name": "Digital Elevation Model"
+        },
+        "lulc_raster_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file, with an integer LULC code "
+                "for each cell."),
+            "name": "Land-Use/Land-Cover"
+        },
+        "soil_group_path": {
+            "type": "raster",
+            "required": "~user_defined_local_recharge",
+            "about": (
+                "Map of SCS soil groups (A, B, C, or D) mapped to integer "
+                "values (1, 2, 3, or 4) used in combination of the LULC map "
+                "to compute the CN map."),
+            "name": "Soil Group"
+        },
+        "aoi_path": {
+            "validation_options": {},
+            "type": "vector",
+            "required": True,
+            "about": (
+                "Path to a vector that indicates the area over which the "
+                "model should be run, as well as the area in which to "
+                "aggregate over when calculating the output Qb."),
+            "name": "AOI/Watershed"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode"] + [
+                    "kc_%s" % i for i in range(1, 13)]
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', and one 'Kc_<int>' column "
+                "per season."),
+            "name": "Biophysical Table"
+        },
+        "rain_events_table_path": {
+            "validation_options": {
+                "required_fields": ["month", "events"],
+            },
+            "type": "csv",
+            "required": (
+                "~user_defined_local_recharge & ~user_defined_climate_zones"),
+            "about": (
+                "Not required if args['user_defined_local_recharge'] is True "
+                "or args['user_defined_climate_zones'] is True.  Path to a "
+                "CSV table that has headers 'month' (1-12) and 'events' "
+                "(int >= 0) that indicates the number of rain events per "
+                "month"),
+            "name": "Rain Events Table"
+        },
+        "alpha_m": {
+            "type": "freestyle_string",
+            "required": "~monthly_alpha",
+            "about": (
+                "Required if args['monthly_alpha'] is false.  Is the "
+                "proportion of upslope annual available local recharge that "
+                "is available in month m."),
+            "name": "alpha_m Parameter"
+        },
+        "beta_i": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "Is the fraction of the upgradient subsidy that is "
+                "available for downgradient evapotranspiration."),
+            "name": "beta_i Parameter"
+        },
+        "gamma": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "The fraction of pixel local recharge that is available to "
+                "downgradient pixels."),
+            "name": "gamma Parameter"
+        },
+        "user_defined_local_recharge": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "If True, indicates user will provide pre-defined local "
+                "recharge raster layer"),
+            "name": "User Defined Recharge Layer (Advanced)"
+        },
+        "l_path": {
+            "type": "raster",
+            "required": "user_defined_local_recharge",
+            "about": (
+                "A path to a GDAL-compatible raster.  Pixels indicate the "
+                "amount of local recharge in mm.  Required if "
+                "args['user_defined_local_recharge'] is True."),
+            "name": "Local Recharge ("
+        },
+        "user_defined_climate_zones": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "If True, user provides a climate zone rain events table and "
+                "a climate zone raster map in lieu of a global rain events "
+                "table."),
+            "name": "Climate Zones (Advanced)"
+        },
+        "climate_zone_table_path": {
+            "validation_options": {
+                "required_fields": ["cz_id"] + MONTH_ID_TO_LABEL,
+            },
+            "type": "csv",
+            "required": "user_defined_climate_zones",
+            "about": (
+                "Required if args['user_defined_climate_zones'] is True. "
+                "Contains monthly precipitation events per climate zone.  "
+                "Fields must be 'cz_id', %s." % ', '.join(MONTH_ID_TO_LABEL)),
+            "name": "Climate Zone Table"
+        },
+        "climate_zone_raster_path": {
+            "type": "raster",
+            "required": "user_defined_climate_zones",
+            "about": (
+                "Map of climate zones that are found in the Climate Zone "
+                "Table input.  Pixel values correspond to values in the "
+                "cz_id column."),
+            "name": "Climate Zone"
+        },
+        "monthly_alpha": {
+            "type": "boolean",
+            "required": True,
+            "about": "If True, use the monthly alpha table.",
+            "name": "Use Monthly Alpha Table (Advanced)"
+        },
+        "monthly_alpha_path": {
+            "type": "raster",
+            "required": "monthly_alpha",
+            "about": "Required if args['monthly_alpha'] is True.",
+            "name": "Monthly Alpha Table"
+        }
+    }
+}
+
+
+
 
 _OUTPUT_BASE_FILES = {
     'aggregate_vector_path': 'aggregated_results.shp',
@@ -78,14 +284,9 @@ _TMP_BASE_FILES = {
 def execute(args):
     """Seasonal Water Yield.
 
-    This function invokes the InVEST seasonal water yield model described in
-    "Spatial attribution of baseflow generation at the parcel level for
-    ecosystem-service valuation", Guswa, et. al (under review in "Water
-    Resources Research")
-
-    Parameters:
+    Arguments:
         args['workspace_dir'] (string): output directory for intermediate,
-        temporary, and final files
+            temporary, and final files
         args['results_suffix'] (string): (optional) string to append to any
             output files
         args['threshold_flow_accumulation'] (number): used when classifying
@@ -105,13 +306,7 @@ def execute(args):
         args['soil_group_path'] (string): required if
             args['user_defined_local_recharge'] is  False. A path to a raster
             indicating SCS soil groups where integer values are mapped to soil
-            types::
-
-                1: A
-                2: B
-                3: C
-                4: D
-
+            types
         args['aoi_path'] (string): path to a vector that indicates the area
             over which the model should be run, as well as the area in which to
             aggregate over when calculating the output Qb.
@@ -142,7 +337,7 @@ def execute(args):
             lieu of a global rain events table.
         args['climate_zone_table_path'] (string): required if
             args['user_defined_climate_zones'] is True. Contains monthly
-            precipitation events per climate zone.  Fields must be:
+            precipitation events per climate zone.  Fields must be
             "cz_id", "jan", "feb", "mar", "apr", "may", "jun", "jul",
             "aug", "sep", "oct", "nov", "dec".
         args['climate_zone_raster_path'] (string): required if
@@ -156,9 +351,6 @@ def execute(args):
             use a single process, 0 will be non-blocking scheduling but
             single process, and >= 1 will make additional processes for
             parallel execution.
-
-    Returns:
-        ``None``
     """
     # This upgrades warnings to exceptions across this model.
     # I found this useful to catch all kinds of weird inputs to the model
@@ -956,90 +1148,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'threshold_flow_accumulation',
-        'dem_raster_path',
-        'lulc_raster_path',
-        'aoi_path',
-        'biophysical_table_path',
-        'beta_i',
-        'gamma']
-
-    if 'user_defined_local_recharge' in args:
-        if args['user_defined_local_recharge']:
-            required_keys.append('l_path')
-        else:
-            required_keys.extend([
-                'et0_dir',
-                'precip_dir',
-                'soil_group_path'])
-
-    if ('user_defined_climate_zones' in args and
-            args['user_defined_climate_zones']):
-        required_keys.extend([
-            'climate_zone_table_path',
-            'climate_zone_raster_path'])
-    else:
-        required_keys.extend(['rain_events_table_path'])
-
-    if 'monthly_alpha_path' in args:
-        if args['monthly_alpha_path']:
-            required_keys.append('monthly_alpha_path')
-        else:
-            required_keys.append('alpha_m')
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('dem_raster_path', 'raster'),
-        ('lulc_raster_path', 'raster'),
-        ('aoi_path', 'vector'),
-        ('biophysical_table_path', 'table'),
-        ('climate_zone_table_path', 'table'),
-        ('climate_zone_raster_path', 'raster'),
-        ('monthly_alpha_path', 'table'),
-        ('precip_dir', 'directory'),
-        ('soil_group_path', 'raster'),
-        ('rain_events_table_path', 'table'),
-        ('l_path', 'raster')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])
