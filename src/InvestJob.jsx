@@ -159,6 +159,7 @@ export class InvestJob extends React.Component {
 
       proc.stdout.on('data', (data) => {
         const results = JSON.parse(data.toString());
+        results['model_temp_vizname'] = MODEL_NAME // TODO: later this will be builtin to spec
         console.log(results);
         this.setState({
           modelSpec: results,
@@ -296,7 +297,7 @@ export class InvestJob extends React.Component {
             <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
             <Provider store={store}>
               <VizApp
-                model={MODEL_NAME} // TODO: later this will come from modelSpec
+                model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
                 workspace={this.state.workspace}
                 activeTab={activeTab}/> 
             </Provider>

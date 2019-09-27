@@ -4,7 +4,6 @@ module.exports = {
     "@babel/preset-react"
     ],
   plugins: [
-//     "babel-plugin-dynamic-import-node",
 	  "@babel/plugin-transform-runtime"
   ]
 };

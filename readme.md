@@ -7,8 +7,14 @@ clone repo
 
 set path to invest executeable at launch:  
 
-windows:  
+# windows:  
+
+This worked for a while, but it's unreliable to call python that depends
+on a specific conda environment without activating that env in the shell first.  
 set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npm start  
+
+set INVEST=C:\\Users\\dmf\\projects\\invest\\dist\\invest\\invest.exe && npm start 
+
   
-linux:  
+# linux:  
 INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start  
