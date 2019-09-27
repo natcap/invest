@@ -22,7 +22,137 @@ import taskgraph
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.sdr')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Sediment Delivery Ratio Model (SDR)",
+    "module": __name__,
+    "userguide_html": "sdr.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
+                         "lulc_path", "drainage_path", "watersheds_path",],
+        "reference_key": "dem_path"
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file with an elevation value for "
+                "each cell.  Make sure the DEM is corrected by filling in "
+                "sinks, and if necessary burning hydrographic features into "
+                "the elevation model (recommended when unusual streams are "
+                "observed.) See the 'Working with the DEM' section of the "
+                "InVEST User's Guide for more information."),
+            "name": "Digital Elevation Model"
+        },
+        "erosivity_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file, with an erosivity index value "
+                "for each cell.  This variable depends on the intensity and "
+                "duration of rainfall in the area of interest.  The greater "
+                "the intensity and duration of the rain storm, the higher "
+                "the erosion potential. The erosivity index is widely used, "
+                "but in case of its absence, there are methods and equations "
+                "to help generate a grid using climatic data.  The units are "
+                "MJ*mm/(ha*h*yr)."),
+            "name": "Rainfall Erosivity Index (R)"
+        },
+        "erodibility_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file, with a soil erodibility value "
+                "for each cell which is a measure of the susceptibility of "
+                "soil particles to detachment and transport by rainfall and "
+                "runoff.  Units are in T*ha*h/(ha*MJ*mm)."),
+            "name": "Soil Erodibility"
+        },
+        "lulc_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file, with an integer LULC code "
+                "for each cell."),
+            "name": "Land-Use/Land-Cover"
+        },
+        "watersheds_path": {
+            "validation_options": {
+                "required_fields": ["ws_id"],
+            },
+            "type": "vector",
+            "required": True,
+            "about": (
+                "This is a layer of polygons representing watersheds such "
+                "that each watershed contributes to a point of interest "
+                "where water quality will be analyzed.  It must have the "
+                "integer field 'ws_id' where the values uniquely identify "
+                "each watershed."),
+            "name": "Watersheds"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "usle_c", "usle_p"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'usle_c', and 'usle_p'.  "
+                "See the InVEST Sediment User's Guide for more information "
+                "about these fields."),
+            "name": "Biophysical Table"
+        },
+        "threshold_flow_accumulation": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that retention "
+                "stops and the remaining export is exported to the stream.  "
+                "Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumulation"
+        },
+        "k_param": {
+            "type": "number",
+            "required": True,
+            "about": "Borselli k parameter.",
+            "name": "Borselli k Parameter"
+        },
+        "sdr_max": {
+            "type": "number",
+            "required": True,
+            "about": "Maximum SDR value.",
+            "name": "Max SDR Value"
+        },
+        "ic_0_param": {
+            "type": "number",
+            "required": True,
+            "about": "Borselli IC0 parameter.",
+            "name": "Borselli IC0 Parameter"
+        },
+        "drainage_path": {
+            "type": "raster",
+            "required": False,
+            "about": (
+                "An optional GDAL-supported raster file mask, that indicates "
+                "areas that drain to the watershed.  Format is that 1's "
+                "indicate drainage areas and 0's or nodata indicate areas "
+                "with no additional drainage.  This model is most accurate "
+                "when the drainage raster aligns with the DEM."),
+            "name": "Drainages"
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
@@ -1165,100 +1295,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'dem_path',
-        'erosivity_path',
-        'erodibility_path',
-        'lulc_path',
-        'watersheds_path',
-        'biophysical_table_path',
-        'threshold_flow_accumulation',
-        'k_param',
-        'ic_0_param',
-        'sdr_max']
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('dem_path', 'raster'),
-        ('erosivity_path', 'raster'),
-        ('erodibility_path', 'raster'),
-        ('lulc_path', 'raster'),
-        ('watersheds_path', 'vector'),
-        ('biophysical_table_path', 'table')]
-
-    if limit_to in ['drainage_path', None] and (
-            'drainage_path' in args and
-            args['drainage_path'] not in ['', None]):
-        file_type_list.append(('drainage_path', 'raster'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-
-        if limit_to in ['watersheds_path', None]:
-            # checks that watersheds are a vector, that they have 'ws_id' and
-            # that all their fields are defined
-            if os.path.exists(args['watersheds_path']):
-                try:
-                    watersheds_vector = gdal.OpenEx(
-                        args['watersheds_path'], gdal.OF_VECTOR)
-                    if watersheds_vector is None:
-                        validation_error_list.append(
-                            (['watersheds_path'], 'not a vector'))
-                    else:
-                        watersheds_layer = watersheds_vector.GetLayer()
-                        watersheds_defn = watersheds_layer.GetLayerDefn()
-                        if watersheds_defn.GetFieldIndex('ws_id') == -1:
-                            validation_error_list.append((
-                                ['watersheds_path'],
-                                'does not have a `ws_id` field defined.'))
-                        else:
-                            for feature in watersheds_layer:
-                                try:
-                                    value = feature.GetFieldAsString('ws_id')
-                                    # value should be an integer
-                                    _ = int(value)
-                                except ValueError:
-                                    validation_error_list.append((
-                                        ['watersheds_path'],
-                                        'feature %s has an invalid value of '
-                                        '"%s" in \'ws_id\' column, it should '
-                                        'be an integer value' % (
-                                            str(feature.GetFID()), value)))
-                finally:
-                    feature = None
-                    watersheds_defn = None
-                    watersheds_layer = None
-                    watersheds_vector = None
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])
