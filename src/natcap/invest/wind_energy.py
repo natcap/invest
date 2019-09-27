@@ -31,8 +31,172 @@ from . import validation
 from . import utils
 
 
-LOGGER = logging.getLogger('natcap.invest.wind_energy')
+LOGGER = logging.getLogger(__name__)
 speedups.enable()
+
+ARGS_SPEC = {
+    "model_name": "Wind Energy",
+    "module": __name__,
+    "userguide_html": "wind_energy.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": [],
+        "reference_key": ""
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "wind_data_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": true,
+            "about": "A CSV file that represents the wind input data (Weibull parameters). Please see the User's Guide for a more detailed description of the parameters.",
+            "name": "Wind Data Points (CSV)"
+        },
+        "aoi_vector_path": {
+            "validation_options": {},
+            "type": "vector",
+            "required": false,
+            "about": "Optional.  An OGR-supported vector file containing a single polygon defining the area of interest.  The AOI must be projected with linear units equal to meters.  If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected.  If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly.  An AOI is required for valuation.",
+            "name": "Area Of Interest (Vector) (Optional)"
+        },
+        "bathymetry_path": {
+            "validation_options": {},
+            "type": "raster",
+            "required": true,
+            "about": "A GDAL-supported raster file containing elevation values represented in meters for the area of interest.  The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used.",
+            "name": "Bathymetric Digital Elevation Model (Raster)"
+        },
+        "land_polygon_vector_path": {
+            "validation_options": {},
+            "type": "vector",
+            "required": false,
+            "about": "An OGR-supported polygon vector that represents the land and coastline that is of interest.  For this input to be selectable the AOI must be selected.  The AOI should also cover a portion of this land polygon to properly calculate distances.  This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission.  This input is required for masking by distance values and for valuation.",
+            "name": "Land Polygon for Distance Calculation (Vector)"
+        },
+        "global_wind_parameters_path": {
+            "validation_options": {},
+            "type": "UNKNOWN",
+            "required": false,
+            "about": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide.  It is recommended that careful consideration be taken before changing these values and to make a new CSV file so that the default one always remains.",
+            "name": "Global Wind Energy Parameters (CSV)"
+        },
+        "suffix": {
+            "validation_options": {},
+            "type": "UNKNOWN",
+            "required": false,
+            "about": "A string that will be added to the end of the output file paths.",
+            "name": "Results suffix (optional)"
+        },
+        "turbine_parameters_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": true,
+            "about": "A CSV file that contains parameters corresponding to a specific turbine type.  The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. A new turbine class may be created by using the existing file format conventions and filling in new parameters.  Likewise an existing class may be modified according to the user's needs.  It is recommended that the existing default CSV files are not overwritten.",
+            "name": "Turbine Type Parameters File (CSV)"
+        },
+        "number_of_turbines": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "An integer value indicating the number of wind turbines per wind farm.",
+            "name": "Number Of Turbines"
+        },
+        "min_depth": {
+            "validation_options": {},
+            "type": "number",
+            "required": true,
+            "about": "A floating point value in meters for the minimum depth of the offshore wind farm installation.",
+            "name": "Minimum Depth for Offshore Wind Farm Installation (meters)"
+        },
+        "max_depth": {
+            "validation_options": {},
+            "type": "number",
+            "required": true,
+            "about": "A floating point value in meters for the maximum depth of the offshore wind farm installation.",
+            "name": "Maximum Depth for Offshore Wind Farm Installation (meters)"
+        },
+        "min_distance": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation.  Required for valuation.",
+            "name": "Minimum Distance for Offshore Wind Farm Installation (meters)"
+        },
+        "max_distance": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation.  Required for valuation.",
+            "name": "Maximum Distance for Offshore Wind Farm Installation (meters)"
+        },
+        "valuation_container": {
+            "validation_options": {},
+            "type": "boolean",
+            "required": false,
+            "about": "Indicates whether model includes\nvaluation",
+            "name": "Valuation"
+        },
+        "foundation_cost": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice.  Please see the User's Guide for guidance on properly selecting this value.",
+            "name": "Cost of the Foundation Type (USD, in Millions)"
+        },
+        "discount_rate": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). See the User's Guide for guidance on selecting this value.",
+            "name": "Discount Rate"
+        },
+        "grid_points_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": false,
+            "about": "An optional CSV file with grid and land points to determine cable distances from.  An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point.  The <b>TYPE</b> column relates to whether it is a land or grid point.  The <b>ID</b> column is a simple unique integer.  The shortest distance between respective points is used for calculations.  See the User's Guide for more information.",
+            "name": "Grid Connection Points (Optional)"
+        },
+        "avg_grid_distance": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "<b>Always required, but NOT used in the model if Grid Points provided</b><br/><br/>A number in kilometres that is only used if grid points are NOT used in valuation.  When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points.  See the User's Guide for a description of the approach and the method used to calculate the default value.",
+            "name": "Average Shore to Grid Distance (Kilometers)"
+        },
+        "price_table": {
+            "validation_options": {},
+            "type": "boolean",
+            "required": true,
+            "about": "When checked the model will use the social cost of wind energy table provided in the input below.  If not checked the price per year will be determined using the price of energy input and the annual rate of change.",
+            "name": "Use Price Table"
+        },
+        "wind_schedule": {
+            "validation_options": {},
+            "type": "csv",
+            "required": false,
+            "about": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm.  They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><t d>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr>< td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td ></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td>< td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above.  In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
+            "name": "Wind Energy Price Table (CSV)"
+        },
+        "wind_price": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "The price of energy per kilowatt hour.  This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below.  See the User's Guide for guidance about determining this value.",
+            "name": "Price of Energy per Kilowatt Hour ($/kWh)"
+        },
+        "rate_change": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "The annual rate of change in the price of wind energy.  This should be expressed as a decimal percentage.  For example, 0.1 for a 10% annual price change.",
+            "name": "Annual Rate of Change in Price of Wind Energy"
+        }
+    }
+}
+
+
 
 # The _SCALE_KEY is used in getting the right wind energy arguments that are
 # dependent on the hub height.
@@ -73,7 +237,7 @@ def execute(args):
 
     Args:
         workspace_dir (str): a path to the output workspace folder (required)
-        wind_data_path (str): path to a CSV file with the following header:
+        wind_data_path (str): path to a CSV file with the following header
             ['LONG','LATI','LAM', 'K', 'REF']. Each following row is a location
             with at least the Longitude, Latitude, Scale ('LAM'),
             Shape ('K'), and reference height ('REF') at which the data was
