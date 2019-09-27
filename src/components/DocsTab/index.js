@@ -8,9 +8,7 @@ export class DocsTab extends React.Component {
     if (fs.existsSync(this.props.docs)) {
       html = fs.readFileSync(this.props.docs, 'utf8');
     }
-    const docStyle = {
-      whiteSpace: 'pre-line'
-    };
+
     return(
         <div><p dangerouslySetInnerHTML={{__html: html}}/></div>
       );

@@ -71,10 +71,12 @@
     "@babel/preset-env": "^7.6.2",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.6.2",
+    "babel-eslint": "^10.0.3",
     "electron": "^6.0.10",
     "electron-devtools-installer": "^2.2.4",
     "eslint": "^3.19.0",
     "eslint-plugin-react": "^7.14.3",
+    "eslint-scope": "^5.0.0",
     "jest": "^24.8.0"
   }
 }

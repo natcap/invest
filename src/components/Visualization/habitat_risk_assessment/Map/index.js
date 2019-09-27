@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import glob from 'glob';
 import { bbox } from "@turf/turf"
@@ -306,7 +305,7 @@ class Hramap extends React.Component {
         if (vectorName.startsWith(prefix) & vectorName !== ecosystemRiskLayer) {
           let defaultCheck = false; // Boolean variable for setting default layer check box
           if (vectorsOnMap.includes(vectorName)) {
-            let defaultCheck = true;
+            defaultCheck = true;
           }
           layerControls.push(
             <label key={vectorName}>
@@ -411,7 +410,7 @@ class Hramap extends React.Component {
   }
 
   // Remove the display of coords when mouse leaves the map
-  removeCoords(e) {
+  removeCoords() {
     this.setState({coords: "Hover mouse over the map to display coordinates."});
   }
 

@@ -1,27 +1,9 @@
 import React from 'react';
-import Electron from 'electron';
-
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
 
-import validate from '../../validate';
-
 export class SetupTab extends React.Component {
-
-  componentDidMount() {
-    // TODO: once invest getspec replaces valid_HRA_args.js
-    // there will not be default arg values present on Mount.
-    // so we may not need this function.
-
-    // For now, nice to validate on load if it's possible to load with default args.
-    // let openingArgs = this.props.args
-    // for (const argname in openingArgs) {
-    //   const argument = openingArgs[argname];
-    //   openingArgs[argname]['valid'] = validate(argument.value, argument.validationRules)
-    // }
-    // this.props.checkArgsReadyToValidate(openingArgs)
-  }
 
   render () {
 

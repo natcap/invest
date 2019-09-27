@@ -3,8 +3,8 @@ import {InvestJob} from './InvestJob';
 
 export default class App extends React.Component {
   render() {
-  	return (
-			<InvestJob />
+    return (
+      <InvestJob />
     );
-	};
+  }
 }

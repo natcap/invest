@@ -116,7 +116,7 @@ export class InvestJob extends React.Component {
       let warningsIssued = false;
       validator.stdout.on('data', (data) => {
         let results = JSON.parse(data.toString());
-        if (Boolean(results.validation_results.length)) {
+        if (results.validation_results.length) {
           warningsIssued = true
           results.validation_results.forEach(x => {
             // TODO: test this indexing against all sorts of validation results
@@ -265,9 +265,9 @@ export class InvestJob extends React.Component {
     render () {
         const activeTab = this.state.activeTab;
         const jobStatus = this.state.jobStatus;
-        const setupDisabled = !Boolean(this.state.modelSpec.args); // enable once modelSpec has loaded
+        const setupDisabled = !(this.state.modelSpec.args); // enable once modelSpec has loaded
         const logDisabled = ['invalid', 'ready'].includes(jobStatus);  // enable during and after execution
-        const vizDisabled = !Boolean(jobStatus === 0);  // enable only on complete execute with no errors
+        const vizDisabled = !(jobStatus === 0);  // enable only on complete execute with no errors
 
         return(
           <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
