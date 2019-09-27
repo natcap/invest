@@ -24,6 +24,108 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+ARG_SPEC = {
+    "model_name": "Wave Energy",
+    "module": "natcap.invest.wave_energy",
+    "userguide_html": "wave_energy.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": [],
+        "reference_key": ""
+    },
+    "args": {
+        "workspace_dir": "validation.WORKSPACE_SPEC",
+        "results_suffix": "validation.SUFFIX_SPEC",
+        "n_workers": "validation.N_WORKERS_SPEC",
+        "wave_base_data_path": {
+            "validation_options": {},
+            "type": "UNKNOWN",
+            "required": true,
+            "about": "Select the folder that has the packaged Wave Energy Data.",
+            "name": "Wave Base Data Folder"
+        },
+        "analysis_area_path": {
+            "validation_options": {
+                "options": [
+                    "West Coast of North America and Hawaii",
+                    "East Coast of North America and Puerto Rico",
+                    "North Sea 4 meter resolution",
+                    "North Sea 10 meter resolution",
+                    "Australia",
+                    "Global"
+                ]
+            },
+            "type": "option_string",
+            "required": true,
+            "about": "A list of analysis areas for which the model can currently be run.  All the wave energy data needed for these areas are pre-packaged in the WaveData folder.",
+            "name": "Analysis Area"
+        },
+        "aoi_path": {
+            "validation_options": {},
+            "type": "vector",
+            "required": false,
+            "about": "An OGR-supported vector file containing a single polygon representing the area of interest.  This input is required for computing valuation and is recommended for biophysical runs as well.  The AOI should be projected in linear units of meters.",
+            "name": "Area of Interest (Vector)"
+        },
+        "machine_perf_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": true,
+            "about": "A CSV Table that has the performance of a particular wave energy machine at certain sea state conditions.",
+            "name": "Machine Performance Table (CSV)"
+        },
+        "machine_param_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": true,
+            "about": "A CSV Table that has parameter values for a wave energy machine.  This includes information on the maximum capacity of the device and the upper limits for wave height and period.",
+            "name": "Machine Parameter Table (CSV)"
+        },
+        "dem_path": {
+            "validation_options": {},
+            "type": "UNKNOWN",
+            "required": true,
+            "about": "A GDAL-supported raster file containing a digital elevation model dataset that has elevation values in meters.  Used to get the cable distance for wave energy transmission.",
+            "name": "Global Digital Elevation Model (Raster)"
+        },
+        "suffix": {
+            "validation_options": {},
+            "type": "UNKNOWN",
+            "required": false,
+            "about": "A string that will be added to the end of the output file paths.",
+            "name": "Results Suffix (Optional)"
+        },
+        "valuation_container": {
+            "validation_options": {},
+            "type": "boolean",
+            "required": false,
+            "about": "Indicates whether the model includes\nvaluation",
+            "name": "Valuation"
+        },
+        "land_gridPts_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": false,
+            "about": "A CSV Table that has the landing points and grid points locations for computing cable distances.",
+            "name": "Grid Connection Points File (CSV)"
+        },
+        "machine_econ_path": {
+            "validation_options": {},
+            "type": "csv",
+            "required": false,
+            "about": "A CSV Table that has the economic parameters for the wave energy machine.",
+            "name": "Machine Economic Table (CSV)"
+        },
+        "number_of_machines": {
+            "validation_options": {},
+            "type": "number",
+            "required": false,
+            "about": "An integer for how many wave energy machines will be in the wave farm.",
+            "name": "Number of Machines"
+        }
+    }
+}
+
+
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
 _TARGET_PIXEL_TYPE = gdal.GDT_Float32
