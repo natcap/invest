@@ -54,8 +54,6 @@ function validate(value, type, required) {
       return true;  // boolean types should have an input that is always valid (e.g. dropdown, radio/checkbox)
     }
   }
-  console.log(value);
-  console.log(type);
   throw 'Validation rule is not defined';
 }
 

@@ -1,4 +1,4 @@
-To develeop and launch this Application
+To develop and launch this Application
 --------------------------
 
 clone repo  
@@ -18,3 +18,15 @@ set INVEST=C:\\Users\\dmf\\projects\\invest\\dist\\invest\\invest.exe && npm sta
   
 # linux:  
 INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start  
+
+
+To run linter or tests
+-----------------------------
+`npm run-script lint`  
+`npm run-script test`  
+
+see `package.json` `scripts` object.  
+
+To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx eslint ...`. 
+
+
