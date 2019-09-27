@@ -26,7 +26,6 @@ export class ModelsTab extends React.Component {
 
     proc.stdout.on('data', (data) => {
       const results = JSON.parse(data.toString());
-      console.log(results);
       this.setState({models:results});
     });
 

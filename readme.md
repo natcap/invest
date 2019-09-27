@@ -22,8 +22,8 @@ INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start
 
 To run linter or tests
 -----------------------------
-`npm run-script lint`  
-`npm run-script test`  
+`npm run lint`  
+`npm run test`  
 
 see `package.json` `scripts` object.  
 
