@@ -5,7 +5,7 @@
   "description": "My Electron application description",
   "main": "src/main.js",
   "scripts": {
-    "start": "electron -r @babel/register .",
+    "start": "npx electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },

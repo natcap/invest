@@ -32,10 +32,11 @@ const DATASTACK_JSON = 'datastack.json' // TODO: save this to the workspace, or 
 export class InvestJob extends React.Component {
     constructor(props) {
         super(props);
+        const timestamp = new Date().toISOString()
         this.state = {
+            sessionID: MODEL_NAME + '_' + timestamp,
             modelSpec: {},
             workspace: null,
-            jobid: null,
             jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
             logStdOut: '',
@@ -51,6 +52,40 @@ export class InvestJob extends React.Component {
         this.switchTabs = this.switchTabs.bind(this);
         this.argsFromJsonDrop = this.argsFromJsonDrop.bind(this);
         this.updateArg = this.updateArg.bind(this);
+        this.saveState = this.saveState.bind(this);
+        this.loadState = this.loadState.bind(this);
+        this.setSession = this.setSession.bind(this);
+    }
+
+    saveState() {
+      const jsonContent = JSON.stringify(this.state, null, 2);
+      const sessionID = this.state.sessionID;
+      fs.writeFile(sessionID + '.json', jsonContent, 'utf8', function (err) {
+        if (err) {
+            console.log("An error occured while writing JSON Object to File.");
+            return console.log(err);
+        }
+        console.log("saved" + sessionID);
+      });
+    }
+    
+    loadState(sessionID) {
+      console.log(sessionID)
+      const filename = sessionID + '.json'
+      if (fs.existsSync(filename)) {
+        const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
+        console.log(loadedState)
+        this.setState(loadedState);
+      } else {
+        console.log('state file not found: ' + filename);
+      }
+    }
+
+    setSession(event) {
+      const value = event.target.value;
+      console.log(value);
+      this.setState(
+        {sessionID: value});
     }
 
     executeModel() {
@@ -274,6 +309,9 @@ export class InvestJob extends React.Component {
             <Tab eventKey="models" title="Models">
               <ModelsTab
                 loadModelSpec={this.loadModelSpec}
+                saveState={this.saveState}
+                loadState={this.loadState}
+                setSession={this.setSession}
               />
             </Tab>
             <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
