@@ -525,7 +525,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
-        args['suffix'] = 'val'
+        args['results_suffix'] = 'val'
 
         wave_energy.execute(args)
 
@@ -560,12 +560,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         from natcap.invest import wave_energy
 
         args = {}
-        with self.assertRaises(KeyError) as cm:
+        with self.assertRaises(ValueError) as cm:
             wave_energy.execute(args)
-        expected_message = (
-            "Keys are missing from args: ['workspace_dir', " +
-            "'wave_base_data_path', 'analysis_area_path', " +
-            "'machine_perf_path', 'machine_param_path', 'dem_path']")
+        expected_message = 'Key is missing from the args dict'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -577,8 +574,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['analysis_area_path'] = 'Incorrect Analysis Area'
         with self.assertRaises(ValueError) as cm:
             wave_energy.execute(args)
-        expected_message = (
-            "'analysis_area_path'], 'Parameter must be a known analysis area.")
+        expected_message = 'Value must be one of'  # Start of option error msg
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -592,10 +588,9 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
         validation_error_list = wave_energy.validate(args)
         expected_errors = [
-            (['wave_base_data_path'],
-             'Parameter not found or is not a folder.'),
-            (['dem_path'],
-             'Parameter must be a filepath to a GDAL-compatible raster file.')]
+            (['dem_path', 'wave_base_data_path'],
+             'Key is required but has no value'),
+        ]
         for expected_error in expected_errors:
             self.assertTrue(expected_error in validation_error_list)
 
@@ -608,9 +603,8 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
         validation_error_list = wave_energy.validate(args)
         expected_errors = [
-            (['aoi_path'], 'Vector must contain only polygons.'),
-            (['aoi_path'], 'Vector must be projected in meters.'),
-            (['aoi_path'], 'Vector must use the WGS_1984 datum.'),]
+            (['aoi_path'], 'Layer must be projected in meters'),
+        ]
         for expected_error in expected_errors:
             self.assertTrue(expected_error in validation_error_list)
 

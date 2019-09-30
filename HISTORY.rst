@@ -2,6 +2,11 @@
 
 Unreleased Changes
 ------------------
+* Correcting an issue with the Wave Energy UI where a second results suffix
+  input was accidentally provided.  The second suffix input has been removed.
+* The results suffix key for the Wave Energy model has been renamed
+  ``results_suffix`` (was previously ``suffix``).  This is for consistency
+  across InVEST models.
 * the InVEST CLI has been completely rebuilt to divide
   functionality into various topic-specific subcommands.  The various internal
   consumers of this API have been updated accordingly.  ``invest --help`` will

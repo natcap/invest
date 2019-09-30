@@ -75,10 +75,6 @@ N_WORKERS_SPEC = {
     "type": "number",
     "required": False,
     "validation_options": {
-        "regexp": {
-            "pattern": "-?[0-9]+",
-            "case_sensitive": False
-        },
         "expression": "value >= -1"
     }
 }
