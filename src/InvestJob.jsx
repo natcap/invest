@@ -9,6 +9,7 @@ import { Provider } from 'react-redux';
 
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
+import Navbar from 'react-bootstrap/Navbar';
 
 import { MODEL_NAME, MODEL_DOCS } from './valid_HRA_args';
 import validate from './validate';
@@ -26,7 +27,7 @@ const store = createStore(rootReducer)
 const INVEST_EXE = process.env.INVEST
 const TEMP_DIR = './'
 const DATASTACK_JSON = 'datastack.json' // TODO: save this to the workspace, or treat it as temp and delete it.
-
+const CACHE_DIR = 'cache' //  for storing state config files
 
 
 export class InvestJob extends React.Component {
@@ -60,7 +61,8 @@ export class InvestJob extends React.Component {
     saveState() {
       const jsonContent = JSON.stringify(this.state, null, 2);
       const sessionID = this.state.sessionID;
-      fs.writeFile(sessionID + '.json', jsonContent, 'utf8', function (err) {
+      const filepath = path.join(CACHE_DIR, sessionID + '.json');
+      fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
         if (err) {
             console.log("An error occured while writing JSON Object to File.");
             return console.log(err);
@@ -71,7 +73,7 @@ export class InvestJob extends React.Component {
     
     loadState(sessionID) {
       console.log(sessionID)
-      const filename = sessionID + '.json'
+      const filename = path.join(CACHE_DIR, sessionID + '.json');
       if (fs.existsSync(filename)) {
         const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
         console.log(loadedState)
@@ -305,47 +307,48 @@ export class InvestJob extends React.Component {
         const vizDisabled = !(jobStatus === 0);  // enable only on complete execute with no errors
 
         return(
-          <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
-            <Tab eventKey="models" title="Models">
-              <ModelsTab
-                loadModelSpec={this.loadModelSpec}
-                saveState={this.saveState}
-                loadState={this.loadState}
-                setSession={this.setSession}
-              />
-            </Tab>
-            <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
-              <SetupTab
-                args={this.state.modelSpec.args}
-                jobStatus={this.state.jobStatus}
-                checkArgsReadyToValidate={this.checkArgsReadyToValidate}
-                handleChange={this.handleChange}
-                selectFile={this.selectFile}
-                executeModel={this.executeModel}
-                onDrop={this.argsFromJsonDrop}
-              />
-            </Tab>
-            <Tab eventKey="log" title="Log" disabled={logDisabled}>
-              <LogDisplay 
-                jobStatus={this.state.jobStatus}
-                logStdOut={this.state.logStdOut}
-                logStdErr={this.state.logStdErr}
-              />
-            </Tab>
-            <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
-            <Provider store={store}>
-              <VizApp
-                model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
-                workspace={this.state.workspace}
-                activeTab={activeTab}/> 
-            </Provider>
-            </Tab>
-            <Tab eventKey="docs" title="Docs">
-              <DocsTab 
-                docs={this.state.docs}
-              />
-            </Tab>
-          </Tabs>
+            <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
+              <Tab eventKey="models" title="Models">
+                <ModelsTab
+                  loadModelSpec={this.loadModelSpec}
+                  saveState={this.saveState}
+                  loadState={this.loadState}
+                  setSession={this.setSession}
+                  sessionID={this.state.sessionID}
+                />
+              </Tab>
+              <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
+                <SetupTab
+                  args={this.state.modelSpec.args}
+                  jobStatus={this.state.jobStatus}
+                  checkArgsReadyToValidate={this.checkArgsReadyToValidate}
+                  handleChange={this.handleChange}
+                  selectFile={this.selectFile}
+                  executeModel={this.executeModel}
+                  onDrop={this.argsFromJsonDrop}
+                />
+              </Tab>
+              <Tab eventKey="log" title="Log" disabled={logDisabled}>
+                <LogDisplay 
+                  jobStatus={this.state.jobStatus}
+                  logStdOut={this.state.logStdOut}
+                  logStdErr={this.state.logStdErr}
+                />
+              </Tab>
+              <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
+              <Provider store={store}>
+                <VizApp
+                  model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
+                  workspace={this.state.workspace}
+                  activeTab={activeTab}/> 
+              </Provider>
+              </Tab>
+              <Tab eventKey="docs" title="Docs">
+                <DocsTab 
+                  docs={this.state.docs}
+                />
+              </Tab>
+            </Tabs>
         );
     }
 }

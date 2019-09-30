@@ -4,7 +4,8 @@ import { spawn } from 'child_process';
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
-
+import Col from 'react-bootstrap/Col';
+import Row from 'react-bootstrap/Row';
 
 const INVEST_EXE = process.env.INVEST
 
@@ -14,8 +15,11 @@ export class ModelsTab extends React.Component {
     super(props);
     this.state = {
       models: {},
-      sessionIdToLoad: null
+      recentSessions: [],
+      // sessionIdToLoad: null
     };
+
+    this.saveSession = this.saveSession.bind(this);
   }
 
   componentDidMount() {
@@ -43,7 +47,18 @@ export class ModelsTab extends React.Component {
     });
   }
 
+  saveSession() {
+    this.props.saveState();
+    let recentSessions = this.state.recentSessions.slice();
+    console.log(recentSessions);
+    console.log(this.props.sessionID);
+    recentSessions.push(this.props.sessionID);
+    console.log(recentSessions);
+    this.setState({recentSessions: recentSessions});
+  }
+
   render () {
+    console.log(this.props.sessionID);
     const investJSON = this.state.models;
     let buttonItems = [];
     for (const model in investJSON) {
@@ -58,24 +73,29 @@ export class ModelsTab extends React.Component {
     }
 
     return (
-      <div>
-      <Form.Label>Save Name</Form.Label>
-        <Form.Control
-          type="text" 
-          value={this.props.sessionID}
-          onChange={this.props.setSession}
-        />
-      <Button
-        onClick={this.props.saveState}
-        variant="primary">
-        Save State
-      </Button>
-      <LoadStateForm
-        loadState={this.props.loadState}/>
-      <ButtonGroup vertical className="mr-2" aria-label="First group">
-        {buttonItems}
-      </ButtonGroup>
-      </div>
+      <Row>
+        <Col>
+          <ButtonGroup vertical className="mr-2" aria-label="First group">
+            {buttonItems}
+          </ButtonGroup>
+        </Col>
+        <Col>
+          <Form.Control
+            type="text"
+            placeholder={this.props.sessionID}
+            value={this.props.sessionID}
+            onChange={this.props.setSession}
+          />
+          <Button
+            onClick={this.saveSession}
+            variant="primary">
+            Save State
+          </Button>
+          <LoadStateForm
+            loadState={this.props.loadState}
+            recentSessions={this.state.recentSessions}/>
+        </Col>
+      </Row>
     );
   }
 }
@@ -89,6 +109,7 @@ class LoadStateForm extends React.Component {
     }
     this.handleTextChange = this.handleTextChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
+    this.handleLink = this.handleLink.bind(this);
   }
 
   handleTextChange(event) {
@@ -101,23 +122,51 @@ class LoadStateForm extends React.Component {
     this.props.loadState(this.state.sessionID);
   }
 
+  handleLink(event) {
+    event.preventDefault();
+    const value = event.target.value;
+    this.setState(
+      {sessionID: value},
+      this.props.loadState(value));
+  }
+
   render() {
-    return (
-      <Form
-        onSubmit={this.handleSubmit}>
-        <Form.Group>
-          <Form.Label>Load Name</Form.Label>
-          <Form.Control
-            type="text" 
-            value={this.state.sessionID}
-            onChange={this.handleTextChange}
-          />
-        </Form.Group>
-        <Button
-          type="submit">
-          Load State
+
+    let recentButtons = [];
+    console.log(this.props.recentSessions);
+    this.props.recentSessions.forEach(session => {
+      console.log(session);
+      recentButtons.push(
+        <Button key={session}
+          value={session}
+          onClick={this.handleLink}
+          variant='Link'>
+          {session}
         </Button>
-      </Form>
+      );
+    });
+
+    return (
+      <div>
+        <Form
+          onSubmit={this.handleSubmit}>
+          <Form.Group>
+            <Form.Control
+              type="text"
+              placeholder="Enter state name"
+              value={this.state.sessionID}
+              onChange={this.handleTextChange}
+            />
+          </Form.Group>
+          <Button
+            type="submit">
+            Load State
+          </Button>
+        </Form>
+        <ButtonGroup vertical className="mr-2" aria-label="recent states">
+          {recentButtons}
+        </ButtonGroup>
+      </div>
     );
   }
 }
