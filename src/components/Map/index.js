@@ -1,22 +1,18 @@
+import fs from 'fs';
+import path from 'path';
+import glob from 'glob';
 import { bbox } from "@turf/turf"
 import { bindActionCreators } from "redux";
 import { connect } from "react-redux";
-
 import chroma from "chroma-js";
 import Choropleth from "react-leaflet-choropleth";
+import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
+import React from "react";
+
 import Control from "./Control";
 import { getCsvUrl } from "../../actions/index";
 import { getVectorsOnMap } from "../../actions/index";
 import { getFileSuffix } from "../../actions/index";
-import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
-import React, { Component } from "react";
-
-// 
-<style>
-  import "font-awesome/css/font-awesome.min.css";
-  import "leaflet/dist/leaflet.css";}
-  import "./style.css";}
-</style>
 
 const { BaseLayer } = LayersControl;
 
@@ -36,24 +32,6 @@ const STRESS_VALUE_RANGE = [1, 1];
 const RISK_FIELD_NAME = "Risk Score";
 const STRESSOR_FIELD_NAME = "Stressor"
 
-const SAMPLE_FILES = [
-  // Habitat risk vectors
-  "RECLASS_RISK_Ecosystem.geojson",
-  "RECLASS_RISK_eelgrass.geojson",
-  "RECLASS_RISK_kelp.geojson",
-  "RECLASS_RISK_hardbottom.geojson",
-  "RECLASS_RISK_softbottom.geojson",
-
-  // Stressor vectors
-  "STRESSOR_Docks_Wharves_Marinas.geojson",
-  "STRESSOR_Finfish_Aquaculture_Comm.geojson",
-  "STRESSOR_Rec_Fishing.geojson",
-  "STRESSOR_Shellfish_Aquaculture_Comm.geojson",
-
-  // Criteria score zonal statistics on each habitat-stressor pair
-  "SUMMARY_STATISTICS.csv"
-];
-
 // CSV file basename.
 const CSV_BASENAME = "SUMMARY_STATISTICS";
 
@@ -62,7 +40,7 @@ const STRESSOR_PREFIX = "STRESSOR_"
 const RISK_PREFIX = "RECLASS_RISK_"
 const ECOSYSTEM_LAYER = "RECLASS_RISK_Ecosystem"
 
-class Hramap extends Component {
+class Hramap extends React.Component {
 
   constructor(props) {
     super(props);
@@ -81,121 +59,68 @@ class Hramap extends Component {
       rasters: {},
       rasterLength: null,
       rastersOnMap: [],
-      colorScale: [],
-      colorRange: [],
       ecosystemRiskLayer: ECOSYSTEM_LAYER, // Default layer on map when user choose to view sample files
       fileSuffix: "",
+      isFirstRender: true
     };
 
     this.mapRef = React.createRef();
     this.layerControl = React.createRef();
+    this.gatherWorkspaceFiles = this.gatherWorkspaceFiles.bind(this);
+    this.loadVectors = this.loadVectors.bind(this);
+    this.zoomToMaxBbox = this.zoomToMaxBbox.bind(this);
   }
 
   componentDidMount() {
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
-    this.mapApi.invalidateSize();
-    console.log('map invalidated');
+    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
+    this.loadVectors(fileMetadata.geojsonUrls); // fetch requests happening here
+    // Update csv url and file suffix reducers
+    this.props.getCsvUrl(fileMetadata.csvUrl);
+    this.props.getFileSuffix(fileMetadata.fileSuffix);
   }
 
   componentDidUpdate() {
-    // The map loads with the wrong center when it has been initialized
-    // prior to the div that will contain it. So call this function to have 
-    // the map check it's container size after that div exists.
-    // this.mapApi.invalidateSize();
+    // The map loads with the wrong center if it was initialized
+    // prior to the div that will contain it. So here's a hack to 
+    // resize the map when the Viz tab is clicked and it's div's are created.
+    // And a hack to only to do this once, so if you switch tabs subsequently,
+    // the map stays where you left it.
+    const activeTab = this.props.activeTab;
+    if (this.state.isFirstRender & activeTab === 'viz') {
+      this.mapApi.invalidateSize();
+      this.updateMaxBbox(); // also zooms to it if the box changed.
+      this.setState({
+        isFirstRender: false
+      });
+    }
   }
 
-  // Read the target files from the event listener when users upload folder,
-  // read the files within the folder and set states accordingly
-  onFileUpload(files, isSampleData) {
-    let geojsonUrls = {};
-    // let geotiffUrls = {};
-    let csvUrl = null;
-    let fileSuffix = "";
+  // Get relevant filenames from the output workspace
+  gatherWorkspaceFiles(workspace) {
+    let fileMetadata = {}
+    fileMetadata.geojsonUrls = {};
+    fileMetadata.csvUrl = null;
+    fileMetadata.fileSuffix = "";
 
-    // Remove preexisting rasters from map
-    for (let i = 0; i < Object.keys(this.state.rastersOnMap).length; i++) {
-      let rasterName = this.state.rastersOnMap[i];
-      this.state.rasters[rasterName].removeFrom(this.mapApi);
-    }
+    const files = glob.sync(path.join(workspace, 'visualization_outputs/*'));
+    Object.values(files).forEach( filename => {
+      let fileExt = filename.split(".").pop();
+      let filenameNoExt = path.basename(filename).replace("." + fileExt, "");
 
-    // If the files are uploaded by user, store them as blob URL
-    if (!isSampleData) {
-      Object.values(files).forEach( fileObj => {
-        let filename = fileObj.name;
-        let fileExt = filename.split(".").pop();
-        let filenameNoExt = filename.replace("." + fileExt, "");
-
-        // Use URLs to reference to the blob, and push them to the dictionary
-        if (fileExt === "geojson") {
-          // Use createObjectURL() to return blob URL as a string
-          geojsonUrls[filenameNoExt] = URL.createObjectURL(fileObj);
-        } else if (fileExt === "tif") {
-          //! do not render rasters for now yet because output files are GeoJSON
-          // geotiffUrls[filenameNoExt] = URL.createObjectURL(fileObj);
-        } else if (
-            fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
-          // Create CSV object URL
-          csvUrl = URL.createObjectURL(fileObj);
-          fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
-        }
-      });
-
-    } else {
-      // If users want to view sample files, save URLs of the hosted GeoJSON
-      // and CSV files
-      files.forEach( filepath => {
-
-        // Save sample file names and paths to geojsonUrls
-        let fileExt = filepath.split(".").pop();
-        let filenameNoExt = filepath.split(".")[1].split("/").pop()
-
-        if (fileExt === "geojson") {
-          geojsonUrls[filenameNoExt] = filepath;
-        } else if (fileExt === "csv") {
-          csvUrl = filepath;
-        } else if (fileExt === "tif") {
-          //! do not render rasters for now yet because output files are GeoJSON
-          // geotiffUrls[filenameNoExt] = filepath;
-        }
-      });
-    }
-
-    // When all object URLs are retrieved, clean up preexisting states
-    // since we will update them when new data is rendered
-    this.setState({
-      vectors: {},
-      vectorLength: null,
-      vectorsOnMap: [],
-      rasters: {},
-      rasterLength: null,
-      rastersOnMap: [],
-      lats: [],
-      lngs: [],
-      maxBbox: [[-90, -180], [90, 180]],
-      fileSuffix: fileSuffix,
-      ecosystemRiskLayer: "RECLASS_RISK_Ecosystem" + fileSuffix,
-    }, () =>
-
-    { // Fetch vector data and create styled polygons from the URLs
-      this.loadVectors(geojsonUrls);
-
-      //! do not render rasters for now yet because output files are GeoJSON
-      // this.loadAndRenderRasters(geotiffUrls);
+      if (fileExt === "geojson") {
+        fileMetadata.geojsonUrls[filenameNoExt] = path.resolve(filename) 
+      } else if (fileExt === "csv" & filenameNoExt.startsWith(CSV_BASENAME)) {
+        fileMetadata.csvUrl = path.resolve(filename)
+        fileMetadata.fileSuffix = filenameNoExt.slice(CSV_BASENAME.length);
+      }
     });
-
-    // Update csv url and file suffix reducers
-    this.props.getCsvUrl(csvUrl);
-    this.props.getFileSuffix(fileSuffix);
+    return(fileMetadata);
   }
 
-  // Load sample files to the page when users click on the View Sample button
-  viewSample(e) {
-    const filepaths = SAMPLE_FILES.map(name => ("./sampledata/" + name) );
-    this.onFileUpload(filepaths, true);
-  }
 
-  // Read GeoJSON files and save them in the vectors state.
+  // Read GeoJSON files and generate Choropleth Components
   loadVectors(vectorUrls) {
     let lats = [];
     let lngs = [];
@@ -208,21 +133,19 @@ class Hramap extends Component {
       let vectorPath = vectorUrls[vectorName];
 
       fetch(vectorPath)
-        .then(response => response.json()) // parse the data as JSON
+        .then(response => response.json())
         .then(data => {
 
           // Get suitable color scales and field name for rendering risk and
           // stressor vectors
+          let colorScale;
+          let colorRange;
           if (data.name.startsWith(RISK_PREFIX)) {
-            this.setState({
-              colorScale: RISK_COLOR_SCALE,
-              colorRange: RISK_VALUE_RANGE
-            });
+            colorScale = RISK_COLOR_SCALE;
+            colorRange = RISK_VALUE_RANGE;
           } else if (data.name.startsWith(STRESSOR_PREFIX)) {
-            this.setState({
-              colorScale: STRESS_COLOR_SCALE,
-              colorRange: STRESS_VALUE_RANGE
-            });
+            colorScale = STRESS_COLOR_SCALE;
+            colorRange = STRESS_VALUE_RANGE;
           }
 
           // Add gradient color to features based on the field names (either
@@ -240,9 +163,9 @@ class Hramap extends Component {
                     return feature.properties[STRESSOR_FIELD_NAME];
                   }
                 }}
-              scale={this.state.colorScale}
+              scale={colorScale}
               steps={COLOR_STEPS}
-              range={this.state.colorRange}
+              range={colorRange}
               mode="e"  // for equidistant color mode
               style={this.getPolygonStyle()}
               onEachFeature={
@@ -268,6 +191,7 @@ class Hramap extends Component {
             { // Update vectorsOnMap reducer
               this.props.getVectorsOnMap(this.state.vectorsOnMap);
               this.updateMaxBbox();
+              this.zoomToMaxBbox();
             });
           }
         });
@@ -276,13 +200,21 @@ class Hramap extends Component {
 
   // Calculate the union of all the bounding boxes of geojson files.
   updateMaxBbox() {
+    const currentBox = this.state.maxBbox;
     if (this.state.lats.length > 0 && this.state.lngs.length > 0) {
       // Calculate the min and max longitude and latitude
       let minlat = Math.min(...this.state.lats),
           maxlat = Math.max(...this.state.lats);
       let minlng = Math.min(...this.state.lngs),
           maxlng = Math.max(...this.state.lngs);
-      this.setState({maxBbox: [[minlat, minlng],[maxlat, maxlng]]});
+      const newBox = [[minlat, minlng],[maxlat, maxlng]];
+      if (currentBox !== newBox) {
+        this.setState({
+          maxBbox: newBox
+        }, () => {
+          this.zoomToMaxBbox()
+        });
+      }
     }
   }
 
@@ -371,6 +303,7 @@ class Hramap extends Component {
       // If vector name starts with 'RECLASS_RISK' or 'STRESSOR_', put them on
       // the control box and remove the front suffix from the names
       Object.keys(vectors).forEach( vectorName => {
+        // console.log(vectorName);
         // If layer name is in the vectorsOnMap array, set it checked
         if (vectorName.startsWith(prefix) & vectorName !== ecosystemRiskLayer) {
           let defaultCheck = false; // Boolean variable for setting default layer check box
@@ -542,14 +475,14 @@ class Hramap extends Component {
         </Control>
 
         <LayersControl position="topleft">
-          <BaseLayer name="Open Street Map" checked={true}>
+          <BaseLayer name="Open Street Map">
             <TileLayer
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
               attribution="&copy; <a href=&quot;http://osm.org/copyright&quot;>
                 OpenStreetMap</a> contributors" />
           </BaseLayer>
 
-          <BaseLayer name="ESRI Ocean Map">
+          <BaseLayer name="ESRI Ocean Map" checked={true}>
             <TileLayer
               url="https://server.arcgisonline.com/ArcGIS/rest/services/Ocean_Basemap/MapServer/tile/{z}/{y}/{x}"
               attribution="&copy;
@@ -566,29 +499,7 @@ class Hramap extends Component {
         </LayersControl>
 
         {this.renderGeojsons()}
-
         {this.addLayerControls()}
-
-        <Control position="topleft">
-          <form className="leaflet-control-layers upload-form">
-
-            Upload HRA Output Folder
-            <input type="file" ref="fileUpload"
-              onChange={e => this.onFileUpload(e.target.files, false)}
-              webkitdirectory="true" mozdirectory="true" msdirectory="true"
-              odirectory="true" directory="true"
-              style={{"display": "none"}} multiple />
-            <br />
-
-            <input type="button" value="Select Folder"
-              onClick={e => this.refs.fileUpload.click()}/>
-
-            or View Sample
-            <input type="button" value="Sample Files"
-              onClick={e => this.viewSample(e)}/>
-          </form>
-
-        </Control>
 
         <Control position="bottomleft">
           <div className="coords">{this.state.coordText}</div>
