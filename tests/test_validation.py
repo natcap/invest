@@ -144,29 +144,6 @@ class ValidatorTest(unittest.TestCase):
         with self.assertRaises(AssertionError):
             validate(args={1: 'foo'})
 
-    def test_invalid_return_value(self):
-        """Validation: check for error when the return value type is wrong."""
-        from natcap.invest import validation
-
-        for invalid_value in (1, True, None):
-            @validation.invest_validator
-            def validate(args, limit_to=None):
-                return invalid_value
-
-            with self.assertRaises(AssertionError):
-                validate({})
-
-    def test_invalid_keys_iterable(self):
-        """Validation: check for error when return keys not an iterable."""
-        from natcap.invest import validation
-
-        @validation.invest_validator
-        def validate(args, limit_to=None):
-            return [('a', 'error 1')]
-
-        with self.assertRaises(AssertionError):
-            validate({'a': 'foo'})
-
     def test_return_keys_in_args(self):
         """Validation: check for error when return keys not all in args."""
         from natcap.invest import validation
@@ -175,19 +152,9 @@ class ValidatorTest(unittest.TestCase):
         def validate(args, limit_to=None):
             return [(('a',), 'error 1')]
 
-        with self.assertRaises(AssertionError):
-            validate({})
-
-    def test_error_string_wrong_type(self):
-        """Validation: check for error when error message not a string."""
-        from natcap.invest import validation
-
-        @validation.invest_validator
-        def validate(args, limit_to=None):
-            return [(('a',), 1234)]
-
-        with self.assertRaises(AssertionError):
-            validate({'a': 'foo'})
+        validation_errors = validate({})
+        self.assertEqual(validation_errors,
+                         [(('a',), 'error 1')])
 
     def test_wrong_parameter_names(self):
         """Validation: check for error when wrong function signature used."""
@@ -217,14 +184,19 @@ class ValidatorTest(unittest.TestCase):
         """Validation: validation error returned on invalid n_workers."""
         from natcap.invest import validation
 
+        args_spec = {
+            'n_workers': validation.N_WORKERS_SPEC,
+        }
+
         @validation.invest_validator
         def validate(args, limit_to=None):
-            return []
+            return validation.validate(args, args_spec)
 
-        validation_errors = validate({'n_workers': 1.5})
+        validation_errors = validate({'n_workers': 'not a number'})
         self.assertEqual(len(validation_errors), 1)
         self.assertTrue(validation_errors[0][0] == ['n_workers'])
-        self.assertTrue('must be an integer' in validation_errors[0][1])
+        self.assertTrue('could not be interpreted as a number'
+                        in validation_errors[0][1])
 
 class DirectoryValidation(unittest.TestCase):
     def setUp(self):
@@ -714,7 +686,7 @@ class TestValidationFromSpec(unittest.TestCase):
             "number_b": 456,
         }
         validation_warnings = validation.validate(args, spec)
-        self.assertEquals(validation_warnings, [
+        self.assertEquals(sorted(validation_warnings), [
             (['number_c'], 'Key is missing from the args dict'),
             (['number_d'], 'Key is missing from the args dict'),
         ])
