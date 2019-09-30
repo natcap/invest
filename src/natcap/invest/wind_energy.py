@@ -39,8 +39,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "wind_energy.html",
     "args_with_spatial_overlap": {
-        "spatial_keys": [],
-        "reference_key": ""
+        "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
+                         'land_polygon_vector_path'],
+        "reference_key": "aoi_vector_path"
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
@@ -49,148 +50,254 @@ ARGS_SPEC = {
         "wind_data_path": {
             "validation_options": {},
             "type": "csv",
-            "required": true,
-            "about": "A CSV file that represents the wind input data (Weibull parameters). Please see the User's Guide for a more detailed description of the parameters.",
+            "required": True,
+            "about": (
+                "A CSV file that represents the wind input data (Weibull "
+                "parameters). Please see the User's Guide for a more "
+                "detailed description of the parameters."),
             "name": "Wind Data Points (CSV)"
         },
         "aoi_vector_path": {
-            "validation_options": {},
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters",
+            },
             "type": "vector",
-            "required": false,
-            "about": "Optional.  An OGR-supported vector file containing a single polygon defining the area of interest.  The AOI must be projected with linear units equal to meters.  If the AOI is provided it will clip and project the outputs to that of the AOI. The Distance inputs are dependent on the AOI and will only be accessible if the AOI is selected.  If the AOI is selected and the Distance parameters are selected, then the AOI should also cover a portion of the land polygon to calculate distances correctly.  An AOI is required for valuation.",
-            "name": "Area Of Interest (Vector) (Optional)"
+            "required": "valuation_container & grid_points_path",
+            "about": (
+                "A GDAL-supported vector file containing a single polygon "
+                "defining the area of interest.  The AOI must be projected "
+                "with linear units equal to meters.  If the AOI is provided "
+                "it will clip and project the outputs to that of the AOI. "
+                "The Distance inputs are dependent on the AOI and will only "
+                "be accessible if the AOI is selected.  If the AOI is "
+                "selected and the Distance parameters are selected, then the "
+                "AOI should also cover a portion of the land polygon to "
+                "calculate distances correctly.  An AOI is required for "
+                "valuation."),
+            "name": "Area Of Interest"
         },
         "bathymetry_path": {
             "validation_options": {},
             "type": "raster",
-            "required": true,
-            "about": "A GDAL-supported raster file containing elevation values represented in meters for the area of interest.  The DEM should cover at least the entire span of the area of interest and if no AOI is provided then the default global DEM should be used.",
-            "name": "Bathymetric Digital Elevation Model (Raster)"
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing elevation values "
+                "represented in meters for the area of interest.  The DEM "
+                "should cover at least the entire span of the area of "
+                "interest and if no AOI is provided then the default global "
+                "DEM should be used."),
+            "name": "Bathymetric Digital Elevation Model"
         },
         "land_polygon_vector_path": {
-            "validation_options": {},
             "type": "vector",
-            "required": false,
-            "about": "An OGR-supported polygon vector that represents the land and coastline that is of interest.  For this input to be selectable the AOI must be selected.  The AOI should also cover a portion of this land polygon to properly calculate distances.  This coastal polygon, and the area covered by the AOI, form the basis for distance calculations for wind farm electrical transmission.  This input is required for masking by distance values and for valuation.",
-            "name": "Land Polygon for Distance Calculation (Vector)"
+            "required": "min_distance | max_distance | valuation_container",
+            "about": (
+                "A GDAL-supported polygon vector that represents the land "
+                "and coastline that is of interest.  For this input to be "
+                "selectable the AOI must be selected.  The AOI should also "
+                "cover a portion of this land polygon to properly calculate "
+                "distances.  This coastal polygon, and the area covered by "
+                "the AOI, form the basis for distance calculations for wind "
+                "farm electrical transmission.  This input is required for "
+                "masking by distance values and for valuation."),
+            "name": "Land Polygon for Distance Calculation"
         },
         "global_wind_parameters_path": {
-            "validation_options": {},
-            "type": "UNKNOWN",
-            "required": false,
-            "about": "A CSV file that holds wind energy model parameters for both the biophysical and valuation modules. These parameters are defaulted to values that are supported and reviewed in the User's Guide.  It is recommended that careful consideration be taken before changing these values and to make a new CSV file so that the default one always remains.",
-            "name": "Global Wind Energy Parameters (CSV)"
-        },
-        "suffix": {
-            "validation_options": {},
-            "type": "UNKNOWN",
-            "required": false,
-            "about": "A string that will be added to the end of the output file paths.",
-            "name": "Results suffix (optional)"
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file that holds wind energy model parameters for both "
+                "the biophysical and valuation modules. These parameters are "
+                "defaulted to values that are supported and reviewed in the "
+                "User's Guide.  It is recommended that careful consideration "
+                "be taken before changing these values and to make a new CSV "
+                "file so that the default one always remains."),
+            "name": "Global Wind Energy Parameters"
         },
         "turbine_parameters_path": {
             "validation_options": {},
             "type": "csv",
-            "required": true,
-            "about": "A CSV file that contains parameters corresponding to a specific turbine type.  The InVEST package comes with two turbine model options, 3.6 MW and 5.0 MW. A new turbine class may be created by using the existing file format conventions and filling in new parameters.  Likewise an existing class may be modified according to the user's needs.  It is recommended that the existing default CSV files are not overwritten.",
-            "name": "Turbine Type Parameters File (CSV)"
+            "required": True,
+            "about": (
+                "A CSV file that contains parameters corresponding to a "
+                "specific turbine type.  The InVEST package comes with two "
+                "turbine model options, 3.6 MW and 5.0 MW. A new turbine "
+                "class may be created by using the existing file format "
+                "conventions and filling in new parameters.  Likewise an "
+                "existing class may be modified according to the user's "
+                "needs.  It is recommended that the existing default CSV "
+                "files are not overwritten."),
+            "name": "Turbine Type Parameters File"
         },
         "number_of_turbines": {
-            "validation_options": {},
+            "validation_options": {
+                "expression": "int(value) > 0",
+            },
             "type": "number",
-            "required": false,
+            "required": True,
             "about": "An integer value indicating the number of wind turbines per wind farm.",
             "name": "Number Of Turbines"
         },
         "min_depth": {
-            "validation_options": {},
             "type": "number",
-            "required": true,
-            "about": "A floating point value in meters for the minimum depth of the offshore wind farm installation.",
-            "name": "Minimum Depth for Offshore Wind Farm Installation (meters)"
+            "required": True,
+            "about": (
+                "A floating point value in meters for the minimum depth of "
+                "the offshore wind farm installation."),
+            "name": (
+                "Minimum Depth for Offshore Wind Farm Installation (meters)")
         },
         "max_depth": {
-            "validation_options": {},
             "type": "number",
-            "required": true,
-            "about": "A floating point value in meters for the maximum depth of the offshore wind farm installation.",
-            "name": "Maximum Depth for Offshore Wind Farm Installation (meters)"
+            "required": True,
+            "about": (
+                "A floating point value in meters for the maximum depth of "
+                "the offshore wind farm installation."),
+            "name": (
+                "Maximum Depth for Offshore Wind Farm Installation (meters)")
         },
         "min_distance": {
-            "validation_options": {},
             "type": "number",
-            "required": false,
-            "about": "A floating point value in meters that represents the minimum distance from shore for offshore wind farm installation.  Required for valuation.",
-            "name": "Minimum Distance for Offshore Wind Farm Installation (meters)"
+            "required": "valuation_container",
+            "about": (
+                "A floating point value in meters that represents the "
+                "minimum distance from shore for offshore wind farm "
+                "installation.  Required for valuation."),
+            "name": (
+                "Minimum Distance for Offshore Wind Farm Installation "
+                "(meters)")
         },
         "max_distance": {
-            "validation_options": {},
             "type": "number",
-            "required": false,
-            "about": "A floating point value in meters that represents the maximum distance from shore for offshore wind farm installation.  Required for valuation.",
-            "name": "Maximum Distance for Offshore Wind Farm Installation (meters)"
+            "required": "valuation_container",
+            "about": (
+                "A floating point value in meters that represents the "
+                "maximum distance from shore for offshore wind farm "
+                "installation.  Required for valuation."),
+            "name": (
+                "Maximum Distance for Offshore Wind Farm Installation "
+                "(meters)")
         },
         "valuation_container": {
-            "validation_options": {},
             "type": "boolean",
-            "required": false,
-            "about": "Indicates whether model includes\nvaluation",
+            "required": False,
+            "about": "Indicates whether model includes valuation",
             "name": "Valuation"
         },
         "foundation_cost": {
-            "validation_options": {},
             "type": "number",
-            "required": false,
-            "about": "A floating point number for the unit cost of the foundation type (in millions of dollars). The cost of a foundation will depend on the type selected, which itself depends on a variety of factors including depth and turbine choice.  Please see the User's Guide for guidance on properly selecting this value.",
+            "required": "valuation_container",
+            "about": (
+                "A floating point number for the unit cost of the foundation "
+                "type (in millions of dollars). The cost of a foundation "
+                "will depend on the type selected, which itself depends on a "
+                "variety of factors including depth and turbine choice.  "
+                "Please see the User's Guide for guidance on properly "
+                "selecting this value."),
             "name": "Cost of the Foundation Type (USD, in Millions)"
         },
         "discount_rate": {
             "validation_options": {},
             "type": "number",
-            "required": false,
-            "about": "The discount rate reflects preferences for immediate benefits over future benefits (e.g., would an individual rather receive $10 today or $10 five years from now?). See the User's Guide for guidance on selecting this value.",
+            "required": "valuation_container",
+            "about": (
+                "The discount rate reflects preferences for immediate "
+                "benefits over future benefits (e.g., would an individual "
+                "rather receive $10 today or $10 five years from now?). See "
+                "the User's Guide for guidance on selecting this value."),
             "name": "Discount Rate"
         },
         "grid_points_path": {
-            "validation_options": {},
+            "validation_options": {
+                "required_fields": ["id", "type", "lati", "long"],
+            },
             "type": "csv",
-            "required": false,
-            "about": "An optional CSV file with grid and land points to determine cable distances from.  An example:<br/> <table border='1'> <tr> <th>ID</th> <th>TYPE</th> <th>LATI</th> <th>LONG</th> </tr> <tr> <td>1</td> <td>GRID</td> <td>42.957</td> <td>-70.786</td> </tr> <tr> <td>2</td> <td>LAND</td> <td>42.632</td> <td>-71.143</td> </tr> <tr> <td>3</td> <td>LAND</td> <td>41.839</td> <td>-70.394</td> </tr> </table> <br/><br/>Each point location is represented as a single row with columns being <b>ID</b>, <b>TYPE</b>, <b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and <b>LONG</b> columns indicate the coordinates for the point.  The <b>TYPE</b> column relates to whether it is a land or grid point.  The <b>ID</b> column is a simple unique integer.  The shortest distance between respective points is used for calculations.  See the User's Guide for more information.",
-            "name": "Grid Connection Points (Optional)"
+            "required": "valuation_container & ~avg_grid_distance",
+            "about": (
+                "An optional CSV file with grid and land points to determine "
+                "cable distances from.  Each point location is represented "
+                "as a single row with columns being <b>ID</b>, <b>TYPE</b>, "
+                "<b>LATI</b>, and <b>LONG</b>. The <b>LATI</b> and "
+                "<b>LONG</b> columns indicate the coordinates for the "
+                "point.  The <b>TYPE</b> column relates to whether it is a "
+                "land or grid point.  The <b>ID</b> column is a simple "
+                "unique integer.  The shortest distance between respective "
+                "points is used for calculations.  See the User's Guide for "
+                "more information."),
+            "name": "Grid Connection Points"
         },
         "avg_grid_distance": {
-            "validation_options": {},
+            "validation_options": {
+                "expression": "value > 0"
+            },
             "type": "number",
-            "required": false,
-            "about": "<b>Always required, but NOT used in the model if Grid Points provided</b><br/><br/>A number in kilometres that is only used if grid points are NOT used in valuation.  When running valuation using the land polygon to compute distances, the model uses an average distance to the onshore grid from coastal cable landing points instead of specific grid connection points.  See the User's Guide for a description of the approach and the method used to calculate the default value.",
+            "required": "valuation_container & ~grid_points_path",
+            "about": (
+                "A number in kilometres that is only used if grid points are "
+                "NOT used in valuation.  When running valuation using the "
+                "land polygon to compute distances, the model uses an "
+                "average distance to the onshore grid from coastal cable "
+                "landing points instead of specific grid connection points.  "
+                "See the User's Guide for a description of the approach and "
+                "the method used to calculate the default value."),
             "name": "Average Shore to Grid Distance (Kilometers)"
         },
         "price_table": {
-            "validation_options": {},
             "type": "boolean",
-            "required": true,
-            "about": "When checked the model will use the social cost of wind energy table provided in the input below.  If not checked the price per year will be determined using the price of energy input and the annual rate of change.",
+            "required": "valuation_container",
+            "about": (
+                "When checked the model will use the social cost of wind "
+                "energy table provided in the input below.  If not checked "
+                "the price per year will be determined using the price of "
+                "energy input and the annual rate of change."),
             "name": "Use Price Table"
         },
         "wind_schedule": {
-            "validation_options": {},
+            "validation_options": {
+                "required_fields": ['year', 'price'],
+            },
             "type": "csv",
-            "required": false,
-            "about": "A CSV file that has the price of wind energy per kilowatt hour for each year of the wind farms life. The CSV file should have the following two columns:<br/><br/><b>Year:</b> a set of integers indicating each year for the lifespan of the wind farm.  They can be in date form such as : 2010, 2011, 2012... OR simple time step integers such as : 0, 1, 2... <br/><br/><b>Price:</b> a set of floats indicating the price of wind energy per kilowatt hour for a particular year or time step in the wind farms life.<br/><br/>An example:<br/> <table border='1'> <tr><th>Year</th> <th>Price</th></tr><tr><td>0</td><t d>.244</td></tr><tr><td>1</td><td>.255</td></tr><tr>< td>2</td><td>.270</td></tr><tr><td>3</td><td>.275</td ></tr><tr><td>4</td><td>.283</td></tr><tr><td>5</td>< td>.290</td></tr></table><br/><br/><b>NOTE:</b> The number of years or time steps listed must match the <b>time</b> parameter in the <b>Global Wind Energy Parameters</b> input file above.  In the above example we have 6 years for the lifetime of the farm, year 0 being a construction year and year 5 being the last year.",
-            "name": "Wind Energy Price Table (CSV)"
+            "required": "valuation_container & price_table",
+            "about": (
+                "A CSV file that has the price of wind energy per kilowatt "
+                "hour for each year of the wind farms life. The CSV file "
+                "should have the following two columns:<br/><br/><b>Year:</b> "
+                "a set of integers indicating each year for the lifespan of "
+                "the wind farm.  They can be in date form such as : 2010, "
+                "2011, 2012... OR simple time step integers such as : 0, 1, "
+                "2... <br/><br/><b>Price:</b> a set of floats indicating the "
+                "price of wind energy per kilowatt hour for a particular "
+                "year or time step in the wind farms life.<br/><br/>"
+                "<b>NOTE:</b> The number of years or time steps listed must "
+                "match the <b>time</b> parameter in the <b>Global Wind "
+                "Energy Parameters</b> input file above.  In the above "
+                "example we have 6 years for the lifetime of the farm, "
+                "year 0 being a construction year and year 5 being the "
+                "last year."),
+            "name": "Wind Energy Price Table"
         },
         "wind_price": {
-            "validation_options": {},
             "type": "number",
-            "required": false,
-            "about": "The price of energy per kilowatt hour.  This is the price that will be used for year or time step 0 and will then be adjusted based on the rate of change percentage from the input below.  See the User's Guide for guidance about determining this value.",
+            "required": "valuation_container & ~price_table",
+            "about": (
+                "The price of energy per kilowatt hour.  This is the price "
+                "that will be used for year or time step 0 and will then be "
+                "adjusted based on the rate of change percentage from the "
+                "input below.  See the User's Guide for guidance about "
+                "determining this value."),
             "name": "Price of Energy per Kilowatt Hour ($/kWh)"
         },
         "rate_change": {
-            "validation_options": {},
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
             "type": "number",
-            "required": false,
-            "about": "The annual rate of change in the price of wind energy.  This should be expressed as a decimal percentage.  For example, 0.1 for a 10% annual price change.",
+            "required": "valuation_container & ~price_table",
+            "about": (
+                "The annual rate of change in the price of wind energy.  "
+                "This should be expressed as a decimal percentage.  For "
+                "example, 0.1 for a 10% annual price change."),
             "name": "Annual Rate of Change in Price of Wind Energy"
         }
     }
@@ -259,7 +366,7 @@ def execute(args):
             in kilometers from a grid connection point to a land connection
             point (required for valuation if grid connection points are not
             provided)
-        suffix (str): a str to append to the end of the output files
+        results_suffix (str): a str to append to the end of the output files
             (optional)
         turbine_parameters_path (str): a path to a CSV file that holds the
             turbines biophysical parameters as well as valuation parameters
@@ -302,33 +409,6 @@ def execute(args):
             this model.  If omitted, computation will take place in the current
             process. (optional)
 
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'wind_data_path': 'path/to/file',
-            'aoi_vector_path': 'path/to/shapefile',
-            'bathymetry_path': 'path/to/raster',
-            'land_polygon_vector_path': 'path/to/shapefile',
-            'global_wind_parameters_path': 'path/to/csv',
-            'suffix': '_results',
-            'turbine_parameters_path': 'path/to/csv',
-            'number_of_turbines': 10,
-            'min_depth': 3,
-            'max_depth': 60,
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 3.4,
-            'discount_rate': 7.0,
-            'grid_points_path': 'path/to/csv',
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': 'path/to/csv',
-            'wind_price': 0.4,
-            'rate_change': 0.0,
-        }
-
     Returns:
         None
 
@@ -345,7 +425,7 @@ def execute(args):
     utils.make_directories([inter_dir, out_dir])
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    suffix = utils.make_suffix_string(args, 'suffix')
+    suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Initialize a TaskGraph
     taskgraph_working_dir = os.path.join(inter_dir, '_taskgraph_working_dir')
@@ -2533,265 +2613,5 @@ def validate(args, limit_to=None):
         message applies to and tuple[1] is the str validation warning.
 
     """
-    warnings = []
-
-    required_keys = [
-        'workspace_dir',
-        'wind_data_path',
-        'bathymetry_path',
-        'global_wind_parameters_path',
-        'turbine_parameters_path',
-        'number_of_turbines',
-        'min_depth',
-        'max_depth',
-    ]
-
-    # If we're doing valuation, min and max distance are required.
-    if 'valuation_container' in args and args['valuation_container'] and (
-            limit_to in ('valuation_container', None)):
-        for key in ('min_distance', 'max_distance'):
-            if key not in args or args[key] in ('', None):
-                warnings.append(([key], 'Value must be defined.'))
-
-        required_keys.extend(['discount_rate', 'foundation_cost'])
-
-        if limit_to in ('price_table', None):
-            if 'price_table' in args and args['price_table'] not in (True,
-                                                                     False):
-                warnings.append((['price_table'],
-                                 'Parameter must be either True or False.'))
-            elif 'price_table' in args and args['price_table']:
-                if 'wind_schedule' in args and (
-                        os.path.exists(args['wind_schedule'])):
-                    # Validate cell types in price table
-                    wind_price_df = pandas.read_csv(args["wind_schedule"])
-                    wind_price_df.columns = wind_price_df.columns.str.lower()
-                    if not pandas.api.types.is_integer_dtype(wind_price_df['year']):
-                        warnings.append(
-                            (['wind_schedule'],
-                                'Value(s) in Year column is not integer.'))
-                    if not pandas.api.types.is_numeric_dtype(wind_price_df['price']):
-                        warnings.append(
-                            (['wind_schedule'],
-                                'Value(s) in Price column is not numeric.'))
-                    year_list = wind_price_df['year'].tolist()
-                    duplicate_years = set(
-                        [year for year in year_list if year_list.count(year) > 1])
-                    if duplicate_years:
-                        warnings.append(
-                            (['wind_schedule'],
-                                'The following year(s) showed up more than '
-                                'once: %s.' % list(duplicate_years)))
-                else:
-                    warnings.append((
-                        ['wind_schedule'],
-                        'Parameter is required when price_table is True.'))
-            else:
-                required_keys.extend(['wind_price', 'rate_change'])
-
-        missing_distance_key = 2
-        try:
-            float(args['avg_grid_distance'])
-            # If the value can be converted to float, then the key is valid
-            missing_distance_key -= 1
-        except (ValueError, KeyError, TypeError):
-            pass
-        if 'grid_points_path' in args and os.path.exists(args['grid_points_path']):
-            missing_distance_key -= 1
-        if missing_distance_key > 1:
-            warnings.append((
-                ['grid_points_path'],
-                'Either avg_grid_distance or grid_points_path must be provided.'
-            ))
-
-    # Check if required keys have non-empty value in the dictionary
-    for required_key in required_keys:
-        if required_key in args and args[required_key] in ('', None):
-            warnings.append(([required_key], 'Parameter must have a value.'))
-
-    for vector_key in ('aoi_vector_path', 'land_polygon_vector_path'):
-        if limit_to in (vector_key, None):
-            try:
-                if args[vector_key] not in ('', None):
-                    with utils.capture_gdal_logging():
-                        vector = gdal.OpenEx(args[vector_key], gdal.OF_VECTOR)
-                        if vector is None:
-                            warnings.append(
-                                ([vector_key],
-                                 ('Parameter must be a path to an OGR-'
-                                  'compatible vector file.')))
-                        vector = None
-            except KeyError:
-                # neither of these vectors are required, so they may be omitted.
-                pass
-
-    if limit_to in ('bathymetry_path', None):
-        with utils.capture_gdal_logging():
-            raster = gdal.OpenEx(args['bathymetry_path'], gdal.OF_RASTER)
-        if raster is None:
-            warnings.append((['bathymetry_path'],
-                             ('Parameter must be a path to a GDAL-compatible '
-                              'raster on disk.')))
-
-    if limit_to in ('wind_data_path', None):
-        try:
-            table_dict = utils.build_lookup_from_csv(
-                args['wind_data_path'], 'REF')
-
-            missing_fields = (set(['long', 'lati', 'lam', 'k', 'ref']) - set(
-                list(table_dict.values())[0].keys()))
-            if missing_fields:
-                warnings.append((['wind_data_path'],
-                                 ('CSV missing required fields: %s' %
-                                  (', '.join(missing_fields)))))
-
-            try:
-                for ref_key, record in table_dict.items():
-                    try:
-                        if float(ref_key) != int(float(ref_key)):
-                            raise ValueError()
-                    except ValueError:
-                        warnings.append(
-                            (['wind_data_path'],
-                             ('Ref %s must be an integer.' % ref_key)))
-
-                    for float_field in ('long', 'lati', 'lam', 'k'):
-                        try:
-                            float(record[float_field])
-                        except ValueError:
-                            warnings.append(
-                                (['wind_data_path'],
-                                 ('Ref %s column %s must be a number.' %
-                                  (ref_key, float_field))))
-
-            except KeyError:
-                # missing keys are reported earlier.
-                pass
-        except ValueError:
-            warnings.append((['wind_data_path'], 'Missing REF field.'))
-        except IOError:
-            warnings.append((['wind_data_path'], 'Could not locate file.'))
-        except csv.Error:
-            warnings.append((['wind_data_path'], 'Could not open CSV file.'))
-
-    if limit_to in ('aoi_vector_path', None):
-        try:
-            if args['aoi_vector_path'] not in ('', None):
-                with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(
-                        args['aoi_vector_path'], gdal.OF_VECTOR)
-                    if vector:
-                        layer = vector.GetLayer()
-                        srs = layer.GetSpatialRef()
-                        units = srs.GetLinearUnitsName().lower()
-                        if units not in ('meter', 'metre'):
-                            warnings.append((
-                                ['aoi_vector_path'],
-                                'Vector must be projected in meters'))
-                    vector = None
-        except KeyError:
-            # Parameter is not required.
-            pass
-
-    for csv_key in ('global_wind_parameters_path', 'turbine_parameters_path'):
-        if limit_to in (csv_key, None):
-            try:
-                csv.reader(open(args[csv_key]))
-            except IOError:
-                warnings.append(([csv_key], 'File not found.'))
-            except csv.Error:
-                warnings.append(([csv_key], 'Could not read CSV file.'))
-
-    if limit_to in ('number_of_turbines', None):
-        try:
-            num_turbines = args['number_of_turbines']
-            if float(num_turbines) != int(float(num_turbines)):
-                raise ValueError()
-        except ValueError:
-            warnings.append((['number_of_turbines'],
-                             ('Parameter must be an integer.')))
-
-    for float_key in ('min_depth', 'max_depth', 'min_distance', 'max_distance',
-                      'foundation_cost', 'discount_rate', 'avg_grid_distance',
-                      'wind_price', 'rate_change'):
-        if limit_to in (float_key, None):
-            if float_key in args and args[float_key]:
-                try:
-                    float(args[float_key])
-                except (ValueError, KeyError, TypeError):
-                    warnings.append((
-                        [float_key], 'Parameter must be a number.'))
-
-    if limit_to in ('grid_points_path', None):
-        try:
-            table_dict = utils.build_lookup_from_csv(
-                args['grid_points_path'], 'id')
-
-            missing_fields = (set(['long', 'lati', 'id', 'type']) - set(
-                list(table_dict.values())[0].keys()))
-            if missing_fields:
-                warnings.append((['grid_points_path'],
-                                 ('CSV missing required fields: %s' %
-                                  (', '.join(missing_fields)))))
-
-            if 'aoi_vector_path' not in args or (
-                    args['aoi_vector_path'] in ('', None)):
-                warnings.append((
-                    ['aoi_vector_path'],
-                    'is required to clip and reproject the grid points.'))
-
-            try:
-                for id_key, record in table_dict.items():
-                    try:
-                        if float(id_key) != int(float(id_key)):
-                            raise ValueError()
-                    except ValueError:
-                        warnings.append(
-                            (['grid_points_path'],
-                             ('ID %s must be an integer.' % id_key)))
-
-                    for float_field in ('long', 'lati'):
-                        try:
-                            float(record[float_field])
-                        except ValueError:
-                            warnings.append(
-                                (['grid_points_path'],
-                                 ('ID %s column %s must be a number.' %
-                                  (id_key, float_field))))
-
-                    if record['type'] not in ('land', 'grid'):
-                        warnings.append(
-                            (['grid_points_path'],
-                             ('ID %s column TYPE must be either "land" or '
-                              '"grid" (case-insensitive)') % id_key))
-            except KeyError:
-                # missing keys are reported earlier.
-                pass
-        except ValueError:
-            warnings.append((['grid_points_path'], 'Missing ID field.'))
-        except KeyError:
-            # This is not a required input.
-            pass
-        except IOError:
-            warnings.append((['grid_points_path'], 'Could not locate file.'))
-        except csv.Error:
-            warnings.append((['grid_points_path'], 'Could not open CSV file.'))
-
-    if limit_to in (None, 'land_polygon_vector_path'):
-        # Require land_polygon_vector_path if any of min_distance,
-        # max_distance, or valuation_container have a value.
-        try:
-            if any((args['min_distance'] not in ('', None),
-                    args['max_distance'] not in ('', None),
-                    args['valuation_container'] is True)):
-                if 'land_polygon_vector_path' not in args or (
-                        args['land_polygon_vector_path'] in ('', None)):
-                    warnings.append(
-                        (['land_polygon_vector_path'],
-                         'Parameter is required, but has no value.'))
-        except KeyError:
-            # It's possible for some of these args to be missing, in which case
-            # the land polygon isn't required.
-            pass
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])

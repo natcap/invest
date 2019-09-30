@@ -13,6 +13,7 @@ import xlrd
 import sympy
 import sympy.parsing.sympy_parser
 from osgeo import gdal, osr
+import numpy
 
 try:
     from builtins import basestring
@@ -520,6 +521,12 @@ def check_spatial_overlap(spatial_filepaths_list, reference_srs_wkt=None):
         if reference_srs_wkt:
             bounding_box = pygeoprocessing.transform_bounding_box(
                 bounding_box, info['projection'], reference_srs_wkt)
+
+        if all([numpy.isinf(coord) for coord in bounding_box]):
+            LOGGER.warn(
+                'Skipping infinite bounding box for file %s', filepath)
+            continue
+
         bounding_boxes.append(bounding_box)
 
     try:
@@ -651,18 +658,22 @@ def validate(args, spec, spatial_overlap_opts=None):
     # when it has a value and the value passes validation requirements.
     sufficient_inputs = dict((_key, False) for _key in invalid_keys)
     for key in spec.keys():
-        if key in invalid_keys:
-            continue  # We already know the input to be invalid
-        elif key not in args:
+        if key not in args or key in invalid_keys:
             sufficient_inputs[key] = False
-        elif key in args and args[key] not in (None, ''):
-            # Boolean values are special in that their T/F state is equivalent
-            # to their satisfaction.  If a checkbox is checked, it is
-            # considered satisfied.
-            if spec[key]['type'] == 'boolean':
-                sufficient_inputs[key] = args[key]
-            else:
-                sufficient_inputs[key] = True
+        else:
+            if key in args:
+                if args[key] in (None, ''):
+                    sufficient_inputs[key] = False
+                else:
+                    # Boolean values are special in that their T/F state is
+                    # equivalent to their satisfaction.  If a checkbox is
+                    # checked, it is considered satisfied.
+                    if spec[key]['type'] == 'boolean':
+                        sufficient_inputs[key] = args[key]
+                    else:
+                        sufficient_inputs[key] = True
+            else:  # key not in args, is therefore insufficient.
+                sufficient_inputs[key] = False
 
     sorted_args_keys = sorted(list(sufficient_inputs.keys()))
     for key in conditionally_required_keys:
@@ -671,9 +682,13 @@ def validate(args, spec, spatial_overlap_opts=None):
 
         # An input is conditionally required when the expression given
         # evaluates to True.
-        is_conditionally_required = sympy.lambdify(
-            sorted_args_keys, spec[key]['required'], 'numpy')(
-                **sufficient_inputs)
+        try:
+            is_conditionally_required = sympy.lambdify(
+                sorted_args_keys, spec[key]['required'], 'numpy')(
+                    **sufficient_inputs)
+        except NameError as e:
+            print('error key: %s' % e)
+            import pdb; pdb.set_trace()
 
         if is_conditionally_required:
             if key not in args:
@@ -694,7 +709,12 @@ def validate(args, spec, spatial_overlap_opts=None):
                 if key in args and args[key] not in ('', None):
                     spatial_files.append(args[key])
 
-            if 'reference_key' in spatial_overlap_opts:
+            if 'reference_key' not in spatial_overlap_opts:
+                # If we don't have an ARGS_SPEC-defined reference SRS, we have
+                # to assume that all of the spatial keys defined are in the
+                # same projection.
+                reference_srs_wkt = None
+            else:
                 reference_key = spatial_overlap_opts['reference_key']
                 if (reference_key in args and
                         args[reference_key] not in ('', None)):
@@ -706,6 +726,10 @@ def validate(args, spec, spatial_overlap_opts=None):
                     except ValueError:
                         reference_srs_wkt = pygeoprocessing.get_vector_info(
                             reference_path)['projection']
+                else:
+                    # Reference key not provided, assume all SRSes are in the
+                    # same projection.
+                    reference_srs_wkt = None
 
             spatial_overlap_error = check_spatial_overlap(
                 spatial_files, reference_srs_wkt)
