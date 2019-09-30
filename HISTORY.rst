@@ -2,8 +2,12 @@
 
 Unreleased Changes
 ------------------
-* Fixed taskgraph-related issues with Habitat Risk Assessment where 
-  1) asynchronous mode was failing due to missing task dependencies and 
+* Fixed an ``IndexError`` issue in Wave Energy encountered in runs using
+  the global wave energy dataset.  This error was the result of an incorrect
+  spatial query of points and resulted in some wave energy points being
+  double-counted.
+* Fixed taskgraph-related issues with Habitat Risk Assessment where
+  1) asynchronous mode was failing due to missing task dependencies and
   2) avoided recomputation was confounded by two tasks modifying the same files.
 * Fixed an issue with Habitat Quality where the model was incorrectly
   expecting the sensitivity table to have a landcover code of 0.
