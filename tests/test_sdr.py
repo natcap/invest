@@ -101,9 +101,9 @@ class SDRTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
-        self.assertTrue(all(
-            [x[1] in ['not a raster', 'not a vector']
-             for x in validate_result]))
+        for (validation_keys, error_msg), phrase in zip(
+                validate_result, ['GDAL raster', 'GDAL vector']):
+            self.assertTrue(phrase in error_msg)
 
     def test_sdr_validation_missing_key(self):
         """SDR test validation that's missing keys."""
