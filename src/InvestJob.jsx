@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import Electron from 'electron';
 
 import React from 'react';
 import { createStore } from 'redux';
@@ -37,6 +36,7 @@ export class InvestJob extends React.Component {
         this.state = {
             sessionID: MODEL_NAME + '_' + timestamp,
             modelSpec: {},
+            args: null,
             workspace: null,
             jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
             logStdErr: '', 
@@ -44,18 +44,16 @@ export class InvestJob extends React.Component {
             activeTab: 'models',
             docs: MODEL_DOCS
         };
-        this.handleChange = this.handleChange.bind(this);
-        this.selectFile = this.selectFile.bind(this);
+        
         this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
         this.loadModelSpec = this.loadModelSpec.bind(this);
         this.investValidate = this.investValidate.bind(this);
-        this.executeModel = this.executeModel.bind(this);
+        this.investExecute = this.investExecute.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
-        this.argsFromJsonDrop = this.argsFromJsonDrop.bind(this);
-        this.updateArg = this.updateArg.bind(this);
+        this.updateArgs = this.updateArgs.bind(this);
         this.saveState = this.saveState.bind(this);
         this.loadState = this.loadState.bind(this);
-        this.setSession = this.setSession.bind(this);
+        this.setSessionID = this.setSessionID.bind(this);
     }
 
     saveState() {
@@ -83,16 +81,16 @@ export class InvestJob extends React.Component {
       }
     }
 
-    setSession(event) {
+    setSessionID(event) {
       const value = event.target.value;
       console.log(value);
       this.setState(
         {sessionID: value});
     }
 
-    executeModel() {
+    investExecute() {
       // first write args to a datastack file
-      argsToJSON(this.state.modelSpec.args, this.state.modelSpec.module);
+      argsToJSON(this.state.args, this.state.modelSpec.module);
       
       this.setState(
         {
@@ -130,14 +128,18 @@ export class InvestJob extends React.Component {
       python.on('close', (code) => {
         this.setState({
           jobStatus: code,
-          workspace: this.state.modelSpec.args.workspace_dir.value
+          workspace: this.state.args.workspace_dir.value
         });
         console.log(this.state)
       });
     }
 
     investValidate(args) {
-      let modelSpec = Object.assign({}, this.state.modelSpec);
+      // TODO: this funcs logic does not handle exceptions from invest validate
+      // in which case there are no warnings, but jobStatus still updates
+      // to 'ready'. Maybe that is desireable though.
+
+      const modelSpec = Object.assign({}, this.state.modelSpec);
       argsToJSON(args, modelSpec.module);  // first write args to datastack file
 
       const options = {
@@ -159,8 +161,8 @@ export class InvestJob extends React.Component {
             // TODO: test this indexing against all sorts of validation results
             const argkey = x[0][0];
             const message = x[1];
-            modelSpec.args[argkey]['validationMessage'] = message
-            modelSpec.args[argkey]['valid'] = false
+            args[argkey]['validationMessage'] = message
+            args[argkey]['valid'] = false
           });
         }
       });
@@ -174,7 +176,7 @@ export class InvestJob extends React.Component {
 
         if (warningsIssued) {
           this.setState({
-            modelSpec: modelSpec,
+            args: args,
             jobStatus: 'invalid'
           })
         } else {
@@ -195,11 +197,16 @@ export class InvestJob extends React.Component {
       const proc = spawn(INVEST_EXE, cmdArgs, options);
 
       proc.stdout.on('data', (data) => {
-        const results = JSON.parse(data.toString());
-        results['model_temp_vizname'] = MODEL_NAME // TODO: later this will be builtin to spec
-        console.log(results);
+        const spec = JSON.parse(data.toString());
+        spec['model_temp_vizname'] = MODEL_NAME // TODO: later this will be builtin to spec
+        
+        // for clarity, state has a dedicated args property separte from spec
+        const args = JSON.parse(JSON.stringify(spec.args));
+        delete spec.args
+
         this.setState({
-          modelSpec: results,
+          modelSpec: spec,
+          args: args
         }, () => this.switchTabs('setup'));
       });
 
@@ -212,82 +219,52 @@ export class InvestJob extends React.Component {
       });
     }
 
-    argsFromJsonDrop(event) {
-      event.preventDefault();
-      
-      const fileList = event.dataTransfer.files;
-      if (fileList.length !== 1) {
-        throw alert('only drop one file at a time.')
+    updateArgs(keys, values) {
+      // Update this.state.args in response to various events
+
+      // Allow multiple keys and values so this function can be
+      // shared by events that modify a single arg (keystroke)
+      // and events that modify many args (drag-drop json file).
+
+      // Parameters:
+        // keys (Array)
+        // valyes (Array)
+
+      let args = JSON.parse(JSON.stringify(this.state.args));
+
+      for (let i = 0; i < keys.length; i++) {
+        let key = keys[i];
+        let value = values[i];
+
+        const isValid = validate(
+          value, args[key].type, args[key].required);
+
+        args[key]['value'] = value;
+        args[key]['valid'] = isValid;
       }
-      const filepath = fileList[0].path;
-      const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
-      let modelSpec = Object.assign({}, this.state.modelSpec);
-      if (modelSpec.module === modelParams.model_name) {
-        // important to loop through Spec rather than Params
-        // because we want to validate each input, whether or not it's getting a value now
-        Object.keys(modelSpec.args).forEach(argkey => {
-          const value = modelParams.args[argkey]
-          modelSpec.args[argkey].value = value
-          // validate as we go because this onDrop function does not trigger handleChange for individual inputs.
-          const isValid = validate(value, modelSpec.args[argkey].type, modelSpec.args[argkey].required)
-          modelSpec.args[argkey].valid = isValid
-        });
-        this.setState(
-          {modelSpec: modelSpec},
-          () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
-        );
-      } else {
-        throw alert('parameter file does not match this model.')
-      }
+      this.setState({args: args}, 
+        this.checkArgsReadyToValidate);
     }
 
-    handleChange(event) {
-      // change handler for form text inputs
-      const value = event.target.value;
-      const name = event.target.name;
-      this.updateArg(name, value);
-    }
-
-    selectFile(event) {
-      // click handler for form browse-button inputs
-      const dialog = Electron.remote.dialog;
-      const argtype = event.target.value;
-      const argname = event.target.name;
-      const prop = (argtype === 'directory') ? 'openDirectory' : 'openFile'
-      // TODO: could add more filters based on argType (e.g. only show .csv)
-      dialog.showOpenDialog({
-        properties: [prop]
-      }, (filepath) => {
-        console.log(filepath);
-        this.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
-      })
-    }
-
-    updateArg(key, value) {
-      // state updater shared by the form event handlers
-      let modelSpec = Object.assign({}, this.state.modelSpec);
-      modelSpec.args[key]['value'] = value
-      modelSpec.args[key]['valid'] = validate(
-        value, modelSpec.args[key].type, modelSpec.args[key].required)
-
-      this.setState(
-          {modelSpec: modelSpec},
-          () => this.checkArgsReadyToValidate(this.state.modelSpec.args)
-      );      
-    }
-
-    checkArgsReadyToValidate(args) {
+    checkArgsReadyToValidate() {
+      // Pass args to invest validate if have valid values 
+      // according to validate.js
+      const args = JSON.parse(JSON.stringify(this.state.args));
       let argIsValidArray = [];
       for (const key in args) {
         argIsValidArray.push(args[key]['valid'])
       }
+      console.log('check Args called');
 
       if (argIsValidArray.every(Boolean)) {
           this.investValidate(args);
           return
       }
       
+      // TODO: move this setState to investValidate?
+      // then this checkArgs could live in Args component
+      // but investValidate would be passed as prop to Args instead
       this.setState(
           {jobStatus: 'invalid'}
       );
@@ -302,7 +279,7 @@ export class InvestJob extends React.Component {
     render () {
         const activeTab = this.state.activeTab;
         const jobStatus = this.state.jobStatus;
-        const setupDisabled = !(this.state.modelSpec.args); // enable once modelSpec has loaded
+        const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
         const logDisabled = ['invalid', 'ready'].includes(jobStatus);  // enable during and after execution
         const vizDisabled = !(jobStatus === 0);  // enable only on complete execute with no errors
 
@@ -313,19 +290,17 @@ export class InvestJob extends React.Component {
                   loadModelSpec={this.loadModelSpec}
                   saveState={this.saveState}
                   loadState={this.loadState}
-                  setSession={this.setSession}
+                  setSessionID={this.setSessionID}
                   sessionID={this.state.sessionID}
                 />
               </Tab>
               <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
                 <SetupTab
-                  args={this.state.modelSpec.args}
+                  args={this.state.args}
+                  modulename={this.state.modelSpec.module}
                   jobStatus={this.state.jobStatus}
-                  checkArgsReadyToValidate={this.checkArgsReadyToValidate}
-                  handleChange={this.handleChange}
-                  selectFile={this.selectFile}
-                  executeModel={this.executeModel}
-                  onDrop={this.argsFromJsonDrop}
+                  updateArgs={this.updateArgs}
+                  investExecute={this.investExecute}
                 />
               </Tab>
               <Tab eventKey="log" title="Log" disabled={logDisabled}>

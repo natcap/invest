@@ -29,4 +29,5 @@ see `package.json` `scripts` object.
 
 To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx eslint ...`. 
 
-
+To run a single test file:  
+set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npx jest -u investjob.test.js

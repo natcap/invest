@@ -16,7 +16,6 @@ export class ModelsTab extends React.Component {
     this.state = {
       models: {},
       recentSessions: [],
-      // sessionIdToLoad: null
     };
 
     this.saveSession = this.saveSession.bind(this);
@@ -48,17 +47,15 @@ export class ModelsTab extends React.Component {
   }
 
   saveSession() {
+    // write the snapshot to json
     this.props.saveState();
+    // and append sessionID to list of recent sessions
     let recentSessions = this.state.recentSessions.slice();
-    console.log(recentSessions);
-    console.log(this.props.sessionID);
     recentSessions.push(this.props.sessionID);
-    console.log(recentSessions);
     this.setState({recentSessions: recentSessions});
   }
 
   render () {
-    console.log(this.props.sessionID);
     const investJSON = this.state.models;
     let buttonItems = [];
     for (const model in investJSON) {
@@ -75,7 +72,7 @@ export class ModelsTab extends React.Component {
     return (
       <Row>
         <Col>
-          <ButtonGroup vertical className="mr-2" aria-label="First group">
+          <ButtonGroup vertical className="mr-2">
             {buttonItems}
           </ButtonGroup>
         </Col>
@@ -84,7 +81,7 @@ export class ModelsTab extends React.Component {
             type="text"
             placeholder={this.props.sessionID}
             value={this.props.sessionID}
-            onChange={this.props.setSession}
+            onChange={this.props.setSessionID}
           />
           <Button
             onClick={this.saveSession}
@@ -133,9 +130,7 @@ class LoadStateForm extends React.Component {
   render() {
 
     let recentButtons = [];
-    console.log(this.props.recentSessions);
     this.props.recentSessions.forEach(session => {
-      console.log(session);
       recentButtons.push(
         <Button key={session}
           value={session}
@@ -163,7 +158,7 @@ class LoadStateForm extends React.Component {
             Load State
           </Button>
         </Form>
-        <ButtonGroup vertical className="mr-2" aria-label="recent states">
+        <ButtonGroup vertical className="mr-2">
           {recentButtons}
         </ButtonGroup>
       </div>

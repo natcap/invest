@@ -1,4 +1,7 @@
+import fs from 'fs';
 import React from 'react';
+import Electron from 'electron';
+
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
 import InputGroup from 'react-bootstrap/InputGroup';
@@ -6,6 +9,7 @@ import InputGroup from 'react-bootstrap/InputGroup';
 export class SetupTab extends React.Component {
 
   render () {
+    console.log('setup re-rendered');
 
     const status = this.props.jobStatus
 
@@ -13,14 +17,13 @@ export class SetupTab extends React.Component {
       <div>
         <ArgsForm 
           args={this.props.args}
-          onDrop={this.props.onDrop}
-          handleChange={this.props.handleChange}
-          selectFile={this.props.selectFile}
+          modulename={this.props.modulename}
+          updateArgs={this.props.updateArgs}
         />
         <Button 
           variant="primary" 
           size="lg"
-          onClick={this.props.executeModel}
+          onClick={this.props.investExecute}
           disabled={['invalid', 'running'].includes(status)}>
               Execute
         </Button>
@@ -29,6 +32,59 @@ export class SetupTab extends React.Component {
 }
 
 class ArgsForm extends React.Component {
+
+  constructor(props) {
+    super(props);
+    this.handleChange = this.handleChange.bind(this);
+    this.selectFile = this.selectFile.bind(this);
+    this.onJsonDrop = this.onJsonDrop.bind(this);
+  }
+
+  handleChange(event) {
+    // Handle changes in form text inputs
+    const value = event.target.value;
+    const name = event.target.name;
+    this.props.updateArgs([name], [value]);
+  }
+
+  selectFile(event) {
+    // Handle clicks on form browse-button inputs
+    const dialog = Electron.remote.dialog;
+    const argtype = event.target.value;
+    const argname = event.target.name;
+    const prop = (argtype === 'directory') ? 'openDirectory' : 'openFile'
+    // TODO: could add more filters based on argType (e.g. only show .csv)
+    dialog.showOpenDialog({
+      properties: [prop]
+    }, (filepath) => {
+      console.log(filepath);
+      this.props.updateArgs([argname], [filepath[0]]); // 0 is safe since we only allow 1 selection
+    })
+  }
+
+  onJsonDrop(event) {
+    // Handle drag-drop of datastack JSON files
+    event.preventDefault();
+    
+    const fileList = event.dataTransfer.files;
+    if (fileList.length !== 1) {
+      throw alert('only drop one file at a time.')
+    }
+    const filepath = fileList[0].path;
+    const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
+
+    if (this.props.modulename === modelParams.model_name) {
+      let keys = [];
+      let values = [];
+      Object.keys(modelParams.args).forEach(argkey => {
+        keys.push(argkey);
+        values.push(modelParams.args[argkey]);
+      });
+      this.props.updateArgs(keys, values);
+    } else {
+      throw alert('parameter file does not match this model.')
+    }
+  }
 
   render() {
     const current_args = Object.assign({}, this.props.args)
@@ -50,7 +106,7 @@ class ArgsForm extends React.Component {
                 name={argname}
                 type="text" 
                 value={argument.value || ''} // empty string is handled better than `undefined`
-                onChange={this.props.handleChange}
+                onChange={this.handleChange}
                 isValid={argument.valid}
                 isInvalid={!argument.valid}
               />
@@ -59,7 +115,7 @@ class ArgsForm extends React.Component {
                   variant="outline-secondary"
                   value={argument.type}  // dialog will limit options to files or dirs accordingly
                   name={argname}
-                  onClick={this.props.selectFile}>
+                  onClick={this.selectFile}>
                   Browse
                 </Button>
               </InputGroup.Append>
@@ -78,8 +134,7 @@ class ArgsForm extends React.Component {
               name={argname}
               type="text" 
               value={argument.value || ''} // empty string is handled better than `undefined`
-              // required={argument.required}
-              onChange={this.props.handleChange}
+              onChange={this.handleChange}
               isValid={argument.valid}
               isInvalid={!argument.valid}
             />
@@ -98,7 +153,7 @@ class ArgsForm extends React.Component {
               label="Yes"
               value={true}//"true"
               checked={argument.value}//{argument.value === "true"}
-              onChange={this.props.handleChange}
+              onChange={this.handleChange}
               name={argname}
             />
             <Form.Check
@@ -106,7 +161,7 @@ class ArgsForm extends React.Component {
               label="No"
               value={false}//"false"
               checked={!argument.value}//{argument.value === "false"}
-              onChange={this.props.handleChange}
+              onChange={this.handleChange}
               name={argname}
             />
           </Form.Group>)
@@ -120,9 +175,7 @@ class ArgsForm extends React.Component {
               as='select'
               name={argname}
               value={argument.value}
-              // required={argument.required}
-              onChange={this.props.handleChange}
-            >
+              onChange={this.handleChange}>
               {argument.validation_options.options.map(opt =>
                 <option value={opt} key={opt}>{opt}</option>
               )}
@@ -137,7 +190,7 @@ class ArgsForm extends React.Component {
     return (
       <Form 
         validated={false}
-        onDrop={this.props.onDrop}
+        onDrop={this.onJsonDrop}
         onDragOver={dragover_handler}>
         {formItems}
       </Form>
