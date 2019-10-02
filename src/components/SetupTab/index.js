@@ -9,7 +9,6 @@ import InputGroup from 'react-bootstrap/InputGroup';
 export class SetupTab extends React.Component {
 
   render () {
-    console.log('setup re-rendered');
 
     const status = this.props.jobStatus
 

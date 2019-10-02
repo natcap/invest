@@ -14,11 +14,11 @@ export class ModelsTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      models: {},
+      models: {}, // stores result of `invest list`
       recentSessions: [],
     };
 
-    this.saveSession = this.saveSession.bind(this);
+    this.onSaveClick = this.onSaveClick.bind(this);
   }
 
   componentDidMount() {
@@ -34,7 +34,7 @@ export class ModelsTab extends React.Component {
 
     proc.stdout.on('data', (data) => {
       const results = JSON.parse(data.toString());
-      this.setState({models:results});
+      this.setState({models: results});
     });
 
     proc.stderr.on('data', (data) => {
@@ -46,11 +46,10 @@ export class ModelsTab extends React.Component {
     });
   }
 
-  saveSession() {
-    // write the snapshot to json
+  onSaveClick() {
     this.props.saveState();
     // and append sessionID to list of recent sessions
-    let recentSessions = this.state.recentSessions.slice();
+    let recentSessions = Object.assign([], this.state.recentSessions);
     recentSessions.push(this.props.sessionID);
     this.setState({recentSessions: recentSessions});
   }
@@ -84,7 +83,7 @@ export class ModelsTab extends React.Component {
             onChange={this.props.setSessionID}
           />
           <Button
-            onClick={this.saveSession}
+            onClick={this.onSaveClick}
             variant="primary">
             Save State
           </Button>
@@ -102,7 +101,7 @@ class LoadStateForm extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      sessionID: ''
+      session_id_to_load: ''
     }
     this.handleTextChange = this.handleTextChange.bind(this);
     this.handleSubmit = this.handleSubmit.bind(this);
@@ -111,7 +110,7 @@ class LoadStateForm extends React.Component {
 
   handleTextChange(event) {
     const value = event.target.value;
-    this.setState({sessionID: value})
+    this.setState({session_id_to_load: value})
   }
 
   handleSubmit(event) {
@@ -123,7 +122,7 @@ class LoadStateForm extends React.Component {
     event.preventDefault();
     const value = event.target.value;
     this.setState(
-      {sessionID: value},
+      {session_id_to_load: value},
       this.props.loadState(value));
   }
 
@@ -135,7 +134,7 @@ class LoadStateForm extends React.Component {
         <Button key={session}
           value={session}
           onClick={this.handleLink}
-          variant='Link'>
+          variant='outline-dark'>
           {session}
         </Button>
       );
