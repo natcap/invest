@@ -23,8 +23,14 @@ import VizApp from './VizApp'
 import rootReducer from './components/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-const INVEST_EXE = process.env.INVEST
+const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
 const TEMP_DIR = './'
+// these options are passed to child_process spawn calls
+const PYTHON_OPTIONS = {
+  cwd: TEMP_DIR,
+  shell: true, // without true, IOError when datastack.py loads json
+  env: {GDAL_DATA: process.env.GDAL_DATA.trim()}
+};
 const DATASTACK_JSON = 'datastack.json' // TODO: save this to the workspace, or treat it as temp and delete it.
 const CACHE_DIR = 'cache' //  for storing state config files
 
@@ -46,7 +52,7 @@ export class InvestJob extends React.Component {
         };
         
         this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
-        this.loadModelSpec = this.loadModelSpec.bind(this);
+        this.investGetSpec = this.investGetSpec.bind(this);
         this.investValidate = this.investValidate.bind(this);
         this.investExecute = this.investExecute.bind(this);
         this.switchTabs = this.switchTabs.bind(this);
@@ -101,13 +107,9 @@ export class InvestJob extends React.Component {
         }
       );
 
-      const options = {
-        cwd: TEMP_DIR,
-        shell: true, // without true, IOError when datastack.py loads json
-      };
       const datastackPath = path.join(TEMP_DIR, 'datastack.json')
       const cmdArgs = ['-vvv', 'run', MODEL_NAME, '--headless', '-d ' + datastackPath]
-      const python = spawn(INVEST_EXE, cmdArgs, options);
+      const python = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
 
       let stdout = this.state.logStdOut
       python.stdout.on('data', (data) => {
@@ -139,18 +141,13 @@ export class InvestJob extends React.Component {
       // in which case there are no warnings, but jobStatus still updates
       // to 'ready'. Maybe that is desireable though.
 
-      const modelSpec = Object.assign({}, this.state.modelSpec);
-      argsToJSON(args, modelSpec.module);  // first write args to datastack file
+      argsToJSON(args, this.state.modelSpec.module);  // first write args to datastack file
 
-      const options = {
-        cwd: TEMP_DIR,
-        shell: true, // without true, IOError when datastack.py loads json
-      };
       const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
       // if we add -vvv flags, we risk getting more stdout 
       // than expected by the results parser below.
       const cmdArgs = ['validate', '--json', datastackPath]
-      const validator = spawn(INVEST_EXE, cmdArgs, options);
+      const validator = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
 
       let warningsIssued = false;
       validator.stdout.on('data', (data) => {
@@ -188,7 +185,7 @@ export class InvestJob extends React.Component {
       });
     }
 
-    loadModelSpec(event) {
+    investGetSpec(event) {
       const modulename = event.target.value;
       const options = {
         shell: true, // without true, IOError when datastack.py loads json
@@ -287,7 +284,7 @@ export class InvestJob extends React.Component {
             <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
               <Tab eventKey="models" title="Models">
                 <ModelsTab
-                  loadModelSpec={this.loadModelSpec}
+                  investGetSpec={this.investGetSpec}
                   saveState={this.saveState}
                   loadState={this.loadState}
                   setSessionID={this.setSessionID}

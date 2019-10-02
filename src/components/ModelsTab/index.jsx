@@ -62,7 +62,7 @@ export class ModelsTab extends React.Component {
       buttonItems.push(
         <Button key={model}
           value={investJSON[model]['internal_name']}
-          onClick={this.props.loadModelSpec}
+          onClick={this.props.investGetSpec}
           variant="outline-success">
           {model}
         </Button>
