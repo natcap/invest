@@ -812,14 +812,23 @@ def validate(args, limit_to=None):
         required_fields = ARGS_SPEC['args'][
             'biophysical_table_path']['validation_options'][
                 'required_fields'][:]
+
+        nutrients_selected = set()
         for nutrient_letter in ('n', 'p'):
             do_nutrient_key = 'calc_%s' % nutrient_letter
             if do_nutrient_key in args and args[do_nutrient_key]:
+                nutrients_selected.add(do_nutrient_key)
                 required_fields += [
                     'load_%s' % nutrient_letter,
                     'eff_%s' % nutrient_letter,
                     'crit_len_%s' % nutrient_letter,
                 ]
+
+        if not nutrients_selected:
+            validation_warnings.append(
+                ([list(sorted(nutrients_selected))],
+                 'Either calc_n or calc_p must be True'))
+
 
         LOGGER.debug('Required keys in CSV: %s', required_fields)
         error_msg = validation.check_csv(

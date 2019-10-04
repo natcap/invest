@@ -121,10 +121,9 @@ class NDRTests(unittest.TestCase):
         # should not raise an exception
         ndr.validate(args)
 
-        with self.assertRaises(KeyError) as context:
-            del args['workspace_dir']
-            ndr.validate(args)
-        self.assertEquals(len(context.exception.args), 1)
+        del args['workspace_dir']
+        validation_errors = ndr.validate(args)
+        self.assertEquals(len(validation_errors), 1)
 
         args = NDRTests.generate_base_args(self.workspace_dir)
         args['workspace_dir'] = ''
