@@ -776,7 +776,11 @@ def _calculate_curve_number_raster(
             'lulc_values': [],
             'cn_values': []
         }
-        for lucode in sorted(list(biophysical_table) + [lulc_nodata]):
+        lucodes = list(biophysical_table)
+        if lulc_nodata is not None:
+            lucodes.append(lulc_nodata)
+
+        for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
                 lulc_to_soil[soil_id]['cn_values'].append(
                     biophysical_table[lucode][soil_column])

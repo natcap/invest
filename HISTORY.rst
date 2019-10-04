@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
+  the Land-Use/Land-Cover raster did not have a defined nodata value.  This
+  case is now handled correctly.
 * Fixed an ``IndexError`` issue in Wave Energy encountered in runs using
   the global wave energy dataset.  This error was the result of an incorrect
   spatial query of points and resulted in some wave energy points being
