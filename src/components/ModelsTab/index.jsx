@@ -1,3 +1,5 @@
+import fs from 'fs';
+import path from 'path';
 import React from 'react';
 import { spawn } from 'child_process';
 
@@ -8,6 +10,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
 const INVEST_EXE = process.env.INVEST
+const CACHE_DIR = 'cache'
 
 export class ModelsTab extends React.Component {
 
@@ -23,6 +26,8 @@ export class ModelsTab extends React.Component {
 
   componentDidMount() {
   	this.makeInvestList();
+    const recentSessions = findRecentSessions(CACHE_DIR);
+    this.setState({recentSessions: recentSessions});
   }
 
   makeInvestList() {
@@ -46,19 +51,21 @@ export class ModelsTab extends React.Component {
     });
   }
 
-  onSaveClick() {
+  onSaveClick(event) {
+    event.preventDefault();
     this.props.saveState();
     // and append sessionID to list of recent sessions
     let recentSessions = Object.assign([], this.state.recentSessions);
-    recentSessions.push(this.props.sessionID);
+    recentSessions.unshift(this.props.sessionID);
     this.setState({recentSessions: recentSessions});
   }
 
   render () {
+    // A button for each model
     const investJSON = this.state.models;
-    let buttonItems = [];
+    let investButtons = [];
     for (const model in investJSON) {
-      buttonItems.push(
+      investButtons.push(
         <Button key={model}
           value={investJSON[model]['internal_name']}
           onClick={this.props.investGetSpec}
@@ -70,30 +77,46 @@ export class ModelsTab extends React.Component {
 
     return (
       <Row>
-        <Col>
-          <ButtonGroup vertical className="mr-2">
-            {buttonItems}
+        <Col md={6}>
+          <ButtonGroup vertical className="mt-2">
+            {investButtons}
           </ButtonGroup>
         </Col>
-        <Col>
-          <Form.Control
-            type="text"
-            placeholder={this.props.sessionID}
-            value={this.props.sessionID}
-            onChange={this.props.setSessionID}
-          />
-          <Button
-            onClick={this.onSaveClick}
-            variant="primary">
-            Save State
-          </Button>
-          <LoadStateForm
-            loadState={this.props.loadState}
-            recentSessions={this.state.recentSessions}/>
+        <Col md={6}>
+          <Row className="mt-2">
+            <SaveStateForm
+              sessionID={this.props.sessionID}
+              setSessionID={this.props.setSessionID}
+              onSaveClick={this.onSaveClick}/>
+          </Row>
+          <Row className="mt-2">
+            <LoadStateForm
+              loadState={this.props.loadState}
+              recentSessions={this.state.recentSessions}/>
+          </Row>
         </Col>
       </Row>
     );
   }
+}
+
+function SaveStateForm(props) {
+  return(
+    <Form
+      onSubmit={props.onSaveClick}>
+      <Form.Control
+        type="text"
+        placeholder={props.sessionID}
+        value={props.sessionID}
+        onChange={props.setSessionID}
+      />
+      <Button
+        onClick={props.onSaveClick}
+        variant="primary">
+        Save State
+      </Button>
+    </Form>
+  );
 }
 
 class LoadStateForm extends React.Component {
@@ -115,7 +138,7 @@ class LoadStateForm extends React.Component {
 
   handleSubmit(event) {
     event.preventDefault();
-    this.props.loadState(this.state.sessionID);
+    this.props.loadState(this.state.session_id_to_load);
   }
 
   handleLink(event) {
@@ -127,6 +150,10 @@ class LoadStateForm extends React.Component {
   }
 
   render() {
+
+    // Make buttons to load each recently saved state
+    // populate recentSessions from list of files in cache dir
+    // sort by time created, max of 10 or 20, etc.
 
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
@@ -144,23 +171,41 @@ class LoadStateForm extends React.Component {
       <div>
         <Form
           onSubmit={this.handleSubmit}>
-          <Form.Group>
-            <Form.Control
-              type="text"
-              placeholder="Enter state name"
-              value={this.state.sessionID}
-              onChange={this.handleTextChange}
-            />
-          </Form.Group>
+          <Form.Control
+            type="text"
+            placeholder="Enter state name"
+            value={this.state.session_id_to_load}
+            onChange={this.handleTextChange}/>
           <Button
             type="submit">
             Load State
           </Button>
         </Form>
-        <ButtonGroup vertical className="mr-2">
-          {recentButtons}
-        </ButtonGroup>
+        <div>
+          Recent Sessions
+          <ButtonGroup vertical className="mt-2">
+            {recentButtons}
+          </ButtonGroup>
+        </div>
       </div>
     );
   }
+}
+
+function findRecentSessions(cache_dir) {
+  // TODO: check that files are actually state config files
+  // before putting them on the array
+  let files = fs.readdirSync(cache_dir);
+  let mtimes = [];
+  files.forEach(file => {
+    let stat = fs.statSync(path.join(cache_dir, file));
+    mtimes.push(stat.mtimeMs)
+  });
+
+  // reverse sort (b - a) based on last-modified time
+  let sortedFiles = files.sort(function(a, b) {
+    return fs.statSync(path.join(cache_dir, b)).mtimeMs -
+         fs.statSync(path.join(cache_dir, a)).mtimeMs
+  });
+  return sortedFiles;
 }

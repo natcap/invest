@@ -230,7 +230,7 @@ export class InvestJob extends React.Component {
         jobStatus: 'invalid',
         logStdErr: '',
         logStdOut: '',
-        sessionID: defaultSessionID(MODEL_NAME),
+        sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
         workspace: null,
       }, () => this.switchTabs('setup'));
     });
