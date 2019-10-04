@@ -39,15 +39,19 @@ const CACHE_DIR = 'cache' //  for storing state snapshot files
 const MODEL_NAME = 'habitat_risk_assessment'
 const MODEL_DOCS = 'C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html'
 
+function defaultSessionID(modelName) {
+  const datetime = new Date()
+      .toISOString()
+      .replace(/:/g, '-').replace('T', '_').slice(0, -5)
+  return(modelName + '_' + datetime);
+}
 
 export class InvestJob extends React.Component {
   constructor(props) {
     super(props);
-    const datetime = new Date()
-      .toISOString()
-      .replace(/:/g, '-').replace('T', '_').slice(0, -5)
+
     this.state = {
-      sessionID: MODEL_NAME + '_' + datetime,
+      sessionID: defaultSessionID(''),
       modelSpec: {},
       args: null,
       workspace: null,
@@ -218,9 +222,16 @@ export class InvestJob extends React.Component {
       const args = JSON.parse(JSON.stringify(spec.args));
       delete spec.args
 
+      // This event represents a user selecting a model,
+      // and so some existing state should be reset.
       this.setState({
         modelSpec: spec,
-        args: args
+        args: args,
+        jobStatus: 'invalid',
+        logStdErr: '',
+        logStdOut: '',
+        sessionID: defaultSessionID(MODEL_NAME),
+        workspace: null,
       }, () => this.switchTabs('setup'));
     });
 
