@@ -12,21 +12,29 @@ export class SetupTab extends React.Component {
 
     const status = this.props.jobStatus
 
-    return (
-      <div>
-        <ArgsForm 
-          args={this.props.args}
-          modulename={this.props.modulename}
-          updateArgs={this.props.updateArgs}
-        />
-        <Button 
-          variant="primary" 
-          size="lg"
-          onClick={this.props.investExecute}
-          disabled={['invalid', 'running'].includes(status)}>
-              Execute
-        </Button>
-      </div>);
+    // Only mount the ArgsForm when there are actually args
+    // This lets us have an ArgsForm.componentDidMount() that
+    // does useful initialization of args state.
+    if (this.props.args) {
+      return (
+        <div>
+          <ArgsForm 
+            args={this.props.args}
+            modulename={this.props.modulename}
+            updateArgs={this.props.updateArgs}
+          />
+          <Button 
+            variant="primary" 
+            size="lg"
+            onClick={this.props.investExecute}
+            disabled={['invalid', 'running'].includes(status)}>
+                Execute
+          </Button>
+        </div>);
+    }
+    // The SetupTab remains disabled in this route, so no need
+    // to render anything here.
+    return(<div>'No args to see here'</div>)
   }
 }
 
@@ -37,6 +45,20 @@ class ArgsForm extends React.Component {
     this.handleChange = this.handleChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
     this.onJsonDrop = this.onJsonDrop.bind(this);
+  }
+
+  componentDidMount() {
+    // updateArgs immediately on mount. Values will be undefined
+    // but validate.js will handle updating the `valid` property
+    // of the optional and conditionally required args so that they 
+    // can validate without any user-interaction.
+    let keys = [];
+    let values = [];
+    Object.keys(this.props.args).forEach(argkey => {
+      keys.push(argkey);
+      values.push(this.props.args[argkey].value);
+    });
+    this.props.updateArgs(keys, values);
   }
 
   handleChange(event) {
@@ -201,5 +223,3 @@ function dragover_handler(event) {
  event.preventDefault();
  event.dataTransfer.dropEffect = "move";
 }
-
-

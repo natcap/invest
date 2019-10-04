@@ -242,7 +242,7 @@ export class InvestJob extends React.Component {
 
     // Parameters:
       // keys (Array)
-      // valyes (Array)
+      // values (Array)
 
     let args = JSON.parse(JSON.stringify(this.state.args));
 
