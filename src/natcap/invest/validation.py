@@ -611,9 +611,18 @@ def validate(args, spec, spatial_overlap_opts=None):
         validation_warnings.append(
             (sorted(keys_with_no_value), "Key is required but has no value"))
 
-    invalid_keys = missing_keys.union(keys_with_no_value)
+    # Sufficiency: An input is sufficient when its key is present in args and
+    # it has a value.  A sufficient input need not be valid.  Sufficiency is
+    # used by the conditional requirement phase (step 3 in this function) to
+    # determine whether a conditionally required input is required.
+    # The only special case about sufficiency is with boolean values.
+    # A boolean value absent from args is insufficient.  A boolean input that
+    # is present in args but False is in sufficient.  A boolean input that is
+    # present in args and True is sufficient.
+    insufficient_keys = missing_keys.union(keys_with_no_value)
 
     # step 2: check primitive validity
+    invalid_keys = set()
     for key, parameter_spec in spec.items():
         if key in invalid_keys:
             continue  # no need to validate a key we know is missing.
@@ -622,11 +631,13 @@ def validate(args, spec, spatial_overlap_opts=None):
         # If it's required and isn't present, we wouldn't have gotten to this
         # point in the function.
         if key not in args:
+            insufficient_keys.add(key)
             continue
 
         # If the value is empty and it isn't required, then we don't need to
         # validate it.
         if args[key] in ('', None):
+            insufficient_keys.add(key)
             continue
 
         # If no validation options specified, assume defaults.
@@ -655,31 +666,27 @@ def validate(args, spec, spatial_overlap_opts=None):
                 ([key], 'An unexpected error occurred in validation'))
 
     # step 3: check conditional requirement
-    # Need to evaluate sufficiency of inputs first.  An input is sufficient
-    # when it has a value and the value passes validation requirements.
-    sufficient_inputs = dict((_key, False) for _key in invalid_keys)
+    # Need to evaluate sufficiency of inputs first.
+    sufficient_inputs = {}
     for key in spec.keys():
-        if key not in args or key in invalid_keys:
+        if key in insufficient_keys:
             sufficient_inputs[key] = False
         else:
-            if key in args:
-                if args[key] in (None, ''):
-                    sufficient_inputs[key] = False
-                else:
-                    # Boolean values are special in that their T/F state is
-                    # equivalent to their satisfaction.  If a checkbox is
-                    # checked, it is considered satisfied.
-                    if spec[key]['type'] == 'boolean':
-                        sufficient_inputs[key] = args[key]
-                    else:
-                        sufficient_inputs[key] = True
-            else:  # key not in args, is therefore insufficient.
-                sufficient_inputs[key] = False
+            # Boolean values are special in that their T/F state is equivalent
+            # to their satisfaction.  If a checkbox is checked, it is
+            # considered satisfied.
+            if spec[key]['type'] == 'boolean':
+                sufficient_inputs[key] = args[key]
+
+            # Any other input type must be sufficient because it is in args and
+            # has a value.
+            else:
+                sufficient_inputs[key] = True
 
     sorted_args_keys = sorted(list(sufficient_inputs.keys()))
     for key in conditionally_required_keys:
         if key in invalid_keys:
-            continue  # no need to check requirement on already invalid input
+            continue
 
         # An input is conditionally required when the expression given
         # evaluates to True.
@@ -687,9 +694,11 @@ def validate(args, spec, spatial_overlap_opts=None):
             is_conditionally_required = sympy.lambdify(
                 sorted_args_keys, spec[key]['required'], 'numpy')(
                     **sufficient_inputs)
-        except NameError as e:
-            print('error key: %s' % e)
-            import pdb; pdb.set_trace()
+        except NameError as missing_key_error:
+            LOGGER.exception(
+                'Could not evaluate conditional requirement expression %s',
+                spec[key]['required'])
+            raise
 
         if is_conditionally_required:
             if key not in args:
