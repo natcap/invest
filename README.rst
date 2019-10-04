@@ -44,7 +44,7 @@ NSIS-specific requirements
 ++++++++++++++++++++++++++
 The InVEST NSIS installer requires the following:
 
-* NSIS version < 3
+* NSIS
 * Installed Plugins:
     * Nsisunz: http://nsis.sourceforge.net/Nsisunz_plug-in
     * InetC: http://nsis.sourceforge.net/Inetc_plug-in

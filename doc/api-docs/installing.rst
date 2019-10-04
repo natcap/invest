@@ -4,11 +4,6 @@
 Installing InVEST
 =================
 
-.. warning::
-
-    Python 2.7.11 or later is required to be able to use the InVEST
-    Recreation model on Windows.  Python 3.6 or later is recommended.
-
 
 .. _BinaryDependencies:
 
@@ -45,7 +40,7 @@ Ubuntu & Debian
 
 ::
 
-    $ sudo apt-get install python-dev python-setuptools python-gdal python-rtree python-shapely python-matplotlib python-qt4
+    $ sudo apt-get install python3-dev python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
 
 
 Fedora
@@ -53,7 +48,7 @@ Fedora
 
 ::
 
-    $ sudo yum install python-devel python-setuptools gdal-python python-rtree python-shapely python-matplotlib PyQt4
+    $ sudo yum install python3-devel python3-setuptools python3-gdal python3-rtree python3-shapely python3-matplotlib
 
 .. _InstallingOnMac:
 
@@ -126,10 +121,6 @@ Installing from Source
 ----------------------
 
 .. note::
-
-    Python 2.7 users will find best compilation results by using the MSVC
-    compiler, which can be downloaded from
-    `the Microsoft website <https://www.microsoft.com/download/details.aspx?id=44266>`_.
 
     Python 3.6 users will need to install Microsoft Visual Studio 2017, or at
     least the Build Tools for Visual Studio 2017.

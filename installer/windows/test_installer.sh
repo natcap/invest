@@ -1,8 +1,7 @@
 #!/bin/bash
 # REQUIREMENTS:
 # -------------
-# * invest.arcgis repo has been cloned ($ paver fetch src)
-# * html and pdf documentation has been created ($ paver build_docs --skip-api)
+# * html documentation has been created
 
 DIR=../../test_dir
 if [ ! -d $DIR ]

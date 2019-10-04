@@ -31,7 +31,7 @@ class ValidateExceptionTests(unittest.TestCase):
         """Test ValueError is raised on invalid datastack."""
         datastack_path = os.path.join(
             self.workspace, 'dummy.invs.json')
-        with open(datastack_path, 'wb') as file:
+        with open(datastack_path, 'w') as file:
             file.write('"args": {"something": "else"},')
             file.write('"model_name": natcap.invest.carbon')
         with self.assertRaises(ValueError):
@@ -41,7 +41,7 @@ class ValidateExceptionTests(unittest.TestCase):
         """Test ValueError is raised if workspace_dir is defined in datastack."""
         datastack_path = os.path.join(
             self.workspace, 'dummy.invs.json')
-        with open(datastack_path, 'wb') as file:
+        with open(datastack_path, 'w') as file:
             file.write('"args": {"workspace_dir": "/home/foo"},')
             file.write('"model_name": natcap.invest.carbon')
         with self.assertRaises(ValueError):
