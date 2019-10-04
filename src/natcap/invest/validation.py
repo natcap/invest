@@ -204,9 +204,12 @@ def _check_projection(srs, projected, projection_units):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
+    if srs is None:
+        return "Dataset must have a valid projection."
+
     if projected:
         if not srs.IsProjected():
-            return "Vector must be projected in linear units."
+            return "Dataset must be projected in linear units."
 
     if projection_units:
         valid_meter_units = set(('m', 'meter', 'meters', 'metre', 'metres'))
