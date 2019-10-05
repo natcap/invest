@@ -158,7 +158,8 @@ class LoadStateForm extends React.Component {
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
       recentButtons.push(
-        <Button key={session}
+        <Button  className="text-left"
+          key={session}
           value={session}
           onClick={this.handleLink}
           variant='outline-dark'>
@@ -182,11 +183,11 @@ class LoadStateForm extends React.Component {
           </Button>
         </Form>
         <div>
-          Recent Sessions
-          <ButtonGroup vertical className="mt-2">
-            {recentButtons}
-          </ButtonGroup>
+          Recent Sessions:
         </div>
+        <ButtonGroup vertical className="mt-2">
+          {recentButtons}
+        </ButtonGroup>
       </div>
     );
   }
@@ -195,17 +196,16 @@ class LoadStateForm extends React.Component {
 function findRecentSessions(cache_dir) {
   // TODO: check that files are actually state config files
   // before putting them on the array
-  let files = fs.readdirSync(cache_dir);
-  let mtimes = [];
+  const files = fs.readdirSync(cache_dir);
+  let sessionNames = [];
   files.forEach(file => {
-    let stat = fs.statSync(path.join(cache_dir, file));
-    mtimes.push(stat.mtimeMs)
+    sessionNames.push(path.parse(file).name);
   });
 
   // reverse sort (b - a) based on last-modified time
-  let sortedFiles = files.sort(function(a, b) {
+  const sortedNames = sessionNames.sort(function(a, b) {
     return fs.statSync(path.join(cache_dir, b)).mtimeMs -
          fs.statSync(path.join(cache_dir, a)).mtimeMs
   });
-  return sortedFiles;
+  return sortedNames;
 }
