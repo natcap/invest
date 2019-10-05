@@ -102,6 +102,28 @@ def get_invalid_keys(validation_warnings):
     return invalid_keys
 
 
+def get_sufficient_keys(args):
+    """Determine which keys in args are sufficient.
+
+    A sufficient key is one that is:
+
+        1. Present within ``args``
+        2. Does not have a value of ``''`` or ``None``.
+
+    Parameters:
+        args (dict): An args dict of string keys to serializeable values.
+
+    Returns:
+        A set of keys from ``args`` that are sufficient.
+    """
+    sufficient_keys = set()
+    for key, value in args.items():
+        if value not in ('', None):
+            sufficient_keys.add(key)
+
+    return sufficient_keys
+
+
 def check_directory(dirpath, exists=False, permissions='rx'):
     """Validate a directory.
 
