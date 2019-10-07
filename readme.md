@@ -30,3 +30,7 @@ To run these or other command-line utils of locally installed packages outside t
 `set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npx jest -u investjob.test.js`  
 
 To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`. This is useful for development of isolated modules.
+
+
+## Visualization components
+Visualization components (i.e. folders in `src/components/Visualization`) should be named with the same model name used in the `invest run <model>` command so that these components can be impored dynamically and lazily.
