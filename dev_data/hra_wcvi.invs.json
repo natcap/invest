@@ -1,0 +1,17 @@
+{
+    "args": {
+        "workspace_dir": "workspace",
+        "aoi_vector_path": "..\\invest\\data\\invest-sample-data\\HabitatRiskAssess\\Input\\subregions.shp",
+        "criteria_table_path": "..\\invest\\data\\invest-sample-data\\HabitatRiskAssess\\Input\\exposure_consequence_criteria.csv",
+        "decay_eq": "Linear",
+        "info_table_path": "..\\invest\\data\\invest-sample-data\\HabitatRiskAssess\\Input\\habitat_stressor_info.csv",
+        "max_rating": "3",
+        "results_suffix": "",
+        "risk_eq": "Euclidean",
+        "visualize_outputs": true,
+        "resolution": "500",
+        "n_workers": "-1"
+    },
+    "invest_version": "3.6.0.post23+ha8467a843c74.d20190206",
+    "model_name": "natcap.invest.hra"
+}

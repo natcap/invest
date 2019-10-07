@@ -26,10 +26,13 @@ const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace wh
 const TEMP_DIR = './'
 
 // these options are passed to child_process spawn calls
+if (process.env.GDAL_DATA) {
+  var GDAL_DATA = process.env.GDAL_DATA.trim()
+}
 const PYTHON_OPTIONS = {
   cwd: TEMP_DIR,
   shell: true, // without true, IOError when datastack.py loads json
-  env: {GDAL_DATA: process.env.GDAL_DATA.trim()}
+  env: {GDAL_DATA: GDAL_DATA}
 };
 const DATASTACK_JSON = 'datastack.json'
 const CACHE_DIR = 'cache' //  for storing state snapshot files

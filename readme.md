@@ -10,10 +10,15 @@ set path to invest executeable at launch:
 # windows:  
 set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Library\\share\\gdal && npm start  
 
+setting the GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
 
-  
 # linux:  
 INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start  
+
+
+Temporary way to test various invest models:  
+set this variable in InvestJob.jsx to a name found in `invest list`:  
+`const MODEL_NAME = 'carbon'`  
 
 
 To run linter or tests

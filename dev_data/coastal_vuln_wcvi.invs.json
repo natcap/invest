@@ -1,0 +1,23 @@
+{
+    "args": {
+        "workspace_dir": "cv_workspace",
+        "aoi_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/AOI_BarkClay.shp", 
+        "dem_averaging_radius": "4000", 
+        "dem_path": "..\\invest\\data\\invest-sample-data\\Base_Data/Marine/DEMs/global_dem/hdr.adf", 
+        "geomorphology_fill_value": "3", 
+        "geomorphology_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/Geomorphology_BarkClay.shp", 
+        "habitat_table_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/NaturalHabitat_WCVI.csv", 
+        "landmass_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/LandPolygon_WCVI.shp", 
+        "max_fetch_distance": "12000", 
+        "model_resolution": "2500", 
+        "population_radius": "5000", 
+        "population_raster_path": "..\\invest\\data\\invest-sample-data\\Base_Data/Marine/Population/global_pop_v2.tif", 
+        "results_suffix": "", 
+        "shelf_contour_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/continental_shelf_polyline.shp", 
+        "slr_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/SeaLevRise_WCVI_points.shp", 
+        "slr_field": "Trend",
+        "wwiii_vector_path": "..\\invest\\data\\invest-sample-data\\CoastalProtection/Input/WaveWatchIII.shp"
+    }, 
+    "invest_version": "3.6.0.post486+hdf88b7291389.d20190422", 
+    "model_name": "natcap.invest.coastal_vulnerability"
+}
