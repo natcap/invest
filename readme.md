@@ -1,28 +1,24 @@
-To develop and launch this Application
---------------------------
-
-clone repo  
+## To develop and launch this Application
 
 `npm install` from repo directory  
 
-set path to invest executeable at launch:  
+set path to invest executeable at launch:
 
-# windows:  
-set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Library\\share\\gdal && npm start  
+### windows:  
+`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Library\\share\\gdal && npm start`  
 
 setting the GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
 
-# linux:  
-INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start  
+### linux:  
+`INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start`  
 
 
-Temporary way to test various invest models:  
+**Temporary way to test various invest models:**  
 set this variable in InvestJob.jsx to a name found in `invest list`:  
 `const MODEL_NAME = 'carbon'`  
 
 
-To run linter or tests
------------------------------
+## To run linter or tests
 `npm run lint`  
 `npm run test`  
 
@@ -30,7 +26,7 @@ see `package.json` `scripts` object.
 
 To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx` (e.g. `npx eslint ...`) as a shortcut to the executeable. 
 
-To run a single test file:  
-set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npx jest -u investjob.test.js  
+**To run a single test file:**  
+`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && npx jest -u investjob.test.js`  
 
 To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`. This is useful for development of isolated modules.
