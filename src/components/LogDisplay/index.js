@@ -22,7 +22,6 @@ export class LogDisplay extends React.Component {
   }
 
   render() {
-    const jobStatus = this.props.jobStatus;
     const current_err = this.props.logStdErr;
     // Include the stderr in the main log even though it also gets an Alert
     const current_out = this.props.logStdOut + current_err;
@@ -34,12 +33,12 @@ export class LogDisplay extends React.Component {
           {current_out}
         </Col>
 
-    // todo: these states should be mutually exclusive, but I don't have a contract 
     if (current_err) {
       renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
-    }
-    if (jobStatus === 0) {
-      renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
+    } else {
+      if (this.props.sessionProgress === 'viz') { // this was set if python exited w/o error
+        renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
+      }
     }
 
     return (

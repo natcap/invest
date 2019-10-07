@@ -36,7 +36,7 @@ const CACHE_DIR = 'cache' //  for storing state snapshot files
 
 // TODO: these ought to be dynamic, from invest getspec or a similar lookup
 // for now, change here as needed to test other models
-const MODEL_NAME = 'habitat_risk_assessment'
+const MODEL_NAME = 'carbon'
 const MODEL_DOCS = 'C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html'
 
 function defaultSessionID(modelName) {
@@ -54,10 +54,11 @@ export class InvestJob extends React.Component {
       sessionID: defaultSessionID(''),
       modelSpec: {},
       args: null,
+      argsValid: false,  // set on invest validate exit
       workspace: null,
-      jobStatus: 'invalid', // (invalid, ready, running, then whatever exit code returned by cli.py)
       logStdErr: '', 
       logStdOut: '',
+      sessionProgress: 'models', // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
       activeTab: 'models',
       docs: MODEL_DOCS
     };
@@ -97,7 +98,8 @@ export class InvestJob extends React.Component {
     if (fs.existsSync(filename)) {
       const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
       console.log(loadedState)
-      this.setState(loadedState);
+      this.setState(loadedState,
+        () => this.switchTabs(loadedState.sessionProgress));
     } else {
       console.log('state file not found: ' + filename);
     }
@@ -116,7 +118,7 @@ export class InvestJob extends React.Component {
     
     this.setState(
       {
-        jobStatus: 'running',
+        sessionProgress: 'log',
         activeTab: 'log',
         logStdErr: '',
         logStdOut: ''
@@ -149,8 +151,9 @@ export class InvestJob extends React.Component {
     });
 
     python.on('close', (code) => {
+      const progress = (code === 0 ? 'viz' : 'log')
       this.setState({
-        jobStatus: code,
+        sessionProgress: progress,
         workspace: this.state.args.workspace_dir.value
       });
       console.log(this.state)
@@ -159,7 +162,7 @@ export class InvestJob extends React.Component {
 
   investValidate(args) {
     // TODO: this funcs logic does not handle exceptions from invest validate
-    // in which case there are no warnings, but jobStatus still updates
+    // in which case there are no warnings, but sessionProgress still updates
     // to 'ready'. Maybe that is desireable though.
 
     argsToJsonFile(args, this.state.modelSpec.module);
@@ -195,12 +198,18 @@ export class InvestJob extends React.Component {
       if (warningsIssued) {
         this.setState({
           args: args,
-          jobStatus: 'invalid'
+          argsValid: false
         })
       } else {
-        this.setState({
-          jobStatus: 'ready'
-        })
+        // It's possible args were already valid, in which case
+        // it's nice to avoid the re-render that this setState call
+        // triggers. Although only the Viz app components re-render in a noticeable way.
+        // I wonder if that could be due to use of redux there?
+        if (!this.state.argsValid) {
+          this.setState({
+            argsValid: true
+          })
+        }
       }
       console.log(this.state);
     });
@@ -227,7 +236,7 @@ export class InvestJob extends React.Component {
       this.setState({
         modelSpec: spec,
         args: args,
-        jobStatus: 'invalid',
+        sessionProgress: 'setup',
         logStdErr: '',
         logStdOut: '',
         sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
@@ -286,13 +295,6 @@ export class InvestJob extends React.Component {
         this.investValidate(args);
         return
     }
-    
-    // TODO: move this setState to investValidate?
-    // then this checkArgs could live in Args component
-    // but investValidate would be passed as prop to Args instead
-    this.setState(
-        {jobStatus: 'invalid'}
-    );
   }
 
   switchTabs(key) {
@@ -303,10 +305,10 @@ export class InvestJob extends React.Component {
 
   render () {
     const activeTab = this.state.activeTab;
-    const jobStatus = this.state.jobStatus;
+    const sessionProgress = this.state.sessionProgress;
     const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
-    const logDisabled = ['invalid', 'ready'].includes(jobStatus);  // enable during and after execution
-    const vizDisabled = !(jobStatus === 0);  // enable only on complete execute with no errors
+    const logDisabled = ['models', 'setup'].includes(sessionProgress);  // enable during and after execution
+    const vizDisabled = (sessionProgress !== 'viz');  // enable only on complete execute with no errors
 
     return(
       <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
@@ -322,15 +324,15 @@ export class InvestJob extends React.Component {
         <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
           <SetupTab
             args={this.state.args}
+            argsValid={this.state.argsValid}
             modulename={this.state.modelSpec.module}
-            jobStatus={this.state.jobStatus}
             updateArgs={this.updateArgs}
             investExecute={this.investExecute}
           />
         </Tab>
         <Tab eventKey="log" title="Log" disabled={logDisabled}>
-          <LogDisplay 
-            jobStatus={this.state.jobStatus}
+          <LogDisplay
+            sessionProgress={this.state.sessionProgress}
             logStdOut={this.state.logStdOut}
             logStdErr={this.state.logStdErr}
           />

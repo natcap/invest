@@ -151,10 +151,7 @@ class LoadStateForm extends React.Component {
 
   render() {
 
-    // Make buttons to load each recently saved state
-    // populate recentSessions from list of files in cache dir
-    // sort by time created, max of 10 or 20, etc.
-
+    // Buttons to load each recently saved state
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
       recentButtons.push(
@@ -194,18 +191,22 @@ class LoadStateForm extends React.Component {
 }
 
 function findRecentSessions(cache_dir) {
+  // Populate recentSessions from list of files in cache dir
+  // sorted by modified time.
+
   // TODO: check that files are actually state config files
   // before putting them on the array
   const files = fs.readdirSync(cache_dir);
-  let sessionNames = [];
-  files.forEach(file => {
-    sessionNames.push(path.parse(file).name);
-  });
 
   // reverse sort (b - a) based on last-modified time
-  const sortedNames = sessionNames.sort(function(a, b) {
+  const sortedFiles = files.sort(function(a, b) {
     return fs.statSync(path.join(cache_dir, b)).mtimeMs -
          fs.statSync(path.join(cache_dir, a)).mtimeMs
   });
-  return sortedNames;
+  // trim off extension, since that is how sessions
+  // were named orginally
+  return (sortedFiles
+    .map(f => path.parse(f).name)
+    .slice(0, 15) // max 15 items returned
+  );
 }

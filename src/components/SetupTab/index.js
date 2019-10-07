@@ -10,8 +10,6 @@ export class SetupTab extends React.Component {
 
   render () {
 
-    const status = this.props.jobStatus
-
     // Only mount the ArgsForm when there are actually args
     // This lets us have an ArgsForm.componentDidMount() that
     // does useful initialization of args state.
@@ -27,7 +25,7 @@ export class SetupTab extends React.Component {
             variant="primary" 
             size="lg"
             onClick={this.props.investExecute}
-            disabled={['invalid', 'running'].includes(status)}>
+            disabled={!this.props.argsValid}>
                 Execute
           </Button>
         </div>);
