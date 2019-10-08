@@ -1295,5 +1295,29 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    sufficient_keys = validation.get_sufficient_keys(args)
+
+    if ('watersheds_path' not in invalid_keys and
+            'watersheds_path' in sufficient_keys):
+        # The watersheds vector must have an integer column called WS_ID.
+        vector = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_invalid_features = 0
+        for feature in layer:
+            try:
+                _ = int(feature.GetFieldAsString('ws_id'))
+            except ValueError:
+                n_invalid_features += 1
+
+        if n_invalid_features:
+            validation_warnings.append((
+                ['watersheds_path'],
+                ('%s features have a non-integer ws_id field' %
+                    n_invalid_features)))
+            invalid_keys.add('watersheds_path')
+
+    return validation_warnings

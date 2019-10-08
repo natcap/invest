@@ -111,9 +111,8 @@ class SDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = {}
-        with self.assertRaises(KeyError) as context:
-            validate_result = sdr.validate(args, limit_to=None)
-        self.assertEquals(len(context.exception.args), 11)
+        validation_warnings = sdr.validate(args, limit_to=None)
+        self.assertEqual(len(validation_warnings[0][0]), 11)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""
@@ -158,9 +157,7 @@ class SDRTests(unittest.TestCase):
             validate_result,
             'expected a validation error but didn\'t get one')
         self.assertTrue(
-            'does not have a `ws_id` field defined' in validate_result[0][1],
-            'expected a `ws_id` validation error, but got %s' % (
-                validate_result))
+            'Fields are missing from the first layer' in validate_result[0][1])
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""
@@ -189,13 +186,10 @@ class SDRTests(unittest.TestCase):
         args['watersheds_path'] = test_watershed_path
 
         validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(len(validate_result) > 0,
+                        'Expected validation errors but none found')
         self.assertTrue(
-            validate_result,
-            'expected a validation error but didn\'t get one')
-        self.assertTrue(
-            'feature 0 has an invalid value of' in validate_result[0][1],
-            'expected an invalid `ws_id` value but got %s' % (
-                validate_result))
+            'features have a non-integer ws_id field' in validate_result[0][1])
 
     def test_base_regression(self):
         """SDR base regression test on sample data.
