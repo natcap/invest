@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
+  the Land-Use/Land-Cover raster did not have a defined nodata value.  This
+  case is now handled correctly.
 * The binary build process for InVEST on Windows (which includes binaries
   based on PyInstaller and an NSIS Installer package) has been migrated
   to 32-bit Python 3.6.  The build itself is taking place on AppVeyor, and
