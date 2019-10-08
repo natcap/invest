@@ -71,7 +71,7 @@ def run_model(modelname, binary, workspace, datastack, headless=False):
     # Using a list here allows subprocess to handle escaping of paths.
     if headless:
         command = [binary, 'run', '--workspace', workspace,
-                   '--datastack', datastack, modelname]
+                   '--datastack', datastack, '--headless', modelname]
     else:
         command = [binary, 'quickrun', '--workspace', workspace,
                    modelname, datastack]
@@ -138,7 +138,7 @@ def main(user_args=None):
     LOGGER.info('Running on %s CPUs', args.max_cpus)
 
     pairs = []
-    for name, datastacks in DATASTACKS.iteritems():
+    for name, datastacks in DATASTACKS.items():
         if not name.startswith(args.prefix):
             continue
 
@@ -183,16 +183,16 @@ def main(user_args=None):
     # new line.
     status_messages = ''
     status_messages += '\n%s %s %s\n' % (
-        string.ljust('MODELNAME', max_width+1),
-        string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
+        'MODELNAME'.ljust(max_width+1),
+        'EXIT CODE'.ljust(10),  # len('EXIT CODE')+1
         'DATASTACK')
     for (modelname, datastack, headless, _), exitcode in sorted(
-            model_results.iteritems(), key=lambda x: x[0]):
+            model_results.items(), key=lambda x: x[0]):
         if headless:
             modelname += ' (headless)'
         status_messages += "%s %s %s\n" % (
-            string.ljust(modelname, max_width+1),
-            string.ljust(str(exitcode[0]), 10),
+            modelname.ljust(max_width+1),
+            str(exitcode[0]).ljust(10),
             datastack)
         if exitcode[0] > 0:
             failures += 1
@@ -200,25 +200,25 @@ def main(user_args=None):
     if failures > 0:
         status_messages += '\n********FAILURES********\n'
         status_messages += '%s %s %s %s\n' % (
-            string.ljust('MODELNAME', max_width+1),
-            string.ljust('EXIT CODE', 10),
-            string.ljust('DATASTACK', datastack_width),
+            'MODELNAME'.ljust(max_width+1),
+            'EXIT CODE'.ljust(10),
+            'DATASTACK'.ljust(datastack_width),
             'WORKSPACE'
         )
         for (modelname, datastack, headless, workspace), exitcode in sorted(
-                [(k, v) for (k, v) in model_results.iteritems()
+                [(k, v) for (k, v) in model_results.items()
                  if v[0] != 0],
                 key=lambda x: x[0]):
             if headless:
                 modelname += ' (headless)'
             status_messages += "%s %s %s %s\n" % (
-                string.ljust(modelname, max_width+1),
-                string.ljust(str(exitcode[0]), 10),
-                string.ljust(datastack, datastack_width),
+                modelname.ljust(max_width+1),
+                str(exitcode[0]).ljust(10),
+                datastack.ljust(datastack_width),
                 workspace
             )
 
-    print status_messages
+    print(status_messages)
     with open(os.path.join(args.workspace, 'model_results.txt'), 'w') as log:
         log.write(status_messages)
 

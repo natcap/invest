@@ -10,8 +10,8 @@ def get_size(start_path = '.'):
     return str(int(total_size/1024.) + 1024*50) + 'K'
 
 size = get_size(defines['investdir'])
-print 'Volume size: %s' % size
-print 'Packaging dirname %s' % defines['investdir']
+print('Volume size: %s' % size)
+print('Packaging dirname %s' % defines['investdir'])
 _invest_dirname = os.path.basename(defines['investdir'])
 
 badge_icon = os.path.join(CWD, 'invest.icns')

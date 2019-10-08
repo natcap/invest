@@ -1,4 +1,5 @@
 # coding=UTF-8
+# -*- mode: python -*-
 import sys
 import os
 import itertools
