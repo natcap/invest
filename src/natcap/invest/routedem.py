@@ -360,4 +360,19 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    sufficient_keys = validation.get_sufficient_keys(args)
+
+    if ('dem_band_index' not in invalid_keys and
+            'dem_band_index' in sufficient_keys and
+            'dem_path' not in invalid_keys and
+            'dem_path' in sufficient_keys):
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        if int(args['dem_band_index']) > raster_info['n_bands']:
+            validation_warnings.append((
+                ['dem_band_index'],
+                'Must be between 1 and %s' % raster_info['n_bands']))
+
+    return validation_warnings
