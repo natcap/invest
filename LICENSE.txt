@@ -5,7 +5,7 @@ and University of Minnesota.
 This tool has an open license. All people are invited to use the tool
 under the following conditions and terms:
 
-Copyright (c) 2018, Natural Capital Project
+Copyright (c) 2019, Natural Capital Project
 
 All rights reserved.
 

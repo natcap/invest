@@ -16,12 +16,11 @@ try:
     from . import __version__
     from . import utils
     from . import datastack
-except ValueError:
+except (ValueError, ImportError):
     # When we're in a PyInstaller build, this isn't a module.
     from natcap.invest import __version__
     from natcap.invest import utils
     from natcap.invest import datastack
-
 
 
 DEFAULT_EXIT_CODE = 1

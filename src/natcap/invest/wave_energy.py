@@ -1675,6 +1675,7 @@ def _index_raster_value_to_point_vector(
     vector_idx = index.Index(generator_function(), interleaved=False)
 
     # For all the features (points) add the proper raster value
+    encountered_fids = set()
     for block_info, block_matrix in pygeoprocessing.iterblocks(
             (base_raster_path, 1)):
         # Calculate block bounding box in decimal degrees
@@ -1694,18 +1695,34 @@ def _index_raster_value_to_point_vector(
 
         for vector in intersect_vectors:
             vector_fid = vector.id
+
+            # Occasionally there will be points that intersect multiple block
+            # bounding boxes (like points that lie on the boundary of two
+            # blocks) and we don't want to double-count.
+            if vector_fid in encountered_fids:
+                continue
+
             vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
 
             # To get proper raster value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
             i = int((vector_trans_x - block_min_x) / pixel_size_x)
             j = int((block_max_y - vector_trans_y) / pixel_size_y)
-            block_value = block_matrix[j][i]
+
+            try:
+                block_value = block_matrix[j][i]
+            except IndexError:
+                # It is possible for an index to be *just* on the edge of a
+                # block and exceed the block dimensions.  If this happens,
+                # pass on this point, as another block's bounding box should
+                # catch this point instead.
+                continue
 
             # There are cases where the DEM may be too coarse and thus a
             # wave energy point falls on land. If the raster value taken is
             # greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
+            encountered_fids.add(vector_fid)
             if block_value >= 0.0:
                 target_layer.DeleteFeature(vector_fid)
             else:

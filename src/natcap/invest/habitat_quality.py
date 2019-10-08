@@ -252,7 +252,7 @@ def execute(args):
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = list(sensitivity_dict[0])
+    sens_header_list = list(sensitivity_dict.values())[0]
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
         h for h in required_sens_header_list if h not in sens_header_list]
