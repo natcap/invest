@@ -85,9 +85,9 @@ def build_environment_from_requirements(cli_args):
     pip_deps_string = '- pip:\n' + '\n'.join(['  - %s' % dep for dep in
                                               sorted(pip_requirements,
                                                      key=lambda x: x.lower())])
-    print YML_TEMPLATE.format(
+    print(YML_TEMPLATE.format(
         conda_dependencies=conda_deps_string,
-        pip_dependencies=pip_deps_string)
+        pip_dependencies=pip_deps_string))
 
 
 if __name__ == '__main__':
