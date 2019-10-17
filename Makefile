@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 345218d448322fd090fdcb3e92d254fecf56c380
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := 1ebb37fe3088
+HG_UG_REPO_REV              := 27141b3841e3
 
 
 ENV = env
