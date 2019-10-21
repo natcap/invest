@@ -1,4 +1,5 @@
 import fs from 'fs';
+import http from 'http';
 import path from 'path';
 import React from 'react';
 import { spawn } from 'child_process';
@@ -31,24 +32,43 @@ export class ModelsTab extends React.Component {
   }
 
   makeInvestList() {
-    const options = {
-      shell: true, // without true, IOError when datastack.py loads json
-    };
-    const cmdArgs = ['list', '--json']
-    const proc = spawn(INVEST_EXE, cmdArgs, options);
+    try {
+      const options = {
+        host: "localhost",
+        port: 5000,
+        path: "/models",
+        method: "GET"
+      }
+      http.request()
+      const request = http.request(options, (data) => {
+        console.log(`${data}`);
+        const results = JSON.parse(`${data}`);
+      });
+      // console.log(request);
+      // request.write(JSON.stringify(args));
+      request.end();
+    } catch (error) {
+      console.log(error);
+    }
 
-    proc.stdout.on('data', (data) => {
-      const results = JSON.parse(data.toString());
-      this.setState({models: results});
-    });
+    // const options = {
+    //   shell: true, // without true, IOError when datastack.py loads json
+    // };
+    // const cmdArgs = ['list', '--json']
+    // const proc = spawn(INVEST_EXE, cmdArgs, options);
 
-    proc.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
+    // proc.stdout.on('data', (data) => {
+    //   const results = JSON.parse(data.toString());
+    //   this.setState({models: results});
+    // });
 
-    proc.on('close', (code) => {
-      console.log(code);
-    });
+    // proc.stderr.on('data', (data) => {
+    //   console.log(`${data}`);
+    // });
+
+    // proc.on('close', (code) => {
+    //   console.log(code);
+    // });
   }
 
   onSaveClick(event) {

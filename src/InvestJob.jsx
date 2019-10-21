@@ -25,10 +25,10 @@ const store = createStore(rootReducer)
 const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
 const TEMP_DIR = './'
 
-// these options are passed to child_process spawn calls
 if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
 }
+// these options are passed to child_process spawn calls
 const PYTHON_OPTIONS = {
   cwd: TEMP_DIR,
   shell: true, // without true, IOError when datastack.py loads json
