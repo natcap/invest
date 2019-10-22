@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import request from 'request';
 
 import React from 'react';
 import { createStore } from 'redux';
@@ -219,41 +220,38 @@ export class InvestJob extends React.Component {
   }
 
   investGetSpec(event) {
-    const modulename = event.target.value;
-    const options = {
-      shell: true, // without true, IOError when datastack.py loads json
-    };
-    const cmdArgs = ['getspec', '--json', modulename]
-    const proc = spawn(INVEST_EXE, cmdArgs, options);
+    const modelName = event.target.value;
 
-    proc.stdout.on('data', (data) => {
-      const spec = JSON.parse(data.toString());
-      spec['model_temp_vizname'] = MODEL_NAME // TODO: later this will be builtin to spec
-      
-      // for clarity, state has a dedicated args property separte from spec
-      const args = JSON.parse(JSON.stringify(spec.args));
-      delete spec.args
+    request.post(
+      'http://localhost:5000/getspec',
+      { json: { 
+        model: modelName} 
+      },
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          const spec = body;
+          spec['model_temp_vizname'] = modelName // TODO: later this will be builtin to spec
+          // for clarity, state has a dedicated args property separte from spec
+          const args = JSON.parse(JSON.stringify(spec.args));
+          delete spec.args
 
-      // This event represents a user selecting a model,
-      // and so some existing state should be reset.
-      this.setState({
-        modelSpec: spec,
-        args: args,
-        sessionProgress: 'setup',
-        logStdErr: '',
-        logStdOut: '',
-        sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
-        workspace: null,
-      }, () => this.switchTabs('setup'));
-    });
-
-    proc.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
-
-    proc.on('close', (code) => {
-      console.log(code);
-    });
+          // This event represents a user selecting a model,
+          // and so some existing state should be reset.
+          this.setState({
+            modelSpec: spec,
+            args: args,
+            sessionProgress: 'setup',
+            logStdErr: '',
+            logStdOut: '',
+            sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
+            workspace: null,
+          }, () => this.switchTabs('setup'));
+        } else {
+          console.log('Status: ' + response.statusCode)
+          console.log('Error: ' + error.message)
+        }
+      }
+    );
   }
 
   updateArgs(keys, values) {

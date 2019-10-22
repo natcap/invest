@@ -10,7 +10,7 @@ set path to invest executeable at launch:
 setting the GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
 
 ### linux:  
-`INVEST=/home/dmf/Miniconda3/envs/invest-py36/Scripts/invest.exe npm start`  
+`INVEST=/home/dmf/miniconda3/envs/invest-env-py36/Scripts/invest.exe npm start`  
 
 
 **Temporary way to test various invest models:**  

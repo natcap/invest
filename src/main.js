@@ -42,7 +42,7 @@ const createWindow = async () => {
 let pythonServerProcess;
 const createPythonProcess = () => {
   pythonServerProcess = spawn(
-    'C:/Users/dmf/Miniconda3/envs/invest-py36/python', ['-m', 'flask', 'run'], {
+    '/home/dmf/miniconda3/envs/invest-env-py36/bin/python', ['-m', 'flask', 'run'], {
       shell: true,
       // stdio: 'ignore',
       detatched: true,
