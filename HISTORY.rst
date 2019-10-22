@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Implemented PEP518-compatible build system definition in the file
+  ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
+  from a source distribution.
 * Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
   the Land-Use/Land-Cover raster did not have a defined nodata value.  This
   case is now handled correctly.
