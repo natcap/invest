@@ -47,3 +47,17 @@ def get_invest_getspec():
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC
     return json.dumps(spec)
+
+
+@app.route('/validate', methods=['POST'])
+def get_invest_validate():
+    payload = request.get_json()
+    target_module = payload['model_module']
+    args_dict = json.loads(payload['args'])
+    limit_to = payload['limit_to']
+    if limit_to == 'undefined':
+        limit_to = None
+    # target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
+    model_module = importlib.import_module(name=target_module)
+    results = model_module.validate(args_dict, limit_to=limit_to)
+    return json.dumps(results)

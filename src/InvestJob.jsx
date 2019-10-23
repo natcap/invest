@@ -164,59 +164,109 @@ export class InvestJob extends React.Component {
     });
   }
 
-  investValidate(args) {
-    // TODO: this funcs logic does not handle exceptions from invest validate
-    // in which case there are no warnings, but sessionProgress still updates
-    // to 'ready'. Maybe that is desireable though.
-
-    argsToJsonFile(args, this.state.modelSpec.module);
-
-    const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
-    // if we add -vvv flags, we risk getting more stdout 
-    // than expected by the results parser below.
-    const cmdArgs = ['validate', '--json', datastackPath]
-    const validator = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
-
+  investValidate(args_dict, limit_to) {
     let warningsIssued = false;
-    validator.stdout.on('data', (data) => {
-      let results = JSON.parse(data.toString());
-      if (results.validation_results.length) {
-        warningsIssued = true
-        results.validation_results.forEach(x => {
-          // TODO: test this indexing against all sorts of validation results
-          const argkey = x[0][0];
-          const message = x[1];
-          args[argkey]['validationMessage'] = message
-          args[argkey]['valid'] = false
-        });
-      }
-    });
+    let args = JSON.parse(JSON.stringify(this.state.args));
+    
+    request.post(
+      'http://localhost:5000/validate',
+      { json: { 
+        model_module: this.state.modelSpec.module,
+        args: args_dict,
+        limit_to: limit_to} 
+      },
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          // console.log(body);
+          let results = body;
+          console.log(results);
+          if (results.length) {
+            warningsIssued = true
+            results.forEach(x => {
+              console.log(x);
+              // TODO: test this indexing against all sorts of validation results
+              const argkey = x[0][0];
+              const message = x[1];
+              console.log(argkey);
+              console.log(args);
+              args[argkey]['validationMessage'] = message
+              args[argkey]['valid'] = false
+            });
 
-    validator.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
-
-    validator.on('close', (code) => {
-      console.log(code);
-
-      if (warningsIssued) {
-        this.setState({
-          args: args,
-          argsValid: false
-        })
-      } else {
-        // It's possible args were already valid, in which case
-        // it's nice to avoid the re-render that this setState call
-        // triggers. Although only the Viz app components re-render in a noticeable way.
-        // I wonder if that could be due to use of redux there?
-        if (!this.state.argsValid) {
-          this.setState({
-            argsValid: true
-          })
+            this.setState({
+              args: args,
+              argsValid: false
+            })
+          } else {
+            // It's possible args were already valid, in which case
+            // it's nice to avoid the re-render that this setState call
+            // triggers. Although only the Viz app components re-render in a noticeable way.
+            // I wonder if that could be due to use of redux there?
+            if (!this.state.argsValid) {
+              this.setState({
+                argsValid: true
+              })
+            }
+          }
+        } else {
+          console.log('Status: ' + response.statusCode)
+          console.log('Error: ' + error.message)
         }
       }
-      console.log(this.state);
-    });
+    );
+
+    // // TODO: this funcs logic does not handle exceptions from invest validate
+    // // in which case there are no warnings, but sessionProgress still updates
+    // // to 'ready'. Maybe that is desireable though.
+
+    // argsToJsonFile(args, this.state.modelSpec.module);
+
+    // const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
+    // // if we add -vvv flags, we risk getting more stdout 
+    // // than expected by the results parser below.
+    // const cmdArgs = ['validate', '--json', datastackPath]
+    // const validator = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
+
+    // let warningsIssued = false;
+    // validator.stdout.on('data', (data) => {
+    //   let results = JSON.parse(data.toString());
+    //   if (results.validation_results.length) {
+    //     warningsIssued = true
+    //     results.validation_results.forEach(x => {
+    //       // TODO: test this indexing against all sorts of validation results
+    //       const argkey = x[0][0];
+    //       const message = x[1];
+    //       args[argkey]['validationMessage'] = message
+    //       args[argkey]['valid'] = false
+    //     });
+    //   }
+    // });
+
+    // validator.stderr.on('data', (data) => {
+    //   console.log(`${data}`);
+    // });
+
+    // validator.on('close', (code) => {
+    //   console.log(code);
+
+    //   if (warningsIssued) {
+    //     this.setState({
+    //       args: args,
+    //       argsValid: false
+    //     })
+    //   } else {
+    //     // It's possible args were already valid, in which case
+    //     // it's nice to avoid the re-render that this setState call
+    //     // triggers. Although only the Viz app components re-render in a noticeable way.
+    //     // I wonder if that could be due to use of redux there?
+    //     if (!this.state.argsValid) {
+    //       this.setState({
+    //         argsValid: true
+    //       })
+    //     }
+    //   }
+    //   console.log(this.state);
+    // });
   }
 
   investGetSpec(event) {
@@ -264,22 +314,25 @@ export class InvestJob extends React.Component {
     // Parameters:
       // keys (Array)
       // values (Array)
-
-    let args = JSON.parse(JSON.stringify(this.state.args));
+    console.log(this.state.args);
+    const args = argsValuesFromSpec(this.state.args);
+    console.log(args);
 
     for (let i = 0; i < keys.length; i++) {
       let key = keys[i];
-      let value = values[i];
+      // let value = values[i];
 
-      const isValid = validate(
-        value, args[key].type, args[key].required);
+      // const isValid = validate(
+      //   value, args[key].type, args[key].required);
+      this.investValidate(args, key)
+      // console.log(results);
 
-      args[key]['value'] = value;
-      args[key]['valid'] = isValid;
+      // args[key]['value'] = value;
+      // args[key]['valid'] = isValid;
     }
 
-    this.setState({args: args}, 
-      this.checkArgsReadyToValidate);
+    // this.setState({args: args}, 
+    //   this.checkArgsReadyToValidate);
   }
 
   checkArgsReadyToValidate() {
@@ -377,4 +430,16 @@ function argsToJsonFile(currentArgs, modulename) {
     }
     console.log("JSON file was saved.");
   });
+}
+
+function argsValuesFromSpec(args) {
+  // TODO: should we use the datastack.py API to create the json? 
+  // make simple args json for passing to python cli
+  let args_dict = {};
+  for (const argname in args) {
+    args_dict[argname] = args[argname]['value'] || ''
+  }
+
+  const args_dict_string = JSON.stringify(args_dict);
+  return(args_dict_string)
 }
