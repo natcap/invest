@@ -225,6 +225,8 @@ def execute(args):
                 # as needed so that:
                 #  * Nodata values are replaced with 0
                 #  * Anything other than 0 or nodata is replaced with 1
+                LOGGER.info('Preprocessing threat values for %s',
+                            aligned_threat_path)
                 threat_nodata = pygeoprocessing.get_raster_info(
                     aligned_threat_path)['nodata'][0]
                 threat_raster = gdal.OpenEx(aligned_threat_path,
