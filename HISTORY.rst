@@ -2,6 +2,14 @@
 
 Unreleased Changes
 ------------------
+* Updating how threat rasters are handled in Habitat Quality to address a few
+  related and common usability issues for the model.  First, threat
+  rasters are now aligned to the LULC instead of the intersection of the whole
+  stack.  This means that the model now handles threat inputs that do not all
+  completely overlap the LULC (they must all still be in the same projection).
+  Second, nodata values in threat rasters are converted to a threat value of 0.
+  Any threat pixel values other than 0 or nodata are interpreted as a threat
+  value of 1.
 * Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
   the Land-Use/Land-Cover raster did not have a defined nodata value.  This
   case is now handled correctly.
