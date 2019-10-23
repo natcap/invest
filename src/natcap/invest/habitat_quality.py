@@ -192,8 +192,9 @@ def execute(args):
     # and tore them in the intermediate folder
     LOGGER.info('Starting aligning and resizing land cover and threat rasters')
 
-    lulc_pixel_size = (
-        pygeoprocessing.get_raster_info(args['lulc_cur_path']))['pixel_size']
+    lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
+    lulc_pixel_size = lulc_raster_info['pixel_size']
+    lulc_bbox = lulc_raster_info['bounding_box']
 
     aligned_raster_list = [
         os.path.join(inter_dir, os.path.basename(path).replace(
@@ -202,7 +203,7 @@ def execute(args):
     pygeoprocessing.align_and_resize_raster_stack(
         lulc_and_threat_raster_list, aligned_raster_list,
         ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
-        'intersection')
+        lulc_bbox)
 
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
 
@@ -214,9 +215,39 @@ def execute(args):
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
-                threat_path_dict['threat' + lulc_key][threat] = os.path.join(
+                aligned_threat_path = os.path.join(
                     inter_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
+                threat_path_dict['threat' + lulc_key][threat] = (
+                    aligned_threat_path)
+
+                # Iterate though the threat raster and update pixel values
+                # as needed so that:
+                #  * Nodata values are replaced with 0
+                #  * Anything other than 0 or nodata is replaced with 1
+                threat_nodata = pygeoprocessing.get_raster_info(
+                    aligned_threat_path)['nodata'][0]
+                threat_raster = gdal.OpenEx(aligned_threat_path,
+                                            gdal.OF_RASTER | gdal.GA_Update)
+                threat_band = threat_raster.GetRasterBand(1)
+                for block_offset in pygeoprocessing.iterblocks(
+                        (aligned_threat_path, 1), offset_only=True):
+                    block = threat_band.ReadAsArray(**block_offset)
+
+                    # First check if we actually need to set anything.
+                    # No need to perform unnecessary writes!
+                    if set(numpy.unique(block)) == set([0, 1]):
+                        continue
+
+                    zero_threat = numpy.isclose(block, threat_nodata)
+                    block[zero_threat] = 0
+                    block[block != 0] = 1
+
+                    threat_band.WriteArray(
+                        block, yoff=block_offset['yoff'],
+                        xoff=block_offset['xoff'])
+                threat_band = None
+                threat_raster = None
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
 
