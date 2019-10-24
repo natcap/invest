@@ -66,6 +66,8 @@ class ArgsForm extends React.Component {
     // Handle changes in form text inputs
     const value = event.target.value;
     const name = event.target.name;
+    console.log(value);
+    console.log(typeof value);
     this.props.updateArg(name, value);
   }
 
@@ -109,7 +111,7 @@ class ArgsForm extends React.Component {
       const argument = current_args[argname];
       let validationMessage = '';
       if (argument.validationMessage) {
-        validationMessage = argument.validationMessage ;
+        validationMessage = argument.validationMessage;
       }
       
       // These types need a text input and a file browser button
@@ -167,16 +169,16 @@ class ArgsForm extends React.Component {
             <Form.Check 
               type="radio"
               label="Yes"
-              value={true}//"true"
-              checked={argument.value}//{argument.value === "true"}
+              value={"true"}
+              checked={argument.value === "true"}
               onChange={this.handleChange}
               name={argname}
             />
             <Form.Check
               type="radio"
               label="No"
-              value={false}//"false"
-              checked={!argument.value}//{argument.value === "false"}
+              value={"false"}
+              checked={argument.value === "false"}
               onChange={this.handleChange}
               name={argname}
             />

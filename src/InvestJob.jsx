@@ -326,8 +326,8 @@ export class InvestJob extends React.Component {
 
     this.setState({args: argsMeta}, 
       () => {
-        const args_dict = argsValuesFromSpec(argsMeta);
-        this.investValidate(args_dict, key);
+        const args_dict_string = argsValuesFromSpec(argsMeta);
+        this.investValidate(args_dict_string, key);
       });
   }
 
