@@ -49,22 +49,17 @@ class ArgsForm extends React.Component {
   }
 
   componentDidMount() {
-    // updateArg immediately on mount. Values will be undefined
-    // but validate.js will handle updating the `valid` property
+    // Validate args immediately on mount. Values will be `undefined`
+    // but converted to empty strings by `argsValuesFromSpec` 
+    // Validation will handle updating the `valid` property
     // of the optional and conditionally required args so that they 
     // can validate without any user-interaction.
-    // let keys = [];
-    // let values = [];
-    // Object.keys(this.props.args).forEach(argkey => {
-    //   keys.push(argkey);
-    //   values.push(this.props.args[argkey].value);
-    // });
-    // this.props.updateArg(keys, values);
-    const args_dict = this.props.argsValuesFromSpec(this.props.args);
-    console.log(args_dict);
-    // TODO: could call batchUpdateArgs here instead,
-    // to avoid passing investValidate this component at all.
-    this.props.investValidate(args_dict);
+
+    const args_dict_string = this.props.argsValuesFromSpec(this.props.args);
+    // TODO: could call batchUpdateArgs here instead
+    // to avoid passing investValidate to this component at all.
+    // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
+    this.props.investValidate(args_dict_string);
   }
 
   handleChange(event) {
@@ -84,13 +79,13 @@ class ArgsForm extends React.Component {
     dialog.showOpenDialog({
       properties: [prop]
     }, (filepath) => {
-      console.log(filepath);
       this.props.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
     })
   }
 
   onJsonDrop(event) {
     // Handle drag-drop of datastack JSON files
+    // TODO: handle errors when dropped file is not valid JSON
     event.preventDefault();
     
     const fileList = event.dataTransfer.files;
@@ -101,16 +96,6 @@ class ArgsForm extends React.Component {
     const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
     if (this.props.modulename === modelParams.model_name) {
-      // console.log(modelParams);
-      // const args_dict = JSON.stringify(modelParams.args);
-      // this.props.investValidate(args_dict);
-      // let keys = [];
-      // let values = [];
-      // Object.keys(modelParams.args).forEach(argkey => {
-      //   keys.push(argkey);
-      //   values.push(modelParams.args[argkey]);
-      //   // this.props.updateArg(argkey, modelParams.args[argkey]);
-      // });
       this.props.batchUpdateArgs(modelParams.args);
     } else {
       throw alert('parameter file does not match this model.')

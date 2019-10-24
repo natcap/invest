@@ -11,7 +11,6 @@ import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 import Navbar from 'react-bootstrap/Navbar';
 
-import validate from './validate';
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
@@ -67,7 +66,6 @@ export class InvestJob extends React.Component {
       docs: MODEL_DOCS
     };
     
-    this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
@@ -165,13 +163,23 @@ export class InvestJob extends React.Component {
     });
   }
 
-  investValidate(args_dict, limit_to) {
+  investValidate(args_dict_string, limit_to) {
+    /*
+    Validate an arguments dictionary using the InVEST model's validate func.
+
+    Parameters:
+      args_dict_string (object) : a JSON.stringify'ed object of model argument
+        keys and values.
+      limit_to (string) : an argument key if validation should be limited only
+        to that argument.
+
+    */
     let warningsIssued = false;
     let argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    let keyset = new Set(Object.keys(JSON.parse(args_dict)));
+    let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
     let payload = { 
       model_module: this.state.modelSpec.module,
-      args: args_dict
+      args: args_dict_string
     };
     if (limit_to) {
       payload['limit_to'] = limit_to
@@ -244,8 +252,8 @@ export class InvestJob extends React.Component {
                   argIsValidArray.push(argsMeta[key]['valid'])
                 }
                 if (argIsValidArray.every(Boolean)) {
-                  const new_args_dict = argsValuesFromSpec(argsMeta);
-                  this.investValidate(new_args_dict);
+                  const new_args_dict_string = argsValuesFromSpec(argsMeta);
+                  this.investValidate(new_args_dict_string);
                 }
               }
             );
@@ -258,59 +266,6 @@ export class InvestJob extends React.Component {
         }
       }
     );
-
-    // // TODO: this funcs logic does not handle exceptions from invest validate
-    // // in which case there are no warnings, but sessionProgress still updates
-    // // to 'ready'. Maybe that is desireable though.
-
-    // argsToJsonFile(args, this.state.modelSpec.module);
-
-    // const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
-    // // if we add -vvv flags, we risk getting more stdout 
-    // // than expected by the results parser below.
-    // const cmdArgs = ['validate', '--json', datastackPath]
-    // const validator = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
-
-    // let warningsIssued = false;
-    // validator.stdout.on('data', (data) => {
-    //   let results = JSON.parse(data.toString());
-    //   if (results.validation_results.length) {
-    //     warningsIssued = true
-    //     results.validation_results.forEach(x => {
-    //       // TODO: test this indexing against all sorts of validation results
-    //       const argkey = x[0][0];
-    //       const message = x[1];
-    //       args[argkey]['validationMessage'] = message
-    //       args[argkey]['valid'] = false
-    //     });
-    //   }
-    // });
-
-    // validator.stderr.on('data', (data) => {
-    //   console.log(`${data}`);
-    // });
-
-    // validator.on('close', (code) => {
-    //   console.log(code);
-
-    //   if (warningsIssued) {
-    //     this.setState({
-    //       args: args,
-    //       argsValid: false
-    //     })
-    //   } else {
-    //     // It's possible args were already valid, in which case
-    //     // it's nice to avoid the re-render that this setState call
-    //     // triggers. Although only the Viz app components re-render in a noticeable way.
-    //     // I wonder if that could be due to use of redux there?
-    //     if (!this.state.argsValid) {
-    //       this.setState({
-    //         argsValid: true
-    //       })
-    //     }
-    //   }
-    //   console.log(this.state);
-    // });
   }
 
   investGetSpec(event) {
@@ -349,6 +304,7 @@ export class InvestJob extends React.Component {
   }
 
   batchUpdateArgs(args_dict) {
+    // Update this.state.args in response to batch argument loading events
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(args_dict).forEach(argkey => {
       argsMeta[argkey]['value'] = args_dict[argkey]
@@ -359,53 +315,20 @@ export class InvestJob extends React.Component {
   }
 
   updateArg(key, value) {
-    // Update this.state.args in response to various events
-
-    // Allow multiple keys and values so this function can be
-    // shared by events that modify a single arg (keystroke)
-    // and events that modify many args (drag-drop json file).
+    // Update this.state.args in response to change events on a single ArgsForm input
 
     // Parameters:
-      // keys (Array)
-      // values (Array)
-    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
+      // key (string)
+      // value (string or number)
 
-    // for (let i = 0; i < keys.length; i++) {
-      // let key = keys[i];
-      // let value = values[i];
-      // const isValid = validate(
-      //   value, args[key].type, args[key].required);
+    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     argsMeta[key]['value'] = value;
-      // args[key]['valid'] = isValid;
-    // }
-    console.log(key);
-    // console.log(argsMeta);
 
     this.setState({args: argsMeta}, 
       () => {
-        console.log(argsMeta);
         const args_dict = argsValuesFromSpec(argsMeta);
-        console.log(args_dict);
         this.investValidate(args_dict, key);
-
-      })
-    //   this.checkArgsReadyToValidate);
-  }
-
-  checkArgsReadyToValidate() {
-    // Pass args to invest validate if have valid values 
-    // according to validate.js
-    const args = JSON.parse(JSON.stringify(this.state.args));
-    let argIsValidArray = [];
-    for (const key in args) {
-      argIsValidArray.push(args[key]['valid'])
-    }
-    console.log('check Args called');
-
-    if (argIsValidArray.every(Boolean)) {
-        this.investValidate(args);
-        return
-    }
+      });
   }
 
   switchTabs(key) {
