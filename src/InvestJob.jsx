@@ -72,7 +72,8 @@ export class InvestJob extends React.Component {
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.updateArgs = this.updateArgs.bind(this);
+    this.updateArg = this.updateArg.bind(this);
+    this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
@@ -166,51 +167,94 @@ export class InvestJob extends React.Component {
 
   investValidate(args_dict, limit_to) {
     let warningsIssued = false;
-    let args = JSON.parse(JSON.stringify(this.state.args));
-    
+    let argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    let keyset = new Set(Object.keys(JSON.parse(args_dict)));
+    let payload = { 
+      model_module: this.state.modelSpec.module,
+      args: args_dict
+    };
+    if (limit_to) {
+      payload['limit_to'] = limit_to
+    }
+
     request.post(
       'http://localhost:5000/validate',
-      { json: { 
-        model_module: this.state.modelSpec.module,
-        args: args_dict,
-        limit_to: limit_to} 
-      },
+      { json: payload},
       (error, response, body) => {
         if (!error && response.statusCode == 200) {
-          // console.log(body);
-          let results = body;
-          console.log(results);
-          if (results.length) {
+          const results = body;
+
+          if (results.length) {  // at least one invalid arg
             warningsIssued = true
-            results.forEach(x => {
-              console.log(x);
-              // TODO: test this indexing against all sorts of validation results
-              const argkey = x[0][0];
-              const message = x[1];
-              console.log(argkey);
-              console.log(args);
-              args[argkey]['validationMessage'] = message
-              args[argkey]['valid'] = false
+            results.forEach(result => {
+              // Each result is an array of two elements
+              // 0: array of arg keys
+              // 1: string message that pertains to those args
+              console.log(result);
+              // TODO: test this indexing against all sorts of results
+              const argkeys = result[0];
+              const message = result[1];
+              console.log(argkeys);
+              console.log(argsMeta);
+              argkeys.forEach(key => {
+                argsMeta[key]['validationMessage'] = message
+                argsMeta[key]['valid'] = false
+                keyset.delete(key);
+              })
             });
+            if (!limit_to){
+              console.log(keyset);
+              // checked all args, so ones left in keyset are valid
+              keyset.forEach(k => {
+                argsMeta[k]['valid'] = true
+              })
+            }
 
             this.setState({
-              args: args,
+              args: argsMeta,
               argsValid: false
+            });
+
+          } else if (!limit_to) { // checked all args and all were valid
+            
+            keyset.forEach(k => {
+              argsMeta[k]['valid'] = true
             })
-          } else {
-            // It's possible args were already valid, in which case
+            // It's possible all args were already valid, in which case
             // it's nice to avoid the re-render that this setState call
             // triggers. Although only the Viz app components re-render in a noticeable way.
             // I wonder if that could be due to use of redux there?
             if (!this.state.argsValid) {
               this.setState({
+                args: argsMeta,
                 argsValid: true
               })
             }
+
+          } else if (limit_to) {  // checked single arg, was valid
+
+            argsMeta[limit_to]['valid'] = true
+            // this could be the last arg that needed to go valid,
+            // in which case we should trigger a full args_dict validation
+            this.setState({
+              args: argsMeta},
+              () => {
+                let argIsValidArray = [];
+                for (const key in argsMeta) {
+                  argIsValidArray.push(argsMeta[key]['valid'])
+                }
+                if (argIsValidArray.every(Boolean)) {
+                  const new_args_dict = argsValuesFromSpec(argsMeta);
+                  this.investValidate(new_args_dict);
+                }
+              }
+            );
           }
         } else {
           console.log('Status: ' + response.statusCode)
-          console.log('Error: ' + error.message)
+          if (error.message) {
+            console.log('Error: ' + error.message)
+          }
         }
       }
     );
@@ -304,7 +348,17 @@ export class InvestJob extends React.Component {
     );
   }
 
-  updateArgs(keys, values) {
+  batchUpdateArgs(args_dict) {
+    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    Object.keys(args_dict).forEach(argkey => {
+      argsMeta[argkey]['value'] = args_dict[argkey]
+    });
+    this.setState({args: argsMeta},
+      () => { this.investValidate(JSON.stringify(args_dict)) }
+    );
+  }
+
+  updateArg(key, value) {
     // Update this.state.args in response to various events
 
     // Allow multiple keys and values so this function can be
@@ -314,24 +368,27 @@ export class InvestJob extends React.Component {
     // Parameters:
       // keys (Array)
       // values (Array)
-    console.log(this.state.args);
-    const args = argsValuesFromSpec(this.state.args);
-    console.log(args);
+    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
 
-    for (let i = 0; i < keys.length; i++) {
-      let key = keys[i];
+    // for (let i = 0; i < keys.length; i++) {
+      // let key = keys[i];
       // let value = values[i];
-
       // const isValid = validate(
       //   value, args[key].type, args[key].required);
-      this.investValidate(args, key)
-      // console.log(results);
-
-      // args[key]['value'] = value;
+    argsMeta[key]['value'] = value;
       // args[key]['valid'] = isValid;
-    }
+    // }
+    console.log(key);
+    // console.log(argsMeta);
 
-    // this.setState({args: args}, 
+    this.setState({args: argsMeta}, 
+      () => {
+        console.log(argsMeta);
+        const args_dict = argsValuesFromSpec(argsMeta);
+        console.log(args_dict);
+        this.investValidate(args_dict, key);
+
+      })
     //   this.checkArgsReadyToValidate);
   }
 
@@ -380,7 +437,10 @@ export class InvestJob extends React.Component {
             args={this.state.args}
             argsValid={this.state.argsValid}
             modulename={this.state.modelSpec.module}
-            updateArgs={this.updateArgs}
+            updateArg={this.updateArg}
+            batchUpdateArgs={this.batchUpdateArgs}
+            investValidate={this.investValidate}
+            argsValuesFromSpec={argsValuesFromSpec}
             investExecute={this.investExecute}
           />
         </Tab>
@@ -432,9 +492,8 @@ function argsToJsonFile(currentArgs, modulename) {
   });
 }
 
+// TODO: move this to a module for import instead of passing around in props.
 function argsValuesFromSpec(args) {
-  // TODO: should we use the datastack.py API to create the json? 
-  // make simple args json for passing to python cli
   let args_dict = {};
   for (const argname in args) {
     args_dict[argname] = args[argname]['value'] || ''

@@ -12,6 +12,15 @@ const isDevMode = process.execPath.match(/[\\/]electron/);
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
 const createWindow = async () => {
+  
+  // Creating the process here with await because sometimes,
+  // but not always, the window loads and the first request
+  // is made before the server is ready. Unfortunately, it's
+  // an intermittent problem, and I'm not certain that await
+  // works here, because createPythonProcess is not a Promise.
+  // UPDATE: await does not deal with the problem.
+  await createPythonProcess();
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -40,9 +49,9 @@ const createWindow = async () => {
 };
 
 let pythonServerProcess;
-const createPythonProcess = () => {
+function createPythonProcess() {
   pythonServerProcess = spawn(
-    '/home/dmf/miniconda3/envs/invest-env-py36/bin/python', ['-m', 'flask', 'run'], {
+    process.env.PYTHON, ['-m', 'flask', 'run'], {
       shell: true,
       // stdio: 'ignore',
       detatched: true,
@@ -64,10 +73,6 @@ const createPythonProcess = () => {
     console.log(code);
     console.log('Child process terminated due to signal ' + signal);
   });
-    pythonServerProcess.on('close', (code, signal) => {
-    console.log(code);
-    console.log('Child process exited on its own ' + signal);
-  });
 }
 
 const exitPythonProcess = () => {
@@ -81,15 +86,14 @@ const exitPythonProcess = () => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', createWindow);
-app.on('ready', createPythonProcess)
 
 // Quit when all windows are closed.
 app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
-    app.quit();
     exitPythonProcess();
+    app.quit();
   }
 });
 

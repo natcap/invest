@@ -19,7 +19,10 @@ export class SetupTab extends React.Component {
           <ArgsForm 
             args={this.props.args}
             modulename={this.props.modulename}
-            updateArgs={this.props.updateArgs}
+            updateArg={this.props.updateArg}
+            batchUpdateArgs={this.props.batchUpdateArgs}
+            investValidate={this.props.investValidate}
+            argsValuesFromSpec={this.props.argsValuesFromSpec}
           />
           <Button 
             variant="primary" 
@@ -46,24 +49,29 @@ class ArgsForm extends React.Component {
   }
 
   componentDidMount() {
-    // updateArgs immediately on mount. Values will be undefined
+    // updateArg immediately on mount. Values will be undefined
     // but validate.js will handle updating the `valid` property
     // of the optional and conditionally required args so that they 
     // can validate without any user-interaction.
-    let keys = [];
-    let values = [];
-    Object.keys(this.props.args).forEach(argkey => {
-      keys.push(argkey);
-      values.push(this.props.args[argkey].value);
-    });
-    this.props.updateArgs(keys, values);
+    // let keys = [];
+    // let values = [];
+    // Object.keys(this.props.args).forEach(argkey => {
+    //   keys.push(argkey);
+    //   values.push(this.props.args[argkey].value);
+    // });
+    // this.props.updateArg(keys, values);
+    const args_dict = this.props.argsValuesFromSpec(this.props.args);
+    console.log(args_dict);
+    // TODO: could call batchUpdateArgs here instead,
+    // to avoid passing investValidate this component at all.
+    this.props.investValidate(args_dict);
   }
 
   handleChange(event) {
     // Handle changes in form text inputs
     const value = event.target.value;
     const name = event.target.name;
-    this.props.updateArgs([name], [value]);
+    this.props.updateArg(name, value);
   }
 
   selectFile(event) {
@@ -77,7 +85,7 @@ class ArgsForm extends React.Component {
       properties: [prop]
     }, (filepath) => {
       console.log(filepath);
-      this.props.updateArgs([argname], [filepath[0]]); // 0 is safe since we only allow 1 selection
+      this.props.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
     })
   }
 
@@ -93,13 +101,17 @@ class ArgsForm extends React.Component {
     const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
     if (this.props.modulename === modelParams.model_name) {
-      let keys = [];
-      let values = [];
-      Object.keys(modelParams.args).forEach(argkey => {
-        keys.push(argkey);
-        values.push(modelParams.args[argkey]);
-      });
-      this.props.updateArgs(keys, values);
+      // console.log(modelParams);
+      // const args_dict = JSON.stringify(modelParams.args);
+      // this.props.investValidate(args_dict);
+      // let keys = [];
+      // let values = [];
+      // Object.keys(modelParams.args).forEach(argkey => {
+      //   keys.push(argkey);
+      //   values.push(modelParams.args[argkey]);
+      //   // this.props.updateArg(argkey, modelParams.args[argkey]);
+      // });
+      this.props.batchUpdateArgs(modelParams.args);
     } else {
       throw alert('parameter file does not match this model.')
     }

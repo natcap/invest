@@ -2,12 +2,13 @@
 
 `npm install` from repo directory  
 
-set path to invest executeable at launch:
+set system-specific environment variables at launch. 
 
 ### windows:  
-`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Library\\share\\gdal && npm start`  
+`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Library\\share\\gdal && set PYTHON=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\python && npm start`  
 
-setting the GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
+GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
+PYTHON path must be able to import `flask`  
 
 ### linux:  
 `INVEST=/home/dmf/miniconda3/envs/invest-env-py36/Scripts/invest.exe npm start`  
