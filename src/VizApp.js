@@ -12,7 +12,6 @@ import React, { Component, Suspense } from 'react';
 class VizApp extends Component {
 
   render() {
-    console.log('viz rendered');
     if (this.props.workspace && this.props.model) {
       const model_viz_space = './components/Visualization/' + this.props.model;
       const Visualization = React.lazy(() => import(model_viz_space));

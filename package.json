@@ -5,7 +5,7 @@
   "description": "My Electron application description",
   "main": "src/main.js",
   "scripts": {
-    "start": "npx electron -r @babel/register .",
+    "start": "cross-env FLASK_APP=src/server.py npx electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },

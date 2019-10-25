@@ -1,3 +1,4 @@
+import { spawn, spawnSync } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 // import { enableLiveReload } from 'electron-compile';
@@ -11,6 +12,15 @@ const isDevMode = process.execPath.match(/[\\/]electron/);
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
 const createWindow = async () => {
+  
+  // Creating the process here with await because sometimes,
+  // but not always, the window loads and the first request
+  // is made before the server is ready. Unfortunately, it's
+  // an intermittent problem, and I'm not certain that await
+  // works here, because createPythonProcess is not a Promise.
+  // UPDATE: await does not deal with the problem.
+  await createPythonProcess();
+
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 1400,
@@ -38,6 +48,40 @@ const createWindow = async () => {
   });
 };
 
+let pythonServerProcess;
+function createPythonProcess() {
+  pythonServerProcess = spawn(
+    process.env.PYTHON, ['-m', 'flask', 'run'], {
+      shell: true,
+      // stdio: 'ignore',
+      detatched: true,
+    });
+
+  console.log('Started python process as PID ' + pythonServerProcess.pid);
+
+  pythonServerProcess.stdout.on('data', (data) => {
+    console.log(`${data}`);
+  });
+  pythonServerProcess.stderr.on('data', (data) => {
+    console.log(`${data}`);
+  });
+  pythonServerProcess.on('error', (err) => {
+    console.log('Process failed.');
+    console.log(err);
+  });
+  pythonServerProcess.on('close', (code, signal) => {
+    console.log(code);
+    console.log('Child process terminated due to signal ' + signal);
+  });
+}
+
+const exitPythonProcess = () => {
+  console.log('Killing python process ' + pythonServerProcess.pid);
+  const processKiller = spawnSync(
+    'taskkill /PID ' + pythonServerProcess.pid + ' /T /F', {shell: true});
+  pythonServerProcess = null;
+}
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -48,6 +92,7 @@ app.on('window-all-closed', () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
+    exitPythonProcess();
     app.quit();
   }
 });
@@ -60,5 +105,6 @@ app.on('activate', () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+// Couldn't get this callback to fire, moved to 'window-all-closed',
+// but that doesn't cover OSX
+// app.on('will-quit', exitPythonProcess);

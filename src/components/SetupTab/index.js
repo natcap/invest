@@ -19,7 +19,10 @@ export class SetupTab extends React.Component {
           <ArgsForm 
             args={this.props.args}
             modulename={this.props.modulename}
-            updateArgs={this.props.updateArgs}
+            updateArg={this.props.updateArg}
+            batchUpdateArgs={this.props.batchUpdateArgs}
+            investValidate={this.props.investValidate}
+            argsValuesFromSpec={this.props.argsValuesFromSpec}
           />
           <Button 
             variant="primary" 
@@ -46,24 +49,26 @@ class ArgsForm extends React.Component {
   }
 
   componentDidMount() {
-    // updateArgs immediately on mount. Values will be undefined
-    // but validate.js will handle updating the `valid` property
+    // Validate args immediately on mount. Values will be `undefined`
+    // but converted to empty strings by `argsValuesFromSpec` 
+    // Validation will handle updating the `valid` property
     // of the optional and conditionally required args so that they 
     // can validate without any user-interaction.
-    let keys = [];
-    let values = [];
-    Object.keys(this.props.args).forEach(argkey => {
-      keys.push(argkey);
-      values.push(this.props.args[argkey].value);
-    });
-    this.props.updateArgs(keys, values);
+
+    const args_dict_string = this.props.argsValuesFromSpec(this.props.args);
+    // TODO: could call batchUpdateArgs here instead
+    // to avoid passing investValidate to this component at all.
+    // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
+    this.props.investValidate(args_dict_string);
   }
 
   handleChange(event) {
     // Handle changes in form text inputs
     const value = event.target.value;
     const name = event.target.name;
-    this.props.updateArgs([name], [value]);
+    console.log(value);
+    console.log(typeof value);
+    this.props.updateArg(name, value);
   }
 
   selectFile(event) {
@@ -76,13 +81,13 @@ class ArgsForm extends React.Component {
     dialog.showOpenDialog({
       properties: [prop]
     }, (filepath) => {
-      console.log(filepath);
-      this.props.updateArgs([argname], [filepath[0]]); // 0 is safe since we only allow 1 selection
+      this.props.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
     })
   }
 
   onJsonDrop(event) {
     // Handle drag-drop of datastack JSON files
+    // TODO: handle errors when dropped file is not valid JSON
     event.preventDefault();
     
     const fileList = event.dataTransfer.files;
@@ -93,13 +98,7 @@ class ArgsForm extends React.Component {
     const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
 
     if (this.props.modulename === modelParams.model_name) {
-      let keys = [];
-      let values = [];
-      Object.keys(modelParams.args).forEach(argkey => {
-        keys.push(argkey);
-        values.push(modelParams.args[argkey]);
-      });
-      this.props.updateArgs(keys, values);
+      this.props.batchUpdateArgs(modelParams.args);
     } else {
       throw alert('parameter file does not match this model.')
     }
@@ -112,7 +111,7 @@ class ArgsForm extends React.Component {
       const argument = current_args[argname];
       let validationMessage = '';
       if (argument.validationMessage) {
-        validationMessage = argument.validationMessage ;
+        validationMessage = argument.validationMessage;
       }
       
       // These types need a text input and a file browser button
@@ -170,16 +169,16 @@ class ArgsForm extends React.Component {
             <Form.Check 
               type="radio"
               label="Yes"
-              value={true}//"true"
-              checked={argument.value}//{argument.value === "true"}
+              value={"true"}
+              checked={argument.value === "true"}
               onChange={this.handleChange}
               name={argname}
             />
             <Form.Check
               type="radio"
               label="No"
-              value={false}//"false"
-              checked={!argument.value}//{argument.value === "false"}
+              value={"false"}
+              checked={argument.value === "false"}
               onChange={this.handleChange}
               name={argname}
             />

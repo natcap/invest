@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
+import request from 'request';
 
 import React from 'react';
 import { createStore } from 'redux';
@@ -10,7 +11,6 @@ import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
 import Navbar from 'react-bootstrap/Navbar';
 
-import validate from './validate';
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
@@ -25,10 +25,10 @@ const store = createStore(rootReducer)
 const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
 const TEMP_DIR = './'
 
-// these options are passed to child_process spawn calls
 if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
 }
+// these options are passed to child_process spawn calls
 const PYTHON_OPTIONS = {
   cwd: TEMP_DIR,
   shell: true, // without true, IOError when datastack.py loads json
@@ -66,12 +66,12 @@ export class InvestJob extends React.Component {
       docs: MODEL_DOCS
     };
     
-    this.checkArgsReadyToValidate = this.checkArgsReadyToValidate.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
-    this.updateArgs = this.updateArgs.bind(this);
+    this.updateArg = this.updateArg.bind(this);
+    this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
@@ -163,141 +163,174 @@ export class InvestJob extends React.Component {
     });
   }
 
-  investValidate(args) {
-    // TODO: this funcs logic does not handle exceptions from invest validate
-    // in which case there are no warnings, but sessionProgress still updates
-    // to 'ready'. Maybe that is desireable though.
+  investValidate(args_dict_string, limit_to) {
+    /*
+    Validate an arguments dictionary using the InVEST model's validate func.
 
-    argsToJsonFile(args, this.state.modelSpec.module);
+    Parameters:
+      args_dict_string (object) : a JSON.stringify'ed object of model argument
+        keys and values.
+      limit_to (string) : an argument key if validation should be limited only
+        to that argument.
 
-    const datastackPath = path.join(TEMP_DIR, DATASTACK_JSON)
-    // if we add -vvv flags, we risk getting more stdout 
-    // than expected by the results parser below.
-    const cmdArgs = ['validate', '--json', datastackPath]
-    const validator = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
-
+    */
+    console.log(args_dict_string);
     let warningsIssued = false;
-    validator.stdout.on('data', (data) => {
-      let results = JSON.parse(data.toString());
-      if (results.validation_results.length) {
-        warningsIssued = true
-        results.validation_results.forEach(x => {
-          // TODO: test this indexing against all sorts of validation results
-          const argkey = x[0][0];
-          const message = x[1];
-          args[argkey]['validationMessage'] = message
-          args[argkey]['valid'] = false
-        });
-      }
-    });
+    let argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
+    let payload = { 
+      model_module: this.state.modelSpec.module,
+      args: args_dict_string
+    };
+    if (limit_to) {
+      payload['limit_to'] = limit_to
+    }
 
-    validator.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
+    request.post(
+      'http://localhost:5000/validate',
+      { json: payload},
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          const results = body;
 
-    validator.on('close', (code) => {
-      console.log(code);
+          if (results.length) {  // at least one invalid arg
+            warningsIssued = true
+            results.forEach(result => {
+              // Each result is an array of two elements
+              // 0: array of arg keys
+              // 1: string message that pertains to those args
+              console.log(result);
+              // TODO: test this indexing against all sorts of results
+              const argkeys = result[0];
+              const message = result[1];
+              console.log(argkeys);
+              console.log(argsMeta);
+              argkeys.forEach(key => {
+                argsMeta[key]['validationMessage'] = message
+                argsMeta[key]['valid'] = false
+                keyset.delete(key);
+              })
+            });
+            if (!limit_to){
+              console.log(keyset);
+              // checked all args, so ones left in keyset are valid
+              keyset.forEach(k => {
+                argsMeta[k]['valid'] = true
+              })
+            }
 
-      if (warningsIssued) {
-        this.setState({
-          args: args,
-          argsValid: false
-        })
-      } else {
-        // It's possible args were already valid, in which case
-        // it's nice to avoid the re-render that this setState call
-        // triggers. Although only the Viz app components re-render in a noticeable way.
-        // I wonder if that could be due to use of redux there?
-        if (!this.state.argsValid) {
-          this.setState({
-            argsValid: true
-          })
+            this.setState({
+              args: argsMeta,
+              argsValid: false
+            });
+
+          } else if (!limit_to) { // checked all args and all were valid
+            
+            keyset.forEach(k => {
+              argsMeta[k]['valid'] = true
+            })
+            // It's possible all args were already valid, in which case
+            // it's nice to avoid the re-render that this setState call
+            // triggers. Although only the Viz app components re-render in a noticeable way.
+            // I wonder if that could be due to use of redux there?
+            if (!this.state.argsValid) {
+              this.setState({
+                args: argsMeta,
+                argsValid: true
+              })
+            }
+
+          } else if (limit_to) {  // checked single arg, was valid
+
+            argsMeta[limit_to]['valid'] = true
+            // this could be the last arg that needed to go valid,
+            // in which case we should trigger a full args_dict validation
+            this.setState({
+              args: argsMeta},
+              () => {
+                let argIsValidArray = [];
+                for (const key in argsMeta) {
+                  argIsValidArray.push(argsMeta[key]['valid'])
+                }
+                if (argIsValidArray.every(Boolean)) {
+                  const new_args_dict_string = argsValuesFromSpec(argsMeta);
+                  this.investValidate(new_args_dict_string);
+                }
+              }
+            );
+          }
+        } else {
+          console.log('Status: ' + response.statusCode)
+          if (error.message) {
+            console.log('Error: ' + error.message)
+          }
         }
       }
-      console.log(this.state);
-    });
+    );
   }
 
   investGetSpec(event) {
-    const modulename = event.target.value;
-    const options = {
-      shell: true, // without true, IOError when datastack.py loads json
-    };
-    const cmdArgs = ['getspec', '--json', modulename]
-    const proc = spawn(INVEST_EXE, cmdArgs, options);
+    const modelName = event.target.value;
 
-    proc.stdout.on('data', (data) => {
-      const spec = JSON.parse(data.toString());
-      spec['model_temp_vizname'] = MODEL_NAME // TODO: later this will be builtin to spec
-      
-      // for clarity, state has a dedicated args property separte from spec
-      const args = JSON.parse(JSON.stringify(spec.args));
-      delete spec.args
+    request.post(
+      'http://localhost:5000/getspec',
+      { json: { 
+        model: modelName} 
+      },
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          const spec = body;
+          spec['model_temp_vizname'] = modelName // TODO: later this will be builtin to spec
+          // for clarity, state has a dedicated args property separte from spec
+          const args = JSON.parse(JSON.stringify(spec.args));
+          delete spec.args
 
-      // This event represents a user selecting a model,
-      // and so some existing state should be reset.
-      this.setState({
-        modelSpec: spec,
-        args: args,
-        sessionProgress: 'setup',
-        logStdErr: '',
-        logStdOut: '',
-        sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
-        workspace: null,
-      }, () => this.switchTabs('setup'));
-    });
-
-    proc.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
-
-    proc.on('close', (code) => {
-      console.log(code);
-    });
+          // This event represents a user selecting a model,
+          // and so some existing state should be reset.
+          this.setState({
+            modelSpec: spec,
+            args: args,
+            sessionProgress: 'setup',
+            logStdErr: '',
+            logStdOut: '',
+            sessionID: defaultSessionID(spec.model_temp_vizname), // see TODO above
+            workspace: null,
+          }, () => this.switchTabs('setup'));
+        } else {
+          console.log('Status: ' + response.statusCode)
+          console.log('Error: ' + error.message)
+        }
+      }
+    );
   }
 
-  updateArgs(keys, values) {
-    // Update this.state.args in response to various events
+  batchUpdateArgs(args_dict) {
+    // Update this.state.args in response to batch argument loading events
+    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    Object.keys(args_dict).forEach(argkey => {
+      argsMeta[argkey]['value'] = args_dict[argkey]
+    });
+    this.setState({args: argsMeta},
+      () => { this.investValidate(JSON.stringify(args_dict)) }
+    );
+  }
 
-    // Allow multiple keys and values so this function can be
-    // shared by events that modify a single arg (keystroke)
-    // and events that modify many args (drag-drop json file).
+  updateArg(key, value) {
+    // Update this.state.args in response to change events on a single ArgsForm input
 
     // Parameters:
-      // keys (Array)
-      // values (Array)
+      // key (string)
+      // value (string or number)
 
-    let args = JSON.parse(JSON.stringify(this.state.args));
+    const argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    argsMeta[key]['value'] = value;
 
-    for (let i = 0; i < keys.length; i++) {
-      let key = keys[i];
-      let value = values[i];
-
-      const isValid = validate(
-        value, args[key].type, args[key].required);
-
-      args[key]['value'] = value;
-      args[key]['valid'] = isValid;
-    }
-
-    this.setState({args: args}, 
-      this.checkArgsReadyToValidate);
-  }
-
-  checkArgsReadyToValidate() {
-    // Pass args to invest validate if have valid values 
-    // according to validate.js
-    const args = JSON.parse(JSON.stringify(this.state.args));
-    let argIsValidArray = [];
-    for (const key in args) {
-      argIsValidArray.push(args[key]['valid'])
-    }
-    console.log('check Args called');
-
-    if (argIsValidArray.every(Boolean)) {
-        this.investValidate(args);
-        return
-    }
+    this.setState({args: argsMeta}, 
+      () => {
+        const args_dict_string = argsValuesFromSpec(argsMeta);
+        // this.investValidate(args_dict_string, key);
+        this.investValidate(args_dict_string);
+      });
   }
 
   switchTabs(key) {
@@ -329,7 +362,10 @@ export class InvestJob extends React.Component {
             args={this.state.args}
             argsValid={this.state.argsValid}
             modulename={this.state.modelSpec.module}
-            updateArgs={this.updateArgs}
+            updateArg={this.updateArg}
+            batchUpdateArgs={this.batchUpdateArgs}
+            investValidate={this.investValidate}
+            argsValuesFromSpec={argsValuesFromSpec}
             investExecute={this.investExecute}
           />
         </Tab>
@@ -379,4 +415,15 @@ function argsToJsonFile(currentArgs, modulename) {
     }
     console.log("JSON file was saved.");
   });
+}
+
+// TODO: move this to a module for import instead of passing around in props.
+function argsValuesFromSpec(args) {
+  let args_dict = {};
+  for (const argname in args) {
+    args_dict[argname] = args[argname]['value'] || ''
+  }
+
+  const args_dict_string = JSON.stringify(args_dict);
+  return(args_dict_string)
 }

@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { spawn } from 'child_process';
+import request from 'request';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
@@ -31,24 +32,18 @@ export class ModelsTab extends React.Component {
   }
 
   makeInvestList() {
-    const options = {
-      shell: true, // without true, IOError when datastack.py loads json
-    };
-    const cmdArgs = ['list', '--json']
-    const proc = spawn(INVEST_EXE, cmdArgs, options);
-
-    proc.stdout.on('data', (data) => {
-      const results = JSON.parse(data.toString());
-      this.setState({models: results});
-    });
-
-    proc.stderr.on('data', (data) => {
-      console.log(`${data}`);
-    });
-
-    proc.on('close', (code) => {
-      console.log(code);
-    });
+    request.get(
+      'http://localhost:5000/models',
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          const models = JSON.parse(body);
+          this.setState({models: models});
+        } else {
+          console.log('Status: ' + response.statusCode)
+          console.log('Error: ' + error.message)
+        }
+      }
+    );
   }
 
   onSaveClick(event) {
