@@ -37,6 +37,7 @@ MODEL_MODULE_MAP = {
 
 
 @app.route('/ready', methods=['GET'])
+def get_is_ready():
     return 'flask ready'
 
 
