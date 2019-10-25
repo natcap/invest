@@ -174,6 +174,7 @@ export class InvestJob extends React.Component {
         to that argument.
 
     */
+    console.log(args_dict_string);
     let warningsIssued = false;
     let argsMeta = JSON.parse(JSON.stringify(this.state.args));
     let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
@@ -327,7 +328,8 @@ export class InvestJob extends React.Component {
     this.setState({args: argsMeta}, 
       () => {
         const args_dict_string = argsValuesFromSpec(argsMeta);
-        this.investValidate(args_dict_string, key);
+        // this.investValidate(args_dict_string, key);
+        this.investValidate(args_dict_string);
       });
   }
 

@@ -36,18 +36,19 @@ MODEL_MODULE_MAP = {
 }
 
 
+@app.route('/ready', methods=['GET'])
+    return 'flask ready'
+
+
 @app.route('/models', methods=['GET'])
 def get_invest_models():
-    print('getting models')
     return natcap.invest.cli.build_model_list_json()
 
 
 @app.route('/getspec', methods=['POST'])
 def get_invest_getspec():
-    print('getting spec')
     target_model = request.get_json()['model']
     target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
-    print(target_module)
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC
     return json.dumps(spec)
@@ -55,7 +56,6 @@ def get_invest_getspec():
 
 @app.route('/validate', methods=['POST'])
 def get_invest_validate():
-    print('validating')
     payload = request.get_json()
     target_module = payload['model_module']
     args_dict = json.loads(payload['args'])
