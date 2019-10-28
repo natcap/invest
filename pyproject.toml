@@ -1,0 +1,8 @@
+[build-system]
+# these are the minimum packages needed in order to execute the natcap.invest
+# build.
+# NOTE: GDAL is *not* required here because the compiled cython module
+# will dynamically import GDAL via python's import system.  This behavior means
+# that we can provide a much easier build experience so long as GDAL is
+# available at runtime.
+requires = ['setuptools', 'wheel', 'setuptools_scm', 'numpy', 'cython']
