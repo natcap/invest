@@ -554,7 +554,7 @@ def check_spatial_overlap(spatial_filepaths_list,
                 bounding_box, info['projection'], wgs84_wkt)
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
-            LOGGER.warn(
+            LOGGER.warning(
                 'Skipping infinite bounding box for file %s', filepath)
             continue
 
