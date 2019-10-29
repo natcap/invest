@@ -72,9 +72,9 @@ class DelineateItTests(unittest.TestCase):
         """DelineateIt: test validation function."""
         from natcap.invest import delineateit
         missing_keys = {}
-        with self.assertRaises(KeyError) as cm:
-            delineateit.validate(missing_keys)
-        self.assertTrue(isinstance(cm.exception, KeyError))
+        validation_warnings = delineateit.validate(missing_keys)
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(len(validation_warnings[0][0]), 4)
 
         missing_values_args = {
             'workspace_dir': '',
@@ -84,8 +84,8 @@ class DelineateItTests(unittest.TestCase):
         }
         validation_warnings = delineateit.validate(missing_values_args)
         self.assertEqual(len(validation_warnings), 2)
-        self.assertEqual(len(validation_warnings[0][0]), 3)
-        self.assertTrue('parameter has no value' in validation_warnings[0][1])
+        self.assertEqual(len(sorted(validation_warnings[1][0])), 3)
+        self.assertTrue('has no value' in validation_warnings[1][1])
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
@@ -93,12 +93,13 @@ class DelineateItTests(unittest.TestCase):
             'outlet_vector_path': os.path.join(self.workspace_dir,
                                                'outlets-not-here.shp'),
             'snap_points': False,
+            'crash_on_invalid_geometry': False,
         }
         validation_warnings = delineateit.validate(file_not_found_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'not found on disk'),
-             (['outlet_vector_path'], 'not found on disk')])
+            [(['dem_path'], 'File not found'),
+             (['outlet_vector_path'], 'File not found')])
 
         bad_spatial_files_args = {
             'workspace_dir': self.workspace_dir,
@@ -109,6 +110,7 @@ class DelineateItTests(unittest.TestCase):
             'snap_points': True,
             'flow_threshold': -1,
             'snap_distance': 'fooooo',
+            'crash_on_invalid_geometry': False,
         }
         for key in ('dem_path', 'outlet_vector_path'):
             with open(bad_spatial_files_args[key], 'w') as spatial_file:
@@ -117,10 +119,11 @@ class DelineateItTests(unittest.TestCase):
         validation_warnings = delineateit.validate(bad_spatial_files_args)
         self.assertEqual(
             validation_warnings,
-            [(['dem_path'], 'not a raster'),
-             (['outlet_vector_path'], 'not a vector'),
-             (['flow_threshold'], 'must be a positive integer'),
-             (['snap_distance'], 'must be an integer')])
+            [(['dem_path'], 'File could not be opened as a GDAL raster'),
+             (['outlet_vector_path'], (
+                 'File could not be opened as a GDAL vector')),
+             (['flow_threshold'], 'Value does not meet condition value > 0'),
+             (['snap_distance'], 'Value could not be interpreted as a number')])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""
