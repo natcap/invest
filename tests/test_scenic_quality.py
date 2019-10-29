@@ -704,7 +704,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
             'dem_path',
             'refraction',
             'structure_path',
-            'do_valuation',
             'workspace_dir',
         ])
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -744,7 +743,6 @@ class ScenicQualityValidationTests(unittest.TestCase):
             'aoi_path',
             'dem_path',
             'refraction',
-            'do_valuation',
             'structure_path',
             'workspace_dir',
         ])
@@ -769,7 +767,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         validation_errors = scenic_quality.validate(args)
 
-        self.assertEqual(len(validation_errors), 7)
+        self.assertEqual(len(validation_errors), 6)
 
         # map single-key errors to their errors.
         single_key_errors = {}
@@ -779,14 +777,16 @@ class ScenicQualityValidationTests(unittest.TestCase):
 
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(
-            single_key_errors['a_coef'], 'cannot be interpreted as a number')
+            single_key_errors['a_coef'], (
+                'Value could not be interpreted as a number'))
         self.assertEqual(
-            single_key_errors['dem_path'], 'not a raster')
+            single_key_errors['dem_path'], 'File not found')
         self.assertEqual(single_key_errors['structure_path'],
-                         'Must be a vector')
-        self.assertEqual(single_key_errors['aoi_path'], 'Must be a vector')
-        self.assertEqual(single_key_errors['valuation_function'],
-                         'Invalid function')
+                         'File not found')
+        self.assertEqual(single_key_errors['aoi_path'], 'File not found')
+        self.assertTrue(
+            single_key_errors['valuation_function'].startswith(
+                'Value must be one of'))
 
     def test_dem_projected_in_m(self):
         """SQ Validate: the DEM must be projected in meters."""
