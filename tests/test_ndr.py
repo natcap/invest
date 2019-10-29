@@ -60,6 +60,28 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
+    def test_crit_len_0(self):
+        """NDR test case where crit len is 0 in biophysical table."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        new_table_path = os.path.join(self.workspace_dir, 'table_c_len_0.csv')
+        with open(new_table_path, 'w') as target_file:
+            with open(args['biophysical_table_path'], 'r') as table_file:
+                target_file.write(table_file.readline())
+                while True:
+                    line = table_file.readline()
+                    if not line:
+                        break
+                    line_list = line.split(',')
+                    # replace the crit_len_p with 0 in this column
+                    line = ','.join(line_list[0:12] + ['0.0'] + line_list[13::])
+                    target_file.write(line)
+
+        args['biophysical_table_path'] = new_table_path
+        ndr.execute(args)
+
     def test_missing_lucode(self):
         """NDR missing lucode in biophysical table should raise a KeyError."""
         from natcap.invest.ndr import ndr
