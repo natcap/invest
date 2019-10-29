@@ -226,7 +226,7 @@ ARGS_SPEC = {
             "name": "Use Monthly Alpha Table (Advanced)"
         },
         "monthly_alpha_path": {
-            "type": "raster",
+            "type": "csv",
             "required": "monthly_alpha",
             "about": "Required if args['monthly_alpha'] is True.",
             "name": "Monthly Alpha Table"
@@ -345,7 +345,7 @@ def execute(args):
             to the "cz_id" values defined in args['climate_zone_table_path']
         args['monthly_alpha'] (boolean): if True, use the alpha
         args['monthly_alpha_path'] (string): required if args['monthly_alpha']
-            is True.
+            is True. A CSV file.
         args['n_workers'] (int): (optional) indicates the number of processes
             to devote to potential parallel task execution. A value < 0 will
             use a single process, 0 will be non-blocking scheduling but
