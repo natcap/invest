@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Add SDR feature to model sediment deposition across the landscape.
+* Fixed an issue that would cause an exception if SDR landcover map was masked
+  out if the original landcover map had no-nodata value defined.
 * Implemented PEP518-compatible build system definition in the file
   ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
   from a source distribution.
