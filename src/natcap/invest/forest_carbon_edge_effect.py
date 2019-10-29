@@ -910,7 +910,7 @@ def validate(args, limit_to=None):
             required_fields = (
                 ARGS_SPEC['args']['biophysical_table_path'][
                     'validation_options']['required_fields'] +
-                ['c_below', 'c_soil' + 'c_dead'])
+                ['c_below', 'c_soil', 'c_dead'])
             error_msg = validation.check_csv(
                 args['biophysical_table_path'],
                 required_fields=required_fields)
