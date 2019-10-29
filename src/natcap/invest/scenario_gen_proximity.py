@@ -59,7 +59,9 @@ ARGS_SPEC = {
         },
         "focal_landcover_codes": {
             "validation_options": {
-                "regexp": "[0-9 ]+",
+                "regexp": {
+                    "pattern": "[0-9 ]+",
+                },
             },
             "type": "freestyle_string",
             "required": True,
@@ -71,9 +73,11 @@ ARGS_SPEC = {
         },
         "convertible_landcover_codes": {
             "validation_options": {
-                "regexp": "[0-9 ]+",
+                "regexp": {
+                    "pattern": "[0-9 ]+",
+                },
             },
-            "type": "number",
+            "type": "freestyle_string",
             "required": True,
             "about": (
                 "A space separated string of landcover codes that can be "
