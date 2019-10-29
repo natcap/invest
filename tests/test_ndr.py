@@ -82,6 +82,40 @@ class NDRTests(unittest.TestCase):
         args['biophysical_table_path'] = new_table_path
         ndr.execute(args)
 
+        result_vector = ogr.Open(
+            os.path.join(args['workspace_dir'], 'watershed_results_ndr.shp'))
+        result_layer = result_vector.GetLayer()
+        error_results = {}
+
+        surf_p_ld = 41.921
+        sub_p_ld = 0
+        p_exp_tot = 7.666
+        surf_n_ld = 2978.520
+        sub_n_ld = 28.614
+        n_exp_tot = 339.839
+        feature = result_layer.GetFeature(0)
+        if not feature:
+            raise AssertionError("No features were output.")
+        for field, value in [
+                ('surf_p_ld', surf_p_ld),
+                ('sub_p_ld', sub_p_ld),
+                ('p_exp_tot', p_exp_tot),
+                ('surf_n_ld', surf_n_ld),
+                ('sub_n_ld', sub_n_ld),
+                ('n_exp_tot', n_exp_tot)]:
+            if not numpy.isclose(feature.GetField(field), value, atol=1e-2):
+                error_results[field] = (
+                    'field', feature.GetField(field), value)
+        ogr.Feature.__swig_destroy__(feature)
+        feature = None
+        result_layer = None
+        ogr.DataSource.__swig_destroy__(result_vector)
+        result_vector = None
+
+        if error_results:
+            raise AssertionError(
+                "The following values are not equal: %s" % error_results)
+
     def test_missing_lucode(self):
         """NDR missing lucode in biophysical table should raise a KeyError."""
         from natcap.invest.ndr import ndr
