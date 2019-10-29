@@ -938,7 +938,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         validation_warnings = validation.validate(
             args, spec, {'spatial_keys': list(args.keys()),
-                         'reference_key': 'vector_a'})
+                         'different_projections_ok': True})
         self.assertEquals(len(validation_warnings), 1)
         self.assertEquals(set(args.keys()), set(validation_warnings[0][0]))
         self.assertTrue('Bounding boxes do not intersect' in

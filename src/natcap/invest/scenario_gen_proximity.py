@@ -27,10 +27,6 @@ ARGS_SPEC = {
     "model_name": "Scenario Generator: Proximity Based",
     "module": __name__,
     "userguide_html": "scenario_gen_proximity.html",
-    "args_with_spatial_overlap": {
-        "spatial_keys": [],
-        "reference_key": ""
-    },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

@@ -25,7 +25,7 @@ ARGS_SPEC = {
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
                          "watersheds_path"],
-        "reference_key": "dem_path"
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

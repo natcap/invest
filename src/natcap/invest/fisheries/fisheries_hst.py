@@ -19,10 +19,6 @@ ARGS_SPEC = {
     "model_name": "Fisheries Habitat Scenario Tool",
     "module": __name__,
     "userguide_html": "fisheries.html",
-    "args_with_spatial_overlap": {
-        "spatial_keys": [],
-        "reference_key": ""
-    },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,

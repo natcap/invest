@@ -25,7 +25,7 @@ ARGS_SPEC = {
             "landcover_raster_path",
             "aggregate_polygon_path",
         ],
-        "reference_key": "landcover_raster_path"
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

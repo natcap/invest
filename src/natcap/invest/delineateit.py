@@ -28,7 +28,7 @@ ARGS_SPEC = {
     "userguide_html": "delineateit.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["dem_path", "outlet_vector_path"],
-        "reference_key": "dem_path"
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

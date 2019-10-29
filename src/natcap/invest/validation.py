@@ -522,20 +522,25 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
     return None
 
 
-def check_spatial_overlap(spatial_filepaths_list, reference_srs_wkt=None):
+def check_spatial_overlap(spatial_filepaths_list,
+                          different_projections_ok=False):
     """Check that the given spatial files spatially overlap.
 
     Parameters:
         spatial_filepaths_list (list): A list of files that can be opened with
             GDAL.  Must be on the local filesystem.
-        reference_srs_wkt=None (string): A WKT string representing the target
-            SRS.  If provided, all provided spatial filepaths will have their
-            bounding boxes warped to this SRS before intersection is verified.
+        different_projections_ok=False (bool): Whether it's OK for the input
+            spatial files to have different projections.  If ``True``, all
+            projections will be converted to WGS84 before overlap is checked.
 
     Returns:
         A string error message if an error is found.  ``None`` otherwise.
 
     """
+    wgs84_srs = osr.SpatialReference()
+    wgs84_srs.ImportFromEPSG(4326)
+    wgs84_wkt = wgs84_srs.ExportToWkt()
+
     bounding_boxes = []
     for filepath in spatial_filepaths_list:
         try:
@@ -544,9 +549,9 @@ def check_spatial_overlap(spatial_filepaths_list, reference_srs_wkt=None):
             info = pygeoprocessing.get_vector_info(filepath)
         bounding_box = info['bounding_box']
 
-        if reference_srs_wkt:
+        if different_projections_ok:
             bounding_box = pygeoprocessing.transform_bounding_box(
-                bounding_box, info['projection'], reference_srs_wkt)
+                bounding_box, info['projection'], wgs84_wkt)
 
         if all([numpy.isinf(coord) for coord in bounding_box]):
             LOGGER.warn(
@@ -746,30 +751,14 @@ def validate(args, spec, spatial_overlap_opts=None):
                 if key in args and args[key] not in ('', None):
                     spatial_files.append(args[key])
 
-            if 'reference_key' not in spatial_overlap_opts:
-                # If we don't have an ARGS_SPEC-defined reference SRS, we have
-                # to assume that all of the spatial keys defined are in the
-                # same projection.
-                reference_srs_wkt = None
-            else:
-                reference_key = spatial_overlap_opts['reference_key']
-                if (reference_key in args and
-                        args[reference_key] not in ('', None)):
-                    reference_path = args[reference_key]
-
-                    try:
-                        reference_srs_wkt = pygeoprocessing.get_raster_info(
-                            reference_path)['projection']
-                    except ValueError:
-                        reference_srs_wkt = pygeoprocessing.get_vector_info(
-                            reference_path)['projection']
-                else:
-                    # Reference key not provided, assume all SRSes are in the
-                    # same projection.
-                    reference_srs_wkt = None
+            try:
+                different_projections_ok = (
+                    spatial_overlap_opts['different_projections_ok'])
+            except KeyError:
+                different_projections_ok = False
 
             spatial_overlap_error = check_spatial_overlap(
-                spatial_files, reference_srs_wkt)
+                spatial_files, different_projections_ok)
             if spatial_overlap_error:
                 validation_warnings.append(
                     (sorted(spatial_keys), spatial_overlap_error))

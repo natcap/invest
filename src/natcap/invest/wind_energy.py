@@ -41,7 +41,7 @@ ARGS_SPEC = {
     "args_with_spatial_overlap": {
         "spatial_keys": ['aoi_vector_path', 'bathymetry_path',
                          'land_polygon_vector_path'],
-        "reference_key": "aoi_vector_path"
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,

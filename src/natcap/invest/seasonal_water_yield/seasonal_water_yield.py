@@ -38,7 +38,7 @@ ARGS_SPEC = {
         "spatial_keys": ["dem_raster_path", "lulc_raster_path",
                          "soil_group_path", "aoi_path", "l_path",
                          "monthly_alpha_path"],
-        "reference_key": "dem_raster_path"
+        "different_projections_ok": True,
     },
     "args": {
         "workspace_dir": validation.WORKSPACE_SPEC,
