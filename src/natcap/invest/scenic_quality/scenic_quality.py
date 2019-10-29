@@ -118,7 +118,7 @@ ARGS_SPEC = {
         "do_valuation": {
             "name": "Valuation",
             "type": "boolean",
-            "required": True,
+            "required": False,
             "about": "Enable or disable valuation."
         },
         "valuation_function": {
