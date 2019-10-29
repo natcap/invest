@@ -39,7 +39,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         # Surprisingly, these differences are not washed out by an
         # aggregation such as zonal statistics.
         numpy.testing.assert_approx_equal(
-            expected_results[key], actual_results[key], significant=5)
+            expected_results[key], actual_results[key], significant=2)
 
 
 class SDRTests(unittest.TestCase):
@@ -212,9 +212,10 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
 
         expected_results = {
+            'usle_tot': 12.69931602478,
             'sed_retent': 392771.84375,
             'sed_export': 0.77038854361,
-            'usle_tot': 12.69931602478,
+            'sed_dep': 8.29587092076114,
         }
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
@@ -226,10 +227,12 @@ class SDRTests(unittest.TestCase):
         Execute SDR with sample data with all rasters having undefined nodata
         values.
         """
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
+        # args_copy = args.copy()
+        # args_copy['workspace_dir'] = 'sdr_test_workspace'
 
         # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')

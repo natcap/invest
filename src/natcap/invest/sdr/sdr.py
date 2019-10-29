@@ -31,7 +31,7 @@ _OUTPUT_BASE_FILES = {
     'sed_export_path': 'sed_export.tif',
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
-    'sediment_deposition_path': 'sediment_deposition.tif',
+    'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',
@@ -467,11 +467,11 @@ def execute(args):
         args=(
             f_reg['flow_direction_path'], f_reg['e_prime_path'],
             f_reg['f_path'], f_reg['sdr_path'],
-            f_reg['sediment_deposition_path']),
+            f_reg['sed_deposition_path']),
         dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
-        target_path_list=[f_reg['sediment_deposition_path']],
+        target_path_list=[f_reg['sed_deposition_path']],
         task_name='sediment deposition')
 
     _ = task_graph.add_task(
@@ -562,7 +562,7 @@ def execute(args):
         args=(
             args['watersheds_path'], f_reg['usle_path'],
             f_reg['sed_export_path'], f_reg['sed_retention_path'],
-            f_reg['watershed_results_sdr_path']),
+            f_reg['sed_deposition_path'], f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
             usle_task, sed_export_task, sed_retention_task],
@@ -826,6 +826,12 @@ def _calculate_w(
     lulc_to_c = dict(
         [(lulc_code, float(table['usle_c'])) for
          (lulc_code, table) in biophysical_table.items()])
+    if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
+        # will get a case where the raster might be masked but nothing to
+        # replace so 0 is used by default. Ensure this exists in lookup.
+        if 0 not in lulc_to_c:
+            lulc_to_c = lulc_to_c.copy()
+            lulc_to_c[0] = 0.0
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
@@ -862,6 +868,11 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
          (lulc_code, table) in biophysical_table.items()])
+    if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
+        # will get a case where the raster might be masked but nothing to
+        # replace so 0 is used by default. Ensure this exists in lookup.
+        if 0 not in lulc_to_cp:
+            lulc_to_cp[0] = 0.0
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA, values_required=True)
@@ -1179,8 +1190,8 @@ def _calculate_sed_retention(
 
 def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
-        watershed_results_sdr_path):
-    """Create shapefile with USLE, sed export, and sed retention fields."""
+        sed_deposition_path, watershed_results_sdr_path):
+    """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
     datasource_copy = driver.CreateCopy(
@@ -1195,6 +1206,8 @@ def _generate_report(
             (sed_export_path, 1), watershed_results_sdr_path),
         'sed_retent': pygeoprocessing.zonal_statistics(
             (sed_retention_path, 1), watershed_results_sdr_path),
+        'sed_dep': pygeoprocessing.zonal_statistics(
+            (sed_deposition_path, 1), watershed_results_sdr_path),
         }
 
     for field_name in field_summaries:
