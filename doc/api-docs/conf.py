@@ -53,7 +53,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'InVEST'
-copyright = u'2015, The Natural Capital Project'
+copyright = u'2019, The Natural Capital Project'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -299,11 +299,15 @@ autodoc_mock_imports = [
     'pylab', 'pyamg', 'osgeo', 'PyQt4', 'shapely', 'shapely.wkb',
     'rtree', 'Pyro4', 'PyQt4.QtGui.QWidget',
     'shapely.geometry', 'osgeo.osr', 'osgeo.gdal', 'gdal',
-    'shapely.wkt', 'shapely.ops', 'shapely.speedups',
+    'shapely.wkt', 'shapely.ops', 'shapely.speedups', 'shapely.errors',
+    'shapely.strtree',
     'shapely.prepared', 'qgis.utils', 'grass.script.setup', 'PyQt4.QtTest',
     'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
     'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
-    'qtawesome', 'sip', 'taskgraph'
+    'pygeoprocessing.testing', 'qtawesome', 'sip', 'taskgraph',
+    'natcap.invest.ndr.ndr_core',
+    'natcap.invest.scenic_quality.viewshed',
+    'natcap.invest.seasonal_water_yield.seasonal_water_yield_core',
 ]
 
 # Mock class with attribute handling.  As suggested by:
@@ -334,7 +338,17 @@ sys.modules['osgeo'].gdal.GetDriverCount.return_value = 1
 sys.modules['osgeo.gdal'].GetDriverCount.return_value = 1
 sys.modules['gdal'].GetDriverCount.return_value = 1
 
-from sphinx import apidoc
+try:
+    from natcap.invest import __version__
+except ImportError:
+    # If the package isn't installed, the __version__ attribute won't be
+    # available.  Setting it anyways from the version from setuptools_scm.
+    sys.modules['natcap.invest'].__version__ = _version
+
+try:
+    from sphinx import apidoc  # sphinx < 1.7
+except ImportError:
+    from sphinx.ext import apidoc  # sphinx >= 1.7
 apidoc.main([
     '--force',
     '-o', os.path.join(DOCS_SOURCE_DIR, 'api'),

@@ -146,7 +146,7 @@ def execute(args):
         # is missing.
         row_header_table_list = []
 
-        lu_parameter_row = lucode_to_parameters.values()[0]
+        lu_parameter_row = list(lucode_to_parameters.values())[0]
         row_header_table_list.append(
             (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_path']))
@@ -580,7 +580,7 @@ def _add_fields_to_shapefile(
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
         target_layer.CreateField(field_def)
-        with open(field_pickle_map[field_name]) as pickle_file:
+        with open(field_pickle_map[field_name], 'rb') as pickle_file:
             field_summaries[field_name] = pickle.load(pickle_file)
 
     for feature in target_layer:
@@ -646,9 +646,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if limit_to is None and (not args['calc_p'] and not args['calc_n']):
         validation_error_list.append(
@@ -829,7 +827,7 @@ def _map_surface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     if subsurface_proportion_type is not None:
         subsurface_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
@@ -879,7 +877,7 @@ def _map_subsurface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     if subsurface_proportion_type is not None:
         subsurface_permeance_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
@@ -928,7 +926,7 @@ def _map_lulc_to_val_mask_stream(
         None.
 
     """
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     values = numpy.array(
         [lucode_to_parameters[x][map_id] for x in keys])
 
@@ -1164,7 +1162,7 @@ def _aggregate_and_pickle_total(
         base_raster_path_band, aggregate_vector_path,
         working_dir=os.path.dirname(target_pickle_path))
 
-    with open(target_pickle_path, 'w') as target_pickle_file:
+    with open(target_pickle_path, 'wb') as target_pickle_file:
         pickle.dump(result, target_pickle_file)
 
 

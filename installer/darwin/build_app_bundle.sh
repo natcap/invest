@@ -40,6 +40,6 @@ sed -i '' "s|++VERSION++|${1}|g" "$new_plist_file"
 
 # This is the command that will launch the application.
 echo '#!/bin/bash' > $new_command_file
-echo '`dirname $0`/invest_dist/invest launcher' >> $new_command_file
+echo '`dirname $0`/invest_dist/invest launch' >> $new_command_file
 chmod a+x $new_command_file
 

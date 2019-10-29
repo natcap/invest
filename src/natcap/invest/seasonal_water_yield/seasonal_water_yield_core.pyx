@@ -427,7 +427,7 @@ cpdef calculate_local_recharge(
 
     cdef numpy.ndarray[numpy.npy_float32, ndim=1] alpha_month_array = (
         numpy.array(
-            [x[1] for x in sorted(alpha_month_map.iteritems())],
+            [x[1] for x in sorted(alpha_month_map.items())],
             dtype=numpy.float32))
 
     # used for time-delayed logging

@@ -328,12 +328,12 @@ def set_cycle_func(vars_dict, rec_func):
             N_next[0] = N_next_0_xsa
 
         for i in range(1, num_classes):
-            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(
-                x), N_prev[i-1]))[:, 0, :] * S[i-1]
+            N_next[i] = np.array(
+                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * S[i-1]
 
         if len(N_prev) > 1:
-            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(
-                x), N_prev[-1]))[:, 0, :] * S[-1]
+            N_next[-1] = N_next[-1] + np.array(
+                [Migration[-1].dot(x) for x in N_prev[-1]])[:, 0, :] * S[-1]
 
         return N_next, spawners
 
@@ -360,13 +360,11 @@ def set_cycle_func(vars_dict, rec_func):
             N_next[0] = N_next_0_xsa
 
         N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0][0])) * S[0]
-
-
         for i in range(1, num_classes):
-            G_comp = np.array(map(lambda x: Migration[i-1].dot(
-                x), N_prev[i-1]))[:, 0, :] * G[i-1]
-            P_comp = np.array(map(lambda x: Migration[i].dot(
-                x), N_prev[i]))[:, 0, :] * P[i]
+            G_comp = np.array(
+                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * G[i-1]
+            P_comp = np.array(
+                [Migration[i].dot(x) for x in N_prev[i]])[:, 0, :] * P[i]
             N_next[i] = G_comp + P_comp
 
         return N_next, spawners
@@ -427,7 +425,7 @@ def set_harvest_func(vars_dict):
         """
         N_xsa = N_asx.swapaxes(0, 2)
         H_xsa = N_xsa * I * Weight
-        H_x = np.array(map(lambda x: x.sum(), H_xsa))
+        H_x = np.array([x.sum() for x in H_xsa])
         V_x = H_x * (frac_post_process * unit_price)
         return H_x, V_x
 
@@ -473,7 +471,7 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
 
     # Run Cycles
     num_cycles = len(N_tasx)
-    for i in xrange(0, num_cycles):
+    for i in range(0, num_cycles):
         # Run Harvest and Check Equilibrium for Current Population
         # Consider Wrapping this into a function
         if harvest_func:

@@ -202,7 +202,7 @@ def execute(args):
         crop_climate_percentile_table = utils.build_lookup_from_csv(
             climate_percentile_yield_table_path, 'climate_bin', to_lower=True)
         yield_percentile_headers = [
-            x for x in crop_climate_percentile_table.itervalues().next()
+            x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
 
         for yield_percentile_id in yield_percentile_headers:
@@ -504,7 +504,7 @@ def tabulate_results(
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
-    with open(target_table_path, 'wb') as result_table:
+    with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
             ','.join(production_percentile_headers) + ',' + ','.join(
@@ -612,7 +612,7 @@ def aggregate_to_polygons(
     pygeoprocessing.reproject_vector(
         base_aggregate_vector_path,
         landcover_raster_projection,
-        target_aggregate_vector_path, layer_index=0,
+        target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
 
     # loop over every crop and query with pgp function
@@ -668,7 +668,7 @@ def aggregate_to_polygons(
                         nutrient_table[crop_name][nutrient_id])
 
     # report everything to a table
-    with open(target_aggregate_table_path, 'wb') as aggregate_table:
+    with open(target_aggregate_table_path, 'w') as aggregate_table:
         # write header
         aggregate_table.write('FID,')
         aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
@@ -677,11 +677,11 @@ def aggregate_to_polygons(
                 '%s_%s' % (nutrient_id, model_type)
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
                 for model_type in sorted(
-                    total_nutrient_table.itervalues().next())]))
+                    list(total_nutrient_table.values())[0])]))
         aggregate_table.write('\n')
 
         # iterate by polygon index
-        for id_index in total_yield_lookup.itervalues().next():
+        for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
                 str(total_yield_lookup[yield_header][id_index]['sum'])
@@ -689,7 +689,7 @@ def aggregate_to_polygons(
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for model_type in sorted(
-                        total_nutrient_table.itervalues().next()):
+                        list(total_nutrient_table.values())[0]):
                     aggregate_table.write(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
@@ -740,9 +740,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

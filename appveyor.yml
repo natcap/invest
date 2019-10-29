@@ -5,39 +5,53 @@ skip_non_tags: false  # we want to build untagged revisions.
 version: "{branch}.{build}"  # Makes build version information more readable on appveyor
 
 environment:
+  # These variables allow us to install packages from the natcap PyPI bucket.
+  PIP_INSTALL: "pip install"
+  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+  PIP_PREFER_BINARY: 1
+
   matrix:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/#python
 
-    - PYTHON: "C:\\Python27"
-      TESTTARGET: "test"
+    - PYTHON: "C:\\Python37"
+      TARGET: "test"
 
-    - PYTHON: "C:\\Python27"
-      TESTTARGET: "test_ui"
+    - PYTHON: "C:\\Python37-x64"
+      TARGET: "test"
 
+    - PYTHON: "C:\\Python37-x64"
+      TARGET: "validate_sampledata"
 
+    - PYTHON: "C:\\Python37"
+      TARGET: "appveyor_binaries"
 
 install:
-    # We need wheel installed to build wheels
-    - "%PYTHON%\\python.exe -m pip install wheel"
-    - "%PYTHON%\\python.exe -m pip install pipwin"
-    - "%PYTHON%\\python.exe -m pipwin install gdal"
-    - "%PYTHON%\\python.exe -m pipwin install shapely"
-    - "%PYTHON%\\python.exe -m pipwin install rtree"
-    - "%PYTHON%\\python.exe -m pipwin install pyqt4"
-    - "%PYTHON%\\python.exe -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
-    - "%PYTHON%\\python.exe setup.py sdist bdist_wheel"
+    - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
+    - "python --version"
+    # We need wheel installed to build wheels and numpy needs to be installed before pygeoprocessing.
+    - "python -m %PIP_INSTALL% wheel numpy"
+    - "python -m %PIP_INSTALL% -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt"
+    - "python setup.py sdist bdist_wheel"
 
     # Need to install with -I because pip thinks that cwd is a valid installation directory.
     # It's not (in our case).  Adding --no-deps because that's what all of the above
     # with pipwin and pip is for.
-    - "%PYTHON%\\python.exe -m pip install -I --no-deps natcap.invest --find-links dist"
+    - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
+
+    # If we're building appveyor binaries, run the extra install script.
+    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-binary-install.ps1)
 
 build: off
 
 test_script:
-    - "make %TESTTARGET%"
+    - if "%TARGET%"=="appveyor_binaries" (make -j3 sampledata windows_installer) else (make %TARGET%)
+
+    # If everything passed (and we're in a binary build), sign the installer
+    # and upload to GCS
+    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-sign-and-upload.ps1)
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory

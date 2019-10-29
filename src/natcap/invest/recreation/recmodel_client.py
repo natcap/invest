@@ -2,7 +2,6 @@
 from __future__ import absolute_import
 
 import json
-import uuid
 import os
 import zipfile
 import time
@@ -12,6 +11,7 @@ import pickle
 import urllib
 import tempfile
 import shutil
+import sys
 
 import rtree
 import Pyro4
@@ -37,8 +37,14 @@ from .. import utils
 from .. import validation
 
 LOGGER = logging.getLogger('natcap.invest.recmodel_client')
+
 # This URL is a NatCap global constant
-RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
+if sys.version_info >= (3,):
+    # This avoids "ValueError: bad marshal data (unknown type code)"
+    # when a Python 2 Pyro tries to shake hands with Python 3 Pyro
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
+else:
+    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
@@ -165,8 +171,13 @@ def execute(args):
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        server_url = urllib.urlopen(RECREATION_SERVER_URL).read().rstrip()
-
+        try:
+            server_url = urllib.urlopen(
+                RECREATION_SERVER_URL).read().rstrip()
+        except AttributeError:
+            # Python 3 packaging:
+            server_url = urllib.request.urlopen(
+                RECREATION_SERVER_URL).read().decode('utf-8').rstrip()
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
@@ -216,6 +227,7 @@ def execute(args):
               file_registry['compressed_aoi_path'],
               args['start_year'], args['end_year'],
               os.path.basename(file_registry['pud_results_path']),
+              os.path.basename(file_registry['monthly_table_path']),
               file_registry['compressed_pud_path'],
               output_dir, server_url, file_registry['server_version']),
         target_path_list=[file_registry['compressed_aoi_path'],
@@ -297,8 +309,8 @@ def _copy_aoi_no_grid(source_aoi_path, dest_aoi_path):
 
 def _retrieve_photo_user_days(
         local_aoi_path, compressed_aoi_path, start_year, end_year,
-        pud_results_filename, compressed_pud_path, output_dir, server_url,
-        server_version_pickle):
+        pud_results_filename, monthly_table_filename, compressed_pud_path,
+        output_dir, server_url, server_version_pickle):
     """Calculate photo-user-days (PUD) on the server and send back results.
 
     All of the client-server communication happens in this scope. The local AOI
@@ -311,6 +323,7 @@ def _retrieve_photo_user_days(
         start_year (int/string): lower limit of date-range for PUD queries
         end_year (int/string): upper limit of date-range for PUD queries
         pud_results_filename (string): filename for a shapefile to hold results
+        monthly_table_filename (string): filename for monthly PUD results CSV
         compressed_pud_path (string): path to zip file storing compressed PUD
             results, including 'pud_results.shp' and 'monthly_table.csv'.
         output_dir (string): path to output workspace where results are
@@ -382,6 +395,10 @@ def _retrieve_photo_user_days(
     for filename in os.listdir(temporary_output_dir):
         shutil.copy(os.path.join(temporary_output_dir, filename), output_dir)
     shutil.rmtree(temporary_output_dir)
+    # the monthly table is returned from the server without a results_suffix.
+    shutil.move(
+        os.path.join(output_dir, 'monthly_table.csv'),
+        os.path.join(output_dir, monthly_table_filename))
 
     LOGGER.info('connection release')
     recmodel_server._pyroRelease()
@@ -481,8 +498,8 @@ def _grid_vector(vector_path, grid_type, cell_size, out_grid_vector_path):
     else:
         raise ValueError('Unknown polygon type: %s' % grid_type)
 
-    for row_index in xrange(n_rows):
-        for col_index in xrange(n_cols):
+    for row_index in range(n_rows):
+        for col_index in range(n_cols):
             polygon_points = _generate_polygon(col_index, row_index)
             ring = ogr.Geometry(ogr.wkbLinearRing)
             for xoff, yoff in polygon_points:
@@ -677,7 +694,7 @@ def _json_to_shp_table(
 
         with open(json_filename, 'r') as file:
             predictor_results = json.load(file)
-        for feature_id, value in predictor_results.iteritems():
+        for feature_id, value in predictor_results.items():
             feature = layer.GetFeature(int(feature_id))
             feature.SetField(str(predictor_id), value)
             layer.SetFeature(feature)
@@ -721,7 +738,7 @@ def _raster_sum_mean(
     # remove results for a feature when the pixel count is 0.
     # we don't have non-nodata predictor values for those features.
     aggregate_results = {
-        str(fid): stats for fid, stats in aggregate_results.iteritems()
+        str(fid): stats for fid, stats in aggregate_results.items()
         if stats['count'] != 0}
     if not aggregate_results:
         LOGGER.warn('raster predictor does not intersect with vector AOI')
@@ -786,7 +803,7 @@ def _polygon_area(
     polygon_coverage_lookup = {}  # map FID to point count
 
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         if time.time() - start_time > 5.0:
             LOGGER.info(
                 "%s polygon area: %.2f%% complete",
@@ -846,7 +863,7 @@ def _line_intersect_length(
 
     feature_count = None
     for feature_count, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s line intersect length: %.2f%% complete",
@@ -892,7 +909,7 @@ def _point_nearest_distance(
 
     index = None
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, 5.0, lambda: LOGGER.info(
                 "%s point distance: %.2f%% complete",
@@ -934,7 +951,7 @@ def _point_count(
 
     index = None
     for index, (feature_id, geometry) in enumerate(
-            response_polygons_lookup.iteritems()):
+            response_polygons_lookup.items()):
         last_time = delay_op(
             last_time, LOGGER_TIME_DELAY, lambda: LOGGER.info(
                 "%s point count: %.2f%% complete",
@@ -1137,7 +1154,7 @@ def _build_regression(
     n_features = data_matrix.shape[0]
     y_factors = data_matrix[:, 0]  # useful to have this as a 1-D array
     coefficients, _, _, _ = numpy.linalg.lstsq(
-        data_matrix[:, 1:], y_factors) 
+        data_matrix[:, 1:], y_factors)
 
     ssres = numpy.sum((
         y_factors -
@@ -1216,11 +1233,11 @@ def _calculate_scenario(
 
     y_intercept = predictor_estimates.pop("(Intercept)")
 
-    for feature_id in xrange(scenario_coefficient_layer.GetFeatureCount()):
+    for feature_id in range(scenario_coefficient_layer.GetFeatureCount()):
         feature = scenario_coefficient_layer.GetFeature(feature_id)
         response_value = 0.0
         try:
-            for predictor_id, coefficient in predictor_estimates.iteritems():
+            for predictor_id, coefficient in predictor_estimates.items():
                 response_value += (
                     coefficient *
                     feature.GetField(str(predictor_id)))
@@ -1446,10 +1463,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        print missing_key_list
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

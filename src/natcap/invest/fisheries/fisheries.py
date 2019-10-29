@@ -299,6 +299,10 @@ def validate(args, limit_to=None):
     if 'migr_cont' in args and bool(args['migr_cont']):
         required_key_list += [
             ('migration_dir', True),
+        ]
+
+    if 'recruitment_type' in args and args['recruitment_type'] == 'Fixed':
+        required_key_list += [
             ('total_recur_recruits', True),
         ]
 
@@ -371,7 +375,7 @@ def validate(args, limit_to=None):
                                  ('total_recur_recruits', None),
                                  ('unit_price', None),
                                  ('frac_post_process', 1.0)):
-        if limit_to in (float_key, None):
+        if limit_to in (float_key, None) and (float_key, True) in required_key_list:
             try:
                 if float(args[float_key]) < 0:
                     warnings.append(([float_key],
@@ -382,7 +386,7 @@ def validate(args, limit_to=None):
                     warnings.append(
                         ([float_key],
                          'Value cannot be greater than %s' % max_value))
-            except ValueError, TypeError:
+            except (ValueError, TypeError):
                 warnings.append(([float_key],
                                  'Value must be a number.'))
             except KeyError:

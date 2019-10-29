@@ -195,7 +195,7 @@ def execute(args):
     biophysical_table = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=False)
     biophysical_keys = [
-        x.lower() for x in biophysical_table.itervalues().next().keys()]
+        x.lower() for x in list(biophysical_table.values())[0].keys()]
     pool_list = [('c_above', True)]
     if args['pools_to_calculate'] == 'all':
         pool_list.extend([
@@ -483,7 +483,7 @@ def _map_distance_from_tropical_forest_edge(
     biophysical_table = utils.build_lookup_from_csv(
         biophysical_table_path, 'lucode', to_lower=False)
     forest_codes = [
-        lucode for (lucode, ludata) in biophysical_table.iteritems()
+        lucode for (lucode, ludata) in biophysical_table.items()
         if int(ludata['is_tropical_forest']) == 1]
 
     # Make a raster where 1 is non-forest landcover types and 0 is forest
@@ -680,9 +680,9 @@ def _calculate_tropical_forest_edge_carbon_map(
 
         # query nearest points for every point in the grid
         # n_jobs=-1 means use all available CPUs
-        coord_points = zip(
+        coord_points = list(zip(
             row_coords[valid_edge_distance_mask].ravel(),
-            col_coords[valid_edge_distance_mask].ravel())
+            col_coords[valid_edge_distance_mask].ravel()))
         # note, the 'n_jobs' parameter was introduced in SciPy 0.16.0
         distances, indexes = kd_tree.query(
             coord_points, k=n_nearest_model_points,
@@ -809,9 +809,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing" +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

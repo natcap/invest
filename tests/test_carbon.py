@@ -77,7 +77,7 @@ def make_pools_csv(pools_csv_path):
         None.
 
     """
-    with open(pools_csv_path, 'wb') as open_table:
+    with open(pools_csv_path, 'w') as open_table:
         open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
         open_table.write('15,10,60,1,1,"lulc code 1"\n')
         open_table.write('5,3,20,0,2,"lulc code 2"\n')

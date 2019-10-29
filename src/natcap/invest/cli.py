@@ -10,153 +10,165 @@ import sys
 import collections
 import pprint
 import multiprocessing
+import json
 
 try:
+    from . import __version__
     from . import utils
-except ValueError:
-    # When we're in a pyinstaller build, this isn't a module.
+    from . import datastack
+except (ValueError, ImportError):
+    # When we're in a PyInstaller build, this isn't a module.
+    from natcap.invest import __version__
     from natcap.invest import utils
+    from natcap.invest import datastack
 
 
 DEFAULT_EXIT_CODE = 1
 LOGGER = logging.getLogger(__name__)
-_UIMETA = collections.namedtuple('UIMeta', 'pyname gui aliases')
+_UIMETA = collections.namedtuple('UIMeta', 'humanname pyname gui aliases')
 
 _MODEL_UIS = {
     'carbon': _UIMETA(
+        humanname="Carbon Storage and Sequestration",
         pyname='natcap.invest.carbon',
         gui='carbon.Carbon',
         aliases=()),
     'coastal_blue_carbon': _UIMETA(
+        humanname="Coastal Blue Carbon",
         pyname='natcap.invest.coastal_blue_carbon.coastal_blue_carbon',
         gui='cbc.CoastalBlueCarbon',
         aliases=('cbc',)),
     'coastal_blue_carbon_preprocessor': _UIMETA(
+        humanname="Coastal Blue Carbon: Preprocessor",
         pyname='natcap.invest.coastal_blue_carbon.preprocessor',
         gui='cbc.CoastalBlueCarbonPreprocessor',
         aliases=('cbc_pre',)),
     'coastal_vulnerability': _UIMETA(
+        humanname="Coastal Vulnerability",
         pyname='natcap.invest.coastal_vulnerability',
         gui='coastal_vulnerability.CoastalVulnerability',
         aliases=('cv',)),
     'crop_production_percentile': _UIMETA(
+        humanname="Crop Production: Percentile Model",
         pyname='natcap.invest.crop_production_percentile',
         gui='crop_production.CropProductionPercentile',
         aliases=('cpp',)),
     'crop_production_regression': _UIMETA(
+        humanname="Crop Production: Regression Model",
         pyname='natcap.invest.crop_production_regression',
         gui='crop_production.CropProductionRegression',
         aliases=('cpr',)),
     'delineateit': _UIMETA(
-        pyname='natcap.invest.routing.delineateit',
-        gui='routing.Delineateit',
+        humanname="DelineateIt",
+        pyname='natcap.invest.delineateit',
+        gui='delineateit.Delineateit',
         aliases=()),
     'finfish_aquaculture': _UIMETA(
+        humanname="Marine Finfish Aquaculture Production",
         pyname='natcap.invest.finfish_aquaculture.finfish_aquaculture',
         gui='finfish.FinfishAquaculture',
         aliases=()),
     'fisheries': _UIMETA(
+        humanname="Fisheries",
         pyname='natcap.invest.fisheries.fisheries',
         gui='fisheries.Fisheries',
         aliases=()),
     'fisheries_hst': _UIMETA(
+        humanname="Fisheries: Habitat Scenario Tool",
         pyname='natcap.invest.fisheries.fisheries_hst',
         gui='fisheries.FisheriesHST',
         aliases=()),
     'forest_carbon_edge_effect': _UIMETA(
+        humanname="Forest Carbon Edge Effect",
         pyname='natcap.invest.forest_carbon_edge_effect',
         gui='forest_carbon.ForestCarbonEdgeEffect',
         aliases=('fc',)),
     'globio': _UIMETA(
+        humanname="GLOBIO",
         pyname='natcap.invest.globio',
         gui='globio.GLOBIO',
         aliases=()),
     'habitat_quality': _UIMETA(
+        humanname="Habitat Quality",
         pyname='natcap.invest.habitat_quality',
         gui='habitat_quality.HabitatQuality',
         aliases=('hq',)),
     'habitat_risk_assessment': _UIMETA(
+        humanname="Habitat Risk Assessment",
         pyname='natcap.invest.hra',
         gui='hra.HabitatRiskAssessment',
         aliases=('hra',)),
     'hydropower_water_yield': _UIMETA(
+        humanname="Annual Water Yield",
         pyname='natcap.invest.hydropower.hydropower_water_yield',
         gui='hydropower.HydropowerWaterYield',
         aliases=('hwy',)),
     'ndr': _UIMETA(
+        humanname="Nutrient Delivery Ratio",
         pyname='natcap.invest.ndr.ndr',
         gui='ndr.Nutrient',
         aliases=()),
     'pollination': _UIMETA(
+        humanname="Pollinator Abundance: Crop Pollination",
         pyname='natcap.invest.pollination',
         gui='pollination.Pollination',
         aliases=()),
     'recreation': _UIMETA(
+        humanname="Visitation: Recreation and Tourism",
         pyname='natcap.invest.recreation.recmodel_client',
         gui='recreation.Recreation',
         aliases=()),
     'routedem': _UIMETA(
+        humanname="RouteDEM",
         pyname='natcap.invest.routedem',
         gui='routedem.RouteDEM',
         aliases=()),
     'scenario_generator_proximity': _UIMETA(
+        humanname="Scenario Generator: Proximity Based",
         pyname='natcap.invest.scenario_gen_proximity',
         gui='scenario_gen.ScenarioGenProximity',
         aliases=('sgp',)),
     'scenic_quality': _UIMETA(
+        humanname="Unobstructed Views: Scenic Quality Provision",
         pyname='natcap.invest.scenic_quality.scenic_quality',
         gui='scenic_quality.ScenicQuality',
         aliases=('sq',)),
     'sdr': _UIMETA(
+        humanname="Sediment Delivery Ratio",
         pyname='natcap.invest.sdr',
         gui='sdr.SDR',
         aliases=()),
     'seasonal_water_yield': _UIMETA(
+        humanname="Seasonal Water Yield",
         pyname='natcap.invest.seasonal_water_yield.seasonal_water_yield',
         gui='seasonal_water_yield.SeasonalWaterYield',
         aliases=('swy',)),
     'wind_energy': _UIMETA(
+        humanname="Offshore Wind Energy Production",
         pyname='natcap.invest.wind_energy',
         gui='wind_energy.WindEnergy',
         aliases=()),
     'wave_energy': _UIMETA(
+        humanname="Wave Energy Production",
         pyname='natcap.invest.wave_energy',
         gui='wave_energy.WaveEnergy',
         aliases=()),
+    'urban_flood_risk_mitigation': _UIMETA(
+        humanname="Urban Flood Risk Mitigation",
+        pyname='natcap.invest.urban_flood_risk_mitigation',
+        gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
+        aliases=('ufrm',)),
 }
 
-# Build up an index mapping aliase to modelname.
+# Build up an index mapping aliases to modelname.
 # ``modelname`` is the key to the _MODEL_UIS dict, above.
 _MODEL_ALIASES = {}
-for _modelname, _meta in _MODEL_UIS.iteritems():
+for _modelname, _meta in _MODEL_UIS.items():
     for _alias in _meta.aliases:
         assert _alias not in _MODEL_ALIASES, (
             'Alias %s already defined for model %s') % (
                 _alias, _MODEL_ALIASES[_alias])
         _MODEL_ALIASES[_alias] = _modelname
-
-
-# metadata for models: full modelname, first released, full citation,
-# local documentation name.
-
-# Goal: allow InVEST models to be run at the command-line, without a UI.
-#   problem: how to identify which models have Qt UIs available?
-#       1.  If we can't import the ui infrastructure, we don't have any qt uis.
-#       2.  We could iterate through all the model UI files and Identify the
-#           model from its name and attributes.
-#       3.  We could access a pre-processed list of models available, perhaps
-#           written to a file during the setuptools build step.
-#   problem: how to identify which models are available to the API?
-#       1.  Recursively import natcap.invest and look for modules with execute
-#           functions available.
-#       2.  Import all of the execute functions to a known place (an __init__
-#           file?).
-#   problem: how to provide parameters?
-#       1.  If execute is parseable, just extract parameters from the docstring
-#           and allow each param to be provided as a CLI flag.
-#       2.  Allow parameters to be passed as a JSON file
-#       3.  Allow model to run with a datastack file.
-#       PS: Optionally, don't validate inputs, but do validate by default.
 
 
 def build_model_list_table():
@@ -171,9 +183,11 @@ def build_model_list_table():
     """
     model_names = sorted(_MODEL_UIS.keys())
     max_model_name_length = max(len(name) for name in model_names)
+
+    # Adding 3 to max alias name length for the parentheses plus some padding.
     max_alias_name_length = max(len(', '.join(meta.aliases))
-                                for meta in _MODEL_UIS.values())
-    template_string = '    {modelname} {aliases}   {usage}'
+                                for meta in _MODEL_UIS.values()) + 3
+    template_string = '    {modelname} {aliases} {humanname} {usage}'
     strings = ['Available models:']
     for model_name in sorted(_MODEL_UIS.keys()):
         usage_string = '(No GUI available)'
@@ -187,25 +201,34 @@ def build_model_list_table():
         strings.append(template_string.format(
             modelname=model_name.ljust(max_model_name_length),
             aliases=alias_string.ljust(max_alias_name_length),
+            humanname=_MODEL_UIS[model_name].humanname,
             usage=usage_string))
     return '\n'.join(strings) + '\n'
 
 
-class ListModelsAction(argparse.Action):
-    """An argparse action to list the available models."""
-    def __call__(self, parser, namespace, values, option_string=None):
-        """Print the available models and quit the argparse parser.
+def build_model_list_json():
+    """Build a json object of relevant information for the CLI.
 
-        See https://docs.python.org/2.7/library/argparse.html#action-classes
-        for the full documentation for argparse classes.
+    The json object returned uses the human-readable model names for keys
+    and the values are another dict containing the internal python name
+    of the model and the aliases recognized by the CLI.
 
-        Overridden from argparse.Action.__call__"""
-        setattr(namespace, self.dest, self.const)
-        parser.exit(message=build_model_list_table())
+    Returns:
+        A string representation of the JSON object.
+
+    """
+    json_object = {}
+    for internal_model_name, model_data in _MODEL_UIS.items():
+        json_object[model_data.humanname] = {
+            'internal_name': internal_model_name,
+            'aliases': model_data.aliases
+        }
+
+    return json.dumps(json_object)
 
 
 class SelectModelAction(argparse.Action):
-    """Given a possily-ambiguous model string, identify the model to run.
+    """Given a possibly-ambiguous model string, identify the model to run.
 
     This is a subclass of ``argparse.Action`` and is executed when the argparse
     interface detects that the user has attempted to select a model by name.
@@ -232,28 +255,27 @@ class SelectModelAction(argparse.Action):
         method.
 
         Overridden from argparse.Action.__call__"""
-        if values in ['', None]:
-            parser.print_help()
-            parser.exit(1, message=build_model_list_table())
+        known_models = sorted(list(_MODEL_UIS.keys()))
+
+        matching_models = [model for model in known_models if
+                           model.startswith(values)]
+
+        exact_matches = [model for model in known_models if
+                         model == values]
+
+        if len(matching_models) == 1:  # match an identifying substring
+            modelname = matching_models[0]
+        elif len(exact_matches) == 1:  # match an exact modelname
+            modelname = exact_matches[0]
+        elif values in _MODEL_ALIASES:  # match an alias
+            modelname = _MODEL_ALIASES[values]
+        elif len(matching_models) == 0:
+            parser.exit(status=1, message=(
+                "Error: '%s' not a known model" % values))
         else:
-            known_models = sorted(_MODEL_UIS.keys() + ['launcher'])
-
-            matching_models = [model for model in known_models if
-                               model.startswith(values)]
-
-            exact_matches = [model for model in known_models if
-                             model == values]
-
-            if len(matching_models) == 1:  # match an identifying substring
-                modelname = matching_models[0]
-            elif len(exact_matches) == 1:  # match an exact modelname
-                modelname = exact_matches[0]
-            elif values in _MODEL_ALIASES:  # match an alias
-                modelname = _MODEL_ALIASES[values]
-            elif len(matching_models) == 0:
-                parser.exit("Error: '%s' not a known model" % values)
-            else:
-                parser.exit((
+            parser.exit(
+                status=1,
+                message=(
                     "Model string '{model}' is ambiguous:\n"
                     "    {matching_models}").format(
                         model=values,
@@ -261,7 +283,7 @@ class SelectModelAction(argparse.Action):
         setattr(namespace, self.dest, modelname)
 
 
-def main():
+def main(user_args=None):
     """CLI entry point for launching InVEST runs.
 
     This command-line interface supports two methods of launching InVEST models
@@ -271,11 +293,12 @@ def main():
         * in headless mode, without its GUI.
 
     Running in headless mode allows us to bypass all GUI functionality,
-    so models may be run in this way wthout having GUI packages
+    so models may be run in this way without having GUI packages
     installed.
     """
 
-    parser = argparse.ArgumentParser(description=(
+    parser = argparse.ArgumentParser(
+        description=(
         'Integrated Valuation of Ecosystem Services and Tradeoffs.  '
         'InVEST (Integrated Valuation of Ecosystem Services and Tradeoffs) is '
         'a family of tools for quantifying the values of natural capital in '
@@ -290,59 +313,72 @@ def main():
         'open-source python environment.'),
         prog='invest'
     )
-    list_group = parser.add_mutually_exclusive_group()
-    verbosity_group = parser.add_mutually_exclusive_group()
-    import natcap.invest
-
     parser.add_argument('--version', action='version',
-                        version=natcap.invest.__version__)
-    verbosity_group.add_argument('-v', '--verbose', dest='verbosity', default=0,
-                                 action='count', help=(
-                                     'Increase verbosity. Affects how much is '
-                                     'printed to the console and (if running '
-                                     'in headless mode) how much is written '
-                                     'to the logfile.'))
-    verbosity_group.add_argument('--debug', dest='log_level',
-                                 default=logging.CRITICAL,
-                                 action='store_const', const=logging.DEBUG,
-                                 help='Enable debug logging. Alias for -vvvvv')
-    list_group.add_argument('--list', action=ListModelsAction,
-                            nargs=0, const=True,
-                            help='List available models')
-    parser.add_argument('-l', '--headless', action='store_true',
-                        dest='headless',
-                        help=('Attempt to run InVEST without its GUI.'))
-    parser.add_argument('-d', '--datastack', default=None, nargs='?',
-                        help='Run the specified model with this datastack')
-    parser.add_argument('-w', '--workspace', default=None, nargs='?',
-                        help='The workspace in which outputs will be saved')
+                        version=__version__)
+    verbosity_group = parser.add_mutually_exclusive_group()
+    verbosity_group.add_argument(
+        '-v', '--verbose', dest='verbosity', default=0, action='count',
+        help=('Increase verbosity.  Affects how much logging is printed to '
+              'the console and (if running in headless mode) how much is '
+              'written to the logfile.'))
+    verbosity_group.add_argument(
+        '--debug', dest='log_level', default=logging.CRITICAL,
+        action='store_const', const=logging.DEBUG,
+        help='Enable debug logging. Alias for -vvvvv')
 
-    gui_options_group = parser.add_argument_group(
-        'gui options', 'These options are ignored if running in headless mode')
-    gui_options_group.add_argument('-q', '--quickrun', action='store_true',
-                                   help=('Run the target model without '
-                                         'validating and quit with a nonzero '
-                                         'exit status if an exception is '
-                                         'encountered'))
+    subparsers = parser.add_subparsers(dest='subcommand')
 
-    cli_options_group = parser.add_argument_group('headless options')
-    cli_options_group.add_argument('-y', '--overwrite', action='store_true',
-                                   default=False,
-                                   help=('Overwrite the workspace without '
-                                         'prompting for confirmation'))
-    cli_options_group.add_argument('-n', '--no-validate', action='store_true',
-                                   dest='validate', default=True,
-                                   help=('Do not validate inputs before '
-                                         'running the model.'))
+    listmodels_subparser = subparsers.add_parser(
+        'list', help='List the available InVEST models')
+    listmodels_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
 
-    list_group.add_argument('model', action=SelectModelAction, nargs='?',
-                            help=('The model/tool to run. Use --list to show '
-                                  'available models/tools. Identifiable model '
-                                  'prefixes may also be used. Alternatively,'
-                                  'specify "launcher" to reveal a model '
-                                  'launcher window.'))
+    launcher_subparser = subparsers.add_parser(
+        'launch', help='Start the InVEST launcher window')
 
-    args = parser.parse_args()
+    run_subparser = subparsers.add_parser(
+        'run', help='Run an InVEST model')
+    run_subparser.add_argument(
+        '-l', '--headless', action='store_true',
+        help=('Run an InVEST model without its GUI. '
+              'Requires a datastack and a workspace.'))
+    run_subparser.add_argument(
+        '-d', '--datastack', default=None, nargs='?',
+        help=('Run the specified model with this JSON datastack. '
+              'Required if using --headless'))
+    run_subparser.add_argument(
+        '-w', '--workspace', default=None, nargs='?',
+        help=('The workspace in which outputs will be saved. '
+              'Required if using --headless'))
+    run_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model to run.  Use "invest list" to list the available '
+              'models.'))
+
+    quickrun_subparser = subparsers.add_parser(
+        'quickrun', help=(
+            'Run through a model with a specific datastack, exiting '
+            'immediately upon completion. This subcommand is only intended '
+            'to be used by automated testing scripts.'))
+    quickrun_subparser.add_argument(
+        'model', action=SelectModelAction,  # Assert valid model name
+        help=('The model to run.  Use "invest list" to list the available '
+              'models.'))
+    quickrun_subparser.add_argument(
+        'datastack', help=('Run the model with this JSON datastack.'))
+    quickrun_subparser.add_argument(
+        '-w', '--workspace', default=None, nargs='?',
+        help=('The workspace in which outputs will be saved.'))
+
+    validate_subparser = subparsers.add_parser(
+        'validate', help=(
+            'Validate the parameters of a datastack'))
+    validate_subparser.add_argument(
+        '--json', action='store_true', help='Write output as a JSON object')
+    validate_subparser.add_argument(
+        'datastack', help=('Run the model with this JSON datastack.'))
+
+    args = parser.parse_args(user_args)
 
     root_logger = logging.getLogger()
     handler = logging.StreamHandler(sys.stdout)
@@ -367,112 +403,105 @@ def main():
     # the setting of the parent logger.
     logging.getLogger('natcap').setLevel(logging.DEBUG)
 
-    # Now that we've set up logging based on args, we can start logging.
-    LOGGER.debug(args)
-
-    try:
-        # Importing model UI files here will usually import qtpy before we can
-        # set the sip API in natcap.invest.ui.inputs.
-        # Set it here, before we can do the actual importing.
-        import sip
-        # 2 indicates SIP/Qt API version 2
-        sip.setapi('QString', 2)
-
-        from natcap.invest.ui import inputs
-    except ImportError as error:
-        # Can't import UI, exit with nonzero exit code
-        LOGGER.exception('Unable to import the UI')
-        parser.error(('Unable to import the UI (failed with "%s")\n'
-                      'Is the UI installed?\n'
-                      '    pip install natcap.invest[ui]') % error)
-
-    if args.model == 'launcher':
-        from natcap.invest.ui import launcher
-        launcher.main()
-
-    elif args.headless:
-        from natcap.invest import datastack
-        target_mod = _MODEL_UIS[args.model].pyname
-        model_module = importlib.import_module(name=target_mod)
-        LOGGER.info('imported target %s from %s',
-                    model_module.__name__, model_module)
-
-        paramset = datastack.extract_parameter_set(args.datastack)
-
-        # prefer CLI option for workspace dir, but use paramset workspace if
-        # the CLI options do not define a workspace.
-        if args.workspace:
-            workspace = os.path.abspath(args.workspace)
-            paramset.args['workspace_dir'] = workspace
+    if args.subcommand == 'list':
+        if args.json:
+            message = build_model_list_json()
         else:
-            if 'workspace_dir' in paramset.args:
-                workspace = paramset.args['workspace_dir']
-            else:
-                parser.exit(DEFAULT_EXIT_CODE, (
-                    'Workspace not defined. \n'
-                    'Use --workspace to specify or add a '
-                    '"workspace_dir" parameter to your datastack.'))
+            message = build_model_list_table()
 
-        with utils.prepare_workspace(workspace,
-                                     name=paramset.model_name,
+        sys.stdout.write(message)
+        parser.exit()
+
+    if args.subcommand == 'launch':
+        from natcap.invest.ui import launcher
+        parser.exit(launcher.main())
+
+    if args.subcommand == 'validate':
+        try:
+            parsed_datastack = datastack.extract_parameter_set(args.datastack)
+        except Exception as error:
+            parser.exit(
+                1, "Error when parsing JSON datastack file:\n    " + str(error))
+
+        model_module = importlib.import_module(
+            name=parsed_datastack.model_name)
+
+        try:
+            validation_result = getattr(
+                model_module, 'validate')(parsed_datastack.args)
+        except KeyError as missing_keys_error:
+            if args.json:
+                message = json.dumps(
+                    {'validation_results': {
+                        str(list(missing_keys_error.args)): 'Key is missing'}})
+            else:
+                message = ('Datastack is missing keys:\n    ' +
+                           str(missing_keys_error.args))
+
+            # Missing keys have an exit code of 1 because that would indicate
+            # probably programmer error.
+            sys.stdout.write(message)
+            parser.exit(1)
+        except Exception as error:
+            parser.exit(
+                1, ('Datastack could not be validated:\n    ' +
+                    str(error)))
+
+        # Even validation errors will have an exit code of 0
+        if args.json:
+            message = json.dumps({
+                'validation_results': validation_result})
+        else:
+            message = pprint.pformat(validation_result)
+
+        sys.stdout.write(message)
+        parser.exit(0)
+
+    if args.subcommand == 'run' and args.headless:
+        if not args.datastack:
+            parser.exit(1, 'Datastack required for headless execution.')
+
+        try:
+            parsed_datastack = datastack.extract_parameter_set(args.datastack)
+        except Exception as error:
+            parser.exit(
+                1, "Error when parsing JSON datastack file:\n    " + str(error))
+
+        if not args.workspace:
+            if ('workspace_dir' not in parsed_datastack.args or
+                    parsed_datastack.args['workspace_dir'] in ['', None]):
+                parser.exit(
+                    1, ('Workspace must be defined at the command line '
+                        'or in the datastack file'))
+        else:
+            parsed_datastack.args['workspace_dir'] = args.workspace
+
+        target_model = _MODEL_UIS[args.model].pyname
+        model_module = importlib.import_module(name=target_model)
+        LOGGER.info('Imported target %s from %s',
+                   model_module.__name__, model_module)
+
+        with utils.prepare_workspace(parsed_datastack.args['workspace_dir'],
+                                     name=parsed_datastack.model_name,
                                      logging_level=log_level):
             LOGGER.log(datastack.ARGS_LOG_LEVEL,
-                       datastack.format_args_dict(paramset.args,
-                                                  paramset.model_name))
-            if not args.validate:
-                LOGGER.info('Skipping validation by user request')
-            else:
-                model_warnings = []
-                try:
-                    model_warnings = getattr(
-                        model_module, 'validate')(paramset.args)
-                except AttributeError:
-                    LOGGER.warn(
-                        '%s does not have a defined validation function.',
-                        paramset.model_name)
-                finally:
-                    if model_warnings:
-                        LOGGER.warn('Warnings found: \n%s',
-                                    pprint.pformat(model_warnings))
+                       datastack.format_args_dict(parsed_datastack.args,
+                                                  parsed_datastack.model_name))
 
-            if not args.workspace:
-                args.workspace = os.getcwd()
+            # We're deliberately not validating here because the user
+            # can just call ``invest validate <datastack>`` to validate.
+            getattr(model_module, 'execute')(parsed_datastack.args)
 
-            # If the workspace exists and we don't have up-front permission to
-            # overwrite the workspace, prompt for permission.
-            if (os.path.exists(args.workspace) and
-                    len(os.listdir(args.workspace)) > 0 and
-                    not args.overwrite):
-                overwrite_denied = False
-                if not sys.stdout.isatty():
-                    overwrite_denied = True
-                else:
-                    user_response = raw_input(
-                        'Workspace exists: %s\n    Overwrite? (y/n) ' % (
-                            os.path.abspath(args.workspace)))
-                    while user_response not in ('y', 'n'):
-                        user_response = raw_input(
-                            "Response must be either 'y' or 'n': ")
-                    if user_response == 'n':
-                        overwrite_denied = True
+    # If we're running in a GUI (either through ``invest run`` or
+    # ``invest quickrun``), we'll need to load the Model's GUI class,
+    # populate parameters and then (if in a quickrun) exit when the model
+    # completes.  Quickrun functionality is primarily useful for automated
+    # testing of the model interfaces.
+    if (args.subcommand == 'run' and not args.headless or
+            args.subcommand == 'quickrun'):
 
-                if overwrite_denied:
-                    # Exit the parser with an error message.
-                    parser.exit(DEFAULT_EXIT_CODE,
-                                ('Use --workspace to define an '
-                                 'alternate workspace.  Aborting.'))
-                else:
-                    LOGGER.warning(
-                        'Overwriting the workspace per user input %s',
-                        os.path.abspath(args.workspace))
+        from natcap.invest.ui import inputs
 
-            if 'workspace_dir' not in paramset.args:
-                paramset.args['workspace_dir'] = args.workspace
-
-            # execute the model's execute function with the loaded args
-            getattr(model_module, 'execute')(paramset.args)
-    else:
-        # import the GUI from the known class
         gui_class = _MODEL_UIS[args.model].gui
         module_name, classname = gui_class.split('.')
         module = importlib.import_module(
@@ -499,7 +528,10 @@ def main():
             model_form.workspace.set_value(args.workspace)
 
         # Run the UI's event loop
-        model_form.run(quickrun=args.quickrun)
+        quickrun = False
+        if args.subcommand == 'quickrun':
+            quickrun = True
+        model_form.run(quickrun=quickrun)
         app_exitcode = inputs.QT_APP.exec_()
 
         # Handle a graceful exit
@@ -510,6 +542,7 @@ def main():
         if app_exitcode != 0:
             parser.exit(app_exitcode,
                         'App terminated with exit code %s\n' % app_exitcode)
+
 
 if __name__ == '__main__':
     multiprocessing.freeze_support()

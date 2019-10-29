@@ -3,10 +3,11 @@ import unittest
 import tempfile
 import shutil
 import os
+import io
 
 import numpy
-import pygeoprocessing.testing
 from osgeo import gdal
+import pandas.testing
 
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'fisheries')
@@ -39,9 +40,21 @@ class FisheriesSampleDataTests(unittest.TestCase):
             'timestep', 'is_equilibrated', 'spawners', and 'harvest'.
         """
         filename = os.path.join(workspace, 'output', filename)
-        with open(filename) as results_csv:
-            last_line = results_csv.readlines()[-1].strip().split(',')
-            timestep, is_equilibrated, spawners, harvest = last_line
+        with io.open(filename, 'r', newline=os.linesep) as results_csv:
+            # last_line = results_csv.readlines()[-1].strip().split(',')
+            timestep, is_equilibrated, spawners, harvest = \
+                    results_csv.readlines()[-1].strip().split(',')
+            # try:
+            #     timestep, is_equilibrated, spawners, harvest = \
+            #         results_csv.readlines()[-1].strip().split(',')
+            # except ValueError:  # not enough values to unpack
+            #     # A last line with nothing but a newline character
+            #     # seems to be ignored in Python 2, with [-1] indexing
+            #     # the last line with content. In Python 3 though, [-1]
+            #     # returns a line with only '\n', so we resent and get [-2]
+            #     results_csv.seek(0)
+            #     timestep, is_equilibrated, spawners, harvest = \
+            #         results_csv.readlines()[-2].strip().split(',')
             try:
                 spawners = float(spawners)
             except:
@@ -213,7 +226,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         }
         fisheries.execute(args)
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
-            self.workspace_dir, 'results_table_foo.csv')
+            args['workspace_dir'], 'results_table_foo.csv')
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
@@ -501,12 +514,12 @@ class FisheriesSampleDataTests(unittest.TestCase):
             u'total_timesteps': 300,
             u'val_cont': False,
             u'results_suffix': 'foo',
-            u'workspace_dir': self.workspace_dir,
+            u'workspace_dir': self.workspace_dir
 
         }
         fisheries.execute(args)
         final_timestep_data = FisheriesSampleDataTests.get_harvest_info(
-            self.workspace_dir, 'results_table_foo.csv')
+            args['workspace_dir'], 'results_table_foo.csv')
         self.assertEqual(final_timestep_data['spawners'], '(fixed recruitment)')
         self.assertEqual(final_timestep_data['harvest'], 3120557.88)
 
@@ -515,7 +528,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         subregions = {}
         harvest_table_path = os.path.join(self.workspace_dir, 'output',
                                           'results_table_foo.csv')
-        with open(harvest_table_path) as harvest_table:
+        with io.open(harvest_table_path, 'r', newline=os.linesep) as harvest_table:
             for line in harvest_table:
                 if in_subregion:
                     if line.lower().startswith('total'):
@@ -560,10 +573,11 @@ class FisheriesHSTTest(unittest.TestCase):
         }
         fisheries_hst.execute(args)
 
-        pygeoprocessing.testing.assert_csv_equal(
-            os.path.join(TEST_DATA, 'pop_params_modified.csv'),
-            os.path.join(args['workspace_dir'], 'output',
-                         'pop_params_modified.csv'))
+        actual_values_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'output', 'pop_params_modified.csv'))
+        expected_values_df = pandas.read_csv(
+            os.path.join(TEST_DATA, 'pop_params_modified.csv'))
+        pandas.testing.assert_frame_equal(actual_values_df, expected_values_df)
 
     def test_regression_sex_specific(self):
         """Fisheries-HST: Verify outputs of sex-specific run."""
@@ -581,9 +595,12 @@ class FisheriesHSTTest(unittest.TestCase):
             u'sexsp': 'Yes',
             u'workspace_dir': self.workspace_dir,
         }
+
         fisheries_hst.execute(args)
 
-        pygeoprocessing.testing.assert_csv_equal(
-            os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'),
-            os.path.join(args['workspace_dir'], 'output',
-                         'hst_pop_params_sexsp_modified.csv'))
+        actual_values_df = pandas.read_csv(
+            os.path.join(args['workspace_dir'], 'output', 'hst_pop_params_sexsp_modified.csv'))
+        expected_values_df = pandas.read_csv(
+            os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'))
+        pandas.testing.assert_frame_equal(actual_values_df, expected_values_df)
+

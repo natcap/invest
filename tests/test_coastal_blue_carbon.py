@@ -84,7 +84,7 @@ def _read_array(raster_path):
 
 def _create_table(uri, rows_list):
     """Create csv file from list of lists."""
-    with open(uri, 'wb') as f:
+    with open(uri, 'w') as f:
         writer = csv.writer(f)
         writer.writerows(rows_list)
     return uri
@@ -601,7 +601,7 @@ class TestModel(unittest.TestCase):
             'outputs_core/total_net_carbon_sequestration_test.tif')
         npv_output_raster = os.path.join(
             self.args['workspace_dir'],
-            'outputs_core/net_present_value_test.tif')
+            'outputs_core/net_present_value_at_2010_test.tif')
         netseq_array = _read_array(netseq_output_raster)
         npv_array = _read_array(npv_output_raster)
 
@@ -724,7 +724,7 @@ class TestModel(unittest.TestCase):
         npv_raster = os.path.join(
             os.path.join(
                 args['workspace_dir'],
-                'outputs_core/net_present_value_150225.tif'))
+                'outputs_core/net_present_value_at_2050_150225.tif'))
         npv_array = _read_array(npv_raster)
 
         # this is just a regression test, but it will capture all values
@@ -933,3 +933,33 @@ class CBCRefactorTest(unittest.TestCase):
 
         self.assertEqual(biomass_dict, expected_biomass_dict)
         self.assertEqual(soil_dict, expected_soil_dict)
+
+    def test_reclass_invalid_nodata(self):
+        """Coastal Blue Carbon: verify handling of incorrect nodata values."""
+        from natcap.invest.coastal_blue_carbon \
+            import coastal_blue_carbon as cbc
+
+        # In this case, the nodata provided (-1) cannot be represented by
+        # numpy.uint16 datatype.
+        lulc_nodata = -1
+        lulc_matrix = numpy.array([
+            [1, 2, 3],
+            [1, 2, 3],
+            [-1, -1, -1]], numpy.uint16)
+
+        reclass_map = {
+            1: 1.1,
+            2: 2.2,
+            3: 3.3
+        }
+
+        expected_array = numpy.array([
+            [1.1, 2.2, 3.3],
+            [1.1, 2.2, 3.3],
+            [numpy.nan, numpy.nan, numpy.nan]], numpy.float32)
+
+        reclassified_array = cbc.reclass(
+            lulc_matrix, reclass_map, out_dtype=numpy.float32,
+            nodata_mask=lulc_nodata)
+
+        numpy.testing.assert_almost_equal(reclassified_array, expected_array)
