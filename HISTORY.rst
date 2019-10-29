@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue in the NDR model that would cause an exception if the critical
+  length of a landcover field was set to 0.
 * Implemented PEP518-compatible build system definition in the file
   ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
   from a source distribution.
