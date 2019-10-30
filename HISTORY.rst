@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed issue in Seasonal Water Yield model that would cause an unhandled
+  exception when input rasters had areas of a valid DEM but nodata in other
+  input layers that overlap that dem.
 * Implemented PEP518-compatible build system definition in the file
   ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
   from a source distribution.
