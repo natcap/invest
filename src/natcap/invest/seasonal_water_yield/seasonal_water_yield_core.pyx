@@ -417,7 +417,8 @@ cpdef calculate_local_recharge(
     cdef int xi, yi, xj, yj, flow_dir_j, p_ij_base
     cdef int win_xsize, win_ysize, n_dir
     cdef int raster_x_size, raster_y_size
-    cdef float pet_m, p_m, qf_m, aet_i, p_i, qf_i, l_i, l_avail_i
+    cdef float pet_m, p_m, qf_m, et0_m, aet_i, p_i, qf_i, l_i, l_avail_i
+    cdef float et0_nodata, precip_nodata, qf_nodata, kc_nodata
 
     cdef int j_neighbor_end_index, mfd_dir_sum
     cdef float mfd_direction_array[8]
@@ -441,20 +442,32 @@ cpdef calculate_local_recharge(
     cdef _ManagedRaster flow_raster = _ManagedRaster(flow_dir_mfd_path, 1, 0)
 
     et0_m_raster_list = []
+    et0_m_nodata_list = []
     for et0_path in et0_path_list:
         et0_m_raster_list.append(_ManagedRaster(et0_path, 1, 0))
+        et0_m_nodata_list.append(
+            pygeoprocessing.get_raster_info(et0_path)['nodata'][0])
 
     precip_m_raster_list = []
+    precip_m_nodata_list = []
     for precip_m_path in precip_path_list:
         precip_m_raster_list.append(_ManagedRaster(precip_m_path, 1, 0))
+        precip_m_nodata_list.append(
+            pygeoprocessing.get_raster_info(precip_m_path)['nodata'][0])
 
     qf_m_raster_list = []
+    qf_m_nodata_list = []
     for qf_m_path in qf_m_path_list:
         qf_m_raster_list.append(_ManagedRaster(qf_m_path, 1, 0))
+        qf_m_nodata_list.append(
+            pygeoprocessing.get_raster_info(qf_m_path)['nodata'][0])
 
     kc_m_raster_list = []
+    kc_m_nodata_list = []
     for kc_m_path in kc_path_list:
         kc_m_raster_list.append(_ManagedRaster(kc_m_path, 1, 0))
+        kc_m_nodata_list.append(
+            pygeoprocessing.get_raster_info(kc_m_path)['nodata'][0])
 
     target_nodata = -1e32
     pygeoprocessing.new_raster_from_base(
@@ -480,6 +493,7 @@ cpdef calculate_local_recharge(
         fill_value_list=[target_nodata])
     cdef _ManagedRaster target_aet_raster = _ManagedRaster(
         target_aet_path, 1, 1)
+
 
     for offset_dict in pygeoprocessing.iterblocks(
             (flow_dir_mfd_path, 1), offset_only=True, largest_block=0):
@@ -601,19 +615,30 @@ cpdef calculate_local_recharge(
                         kc_m_raster = (
                             <_ManagedRaster?>kc_m_raster_list[m_index])
 
+                        et0_nodata = et0_m_nodata_list[m_index]
+                        precip_nodata = precip_m_nodata_list[m_index]
+                        qf_nodata = qf_m_nodata_list[m_index]
+                        kc_nodata = kc_m_nodata_list[m_index]
+
                         p_m = precip_m_raster.get(xi, yi)
-                        p_i += p_m
+                        if not is_close(p_m, precip_nodata):
+                            p_i += p_m
                         qf_m = qf_m_raster.get(xi, yi)
-                        qf_i += qf_m
+                        if not is_close(qf_m, qf_nodata):
+                            qf_i += qf_m
                         kc_m = kc_m_raster.get(xi, yi)
-                        # Equation 6
-                        pet_m = kc_m * et0_m_raster.get(xi, yi)
+                        pet_m = 0
+                        et0_m = et0_m_raster.get(xi, yi)
+                        if not (
+                                is_close(kc_m, kc_nodata) or
+                                is_close(et0_m, et0_nodata)):
+                            # Equation 6
+                            pet_m = kc_m * et0_m
                         # Equation 4/5
                         aet_i += min(
                             pet_m,
                             p_m - qf_m +
                             alpha_month_array[m_index]*beta_i*l_sum_avail_i)
-                    #LOGGER.debug('%d %d %f', xi, yi, aet_i)
                     target_aet_raster.set(xi, yi, aet_i)
                     l_i = (p_i - qf_i - aet_i)
                     target_li_raster.set(xi, yi, l_i)
