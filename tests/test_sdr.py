@@ -213,7 +213,8 @@ class SDRTests(unittest.TestCase):
         sdr.execute(args)
         gpkg_driver = ogr.GetDriverByName('GPKG')
         base_vector = ogr.Open(args['watersheds_path'])
-        target_watersheds_path = 'input_watersheds.gpkg'
+        target_watersheds_path = os.path.join(
+            args['watersheds_path'], 'input_watersheds.gpkg')
         gpkg_driver.CopyDataSource(base_vector, target_watersheds_path)
         args['watersheds_path'] = target_watersheds_path
         expected_results = {

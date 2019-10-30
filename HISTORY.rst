@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue in the SDR model that could cause reported result vector
+  values to not correspond with known input vectors if the input watershed
+  vector was not an ESRI Shapefile.
 * Implemented PEP518-compatible build system definition in the file
   ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
   from a source distribution.
