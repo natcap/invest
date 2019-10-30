@@ -84,7 +84,6 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
-    @unittest.skip("skipping until we resolve (issue #3899)")
     def test_base_regression(self):
         """NDR base regression test on sample data.
 
@@ -96,7 +95,8 @@ class NDRTests(unittest.TestCase):
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
-
+        args = args.copy()
+        args['workspace_dir'] = 'crashing_ndr_test_workspace'
         # make an empty output shapefile on top of where the new output
         # shapefile should reside to ensure the model overwrites it
         with open(
