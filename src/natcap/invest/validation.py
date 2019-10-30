@@ -11,8 +11,7 @@ import pygeoprocessing
 import pandas
 import xlrd
 import xlwt
-import sympy
-import sympy.parsing.sympy_parser
+import asteval
 from osgeo import gdal, osr
 import numpy
 
@@ -80,6 +79,26 @@ N_WORKERS_SPEC = {
         "expression": "value >= -1"
     }
 }
+
+
+def _evaluate_expression(expression, variable_map):
+    """Evaluate a python expression.
+
+    Python and numpy syntax are both acceptable.
+
+    Parameters:
+        expression (string): A string expression that returns a value.
+        variable_map (dict): A dict mapping string variable names to their
+            python object values.  This is the variable map that will be used
+            when evaluating the expression.
+
+    Returns:
+        Whatever value is returned from evaluating ``expression`` with the
+        variables stored in ``variable_map``.
+
+    """
+    interpreter = asteval.Interpreter(usersyms=variable_map)
+    return interpreter(expression)
 
 
 def get_invalid_keys(validation_warnings):
@@ -425,26 +444,17 @@ def check_number(value, expression=None):
 
     if expression:
         # Check to make sure that 'value' is in the expression.
-        if 'value' not in [str(x) for x in
-                           sympy.parsing.sympy_parser.parse_expr(
-                               expression).free_symbols]:
-            raise AssertionError('Value is not used in this expression')
+        if 'value' not in expression:
+            raise AssertionError(
+                'The variable name value is not found in the '
+                'expression: "%s"' % expression)
 
         # Expression is assumed to return a boolean, something like
         # "value > 0" or "(value >= 0) & (value < 1)".  An exception will
-        # be raised if sympy can't evaluate the expression.
-        result = sympy.lambdify(['value'], expression, 'numpy')(float(value))
-        if result == False:  # A numpy bool object is returned.
+        # be raised if asteval can't evaluate the expression.
+        result = _evaluate_expression(expression, {'value': float(value)})
+        if result == False:  # A python bool object is returned.
             return "Value does not meet condition %s" % expression
-
-        # This error was raised when I passed a string value to
-        # ``sympy.lambdify`` (which is resolved by always passing a numeric
-        # type).  I'm leaving this handler in here for when we encounter
-        # another case where an invalid value was passed so we can more easily
-        # determine the cause.
-        elif result is NotImplemented:
-            raise AssertionError(
-                "Could not evaluate expression for value %s", float(value))
 
     return None
 
@@ -721,9 +731,10 @@ def validate(args, spec, spatial_overlap_opts=None):
         # An input is conditionally required when the expression given
         # evaluates to True.
         try:
-            is_conditionally_required = sympy.lambdify(
-                sorted_args_keys, spec[key]['required'], 'numpy')(
-                    **sufficient_inputs)
+
+            is_conditionally_required = _evaluate_expression(
+                expression=spec[key]['required'],
+                variable_map=sufficient_inputs)
         except NameError as missing_key_error:
             LOGGER.exception(
                 'Could not evaluate conditional requirement expression %s',

@@ -27,4 +27,4 @@ chardet>=3.0.4
 matplotlib
 xlrd>=1.2.0
 xlwt
-sympy
+asteval>=0.9.9
