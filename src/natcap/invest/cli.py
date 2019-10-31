@@ -161,6 +161,7 @@ _MODEL_UIS = {
     'urban_cooling_model': _UIMETA(
         pyname='natcap.invest.urban_cooling_model',
         gui='urban_cooling_model.UrbanCoolingModel',
+        humanname='Urban Cooling',
         aliases=('ucm',)),
 }
 
