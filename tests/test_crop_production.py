@@ -150,7 +150,7 @@ class CropProductionTests(unittest.TestCase):
         }
 
         with open(args['landcover_to_crop_table_path'],
-                  'wb') as landcover_crop_table:
+                  'w') as landcover_crop_table:
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 
@@ -181,7 +181,7 @@ class CropProductionTests(unittest.TestCase):
         }
 
         with open(args['landcover_to_crop_table_path'],
-                  'wb') as landcover_crop_table:
+                  'w') as landcover_crop_table:
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 

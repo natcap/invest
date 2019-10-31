@@ -34,6 +34,7 @@ class RouteDEMTests(unittest.TestCase):
         dem_array = numpy.vstack((
             valley_with_sink,
             numpy.tile(valley, (9, 1)) + elevation))
+        nodata_value = -1
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)
@@ -47,11 +48,11 @@ class RouteDEMTests(unittest.TestCase):
                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
         dem_raster.SetProjection(srs_wkt)
         ones_band = dem_raster.GetRasterBand(1)
-        ones_band.SetNoDataValue(0)
+        ones_band.SetNoDataValue(nodata_value)
         ones_band.WriteArray(numpy.ones(dem_array.shape))
 
         dem_band = dem_raster.GetRasterBand(2)
-        dem_band.SetNoDataValue(-1)
+        dem_band.SetNoDataValue(nodata_value)
         dem_band.WriteArray(dem_array)
         dem_geotransform = [2, 2, 0, -2, 0, -2]
         dem_raster.SetGeoTransform(dem_geotransform)
@@ -379,7 +380,7 @@ class RouteDEMTests(unittest.TestCase):
         }
 
         with open(args['dem_path'], 'w') as bad_raster:
-             bad_raster.write('This is an invalid raster format.')
+            bad_raster.write('This is an invalid raster format.')
 
         validation_errors = routedem.validate(args)
         self.assertEqual(len(validation_errors), 1)
@@ -393,7 +394,7 @@ class RouteDEMTests(unittest.TestCase):
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'notafile.txt'),
-            'dem_band_index': xrange(1, 5),
+            'dem_band_index': range(1, 5),
         }
 
         validation_errors = routedem.validate(args)

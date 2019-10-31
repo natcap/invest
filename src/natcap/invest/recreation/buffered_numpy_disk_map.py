@@ -87,7 +87,7 @@ class BufferedNumpyDiskMap(object):
         insert_list = []
 
         while len(self.array_cache) > 0:
-            array_id = self.array_cache.iterkeys().next()
+            array_id = next(iter(self.array_cache.keys()))
             array_deque = self.array_cache.pop(array_id)
             # try to get data if it's there
             db_cursor.execute(

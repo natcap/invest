@@ -120,7 +120,7 @@ def make_lulc_raster(raster_path, lulc_val):
         None.
 
     """
-    lulc_array = numpy.zeros((100, 100), dtype=numpy.int8)
+    lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
     lulc_array[50:, :] = lulc_val
     make_raster_from_array(lulc_array, raster_path)
 
@@ -140,7 +140,7 @@ def make_threats_raster(folder_path, make_empty_raster=False):
     for suffix in ['_c', '_f']:
         for i, threat in enumerate(['threat_1', 'threat_2']):
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
-            threat_array[100/(i+1):, :] = 1  # making variations among threats
+            threat_array[100//(i+1):, :] = 1  # making variations among threats
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
@@ -160,19 +160,19 @@ def make_sensitivity_samp_csv(csv_path,
 
     """
     if include_threat:
-        with open(csv_path, 'wb') as open_table:
+        with open(csv_path, 'w') as open_table:
             open_table.write('LULC,NAME,HABITAT,L_threat_1,L_threat_2\n')
-            open_table.write('0,"lulc 0",1,1,1\n')
+            open_table.write('1,"lulc 1",1,1,1\n')
             if not missing_lines:
-                open_table.write('1,"lulc 1",0.5,0.5,1\n')
-                open_table.write('2,"lulc 2",0,0.3,1\n')
+                open_table.write('2,"lulc 2",0.5,0.5,1\n')
+                open_table.write('3,"lulc 3",0,0.3,1\n')
     else:
-        with open(csv_path, 'wb') as open_table:
+        with open(csv_path, 'w') as open_table:
             open_table.write('LULC,NAME,HABITAT\n')
-            open_table.write('0,"lulc 0",1\n')
+            open_table.write('1,"lulc 1",1\n')
             if not missing_lines:
-                open_table.write('1,"lulc 1",0.5\n')
-                open_table.write('2,"lulc 2",0\n')
+                open_table.write('2,"lulc 2",0.5\n')
+                open_table.write('3,"lulc 3",0\n')
 
 
 def make_threats_csv(csv_path,
@@ -191,7 +191,7 @@ def make_threats_csv(csv_path,
         None.
 
     """
-    with open(csv_path, 'wb') as open_table:
+    with open(csv_path, 'w') as open_table:
         open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
         if include_invalid_decay:
             open_table.write('0.9,0.7,threat_1,invalid\n')
@@ -217,7 +217,7 @@ def assert_array_sum(base_raster_path, desired_sum):
     base_band = base_raster.GetRasterBand(1)
     base_array = base_band.ReadAsArray()
     raster_sum = numpy.sum(base_array)
-    numpy.testing.assert_almost_equal(raster_sum, desired_sum)
+    numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
 
 
 class HabitatQualityTests(unittest.TestCase):
@@ -248,7 +248,7 @@ class HabitatQualityTests(unittest.TestCase):
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, scenario in enumerate(scenarios):
+        for lulc_val, scenario in enumerate(scenarios, start=1):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
@@ -268,13 +268,13 @@ class HabitatQualityTests(unittest.TestCase):
 
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
-                'deg_sum_c_regression.tif': 10.728817,
-                'deg_sum_f_regression.tif': 16.461340,
-                'quality_c_regression.tif': 7499.9975586,
-                'quality_f_regression.tif': 4999.9995117,
+                'deg_sum_c_regression.tif': 1792.8088,
+                'deg_sum_f_regression.tif': 2308.9636,
+                'quality_c_regression.tif': 6928.5293,
+                'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000
-        }.iteritems():
+        }.items():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),
                 assert_value)
@@ -300,7 +300,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
                                              'lc_samp_cur_b.tif')
-        make_lulc_raster(args['lulc_cur_path'], 1)
+        make_lulc_raster(args['lulc_cur_path'], 2)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
@@ -331,7 +331,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
                                              'lc_samp_cur_b.tif')
-        make_lulc_raster(args['lulc_cur_path'], 1)
+        make_lulc_raster(args['lulc_cur_path'], 2)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
@@ -364,7 +364,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
                                              'lc_samp_cur_b.tif')
-        make_lulc_raster(args['lulc_cur_path'], 1)
+        make_lulc_raster(args['lulc_cur_path'], 2)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
@@ -393,7 +393,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
                                              'lc_samp_cur_b.tif')
-        make_lulc_raster(args['lulc_cur_path'], 1)
+        make_lulc_raster(args['lulc_cur_path'], 2)
 
         # Make an empty threat raster in the workspace folder.
         args['threat_raster_folder'] = args['workspace_dir']
@@ -422,7 +422,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['lulc_cur_path'] = os.path.join(args['workspace_dir'],
                                              'lc_samp_cur_b.tif')
-        make_lulc_raster(args['lulc_cur_path'], 1)
+        make_lulc_raster(args['lulc_cur_path'], 2)
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'])
@@ -436,7 +436,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
-            7499.9931641)
+            5951.2827)
 
     def test_habitat_quality_nodata_fut(self):
         """Habitat Quality: on missing future LULC raster."""
@@ -452,7 +452,7 @@ class HabitatQualityTests(unittest.TestCase):
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         scenarios = ['_bas_', '_cur_']  # Missing '_fut_'
-        for lulc_val, scenario in enumerate(scenarios):
+        for lulc_val, scenario in enumerate(scenarios, start=1):
             args['lulc' + scenario + 'path'] = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
@@ -469,7 +469,7 @@ class HabitatQualityTests(unittest.TestCase):
         # Reasonable to just check quality out in this case
         assert_array_sum(
             os.path.join(args['workspace_dir'], 'output', 'quality_c.tif'),
-            7499.9931641)
+            5951.2827)
 
     def test_habitat_quality_missing_lucodes_in_table(self):
         """Habitat Quality: on missing lucodes in the sensitivity table."""
@@ -485,7 +485,7 @@ class HabitatQualityTests(unittest.TestCase):
         make_access_shp(args['access_vector_path'])
 
         scenarios = ['_bas_', '_cur_', '_fut_']
-        for lulc_val, scenario in enumerate(scenarios):
+        for lulc_val, scenario in enumerate(scenarios, start=1):
             path = os.path.join(
                 args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
             args['lulc' + scenario + 'path'] = path
@@ -522,9 +522,9 @@ class HabitatQualityTests(unittest.TestCase):
         self.assertTrue(
             'The following land cover codes were found in ' in
             actual_message, actual_message)
-        # 1, 2 are the missing landcover codes.
+        # 2, 3 are the missing landcover codes.
         # Raster nodata is 255 and should NOT appear in this list.
-        self.assertTrue(': 1, 2.' in actual_message, actual_message)
+        self.assertTrue(': 2, 3.' in actual_message, actual_message)
 
     def test_habitat_quality_validate(self):
         """Habitat Quality: validate raise exception as expected."""
@@ -538,10 +538,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         with self.assertRaises(KeyError) as cm:
             habitat_quality.validate(args)
-        actual_message = str(cm.exception)
-        self.assertTrue(
-            'missing: lulc_cur_path, threats_table_path, sensitivity_table_path'
-            ', half_saturation_constant' in actual_message, actual_message)
+        self.assertEqual(len(cm.exception.args), 4)
 
         keys_without_value = [
             'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',

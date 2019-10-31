@@ -1,12 +1,14 @@
 """This Python Script converts wave watch 3 data to yearly values
 
     Example from command line:
-    >> python ww3_per_year.py ww3_formatted.txt ww3_yearly.txt 10 
+    >> python ww3_per_year.py ww3_formatted.txt ww3_yearly.txt 10
 """
 
 import os
-import numpy as np
 import sys
+
+import numpy as np
+
 
 def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
     """Divide all the wave watch data values by 'num_years' to get per year data
@@ -20,11 +22,11 @@ def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
             collected over (required)
 
         returns - Nothing"""
-    
+
     # Get the number of years as a float just to make sure we do floating
-    # division 
+    # division
     num_years = float(num_years)
-    
+
     # Open the wave watch text file
     wave_file = open(wave_watch_file_uri)
 
@@ -33,7 +35,7 @@ def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
     wave_heights = wave_file.readline()
 
     # Open the output uri as writeable
-    out_file = open(out_file_uri, 'w')	
+    out_file = open(out_file_uri, 'w')
     # Write the wave periods and heights to the output file as we DO NOT want to
     # divide the ranges by the number of years
     out_file.write(wave_periods)
@@ -44,7 +46,7 @@ def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
         # Get the next line
         line = wave_file.readline()
         # Set a blank string to build up altered yearly data line
-        out_string = ''     
+        out_string = ''
         # Check for the end of the file
         if len(line) == 0:
             #end of file
@@ -61,7 +63,7 @@ def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
             # Divide all the values in the list by the number of years to get
             # per year values
             per_yr_vals = values / num_years
-           
+
             # Now that we have a list of floating values we need to build up a
             # string to write back to the output file. Start by iterating over
             # each per year value in the list
@@ -75,11 +77,11 @@ def extrapolate_wave_data(wave_watch_file_uri, out_file_uri,  num_years):
             # Once the string is completed for the line, remove the trailing
             # comma at the end of the line and replace with a newline character
             out_string = out_string[0:len(out_string)-1] + '\n'
-            
+
             # Write the line string with the yearly data values to the output
             # file
             out_file.write(out_string)
-    
+
     # Close the files
     wave_file.close()
     out_file.close()

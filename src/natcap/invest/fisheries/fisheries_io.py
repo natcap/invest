@@ -5,7 +5,6 @@ The Fisheries IO module contains functions for handling inputs and outputs
 import logging
 import os
 import csv
-import io
 
 import numpy
 from osgeo import ogr
@@ -765,32 +764,32 @@ def _create_results_csv(vars_dict):
         #Header for final results table
         csv_file.write(','.join(['Final Harvest by Subregion after ' +
                                  str(total_timesteps-1) +
-                                 ' Time Steps']) + os.linesep)
-        csv_file.write(os.linesep)
+                                 ' Time Steps']) + '\n')
+        csv_file.write('\n')
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
         sum_headers_row = ['Subregion', 'Harvest']
         if vars_dict['val_cont']:
             sum_headers_row.append('Valuation')
-        csv_file.write(','.join(sum_headers_row) + os.linesep)
+        csv_file.write(','.join(sum_headers_row) + '\n')
 
         for i in range(0, len(H_tx[-1])):  # i is a cycle
             line = [Regions[i], "%.2f" % H_tx[-1, i]]
             if vars_dict['val_cont']:
                 line.append("%.2f" % V_tx[-1, i])
-            csv_file.write(','.join(line) + os.linesep)
+            csv_file.write(','.join(line) + '\n')
         line = ['Total', "%.2f" % H_tx[-1].sum()]
 
         if vars_dict['val_cont']:
             line.append("%.2f" % V_tx[-1].sum())
-        csv_file.write(','.join(line) + os.linesep)
-        csv_file.write(os.linesep)
+        csv_file.write(','.join(line) + '\n')
+        csv_file.write('\n')
 
         # Give Total Harvest for Each Cycle
-        csv_file.write('Time Step Breakdown' + os.linesep)
-        csv_file.write(os.linesep)
+        csv_file.write('Time Step Breakdown' + '\n')
+        csv_file.write('\n')
         line = ['Time Step', 'Equilibrated?', 'Spawners', 'Harvest']
-        csv_file.write(','.join(line) + os.linesep)
+        csv_file.write(','.join(line) + '\n')
 
         for i in range(0, len(H_tx)):  # i is a cycle
             line = [str(i)]
@@ -805,7 +804,7 @@ def _create_results_csv(vars_dict):
             else:
                 line.append("%.2f" % Spawners_t[i])
             line.append("%.2f" % H_tx[i].sum())
-            csv_file.write(','.join(line) + os.linesep)
+            csv_file.write(','.join(line) + '\n')
 
 
 def _create_results_html(vars_dict):

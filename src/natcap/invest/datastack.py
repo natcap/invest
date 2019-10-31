@@ -507,7 +507,10 @@ def extract_parameter_set(paramset_path):
                 arguments are intended for.
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
-    read_params = json.load(codecs.open(paramset_path, 'r', encoding='UTF-8'))
+    with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
+        params_raw = paramset_file.read()
+
+    read_params = json.loads(params_raw)
 
     def _recurse(args_param):
         if isinstance(args_param, dict):

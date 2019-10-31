@@ -218,7 +218,7 @@ def _execute(args):
         alpha_month_map = dict(
             (key, val['alpha']) for key, val in
             utils.build_lookup_from_csv(
-                args['monthly_alpha_path'], 'month').iteritems())
+                args['monthly_alpha_path'], 'month').items())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -771,12 +771,16 @@ def _calculate_curve_number_raster(
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
-    for soil_id, soil_column in map_soil_type_to_header.iteritems():
+    for soil_id, soil_column in map_soil_type_to_header.items():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
             'cn_values': []
         }
-        for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
+        lucodes = list(biophysical_table)
+        if lulc_nodata is not None:
+            lucodes.append(lulc_nodata)
+
+        for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
                 lulc_to_soil[soil_id]['cn_values'].append(
                     biophysical_table[lucode][soil_column])
@@ -871,7 +875,7 @@ def _aggregate_recharge(
         None
     """
     if os.path.exists(aggregate_vector_path):
-        LOGGER.warn(
+        LOGGER.warning(
             '%s exists, deleting and writing new output',
             aggregate_vector_path)
         os.remove(aggregate_vector_path)
@@ -1002,9 +1006,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

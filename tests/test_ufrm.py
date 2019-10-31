@@ -102,7 +102,7 @@ class UFRMTests(unittest.TestCase):
         del args['workspace_dir']
         with self.assertRaises(KeyError) as cm:
             urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('keys were expected' in str(cm.exception))
+        self.assertEquals(len(cm.exception.args), 1)
 
         args['workspace_dir'] = ''
         result = urban_flood_risk_mitigation.validate(args)

@@ -308,7 +308,7 @@ def _convert_landscape(
     invert_mask = None
     distance_nodata = None
 
-    for step_index in xrange(n_steps):
+    for step_index in range(n_steps):
         LOGGER.info('step %d of %d', step_index+1, n_steps)
         pixels_left_to_convert -= pixels_to_convert
 
@@ -412,7 +412,7 @@ def _log_stats(stats_cache, pixel_area, stats_path):
         None
 
     """
-    with open(stats_path, 'wb') as csv_output_file:
+    with open(stats_path, 'w') as csv_output_file:
         csv_output_file.write('lucode,area converted (Ha),pixels converted\n')
         for lucode in sorted(stats_cache):
             csv_output_file.write(
@@ -506,7 +506,7 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
         sort_index = score_cache.argsort()
         score_cache = score_cache[sort_index]
         index_cache = index_cache[sort_index]
-        for index in xrange(0, score_cache.size, _LARGEST_STRUCT_PACK):
+        for index in range(0, score_cache.size, _LARGEST_STRUCT_PACK):
             score_block = score_cache[index:index+_LARGEST_STRUCT_PACK]
             index_block = index_cache[index:index+_LARGEST_STRUCT_PACK]
             score_file.write(
@@ -536,9 +536,9 @@ def _sort_to_disk(dataset_path, score_weight=1.0):
         scores_block = scores_block.flatten() * score_weight
 
         col_coords, row_coords = numpy.meshgrid(
-            xrange(scores_data['xoff'], scores_data['xoff'] +
+            range(scores_data['xoff'], scores_data['xoff'] +
                    scores_data['win_xsize']),
-            xrange(scores_data['yoff'], scores_data['yoff'] +
+            range(scores_data['yoff'], scores_data['yoff'] +
                    scores_data['win_ysize']))
 
         flat_indexes = (col_coords + row_coords * n_cols).flatten()
@@ -678,7 +678,7 @@ def _convert_by_score(
         if pixels_converted >= max_pixels_to_convert:
             break
         col_index = flatindex % n_cols
-        row_index = flatindex / n_cols
+        row_index = flatindex // n_cols
         row_array[next_index] = row_index
         col_array[next_index] = col_index
         # data_array will only ever recieve True elements, necessary for the
@@ -687,7 +687,7 @@ def _convert_by_score(
         data_array[next_index] = True
         next_index += 1
         dirty_blocks.add(
-            (row_index / out_block_row_size, col_index / out_block_col_size))
+            (row_index // out_block_row_size, col_index // out_block_col_size))
         pixels_converted += 1
 
         if time.time() - last_time > 5.0:
@@ -744,9 +744,9 @@ def _make_gaussian_kernel_path(sigma, kernel_path):
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
-    col_index = numpy.array(xrange(kernel_size))
+    col_index = numpy.array(range(kernel_size))
     running_sum = 0.0
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         distance_kernel_row = numpy.sqrt(
             (row_index - max_distance) ** 2 +
             (col_index - max_distance) ** 2).reshape(1, kernel_size)
@@ -810,9 +810,7 @@ def validate(args, limit_to=None):
 
     if missing_key_list:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if no_value_list:
         validation_error_list.append(

@@ -2,6 +2,45 @@
 
 Unreleased Changes
 ------------------
+* Implemented PEP518-compatible build system definition in the file
+  ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
+  from a source distribution.
+* Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
+  the Land-Use/Land-Cover raster did not have a defined nodata value.  This
+  case is now handled correctly.
+* The binary build process for InVEST on Windows (which includes binaries
+  based on PyInstaller and an NSIS Installer package) has been migrated
+  to 32-bit Python 3.7.  The build itself is taking place on AppVeyor, and
+  the configuration for this is contained within ``appveyor.yml``.
+  Various python scripts involved in the distribution and release processes
+  have been updated for compatibility with python 3.7 as a part of this
+  migration.
+* Fixed an ``IndexError`` issue in Wave Energy encountered in runs using
+  the global wave energy dataset.  This error was the result of an incorrect
+  spatial query of points and resulted in some wave energy points being
+  double-counted.
+* Fixed taskgraph-related issues with Habitat Risk Assessment where
+  1) asynchronous mode was failing due to missing task dependencies and
+  2) avoided recomputation was confounded by two tasks modifying the same files.
+* Fixed an issue with Habitat Quality where the model was incorrectly
+  expecting the sensitivity table to have a landcover code of 0.
+* The InVEST CLI has been completely rebuilt to divide
+  functionality into various topic-specific subcommands.  The various internal
+  consumers of this API have been updated accordingly.  ``invest --help`` will
+  contain details of the new interface.
+* Updated the InVEST Launcher to list the human-readable model names rather
+  than the internal model identifiers.
+* Updated Coastal Vulnerability Model with significant speedups including
+  ~40x speedup for geomorphology process and ~3x speedup for wind exposure process.
+  Also saving an intermediate vector with wave energy values and a geomorphology
+  vector with points that were assigned the ``geomorphology_fill_value``.
+* Updated trove classifiers to indicate support for python versions 2.7, 3.6
+  and 3.7.
+* Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
+  environment. Also tested all models against GDAL versions 2.2.4 and 2.4.1.
+* Fixed an issue with Habitat Quality where convolutions over threat rasters
+  were not excluding nodata values, leading to incorrect outputs.  Nodata values
+  are now handled correctly and excluded from the convolution entirely.
 * Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
   and also to support the PySide2 bindings to Qt5.
 * InVEST Coastal Blue Carbon model now writes out a net present value

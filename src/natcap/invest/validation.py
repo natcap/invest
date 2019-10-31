@@ -4,6 +4,12 @@ import inspect
 import logging
 import pprint
 
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
+
 
 # Python3 doesn't know about basestring, only str.
 try:

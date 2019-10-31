@@ -290,7 +290,7 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         Returns:
             The int return code from the QMessageBox's ``exec_()`` method.
         """
-        self.checkbox.setChecked(starting_checkstate)
+        self.checkbox.setChecked(bool(starting_checkstate))
         return QtWidgets.QMessageBox.exec_(self)
 
 

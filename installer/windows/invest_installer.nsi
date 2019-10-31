@@ -66,7 +66,7 @@
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
-!define PRODUCT_WEB_SITE "https://www.naturalcapitalproject.org"
+!define PRODUCT_WEB_SITE "https://naturalcapitalproject.stanford.edu"
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
@@ -277,7 +277,7 @@ FunctionEnd
 !define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
 !macro StartMenuLink linkName modelName
-    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "${modelName}" "${INVEST_ICON}"
+    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
@@ -364,7 +364,6 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
-    File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
@@ -496,7 +495,7 @@ Function .onInit
      MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
      $\r$\n\
      For more information about InVEST or the Natural Capital Project, visit our \
-     website: http://naturalcapitalproject.org/invest$\r$\n\
+     website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
      $\r$\n\
      Command-Line Options:$\r$\n\
          /?$\t$\t=$\tDisplay this help and exit$\r$\n\
