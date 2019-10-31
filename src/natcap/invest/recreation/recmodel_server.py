@@ -86,6 +86,7 @@ def _try_except_wrapper(mesg):
     return try_except_decorator
 
 
+@Pyro4.expose
 class RecModel(object):
     """Class that manages RPCs for calculating photo user days."""
 
