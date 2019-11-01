@@ -254,3 +254,127 @@ class CarbonTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+
+# def generate_base_args():
+#     args = {
+#         'workspace_dir': self.workspace_dir,
+#         'results_suffix': 'foo',
+#         'n_workers': -1,
+#         'lulc_cur_path': 'some_path.tif',
+#         'calc_sequestration': True,
+#         'lulc_fut_path': 'some_path.tif',
+#         'do_redd': True,
+#         'lulc_redd_path': 'some_path.tif',
+#         'carbon_pools_path': 'some_path.csv',
+#         'lulc_cur_year': 2016,
+#         'lulc_fut_year': 2030,
+#         'do_valuation': True,
+#         'price_per_metric_ton_of_c': 43.0,
+#         'discount_rate': -7.1,
+#         'rate_change': 2.8,
+#     }
+#     from natcap.invest.carbon import ARGS_SPEC
+#     # assert base args isn't missing any args.
+#     assert set(ARGS_SPEC.keys()).is_subset(set(args.keys()))
+#     return args
+
+
+class CarbonValidationTests(unittest.TestCase):
+    """Tests for the Carbon Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Carbon Validate: assert missing required keys."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        validation_errors = carbon.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set([
+            'workspace_dir',
+            'lulc_cur_path',
+            'carbon_pools_path',
+        ])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_sequestration(self):
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'calc_sequestration': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set([
+            'workspace_dir',
+            'lulc_cur_path',
+            'carbon_pools_path',
+            'lulc_cur_year',
+            'lulc_fut_year',
+            'lulc_fut_path',
+        ])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_redd(self):
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'do_redd': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set([
+            'workspace_dir',
+            'lulc_cur_path',
+            'carbon_pools_path',
+            'lulc_cur_year',
+            'lulc_fut_year',
+            'lulc_fut_path',
+            'lulc_redd_path',
+        ])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_valuation(self):
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'do_valuation': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set([
+            'workspace_dir',
+            'lulc_cur_path',
+            'carbon_pools_path',
+            'lulc_cur_year',
+            'lulc_fut_year',
+            'lulc_fut_path',
+            'price_per_metric_ton_of_c',
+            'discount_rate',
+            'rate_change',
+        ])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+"""
+1. Test that the model will run given the
+argument requirements stated in ARGS SPEC.
+Build an arg set that meets the spec requirements
+and then run the model and observe no errors.
+
+2. Test that argument requirements stated in ARGS SPEC
+are not too strict. Will the model run without
+meeting all those requirements? How would I test this?
+
+3. Test that validation API works as expected given the
+conditional logic in ARGS_SPEC required fields. Functionality
+of common expressions (such as a single arg key string)
+is adequately tested by test_validation.py.
+Custom logical expressions should have tests here.
+
+4. 
+"""
