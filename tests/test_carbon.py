@@ -333,9 +333,7 @@ class CarbonValidationTests(unittest.TestCase):
             'workspace_dir',
             'lulc_cur_path',
             'carbon_pools_path',
-            'lulc_cur_year',
-            'lulc_fut_year',
-            'lulc_fut_path',
+            'calc_sequestration',
             'lulc_redd_path',
         ])
         self.assertEqual(invalid_keys, expected_missing_keys)
@@ -351,30 +349,9 @@ class CarbonValidationTests(unittest.TestCase):
             'workspace_dir',
             'lulc_cur_path',
             'carbon_pools_path',
-            'lulc_cur_year',
-            'lulc_fut_year',
-            'lulc_fut_path',
+            'calc_sequestration',
             'price_per_metric_ton_of_c',
             'discount_rate',
             'rate_change',
         ])
         self.assertEqual(invalid_keys, expected_missing_keys)
-
-"""
-1. Test that the model will run given the
-argument requirements stated in ARGS SPEC.
-Build an arg set that meets the spec requirements
-and then run the model and observe no errors.
-
-2. Test that argument requirements stated in ARGS SPEC
-are not too strict. Will the model run without
-meeting all those requirements? How would I test this?
-
-3. Test that validation API works as expected given the
-conditional logic in ARGS_SPEC required fields. Functionality
-of common expressions (such as a single arg key string)
-is adequately tested by test_validation.py.
-Custom logical expressions should have tests here.
-
-4. 
-"""

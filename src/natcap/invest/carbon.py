@@ -39,7 +39,7 @@ ARGS_SPEC = {
         },
         "calc_sequestration": {
             "type": "boolean",
-            "required": False,
+            "required": "do_valuation | do_redd",
             "about": (
                 "Check to enable sequestration analysis. This requires "
                 "inputs of Land Use/Land Cover maps for both current and "
