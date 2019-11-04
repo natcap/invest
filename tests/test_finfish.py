@@ -190,7 +190,7 @@ class FinfishValidationTests(unittest.TestCase):
         from natcap.invest import validation
 
         validation_errors = finfish_aquaculture.validate(
-            {'do_valuation': True})  # empty args dict.
+            {'do_valuation': True})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys +
@@ -200,4 +200,16 @@ class FinfishValidationTests(unittest.TestCase):
              'discount'])
         self.assertEqual(invalid_keys, expected_missing_keys)
 
+    def test_missing_field_in_farm_vector(self):
+        """Finfish Validate: warning message on invalid fieldname."""
+        from natcap.invest.finfish_aquaculture import finfish_aquaculture
 
+        farm_vector_path = os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp')
+        validation_warnings = finfish_aquaculture.validate(
+            {'ff_farm_loc': farm_vector_path,
+             'farm_ID': 'foo'})
+        expected_message = "Value must be one of: ['FarmID']"
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)
