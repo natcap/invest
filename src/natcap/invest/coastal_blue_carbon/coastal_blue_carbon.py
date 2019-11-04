@@ -1149,6 +1149,6 @@ def validate(args, limit_to=None):
                 len(args['lulc_transition_years_list'])):
             validation_warnings.append(
                 (['lulc_transition_maps_list', 'lulc_transition_years_list'],
-                    'Must have the same number of elements.'))
+                 'Must have the same number of elements.'))
 
     return validation_warnings
