@@ -5,11 +5,8 @@ import os
 import csv
 import logging
 
-from osgeo import gdal
-
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import validation
-from .. import utils
 
 
 LOGGER = logging.getLogger(__name__)
@@ -83,6 +80,15 @@ ARGS_SPEC = {
             "about": "Enable uncertainty analysis.",
             "type": "boolean",
             "required": True,
+        },
+        "g_param_a_sd": {
+            "name": "Standard Deviation for Parameter (a)",
+            "about": (
+                "Standard deviation for fish growth parameter a. "
+                "This indicates the level of uncertainty in the "
+                "estimate for parameter a."),
+            "type": "number",
+            "required": "use_uncertainty",
         },
         "g_param_b_sd": {
             "name": "Standard Deviation for Parameter (b)",
