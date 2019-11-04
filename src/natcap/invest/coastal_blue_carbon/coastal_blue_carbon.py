@@ -109,14 +109,14 @@ ARGS_SPEC = {
         },
         "lulc_baseline_year": {
             "name": "Year of baseline LULC raster",
-            "required": False,
+            "required": True,
             "about": "The year of the baseline LULC raster.",
             "type": "number",
         },
         "lulc_transition_maps_list": {
             "name": 'LULC Transition ("Snapshot") Rasters',
             "type": "other",
-            "required": False,
+            "required": "lulc_transition_years_list",
             "about": (
                 "A list of GDAL-supported rasters representing the "
                 "landscape/seascape at particular points in time.  Provided "
@@ -125,7 +125,7 @@ ARGS_SPEC = {
         "lulc_transition_years_list": {
             "name": 'LULC Transition ("Snapshot") Years',
             "type": "other",
-            "required": False,
+            "required": "lulc_transition_maps_list",
             "about": (
                 'A list of years that respectively correspond to transition '
                 'years of the rasters. Provided in chronological order.'),
@@ -149,7 +149,7 @@ ARGS_SPEC = {
         "do_price_table": {
             "name": "Use Price Table",
             "type": "boolean",
-            "required": True,
+            "required": False,
             "about": (
                 "boolean value indicating whether a price table is included "
                 "in the arguments and to be used or a price and interest rate "
@@ -158,19 +158,19 @@ ARGS_SPEC = {
         "price": {
             "name": "Price",
             "type": "number",
-            "required": True,
+            "required": "do_economic_analysis & ~do_price_table",
             "about": "The price per Megatonne CO2e at the base year.",
         },
         "inflation_rate": {
             "name": "Interest Rate (%)",
             "type": "number",
-            "required": True,
+            "required": "do_economic_analysis & ~do_price_table",
             "about": "Annual change in the price per unit of carbon",
         },
         "price_table_uri": {
             "name": "Price Table",
             "type": "csv",
-            "required": True,
+            "required": "do_price_table",
             "validation_options": {
                 "required_fields": ["year", "price"],
             },
@@ -184,7 +184,7 @@ ARGS_SPEC = {
         "discount_rate": {
             "name": "Discount Rate (%)",
             "type": "number",
-            "required": True,
+            "required": "do_economic_analysis",
             "about": (
                 "The discount rate on future valuations of "
                 "sequestered carbon, compounded yearly."),
@@ -1137,4 +1137,18 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    return validation.validate(args, ARGS_SPEC['args'])
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'])
+    sufficient_keys = validation.get_sufficient_keys(args)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+
+    if ('lulc_transition_maps_list' not in invalid_keys and
+            'lulc_transition_years_list' not in invalid_keys and
+            'lulc_transition_maps_list' in sufficient_keys):
+        if (len(args['lulc_transition_maps_list']) !=
+                len(args['lulc_transition_years_list'])):
+            validation_warnings.append(
+                (['lulc_transition_maps_list', 'lulc_transition_years_list'],
+                    'Must have the same number of elements.'))
+
+    return validation_warnings
