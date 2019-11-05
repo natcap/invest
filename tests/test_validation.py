@@ -679,6 +679,12 @@ class TestValidationFromSpec(unittest.TestCase):
                 "type": "number",
                 "required": "number_b & number_d"
             },
+            "number_f": {
+                "name": "The sixth parameter",
+                "about": "About the sixth parameter",
+                "type": "number",
+                "required": "not number_b"
+            }
         }
 
         args = {
@@ -699,6 +705,14 @@ class TestValidationFromSpec(unittest.TestCase):
             "number_e": 4,
         }
         self.assertEquals([], validation.validate(args, spec))
+
+        args = {
+            "number_a": 123,
+        }
+        validation_warnings = validation.validate(args, spec)
+        self.assertEquals(sorted(validation_warnings), [
+            (['number_f'], 'Key is missing from the args dict')
+        ])
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
