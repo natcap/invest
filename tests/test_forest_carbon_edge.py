@@ -294,3 +294,30 @@ class ForestCarbonEdgeTests(unittest.TestCase):
             if result_vector:
                 gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
+
+class ForestCarbonEdgeValidationTests(unittest.TestCase):
+    """Tests for the Forest Carbon Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'biophysical_table_path',
+            'lulc_raster_path',
+            'pools_to_calculate'
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Forest Carbon Validate: assert missing required keys."""
+        from natcap.invest import forest_carbon_edge_effect
+        from natcap.invest import validation
+
+        validation_errors = forest_carbon_edge_effect.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
