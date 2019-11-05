@@ -45,7 +45,7 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             "type": "raster",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to a base landcover map with integer codes",
             "name": "Land Use/Cover (Raster)"
         },
@@ -54,7 +54,7 @@ ARGS_SPEC = {
                 "required_fields": ["lucode", "globio_lucode"],
             },
             "type": "csv",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": (
                 "A CSV table containing model information corresponding to "
                 "each of the land use classes in the LULC raster input.  It "
@@ -78,13 +78,13 @@ ARGS_SPEC = {
         },
         "pasture_path": {
             "type": "raster",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to pasture raster",
             "name": "Pasture (Raster)"
         },
         "potential_vegetation_path": {
             "type": "raster",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to potential vegetation raster",
             "name": "Potential Vegetation (Raster)"
         },
@@ -93,7 +93,7 @@ ARGS_SPEC = {
                 "expression": "(value >= 0) & (value <= 1)",
             },
             "type": "number",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": "used in \"mode (a)\"",
             "name": "Pasture Threshold"
         },
@@ -113,7 +113,7 @@ ARGS_SPEC = {
                 "expression": "(value >= 0) & (value <= 1)",
             },
             "type": "number",
-            "required": "~predefined_globio",
+            "required": "not predefined_globio",
             "about": "used in \"mode (a)\"",
             "name": "Primary Threshold"
         },
