@@ -52,6 +52,9 @@ Unreleased Changes
   configuration of a nodata value would result in ``-inf`` values in
   output rasters.  Now, any values without a defined reclassification
   rule that make it past validation will be written out as nodata.
+* DelineateIt has been reimplemented using the latest version of
+  pygeoprocessing (and the watershed delineation routine it provides) and now
+  uses ``taskgraph`` for avoiding unnecessary recomputation.
 * Fixed a bug in Recreation Model that was causing server-side code
   to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to
