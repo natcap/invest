@@ -226,9 +226,6 @@ def execute(args):
 
     """
     LOGGER.info('Validating arguments')
-    # Default visualization option to True if it's not in args
-    if 'visualize_outputs' not in args:
-        args['visualize_outputs'] = True
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
