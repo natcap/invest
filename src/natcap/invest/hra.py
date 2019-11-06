@@ -89,7 +89,8 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "validation_options": {
-                "required_fields": ["NAME", "PATH", _BUFFER_HEADER],
+                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
+                "excel_ok": True,
             }
         },
         "criteria_table_path": {

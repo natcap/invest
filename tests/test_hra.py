@@ -1017,7 +1017,6 @@ class HraRegressionTests(unittest.TestCase):
         _make_aoi_vector(args['aoi_vector_path'])
 
         validation_warnings = natcap.invest.hra.validate(args)
-        print(validation_warnings)
         self.assertTrue([] == validation_warnings)
 
     def test_validate_max_rating_value(self):
