@@ -158,13 +158,13 @@ ARGS_SPEC = {
         "price": {
             "name": "Price",
             "type": "number",
-            "required": "do_economic_analysis & ~do_price_table",
+            "required": "do_economic_analysis & (not do_price_table)",
             "about": "The price per Megatonne CO2e at the base year.",
         },
         "inflation_rate": {
             "name": "Interest Rate (%)",
             "type": "number",
-            "required": "do_economic_analysis & ~do_price_table",
+            "required": "do_economic_analysis & (not do_price_table)",
             "about": "Annual change in the price per unit of carbon",
         },
         "price_table_uri": {
