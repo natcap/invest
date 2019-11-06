@@ -115,6 +115,7 @@ class NDRTests(unittest.TestCase):
     def test_validation(self):
         """NDR test argument validation."""
         from natcap.invest.ndr import ndr
+        from natcap.invest import validation
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
@@ -159,6 +160,27 @@ class NDRTests(unittest.TestCase):
         validation_error_list = ndr.validate(args)
         # we should have one warning that is an empty value
         self.assertEqual(len(validation_error_list), 1)
+
+        # cover that some args are conditionally required when
+        # these args are present and true
+        args = {'calc_p': True, 'calc_n': True}
+        validation_error_list = ndr.validate(args)
+        invalid_args = validation.get_invalid_keys(validation_error_list)
+        expected_missing_args = [
+            'biophysical_table_path',
+            'threshold_flow_accumulation',
+            'dem_path',
+            'subsurface_critical_length_n',
+            'subsurface_critical_length_p',
+            'runoff_proxy_path',
+            'lulc_path',
+            'workspace_dir',
+            'k_param',
+            'watersheds_path',
+            'subsurface_eff_p',
+            'subsurface_eff_n',
+        ]
+        self.assertEqual(invalid_args, expected_missing_args)
 
 
     @staticmethod
