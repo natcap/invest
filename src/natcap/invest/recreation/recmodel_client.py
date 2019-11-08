@@ -107,7 +107,7 @@ ARGS_SPEC = {
         },
         "grid_aoi": {
             "type": "boolean",
-            "required": True,
+            "required": False,
             "about": (
                 "If true the polygon vector in `args['aoi_path']` should be "
                 "gridded into a new vector and the recreation model should "
@@ -166,7 +166,7 @@ ARGS_SPEC = {
                 "required_fields": ['id', 'path', 'type'],
             },
             "type": "csv",
-            "required": "compute_regression",
+            "required": False,
             "about": (
                 "A table that maps predictor IDs to files and their types "
                 "with required headers of 'id', 'path', and 'type'.  The "
