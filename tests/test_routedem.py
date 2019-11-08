@@ -327,7 +327,6 @@ class RouteDEMTests(unittest.TestCase):
             # Required because calculate_stream_threshold
             'threshold_flow_accumulation']
 
-
         validation_warnings = routedem.validate(args)
         invalid_keys = validation.get_invalid_keys(validation_warnings)
         for key in required_keys:
