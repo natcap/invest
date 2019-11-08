@@ -826,7 +826,7 @@ def validate(args, limit_to=None):
 
         if not nutrients_selected:
             validation_warnings.append(
-                ([list(sorted(nutrients_selected))],
+                (['calc_n', 'calc_p'],
                  'Either calc_n or calc_p must be True'))
 
 

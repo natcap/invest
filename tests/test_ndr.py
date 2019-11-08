@@ -153,6 +153,8 @@ class NDRTests(unittest.TestCase):
         validation_error_list = ndr.validate(args)
         # we should have one warning that is an empty value
         self.assertEqual(len(validation_error_list), 1)
+        self.assertTrue('calc_n' in validation_error_list[0][0] and
+                        'calc_p' in validation_error_list[0][0])
 
         # cover that a file is missing
         args = NDRTests.generate_base_args(self.workspace_dir)
