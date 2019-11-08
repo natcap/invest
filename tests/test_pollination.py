@@ -391,3 +391,30 @@ class PollinationTests(unittest.TestCase):
             raise AssertionError(
                 "The following files were expected but not found: " +
                 '\n'.join(missing_files))
+
+
+class PollinationValidationTests(unittest.TestCase):
+"""Tests for the Pollination Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create list of always required arguments."""
+        self.base_required_keys = [
+            'workspace_dir',
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+        ]
+
+    def tearDown(self):
+        """Overriding tearDown function to remove temporary directory."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Pollination Validate: assert missing required keys."""
+        from natcap.invest import pollination
+        from natcap.invest import validation
+
+        validation_errors = pollination.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
