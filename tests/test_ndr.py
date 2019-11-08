@@ -182,7 +182,7 @@ class NDRTests(unittest.TestCase):
             'subsurface_eff_p',
             'subsurface_eff_n',
         ]
-        self.assertEqual(invalid_args, expected_missing_args)
+        self.assertEqual(set(invalid_args), set(expected_missing_args))
 
 
     @staticmethod

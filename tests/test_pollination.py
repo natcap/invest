@@ -394,7 +394,7 @@ class PollinationTests(unittest.TestCase):
 
 
 class PollinationValidationTests(unittest.TestCase):
-"""Tests for the Pollination Model ARGS_SPEC and validation."""
+    """Tests for the Pollination Model ARGS_SPEC and validation."""
 
     def setUp(self):
         """Create list of always required arguments."""
@@ -404,10 +404,6 @@ class PollinationValidationTests(unittest.TestCase):
             'guild_table_path',
             'landcover_biophysical_table_path',
         ]
-
-    def tearDown(self):
-        """Overriding tearDown function to remove temporary directory."""
-        shutil.rmtree(self.workspace_dir)
 
     def test_missing_keys(self):
         """Pollination Validate: assert missing required keys."""
