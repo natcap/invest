@@ -97,7 +97,7 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             "type": "vector",
-            "required": True,
+            "required": False,
             "about": (
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),
