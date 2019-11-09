@@ -62,7 +62,7 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "type": "directory",
-            "required": "~user_defined_local_recharge",
+            "required": "not user_defined_local_recharge",
             "about": (
                 "The selected folder has a list of ET0 files with a "
                 "specified format."),
@@ -73,7 +73,7 @@ ARGS_SPEC = {
                 "exists": True,
             },
             "type": "directory",
-            "required": "~user_defined_local_recharge",
+            "required": "not user_defined_local_recharge",
             "about": (
                 "The selected folder has a list of monthly precipitation "
                 "files with a specified format."),
@@ -101,7 +101,7 @@ ARGS_SPEC = {
         },
         "soil_group_path": {
             "type": "raster",
-            "required": "~user_defined_local_recharge",
+            "required": "not user_defined_local_recharge",
             "about": (
                 "Map of SCS soil groups (A, B, C, or D) mapped to integer "
                 "values (1, 2, 3, or 4) used in combination of the LULC map "
@@ -138,7 +138,7 @@ ARGS_SPEC = {
             },
             "type": "csv",
             "required": (
-                "~user_defined_local_recharge & ~user_defined_climate_zones"),
+                "(not user_defined_local_recharge) & (not user_defined_climate_zones)"),
             "about": (
                 "Not required if args['user_defined_local_recharge'] is True "
                 "or args['user_defined_climate_zones'] is True.  Path to a "
@@ -149,7 +149,7 @@ ARGS_SPEC = {
         },
         "alpha_m": {
             "type": "freestyle_string",
-            "required": "~monthly_alpha",
+            "required": "not monthly_alpha",
             "about": (
                 "Required if args['monthly_alpha'] is false.  Is the "
                 "proportion of upslope annual available local recharge that "
