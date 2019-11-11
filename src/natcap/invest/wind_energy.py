@@ -213,7 +213,7 @@ ARGS_SPEC = {
                 "required_fields": ["id", "type", "lati", "long"],
             },
             "type": "csv",
-            "required": "valuation_container & ~avg_grid_distance",
+            "required": "valuation_container & (not avg_grid_distance)",
             "about": (
                 "An optional CSV file with grid and land points to determine "
                 "cable distances from.  Each point location is represented "
@@ -232,7 +232,7 @@ ARGS_SPEC = {
                 "expression": "value > 0"
             },
             "type": "number",
-            "required": "valuation_container & ~grid_points_path",
+            "required": "valuation_container & (not grid_points_path)",
             "about": (
                 "A number in kilometres that is only used if grid points are "
                 "NOT used in valuation.  When running valuation using the "
@@ -279,7 +279,7 @@ ARGS_SPEC = {
         },
         "wind_price": {
             "type": "number",
-            "required": "valuation_container & ~price_table",
+            "required": "valuation_container & (not price_table)",
             "about": (
                 "The price of energy per kilowatt hour.  This is the price "
                 "that will be used for year or time step 0 and will then be "
@@ -293,7 +293,7 @@ ARGS_SPEC = {
                 "expression": "(value >= 0) & (value <= 1)",
             },
             "type": "number",
-            "required": "valuation_container & ~price_table",
+            "required": "valuation_container & (not price_table)",
             "about": (
                 "The annual rate of change in the price of wind energy.  "
                 "This should be expressed as a decimal percentage.  For "
