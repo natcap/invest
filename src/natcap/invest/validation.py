@@ -1,4 +1,5 @@
 """Common validation utilities for InVEST models."""
+import ast
 import collections
 import inspect
 import logging
@@ -11,7 +12,6 @@ import pygeoprocessing
 import pandas
 import xlrd
 import xlwt
-import asteval
 from osgeo import gdal, osr
 import numpy
 
@@ -84,7 +84,7 @@ N_WORKERS_SPEC = {
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
 
-    Python and numpy syntax are both acceptable.
+    The expression must be able to be evaluated as a python expression.
 
     Parameters:
         expression (string): A string expression that returns a value.
@@ -97,8 +97,31 @@ def _evaluate_expression(expression, variable_map):
         variables stored in ``variable_map``.
 
     """
-    interpreter = asteval.Interpreter(usersyms=variable_map)
-    return interpreter(expression)
+    # __builtins__ can be either a dict or a module.  We need its contents as a
+    # dict in order to use ``eval``.
+    if not isinstance(__builtins__, dict):
+        builtins = __builtins__.__dict__
+    else:
+        builtins = __builtins__
+    builtin_symbols = set(builtins.keys())
+
+    active_symbols = set()
+    for tree_node in ast.walk(ast.parse(expression)):
+        if isinstance(tree_node, ast.Name):
+            active_symbols.add(tree_node.id)
+
+    # This should allow any builtin functions, exceptions, etc. to be handled
+    # correctly within an expression.
+    missing_symbols = (active_symbols -
+                       set(variable_map.keys()).union(builtin_symbols))
+    if missing_symbols:
+        raise AssertionError(
+            'Identifiers expected in the expression "%s" are missing: %s' % (
+                expression, ', '.join(missing_symbols)))
+
+    # The usual warnings should go with this call to eval:
+    # Don't run untrusted code!!!
+    return eval(expression, builtins, variable_map)
 
 
 def get_invalid_keys(validation_warnings):
@@ -730,16 +753,9 @@ def validate(args, spec, spatial_overlap_opts=None):
 
         # An input is conditionally required when the expression given
         # evaluates to True.
-        try:
-
-            is_conditionally_required = _evaluate_expression(
-                expression=spec[key]['required'],
-                variable_map=sufficient_inputs)
-        except NameError as missing_key_error:
-            LOGGER.exception(
-                'Could not evaluate conditional requirement expression %s',
-                spec[key]['required'])
-            raise
+        is_conditionally_required = _evaluate_expression(
+            expression=spec[key]['required'],
+            variable_map=sufficient_inputs)
 
         if is_conditionally_required:
             if key not in args:

@@ -498,14 +498,14 @@ class NumberValidation(unittest.TestCase):
         """Validation: test when a number does not meet the expression."""
         from natcap.invest import validation
         error_msg = validation.check_number(
-            35, 'value < 0')
+            35, 'float(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
 
     def test_expression_failure_string(self):
         """Validation: test when string value does not meet the expression."""
         from natcap.invest import validation
         error_msg = validation.check_number(
-            "35", 'value < 0')
+            "35", 'int(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
 
 
@@ -713,6 +713,39 @@ class TestValidationFromSpec(unittest.TestCase):
         self.assertEquals(sorted(validation_warnings), [
             (['number_f'], 'Key is missing from the args dict')
         ])
+
+    def test_conditional_requirement_missing_var(self):
+        """Validation: check AssertionError if expression is missing a var."""
+        from natcap.invest import validation
+
+        spec = {
+            "number_a": {
+                "name": "The first parameter",
+                "about": "About the first parameter",
+                "type": "number",
+                "required": True,
+            },
+            "number_b": {
+                "name": "The second parameter",
+                "about": "About the second parameter",
+                "type": "number",
+                "required": False,
+            },
+            "number_c": {
+                "name": "The third parameter",
+                "about": "About the third parameter",
+                "type": "number",
+                "required": "some_var_not_in_args",
+            }
+        }
+
+        args = {
+            "number_a": 123,
+            "number_b": 456,
+        }
+        with self.assertRaises(AssertionError) as cm:
+            validation_warnings = validation.validate(args, spec)
+        self.assertTrue('some_var_not_in_args' in str(cm.exception))
 
     def test_requirement_missing(self):
         """Validation: verify absolute requirement on missing key."""
