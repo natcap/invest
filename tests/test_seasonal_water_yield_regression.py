@@ -874,19 +874,34 @@ class SWYValidationTests(unittest.TestCase):
             {'user_defined_climate_zones', 'rain_events_table_path'})
         self.assertEqual(invalid_keys, expected_missing_keys)
 
-    def test_missing_keys_recharge_layer(self):
-        """SWY Validate: assert missing required keys given recharge layer."""
+    def test_missing_keys_local_recharge(self):
+        """SWY Validate: assert missing required keys given local recharge."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
         from natcap.invest import validation
 
         validation_errors = seasonal_water_yield.validate(
-            {'user_defined_recharge_layer': True})
+            {'user_defined_local_recharge': True})
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(
             self.base_required_keys + ['l_path'])
         expected_missing_keys.difference_update(
-            {'user_defined_recharge_layer',
+            {'user_defined_local_recharge',
              'et0_dir',
              'precip_dir',
+             'rain_events_table_path',
              'soil_group_path'})
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_monthly_alpha_table(self):
+        """SWY Validate: assert missing required keys given monthly alpha."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        from natcap.invest import validation
+
+        validation_errors = seasonal_water_yield.validate(
+            {'monthly_alpha': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['monthly_alpha_path'])
+        expected_missing_keys.difference_update(
+            {'monthly_alpha', 'alpha_m'})
         self.assertEqual(invalid_keys, expected_missing_keys)
