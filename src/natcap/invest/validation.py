@@ -84,7 +84,7 @@ N_WORKERS_SPEC = {
 def _evaluate_expression(expression, variable_map):
     """Evaluate a python expression.
 
-    Python and numpy syntax are both acceptable.
+    The expression must be able to be evaluated as a python expression.
 
     Parameters:
         expression (string): A string expression that returns a value.
@@ -97,20 +97,31 @@ def _evaluate_expression(expression, variable_map):
         variables stored in ``variable_map``.
 
     """
+    # __builtins__ can be either a dict or a module.  We need its contents as a
+    # dict in order to use ``eval``.
+    if not isinstance(__builtins__, dict):
+        builtins = __builtins__.__dict__
+    else:
+        builtins = __builtins__
+    builtin_symbols = set(builtins.keys())
+
     active_symbols = set()
     for tree_node in ast.walk(ast.parse(expression)):
         if isinstance(tree_node, ast.Name):
             active_symbols.add(tree_node.id)
 
-    missing_symbols = active_symbols - set(variable_map.keys())
+    # This should allow any builtin functions, exceptions, etc. to be handled
+    # correctly within an expression.
+    missing_symbols = (active_symbols -
+                       set(variable_map.keys()).union(builtin_symbols))
     if missing_symbols:
         raise AssertionError(
-            'Variables expected in the expression "%s" are missing: %s' % (
+            'Identifiers expected in the expression "%s" are missing: %s' % (
                 expression, ', '.join(missing_symbols)))
 
-    # The usual warnings should go with this call to eval: don't run untrusted
-    # code!!!
-    return eval(expression, {}, variable_map)
+    # The usual warnings should go with this call to eval:
+    # Don't run untrusted code!!!
+    return eval(expression, builtins, variable_map)
 
 
 def get_invalid_keys(validation_warnings):

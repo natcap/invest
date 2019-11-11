@@ -498,14 +498,14 @@ class NumberValidation(unittest.TestCase):
         """Validation: test when a number does not meet the expression."""
         from natcap.invest import validation
         error_msg = validation.check_number(
-            35, 'value < 0')
+            35, 'float(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
 
     def test_expression_failure_string(self):
         """Validation: test when string value does not meet the expression."""
         from natcap.invest import validation
         error_msg = validation.check_number(
-            "35", 'value < 0')
+            "35", 'int(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
 
 
