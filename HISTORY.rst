@@ -5,6 +5,8 @@ Unreleased Changes
 * Fixed issue in Seasonal Water Yield model that would cause an unhandled
   exception when input rasters had areas of a valid DEM but nodata in other
   input layers that overlap that dem.
+* Fixed an issue in the NDR model that would cause an exception if the critical
+  length of a landcover field was set to 0.
 * Implemented PEP518-compatible build system definition in the file
   ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
   from a source distribution.
@@ -53,6 +55,9 @@ Unreleased Changes
   configuration of a nodata value would result in ``-inf`` values in
   output rasters.  Now, any values without a defined reclassification
   rule that make it past validation will be written out as nodata.
+* DelineateIt has been reimplemented using the latest version of
+  pygeoprocessing (and the watershed delineation routine it provides) and now
+  uses ``taskgraph`` for avoiding unnecessary recomputation.
 * Fixed a bug in Recreation Model that was causing server-side code
   to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to
