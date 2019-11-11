@@ -1,5 +1,5 @@
 # cython: profile=False
-# cython: language_level=2
+# cython: language_level=3
 import logging
 import os
 
@@ -360,7 +360,7 @@ def calculate_sediment_deposition(
             None.
 
     """
-    LOGGER.debug('CALCULATE SEDIMENT DEPOSITION')
+    LOGGER.info('calculate sediment deposition')
     cdef float sediment_deposition_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_sediment_deposition_path,
@@ -406,7 +406,7 @@ def calculate_sediment_deposition(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
-        LOGGER.debug('%.2f%% complete', 100.0 * (
+        LOGGER.info('%.2f%% complete', 100.0 * (
             (yoff*n_cols+xoff) / float(n_cols*n_rows)))
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
