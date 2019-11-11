@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed issue in Seasonal Water Yield model that would cause an unhandled
+  exception when input rasters had areas of a valid DEM but nodata in other
+  input layers that overlap that dem.
 * Fixed an issue in the NDR model that would cause an exception if the critical
   length of a landcover field was set to 0.
 * Implemented PEP518-compatible build system definition in the file
