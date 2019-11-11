@@ -305,7 +305,8 @@ class ForestCarbonEdgeValidationTests(unittest.TestCase):
             'workspace_dir',
             'biophysical_table_path',
             'lulc_raster_path',
-            'pools_to_calculate'
+            'pools_to_calculate',
+            'compute_forest_edge_effects',
         ]
 
     def tearDown(self):
@@ -320,4 +321,21 @@ class ForestCarbonEdgeValidationTests(unittest.TestCase):
         validation_errors = forest_carbon_edge_effect.validate({})  # empty args dict.
         invalid_keys = validation.get_invalid_keys(validation_errors)
         expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_for_edge_effects(self):
+        """Forest Carbon Validate: assert missing required for edge effects."""
+        from natcap.invest import forest_carbon_edge_effect
+        from natcap.invest import validation
+
+        args = {'compute_forest_edge_effects': True}
+        validation_errors = forest_carbon_edge_effect.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['n_nearest_model_points',
+             'tropical_forest_edge_carbon_model_vector_path',
+             'biomass_to_carbon_conversion_factor'])
+        expected_missing_keys.difference_update(
+            {'compute_forest_edge_effects'})
         self.assertEqual(invalid_keys, expected_missing_keys)

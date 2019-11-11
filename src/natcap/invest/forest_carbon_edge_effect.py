@@ -44,7 +44,7 @@ ARGS_SPEC = {
                 "expression": "int(value) > 0",
             },
             "type": "number",
-            "required": True,
+            "required": "compute_forest_edge_effects",
             "about": (
                 "Used when calculating the biomass in a pixel.  This number "
                 "determines the number of closest regression models that are "
@@ -118,7 +118,7 @@ ARGS_SPEC = {
                 "required_fields": ["method", "theta1", "theta2", "theta3"],
             },
             "type": "vector",
-            "required": True,
+            "required": "compute_forest_edge_effects",
             "about": (
                 "A vector with fields 'method', 'theta1', 'theta2', "
                 "'theta3' describing the global forest carbon edge models.  "
@@ -127,7 +127,7 @@ ARGS_SPEC = {
         },
         "biomass_to_carbon_conversion_factor": {
             "type": "number",
-            "required": True,
+            "required": "compute_forest_edge_effects",
             "about": (
                 "Number by which to scale forest edge biomass to convert to "
                 "carbon.  Default value is 0.47 (according to IPCC 2006). "
