@@ -117,9 +117,9 @@ cdef class _ManagedRaster:
         self.block_xbits = numpy.log2(self.block_xsize)
         self.block_ybits = numpy.log2(self.block_ysize)
         self.block_nx = (
-            self.raster_x_size + (self.block_xsize) - 1) / self.block_xsize
+            self.raster_x_size + (self.block_xsize) - 1) // self.block_xsize
         self.block_ny = (
-            self.raster_y_size + (self.block_ysize) - 1) / self.block_ysize
+            self.raster_y_size + (self.block_ysize) - 1) // self.block_ysize
 
         self.lru_cache = new LRUCache[int, double*](MANAGED_RASTER_N_BLOCKS)
         self.raster_path = <bytes> raster_path
@@ -249,7 +249,7 @@ cdef class _ManagedRaster:
 
     cdef void _load_block(self, int block_index) except *:
         cdef int block_xi = block_index % self.block_nx
-        cdef int block_yi = block_index / self.block_nx
+        cdef int block_yi = block_index // self.block_nx
 
         # we need the offsets to subtract from global indexes for cached array
         cdef int xoff = block_xi << self.block_xbits
@@ -310,7 +310,7 @@ cdef class _ManagedRaster:
                     self.dirty_blocks.erase(dirty_itr)
 
                     block_xi = block_index % self.block_nx
-                    block_yi = block_index / self.block_nx
+                    block_yi = block_index // self.block_nx
 
                     xoff = block_xi << self.block_xbits
                     yoff = block_yi << self.block_ybits
@@ -397,7 +397,7 @@ def calculate_sediment_deposition(
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
-    cdef float downstream_sdr_weighted_sum
+    cdef float downstream_sdr_weighted_sum, sdr_i, sdr_j
     cdef float r_j, r_j_weighted_sum, p_j, p_val
 
     for offset_dict in pygeoprocessing.iterblocks(
@@ -444,7 +444,7 @@ def calculate_sediment_deposition(
                     # processed
                     flat_index = processing_stack.top()
                     processing_stack.pop()
-                    global_row = flat_index / n_cols
+                    global_row = flat_index // n_cols
                     global_col = flat_index % n_cols
 
                     # calculate the upstream Fj contribution to this pixel
