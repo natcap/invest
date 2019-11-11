@@ -742,16 +742,9 @@ def validate(args, spec, spatial_overlap_opts=None):
 
         # An input is conditionally required when the expression given
         # evaluates to True.
-        try:
-
-            is_conditionally_required = _evaluate_expression(
-                expression=spec[key]['required'],
-                variable_map=sufficient_inputs)
-        except NameError as missing_key_error:
-            LOGGER.exception(
-                'Could not evaluate conditional requirement expression %s',
-                spec[key]['required'])
-            raise
+        is_conditionally_required = _evaluate_expression(
+            expression=spec[key]['required'],
+            variable_map=sufficient_inputs)
 
         if is_conditionally_required:
             if key not in args:
