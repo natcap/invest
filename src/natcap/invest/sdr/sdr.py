@@ -115,8 +115,6 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
-        args['local_projection_epsg'] (str): if present, projects all input
-            rasters to this projection.
         args['target_pixel_size'] (list): requested target pixel size in
             local projection coordinate system.
         args['biophysical_table_lucode_field'] (str): optional, if exists
@@ -188,12 +186,6 @@ def execute(args):
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
     target_sr_wkt = dem_raster_info['projection']
-    if 'local_projection_epsg' in args:
-        local_srs = osr.SpatialReference()
-        local_srs.ImportFromEPSG(args['local_projection_epsg'])
-        target_sr_wkt = local_srs.ExportToWkt()
-        target_pixel_size = args['target_pixel_size']
-
     vector_mask_options = {'mask_vector_path': args['watersheds_path']}
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
