@@ -1,4 +1,5 @@
 """Common validation utilities for InVEST models."""
+import ast
 import collections
 import inspect
 import logging
@@ -11,7 +12,6 @@ import pygeoprocessing
 import pandas
 import xlrd
 import xlwt
-import asteval
 from osgeo import gdal, osr
 import numpy
 
@@ -97,8 +97,20 @@ def _evaluate_expression(expression, variable_map):
         variables stored in ``variable_map``.
 
     """
-    interpreter = asteval.Interpreter(usersyms=variable_map)
-    return interpreter(expression)
+    active_symbols = set()
+    for tree_node in ast.walk(ast.parse(expression)):
+        if isinstance(tree_node, ast.Name):
+            active_symbols.add(tree_node.id)
+
+    missing_symbols = active_symbols - set(variable_map.keys())
+    if missing_symbols:
+        raise AssertionError(
+            'Variables expected in the expression "%s" are missing: %s' % (
+                expression, ', '.join(missing_symbols)))
+
+    # The usual warnings should go with this call to eval: don't run untrusted
+    # code!!!
+    return eval(expression, {}, variable_map)
 
 
 def get_invalid_keys(validation_warnings):
