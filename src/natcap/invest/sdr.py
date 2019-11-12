@@ -1113,38 +1113,62 @@ def _calculate_sed_retention(
 
 
 def _generate_report(
-        watersheds_path, usle_path, sed_export_path, sed_retention_path,
-        watershed_results_sdr_path):
-    """Create shapefile with USLE, sed export, and sed retention fields."""
+        watersheds_vector_path, usle_raster_path, sed_export_raster_path,
+        sed_retention_raster_path, target_watershed_agg_vector_path):
+    """Create shapefile with USLE, sed export, and sed retention fields.
+
+    Parameters:
+        watersheds_vector_path (str): path to base input watersheds.
+        usle_raster_path (str): path to usle raster.
+        sed_export_raster_path (str): path to sediment export raster.
+        sed_retention_raster_path (str): path to sediment retention raster.
+        target_watershed_agg_vector_path (str): path to a vector that will be
+            created from this call that will contain fields:
+                'usle_tot'
+                'sed_export'
+                'sed_retent'
+            representing the aggregate sum of the base fetures over those
+            respective rasters.
+
+    Returns:
+        None.
+
+    """
+    original_datasource = gdal.OpenEx(watersheds_vector_path, gdal.OF_VECTOR)
+    driver = gdal.GetDriverByName('ESRI Shapefile')
+    target_vector = driver.CreateCopy(
+        target_watershed_agg_vector_path, original_datasource)
+    target_vector = None
+
     field_summaries = {
         'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watersheds_path),
+            (usle_raster_path, 1), target_watershed_agg_vector_path),
         'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watersheds_path),
+            (sed_export_raster_path, 1), target_watershed_agg_vector_path),
         'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watersheds_path),
+            (sed_retention_raster_path, 1), target_watershed_agg_vector_path),
         }
 
-    original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
-    driver = gdal.GetDriverByName('ESRI Shapefile')
-    datasource_copy = driver.CreateCopy(
-        watershed_results_sdr_path, original_datasource)
-    layer = datasource_copy.GetLayer()
+    target_vector = gdal.OpenEx(
+        target_watershed_agg_vector_path, gdal.OF_VECTOR | gdal.GA_Update)
+    target_layer = target_vector.GetLayer()
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
-        layer.CreateField(field_def)
+        target_layer.CreateField(field_def)
 
-    layer.ResetReading()
-    for feature in layer:
+    target_layer.ResetReading()
+    for feature in target_layer:
         feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
                 field_name,
                 float(field_summaries[field_name][feature_id]['sum']))
-        layer.SetFeature(feature)
+        target_layer.SetFeature(feature)
+    target_vector = None
+    target_layer = None
 
 
 @validation.invest_validator
