@@ -598,7 +598,7 @@ def _calculate_vri(l_path, target_vri_path):
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     for _, block in pygeoprocessing.iterblocks((l_path, 1)):
-        valid_mask = block != l_nodata
+        valid_mask = (block != l_nodata) & (~numpy.isinf(block))
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
@@ -609,7 +609,11 @@ def _calculate_vri(l_path, target_vri_path):
         result[:] = li_nodata
         if qb_sum > 0:
             valid_mask = li_array != li_nodata
-            result[valid_mask] = li_array[valid_mask] / qb_sum
+            try:
+                result[valid_mask] = li_array[valid_mask] / qb_sum
+            except RuntimeWarning:
+                LOGGER.exception(qb_sum)
+                raise
         return result
     pygeoprocessing.raster_calculator(
         [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
