@@ -1186,10 +1186,10 @@ def _generate_report(
     """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    datasource_copy = driver.CreateCopy(
+    target_vector = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
-    layer = datasource_copy.GetLayer()
-    layer.SyncToDisk()
+    target_layer = target_vector.GetLayer()
+    target_layer.SyncToDisk()
 
     field_summaries = {
         'usle_tot': pygeoprocessing.zonal_statistics(
@@ -1206,16 +1206,18 @@ def _generate_report(
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
-        layer.CreateField(field_def)
+        target_layer.CreateField(field_def)
 
-    layer.ResetReading()
-    for feature in layer:
+    target_layer.ResetReading()
+    for feature in target_layer:
         feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
                 field_name,
                 float(field_summaries[field_name][feature_id]['sum']))
-        layer.SetFeature(feature)
+        target_layer.SetFeature(feature)
+    target_vector = None
+    target_layer = None
 
 
 @validation.invest_validator
