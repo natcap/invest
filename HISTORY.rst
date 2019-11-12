@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Fixed an issue in the SDR model that could cause reported result vector
+  values to not correspond with known input vectors if the input watershed
+  vector was not an ESRI Shapefile.
 * Fixed issue in Seasonal Water Yield model that would cause an unhandled
   exception when input rasters had areas of a valid DEM but nodata in other
   input layers that overlap that dem.

@@ -209,8 +209,17 @@ class SDRTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
-        sdr.execute(args)
 
+        gpkg_driver = ogr.GetDriverByName('GPKG')
+        base_vector = ogr.Open(args['watersheds_path'])
+        target_watersheds_path = os.path.join(
+            args['workspace_dir'], 'input_watersheds.gpkg')
+        target_vector = gpkg_driver.CopyDataSource(
+            base_vector, target_watersheds_path)
+        base_vector = None
+        target_vector = None
+        args['watersheds_path'] = target_watersheds_path
+        sdr.execute(args)
         expected_results = {
             'sed_retent': 392771.84375,
             'sed_export': 0.77038854361,
