@@ -605,6 +605,7 @@ cpdef calculate_local_recharge(
                     aet_i = 0
                     p_i = 0
                     qf_i = 0
+
                     for m_index in range(12):
                         precip_m_raster = (
                             <_ManagedRaster?>precip_m_raster_list[m_index])
@@ -623,9 +624,15 @@ cpdef calculate_local_recharge(
                         p_m = precip_m_raster.get(xi, yi)
                         if not is_close(p_m, precip_nodata):
                             p_i += p_m
+                        else:
+                            p_m = 0
+
                         qf_m = qf_m_raster.get(xi, yi)
                         if not is_close(qf_m, qf_nodata):
                             qf_i += qf_m
+                        else:
+                            qf_m = 0
+
                         kc_m = kc_m_raster.get(xi, yi)
                         pet_m = 0
                         et0_m = et0_m_raster.get(xi, yi)
@@ -634,16 +641,20 @@ cpdef calculate_local_recharge(
                                 is_close(et0_m, et0_nodata)):
                             # Equation 6
                             pet_m = kc_m * et0_m
+
                         # Equation 4/5
                         aet_i += min(
                             pet_m,
                             p_m - qf_m +
                             alpha_month_array[m_index]*beta_i*l_sum_avail_i)
+
                     target_aet_raster.set(xi, yi, aet_i)
                     l_i = (p_i - qf_i - aet_i)
-                    target_li_raster.set(xi, yi, l_i)
+
                     # Equation 8
                     l_avail_i = min(gamma*l_i, l_i)
+
+                    target_li_raster.set(xi, yi, l_i)
                     target_li_avail_raster.set(xi, yi, l_avail_i)
 
                     flow_dir_mfd = <int>flow_raster.get(xi, yi)
