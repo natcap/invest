@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Improved how Coastal Vulnerability calculates local wind-driven waves.
+  This requires a new bathymetry raster input and implements equation 10
+  of the User Guid. Also minor updates to fields in intermediate output files, notably a 'shore_id' field is now the unique ID for joining tables, FIDs are no longer used.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
