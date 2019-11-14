@@ -16,7 +16,7 @@ from .. import validation
 from .. import utils
 from . import ndr_core
 
-LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
+LOGGER = logging.getLogger(__name__)
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
