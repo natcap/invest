@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Add SDR feature to model sediment deposition across the landscape.
+* Fixed an issue that would cause an exception if SDR landcover map was masked
+  out if the original landcover map had no-nodata value defined.
 * Fixed an issue in the SDR model that could cause reported result vector
   values to not correspond with known input vectors if the input watershed
   vector was not an ESRI Shapefile.
