@@ -42,6 +42,7 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
+        'natcap.invest.sdr',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
         'natcap.invest.scenic_quality',
@@ -90,6 +91,11 @@ setup(
         Extension(
             name="natcap.invest.ndr.ndr_core",
             sources=['src/natcap/invest/ndr/ndr_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
+            name="natcap.invest.sdr.sdr_core",
+            sources=['src/natcap/invest/sdr/sdr_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(

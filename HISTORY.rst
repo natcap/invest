@@ -10,6 +10,17 @@ Unreleased Changes
 * The results suffix key for the Wave Energy and Wind Energy models has been
   renamed ``results_suffix`` (was previously ``suffix``).  This is for
   consistency across InVEST models.
+* Improved how Seasonal Water Yield handles nodata values when processing
+  floating-point precipitation and quickflow rasters.
+* Add SDR feature to model sediment deposition across the landscape.
+* Fixed an issue that would cause an exception if SDR landcover map was masked
+  out if the original landcover map had no-nodata value defined.
+* Fixed an issue in the SDR model that could cause reported result vector
+  values to not correspond with known input vectors if the input watershed
+  vector was not an ESRI Shapefile.
+* Fixed issue in Seasonal Water Yield model that would cause an unhandled
+  exception when input rasters had areas of a valid DEM but nodata in other
+  input layers that overlap that dem.
 * Fixed an issue in the NDR model that would cause an exception if the critical
   length of a landcover field was set to 0.
 * Implemented PEP518-compatible build system definition in the file
