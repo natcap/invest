@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Added a human-friendly message on NDR model ``KeyError``.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
