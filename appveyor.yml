@@ -21,6 +21,9 @@ environment:
     - PYTHON: "C:\\Python37-x64"
       TARGET: "test"
 
+    - PYTHON: "C:\\Python37"
+      TARGET: "test_ui"
+
     - PYTHON: "C:\\Python37-x64"
       TARGET: "validate_sampledata"
 
