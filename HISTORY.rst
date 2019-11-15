@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
