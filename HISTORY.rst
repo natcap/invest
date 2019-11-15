@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
