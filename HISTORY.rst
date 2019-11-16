@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
 * Added a human-friendly message on NDR model ``KeyError``.
 * Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
   has correct values.
