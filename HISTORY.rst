@@ -3,6 +3,9 @@
 Unreleased Changes
 ------------------
 * Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
+* Added a human-friendly message on NDR model ``KeyError``.
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
