@@ -5,6 +5,8 @@ Unreleased Changes
 * Correcting an issue with repository fetching in the InVEST ``Makefile``.
   Managed repositories will now be fetched and updated to the expected revision
   even if the repository already exists.
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
