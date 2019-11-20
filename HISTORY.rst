@@ -4,6 +4,9 @@ Unreleased Changes
 ------------------
 * Added a status message to the UI if a datastack file fails to load,
   instead of staying silent.
+* Correcting an issue with repository fetching in the InVEST ``Makefile``.
+  Managed repositories will now be fetched and updated to the expected revision
+  even if the repository already exists.
 * Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
 * Added a human-friendly message on NDR model ``KeyError``.
 * Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
