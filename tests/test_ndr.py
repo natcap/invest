@@ -125,8 +125,12 @@ class NDRTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_lucode.csv')
-        with self.assertRaises(KeyError):
+        with self.assertRaises(KeyError) as cm:
             ndr.execute(args)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'present in the landuse raster but missing from the biophysical'
+            in actual_message)
 
     def test_no_nutrient_selected(self):
         """NDR no nutrient selected should raise a ValueError."""
