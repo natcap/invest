@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Added a status message to the UI if a datastack file fails to load,
+  instead of staying silent.
 * Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
 * Added a human-friendly message on NDR model ``KeyError``.
 * Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
