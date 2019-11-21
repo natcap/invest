@@ -55,7 +55,7 @@ def build_environment_from_requirements(cli_args):
     requirements_files = args.req
 
     pip_requirements = set([])
-    conda_requirements = set(['python=2.7'])
+    conda_requirements = set(['python=3.7'])
     for requirement_file in requirements_files:
         for line in open(requirement_file):
             line = line.strip()

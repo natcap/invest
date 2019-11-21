@@ -37,8 +37,6 @@ ifeq ($(OS),Windows_NT)
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
-	ENV_SCRIPTS = $(ENV)/bin
-	ENV_ACTIVATE = source $(ENV_SCRIPTS)/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
@@ -194,10 +192,18 @@ fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH
 
 # Python environment management
 env:
-	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    ifeq ($(OS),Windows_NT)
+		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    else
+		# TODO: make the yml files here using scripts/convert...py?
+		conda create -p conda_env -y -c conda-forge pip PyInstaller Cython
+		conda env update -p conda_env --file requirements.yml
+		conda env update -p conda_env --file requirements-dev.yml --file requirements-gui.yml
+		$(BASHLIKE_SHELL_COMMAND) "source activate ./conda_env && $(MAKE) install"
+    endif
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
