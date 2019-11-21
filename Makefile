@@ -199,10 +199,9 @@ env:
 		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
     else
 		# TODO: make the yml files here using scripts/convert...py?
-		conda create -p conda_env -y -c conda-forge pip PyInstaller Cython
-		conda env update -p conda_env --file requirements.yml
-		conda env update -p conda_env --file requirements-dev.yml --file requirements-gui.yml
-		$(BASHLIKE_SHELL_COMMAND) "source activate ./conda_env && $(MAKE) install"
+		conda create -p $(ENV) -y -c conda-forge pip PyInstaller Cython
+		conda env update -p $(ENV) --file requirements.yml --file requirements-dev.yml --file requirements-gui.yml
+		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
     endif
 
 # compatible with pip>=7.0.0
