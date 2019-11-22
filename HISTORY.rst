@@ -4,7 +4,19 @@ Unreleased Changes
 ------------------
 * Improved how Coastal Vulnerability calculates local wind-driven waves.
   This requires a new bathymetry raster input and implements equation 10
-  of the User Guid. Also minor updates to fields in intermediate output files, notably a 'shore_id' field is now the unique ID for joining tables, FIDs are no longer used.
+  of the User Guide. Also minor updates to fields in intermediate outputs, 
+  notably a 'shore_id' field is now the unique ID for joining tables and 
+  FIDs are no longer used.
+* Added a status message to the UI if a datastack file fails to load,
+  instead of staying silent.
+* Correcting an issue with repository fetching in the InVEST ``Makefile``.
+  Managed repositories will now be fetched and updated to the expected revision
+  even if the repository already exists.
+* Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
+* Added a human-friendly message on NDR model ``KeyError``.
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
+>>>>>>> merge rev
 * Improved how Seasonal Water Yield handles nodata values when processing
   floating-point precipitation and quickflow rasters.
 * Add SDR feature to model sediment deposition across the landscape.
