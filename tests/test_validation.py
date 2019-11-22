@@ -238,7 +238,7 @@ class DirectoryValidation(unittest.TestCase):
         """Validation: folder permissions."""
         from natcap.invest import validation
 
-        self.assertEquals(None, validation.check_directory(
+        self.assertEqual(None, validation.check_directory(
             self.workspace_dir, exists=True, permissions='rwx'))
 
 
@@ -563,7 +563,7 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.csv')
         df.to_csv(target_file)
 
-        self.assertEquals(None, validation.check_csv(
+        self.assertEqual(None, validation.check_csv(
             target_file, required_fields=['foo', 'bar']))
 
     def test_csv_bom_fieldnames(self):
@@ -578,7 +578,7 @@ class CSVValidation(unittest.TestCase):
         target_file = os.path.join(self.workspace_dir, 'test.csv')
         df.to_csv(target_file, encoding='utf-8-sig')
 
-        self.assertEquals(None, validation.check_csv(
+        self.assertEqual(None, validation.check_csv(
             target_file, required_fields=['foo', 'bar']))
 
     def test_csv_missing_fieldnames(self):
@@ -692,7 +692,7 @@ class TestValidationFromSpec(unittest.TestCase):
             "number_b": 456,
         }
         validation_warnings = validation.validate(args, spec)
-        self.assertEquals(sorted(validation_warnings), [
+        self.assertEqual(sorted(validation_warnings), [
             (['number_c'], 'Key is missing from the args dict'),
             (['number_d'], 'Key is missing from the args dict'),
         ])
@@ -704,13 +704,13 @@ class TestValidationFromSpec(unittest.TestCase):
             "number_d": 3,
             "number_e": 4,
         }
-        self.assertEquals([], validation.validate(args, spec))
+        self.assertEqual([], validation.validate(args, spec))
 
         args = {
             "number_a": 123,
         }
         validation_warnings = validation.validate(args, spec)
-        self.assertEquals(sorted(validation_warnings), [
+        self.assertEqual(sorted(validation_warnings), [
             (['number_f'], 'Key is missing from the args dict')
         ])
 
@@ -760,7 +760,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
 
         args = {}
-        self.assertEquals(
+        self.assertEqual(
             [(['number_a'], 'Key is missing from the args dict')],
             validation.validate(args, spec))
 
@@ -777,12 +777,12 @@ class TestValidationFromSpec(unittest.TestCase):
         }
 
         args = {'number_a': ''}
-        self.assertEquals(
+        self.assertEqual(
             [(['number_a'], 'Key is required but has no value')],
             validation.validate(args, spec))
 
         args = {'number_a': None}
-        self.assertEquals(
+        self.assertEqual(
             [(['number_a'], 'Key is required but has no value')],
             validation.validate(args, spec))
 
@@ -799,7 +799,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
 
         args = {'number_a': 'not a number'}
-        self.assertEquals(
+        self.assertEqual(
             [(['number_a'], 'Value could not be interpreted as a number')],
             validation.validate(args, spec))
 
@@ -823,7 +823,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'string_a': None, "number_a": 1}
 
-        self.assertEquals(
+        self.assertEqual(
             [(['string_a'], 'Key is required but has no value')],
             validation.validate(args, spec))
 
@@ -850,7 +850,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'string_a': "ZZZ", "number_a": 1}
 
-        self.assertEquals(
+        self.assertEqual(
             [(['string_a'], "Value must be one of: ['AAA', 'BBB']")],
             validation.validate(args, spec))
 
@@ -880,7 +880,7 @@ class TestValidationFromSpec(unittest.TestCase):
             validation._VALIDATION_FUNCS['number'] = (
                 validation.check_number)
 
-        self.assertEquals(
+        self.assertEqual(
             validation_warnings,
             [(['number_a'], 'An unexpected error occurred in validation')])
 
@@ -897,7 +897,7 @@ class TestValidationFromSpec(unittest.TestCase):
         }
 
         args = {'number_a': 1}
-        self.assertEquals([], validation.validate(args, spec))
+        self.assertEqual([], validation.validate(args, spec))
 
     def test_conditional_validity_recursive(self):
         """Validation: check that we can require from nested conditions."""
@@ -919,7 +919,7 @@ class TestValidationFromSpec(unittest.TestCase):
 
         del args[previous_key]  # delete the last addition to the dict.
 
-        self.assertEquals(
+        self.assertEqual(
             [(['arg_J'], 'Key is missing from the args dict')],
             validation.validate(args, spec))
 
@@ -986,7 +986,7 @@ class TestValidationFromSpec(unittest.TestCase):
         validation_warnings = validation.validate(
             args, spec, {'spatial_keys': list(args.keys()),
                          'different_projections_ok': True})
-        self.assertEquals(len(validation_warnings), 1)
-        self.assertEquals(set(args.keys()), set(validation_warnings[0][0]))
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertEqual(set(args.keys()), set(validation_warnings[0][0]))
         self.assertTrue('Bounding boxes do not intersect' in
                         validation_warnings[0][1])
