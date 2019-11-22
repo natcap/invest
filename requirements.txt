@@ -3,7 +3,7 @@
 # This file records the packages and requirements needed in order for
 # all models of natcap.invest to work as expected.
 #
-# Packages required for extras (like the UI) are in setup.py.
+# Packages required for extras (like the UI) are in requirements-gui.txt.
 #
 # Note that there may be some OS-specific requirements, so be sure to run
 # `make check` to verify you have all the required packages.
