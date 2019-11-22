@@ -7,7 +7,7 @@ import requests
 import pkg_resources
 
 FEEDSTOCK_URL = 'https://github.com/conda-forge/{package}-feedstock'
-YML_TEMPLATE = """name: invest-env
+YML_TEMPLATE = """
 channels:
 - conda-forge
 - default
@@ -20,6 +20,10 @@ SCM_MAP = {
     'hg': 'mercurial',
     'git': 'git',
 }
+
+# Pinning python at 3.7 triggered requirements conflicts and time-consuming 
+# conda solvers.
+PYTHON_REQUIREMENT = 'python>=3.6,<3.8'
 
 
 def build_environment_from_requirements(cli_args):
@@ -55,7 +59,8 @@ def build_environment_from_requirements(cli_args):
     requirements_files = args.req
 
     pip_requirements = set([])
-    conda_requirements = set(['python=3.7'])
+    # conda likes it when you list pip if you're using pip.
+    conda_requirements = set([PYTHON_REQUIREMENT, 'pip'])
     for requirement_file in requirements_files:
         for line in open(requirement_file):
             line = line.strip()
