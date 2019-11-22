@@ -126,4 +126,3 @@ class UFRMTests(unittest.TestCase):
         del args['infrastructure_damage_loss_table_path']
         result = urban_flood_risk_mitigation.validate(args)
         self.assertTrue('missing from the args dict' in result[0][1])
-

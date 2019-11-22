@@ -620,8 +620,9 @@ def execute(args):
         # Join here because all the following tasks need to unpickle parameters
         # from ``get_suitable_projection_params`` task first
         task_graph.join()
-        target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
-            open(proj_params_pickle_path, 'rb'))
+        with open(proj_params_pickle_path, 'rb') as pickle_file:
+            target_sr_wkt, target_pixel_size, target_bounding_box = pickle.load(
+                pickle_file)
         LOGGER.debug('target_sr_wkt: %s\ntarget_pixel_size: %s\n' +
                      'target_bounding_box: %s\n', target_sr_wkt,
                      (target_pixel_size,), target_bounding_box)
@@ -1934,7 +1935,8 @@ def _compute_density_harvested_fields(
         wind_dict_copy[key][_DENSITY_FIELD_NAME] = density_results
         wind_dict_copy[key][_HARVESTED_FIELD_NAME] = harvested_wind_energy
 
-    pickle.dump(wind_dict_copy, open(target_pickle_path, 'wb'))
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(wind_dict_copy, pickle_file)
 
 
 def _dictionary_to_point_vector(base_dict_data, layer_name, target_vector_path):
@@ -2109,9 +2111,10 @@ def _get_suitable_projection_params(
         min_pixel_size = np.min(np.absolute(base_raster_info['pixel_size']))
         target_pixel_size = (min_pixel_size, -min_pixel_size)
 
-    pickle.dump(
-        (target_sr_wkt, target_pixel_size, target_bounding_box),
-        open(target_pickle_path, 'wb'))
+    with open(target_pickle_path, 'wb') as pickle_file:
+        pickle.dump(
+            (target_sr_wkt, target_pixel_size, target_bounding_box),
+            pickle_file)
 
 
 def _clip_to_projection_with_square_pixels(
@@ -2215,7 +2218,8 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
     LOGGER.info('Entering _wind_data_to_point_vector')
 
     # Unpickle the wind data dictionary
-    wind_data = pickle.load(open(wind_data_pickle_path, 'rb'))
+    with open(wind_data_pickle_path, 'rb') as pickle_file:
+        wind_data = pickle.load(pickle_file)
 
     # Get driver based on file extension
     _, driver_name = _get_file_ext_and_driver_name(target_vector_path)
