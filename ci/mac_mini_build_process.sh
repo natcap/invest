@@ -1,11 +1,27 @@
-PYTHON_ENV=conda_env
-# conda must be installed and on the path for make env
+#!/bin/bash
+
+# A series of Make commands to build InVEST binaries and
+# installers for MacOSX.
+
+# System Pre-requisites (all should be on the PATH):
+# make
+# python3
+# conda
+# pandoc
+
+# PyInstaller's exe/invest.spec expects the python environment
+# to be named 'env' so it can find and binary files that need moving
+PYTHON_ENV=env
 make ENV=$PYTHON_ENV env
-source activate ./$PYTHON_ENV
+
+# calling these targets directly in order to override the PYTHON var in Makefile
 make PYTHON=$PYTHON_ENV/bin/python python_packages
 make PYTHON=$PYTHON_ENV/bin/python binaries
 
-#27049 ERROR: Can not find path ./libshiboken2.abi3.5.13.dylib (needed by /Users/jenkins/workspace/davemfish/invest/conda_env/lib/python3.7/site-packages/PySide2/QtWidgets.abi3.so)
+# activate environment here so that userguide recipe finds sphinx-build
+source activate ./$PYTHON_ENV
 
-# To test our build:
-# ./dist/invest/invest list
+# overriding this make variable just so it includes the trailing slash,
+# which is key for cp and rsync commands in this bash shell
+make INVEST_BINARIES_DIR=dist/invest/ mac_zipfile
+make deploy
