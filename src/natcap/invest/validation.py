@@ -821,7 +821,7 @@ def invest_validator(validate_func):
             # do your validation here
     """
     def _wrapped_validate_func(args, limit_to=None):
-        validate_func_args = inspect.getargspec(validate_func)
+        validate_func_args = inspect.getfullargspec(validate_func)
         assert validate_func_args.args == ['args', 'limit_to'], (
             'validate has invalid parameters: parameters are: %s.' % (
                 validate_func_args.args))

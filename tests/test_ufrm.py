@@ -101,7 +101,7 @@ class UFRMTests(unittest.TestCase):
 
         del args['workspace_dir']
         validation_warnings = urban_flood_risk_mitigation.validate(args)
-        self.assertEquals(len(validation_warnings), 1)
+        self.assertEqual(len(validation_warnings), 1)
 
         args['workspace_dir'] = ''
         result = urban_flood_risk_mitigation.validate(args)
