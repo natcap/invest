@@ -10,6 +10,7 @@ from PyInstaller.compat import is_win, is_darwin
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 exename = 'invest'
+conda_env = 'env'
 
 
 kwargs = {
@@ -40,8 +41,8 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 if is_darwin:
     # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
-        (os.path.join(os.path.basename(name)), name, 'BINARY') for name in
-        glob.glob('./conda_env/lib/libspatialindex*.dylib')]
+        (os.path.basename(name), name, 'BINARY') for name in
+        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/
