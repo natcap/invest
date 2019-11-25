@@ -52,7 +52,7 @@ class FileRegistryTests(unittest.TestCase):
             }
 
         unexpected_paths = []
-        for key, result_path in expected_dict.iteritems():
+        for key, result_path in expected_dict.items():
             expected_path = os.path.normpath(result[key])
             if os.path.normpath(result_path) != expected_path:
                 unexpected_paths.append(

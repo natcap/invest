@@ -358,21 +358,17 @@ def _msa_f_op(
     """
     nodata_mask = numpy.isclose(primary_veg_mask_nodata, primary_veg_smooth)
     msa_f = numpy.empty(primary_veg_smooth.shape)
-    msa_f_values = sorted(msa_f_table)
 
-    for value in reversed(msa_f_values):
-        # special case if it's a > or < value
-        if value == '>':
-            msa_f[primary_veg_smooth > msa_f_table['>'][0]] = (
-                msa_f_table['>'][1])
-        elif value == '<':
-            continue
-        else:
-            msa_f[primary_veg_smooth <= value] = msa_f_table[value]
-
-    if '<' in msa_f_table:
-        msa_f[primary_veg_smooth < msa_f_table['<'][0]] = (
-            msa_f_table['<'][1])
+    less_than = msa_f_table.pop('<', None)
+    greater_than = msa_f_table.pop('>', None)
+    if greater_than:
+        msa_f[primary_veg_smooth > greater_than[0]] = (
+                greater_than[1])
+    for key in reversed(sorted(msa_f_table)):
+        msa_f[primary_veg_smooth <= key] = msa_f_table[key]
+    if less_than:
+        msa_f[primary_veg_smooth < less_than[0]] = (
+            less_than[1])
 
     msa_f[nodata_mask] = msa_nodata
 
@@ -407,42 +403,30 @@ def _msa_i_op(
     distance_to_infrastructure *= out_pixel_size  # convert to meters
     msa_i_primary = numpy.empty(lulc_array.shape)
     msa_i_other = numpy.empty(lulc_array.shape)
-    msa_i_primary_values = sorted(msa_i_primary_table)
-    msa_i_other_values = sorted(msa_i_other_table)
 
-    for value in reversed(msa_i_primary_values):
-        # special case if it's a > or < value
-        if value == '>':
-            msa_i_primary[distance_to_infrastructure >
-                          msa_i_primary_table['>'][0]] = (
-                              msa_i_primary_table['>'][1])
-        elif value == '<':
-            continue
-        else:
-            msa_i_primary[distance_to_infrastructure <= value] = (
-                msa_i_primary_table[value])
+    primary_less_than = msa_i_primary_table.pop('<', None)
+    primary_greater_than = msa_i_primary_table.pop('>', None)
+    if primary_greater_than:
+        msa_i_primary[distance_to_infrastructure > primary_greater_than[0]] = (
+                primary_greater_than[1])
+    for key in reversed(sorted(msa_i_primary_table)):
+        msa_i_primary[distance_to_infrastructure <= key] = (
+            msa_i_primary_table[key])
+    if primary_less_than:
+        msa_i_primary[distance_to_infrastructure < primary_less_than[0]] = (
+            primary_less_than[1])
 
-    if '<' in msa_i_primary_table:
-        msa_i_primary[distance_to_infrastructure <
-                      msa_i_primary_table['<'][0]] = (
-                          msa_i_primary_table['<'][1])
-
-    for value in reversed(msa_i_other_values):
-        # special case if it's a > or < value
-        if value == '>':
-            msa_i_other[distance_to_infrastructure >
-                        msa_i_other_table['>'][0]] = (
-                            msa_i_other_table['>'][1])
-        elif value == '<':
-            continue
-        else:
-            msa_i_other[distance_to_infrastructure <= value] = (
-                msa_i_other_table[value])
-
-    if '<' in msa_i_other_table:
-        msa_i_other[distance_to_infrastructure <
-                    msa_i_other_table['<'][0]] = (
-                        msa_i_other_table['<'][1])
+    other_less_than = msa_i_other_table.pop('<', None)
+    other_greater_than = msa_i_other_table.pop('>', None)
+    if other_greater_than:
+        msa_i_other[distance_to_infrastructure > other_greater_than[0]] = (
+                other_greater_than[1])
+    for key in reversed(sorted(msa_i_other_table)):
+        msa_i_other[distance_to_infrastructure <= key] = (
+            msa_i_other_table[key])
+    if other_less_than:
+        msa_i_other[distance_to_infrastructure < other_less_than[0]] = (
+            other_less_than[1])
 
     # lulc code 1 is primary veg
     msa_i = numpy.where(lulc_array == 1, msa_i_primary, msa_i_other)
@@ -478,9 +462,9 @@ def make_gaussian_kernel_path(sigma, kernel_path):
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
-    col_index = numpy.array(xrange(kernel_size))
+    col_index = numpy.array(range(kernel_size))
     integration = 0.0
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         kernel = numpy.exp(
             -((row_index - max_distance)**2 +
               (col_index - max_distance) ** 2)/(2.0*sigma**2)).reshape(
@@ -489,7 +473,7 @@ def make_gaussian_kernel_path(sigma, kernel_path):
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         kernel_row = kernel_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
@@ -914,9 +898,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

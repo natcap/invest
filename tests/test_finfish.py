@@ -4,7 +4,7 @@ import tempfile
 import shutil
 import os
 
-import pygeoprocessing
+import pygeoprocessing.testing
 
 
 SAMPLE_DATA = os.path.join(
@@ -25,7 +25,7 @@ def _make_harvest_shp(workspace_dir):
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     with open(os.path.join(output_path, 'Finfish_Harvest.shp'), 'wb') as shp:
-        shp.write('')
+        shp.write(b'')
 
 
 class FinfishTests(unittest.TestCase):

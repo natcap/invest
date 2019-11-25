@@ -876,7 +876,7 @@ def _parse_scenario_variables(args):
         guild_table_path, 'species', to_lower=True)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
-    guild_headers = guild_table.itervalues().next().keys()
+    guild_headers = list(guild_table.values())[0].keys()
     for header in _EXPECTED_GUILD_HEADERS:
         matches = re.findall(header, " ".join(guild_headers))
         if len(matches) == 0:
@@ -890,7 +890,7 @@ def _parse_scenario_variables(args):
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
     biophysical_table_headers = (
-        landcover_biophysical_table.itervalues().next().keys())
+        list(landcover_biophysical_table.values())[0].keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
         if len(matches) == 0:
@@ -930,7 +930,7 @@ def _parse_scenario_variables(args):
         farm_layer_defn = farm_layer.GetLayerDefn()
         farm_headers = [
             farm_layer_defn.GetFieldDefn(i).GetName()
-            for i in xrange(farm_layer_defn.GetFieldCount())]
+            for i in range(farm_layer_defn.GetFieldCount())]
         for header in _EXPECTED_FARM_HEADERS:
             matches = re.findall(header, " ".join(farm_headers))
             if not matches:
@@ -960,7 +960,7 @@ def _parse_scenario_variables(args):
             substrate_to_header[substrate]['biophysical'] = match.group()
 
     for table_type, lookup_table in itertools.chain(
-            season_to_header.iteritems(), substrate_to_header.iteritems()):
+            season_to_header.items(), substrate_to_header.items()):
         if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for '%s' but "
@@ -1084,7 +1084,8 @@ class _CalculateHabitatNestingIndex(object):
         # if the function has changed
         try:
             self.__name__ = hashlib.sha1(inspect.getsource(
-                _CalculateHabitatNestingIndex.__call__)).hexdigest()
+                    _CalculateHabitatNestingIndex.__call__
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = _CalculateHabitatNestingIndex.__name__
@@ -1130,7 +1131,7 @@ class _SumRasters(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _SumRasters.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1159,7 +1160,7 @@ class _PollinatorSupplyOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PollinatorSupplyOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1202,7 +1203,7 @@ class _PollinatorSupplyIndexOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PollinatorSupplyIndexOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1241,7 +1242,7 @@ class _MultByScalar(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _MultByScalar.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1267,7 +1268,7 @@ class _OnFarmPollinatorAbundance(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _OnFarmPollinatorAbundance.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1297,7 +1298,7 @@ class _PYTOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PYTOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1324,7 +1325,7 @@ class _PYWOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PYWOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1376,9 +1377,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing" +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

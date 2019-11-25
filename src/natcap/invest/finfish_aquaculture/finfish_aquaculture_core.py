@@ -6,7 +6,6 @@ This will pull from data passed in by finfish_aquaculture.
 import collections
 import os
 import math
-import datetime
 import logging
 
 from osgeo import ogr

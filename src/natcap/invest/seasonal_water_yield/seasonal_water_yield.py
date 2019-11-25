@@ -218,7 +218,7 @@ def _execute(args):
         alpha_month_map = dict(
             (key, val['alpha']) for key, val in
             utils.build_lookup_from_csv(
-                args['monthly_alpha_path'], 'month').iteritems())
+                args['monthly_alpha_path'], 'month').items())
     else:
         # make all 12 entries equal to args['alpha_m']
         alpha_m = float(fractions.Fraction(args['alpha_m']))
@@ -598,7 +598,7 @@ def _calculate_vri(l_path, target_vri_path):
     l_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
 
     for _, block in pygeoprocessing.iterblocks((l_path, 1)):
-        valid_mask = block != l_nodata
+        valid_mask = (block != l_nodata) & (~numpy.isinf(block))
         qb_sum += numpy.sum(block[valid_mask])
         qb_valid_count += numpy.count_nonzero(valid_mask)
     li_nodata = pygeoprocessing.get_raster_info(l_path)['nodata'][0]
@@ -609,7 +609,11 @@ def _calculate_vri(l_path, target_vri_path):
         result[:] = li_nodata
         if qb_sum > 0:
             valid_mask = li_array != li_nodata
-            result[valid_mask] = li_array[valid_mask] / qb_sum
+            try:
+                result[valid_mask] = li_array[valid_mask] / qb_sum
+            except RuntimeWarning:
+                LOGGER.exception(qb_sum)
+                raise
         return result
     pygeoprocessing.raster_calculator(
         [(l_path, 1)], vri_op, target_vri_path, gdal.GDT_Float32,
@@ -691,9 +695,9 @@ def _calculate_monthly_quick_flow(
 
         """
         valid_mask = (
-            (p_im != p_nodata) & (s_i != si_nodata) & (p_im != 0.0) &
-            (stream_array != 1) &
-            (n_events != n_events_nodata) & (n_events > 0))
+            (~numpy.isclose(p_im, p_nodata)) & (~numpy.isclose(s_i, si_nodata)) &
+            (p_im != 0.0) & (stream_array != 1) &
+            (~numpy.isclose(n_events, n_events_nodata)) & (n_events > 0))
         valid_n_events = n_events[valid_mask]
         valid_si = s_i[valid_mask]
 
@@ -725,12 +729,14 @@ def _calculate_monthly_quick_flow(
         # if precip is 0, then QF should be zero
         qf_im[(p_im == 0) | (n_events == 0)] = 0.0
         # if we're on a stream, set quickflow to the precipitation
-        valid_stream_precip_mask = (stream_array == 1) & (p_im != p_nodata)
+        valid_stream_precip_mask = (
+            (stream_array == 1) & (~numpy.isclose(p_im, p_nodata)))
         qf_im[valid_stream_precip_mask] = p_im[valid_stream_precip_mask]
 
         # this handles some user cases where they don't have data defined on
         # their landcover raster. It otherwise crashes later with some NaNs
-        qf_im[(qf_im == qf_nodata) & (stream_array != stream_nodata)] = 0.0
+        qf_im[numpy.isclose(qf_im, qf_nodata) &
+              ~numpy.isclose(stream_array, stream_nodata)] = 0.0
         return qf_im
 
     pygeoprocessing.raster_calculator(
@@ -771,12 +777,16 @@ def _calculate_curve_number_raster(
     lulc_to_soil = {}
     lulc_nodata = pygeoprocessing.get_raster_info(
         lulc_raster_path)['nodata'][0]
-    for soil_id, soil_column in map_soil_type_to_header.iteritems():
+    for soil_id, soil_column in map_soil_type_to_header.items():
         lulc_to_soil[soil_id] = {
             'lulc_values': [],
             'cn_values': []
         }
-        for lucode in sorted(biophysical_table.keys() + [lulc_nodata]):
+        lucodes = list(biophysical_table)
+        if lulc_nodata is not None:
+            lucodes.append(lulc_nodata)
+
+        for lucode in sorted(lucodes):
             if lucode != lulc_nodata:
                 lulc_to_soil[soil_id]['cn_values'].append(
                     biophysical_table[lucode][soil_column])
@@ -871,7 +881,7 @@ def _aggregate_recharge(
         None
     """
     if os.path.exists(aggregate_vector_path):
-        LOGGER.warn(
+        LOGGER.warning(
             '%s exists, deleting and writing new output',
             aggregate_vector_path)
         os.remove(aggregate_vector_path)
@@ -1002,9 +1012,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(

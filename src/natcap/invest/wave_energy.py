@@ -904,7 +904,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Creating new vector')
     output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
     output_vector = output_driver.CreateDataSource(target_vector_path)
-    target_layer = output_vector.CreateLayer(layer_name, target_sr,
+    target_layer = output_vector.CreateLayer(str(layer_name), target_sr,
                                              ogr.wkbPoint)
 
     # Construct a dictionary of field names and their corresponding types
@@ -923,7 +923,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
 
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
-    for point_dict in base_dict_data.itervalues():
+    for point_dict in base_dict_data.values():
         latitude = float(point_dict['LAT'])
         longitude = float(point_dict['LONG'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
@@ -1236,7 +1236,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
     percentile_dict = {}
-    for idx in xrange(len(percentile_groups)):
+    for idx in range(len(percentile_groups)):
         percentile_dict[percentile_groups[idx]] = value_ranges[idx]
     value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
     _create_raster_attr_table(
@@ -1262,7 +1262,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         'Pixel Count'
     ]
     table_dict = dict((col_name, []) for col_name in column_names)
-    for idx in xrange(len(percentile_groups)):
+    for idx in range(len(percentile_groups)):
         table_dict['Percentile Group'].append(percentile_groups[idx])
         table_dict['Percentile Range'].append(percentile_ranges[idx])
         table_dict[value_range_field].append(value_ranges[idx])
@@ -1471,7 +1471,7 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
 
     # For all the wave watch points, multiply the occurrence matrix by the
     # interpolated machine performance matrix to get the captured wave energy
-    for key, val in wave_data['bin_matrix'].iteritems():
+    for key, val in wave_data['bin_matrix'].items():
         # Convert all values to type float
         temp_matrix = numpy.array(val, dtype='f')
         mult_matrix = numpy.multiply(temp_matrix, interp_z)
@@ -1568,6 +1568,7 @@ def _index_raster_value_to_point_vector(
     vector_idx = index.Index(generator_function(), interleaved=False)
 
     # For all the features (points) add the proper raster value
+    encountered_fids = set()
     for block_info, block_matrix in pygeoprocessing.iterblocks(
             (base_raster_path, 1)):
         # Calculate block bounding box in decimal degrees
@@ -1587,18 +1588,34 @@ def _index_raster_value_to_point_vector(
 
         for vector in intersect_vectors:
             vector_fid = vector.id
+
+            # Occasionally there will be points that intersect multiple block
+            # bounding boxes (like points that lie on the boundary of two
+            # blocks) and we don't want to double-count.
+            if vector_fid in encountered_fids:
+                continue
+
             vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
 
             # To get proper raster value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
             i = int((vector_trans_x - block_min_x) / pixel_size_x)
             j = int((block_max_y - vector_trans_y) / pixel_size_y)
-            block_value = block_matrix[j][i]
+
+            try:
+                block_value = block_matrix[j][i]
+            except IndexError:
+                # It is possible for an index to be *just* on the edge of a
+                # block and exceed the block dimensions.  If this happens,
+                # pass on this point, as another block's bounding box should
+                # catch this point instead.
+                continue
 
             # There are cases where the DEM may be too coarse and thus a
             # wave energy point falls on land. If the raster value taken is
             # greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
+            encountered_fids.add(vector_fid)
             if block_value >= 0.0:
                 target_layer.DeleteFeature(vector_fid)
             else:
@@ -1798,7 +1815,7 @@ def _count_pixels_groups(raster_path, group_values):
 
     for _, block_matrix in pygeoprocessing.iterblocks((raster_path, 1)):
         # Cumulatively add the pixels count for each value in 'group_values'
-        for idx in xrange(len(group_values)):
+        for idx in range(len(group_values)):
             val = group_values[idx]
             count_mask = numpy.zeros(block_matrix.shape)
             numpy.equal(block_matrix, val, count_mask)

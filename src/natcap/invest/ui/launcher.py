@@ -4,6 +4,13 @@ import sys
 import subprocess
 import os
 
+try:
+    import PyQt4
+except ImportError:
+    # Need to explicitly import PySide2 when on python3.  It's the only Qt
+    # binding I can seem to get to work under python3.
+    import PySide2
+
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -44,7 +51,7 @@ class ModelLaunchButton(QtWidgets.QPushButton):
             cwd = None  # subprocess.Popen default value for cwd.
             command = 'invest'
         LOGGER.info('Launching %s from CWD %s', self._model, cwd)
-        subprocess.Popen('%s %s' % (command, self._model), shell=True, cwd=cwd)
+        subprocess.Popen('%s run %s' % (command, self._model), shell=True, cwd=cwd)
 
 
 def main():
@@ -61,13 +68,15 @@ def main():
     scroll_area.setWidget(main_widget)
 
     labels_and_buttons = []
-    for model in sorted(cli._MODEL_UIS.keys()):
+    for model, model_data in sorted(cli._MODEL_UIS.items()):
         row = layout.rowCount()
         label = QtWidgets.QLabel()
         button = ModelLaunchButton('Launch', model)
         labels_and_buttons.append((label, button))
 
-        layout.addWidget(QtWidgets.QLabel(model), row, 0, QtCore.Qt.AlignRight)
+        layout.addWidget(
+            QtWidgets.QLabel(model_data.humanname), row, 0,
+            QtCore.Qt.AlignRight)
         layout.addWidget(button, row, 1)
 
     version_label = QtWidgets.QLabel(

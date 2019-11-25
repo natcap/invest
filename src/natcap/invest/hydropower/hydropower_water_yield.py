@@ -264,7 +264,19 @@ def execute(args):
 
     for lulc_code in bio_dict:
         Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
-        vegetated_dict[lulc_code] = bio_dict[lulc_code]['lulc_veg']
+
+        # Catch invalid LULC_veg values with an informative error.
+        lulc_veg_value = bio_dict[lulc_code]['lulc_veg']
+        try:
+            vegetated_dict[lulc_code] = int(lulc_veg_value)
+            if vegetated_dict[lulc_code] not in set([0, 1]):
+                raise ValueError()
+        except ValueError:
+            # If the user provided an invalid LULC_veg value, raise an
+            # informative error.
+            raise ValueError('LULC_veg value must be either 1 or 0, not %s',
+                             lulc_veg_value)
+
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
@@ -469,7 +481,7 @@ def create_vector_output(
     watershed_vector = None
 
     for pickle_path, key_name in stats_path_list:
-        with open(pickle_path, 'r') as picklefile:
+        with open(pickle_path, 'rb') as picklefile:
             ws_stats_dict = pickle.load(picklefile)
 
             if key_name == 'wyield_mn':
@@ -536,7 +548,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     """
     ws_stats_dict = pygeoprocessing.zonal_statistics(
         (raster_path, 1), base_vector_path, ignore_nodata=True)
-    with open(target_stats_pickle, 'w') as picklefile:
+    with open(target_stats_pickle, 'wb') as picklefile:
         picklefile.write(pickle.dumps(ws_stats_dict))
 
 
@@ -1027,9 +1039,7 @@ def validate(args, limit_to=None):
 
     if len(missing_key_list) > 0:
         # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        raise KeyError(*missing_key_list)
 
     if len(no_value_list) > 0:
         validation_error_list.append(
