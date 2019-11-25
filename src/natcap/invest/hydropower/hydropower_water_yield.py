@@ -264,7 +264,19 @@ def execute(args):
 
     for lulc_code in bio_dict:
         Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
-        vegetated_dict[lulc_code] = bio_dict[lulc_code]['lulc_veg']
+
+        # Catch invalid LULC_veg values with an informative error.
+        lulc_veg_value = bio_dict[lulc_code]['lulc_veg']
+        try:
+            vegetated_dict[lulc_code] = int(lulc_veg_value)
+            if vegetated_dict[lulc_code] not in set([0, 1]):
+                raise ValueError()
+        except ValueError:
+            # If the user provided an invalid LULC_veg value, raise an
+            # informative error.
+            raise ValueError('LULC_veg value must be either 1 or 0, not %s',
+                             lulc_veg_value)
+
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']

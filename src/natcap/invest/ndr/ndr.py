@@ -16,7 +16,7 @@ from .. import validation
 from .. import utils
 from . import ndr_core
 
-LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
+LOGGER = logging.getLogger(__name__)
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
@@ -759,9 +759,14 @@ def _calculate_load(
         result[:] = _TARGET_NODATA
         for lucode in numpy.unique(lucode_array):
             if lucode != nodata_landuse:
+                try:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
                         cell_area_ha)
+                except KeyError:
+                    raise KeyError(
+                        'lucode: %d is present in the landuse raster but '
+                        'missing from the biophysical table' % lucode)
         return result
 
     pygeoprocessing.raster_calculator(

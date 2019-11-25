@@ -60,6 +60,62 @@ class NDRTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             ndr.execute(args)
 
+    def test_crit_len_0(self):
+        """NDR test case where crit len is 0 in biophysical table."""
+        from natcap.invest.ndr import ndr
+
+        # use predefined directory so test can clean up files during teardown
+        args = NDRTests.generate_base_args(self.workspace_dir)
+        new_table_path = os.path.join(self.workspace_dir, 'table_c_len_0.csv')
+        with open(new_table_path, 'w') as target_file:
+            with open(args['biophysical_table_path'], 'r') as table_file:
+                target_file.write(table_file.readline())
+                while True:
+                    line = table_file.readline()
+                    if not line:
+                        break
+                    line_list = line.split(',')
+                    # replace the crit_len_p with 0 in this column
+                    line = ','.join(line_list[0:12] + ['0.0'] + line_list[13::])
+                    target_file.write(line)
+
+        args['biophysical_table_path'] = new_table_path
+        ndr.execute(args)
+
+        result_vector = ogr.Open(
+            os.path.join(args['workspace_dir'], 'watershed_results_ndr.shp'))
+        result_layer = result_vector.GetLayer()
+        error_results = {}
+
+        surf_p_ld = 41.921
+        sub_p_ld = 0
+        p_exp_tot = 7.666
+        surf_n_ld = 2978.520
+        sub_n_ld = 28.614
+        n_exp_tot = 339.839
+        feature = result_layer.GetFeature(0)
+        if not feature:
+            raise AssertionError("No features were output.")
+        for field, value in [
+                ('surf_p_ld', surf_p_ld),
+                ('sub_p_ld', sub_p_ld),
+                ('p_exp_tot', p_exp_tot),
+                ('surf_n_ld', surf_n_ld),
+                ('sub_n_ld', sub_n_ld),
+                ('n_exp_tot', n_exp_tot)]:
+            if not numpy.isclose(feature.GetField(field), value, atol=1e-2):
+                error_results[field] = (
+                    'field', feature.GetField(field), value)
+        ogr.Feature.__swig_destroy__(feature)
+        feature = None
+        result_layer = None
+        ogr.DataSource.__swig_destroy__(result_vector)
+        result_vector = None
+
+        if error_results:
+            raise AssertionError(
+                "The following values are not equal: %s" % error_results)
+
     def test_missing_lucode(self):
         """NDR missing lucode in biophysical table should raise a KeyError."""
         from natcap.invest.ndr import ndr
@@ -69,8 +125,12 @@ class NDRTests(unittest.TestCase):
         # make args explicit that this is a base run of SWY
         args['biophysical_table_path'] = os.path.join(
             REGRESSION_DATA, 'input', 'biophysical_table_missing_lucode.csv')
-        with self.assertRaises(KeyError):
+        with self.assertRaises(KeyError) as cm:
             ndr.execute(args)
+        actual_message = str(cm.exception)
+        self.assertTrue(
+            'present in the landuse raster but missing from the biophysical'
+            in actual_message)
 
     def test_no_nutrient_selected(self):
         """NDR no nutrient selected should raise a ValueError."""

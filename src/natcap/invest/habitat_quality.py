@@ -84,8 +84,10 @@ def execute(args):
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
-    threat_dict = utils.build_lookup_from_csv(
-        args['threats_table_path'], 'THREAT', to_lower=False)
+    # Ensure the key is a string.
+    threat_dict = {
+        str(key): value for key, value in utils.build_lookup_from_csv(
+            args['threats_table_path'], 'THREAT', to_lower=False).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
 
