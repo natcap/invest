@@ -34,6 +34,9 @@ ARGS_SPEC = {
         "dem_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing elevation values for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -46,6 +49,9 @@ ARGS_SPEC = {
         "lulc_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing integer values "
                 "representing the LULC code for each cell.  The LULC code "
@@ -64,6 +70,10 @@ ARGS_SPEC = {
         "watersheds_path": {
             "type": "vector",
             "required": True,
+            "validation_options": {
+                "required_fields": ['ws_id'],
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported vector file containing watersheds such "
                 "that each watershed contributes to a point of interest "

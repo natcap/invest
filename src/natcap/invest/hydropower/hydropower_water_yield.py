@@ -37,6 +37,9 @@ ARGS_SPEC = {
         "lulc_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing LULC code "
                 "(expressed as integers) for each cell."),
@@ -45,6 +48,9 @@ ARGS_SPEC = {
         "depth_to_root_rest_layer_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing an average root "
                 "restricting layer depth value for each cell. The root "
@@ -55,6 +61,9 @@ ARGS_SPEC = {
         "precipitation_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing non-zero, average "
                 "annual precipitation values for each cell. The "
@@ -65,6 +74,9 @@ ARGS_SPEC = {
         "pawc_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing plant available "
                 "water content values for each cell.  The plant available "
@@ -75,6 +87,9 @@ ARGS_SPEC = {
         "eto_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file containing annual average "
                 "reference evapotranspiration values for each cell.  The "
@@ -85,6 +100,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "validation_options": {
                 "required_fields": ['ws_id'],
+                "projected": True,
             },
             "type": "vector",
             "required": True,
@@ -98,6 +114,7 @@ ARGS_SPEC = {
         "sub_watersheds_path": {
             "validation_options": {
                 "required_fields": ["subws_id"],
+                "projected": True
             },
             "type": "vector",
             "required": False,

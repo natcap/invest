@@ -672,7 +672,8 @@ def validate(args, spec, spatial_overlap_opts=None):
 
     if keys_with_no_value:
         validation_warnings.append(
-            (sorted(keys_with_no_value), "Key is required but has no value"))
+            (sorted(keys_with_no_value),
+             "Input is required but has no value"))
 
     # Sufficiency: An input is sufficient when its key is present in args and
     # it has a value.  A sufficient input need not be valid.  Sufficiency is

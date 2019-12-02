@@ -42,6 +42,9 @@ ARGS_SPEC = {
         "dem_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -54,6 +57,9 @@ ARGS_SPEC = {
         "erosivity_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file, with an erosivity index value "
                 "for each cell.  This variable depends on the intensity and "
@@ -68,6 +74,9 @@ ARGS_SPEC = {
         "erodibility_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file, with a soil erodibility value "
                 "for each cell which is a measure of the susceptibility of "
@@ -78,6 +87,9 @@ ARGS_SPEC = {
         "lulc_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
@@ -86,6 +98,7 @@ ARGS_SPEC = {
         "watersheds_path": {
             "validation_options": {
                 "required_fields": ["ws_id"],
+                "projected": True,
             },
             "type": "vector",
             "required": True,
