@@ -9,14 +9,15 @@ from osgeo import osr
 
 WORKSPACE_DIR = 'uhim_test_data'
 
+
 def main():
     """Entry point."""
     base_data_path_list = [
-        r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Buildings.shp",
-        r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\ETo_SFBA.tif",
-        r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Tair_Sept.tif",
-        r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\LULC_SFBA.tif",
-        r"C:\Users\rpsharp\Dropbox\Urban InVEST\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",]
+        r"C:\Users\jdouglass\Downloads\Urban heat data SF\Buildings.shp",
+        r"C:\Users\jdouglass\Downloads\Urban heat data SF\ETo_SFBA.tif",
+        r"C:\Users\jdouglass\Downloads\Urban heat data SF\Tair_Sept.tif",
+        r"C:\Users\jdouglass\Downloads\Urban heat data SF\LULC_SFBA.tif",
+        r"C:\Users\jdouglass\Downloads\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",]
 
     clip_polygon_path = r"C:\Users\rpsharp\Documents\bitbucket_repos\invest\uhim_clip.gpkg"
     clip_polygon_vector = gdal.OpenEx(clip_polygon_path, gdal.OF_VECTOR)
