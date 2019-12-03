@@ -423,6 +423,8 @@ Var INSTALLER_DIR
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
+  ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
+  ; "$ du -BK -c <directory with model sample data>" and then use the total.
   Section "${Title}"
     AddSize "${AdditionalSizeKb}"
 
@@ -484,7 +486,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
     !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
     !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 694
-    !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip" 148
+    !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip" 6885
   SectionGroupEnd
 SectionGroupEnd
 
