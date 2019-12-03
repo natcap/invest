@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -xe
 
 # A series of Make commands to build InVEST binaries and
 # installers for MacOSX.
@@ -10,7 +10,7 @@
 # pandoc
 
 # PyInstaller's exe/invest.spec expects the python environment
-# to be named 'env' so it can find and binary files that need moving
+# to be named 'env' so it can find binary files that need moving
 PYTHON_ENV=env
 make ENV=$PYTHON_ENV env
 
