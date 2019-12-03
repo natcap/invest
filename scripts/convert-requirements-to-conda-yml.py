@@ -21,9 +21,7 @@ SCM_MAP = {
     'git': 'git',
 }
 
-# Pinning python at 3.7 triggered requirements conflicts and time-consuming 
-# conda solvers.
-PYTHON_REQUIREMENT = 'python>=3.6,<3.8'
+PYTHON_REQUIREMENT = 'python>=3.7.0,<3.8'
 
 
 def build_environment_from_requirements(cli_args):
