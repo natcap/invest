@@ -7,7 +7,7 @@ from osgeo import gdal
 from osgeo import ogr
 from osgeo import osr
 
-WORKSPACE_DIR = 'uhim_test_data'
+WORKSPACE_DIR = 'uhim_test_data-dtsf'
 
 
 def main():
@@ -19,7 +19,7 @@ def main():
         r"C:\Users\jdouglass\Downloads\Urban heat data SF\LULC_SFBA.tif",
         r"C:\Users\jdouglass\Downloads\Urban heat data SF\Draft_Watersheds_SFEI\Draft_Watersheds_SFEI.shp",]
 
-    clip_polygon_path = r"C:\Users\rpsharp\Documents\bitbucket_repos\invest\uhim_clip.gpkg"
+    clip_polygon_path = r"C:\Users\jdouglass\Downloads\Urban heat data SF\AOI-DTSF.shp"
     clip_polygon_vector = gdal.OpenEx(clip_polygon_path, gdal.OF_VECTOR)
     clip_polygon_layer = clip_polygon_vector.GetLayer()
     clip_polygon_feature = next(clip_polygon_layer)
