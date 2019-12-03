@@ -280,6 +280,7 @@ ZIPDIRS = Aquaculture \
 		  seasonal_water_yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
+		  UrbanCoolingModel\
 		  WaveEnergy \
 		  WindEnergy
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
