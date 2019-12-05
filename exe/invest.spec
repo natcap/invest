@@ -10,6 +10,7 @@ from PyInstaller.compat import is_win, is_darwin
 current_dir = os.getcwd()  # assume we're building from the project root
 block_cipher = None
 exename = 'invest'
+conda_env = 'env'
 
 
 kwargs = {
@@ -38,20 +39,10 @@ pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
 # Create the executable file.
 if is_darwin:
-    # Avoid shapely and matplotlib dylib collision with GDAL dylibs.
-    excluded_dylibs = set(['libgeos_c.1.dylib', 'libpng16.16.dylib'])
-    a.binaries = [x for x in a.binaries if x[0] not in excluded_dylibs]
-
-    # add gdal dynamic libraries from homebrew
-    a.binaries += [('geos_c.dll', '/usr/local/lib/libgeos_c.dylib', 'BINARY')]
+    # add rtree dependency dynamic libraries from conda environment
     a.binaries += [
         (os.path.basename(name), name, 'BINARY') for name in
-         itertools.chain(
-            glob.glob('/usr/local/lib/libgeos*.dylib'),
-            glob.glob('/usr/local/lib/libgeotiff*.dylib'),
-            glob.glob('/usr/local/lib/libpng*.dylib'),
-            glob.glob('/usr/local/lib/libspatialindex*.dylib')
-        )]
+        glob.glob(os.path.join(conda_env, 'lib/libspatialindex*.dylib'))]
 elif is_win:
     # Adapted from
     # https://shanetully.com/2013/08/cross-platform-deployment-of-python-applications-with-pyinstaller/

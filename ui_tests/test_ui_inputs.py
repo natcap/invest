@@ -1217,6 +1217,7 @@ class ContainerTest(InVESTModelInputTest):
         pass
 
 
+@unittest.skip('skipping MultiTest class. See issue #3936')
 class MultiTest(ContainerTest):
     @staticmethod
     def create_input(*args, **kwargs):
