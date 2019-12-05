@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 12156954f0bf6e3188fe624c7d0d635edae4149d
+GIT_SAMPLE_DATA_REPO_REV    := f1165a7df4d7d7a0eca32e3ea781257d378662a7
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -10,7 +10,7 @@ GIT_TEST_DATA_REPO_REV      := 2ddcafc7eb0635f7351ef1ba40c0245ea5b08c41
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := 0fb6c74c6697
+HG_UG_REPO_REV              := 1dfee03e6bf8
 
 
 ENV = env
@@ -37,8 +37,6 @@ ifeq ($(OS),Windows_NT)
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
-	ENV_SCRIPTS = $(ENV)/bin
-	ENV_ACTIVATE = source $(ENV_SCRIPTS)/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
@@ -194,10 +192,17 @@ fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH
 
 # Python environment management
 env:
-	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    ifeq ($(OS),Windows_NT)
+		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    else
+		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+		conda create -p $(ENV) -y -c conda-forge
+		conda env update -p $(ENV) --file requirements-all.yml
+		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
+    endif
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
@@ -261,7 +266,7 @@ ZIPDIRS = Aquaculture \
 		  Terrestrial \
 		  carbon \
 		  CoastalBlueCarbon \
-		  CoastalProtection \
+		  CoastalVulnerability \
 		  CropProduction \
 		  Fisheries \
 		  forest_carbon_edge_effect \
