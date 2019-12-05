@@ -16,7 +16,7 @@ GDAL>=2.0,<3.0
 Pyro4==4.77  # pip-only
 pandas>=0.22.0
 numpy>=1.11.0,!=1.16.0
-Rtree>=0.8.2
+Rtree>=0.8.2,!=0.9.1
 scipy>=0.16.1
 Shapely>=1.6.4
 six
