@@ -2,6 +2,13 @@
 
 Unreleased Changes
 ------------------
+* Improved how Coastal Vulnerability calculates local wind-driven waves.
+  This requires a new bathymetry raster input and implements equation 10
+  of the User Guide. Also minor updates to fields in intermediate outputs, 
+  notably a 'shore_id' field is now the unique ID for joining tables and 
+  FIDs are no longer used.
+* Added a status message to the UI if a datastack file fails to load,
+  instead of staying silent.
 * Correcting an issue with repository fetching in the InVEST ``Makefile``.
   Managed repositories will now be fetched and updated to the expected revision
   even if the repository already exists.

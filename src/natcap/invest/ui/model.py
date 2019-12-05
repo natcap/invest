@@ -339,8 +339,8 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
 
         self._body_text = (
             "This datastack was created for the model \"{datastack_model}\", "
-            "which looks different from this model (\"{current_model}\"). Load "
-            "these parameters anyways?"
+            "which looks different from this model (\"{current_model}\").\n\n "
+            "Load these parameters anyway?"
         )
 
         ConfirmDialog.__init__(
@@ -1712,7 +1712,9 @@ class InVESTModel(QtWidgets.QMainWindow):
             stack_type, stack_info = datastack.get_datastack_info(
                 datastack_path)
         except Exception:
-            LOGGER.exception('Could not load datastack %s', datastack_path)
+            fail_message = 'Could not load datastack %s' % datastack_path
+            self.statusBar().showMessage(fail_message, STATUSBAR_MSG_DURATION)
+            LOGGER.exception(fail_message)
             return
 
         if stack_info.model_name != self.target.__module__:
