@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Removed a constraint in Coastal Vulnerability so the AOI polygon no longer
+  needs to intersect the continental shelf contour line. So the AOI can now be
+  used exclusively to delineate the coastal area of interest.
 * Improved how Coastal Vulnerability calculates local wind-driven waves.
   This requires a new bathymetry raster input and implements equation 10
   of the User Guide. Also minor updates to fields in intermediate outputs, 
