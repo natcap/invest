@@ -81,10 +81,9 @@ def main(sampledatadir):
             LOGGER.info('validating %s ', datastack_path)
             model_warnings = getattr(
                 model_module, 'validate')(paramset.args)
-        except AttributeError:
-            LOGGER.warn(
-                '%s does not have a defined validation function.',
-                paramset.model_name)
+        except AttributeError as err:
+            # If there was no validate function, don't crash but raise it later.
+            model_warnings = err
         finally:
             if model_warnings:
                 LOGGER.error(model_warnings)
