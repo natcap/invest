@@ -261,7 +261,7 @@ ZIPDIRS = Aquaculture \
 		  Terrestrial \
 		  carbon \
 		  CoastalBlueCarbon \
-		  CoastalProtection \
+		  CoastalVulnerability \
 		  CropProduction \
 		  Fisheries \
 		  forest_carbon_edge_effect \
