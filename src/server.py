@@ -1,5 +1,7 @@
 import importlib
 import json
+import sys
+
 from flask import Flask
 from flask import request
 import natcap.invest.cli
@@ -28,7 +30,7 @@ MODEL_MODULE_MAP = {
     "routedem": "routedem",
     "scenario_generator_proximity": "scenario_gen_proximity",
     "scenic_quality": "scenic_quality.scenic_quality",
-    "sdr": "sdr",
+    "sdr": "sdr.sdr",
     "seasonal_water_yield": "seasonal_water_yield",
     "urban_flood_risk_mitigation": "urban_flood_risk_mitigation",
     "wave_energy": "wave_energy",
@@ -36,9 +38,21 @@ MODEL_MODULE_MAP = {
 }
 
 
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
 @app.route('/ready', methods=['GET'])
 def get_is_ready():
-    return 'flask ready'
+    return json.dumps('Flask ready')
+
+
+@app.route('/shutdown', methods=['POST'])
+def shutdown():
+    shutdown_server()
+    return 'Flask server shutting down...'
 
 
 @app.route('/models', methods=['GET'])

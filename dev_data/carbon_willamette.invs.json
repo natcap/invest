@@ -4,7 +4,7 @@
         "calc_sequestration": true, 
         "carbon_pools_path": "..\\invest\\data\\invest-sample-data\\carbon\\carbon_pools_samp.csv", 
         "do_redd": false, 
-        "do_valuation": "False", 
+        "do_valuation": "false", 
         "lulc_cur_path": "..\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_cur\\hdr.adf", 
         "lulc_cur_year": "2016", 
         "lulc_fut_path": "..\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_fut\\hdr.adf", 

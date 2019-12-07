@@ -1,6 +1,7 @@
 import { spawn, spawnSync } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
+import request from 'request';
 // import { enableLiveReload } from 'electron-compile';
 
 // Keep a global reference of the window object, if you don't, the window will
@@ -75,11 +76,17 @@ function createPythonProcess() {
   });
 }
 
-const exitPythonProcess = () => {
-  console.log('Killing python process ' + pythonServerProcess.pid);
-  const processKiller = spawnSync(
-    'taskkill /PID ' + pythonServerProcess.pid + ' /T /F', {shell: true});
-  pythonServerProcess = null;
+function exitPythonProcess() {
+  request.post(
+    'http://localhost:5000/shutdown',
+    (error, response, body) => {
+      if (!error) {
+        console.log('python killed')
+      } else {
+        console.log('Error: ' + error.message)
+      }
+    }
+  );
 }
 
 // This method will be called when Electron has finished
@@ -88,12 +95,14 @@ const exitPythonProcess = () => {
 app.on('ready', createWindow);
 
 // Quit when all windows are closed.
-app.on('window-all-closed', () => {
+app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
     exitPythonProcess();
-    app.quit();
+    // It's crucial to wait before the app.quit here, otherwise
+    // the parent process dies before flask has time to kill its server.
+    setTimeout(app.quit, 10);
   }
 });
 
