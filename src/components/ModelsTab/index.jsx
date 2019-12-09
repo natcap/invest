@@ -25,25 +25,14 @@ export class ModelsTab extends React.Component {
     this.onSaveClick = this.onSaveClick.bind(this);
   }
 
-  componentDidMount() {
-  	this.makeInvestList();
-    const recentSessions = findRecentSessions(CACHE_DIR);
-    this.setState({recentSessions: recentSessions});
-  }
-
-  makeInvestList() {
-    request.get(
-      'http://localhost:5000/models',
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          const models = JSON.parse(body);
-          this.setState({models: models});
-        } else {
-          console.log('Status: ' + response.statusCode)
-          console.log('Error: ' + error.message)
-        }
-      }
-    );
+  async componentDidMount() {
+    const investList = await makeInvestList();
+    const recentSessions = await findRecentSessions(CACHE_DIR);
+    this.setState(
+      {
+        models: investList,
+        recentSessions: recentSessions,
+      });
   }
 
   onSaveClick(event) {
@@ -185,23 +174,51 @@ class LoadStateForm extends React.Component {
   }
 }
 
+
+function makeInvestList() {
+  return new Promise(function(resolve, reject) {
+    setTimeout(() => {
+      request.get(
+        'http://localhost:5000/models',
+        (error, response, body) => {
+          if (!error && response.statusCode == 200) {
+            const models = JSON.parse(body);
+            resolve(models);
+          } else if (error) {
+            console.error(error);
+          } else {
+            try {
+              console.log('Status: ' + response.statusCode);
+            }
+            catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      );
+    }, 500)  // wait, the server only just launced in a subprocess.
+  });
+}
+
 function findRecentSessions(cache_dir) {
   // Populate recentSessions from list of files in cache dir
   // sorted by modified time.
 
   // TODO: check that files are actually state config files
   // before putting them on the array
-  const files = fs.readdirSync(cache_dir);
+  return new Promise(function(resolve, reject) {
+    const files = fs.readdirSync(cache_dir);
 
-  // reverse sort (b - a) based on last-modified time
-  const sortedFiles = files.sort(function(a, b) {
-    return fs.statSync(path.join(cache_dir, b)).mtimeMs -
-         fs.statSync(path.join(cache_dir, a)).mtimeMs
+    // reverse sort (b - a) based on last-modified time
+    const sortedFiles = files.sort(function(a, b) {
+      return fs.statSync(path.join(cache_dir, b)).mtimeMs -
+           fs.statSync(path.join(cache_dir, a)).mtimeMs
+    });
+    // trim off extension, since that is how sessions
+    // were named orginally
+    resolve(sortedFiles
+      .map(f => path.parse(f).name)
+      .slice(0, 15) // max 15 items returned
+    );
   });
-  // trim off extension, since that is how sessions
-  // were named orginally
-  return (sortedFiles
-    .map(f => path.parse(f).name)
-    .slice(0, 15) // max 15 items returned
-  );
 }
