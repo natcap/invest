@@ -350,6 +350,7 @@ export class InvestJob extends React.Component {
       <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
         <Tab eventKey="models" title="Models">
           <ModelsTab
+            investList={this.props.investList}
             investGetSpec={this.investGetSpec}
             saveState={this.saveState}
             loadState={this.loadState}

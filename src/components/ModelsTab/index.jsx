@@ -2,13 +2,13 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { spawn } from 'child_process';
-import request from 'request';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
+
 
 const INVEST_EXE = process.env.INVEST
 const CACHE_DIR = 'cache'
@@ -18,7 +18,6 @@ export class ModelsTab extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      models: {}, // stores result of `invest list`
       recentSessions: [],
     };
 
@@ -26,11 +25,9 @@ export class ModelsTab extends React.Component {
   }
 
   async componentDidMount() {
-    const investList = await makeInvestList();
     const recentSessions = await findRecentSessions(CACHE_DIR);
     this.setState(
       {
-        models: investList,
         recentSessions: recentSessions,
       });
   }
@@ -46,7 +43,7 @@ export class ModelsTab extends React.Component {
 
   render () {
     // A button for each model
-    const investJSON = this.state.models;
+    const investJSON = this.props.investList;
     let investButtons = [];
     for (const model in investJSON) {
       investButtons.push(
@@ -172,32 +169,6 @@ class LoadStateForm extends React.Component {
       </div>
     );
   }
-}
-
-
-function makeInvestList() {
-  return new Promise(function(resolve, reject) {
-    setTimeout(() => {
-      request.get(
-        'http://localhost:5000/models',
-        (error, response, body) => {
-          if (!error && response.statusCode == 200) {
-            const models = JSON.parse(body);
-            resolve(models);
-          } else if (error) {
-            console.error(error);
-          } else {
-            try {
-              console.log('Status: ' + response.statusCode);
-            }
-            catch (e) {
-              console.error(e);
-            }
-          }
-        }
-      );
-    }, 500)  // wait, the server only just launced in a subprocess.
-  });
 }
 
 function findRecentSessions(cache_dir) {
