@@ -1327,8 +1327,7 @@ class GriddedInput(InVESTModelInput):
 
         self._validator.validate(
             target=validator_ref,
-            args=args,
-            limit_to=self.args_key)
+            args=args)
 
     def _validation_finished(self, validation_warnings):
         """Interpret any validation errors and format them for the UI.
@@ -1536,7 +1535,10 @@ class Text(GriddedInput):
         self.widgets[2] = self.textfield
 
     def _text_changed(self, new_text):
-        """A slot to emit the ``value_changed`` signal and trigger validation.
+        """A slot to emit the ``value_changed`` signal.
+
+        NOTE: Validation is no longer triggered by this signal handler,
+        everything is handled at the model level.
 
         Parameters:
             new_text (string): The new string value of the textfield.
@@ -1546,7 +1548,6 @@ class Text(GriddedInput):
         """
         self.dirty = True
         self.value_changed.emit(new_text)
-        self._validate()
 
     def value(self):
         """Fetch the value of the textfield.

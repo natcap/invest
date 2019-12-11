@@ -463,7 +463,7 @@ def check_number(value, expression=None):
     try:
         float(value)
     except (TypeError, ValueError):
-        return "Value could not be interpreted as a number"
+        return "Value '%s' could not be interpreted as a number" % value
 
     if expression:
         # Check to make sure that 'value' is in the expression.
