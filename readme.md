@@ -5,7 +5,7 @@
 set system-specific environment variables at launch. 
 
 ### windows:  
-`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py36\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\Library\\share\\gdal && set PYTHON=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\python && npm start`  
+`set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\Library\\share\\gdal && set PYTHON=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\python && npm start`  
 
 GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
 PYTHON path must be able to import `flask`  

@@ -199,12 +199,9 @@ export class InvestJob extends React.Component {
               // Each result is an array of two elements
               // 0: array of arg keys
               // 1: string message that pertains to those args
-              console.log(result);
               // TODO: test this indexing against all sorts of results
               const argkeys = result[0];
               const message = result[1];
-              console.log(argkeys);
-              console.log(argsMeta);
               argkeys.forEach(key => {
                 argsMeta[key]['validationMessage'] = message
                 argsMeta[key]['valid'] = false
@@ -212,7 +209,6 @@ export class InvestJob extends React.Component {
               })
             });
             if (!limit_to){
-              console.log(keyset);
               // checked all args, so ones left in keyset are valid
               keyset.forEach(k => {
                 argsMeta[k]['valid'] = true
@@ -231,8 +227,8 @@ export class InvestJob extends React.Component {
             })
             // It's possible all args were already valid, in which case
             // it's nice to avoid the re-render that this setState call
-            // triggers. Although only the Viz app components re-render in a noticeable way.
-            // I wonder if that could be due to use of redux there?
+            // triggers. Although only the Viz app components re-render 
+            // in a noticeable way. Due to use of redux there?
             if (!this.state.argsValid) {
               this.setState({
                 args: argsMeta,
@@ -260,9 +256,10 @@ export class InvestJob extends React.Component {
             );
           }
         } else {
-          console.log('Status: ' + response.statusCode)
-          if (error.message) {
-            console.log('Error: ' + error.message)
+          console.log('Status: ' + response.statusCode);
+          console.log(response);
+          if (error) {
+            console.error(error);
           }
         }
       }

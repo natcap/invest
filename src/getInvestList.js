@@ -1,6 +1,6 @@
 import request from 'request';
 
-export function makeInvestList() {
+export function getInvestList() {
   return new Promise(function(resolve, reject) {
     setTimeout(() => {
       request.get(

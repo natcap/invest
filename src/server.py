@@ -1,10 +1,13 @@
 import importlib
 import json
 import sys
+import logging
 
 from flask import Flask
 from flask import request
 import natcap.invest.cli
+
+LOGGER = logging.basicConfig()
 
 app = Flask(__name__)
 
