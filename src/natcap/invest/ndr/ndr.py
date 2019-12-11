@@ -105,7 +105,7 @@ ARGS_SPEC = {
         "calc_n": {
             "type": "boolean",
             "required": True,
-            "about": "Select to calcualte nitrogen export.",
+            "about": "Select to calculate nitrogen export.",
             "name": "Calculate Nitrogen Retention"
         },
         "threshold_flow_accumulation": {
@@ -119,7 +119,7 @@ ARGS_SPEC = {
                 "before it's considered part of a stream such that "
                 "retention stops and the remaining export is exported to the "
                 "stream.  Used to define streams from the DEM."),
-            "name": "Threshold Flow Accumluation"
+            "name": "Threshold Flow Accumulation"
         },
         "k_param": {
             "type": "number",
