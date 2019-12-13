@@ -7,7 +7,8 @@ from flask import Flask
 from flask import request
 import natcap.invest.cli
 
-LOGGER = logging.basicConfig()
+logging.basicConfig(level=logging.DEBUG)
+LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
@@ -75,8 +76,10 @@ def get_invest_getspec():
 @app.route('/validate', methods=['POST'])
 def get_invest_validate():
     payload = request.get_json()
+    LOGGER.debug(payload)
     target_module = payload['model_module']
     args_dict = json.loads(payload['args'])
+    LOGGER.debug(args_dict)
     try:
         limit_to = payload['limit_to']
     except KeyError:
@@ -84,4 +87,5 @@ def get_invest_validate():
     # target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
     model_module = importlib.import_module(name=target_module)
     results = model_module.validate(args_dict, limit_to=limit_to)
+    LOGGER.debug(results)
     return json.dumps(results)

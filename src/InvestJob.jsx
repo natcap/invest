@@ -55,9 +55,9 @@ export class InvestJob extends React.Component {
 
     this.state = {
       sessionID: defaultSessionID(''),
-      modelSpec: {},
-      args: null,
-      argsValid: false,  // set on invest validate exit
+      modelSpec: {},  // ARGS_SPEC dict with all keys except ARGS_SPEC.args
+      args: null,     // ARGS_SPEC.args, to be modified to include values
+      argsValid: false,  // set on investValidate exit
       workspace: null,
       logStdErr: '', 
       logStdOut: '',
@@ -257,7 +257,7 @@ export class InvestJob extends React.Component {
           }
         } else {
           console.log('Status: ' + response.statusCode);
-          console.log(response);
+          console.log(body);
           if (error) {
             console.error(error);
           }
@@ -397,7 +397,11 @@ function argsToJsonFile(currentArgs, modulename) {
   // make simple args json for passing to python cli
   let args_dict = {};
   for (const argname in currentArgs) {
-    args_dict[argname] = currentArgs[argname]['value']
+    if (currentArgs[argname]['type'] === 'boolean') {
+      args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
+    } else {
+      args_dict[argname] = currentArgs[argname]['value'] || ''
+    }
   }
   const datastack = { // keys expected by datastack.py
     args: args_dict,
@@ -415,13 +419,34 @@ function argsToJsonFile(currentArgs, modulename) {
   });
 }
 
+function boolStringToBoolean(val) {
+  let valBoolean;
+  try {
+    const valString = val.toLowerCase()
+    valBoolean = (valString === 'true') ? true : false
+  }
+  catch(TypeError) {
+    valBoolean = val || ''
+  }
+  return valBoolean
+}
+
 // TODO: move this to a module for import instead of passing around in props.
 function argsValuesFromSpec(args) {
+  /* Given a complete InVEST ARGS_SPEC, return just the key:value pairs
+
+  Parameters: 
+    args: JSON representation of an InVEST model's ARGS_SPEC dictionary.
+
+  */
   let args_dict = {};
   for (const argname in args) {
-    args_dict[argname] = args[argname]['value'] || ''
+    if (args[argname]['type'] === 'boolean') {
+      args_dict[argname] = boolStringToBoolean(args[argname]['value'])
+    } else {
+      args_dict[argname] = args[argname]['value'] || ''
+    }
   }
-
   const args_dict_string = JSON.stringify(args_dict);
   return(args_dict_string)
 }
