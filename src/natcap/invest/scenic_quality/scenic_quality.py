@@ -22,10 +22,10 @@ LOGGER = logging.getLogger(__name__)
 _VALUATION_NODATA = -99999  # largish negative nodata value.
 _BYTE_NODATA = 255  # Largest value a byte can hold
 BYTE_GTIFF_CREATION_OPTIONS = (
-    'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
-    'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+    'GTIFF', ('TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
+              'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
 FLOAT_GTIFF_CREATION_OPTIONS = (
-    'PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS
+    'GTIFF', ('PREDICTOR=3',) + BYTE_GTIFF_CREATION_OPTIONS[1])
 
 _OUTPUT_BASE_FILES = {
     'viewshed_value': 'vshed_value.tif',
@@ -424,7 +424,7 @@ def _sum_valuation_rasters(dem_path, valuation_filepaths, target_path):
     pygeoprocessing.raster_calculator(
         [(dem_path, 1)] + [(path, 1) for path in valuation_filepaths],
         _sum_rasters, target_path, gdal.GDT_Float64, _VALUATION_NODATA,
-        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_valuation(visibility_path, viewpoint, weight,
@@ -669,7 +669,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     pygeoprocessing.new_raster_from_base(
         clipped_dem_path, aoi_mask_raster_path, gdal.GDT_Byte,
         [_BYTE_NODATA], [0],
-        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
+        raster_driver_creation_tuple=BYTE_GTIFF_CREATION_OPTIONS)
     pygeoprocessing.rasterize(aoi_path, aoi_mask_raster_path, [1], None)
 
     dem_nodata = dem_raster_info['nodata'][0]
@@ -685,7 +685,7 @@ def _clip_and_mask_dem(dem_path, aoi_path, target_path, working_dir):
     pygeoprocessing.raster_calculator(
         [(clipped_dem_path, 1), (aoi_mask_raster_path, 1)],
         _mask_op, target_path, gdal.GDT_Float32, dem_nodata,
-        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
@@ -751,7 +751,7 @@ def _count_and_weight_visible_structures(visibility_raster_path_list, weights,
          [(vis_path, 1) for vis_path in visibility_raster_path_list] +
          [(weight, 'raw') for weight in weights]),
         _sum_and_weight, target_path, gdal.GDT_Float32, target_nodata,
-        gtiff_creation_options=FLOAT_GTIFF_CREATION_OPTIONS)
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
 
 def _calculate_visual_quality(source_raster_path, working_dir, target_path):
@@ -889,7 +889,7 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     pygeoprocessing.raster_calculator(
         [(source_raster_path, 1)], _map_percentiles, target_path,
         gdal.GDT_Byte, _BYTE_NODATA,
-        gtiff_creation_options=BYTE_GTIFF_CREATION_OPTIONS)
+        raster_driver_creation_tuple=BYTE_GTIFF_CREATION_OPTIONS)
 
 
 @validation.invest_validator

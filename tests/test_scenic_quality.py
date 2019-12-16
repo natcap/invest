@@ -54,9 +54,10 @@ class ScenicQualityTests(unittest.TestCase):
             projection_wkt=WKT,
             nodata=255,  # byte nodata value
             pixel_size=(2, -2),
-            dataset_opts=['TILED=YES',
+            raster_driver_creation_tuple=(
+                'GTIFF', ['TILED=YES',
                           'BIGTIFF=YES',
-                          'COMPRESS=LZW'],
+                          'COMPRESS=LZW']),
             filename=dem_path)
 
     @staticmethod
@@ -1014,9 +1015,9 @@ class ViewshedTests(unittest.TestCase):
         pygeoprocessing.testing.create_raster_on_disk(
             [numpy.ones((10, 10))],
             (0, 0), projection_wkt=srs.ExportToWkt(), nodata=-1,
-            pixel_size=(1, -1), dataset_opts=(
-                'TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
-                'BLOCKXSIZE=20', 'BLOCKYSIZE=40'), filename=dem_filepath)
+            pixel_size=(1, -1), raster_driver_creation_tuple=(
+                'GTIFF', ('TILED=NO', 'BIGTIFF=YES', 'COMPRESS=LZW',
+                'BLOCKXSIZE=20', 'BLOCKYSIZE=40')), filename=dem_filepath)
 
         with self.assertRaises(ValueError):
             viewshed(
