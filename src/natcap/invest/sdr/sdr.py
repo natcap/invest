@@ -919,9 +919,9 @@ def _calculate_bar_factor(
     pygeoprocessing.routing.flow_accumulation_mfd(
         (flow_direction_path, 1), accumulation_path,
         weight_raster_path_band=(factor_path, 1),
-        gtiff_creation_options=[
+        raster_driver_creation_tuple=('GTIFF', [
             'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
-            'PREDICTOR=3'])
+            'PREDICTOR=3']))
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
