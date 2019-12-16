@@ -96,8 +96,8 @@ class RouteDEMTests(unittest.TestCase):
 
         # The first band has only values of 1, no hydrological pits.
         # So, the filled band should match the source band.
-        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[1]
-        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()[1]
+        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[0]
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
         numpy.testing.assert_almost_equal(
             expected_filled_array,
             filled_array)
