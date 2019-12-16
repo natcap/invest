@@ -179,7 +179,7 @@ def execute(args):
             _TARGET_FLOW_DIRECTION_FILE_PATTERN % file_suffix)
         flow_direction_task = graph.add_task(
             routing_funcs['flow_direction'],
-            args=((dem_filled_pits_path, band_index),
+            args=((dem_filled_pits_path, 1),  # PGP>1.9.0 creates 1-band fills
                   flow_dir_path,
                   args['workspace_dir']),
             target_path_list=[flow_dir_path],
