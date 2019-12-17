@@ -862,7 +862,8 @@ def _raster_sum_mean(
 
     """
     aggregate_results = pygeoprocessing.zonal_statistics(
-        (raster_path, 1), response_vector_path)
+        (raster_path, 1), response_vector_path,
+        polygons_might_overlap=False)
     # remove results for a feature when the pixel count is 0.
     # we don't have non-nodata predictor values for those features.
     aggregate_results = {

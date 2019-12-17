@@ -135,7 +135,7 @@ _MODEL_UIS = {
         aliases=('sq',)),
     'sdr': _UIMETA(
         humanname="Sediment Delivery Ratio",
-        pyname='natcap.invest.sdr',
+        pyname='natcap.invest.sdr.sdr',
         gui='sdr.SDR',
         aliases=()),
     'seasonal_water_yield': _UIMETA(
