@@ -89,7 +89,6 @@ ARGS_SPEC = {
         "built_infrastructure_vector_path": {
             "validation_options": {
                 "required_fields": ["type"],
-                "projected": True,
             },
             "type": "vector",
             "required": False,
