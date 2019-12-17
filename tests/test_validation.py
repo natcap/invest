@@ -520,18 +520,16 @@ class BooleanValidation(unittest.TestCase):
     def test_string_boolean(self):
         """Validation: test when valid strings are passed."""
         from natcap.invest import validation
-        self.assertEqual(None, validation.check_boolean('True'))
-        self.assertEqual(None, validation.check_boolean('False'))
-        self.assertEqual(None, validation.check_boolean('true'))
-        self.assertEqual(None, validation.check_boolean('false'))
-        self.assertEqual(None, validation.check_boolean('TRUE'))
-        self.assertEqual(None, validation.check_boolean('FALSE'))
+        for non_boolean_value in ('true', 1, [], set()):
+            self.assertTrue(
+                isinstance(validation.check_boolean(non_boolean_value), str))
 
     def test_invalid_string(self):
         """Validation: test when invalid strings are passed."""
         from natcap.invest import validation
         error_msg = validation.check_boolean('not clear')
-        self.assertTrue("must be one of 'True' or 'False'" in error_msg)
+        self.assertTrue(isinstance(error_msg, str))
+        self.assertTrue('must be either True or False' in error_msg)
 
 
 class CSVValidation(unittest.TestCase):
@@ -778,12 +776,12 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'number_a': ''}
         self.assertEqual(
-            [(['number_a'], 'Key is required but has no value')],
+            [(['number_a'], 'Input is required but has no value')],
             validation.validate(args, spec))
 
         args = {'number_a': None}
         self.assertEqual(
-            [(['number_a'], 'Key is required but has no value')],
+            [(['number_a'], 'Input is required but has no value')],
             validation.validate(args, spec))
 
     def test_invalid_value(self):
@@ -800,7 +798,8 @@ class TestValidationFromSpec(unittest.TestCase):
 
         args = {'number_a': 'not a number'}
         self.assertEqual(
-            [(['number_a'], 'Value could not be interpreted as a number')],
+            [(['number_a'], ("Value 'not a number' could not be interpreted "
+                             "as a number"))],
             validation.validate(args, spec))
 
     def test_conditionally_required_no_value(self):

@@ -485,9 +485,9 @@ def check_number(value, expression=None):
 def check_boolean(value):
     """Validate a boolean value.
 
-    The strings "True" and "False" (case-insensitive) will evaluate to True and
-    False, respectively.  If ``value`` is a string and does not match this
-    pattern, an error will be returned.
+    If the value provided is not a python boolean, an error message is
+    returned.
+
 
     Parameters:
         value: The value to evaluate.
@@ -496,15 +496,9 @@ def check_boolean(value):
         A string error message if an error was found.  ``None`` otherwise.
 
     """
-    if isinstance(value, str):
-        value = value.strip()
-        if value.lower() not in ("true", "false"):
-            return "Value must be one of 'True' or 'False'"
-
-    # Python's truthiness rules allow for basically anything to be cast to a
-    # boolean, so there's no error here that we can check for unless it's
-    # one of the string cases above.
-    return None
+    if not isinstance(value, bool):
+        return "Value must be either True or False, not %s %s" % (
+            type(value), value)
 
 
 def check_csv(filepath, required_fields=None, excel_ok=False):
