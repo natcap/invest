@@ -723,7 +723,7 @@ class FileDialog(object):
             self.file_dialog.deleteLater()
         except RuntimeError:
             # Raised when the file dialog has already been deleted.
-            LOGGER.debug('File dialog object %s already deleted.')
+            pass
 
     def save_file(self, title, start_dir=None, savefile=None):
         """Prompt the user to save a file.
