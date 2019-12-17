@@ -776,97 +776,36 @@ def _calculate_visual_quality(source_raster_path, working_dir, target_path):
     """
     # Using the nearest-rank method.
     LOGGER.info('Calculating visual quality')
+
     raster_info = pygeoprocessing.get_raster_info(source_raster_path)
     raster_nodata = raster_info['nodata'][0]
 
     temp_dir = tempfile.mkdtemp(dir=working_dir,
                                 prefix='visual_quality')
 
-    def _values_from_file(filepath):
-        """Iterate through a binary file and yield each number in sequence.
-
-        The filepath provided must contain a sorted sequence of numbers, stored
-        in float64 binary.  These values will be unpacked by ``struct`` in the
-        sequence in which they are stored, and yielded.
-
-        This function is a generator.
-
-        Parameters:
-            filepath (string): The filepath to open.
-
-        Yields:
-            Floating-point numeric values.
-
-        """
-        buffer_size = 1024  # bytes
-        seek_offset = 0
-        buffer_offset = 1
-        dtype_n_bytes = struct.calcsize('d')  # float64
-        values_buffer = ''
-        while True:
-            if buffer_offset >= len(values_buffer):
-                with open(filepath, 'rb') as sorted_file:
-                    sorted_file.seek(seek_offset)
-                    values_buffer = sorted_file.read(buffer_size)
-                seek_offset += buffer_size
-                buffer_offset = 0
-
-            packed_score = values_buffer[
-                buffer_offset:buffer_offset+dtype_n_bytes]
-            buffer_offset += dtype_n_bytes
-            if not packed_score:
-                break
-            for value in struct.unpack(
-                    'd' * (len(packed_score)//dtype_n_bytes), packed_score):
-                yield value
-
     # phase 1: calculate percentiles from the visible_structures raster
     LOGGER.info('Determining percentiles for %s',
                 os.path.basename(source_raster_path))
-    iterators = []
-    pixel_cache = numpy.array([], dtype=numpy.float64)
-    desired_pixel_cache_size = 2**17  # seems like a reasonable cache size
-    n_valid_pixels = 0
-    n_pixels_read = 0
-    n_pixels_in_raster = (raster_info['raster_size'][0] *
-                          raster_info['raster_size'][1])
-    for _, block in pygeoprocessing.iterblocks((source_raster_path, 1)):
-        block = block.astype(numpy.float64)
-        valid_pixels = block[(~numpy.isclose(block, raster_nodata) &
-                               (~numpy.isclose(block, 0)))]
-        n_pixels_read += block.size
 
-        # Only process blocks that have valid pixels.
-        if valid_pixels.size > 0:
-            n_valid_pixels += valid_pixels.size
-            pixel_cache = numpy.concatenate((pixel_cache, valid_pixels))
+    def _mask_zeros(valuation_matrix):
+        """Assign zeros to nodata, excluding them from percentile calc."""
+        nonzero = ~numpy.isclose(valuation_matrix, 0.0)
+        nodata = numpy.isclose(valuation_matrix, raster_nodata)
+        valid_indexes = (~nodata & nonzero)
+        visual_quality = numpy.empty(valuation_matrix.shape,
+                                     dtype=numpy.float64)
+        visual_quality[:] = _VALUATION_NODATA
+        visual_quality[valid_indexes] = valuation_matrix[valid_indexes]
+        return visual_quality
 
-        # Only write a file if we have enough pixels to make a cache file
-        # or we're at the end of the raster.
-        if (pixel_cache.size >= desired_pixel_cache_size or
-                n_pixels_read == n_pixels_in_raster):
-            tmp_filepath = os.path.join(
-                temp_dir, 'tmp_offset_%s.bin' % n_pixels_read)
-            with open(tmp_filepath, 'wb') as tmp_file:
-                tmp_file.write(struct.pack(
-                    'd'*pixel_cache.size, *numpy.sort(pixel_cache)))
-            iterators.append(_values_from_file(tmp_filepath))
-            pixel_cache = numpy.array([], dtype=numpy.float64)
+    masked_raster_path = os.path.join(temp_dir, 'zeros_masked.tif')
+    pygeoprocessing.raster_calculator(
+        [(source_raster_path, 1)], _mask_zeros, masked_raster_path,
+        gdal.GDT_Float64, _VALUATION_NODATA,
+        raster_driver_creation_tuple=FLOAT_GTIFF_CREATION_OPTIONS)
 
-    rank_ordinals = [math.ceil(n*n_valid_pixels) for n in
-                     (0.0, 0.25, 0.50, 0.75)]
-    percentile_values = []
-    current_index = 0
-    next_percentile_ordinal = rank_ordinals.pop(0)
-    for value in heapq.merge(*iterators):
-        if current_index == next_percentile_ordinal:
-            percentile_values.append(value)
-            try:
-                next_percentile_ordinal = rank_ordinals.pop(0)
-            except IndexError:
-                # No more percentile breaks to find
-                break
-        current_index += 1
+    percentile_values = pygeoprocessing.raster_band_percentile(
+        (masked_raster_path, 1), temp_dir, [0., 25., 50., 75.])
 
     shutil.rmtree(temp_dir, ignore_errors=True)
 
