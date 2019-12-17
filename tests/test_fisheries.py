@@ -151,7 +151,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         validation_warnings = fisheries.validate(args, limit_to='do_batch')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('Value must be one of' in
+        self.assertTrue('Value must be either True or False' in
                         validation_warnings[0][1])
 
     def test_validation_invalid_pop_csv(self):

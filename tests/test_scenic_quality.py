@@ -778,7 +778,7 @@ class ScenicQualityValidationTests(unittest.TestCase):
         self.assertTrue('refraction' not in single_key_errors)
         self.assertEqual(
             single_key_errors['a_coef'], (
-                'Value could not be interpreted as a number'))
+                "Value 'foo' could not be interpreted as a number"))
         self.assertEqual(
             single_key_errors['dem_path'], 'File not found')
         self.assertEqual(single_key_errors['structure_path'],

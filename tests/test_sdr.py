@@ -168,13 +168,17 @@ class SDRTests(unittest.TestCase):
             self.workspace_dir, 'watershed.shp')
         vector = vector_driver.CreateDataSource(test_watershed_path)
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(4326)
+        srs.ImportFromEPSG(26910)  #NAD83 / UTM zone 11N
         layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
         # forget to add a 'ws_id' field
         layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))
         feature = ogr.Feature(layer.GetLayerDefn())
+        # Point coordinates taken from the projected bounds noted on
+        # https://spatialreference.org/ref/epsg/nad83-utm-zone-10n/
+        feature.SetGeometry(ogr.CreateGeometryFromWkt(
+            "POINT(224215.89977 3810589.922)"))
+
         # intentionally not setting ws_id
-        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT(-112.2 42.5)"))
         layer.CreateFeature(feature)
         feature = None
         layer = None

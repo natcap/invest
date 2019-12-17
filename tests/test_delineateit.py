@@ -123,7 +123,8 @@ class DelineateItTests(unittest.TestCase):
              (['outlet_vector_path'], (
                  'File could not be opened as a GDAL vector')),
              (['flow_threshold'], 'Value does not meet condition value > 0'),
-             (['snap_distance'], 'Value could not be interpreted as a number')])
+             (['snap_distance'], (
+                "Value 'fooooo' could not be interpreted as a number"))])
 
     def test_point_snapping(self):
         """DelineateIt: test point snapping."""

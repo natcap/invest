@@ -667,7 +667,7 @@ class WaveEnergyValidateTests(unittest.TestCase):
         validation_error_list = wave_energy.validate(args)
         expected_errors = [
             (['dem_path', 'wave_base_data_path'],
-             'Key is required but has no value'),
+             'Input is required but has no value'),
         ]
         for expected_error in expected_errors:
             self.assertTrue(expected_error in validation_error_list)
