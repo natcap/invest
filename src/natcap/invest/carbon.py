@@ -32,6 +32,9 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster representing the land-cover of the"
                 "current scenario."),
@@ -49,6 +52,9 @@ ARGS_SPEC = {
         "lulc_fut_path": {
             "type": "raster",
             "required": "calc_sequestration",
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster representing the land-cover of the "
                 "future scenario. If REDD scenario analysis is "
@@ -70,6 +76,9 @@ ARGS_SPEC = {
         "lulc_redd_path": {
             "type": "raster",
             "required": "do_redd",
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster representing the land-cover of "
                 "the REDD policy future scenario.  This scenario will be "

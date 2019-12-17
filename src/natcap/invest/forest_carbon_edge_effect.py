@@ -85,6 +85,9 @@ ARGS_SPEC = {
         "lulc_raster_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code for "
                 "each cell."),

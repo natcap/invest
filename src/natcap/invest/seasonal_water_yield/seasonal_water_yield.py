@@ -82,6 +82,9 @@ ARGS_SPEC = {
         "dem_raster_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file with an elevation value for "
                 "each cell.  Make sure the DEM is corrected by filling in "
@@ -94,6 +97,9 @@ ARGS_SPEC = {
         "lulc_raster_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file, with an integer LULC code "
                 "for each cell."),
@@ -102,6 +108,9 @@ ARGS_SPEC = {
         "soil_group_path": {
             "type": "raster",
             "required": "not user_defined_local_recharge",
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Map of SCS soil groups (A, B, C, or D) mapped to integer "
                 "values (1, 2, 3, or 4) used in combination of the LULC map "
@@ -109,9 +118,11 @@ ARGS_SPEC = {
             "name": "Soil Group"
         },
         "aoi_path": {
-            "validation_options": {},
             "type": "vector",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Path to a vector that indicates the area over which the "
                 "model should be run, as well as the area in which to "
@@ -183,6 +194,9 @@ ARGS_SPEC = {
         "l_path": {
             "type": "raster",
             "required": "user_defined_local_recharge",
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A path to a GDAL-compatible raster.  Pixels indicate the "
                 "amount of local recharge in mm.  Required if "
@@ -213,6 +227,9 @@ ARGS_SPEC = {
         "climate_zone_raster_path": {
             "type": "raster",
             "required": "user_defined_climate_zones",
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Map of climate zones that are found in the Climate Zone "
                 "Table input.  Pixel values correspond to values in the "

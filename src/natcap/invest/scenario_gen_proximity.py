@@ -32,7 +32,9 @@ ARGS_SPEC = {
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
         "base_lulc_path": {
-            "validation_options": {},
+            "validation_options": {
+                "projected": True,
+            },
             "type": "raster",
             "required": True,
             "about": "Path to the base landcover map",
@@ -98,6 +100,9 @@ ARGS_SPEC = {
         "aoi_path": {
             "type": "vector",
             "required": False,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "This is a set of polygons that will be used to aggregate "
                 "carbon values at the end of the run if provided."),

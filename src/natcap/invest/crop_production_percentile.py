@@ -89,6 +89,9 @@ ARGS_SPEC = {
         "aggregate_polygon_path": {
             "type": "vector",
             "required": False,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A polygon vector containing features with which to "
                 "aggregate/summarize final results. It is fine to have "

@@ -812,13 +812,11 @@ def validate(args, limit_to=None):
     validation_warnings = validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
-    invalid_keys = set([])
-    for affected_keys, error_msg in validation_warnings:
-        for key in affected_keys:
-            invalid_keys.add(key)
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
 
     LOGGER.debug('Starting logging for biophysical table')
     if 'biophysical_table_path' not in invalid_keys:
+        # Check required fields given the state of ``calc_n`` and ``calc_p``
         required_fields = ARGS_SPEC['args'][
             'biophysical_table_path']['validation_options'][
                 'required_fields'][:]
@@ -838,7 +836,6 @@ def validate(args, limit_to=None):
             validation_warnings.append(
                 (['calc_n', 'calc_p'],
                  'Either calc_n or calc_p must be True'))
-
 
         LOGGER.debug('Required keys in CSV: %s', required_fields)
         error_msg = validation.check_csv(

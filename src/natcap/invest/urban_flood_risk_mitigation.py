@@ -26,7 +26,9 @@ ARGS_SPEC = {
     "module": __name__,
     "userguide_html": "urban_flood_risk_mitigation.html",
     "args_with_spatial_overlap": {
-        "spatial_keys": ["aoi_watersheds_path", "lulc_path"],
+        "spatial_keys": ["aoi_watersheds_path", "lulc_path",
+                         "built_infrastructure_vector_path",
+                         "soils_hydrological_group_raster_path"],
         "different_projections_ok": True,
     },
     "args": {
@@ -53,6 +55,9 @@ ARGS_SPEC = {
         "lulc_path": {
             "validation_options": {},
             "type": "raster",
+            "validation_options": {
+                "projected": True,
+            },
             "required": True,
             "about": "Path to a landcover raster",
             "name": "Landcover Raster"
@@ -60,6 +65,9 @@ ARGS_SPEC = {
         "soils_hydrological_group_raster_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Raster with values equal to 1, 2, 3, 4, corresponding to "
                 "soil hydrologic group A, B, C, or D, respectively (used to "
@@ -81,6 +89,7 @@ ARGS_SPEC = {
         "built_infrastructure_vector_path": {
             "validation_options": {
                 "required_fields": ["type"],
+                "projected": True,
             },
             "type": "vector",
             "required": False,

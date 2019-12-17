@@ -102,6 +102,9 @@ ARGS_SPEC = {
         "lulc_baseline_map_uri": {
             "name": 'Baseline LULC Raster',
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster representing the baseline "
                 "landscape/seascape."),

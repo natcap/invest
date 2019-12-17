@@ -30,6 +30,9 @@ ARGS_SPEC = {
         "landcover_raster_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "This is the landcover map that's used to map biophysical "
                 "properties about habitat and floral resources of landcover "

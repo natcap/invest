@@ -45,6 +45,9 @@ ARGS_SPEC = {
         },
         "lulc_path": {
             "type": "raster",
+            "validation_options": {
+                "projected": True,
+            },
             "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to a base landcover map with integer codes",
             "name": "Land Use/Cover (Raster)"
@@ -78,12 +81,18 @@ ARGS_SPEC = {
         },
         "pasture_path": {
             "type": "raster",
+            "validation_options": {
+                "projected": True,
+            },
             "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to pasture raster",
             "name": "Pasture (Raster)"
         },
         "potential_vegetation_path": {
             "type": "raster",
+            "validation_options": {
+                "projected": True,
+            },
             "required": "not predefined_globio",
             "about": "used in \"mode (a)\" path to potential vegetation raster",
             "name": "Potential Vegetation (Raster)"
@@ -132,6 +141,9 @@ ARGS_SPEC = {
         },
         "aoi_path": {
             "type": "vector",
+            "validation_options": {
+                "projected": True,
+            },
             "required": False,
             "about": (
                 "This is a set of polygons that can be used to aggregate MSA "
@@ -139,7 +151,9 @@ ARGS_SPEC = {
             "name": "AOI",
         },
         "globio_lulc_path": {
-            "validation_options": {},
+            "validation_options": {
+                "projected": True,
+            },
             "type": "raster",
             "required": "predefined_globio",
             "about": "used in \"mode (b)\" path to predefined globio raster.",

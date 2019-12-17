@@ -32,6 +32,9 @@ ARGS_SPEC = {
         "lulc_cur_path": {
             "type": "raster",
             "required": True,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "A GDAL-supported raster file.  The current LULC must have "
                 "its' own threat rasters, where each threat raster file path "
@@ -45,6 +48,9 @@ ARGS_SPEC = {
         "lulc_fut_path": {
             "type": "raster",
             "required": False,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Optional.  A GDAL-supported raster file.  Inputting a "
                 "future LULC will generate degradation, habitat quality, and "
@@ -61,6 +67,9 @@ ARGS_SPEC = {
         "lulc_bas_path": {
             "type": "raster",
             "required": False,
+            "validation_options": {
+                "projected": True,
+            },
             "about": (
                 "Optional.  A GDAL-supported raster file.  If the baseline "
                 "LULC is provided, rarity outputs will be created for the "
@@ -120,6 +129,7 @@ ARGS_SPEC = {
         "access_vector_path": {
             "validation_options": {
                 "required_fields": ["access"],
+                "projected": True,
             },
             "type": "vector",
             "required": False,
