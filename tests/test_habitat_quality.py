@@ -301,7 +301,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             'threats_table_path': threat_csv_path,
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'threat_raster_folder': threats_folder,
