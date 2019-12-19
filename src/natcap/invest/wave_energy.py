@@ -1182,8 +1182,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     """
     LOGGER.info('Creating Percentile Rasters')
-    temp_dir = tempfile.mkdtemp(
-        dir=working_dir, prefix=os.path.dirname(base_raster_path))
+    temp_dir = tempfile.mkdtemp(dir=working_dir)
 
     # If the target_raster_path is already a file, delete it
     if os.path.isfile(target_raster_path):
@@ -1213,21 +1212,25 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     # Get the percentile values for each percentile
     percentile_values = pygeoprocessing.raster_band_percentile(
-        (input_raster_path, 1), temp_dir, percentile_list)
-    # p_values = numpy.round(p_values, decimals=1)
-    
+        (input_raster_path, 1),
+        os.path.join(temp_dir, 'percentile'),
+        percentile_list)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
     # Get the percentile ranges as strings so that they can be added to the
-    # output table
+    # output table. Also round them for readability.
     value_ranges = []
+    rounded_percentiles = numpy.round(percentile_values, decimals=2)
     # Add the first range with the starting value if it exists
     if start_value:
-        value_ranges.append('%s to %s' % (start_value, percentile_values[0]))
+        value_ranges.append('%s to %s' % (start_value, rounded_percentiles[0]))
     else:
-        value_ranges.append('Less than or equal to %s' % percentile_values[0])
+        value_ranges.append('Less than or equal to %s' % rounded_percentiles[0])
     value_ranges += ['%s to %s' % (p, q) for (p, q) in
-                     zip(percentile_values[:-1], percentile_values[1:])]
+                     zip(rounded_percentiles[:-1], rounded_percentiles[1:])]
     # Add the last range to the range of values list
-    value_ranges.append('Greater than %s' % percentile_values[-1])
+    value_ranges.append('Greater than %s' % rounded_percentiles[-1])
     LOGGER.debug('Range_values : %s', value_ranges)
 
     def raster_percentile(band):
