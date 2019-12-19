@@ -6,6 +6,7 @@ Unreleased Changes
   models to use a more efficient and reliable raster percentile function
   from pygeoprocessing.
 * InVEST is now compatible with pygeoprocessing 1.9.0.
+* Speed and memory optimization of raster processing in the Recreation model.
 * Removed a constraint in Coastal Vulnerability so the AOI polygon no longer
   needs to intersect the continental shelf contour line. So the AOI can now be
   used exclusively to delineate the coastal area of interest.
