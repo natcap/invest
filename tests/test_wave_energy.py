@@ -150,34 +150,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(results, expected_results):
             pygeoprocessing.testing.assert_close(res, exp_res, 1e-6)
 
-    def test_calculate_percentiles_from_raster(self):
-        """WaveEnergy: testing '_calculate_percentiles_from_raster' function."""
-        from natcap.invest import wave_energy
-
-        raster_path = os.path.join(self.workspace_dir, 'percentile.tif')
-        srs = sampledata.SRS_WILLAMETTE
-
-        matrix = numpy.arange(1, 101)
-        matrix = matrix.reshape(10, 10)
-        raster_path = pygeoprocessing.testing.create_raster_on_disk(
-            [matrix],
-            srs.origin,
-            srs.projection,
-            -1,
-            srs.pixel_size(100),
-            datatype=gdal.GDT_Int32,
-            filename=raster_path)
-
-        percentiles = [1, 25, 50, 75]
-
-        results = wave_energy._calculate_percentiles_from_raster(
-            raster_path, percentiles)
-
-        expected_results = [1, 25, 50, 75]
-
-        for res, exp_res in zip(results, expected_results):
-            self.assertEqual(res, exp_res)
-
     def test_calculate_min_distances(self):
         """WaveEnergy: testing '_calculate_min_distances' function."""
         from natcap.invest import wave_energy

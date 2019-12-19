@@ -480,7 +480,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
-              _CAPWE_UNITS_LONG, _PERCENTILES),
+              _CAPWE_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[capwe_rc_path],
         task_name='create_energy_percentile_raster',
@@ -489,7 +489,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(wave_power_raster_path, wp_rc_path, _WP_UNITS_SHORT,
-              _WP_UNITS_LONG, _PERCENTILES),
+              _WP_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[wp_rc_path],
         task_name='create_power_percentile_raster',
@@ -576,7 +576,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(target_npv_raster_path, target_npv_rc_path, _NPV_UNITS_SHORT,
-              _NPV_UNITS_LONG, _PERCENTILES),
+              _NPV_UNITS_LONG, _PERCENTILES, intermediate_dir),
         target_path_list=[target_npv_rc_path],
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])
@@ -1158,7 +1158,7 @@ def _get_coordinate_transformation(source_sr, target_sr):
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
                                units_short, units_long, percentile_list,
-                               start_value=None):
+                               working_dir, start_value=None):
     """Create a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
@@ -1182,20 +1182,40 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     """
     LOGGER.info('Creating Percentile Rasters')
+    temp_dir = tempfile.mkdtemp(
+        dir=working_dir, prefix=os.path.dirname(base_raster_path))
 
     # If the target_raster_path is already a file, delete it
     if os.path.isfile(target_raster_path):
         os.remove(target_raster_path)
 
-    # Set nodata to a negative number
     target_nodata = 255
-    base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][
-        0]
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    base_nodata = base_raster_info['nodata'][0]
+    base_dtype = base_raster_info['datatype']
+
+    def _mask_below_start_value(array):
+        valid_mask = (array != base_nodata) & (array >= float(start_value))
+        result = numpy.empty_like(array)
+        result[:] = base_nodata
+        result[valid_mask] = array[valid_mask]
+        return result
+
+    if start_value is not None:
+        masked_raster_path = os.path.join(
+            temp_dir, os.path.basename(base_raster_path))
+        pygeoprocessing.raster_calculator(
+            [(base_raster_path, 1)], _mask_below_start_value,
+            masked_raster_path, base_dtype, base_nodata)
+        input_raster_path = masked_raster_path
+    else:
+        input_raster_path = base_raster_path
 
     # Get the percentile values for each percentile
-    percentile_values = _calculate_percentiles_from_raster(
-        base_raster_path, percentile_list, start_value)
-
+    percentile_values = pygeoprocessing.raster_band_percentile(
+        (input_raster_path, 1), temp_dir, percentile_list)
+    # p_values = numpy.round(p_values, decimals=1)
+    
     # Get the percentile ranges as strings so that they can be added to the
     # output table
     value_ranges = []
@@ -1715,87 +1735,6 @@ def _energy_and_power_to_wave_vector(
 
     target_wave_layer = None
     target_wave_vector = None
-
-
-def _calculate_percentiles_from_raster(
-        base_raster_path, percentile_list, start_value=None):
-    """Determine the _PERCENTILES of a raster using the nearest-rank method.
-
-    Iterate through the raster blocks and round the unique values for
-    efficiency. Then add each unique value-count pair into a dictionary.
-    Compute ordinal ranks given the percentile list.
-
-    Parameters:
-        base_raster_path (str): path to a gdal raster on disk
-        percentile_list (list): a list of desired _PERCENTILES to lookup,
-            ex: [25,50,75,90]
-        start_value (str): the first value that goes to the first percentile
-            range (start_value: percentile_one). (optional)
-
-    Returns:
-            a list of values corresponding to the _PERCENTILES from the list
-
-    """
-    nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
-    if start_value:
-        start_value = float(start_value)
-    unique_value_counts = {}
-    for _, block_matrix in pygeoprocessing.iterblocks((base_raster_path, 1)):
-        # Sum the values with the same key in both dictionaries
-        unique_values, counts = numpy.unique(block_matrix, return_counts=True)
-        # Remove the nodata value from the array
-        if start_value:
-            valid_pixel_mask = (unique_values != nodata) & (
-                unique_values >= start_value)
-        else:
-            valid_pixel_mask = (unique_values != nodata)
-        unique_values = unique_values[valid_pixel_mask]
-        counts = counts[valid_pixel_mask]
-        # Round the array so the unique values won't explode the dictionary
-        numpy.round(unique_values, decimals=1, out=unique_values)
-
-        block_unique_value_counts = dict(zip(unique_values, counts))
-        for value in block_unique_value_counts.keys():
-            unique_value_counts[value] = unique_value_counts.get(
-                value, 0) + block_unique_value_counts.get(value, 0)
-
-    LOGGER.debug('Unique_value_counts: %s', unique_value_counts)
-
-    # Get the total pixel count except nodata pixels
-    total_count = sum(unique_value_counts.values())
-
-    # Calculate the ordinal rank
-    ordinal_rank = [
-        numpy.ceil(percentile / 100.0 * total_count)
-        for percentile in percentile_list
-    ]
-
-    # Get values from the ordered dictionary that correspond to the ranks
-    percentile_values = []  # list for corresponding values
-    ith_element = 0  # indexing the ith element in the percentile_values list
-    cumulative_count = 0  # for checking if the percentile value is reached
-
-    # Get the unique_value keys in the ascending order
-    for unique_value in sorted(unique_value_counts.keys()):
-        # stop iteration when all corresponding values are obtained
-        if ith_element > len(ordinal_rank) - 1:
-            break
-
-        # Add count from the unique value
-        count = unique_value_counts[unique_value]
-        cumulative_count += count
-
-        while cumulative_count == ordinal_rank[ith_element] or \
-                cumulative_count > ordinal_rank[ith_element]:
-            percentile_values.append(unique_value)
-            ith_element += 1
-
-            # stop iteration when all corresponding values are obtained
-            if ith_element == len(ordinal_rank):
-                break
-
-    LOGGER.debug('Percentile_values: %s', percentile_values)
-    return percentile_values
 
 
 def _count_pixels_groups(raster_path, group_values):
