@@ -1813,25 +1813,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             if isinstance(input_, inputs.GriddedInput):
                 args_to_inputs[input_.args_key] = input_
 
-        keys_with_errors = set()
         warnings_ = []
         for keys, warning in validation_warnings:
-            for key in keys:
-                keys_with_errors.add(key)
-
             warnings_.append(
                 (list(args_to_inputs[key].label for key in keys), warning))
 
-            # If the error only affects a single input, report that back to the
-            # input itself.
-            if len(keys) == 1:
-                affected_key = list(keys)[0]
-                args_to_inputs[affected_key]._validation_finished(
-                    [(list(keys), warning)])
-
-        # For inputs without validation warnings, clear the per-input errors.
-        for key in set(args_to_inputs.keys()).difference(keys_with_errors):
-            args_to_inputs[key]._validation_finished([])
+        for key in args_to_inputs:
+            args_to_inputs[key]._validation_finished(validation_warnings)
 
         self.validation_report_dialog.post_warnings(warnings_)
 
