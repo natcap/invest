@@ -149,6 +149,10 @@ ARGS_SPEC = {
             "validation_options": {
                 "expression": "(value >= 0) and (value <= 100)",
             },
+            "about": (
+                "The average relative humidity (0-100%) over the time period "
+                "of interest."
+            ),
         },
         "building_vector_path": {
             "name": "Buildings vector",
