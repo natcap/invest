@@ -200,22 +200,27 @@ class HydropowerTests(unittest.TestCase):
         args_bad_vector = args.copy()
         args_bad_vector['watersheds_path'] = args_bad_vector['eto_path']
         bad_vector_list = hydropower_water_yield.validate(args_bad_vector)
-        self.assertEqual(bad_vector_list[0][1], 'not a vector')
+        self.assertTrue('not be opened as a GDAL vector'
+                        in bad_vector_list[0][1])
 
         args_bad_raster = args.copy()
         args_bad_raster['eto_path'] = args_bad_raster['watersheds_path']
         bad_raster_list = hydropower_water_yield.validate(args_bad_raster)
-        self.assertEqual(bad_raster_list[0][1], 'not a raster')
+        self.assertTrue('not be opened as a GDAL raster'
+                        in bad_raster_list[0][1])
 
         args_bad_file = args.copy()
         args_bad_file['eto_path'] = 'non_existant_file.tif'
         bad_file_list = hydropower_water_yield.validate(args_bad_file)
-        self.assertEqual(bad_file_list[0][1], 'not found on disk')
+        self.assertTrue('File not found' in bad_file_list[0][1])
 
         args_missing_key = args.copy()
         del args_missing_key['eto_path']
-        with self.assertRaises(KeyError):
-            hydropower_water_yield.validate(args_missing_key)
+        validation_warnings = hydropower_water_yield.validate(
+            args_missing_key)
+        self.assertEqual(
+            validation_warnings,
+            [(['eto_path'], 'Key is missing from the args dict')])
 
         # ensure that a missing landcover code in the biophysical table will
         # raise an exception that's helpful

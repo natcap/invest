@@ -190,16 +190,16 @@ class NDRTests(unittest.TestCase):
     def test_validation(self):
         """NDR test argument validation."""
         from natcap.invest.ndr import ndr
+        from natcap.invest import validation
 
         # use predefined directory so test can clean up files during teardown
         args = NDRTests.generate_base_args(self.workspace_dir)
         # should not raise an exception
         ndr.validate(args)
 
-        with self.assertRaises(KeyError) as context:
-            del args['workspace_dir']
-            ndr.validate(args)
-        self.assertEquals(len(context.exception.args), 1)
+        del args['workspace_dir']
+        validation_errors = ndr.validate(args)
+        self.assertEquals(len(validation_errors), 1)
 
         args = NDRTests.generate_base_args(self.workspace_dir)
         args['workspace_dir'] = ''
@@ -228,6 +228,8 @@ class NDRTests(unittest.TestCase):
         validation_error_list = ndr.validate(args)
         # we should have one warning that is an empty value
         self.assertEqual(len(validation_error_list), 1)
+        self.assertTrue('calc_n' in validation_error_list[0][0] and
+                        'calc_p' in validation_error_list[0][0])
 
         # cover that a file is missing
         args = NDRTests.generate_base_args(self.workspace_dir)
@@ -235,3 +237,78 @@ class NDRTests(unittest.TestCase):
         validation_error_list = ndr.validate(args)
         # we should have one warning that is an empty value
         self.assertEqual(len(validation_error_list), 1)
+
+        # cover that some args are conditionally required when
+        # these args are present and true
+        args = {'calc_p': True, 'calc_n': True}
+        validation_error_list = ndr.validate(args)
+        invalid_args = validation.get_invalid_keys(validation_error_list)
+        expected_missing_args = [
+            'biophysical_table_path',
+            'threshold_flow_accumulation',
+            'dem_path',
+            'subsurface_critical_length_n',
+            'subsurface_critical_length_p',
+            'runoff_proxy_path',
+            'lulc_path',
+            'workspace_dir',
+            'k_param',
+            'watersheds_path',
+            'subsurface_eff_p',
+            'subsurface_eff_n',
+        ]
+        self.assertEqual(set(invalid_args), set(expected_missing_args))
+
+
+    @staticmethod
+    def _assert_regression_results_equal(
+            workspace_dir, result_vector_path, agg_results_path):
+        """Test workspace state against expected aggregate results.
+
+        Parameters:
+            workspace_dir (string): path to the completed model workspace
+            result_vector_path (string): path to the summary shapefile
+                produced by the SWY model.
+            agg_results_path (string): path to a csv file that has the
+                expected aggregated_results.shp table in the form of
+                fid,p_load_tot,p_exp_tot,n_load_tot,n_exp_tot per line
+
+        Returns:
+            None
+
+        Raises:
+            AssertionError if any files are missing or results are out of
+            range by `tolerance_places`
+        """
+        # we expect a file called 'aggregated_results.shp'
+        result_vector = ogr.Open(result_vector_path)
+        result_layer = result_vector.GetLayer()
+
+        error_results = collections.defaultdict(dict)
+        with open(agg_results_path, 'r') as agg_result_file:
+            for line in agg_result_file:
+                (fid, surf_p_ld, sub_p_ld, p_exp_tot,
+                 surf_n_ld, sub_n_ld, n_exp_tot) = [
+                    float(x) for x in line.split(',')]
+                feature = result_layer.GetFeature(int(fid))
+                if not feature:
+                    raise AssertionError("The fid %s is missing." % fid)
+                for field, value in [
+                                    ('ws_id', fid),
+                                    ('surf_p_ld', surf_p_ld),
+                                    ('sub_p_ld', sub_p_ld),
+                                    ('p_exp_tot', p_exp_tot),
+                                    ('surf_n_ld', surf_n_ld),
+                                    ('sub_n_ld', sub_n_ld),
+                                    ('n_exp_tot', n_exp_tot)]:
+                    if not numpy.isclose(feature.GetField(field), value):
+                        error_results[fid][field] = (
+                            feature.GetField(field), value)
+                ogr.Feature.__swig_destroy__(feature)
+                feature = None
+        result_layer = None
+        ogr.DataSource.__swig_destroy__(result_vector)
+        result_vector = None
+        if error_results:
+            raise AssertionError(
+                "The following values are not equal: %s" % error_results)

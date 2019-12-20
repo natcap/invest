@@ -100,31 +100,29 @@ class UFRMTests(unittest.TestCase):
             len(urban_flood_risk_mitigation.validate(args)), 0)
 
         del args['workspace_dir']
-        with self.assertRaises(KeyError) as cm:
-            urban_flood_risk_mitigation.validate(args)
-        self.assertEquals(len(cm.exception.args), 1)
+        validation_warnings = urban_flood_risk_mitigation.validate(args)
+        self.assertEqual(len(validation_warnings), 1)
 
         args['workspace_dir'] = ''
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertEqual(result[0][1], 'parameter has no value')
+        self.assertTrue('has no value' in result[0][1])
 
         args = self._make_args()
         args['lulc_path'] = 'fake/path/notfound.tif'
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertEqual(result[0][1], 'not found on disk')
+        self.assertTrue('not found' in result[0][1])
 
         args = self._make_args()
         args['lulc_path'] = args['aoi_watersheds_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertEqual(result[0][1], 'not a raster')
+        self.assertTrue('GDAL raster' in result[0][1])
 
         args = self._make_args()
         args['aoi_watersheds_path'] = args['lulc_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertEqual(result[0][1], 'not a vector')
+        self.assertTrue('GDAL vector' in result[0][1])
 
         args = self._make_args()
         del args['infrastructure_damage_loss_table_path']
         result = urban_flood_risk_mitigation.validate(args)
-        self.assertTrue('no damage loss table' in result[0][1])
-
+        self.assertTrue('missing from the args dict' in result[0][1])

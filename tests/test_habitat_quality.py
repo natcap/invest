@@ -239,7 +239,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             u'workspace_dir': self.workspace_dir,
         }
 
@@ -273,8 +273,7 @@ class HabitatQualityTests(unittest.TestCase):
                 'quality_c_regression.tif': 6928.5293,
                 'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
-                'rarity_f_regression.tif': 2500.0000000
-        }.items():
+                'rarity_f_regression.tif': 2500.0000000}.items():
             assert_array_sum(
                 os.path.join(args['workspace_dir'], 'output', output_filename),
                 assert_value)
@@ -302,7 +301,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             'threats_table_path': threat_csv_path,
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'threat_raster_folder': threats_folder,
@@ -592,24 +591,15 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'threat_raster_folder': self.workspace_dir,
         }
 
-        with self.assertRaises(KeyError) as cm:
-            habitat_quality.validate(args)
-        self.assertEqual(len(cm.exception.args), 4)
+        validation_results = habitat_quality.validate(args)
+        self.assertEqual(len(validation_results), 1)
 
-        keys_without_value = [
+        keys_without_value = set([
             'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',
-            'half_saturation_constant']
-
-        for key in keys_without_value:
-            args[key] = ''
-
-        validation_error_list = habitat_quality.validate(args)
-        for key in keys_without_value:
-            self.assertTrue(
-                ([key], 'should have a value') in validation_error_list,
-                'exception not raised for %s')
+            'half_saturation_constant'])
+        self.assertEqual(set(validation_results[0][0]), keys_without_value)

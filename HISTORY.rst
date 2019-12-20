@@ -2,14 +2,20 @@
 
 Unreleased Changes
 ------------------
+* All InVEST models now have an ``ARGS_SPEC`` object that contains metadata
+  about the model and describes the model's arguments.  Validation has been
+  reimplemented across all models to use these ``ARGS_SPEC`` objects.
+* The results suffix key for the Wave Energy and Wind Energy models has been
+  renamed ``results_suffix`` (was previously ``suffix``).  This is for
+  consistency across InVEST models.
 * Speed and memory optimization of raster processing in the Recreation model.
 * Removed a constraint in Coastal Vulnerability so the AOI polygon no longer
   needs to intersect the continental shelf contour line. So the AOI can now be
   used exclusively to delineate the coastal area of interest.
 * Improved how Coastal Vulnerability calculates local wind-driven waves.
   This requires a new bathymetry raster input and implements equation 10
-  of the User Guide. Also minor updates to fields in intermediate outputs, 
-  notably a 'shore_id' field is now the unique ID for joining tables and 
+  of the User Guide. Also minor updates to fields in intermediate outputs,
+  notably a 'shore_id' field is now the unique ID for joining tables and
   FIDs are no longer used.
 * Added a status message to the UI if a datastack file fails to load,
   instead of staying silent.
