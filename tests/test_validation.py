@@ -528,7 +528,7 @@ class BooleanValidation(unittest.TestCase):
         self.assertEqual(None, validation.check_boolean(False))
 
     def test_string_boolean(self):
-        """Validation: test when valid strings are passed."""
+        """Validation: an error should be raised when the type is wrong."""
         from natcap.invest import validation
         for non_boolean_value in ('true', 1, [], set()):
             self.assertTrue(
