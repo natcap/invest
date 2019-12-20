@@ -863,36 +863,6 @@ class TestValidationFromSpec(unittest.TestCase):
             [(['string_a'], "Value must be one of: ['AAA', 'BBB']")],
             validation.validate(args, spec))
 
-    def test_conditionally_required_str_bool_expression(self):
-        """Validation: verify behavior when some bools are in str form."""
-        from natcap.invest import validation
-        spec = {
-            "bool_a": {
-                "name": "The first parameter",
-                "about": "About the first parameter",
-                "type": "boolean",
-                "required": True,
-            },
-            "bool_b": {
-                "name": "The second parameter",
-                "about": "About the second parameter",
-                "type": "boolean",
-                "required": True,
-            },
-            "string_a": {
-                "name": "The thrid parameter",
-                "about": "About the third parameter",
-                "type": "freestyle_string",
-                "required": "bool_a | bool_b",
-            }
-        }
-
-        args = {"bool_a": True, "bool_b": "false"}
-
-        self.assertEqual(
-            [(['string_a'], 'Key is missing from the args dict')],
-            validation.validate(args, spec))
-
     def test_validation_exception(self):
         """Validation: Verify error when an unexpected exception occurs."""
         from natcap.invest import validation
