@@ -25,6 +25,197 @@ LOGGER = logging.getLogger(__name__)
 TARGET_NODATA = -1
 _LOGGING_PERIOD = 5.0
 
+ARGS_SPEC = {
+    'model_name': 'Urban Cooling Model',
+    'module': __name__,
+    'userguide_html': 'urban_cooling_model.html',
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["lulc_raster_path", "ref_eto_raster_path",
+                         "aoi_vector_path", "building_vector_path"],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "t_ref": {
+            "name": "Reference Air Temperature",
+            "type": "number",
+            "required": True,
+            "about": (
+                "Rural reference temperature (where the urban heat island"
+                "effect is not observed) for the period of interest. This "
+                "could be nighttime or daytime temperature, for a specific "
+                "date or an average over several days. The results will be "
+                "given for the same period of interest)"),
+        },
+        "lulc_raster_path": {
+            "name": "Land Use / Land Cover Raster",
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing integer values "
+                "representing the LULC code for each cell.  The LULC code "
+                "should be an integer.  The model will use the resolution of "
+                "this layer to resample all outputs.  The resolution should "
+                "be small enough to capture the effect of green areas in the "
+                "landscape, although LULC categories can comprise a mix of "
+                "vegetated and non-vegetated covers (e.g. 'residential', "
+                "which may have 30% canopy cover."
+            )
+        },
+        "ref_eto_raster_path": {
+            "name": "Reference Evapotranspiration Raster",
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing numeric values "
+                "representing the evapotranspiration (in mm) for the period "
+                "of interest."
+            )
+        },
+        "aoi_vector_path": {
+            "name": "Area of Interest Vector",
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-compatible vector delineating areas of interest "
+                "(city or neighborhood boundaries).  Results will be "
+                "aggregated within each feature in this vector."
+            )
+        },
+        "biophysical_table_path": {
+            "name": "Biophysical Table",
+            "type": "csv",
+            "required": True,
+            "validation_options": {
+                "required_fields": ["lucode", "shade", "kc", "albedo",
+                                    "green_area"],
+            },
+            "about": (
+                "A CSV table containing model information corresponding "
+                "to each of the land use classes in the LULC.  All classes "
+                "in the land cover raster MUST have corresponding values "
+                "in this table.  Each row is a land use/land cover class."
+            ),
+        },
+        "green_area_cooling_distance": {
+            "name": "Green area max cooling distance effect (m)",
+            "type": "number",
+            "required": True,  # TODO: is it?
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                "Distance (in m) over which large green areas (> 2 ha) "
+                "will have a cooling effect."
+            ),
+        },
+        "t_air_average_radius": {
+            "name": "T_air moving average radius (m)",
+            "type": "number",
+            "required": True,  # TODO: is it?
+            "validation_options": {
+                "expression": "value > 0"
+            },
+            "about": (
+                "Radius of the averaging filter for turning T_air_nomix "
+                "into T_air")
+        },
+        "uhi_max": {
+            "name": "Magnitude of the UHI effect",
+            "type": "number",
+            "required": True,
+            "about": (
+                "The magnitude of the urban heat island effect, in degrees "
+                "C.  Example: the difference between the rural reference "
+                "temperature and the maximum temperature observed in the "
+                "city."
+            ),
+        },
+        "do_valuation": {
+            "name": "Run Valuation Model",
+            "type": "boolean",
+            "required": True,
+            "about": "Select to run the valuation model."
+        },
+        "avg_rel_humidity": {
+            "name": "Average relative humidity (0-100%)",
+            "type": "number",
+            "required": "do_valuation",
+            "validation_options": {
+                "expression": "(value >= 0) and (value <= 100)",
+            },
+        },
+        "building_vector_path": {
+            "name": "Buildings vector",
+            "type": "vector",
+            "required": "do_valuation",
+            "validation_options": {
+                "required_fields": ["type"],
+            },
+            "about": (
+                "A GDAL-compatible vector with built infrastructure "
+                "footprints.  The attribute table must contain the column "
+                "'type', with integers referencing the building type "
+                "(e.g. 1=residential, 2=office, etc.) that match types in "
+                "the energy consumption table."
+            ),
+        },
+        "energy_consumption_table_path": {
+            "name": "Energy consumption table",
+            "type": "csv",
+            "required": "do_valuation",
+            "validation_options": {
+                "required_fields": ["type", "consumption"],
+            },
+            "about": (
+                "A CSV table containing information on energy consumption "
+                "for various types of buildings, in kW/degC."
+            ),
+        },
+        "cc_weight_shade": {
+            "name": "",  # TODO: asked Chris about this
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                "The relative weight to apply to shade when calculating the "
+                "cooling index."
+            ),
+        },
+        "cc_weight_albedo": {
+            "name": "",  # TODO: asked Chris about this
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                "The relative weight to apply to albedo when calculating the "
+                "cooling index."
+            ),
+        },
+        "cc_weight_eti": {
+            "name": "",  # TODO: asked Chris about this
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                "The relative weight to apply to ETI when calculating the "
+                "cooling index."
+            )
+        },
+    }
+}
+
 
 def execute(args):
     """Urban Cooling Model.
@@ -833,62 +1024,8 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    LOGGER.debug('starting validation')
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        't_ref',
-        'lulc_raster_path',
-        'ref_eto_raster_path',
-        'aoi_vector_path',
-        'biophysical_table_path',
-        'green_area_cooling_distance',
-        'uhi_max',
-        'cc_weight_shade',
-        'cc_weight_albedo',
-        'cc_weight_eti',
-        ]
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    no_float_value_list = []
-    negative_value_list = []
-    for weight_key in [
-            'cc_weight_shade', 'cc_weight_albedo', 'cc_weight_eti']:
-        try:
-            LOGGER.debug(weight_key)
-            val = float(args[weight_key])
-            LOGGER.debug(val)
-            if val < 0:
-                negative_value_list.append(weight_key)
-        except ValueError:
-            no_float_value_list.append(weight_key)
-    if no_float_value_list:
-        validation_error_list.append(
-            (no_float_value_list, 'parameter is not a number'))
-    if negative_value_list:
-        validation_error_list.append(
-            (negative_value_list, 'value should be positive'))
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])
 
 
 def calculate_wbgt(
