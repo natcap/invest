@@ -1804,13 +1804,23 @@ class InVESTModel(QtWidgets.QMainWindow):
             icon = inputs.ICON_ENTER
         self.form.run_button.setIcon(icon)
 
-        # post warnings to the WMV dialog
-        args_to_inputs = dict((input_.args_key, input_) for input_ in
-                              self.inputs)
+        # Post warnings to the WMV dialog and to the inputs themselves if the
+        # error only affects that one input.
+        # We can only post validation warnings if the input supports it (is a
+        # GriddedInput instance).
+        args_to_inputs = {}
+        for input_ in self.inputs:
+            if isinstance(input_, inputs.GriddedInput):
+                args_to_inputs[input_.args_key] = input_
+
         warnings_ = []
         for keys, warning in validation_warnings:
             warnings_.append(
-                ((args_to_inputs[key].label for key in keys), warning))
+                (list(args_to_inputs[key].label for key in keys), warning))
+
+        for key in args_to_inputs:
+            args_to_inputs[key]._validation_finished(validation_warnings)
+
         self.validation_report_dialog.post_warnings(warnings_)
 
     def validate(self, block=False):

@@ -96,10 +96,8 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         }
         validation_warnings = fisheries.validate(args)
-        self.assertEqual(len(validation_warnings), 2)
-        self.assertTrue('must have a value' in validation_warnings[0][1])
-        self.assertTrue('must be one of Individuals, Weight' in
-                        validation_warnings[1][1])
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertTrue('required but has no value' in validation_warnings[0][1])
 
     def test_validation_batch(self):
         """Fisheries: Batch parameters (full model validation)."""
@@ -143,7 +141,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         validation_warnings = fisheries.validate(
             args, limit_to='aoi_vector_path')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('must be an OGR-compatible vector' in
+        self.assertTrue('File not found' in
                         validation_warnings[0][1])
 
     def test_validation_invalid_batch(self):
@@ -153,7 +151,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         validation_warnings = fisheries.validate(args, limit_to='do_batch')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('must be either True or False' in
+        self.assertTrue('Value must be either True or False' in
                         validation_warnings[0][1])
 
     def test_validation_invalid_pop_csv(self):
@@ -164,7 +162,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         validation_warnings = fisheries.validate(
             args, limit_to='population_csv_path')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('must be a valid CSV file' in
+        self.assertTrue('File not found' in
                         validation_warnings[0][1])
 
     def test_validation_invalid_aoi_fields(self):
@@ -183,7 +181,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
 
         validation_warnings = fisheries.validate(args, limit_to='aoi_vector_path')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('column name "Name" is missing' in
+        self.assertTrue('Fields are missing from the first layer' in
                         validation_warnings[0][1])
 
     def test_validation_invalid_init_recruits(self):
@@ -194,7 +192,7 @@ class FisheriesSampleDataTests(unittest.TestCase):
         validation_warnings = fisheries.validate(
             args, limit_to='total_init_recruits')
         self.assertEqual(len(validation_warnings), 1)
-        self.assertTrue('must be positive' in
+        self.assertTrue('Value does not meet condition' in
                         validation_warnings[0][1])
 
     def test_sampledata_shrimp(self):

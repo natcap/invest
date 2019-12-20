@@ -1118,6 +1118,80 @@ class RecreationRegressionTests(unittest.TestCase):
             recmodel_client.execute(args)
 
 
+class RecreationValidationTests(unittest.TestCase):
+    """Tests for the Recreation Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'aoi_path',
+            'start_year',
+            'end_year'
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Recreation Validate: assert missing required keys."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_grid_aoi(self):
+        """Recreation Validate: assert missing keys for grid option."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({'grid_aoi': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['grid_type', 'cell_size'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_compute_regression(self):
+        """Recreation Validate: assert missing keys for regression option."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({'compute_regression': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['predictor_table_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_bad_predictor_table_header(self):
+        """Recreation Validate: assert messages for bad table headers."""
+        from natcap.invest.recreation import recmodel_client
+
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as file:
+            file.write('foo,bar,baz\n')
+            file.write('a,b,c\n')
+
+        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        validation_warnings = recmodel_client.validate(
+            {'predictor_table_path': table_path})
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)
+
+        validation_warnings = recmodel_client.validate(
+            {'scenario_predictor_table_path': table_path})
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)
+
+
 def _assert_vector_attributes_eq(
         actual_vector_path, expected_vector_path, tolerance_places=3):
     """Assert fieldnames and values are equal with no respect to order."""

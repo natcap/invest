@@ -963,3 +963,109 @@ class CBCRefactorTest(unittest.TestCase):
             nodata_mask=lulc_nodata)
 
         numpy.testing.assert_almost_equal(reclassified_array, expected_array)
+
+class CBCValidationTests(unittest.TestCase):
+    """Tests for Coastal Blue Carbon Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'lulc_lookup_uri',
+            'lulc_transition_matrix_uri',
+            'carbon_pool_initial_uri',
+            'carbon_pool_transient_uri',
+            'lulc_baseline_map_uri',
+            'lulc_baseline_year',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """CBC Validate: assert missing required keys."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_errors = coastal_blue_carbon.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_do_valuation(self):
+        """CBC Validate: assert missing required for valuation."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_errors = coastal_blue_carbon.validate(
+            {'do_economic_analysis': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['price',
+             'inflation_rate',
+             'discount_rate'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_do_valuation_table(self):
+        """CBC Validate: assert missing required for valuation with table."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_errors = coastal_blue_carbon.validate(
+            {'do_economic_analysis': True,
+             'do_price_table': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['discount_rate',
+             'price_table_uri'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_transition_years(self):
+        """CBC Validate: assert maps required if years given."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_errors = coastal_blue_carbon.validate(
+            {'lulc_transition_years_list': [1999]})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['lulc_transition_maps_list'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_transition_maps(self):
+        """CBC Validate: assert years required if maps given."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_errors = coastal_blue_carbon.validate(
+            {'lulc_transition_maps_list': ['foo.tif']})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['lulc_transition_years_list'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_transitions_map_year_mismatch(self):
+        """CBC Validate: assert transition maps and years are equal length."""
+        from natcap.invest.coastal_blue_carbon import coastal_blue_carbon
+        from natcap.invest import validation
+
+        validation_warnings = coastal_blue_carbon.validate(
+            {'lulc_transition_years_list': [1999],
+             'lulc_transition_maps_list': ['foo.tif', 'bar.tif']})
+        invalid_keys = validation.get_invalid_keys(validation_warnings)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['lulc_transition_maps_list',
+             'lulc_transition_years_list'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+        expected_message = 'Must have the same number of elements.'
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)

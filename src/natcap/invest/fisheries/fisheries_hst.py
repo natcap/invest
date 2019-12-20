@@ -13,7 +13,82 @@ import numpy as np
 from . import fisheries_hst_io as io
 from .. import validation
 
-LOGGER = logging.getLogger('natcap.invest.fisheries.hst')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Fisheries Habitat Scenario Tool",
+    "module": __name__,
+    "userguide_html": "fisheries.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "sexsp": {
+            "name": "Population Classes are Sex-Specific",
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ["No", "Yes"],
+            },
+            "about": (
+                "Specifies whether or not the population classes "
+                "provided in the Population Parameters CSV file are "
+                "distinguished by sex."),
+        },
+        "population_csv_path": {
+            "name": "Population Parameters File",
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file containing all necessary attributes for "
+                "population classes based on age/stage, sex, and area "
+                "- excluding possible migration "
+                "information.<br><br>See the 'Running the Model >> "
+                "Core Model >> Population Parameters' section in the "
+                "model's documentation for help on how to format this "
+                "file."),
+        },
+        "habitat_dep_csv_path": {
+            "name": "Habitat Dependency Parameters File",
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file containing the habitat dependencies (0-1) "
+                "for each life stage or age and for each habitat type "
+                "included in the Habitat Change CSV File.<br><br>See "
+                "the 'Running the Model >> Habitat Scenario Tool >> "
+                "Habitat Parameters' section in the model's "
+                "documentation for help on how to format this file."),
+        },
+        "habitat_chg_csv_path": {
+            "name": "Habitat Area Change File",
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file containing the percent changes in habitat "
+                "area by subregion (if applicable). The habitats "
+                "included should be those which the population depends "
+                "on at any life stage. See the 'Running the "
+                "Model >> Habitat Scenario Tool >> Habitat Parameters' "
+                "section in the model's documentation for help on how "
+                "to format this file."),
+        },
+        "gamma": {
+            "name": "Gamma",
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
+            "about": (
+                "Gamma describes the relationship between a change in "
+                "habitat area and a change in survival of life stages "
+                "dependent on that habitat.  Specify a value between 0 "
+                "and 1. See the documentation for advice on "
+                "selecting a gamma value."),
+        }
+    }
+}
+
 
 
 def execute(args):
@@ -179,52 +254,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-    keys_with_empty_values = set([])
-    missing_keys = set([])
-    for key in ('workspace_dir',
-                'results_suffix',
-                'population_csv_path',
-                'sexsp',
-                'habitat_dep_csv_path',
-                'habitat_chg_csv_path',
-                'gamma'):
-        if key in (None, limit_to):
-            try:
-                if args[key] in ('', None):
-                    keys_with_empty_values.add(key)
-            except KeyError:
-                missing_keys.add(key)
-
-    if len(missing_keys) > 0:
-        raise KeyError(
-            'Args is missing required keys: %s' % ', '.join(
-                sorted(missing_keys)))
-
-    if len(keys_with_empty_values) > 0:
-        warnings.append((keys_with_empty_values,
-                         'Argument must have a value'))
-
-    for csv_key in ('population_csv_path',
-                    'habitat_dep_csv_path',
-                    'habitat_chg_csv_path'):
-        if limit_to in (csv_key, None):
-            try:
-                csv.reader(open(args[csv_key], 'r'))
-            except (csv.Error, IOError):
-                warnings.append(([csv_key],
-                                 'Parameter must be a valid CSV file'))
-
-    if limit_to in ('sexsp', None):
-        if args['sexsp'] not in ('Yes', 'No'):
-            warnings.append((['sexsp'],
-                             'Parameter must be either "Yes" or "No"'))
-
-    if limit_to in ('gamma', None):
-        try:
-            float(args['gamma'])
-        except ValueError:
-            warnings.append((['gamma'],
-                             'Parameter must be a number'))
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])

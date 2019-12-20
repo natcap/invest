@@ -240,7 +240,9 @@ class CLIHeadlessTests(unittest.TestCase):
                     parameter_set_path,
                 ])
         self.assertTrue(len(stdout_stream.getvalue()) > 0)
-        self.assertEqual(exit_cm.exception.code, 1)
+
+        # Validation failed, not the program.
+        self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_fisheries_missing_workspace_json(self):
         """CLI: Validate the fisheries model inputs through the cli."""
@@ -262,7 +264,9 @@ class CLIHeadlessTests(unittest.TestCase):
         stdout = stdout_stream.getvalue()
         self.assertTrue(len(stdout) > 0)
         self.assertEqual(len(json.loads(stdout)), 1)  # workspace_dir invalid
-        self.assertEqual(exit_cm.exception.code, 1)
+
+        # Validation failed, not the program.
+        self.assertEqual(exit_cm.exception.code, 0)
 
     def test_validate_invalid_json(self):
         """CLI: Validate invalid json files set an error code."""
@@ -315,7 +319,7 @@ class CLIHeadlessTests(unittest.TestCase):
         stdout = stdout_stream.getvalue()
         stdout_json = json.loads(stdout)
         self.assertEqual(len(stdout_json), 1)
-        self.assertEqual(len(stdout_json['validation_results']), 2)
+        self.assertEqual(len(stdout_json['validation_results']), 4)
 
         # Validation returned successfully, so error code 0 even though there
         # are warnings.

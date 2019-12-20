@@ -5,7 +5,6 @@ import os
 import logging
 
 from osgeo import gdal
-from osgeo import ogr
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
@@ -15,6 +14,95 @@ from . import utils
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "RouteDEM",
+    "module": __name__,
+    "userguide_html": "routedem.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing a base Digital "
+                "Elevation Model to execute the routing functionality "
+                "across."),
+            "name": "Digital Elevation Model"
+        },
+        "dem_band_index": {
+            "validation_options": {
+                "expression": "value >= 1",
+            },
+            "type": "number",
+            "required": False,
+            "about": (
+                "The band index to use from the raster. This positive "
+                "integer is 1-based. Default: 1"),
+            "name": "Band Index"
+        },
+        "algorithm": {
+            "validation_options": {
+                "options": ["D8", "MFD"],
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "The routing algorithm to use. "
+                "<ul><li>D8: all water flows directly into the most downhill "
+                "of each of the 8 neighbors of a cell.</li>"
+                "<li>MFD: Multiple Flow Direction. Fractional flow is "
+                "modeled between pixels.</li></ul>"),
+            "name": "Routing Algorithm"
+        },
+        "calculate_flow_direction": {
+            "type": "boolean",
+            "required": False,
+            "about": "Select to calculate flow direction",
+            "name": "Calculate Flow Direction"
+        },
+        "calculate_flow_accumulation": {
+            "validation_options": {},
+            "type": "boolean",
+            "required": False,
+            "about": "Select to calculate flow accumulation.",
+            "name": "Calculate Flow Accumulation"
+        },
+        "calculate_stream_threshold": {
+            "type": "boolean",
+            "required": False,
+            "about": "Select to calculate a stream threshold to flow accumulation.",
+            "name": "Calculate Stream Thresholds"
+        },
+        "threshold_flow_accumulation": {
+            "validation_options": {},
+            "type": "number",
+            "required": "calculate_stream_threshold",
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's classified as a stream."),
+            "name": "Threshold Flow Accumulation Limit"
+        },
+        "calculate_downstream_distance": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "If selected, creates a downstream distance raster based "
+                "on the thresholded flow accumulation stream "
+                "classification."),
+            "name": "Calculate Distance to stream"
+        },
+        "calculate_slope": {
+            "type": "boolean",
+            "required": False,
+            "about": "If selected, calculates slope from the provided DEM.",
+            "name": "Calculate Slope"
+        }
+    }
+}
+
 
 # replace %s with file suffix
 _TARGET_FILLED_PITS_FILED_PATTERN = 'filled%s.tif'
@@ -268,79 +356,19 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
 
-    required_keys = [
-        'workspace_dir',
-        'dem_path']
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    sufficient_keys = validation.get_sufficient_keys(args)
 
-    if ('calculate_stream_threshold' in args and
-            args['calculate_stream_threshold']):
-        required_keys.append('threshold_flow_accumulation')
+    if ('dem_band_index' not in invalid_keys and
+            'dem_band_index' in sufficient_keys and
+            'dem_path' not in invalid_keys and
+            'dem_path' in sufficient_keys):
+        raster_info = pygeoprocessing.get_raster_info(args['dem_path'])
+        if int(args['dem_band_index']) > raster_info['n_bands']:
+            validation_warnings.append((
+                ['dem_band_index'],
+                'Must be between 1 and %s' % raster_info['n_bands']))
 
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to in ('dem_band_index', None):
-        if ('dem_band_index' in args and
-                args['dem_band_index'] not in (None, '')):
-            invalid_band_index_error_msg = 'must be a positive, nonzero integer'
-            invalid_index = False
-            try:
-                if int(args['dem_band_index']) < 1:
-                    invalid_index = True
-            except (ValueError, TypeError):
-                # ValueError when args['dem_band'] is an invalid string (such
-                # as 'foo')
-                # TypeError when an invalid type is passed.
-                invalid_index = True
-            if invalid_index:
-                validation_error_list.append(
-                    (['dem_band_index'], invalid_band_index_error_msg))
-
-    file_type_list = [('dem_path', 'raster')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if args[key] in (None, ''):
-                    # should have already been caught
-                    break
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-
-    if limit_to is None:
-        if ('dem_band_index' in args and
-                args['dem_band_index'] not in (None, '')):
-            # So, validation already passed so far on band index
-            if not invalid_index:
-                dem_raster = gdal.OpenEx(args['dem_path'])
-                if int(args['dem_band_index']) > dem_raster.RasterCount:
-                    validation_error_list.append((
-                        ['dem_band_index'],
-                        'Must be between 1 and %s' % dem_raster.RasterCount))
-
-    return validation_error_list
+    return validation_warnings
