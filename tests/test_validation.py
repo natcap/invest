@@ -241,6 +241,16 @@ class DirectoryValidation(unittest.TestCase):
         self.assertEqual(None, validation.check_directory(
             self.workspace_dir, exists=True, permissions='rwx'))
 
+    def test_workspace_not_exists(self):
+        """Validation: when a folder's parent must exist with permissions."""
+        from natcap.invest import validation
+
+        dirpath = 'foo'
+        new_dir = os.path.join(self.workspace_dir, dirpath)
+        
+        self.assertEqual(None, validation.check_directory(
+            new_dir, exists=False, permissions='rwx'))
+
 
 class FileValidation(unittest.TestCase):
     def setUp(self):

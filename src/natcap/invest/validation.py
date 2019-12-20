@@ -191,15 +191,15 @@ def check_directory(dirpath, exists=False, permissions='rx'):
             return "Path must be a directory"
     else:
         # find the parent directory that does exist and check permissions
-        directory_hierarchy = os.path.normcase(
-            os.path.abspath(dirpath)).split(os.sep)
-        index = len(directory_hierarchy)
-        while index > 0:
-            dirpath = os.path.join(*directory_hierarchy[:index])
-            if os.path.exists(dirpath):
+        child = dirpath
+        parent = os.path.normcase(os.path.abspath(dirpath))
+        while child:
+            # iterate child because if this gets back to the root dir,
+            # child becomes an empty string and parent remains root string.
+            parent, child = os.path.split(parent)
+            if os.path.exists(parent):
+                dirpath = parent
                 break
-            else:
-                index -= 1
 
     permissions_warning = check_permissions(dirpath, permissions)
     if permissions_warning:
