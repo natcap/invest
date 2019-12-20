@@ -44,13 +44,133 @@ _INTERMEDIATE_BASE_FILES = {
 }
 
 
+ARGS_SPEC = {
+    "model_name": "Unobstructed Views: Scenic Quality Provision",
+    "module": __name__,
+    "userguide_html": "scenic_quality.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["aoi_path", "structure_path", "dem_path"],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "aoi_path": {
+            "name": "Area of Interest",
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-supported vector file.  This AOI instructs "
+                "the model where to clip the input data and the extent "
+                "of analysis.  Users will create a polygon feature "
+                "layer that defines their area of interest.  The AOI "
+                "must intersect the Digital Elevation Model (DEM)."),
+        },
+        "structure_path": {
+            "name": "Features Impacted Scenic Quality",
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-supported vector file.  The user must specify "
+                "a point feature layer that indicates locations of "
+                "objects that contribute to negative scenic quality, "
+                "such as aquaculture netpens or wave energy "
+                "facilities.  In order for the viewshed analysis to "
+                "run correctly, the projection of this input must be "
+                "consistent with the project of the DEM input."),
+        },
+        "dem_path": {
+            "name": "Digital Elevation Model",
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters",
+            },
+            "about": (
+                "A GDAL-supported raster file.  An elevation raster "
+                "layer is required to conduct viewshed analysis. "
+                "Elevation data allows the model to determine areas "
+                "within the AOI's land-seascape where point features "
+                "contributing to negative scenic quality are visible."),
+        },
+        "refraction": {
+            "name": "Refractivity Coefficient",
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            },
+            "about": (
+                "The earth curvature correction option corrects for "
+                "the curvature of the earth and refraction of visible "
+                "light in air.  Changes in air density curve the light "
+                "downward causing an observer to see further and the "
+                "earth to appear less curved.  While the magnitude of "
+                "this effect varies with atmospheric conditions, a "
+                "standard rule of thumb is that refraction of visible "
+                "light reduces the apparent curvature of the earth by "
+                "one-seventh.  By default, this model corrects for the "
+                "curvature of the earth and sets the refractivity "
+                "coefficient to 0.13."),
+        },
+        "do_valuation": {
+            "name": "Valuation",
+            "type": "boolean",
+            "required": False,
+            "about": "Enable or disable valuation."
+        },
+        "valuation_function": {
+            "name": "Valuation function",
+            "type": "option_string",
+            "required": "do_valuation",
+            "validation_options": {
+                "options": [
+                    'linear: a + bx',
+                    'logarithmic: a + b log(x+1)',
+                    'exponential: a * e^(-bx)'],
+            },
+            "about": (
+                "This field indicates the functional form f(x) the "
+                "model will use to value the visual impact for each "
+                "viewpoint."),
+        },
+        "a_coef": {
+            "name": "'a' Coefficient",
+            "type": "number",
+            "required": "do_valuation",
+            "about": ("First coefficient used by the valuation function"),
+        },
+        "b_coef": {
+            "name": "'a' Coefficient",
+            "type": "number",
+            "required": "do_valuation",
+            "about": ("Second coefficient used by the valuation function"),
+        },
+        "max_valuation_radius": {
+            "name": "Maximum Valuation Radius",
+            "type": "number",
+            "required": False,
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "about": (
+                u"Radius beyond which the valuation is set to zero. "
+                u"The valuation function 'f' cannot be negative at the "
+                u"radius 'r' (f(r)>=0)."),
+        },
+    }
+}
+
+
 def execute(args):
     """Run the Scenic Quality Model.
 
     Parameters:
         args['workspace_dir'] (string): (required) output directory for
             intermediate, temporary, and final files.
-        args['results_suffix] (string): (optional) string to append to any
+        args['results_suffix'] (string): (optional) string to append to any
             output file.
         args['aoi_path'] (string): (required) path to a vector that
             indicates the area over which the model should be run.
@@ -850,97 +970,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'aoi_path',
-        'structure_path',
-        'dem_path',
-        'refraction',
-    ]
-
-    if (limit_to is None and
-            'do_valuation' in args and
-            bool(args['do_valuation'])):
-        required_keys.extend([
-            'a_coef',
-            'b_coef',
-            'max_valuation_radius',
-            'valuation_function'
-        ])
-
-    for key in required_keys:
-        if limit_to in (None, key):
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ('', None):
-                no_value_list.append(key)
-
-    if missing_key_list:
-        raise KeyError(*missing_key_list)
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to in ('valuation_function', None):
-        if not args['valuation_function'].startswith(
-                ('linear', 'logarithmic', 'exponential')):
-            validation_error_list.append(
-                (['valuation_function'], 'Invalid function'))
-
-    spatial_files = (
-        ('dem_path', gdal.OF_RASTER, 'raster',),
-        ('aoi_path', gdal.OF_VECTOR, 'vector'),
-        ('structure_path', gdal.OF_VECTOR, 'vector'))
-    with utils.capture_gdal_logging():
-        for key, filetype, filetype_string in spatial_files:
-            if limit_to not in (key, None):
-                continue
-
-            spatial_file = gdal.OpenEx(args[key], filetype)
-            if spatial_file is None:
-                validation_error_list.append(
-                    ([key], 'Must be a %s' % filetype_string))
-
-    # Verify that the DEM projection is in meters.
-    # We don't care about the other spatial inputs, as they'll all be
-    # reprojected to the DEM's projection.
-    if limit_to in ('dem_path', None):
-        # only do this check if we can open the raster.
-        with utils.capture_gdal_logging():
-            do_spatial_check = False
-            if gdal.OpenEx(args['dem_path'], gdal.OF_RASTER) is not None:
-                do_spatial_check = True
-        if do_spatial_check:
-            dem_srs = osr.SpatialReference()
-            dem_srs.ImportFromWkt(
-                pygeoprocessing.get_raster_info(
-                    args['dem_path'])['projection'])
-            if (abs(dem_srs.GetLinearUnits() - 1.0) > 0.5e7 or
-                    not bool(dem_srs.IsProjected())):
-                validation_error_list.append(
-                    (['dem_path'], 'Must be projected in meters'))
-
-    numeric_keys = [
-        'refraction',
-        'max_valuation_radius',
-        'a_coef',
-        'b_coef',
-    ]
-    for key in numeric_keys:
-        # Skip validating key unless that's the only key we're validator OR
-        # we're validating every key.
-        if limit_to not in (key, None):
-            continue
-
-        try:
-            float(args[key])
-        except (ValueError, TypeError):
-            validation_error_list.append(
-                ([key], "Must be a number"))
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])

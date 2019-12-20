@@ -134,3 +134,43 @@ class ScenarioProximityTests(unittest.TestCase):
             raise AssertionError(
                 "The following files were expected but not found: " +
                 '\n'.join(missing_files))
+
+
+class ScenarioGenValidationTests(unittest.TestCase):
+    """Tests for the Scenario Generator ARGS_SPEC and validation."""
+
+    def setUp(self):
+        self.base_required_keys = [
+            'focal_landcover_codes',
+            'replacment_lucode',
+            'workspace_dir',
+            'n_fragmentation_steps',
+            'convertible_landcover_codes',
+            'area_to_convert',
+            'base_lulc_path',
+            'convert_nearest_to_edge',
+            'convert_farthest_from_edge'
+        ]
+
+    def test_missing_keys(self):
+        """SG Validate: assert missing required keys."""
+        from natcap.invest import scenario_gen_proximity
+        from natcap.invest import validation
+
+        validation_errors = scenario_gen_proximity.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_invalid_conversion_methods(self):
+        """SG Validate: assert message if both conversion methods false."""
+        from natcap.invest import scenario_gen_proximity
+
+        validation_errors = scenario_gen_proximity.validate(
+            {'convert_nearest_to_edge': False,
+             'convert_farthest_from_edge': False})
+        expected_message = 'One or more of "convert_nearest_to_edge" or "convert_farthest_from_edge" must be selected'
+        actual_messages = set()
+        for keys, error_strings in validation_errors:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)

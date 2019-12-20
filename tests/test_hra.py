@@ -758,7 +758,8 @@ class HraRegressionTests(unittest.TestCase):
             'decay_eq': 'Linear',
             'aoi_vector_path': os.path.join(workspace_dir, 'aoi.shp'),
             'resolution': 1,
-            'n_workers': -1
+            'n_workers': -1,
+            'visualize_outputs': True,
         }
 
         return args
@@ -901,7 +902,7 @@ class HraRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'not projected'
+        expected_message = 'Dataset must have a valid projection'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -1002,7 +1003,7 @@ class HraRegressionTests(unittest.TestCase):
             'n_workers': -1
         }
 
-        with self.assertRaises(KeyError) as cm:
+        with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
         self.assertEquals(len(cm.exception.args), 1)
 
@@ -1015,7 +1016,8 @@ class HraRegressionTests(unittest.TestCase):
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
-        natcap.invest.hra.validate(args)
+        validation_warnings = natcap.invest.hra.validate(args)
+        self.assertTrue([] == validation_warnings)
 
     def test_validate_max_rating_value(self):
         """HRA: testing validation with max_rating less than 1 in args."""
@@ -1025,7 +1027,8 @@ class HraRegressionTests(unittest.TestCase):
         args['max_rating'] = '-1'
 
         validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['max_rating'], 'should be larger than 1')
+        expected_error = (['max_rating'],
+                          'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_negative_resolution(self):
@@ -1036,7 +1039,8 @@ class HraRegressionTests(unittest.TestCase):
         args['resolution'] = '-110'
 
         validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['resolution'], 'should be a positive number')
+        expected_error = (['resolution'],
+                          'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod

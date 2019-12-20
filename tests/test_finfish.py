@@ -131,3 +131,85 @@ class FinfishTests(unittest.TestCase):
             raise AssertionError(
                 "The following files were expected but not found: " +
                 '\n'.join(missing_files))
+
+
+class FinfishValidationTests(unittest.TestCase):
+    """Tests for the Finfish Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'ff_farm_loc',
+            'farm_ID',
+            'g_param_a',
+            'g_param_b',
+            'g_param_tau',
+            'water_temp_tbl',
+            'farm_op_tbl',
+            'outplant_buffer',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Finfish Validate: assert missing required keys."""
+        from natcap.invest.finfish_aquaculture import finfish_aquaculture
+        from natcap.invest import validation
+
+        validation_errors = finfish_aquaculture.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['do_valuation',
+             'use_uncertainty'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_use_uncertainty(self):
+        """Finfish Validate: assert missing required keys for uncertainty."""
+        from natcap.invest.finfish_aquaculture import finfish_aquaculture
+        from natcap.invest import validation
+
+        validation_errors = finfish_aquaculture.validate(
+            {'use_uncertainty': True})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['do_valuation',
+             'g_param_a_sd',
+             'g_param_b_sd',
+             'num_monte_carlo_runs'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_do_valuation(self):
+        """Finfish Validate: assert missing required keys for valuation."""
+        from natcap.invest.finfish_aquaculture import finfish_aquaculture
+        from natcap.invest import validation
+
+        validation_errors = finfish_aquaculture.validate(
+            {'do_valuation': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['use_uncertainty',
+             'p_per_kg',
+             'frac_p',
+             'discount'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_field_in_farm_vector(self):
+        """Finfish Validate: warning message on invalid fieldname."""
+        from natcap.invest.finfish_aquaculture import finfish_aquaculture
+
+        farm_vector_path = os.path.join(SAMPLE_DATA, 'Finfish_Netpens.shp')
+        validation_warnings = finfish_aquaculture.validate(
+            {'ff_farm_loc': farm_vector_path,
+             'farm_ID': 'foo'})
+        expected_message = "Value must be one of: ['FarmID']"
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)

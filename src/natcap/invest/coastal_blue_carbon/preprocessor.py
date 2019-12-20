@@ -19,8 +19,45 @@ from .. import validation
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
 
+LOGGER = logging.getLogger(__name__)
 
-LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
+ARGS_SPEC = {
+    "model_name": "Coastal Blue Carbon Preprocessor",
+    "module": __name__,
+    "userguide_html": "coastal_blue_carbon.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "lulc_lookup_uri": {
+            "name": "LULC Lookup Table",
+            "type": "csv",
+            "about": (
+                "A CSV table used to map lulc classes to their values "
+                "in a raster, as well as to indicate whether or not "
+                "the lulc class is a coastal blue carbon habitat."),
+            "required": True,
+            "validation_options": {
+                "required_fields": ["lulc-class", "code",
+                                    "is_coastal_blue_carbon_habitat"]
+            },
+        },
+        "lulc_snapshot_list": {
+            "name": "Land Use/Land Cover Rasters",
+            "type": "other",
+            "required": True,
+            "about": (
+                "One or more GDAL-supported land use/land cover rasters "
+                "representing the land/seascape at particular points in time. "
+                "The values for this rater are unique integers representing "
+                "each LULC class and must have matching values in the "
+                "``code`` column of the LULC lookup table.  The Land Use/ "
+                "Land Cover rasters must be entered into the user "
+                "interface in chronological order. All pixel stacks across "
+                "all timesteps must have valid pixels in order for "
+                "calculations to take place."),
+        },
+    }
+}
 
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
@@ -35,7 +72,7 @@ def execute(args):
 
     The preprocessor accepts a list of rasters and checks for cell-transitions
     across the rasters.  The preprocessor outputs a CSV file representing a
-    matrix of land cover transitions, each cell prefilled with a string
+    matrix of land cover transitions, each cell pre-filled with a string
     indicating whether carbon accumulates or is disturbed as a result of the
     transition, if a transition occurs.
 
@@ -380,44 +417,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-    missing_keys = []
-    keys_missing_value = []
-    for required_key in ('workspace_dir', 'lulc_lookup_uri'):
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_value.append(required_key)
-        except KeyError:
-            missing_keys.append(required_key)
-
-    if missing_keys:
-        raise KeyError('Args is missing these keys: %s'
-                       % ', '.join(missing_keys))
-
-    if keys_missing_value:
-        warnings.append((keys_missing_value,
-                         'Parameter must have a value.'))
-
-    if limit_to in ('lulc_lookup_uri', None):
-        if not os.path.exists(args['lulc_lookup_uri']):
-            warnings.append((['lulc_lookup_uri'], 'File not found.'))
-        try:
-            pandas.read_csv(args['lulc_lookup_uri'])
-        except:
-            warnings.append((['lulc_lookup_uri'], 'Could not open CSV.'))
-
-    if limit_to in ('lulc_snapshot_list', None):
-        try:
-            with utils.capture_gdal_logging():
-                for index, raster_path in enumerate(
-                        args['lulc_snapshot_list']):
-                    raster = gdal.OpenEx(raster_path)
-                    if raster is None:
-                        warnings.append(
-                            (['lulc_snapshot_list'],
-                             ('Raster index %s must be a path to a '
-                              'GDAL-compatible file on disk.') % index))
-        except KeyError:
-            pass
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])

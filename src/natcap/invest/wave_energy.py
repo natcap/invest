@@ -24,6 +24,130 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+ARGS_SPEC = {
+    "model_name": "Wave Energy",
+    "module": __name__,
+    "userguide_html": "wave_energy.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "wave_base_data_path": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": True,
+            "about": "Select the folder that has the packaged Wave Energy Data.",
+            "name": "Wave Base Data Folder"
+        },
+        "analysis_area_path": {
+            "validation_options": {
+                "options": [
+                    "West Coast of North America and Hawaii",
+                    "East Coast of North America and Puerto Rico",
+                    "North Sea 4 meter resolution",
+                    "North Sea 10 meter resolution",
+                    "Australia",
+                    "Global"
+                ]
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "A list of analysis areas for which the model can currently "
+                "be run.  All the wave energy data needed for these areas "
+                "are pre-packaged in the WaveData folder."),
+            "name": "Analysis Area"
+        },
+        "aoi_path": {
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters"
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "An OGR-supported vector file containing a single polygon "
+                "representing the area of interest.  This input is required "
+                "for computing valuation and is recommended for biophysical "
+                "runs as well.  The AOI should be projected in linear units "
+                "of meters."),
+            "name": "Area of Interest"
+        },
+        "machine_perf_path": {
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV Table that has the performance of a particular wave "
+                "energy machine at certain sea state conditions."),
+            "name": "Machine Performance Table"
+        },
+        "machine_param_path": {
+            "validation_options": {
+                "required_fields": ["name", "value", "note"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV Table that has parameter values for a wave energy "
+                "machine.  This includes information on the maximum "
+                "capacity of the device and the upper limits for wave height "
+                "and period."),
+            "name": "Machine Parameter Table"
+        },
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing a digital elevation "
+                "model dataset that has elevation values in meters.  Used to "
+                "get the cable distance for wave energy transmission."),
+            "name": "Global Digital Elevation Model"
+        },
+        "valuation_container": {
+            "type": "boolean",
+            "required": False,
+            "about": "Indicates whether the model includes valuation",
+            "name": "Valuation"
+        },
+        "land_gridPts_path": {
+            "validation_options": {
+                "required_fields": ['id', 'type', 'lat', 'long', 'location'],
+            },
+            "type": "csv",
+            "required": "valuation_container",
+            "about": (
+                "A CSV Table that has the landing points and grid points "
+                "locations for computing cable distances."),
+            "name": "Grid Connection Points Table"
+        },
+        "machine_econ_path": {
+            "validation_options": {
+                'required_fields': ['name', 'value', 'note'],
+            },
+            "type": "csv",
+            "required": "valuation_container",
+            "about": (
+                "A CSV Table that has the economic parameters for the wave "
+                "energy machine."),
+            "name": "Machine Economic Table"
+        },
+        "number_of_machines": {
+            "validation_options": {
+                "expression": "int(value) > 0"
+            },
+            "type": "number",
+            "required": "valuation_container",
+            "about": (
+                "An integer for how many wave energy machines will be in the "
+                "wave farm."),
+            "name": "Number of Machines"
+        }
+    }
+}
+
+
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
 _TARGET_PIXEL_TYPE = gdal.GDT_Float32
@@ -114,7 +238,7 @@ def execute(args):
             machine parameter table. (required)
         dem_path (str): The path of the Global Digital Elevation Model (DEM).
             (required)
-        suffix (str): A python string of characters to append to each output
+        results_suffix (str): A python string of characters to append to each output
             filename (optional)
         valuation_container (boolean): Indicates whether the model includes
             valuation
@@ -127,23 +251,6 @@ def execute(args):
         n_workers (int): The number of worker processes to use for processing
             this model.  If omitted, computation will take place in the current
             process. (optional)
-
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'wave_base_data_path': 'path/to/base_data_dir',
-            'analysis_area_path': 'West Coast of North America and Hawaii',
-            'aoi_path': 'path/to/vector',
-            'machine_perf_path': 'path/to/csv',
-            'machine_param_path': 'path/to/csv',
-            'dem_path': 'path/to/raster',
-            'suffix': '_results',
-            'valuation_container': True,
-            'land_gridPts_path': 'path/to/csv',
-            'machine_econ_path': 'path/to/csv',
-            'number_of_machines': 28,
-        }
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
@@ -170,7 +277,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Get the path for the DEM
     dem_path = args['dem_path']
@@ -1903,126 +2010,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    warnings = []
-    keys_missing_value = []
-    missing_keys = []
-    for required_key in ('workspace_dir', 'wave_base_data_path',
-                         'analysis_area_path', 'machine_perf_path',
-                         'machine_param_path', 'dem_path'):
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_value.append(required_key)
-        except KeyError:
-            missing_keys.append(required_key)
-
-    if missing_keys:
-        raise KeyError('Keys are missing from args: %s' % str(missing_keys))
-
-    if keys_missing_value:
-        warnings.append((keys_missing_value,
-                         'Parameter is required but has no value'))
-
-    if limit_to in ('wave_base_data_path', None):
-        if not args['wave_base_data_path'] or (
-                not os.path.isdir(args['wave_base_data_path'])):
-            warnings.append((['wave_base_data_path'],
-                             'Parameter not found or is not a folder.'))
-
-    if limit_to in ('analysis_area_path', None):
-        if args['analysis_area_path'] not in (
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution", "Australia", "Global"):
-            warnings.append((['analysis_area_path'],
-                             'Parameter must be a known analysis area.'))
-
-    if limit_to in ('aoi_path', None):
-        try:
-            if args['aoi_path'] not in ('', None):
-                with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
-                    layer = vector.GetLayer()
-                    geometry_type = layer.GetGeomType()
-                    if geometry_type != ogr.wkbPolygon:
-                        warnings.append((['aoi_path'],
-                                         'Vector must contain only polygons.'))
-                    srs = layer.GetSpatialRef()
-                    units = srs.GetLinearUnitsName().lower()
-                    if units not in ('meter', 'metre'):
-                        warnings.append((['aoi_path'],
-                                         'Vector must be projected in meters.'))
-
-                    datum = srs.GetAttrValue('DATUM')
-                    if datum != 'WGS_1984':
-                        warnings.append(
-                            (['aoi_path'],
-                             'Vector must use the WGS_1984 datum.'))
-                    layer = None
-                    vector = None
-        except KeyError:
-            # Parameter is not required.
-            pass
-
-    for csv_key, required_fields in (
-            ('machine_perf_path', set([])),
-            ('machine_param_path', set(['name', 'value', 'note'])),
-            ('land_gridPts_path',
-                set(['id', 'type', 'lat', 'long', 'location'])),
-            ('machine_econ_path', set(['name', 'value', 'note']))):
-        try:
-            _, missing_fields = _get_validated_dataframe(
-                args[csv_key], required_fields)
-            if missing_fields:
-                warnings.append('CSV is missing columns: %s' % ', '.join(
-                    sorted(missing_fields)))
-        except KeyError:
-            # Not all these are required inputs.
-            pass
-        except IOError:
-            warnings.append(([csv_key], 'File not found.'))
-
-    if limit_to in ('dem_path', None):
-        if args['dem_path']:
-            with utils.capture_gdal_logging():
-                raster = gdal.OpenEx(args['dem_path'], gdal.OF_RASTER)
-        if not args['dem_path'] or raster is None:
-            warnings.append(
-                (['dem_path'],
-                 ('Parameter must be a filepath to a GDAL-compatible '
-                  'raster file.')))
-        raster = None
-
-    if limit_to in ('number_of_machines', None):
-        try:
-            num_machines = args['number_of_machines']
-            if (int(float(num_machines)) != float(num_machines)
-                    or float(num_machines) < 0):
-                warnings.append((['number_of_machines'],
-                                 'Parameter must be a positive integer.'))
-        except KeyError:
-            pass
-        except ValueError:
-            warnings.append((['number_of_machines'],
-                             'Parameter must be a number.'))
-
-    if limit_to is None:
-        if 'valuation_container' in args and args['valuation_container']:
-            missing_keys = []
-            keys_with_no_value = []
-            for required_key in ('land_gridPts_path', 'machine_econ_path',
-                                 'number_of_machines'):
-                try:
-                    if args[required_key] in ('', None):
-                        keys_with_no_value.append(required_key)
-                except KeyError:
-                    missing_keys.append(required_key)
-
-            if missing_keys:
-                raise KeyError('Keys are missing: %s' % missing_keys)
-
-            if keys_with_no_value:
-                warnings.append((keys_with_no_value,
-                                 'Parameter must have a value'))
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])

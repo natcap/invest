@@ -2941,12 +2941,7 @@ class ModelTests(_QtTest):
 
         @validation.invest_validator
         def _validate(args, limit_to=None):
-            context = validation.ValidationContext(args, limit_to)
-            # require workspace dir input.
-            if context.is_arg_complete('workspace_dir', require=True):
-                pass
-
-            return context.warnings
+            return [(['workspace_dir'], 'Some error message')]
 
         model_ui = ModelTests.build_model(_validate)
         try:
