@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Updated raster percentile algorithms in Scenic Quality and Wave Energy
+  models to use a more efficient and reliable raster percentile function
+  from pygeoprocessing.
+* InVEST is now compatible with pygeoprocessing 1.9.1.
 * All InVEST models now have an ``ARGS_SPEC`` object that contains metadata
   about the model and describes the model's arguments.  Validation has been
   reimplemented across all models to use these ``ARGS_SPEC`` objects.
