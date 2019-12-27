@@ -129,7 +129,8 @@ export class InvestJob extends React.Component {
     );
 
     const datastackPath = path.join(TEMP_DIR, 'datastack.json')
-    const cmdArgs = ['-vvv', 'run', MODEL_NAME, '--headless', '-d ' + datastackPath]
+    const modelRunName = this.state.modelSpec.module.split('.').pop()
+    const cmdArgs = ['-vvv', 'run', modelRunName, '--headless', '-d ' + datastackPath]
     const python = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
 
     // TODO: These setState calls on stdout and stderr trigger
