@@ -29,12 +29,11 @@ if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
 }
 
-const DATASTACK_JSON = 'datastack.json'
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 
 // TODO: these ought to be dynamic, from invest getspec or a similar lookup
 // for now, change here as needed to test other models
-const MODEL_NAME = 'carbon'
+// const MODEL_NAME = 'carbon'
 const MODEL_DOCS = 'C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html'
 
 function defaultSessionID(modelName) {
@@ -113,7 +112,10 @@ export class InvestJob extends React.Component {
   }
 
   investExecute() {
-    argsToJsonFile(this.state.args, this.state.modelSpec.module);
+    const datastackPath = path.join(
+      this.state.args.workspace_dir.value, this.state.sessionID + '.json')
+
+    argsToJsonFile(this.state.args, this.state.modelSpec.module, datastackPath);
     
     this.setState(
       {
@@ -124,7 +126,6 @@ export class InvestJob extends React.Component {
       }
     );
 
-    const datastackPath = path.join(TEMP_DIR, 'datastack.json')
     const modelRunName = this.state.modelSpec.module.split('.').pop()
     const cmdArgs = ['-vvv', 'run', modelRunName, '--headless', '-d ' + datastackPath]
     const investRun = spawn(INVEST_EXE, cmdArgs, {
@@ -393,6 +394,7 @@ export class InvestJob extends React.Component {
           <VizApp
             model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
             workspace={this.state.workspace}
+            sessionID={this.state.sessionID}
             activeTab={activeTab}/> 
         </Provider>
         </Tab>
@@ -406,7 +408,7 @@ export class InvestJob extends React.Component {
   }
 }
 
-function argsToJsonFile(currentArgs, modulename) {
+function argsToJsonFile(currentArgs, modulename, datastackPath) {
   // TODO: should we use the datastack.py API to create the json? 
   // make simple args json for passing to python cli
   let args_dict = {};
@@ -424,7 +426,7 @@ function argsToJsonFile(currentArgs, modulename) {
   };
 
   const jsonContent = JSON.stringify(datastack, null, 2);
-  fs.writeFile(TEMP_DIR + DATASTACK_JSON, jsonContent, 'utf8', function (err) {
+  fs.writeFile(datastackPath, jsonContent, 'utf8', function (err) {
     if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
