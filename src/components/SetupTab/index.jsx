@@ -3,7 +3,10 @@ import React from 'react';
 import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
+import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
+import Col from 'react-bootstrap/Col';
+import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 
 export class SetupTab extends React.Component {
@@ -108,18 +111,50 @@ class ArgsForm extends React.Component {
     const current_args = Object.assign({}, this.props.args)
     let formItems = [];
     for (const argname in current_args) {
+      if (argname === 'n_workers') { continue }
       const argument = current_args[argname];
       let validationMessage = '';
       if (argument.validationMessage) {
         validationMessage = argument.validationMessage;
       }
-      
+
       // These types need a text input and a file browser button
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         formItems.push(
-          <Form.Group key={argname}>
-            <Form.Label>{argument.name}</Form.Label>
-            <InputGroup>
+          <Form.Group as={Row} key={argname}>
+            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Col sm="8">
+              <InputGroup>
+                <Form.Control
+                  name={argname}
+                  type="text" 
+                  value={argument.value || ''} // empty string is handled better than `undefined`
+                  onChange={this.handleChange}
+                  isValid={argument.valid}
+                  isInvalid={!argument.valid}
+                />
+                <InputGroup.Append>
+                  <Button 
+                    variant="outline-secondary"
+                    value={argument.type}  // dialog will limit options to files or dirs accordingly
+                    name={argname}
+                    onClick={this.selectFile}>
+                    Browse
+                  </Button>
+                </InputGroup.Append>
+                <Form.Control.Feedback type='invalid'>
+                  {argument.type + ' : ' + validationMessage}
+                </Form.Control.Feedback>
+              </InputGroup>
+            </Col>
+          </Form.Group>)
+      
+      // These types need a text input
+      } else if (['freestyle_string', 'number'].includes(argument.type)) {
+        formItems.push(
+          <Form.Group as={Row} key={argname}>
+            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Col sm="4">
               <Form.Control
                 name={argname}
                 type="text" 
@@ -128,37 +163,10 @@ class ArgsForm extends React.Component {
                 isValid={argument.valid}
                 isInvalid={!argument.valid}
               />
-              <InputGroup.Append>
-                <Button 
-                  variant="outline-secondary"
-                  value={argument.type}  // dialog will limit options to files or dirs accordingly
-                  name={argname}
-                  onClick={this.selectFile}>
-                  Browse
-                </Button>
-              </InputGroup.Append>
               <Form.Control.Feedback type='invalid'>
                 {argument.type + ' : ' + validationMessage}
               </Form.Control.Feedback>
-            </InputGroup>
-          </Form.Group>)
-      
-      // These types need a text input
-      } else if (['freestyle_string', 'number'].includes(argument.type)) {
-        formItems.push(
-          <Form.Group  key={argname}>
-            <Form.Label>{argument.name}</Form.Label>
-            <Form.Control
-              name={argname}
-              type="text" 
-              value={argument.value || ''} // empty string is handled better than `undefined`
-              onChange={this.handleChange}
-              isValid={argument.valid}
-              isInvalid={!argument.valid}
-            />
-            <Form.Control.Feedback type='invalid'>
-              {argument.type + ' : ' + validationMessage}
-            </Form.Control.Feedback>
+            </Col>
           </Form.Group>)
       
       // Radio select for boolean args
@@ -168,43 +176,49 @@ class ArgsForm extends React.Component {
         // is set from this UI, because html forms always submit strings.
         // So, `checked` property must accomodate both types to determine state.
         formItems.push(
-          <Form.Group key={argname}>
-            <Form.Label>{argument.name}</Form.Label>
-            <Form.Check 
-              type="radio"
-              label="Yes"
-              value={"true"}
-              checked={argument.value || argument.value === "true"}
-              onChange={this.handleChange}
-              name={argname}
-            />
-            <Form.Check
-              type="radio"
-              label="No"
-              value={"false"}
-              checked={!argument.value || argument.value === "false"}
-              onChange={this.handleChange}
-              name={argname}
-            />
+          <Form.Group as={Row} key={argname}>
+            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Col sm="8">
+              <Form.Check
+                inline
+                type="radio"
+                label="Yes"
+                value={"true"}
+                checked={argument.value || argument.value === "true"}
+                onChange={this.handleChange}
+                name={argname}
+              />
+              <Form.Check
+                inline
+                type="radio"
+                label="No"
+                value={"false"}
+                checked={!argument.value || argument.value === "false"}
+                onChange={this.handleChange}
+                name={argname}
+              />
+            </Col>
           </Form.Group>)
 
       // Dropdown menus for args with options
       } else if (argument.type === 'option_string') {
         formItems.push(
-          <Form.Group  key={argname}>
-            <Form.Label>{argument.name}</Form.Label>
-            <Form.Control
-              as='select'
-              name={argname}
-              value={argument.value}
-              onChange={this.handleChange}>
-              {argument.validation_options.options.map(opt =>
-                <option value={opt} key={opt}>{opt}</option>
-              )}
-            </Form.Control>
-            <Form.Control.Feedback type='invalid'>
-              {argument.type + ' : ' + validationMessage}
-            </Form.Control.Feedback>
+          <Form.Group as={Row} key={argname}>
+            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Col sm="4">
+              <Form.Control
+                as='select'
+                name={argname}
+                value={argument.value}
+                onChange={this.handleChange}>
+                {argument.validation_options.options.map(opt =>
+                  <option value={opt} key={opt}>{opt}</option>
+                )}
+              </Form.Control>
+              <Form.Control.Feedback type='invalid'>
+                {argument.type + ' : ' + validationMessage}
+              </Form.Control.Feedback>
+            </Col>
           </Form.Group>)
       }
     }
