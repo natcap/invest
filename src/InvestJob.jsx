@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, execFile } from 'child_process';
 import request from 'request';
 
 import React from 'react';
@@ -28,12 +28,7 @@ const TEMP_DIR = './'
 if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
 }
-// these options are passed to child_process spawn calls
-const PYTHON_OPTIONS = {
-  cwd: TEMP_DIR,
-  shell: true, // without true, IOError when datastack.py loads json
-  env: {GDAL_DATA: GDAL_DATA}
-};
+
 const DATASTACK_JSON = 'datastack.json'
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 
@@ -69,6 +64,7 @@ export class InvestJob extends React.Component {
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
+    this.investKill = this.investKill.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.updateArg = this.updateArg.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
@@ -131,7 +127,11 @@ export class InvestJob extends React.Component {
     const datastackPath = path.join(TEMP_DIR, 'datastack.json')
     const modelRunName = this.state.modelSpec.module.split('.').pop()
     const cmdArgs = ['-vvv', 'run', modelRunName, '--headless', '-d ' + datastackPath]
-    const python = spawn(INVEST_EXE, cmdArgs, PYTHON_OPTIONS);
+    const investRun = spawn(INVEST_EXE, cmdArgs, {
+        cwd: TEMP_DIR,
+        shell: true, // without true, IOError when datastack.py loads json
+        env: {GDAL_DATA: GDAL_DATA}
+      });
 
     // TODO: These setState calls on stdout and stderr trigger
     // a re-render of this component (and it's children -- so everything).
@@ -139,29 +139,41 @@ export class InvestJob extends React.Component {
     // solution for getting a streaming log. 
     // Or we can suppress some re-renders manually, perhaps.
     let stdout = Object.assign('', this.state.logStdOut);
-    python.stdout.on('data', (data) => {
+    investRun.stdout.on('data', (data) => {
       stdout += `${data}`
       this.setState({
         logStdOut: stdout,
+        procID: investRun.pid
       });
     });
 
     let stderr = Object.assign('', this.state.logStdErr);
-    python.stderr.on('data', (data) => {
+    investRun.stderr.on('data', (data) => {
       stderr += `${data}`
       this.setState({
         logStdErr: stderr,
       });
     });
 
-    python.on('close', (code) => {
+    // Reset the procID when the process finishes because the OS
+    // can recycle the pid, and we don't want the kill Button killing
+    // another random process.
+    investRun.on('close', (code) => {
       const progress = (code === 0 ? 'viz' : 'log')
       this.setState({
         sessionProgress: progress,
-        workspace: this.state.args.workspace_dir.value
+        workspace: this.state.args.workspace_dir.value,
+        procID: null,  // see above comment
       });
       console.log(this.state)
     });
+  }
+
+  investKill() {
+    if (this.state.procID){
+      console.log(this.state.procID);
+      process.kill(this.state.procID)
+    }
   }
 
   investValidate(args_dict_string, limit_to) {
@@ -373,6 +385,7 @@ export class InvestJob extends React.Component {
             sessionProgress={this.state.sessionProgress}
             logStdOut={this.state.logStdOut}
             logStdErr={this.state.logStdErr}
+            investKill={this.investKill}
           />
         </Tab>
         <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>

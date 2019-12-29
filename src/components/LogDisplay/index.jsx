@@ -3,6 +3,9 @@ import React from 'react';
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
+import Button from 'react-bootstrap/Button';
+import Spinner from 'react-bootstrap/Spinner';
+
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -27,6 +30,7 @@ export class LogDisplay extends React.Component {
     const current_out = this.props.logStdOut + current_err;
     let renderedLog;
     let renderedAlert;
+    let killButton;
 
     renderedLog =
         <Col ref={this.content} style={logStyle}>
@@ -41,10 +45,26 @@ export class LogDisplay extends React.Component {
       }
     }
 
+    killButton = 
+      <Button
+        variant="primary" 
+        size="lg"
+        onClick={this.props.investKill}>
+        <Spinner
+          className="sr-only" // accessibility
+          animation='border'
+          size='sm'
+          role='status'
+          aria-hidden='true'
+        />
+        Kill Subprocess
+      </Button>
+
     return (
       <React.Fragment>
         <Row>{renderedLog}</Row>
         <Row>{renderedAlert}</Row>
+        <Row>{killButton}</Row>
       </React.Fragment>
     );
   }

@@ -11,7 +11,7 @@ GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.
 PYTHON path must be able to import `flask`  
 
 ### linux:  
-`INVEST=/home/dmf/miniconda3/envs/invest-env-py36/Scripts/invest.exe npm start`  
+`INVEST=/home/dmf/miniconda3/envs/invest-env-py36/bin/invest PYTHON=/home/dmf/miniconda3/envs/invest-env-py36/bin/python npm start`  
 
 
 **Temporary way to test various invest models:**  
