@@ -97,7 +97,11 @@ export class InvestJob extends React.Component {
       const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
       console.log(loadedState)
       this.setState(loadedState,
-        () => this.switchTabs(loadedState.sessionProgress));
+        () => {
+          this.switchTabs(loadedState.sessionProgress);
+          // Validate args on load because referenced files may have moved
+          this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
+        });
     } else {
       console.log('state file not found: ' + filename);
     }
@@ -188,7 +192,6 @@ export class InvestJob extends React.Component {
         to that argument.
 
     */
-    console.log(args_dict_string);
     let warningsIssued = false;
     let argsMeta = JSON.parse(JSON.stringify(this.state.args));
     let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
@@ -226,6 +229,7 @@ export class InvestJob extends React.Component {
               // checked all args, so ones left in keyset are valid
               keyset.forEach(k => {
                 argsMeta[k]['valid'] = true
+                argsMeta[k]['validationMessage'] = ''
               })
             }
 
@@ -238,6 +242,7 @@ export class InvestJob extends React.Component {
             
             keyset.forEach(k => {
               argsMeta[k]['valid'] = true
+              argsMeta[k]['validationMessage'] = ''
             })
             // It's possible all args were already valid, in which case
             // it's nice to avoid the re-render that this setState call
@@ -301,6 +306,7 @@ export class InvestJob extends React.Component {
           this.setState({
             modelSpec: spec,
             args: args,
+            argsValid: false,
             sessionProgress: 'setup',
             logStdErr: '',
             logStdOut: '',
@@ -319,7 +325,8 @@ export class InvestJob extends React.Component {
     // Update this.state.args in response to batch argument loading events
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(args_dict).forEach(argkey => {
-      argsMeta[argkey]['value'] = args_dict[argkey]
+      argsMeta[argkey]['value'] = args_dict[argkey];
+      argsMeta[argkey]['touched'] = true;
     });
     this.setState({args: argsMeta},
       () => { this.investValidate(JSON.stringify(args_dict)) }
@@ -335,6 +342,7 @@ export class InvestJob extends React.Component {
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     argsMeta[key]['value'] = value;
+    argsMeta[key]['touched'] = true;
 
     this.setState({args: argsMeta}, 
       () => {

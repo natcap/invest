@@ -51,7 +51,6 @@ export class LogDisplay extends React.Component {
         size="lg"
         onClick={this.props.investKill}>
         <Spinner
-          className="sr-only" // accessibility
           animation='border'
           size='sm'
           role='status'

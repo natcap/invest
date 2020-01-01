@@ -58,10 +58,10 @@ class ArgsForm extends React.Component {
     // of the optional and conditionally required args so that they 
     // can validate without any user-interaction.
 
-    const args_dict_string = this.props.argsValuesFromSpec(this.props.args);
     // TODO: could call batchUpdateArgs here instead
     // to avoid passing investValidate to this component at all.
     // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
+    const args_dict_string = this.props.argsValuesFromSpec(this.props.args);
     this.props.investValidate(args_dict_string);
   }
 
@@ -69,8 +69,6 @@ class ArgsForm extends React.Component {
     // Handle changes in form text inputs
     const value = event.target.value;
     const name = event.target.name;
-    console.log(value);
-    console.log(typeof value);
     this.props.updateArg(name, value);
   }
 
@@ -113,10 +111,6 @@ class ArgsForm extends React.Component {
     for (const argname in current_args) {
       if (argname === 'n_workers') { continue }
       const argument = current_args[argname];
-      let validationMessage = '';
-      if (argument.validationMessage) {
-        validationMessage = argument.validationMessage;
-      }
 
       // These types need a text input and a file browser button
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
@@ -130,8 +124,8 @@ class ArgsForm extends React.Component {
                   type="text" 
                   value={argument.value || ''} // empty string is handled better than `undefined`
                   onChange={this.handleChange}
-                  isValid={argument.valid}
-                  isInvalid={!argument.valid}
+                  isValid={argument.touched && argument.valid}
+                  isInvalid={argument.touched && argument.validationMessage}
                 />
                 <InputGroup.Append>
                   <Button 
@@ -143,7 +137,7 @@ class ArgsForm extends React.Component {
                   </Button>
                 </InputGroup.Append>
                 <Form.Control.Feedback type='invalid'>
-                  {argument.type + ' : ' + validationMessage}
+                  {argument.type + ' : ' + (argument.validationMessage || '')}
                 </Form.Control.Feedback>
               </InputGroup>
             </Col>
@@ -160,11 +154,11 @@ class ArgsForm extends React.Component {
                 type="text" 
                 value={argument.value || ''} // empty string is handled better than `undefined`
                 onChange={this.handleChange}
-                isValid={argument.valid}
-                isInvalid={!argument.valid}
+                isValid={argument.touched && argument.valid}
+                isInvalid={argument.touched && argument.validationMessage}
               />
               <Form.Control.Feedback type='invalid'>
-                {argument.type + ' : ' + validationMessage}
+                {argument.type + ' : ' + (argument.validationMessage || '')}
               </Form.Control.Feedback>
             </Col>
           </Form.Group>)
@@ -216,7 +210,7 @@ class ArgsForm extends React.Component {
                 )}
               </Form.Control>
               <Form.Control.Feedback type='invalid'>
-                {argument.type + ' : ' + validationMessage}
+                {argument.type + ' : ' + (argument.validationMessage || '')}
               </Form.Control.Feedback>
             </Col>
           </Form.Group>)
