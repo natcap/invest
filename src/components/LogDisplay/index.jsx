@@ -4,8 +4,6 @@ import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
-import Spinner from 'react-bootstrap/Spinner';
-
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -50,12 +48,6 @@ export class LogDisplay extends React.Component {
         variant="primary" 
         size="lg"
         onClick={this.props.investKill}>
-        <Spinner
-          animation='border'
-          size='sm'
-          role='status'
-          aria-hidden='true'
-        />
         Kill Subprocess
       </Button>
 
@@ -63,7 +55,6 @@ export class LogDisplay extends React.Component {
       <React.Fragment>
         <Row>{renderedLog}</Row>
         <Row>{renderedAlert}</Row>
-        <Row>{killButton}</Row>
       </React.Fragment>
     );
   }

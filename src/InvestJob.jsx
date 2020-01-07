@@ -14,6 +14,10 @@ import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
+import Spinner from 'react-bootstrap/Spinner';
+import Form from 'react-bootstrap/Form';
+import Button from 'react-bootstrap/Button';
+import InputGroup from 'react-bootstrap/InputGroup';
 
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
@@ -27,13 +31,13 @@ import rootReducer from './components/Visualization/habitat_risk_assessment/redu
 const store = createStore(rootReducer)
 
 const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
-const TEMP_DIR = './'
 
 if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
 }
 
 const CACHE_DIR = 'cache' //  for storing state snapshot files
+const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
 
 // TODO: these ought to be dynamic, from invest getspec or a similar lookup
 // for now, change here as needed to test other models
@@ -61,7 +65,8 @@ export class InvestJob extends React.Component {
       logStdOut: '',
       sessionProgress: 'models', // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
       activeTab: 'models',
-      docs: MODEL_DOCS
+      docs: MODEL_DOCS,
+      recentSessions: [],
     };
     
     this.investGetSpec = this.investGetSpec.bind(this);
@@ -74,6 +79,15 @@ export class InvestJob extends React.Component {
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
+    this.onSaveClick = this.onSaveClick.bind(this);
+  }
+
+  async componentDidMount() {
+    const recentSessions = await findRecentSessions(CACHE_DIR);
+    this.setState(
+      {
+        recentSessions: recentSessions,
+      });
   }
 
   saveState() {
@@ -90,16 +104,23 @@ export class InvestJob extends React.Component {
       console.log("saved" + sessionID);
     });
   }
+
+  onSaveClick(event) {
+    event.preventDefault();
+    this.saveState();
+    // and append sessionID to list of recent sessions
+    let recentSessions = Object.assign([], this.state.recentSessions);
+    recentSessions.unshift(this.state.sessionID);
+    this.setState({recentSessions: recentSessions});
+  }
   
   loadState(sessionID) {
     // Set this component's state to the object parsed from a JSON file.
     // sessionID (string) : the name, without extension, of a saved JSON.
 
-    console.log(sessionID)
     const filename = path.join(CACHE_DIR, sessionID + '.json');
     if (fs.existsSync(filename)) {
       const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
-      console.log(loadedState)
       this.setState(loadedState,
         () => {
           this.switchTabs(loadedState.sessionProgress);
@@ -114,14 +135,13 @@ export class InvestJob extends React.Component {
   setSessionID(event) {
     // Handle keystroke events to store a name for current session
     const value = event.target.value;
-    console.log(value);
     this.setState(
       {sessionID: value});
   }
 
   investExecute() {
     const datastackPath = path.join(
-      this.state.args.workspace_dir.value, this.state.sessionID + '.json')
+      TEMP_DIR, this.state.sessionID + '.json')
 
     argsToJsonFile(this.state.args, this.state.modelSpec.module, datastackPath);
     
@@ -137,7 +157,7 @@ export class InvestJob extends React.Component {
     const modelRunName = this.state.modelSpec.module.split('.').pop()
     const cmdArgs = ['-vvv', 'run', modelRunName, '--headless', '-d ' + datastackPath]
     const investRun = spawn(INVEST_EXE, cmdArgs, {
-        cwd: TEMP_DIR,
+        cwd: '.',
         shell: true, // without true, IOError when datastack.py loads json
         env: {GDAL_DATA: GDAL_DATA}
       });
@@ -368,10 +388,26 @@ export class InvestJob extends React.Component {
     const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
     const logDisabled = ['models', 'setup'].includes(sessionProgress);  // enable during and after execution
     const vizDisabled = (sessionProgress !== 'viz');  // enable only on complete execute with no errors
+    
+    // state.procID only has a value during invest execution
+    let spinner;
+    if (this.state.procID) {
+      spinner = <Spinner
+                  animation='border'
+                  size='sm'
+                  role='status'
+                  aria-hidden='true'
+                />
+    } else {
+      spinner = <div></div>
+    }
 
     return(
       <TabContainer activeKey={activeTab}>
-      <Nav variant="tabs" id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
+      <Navbar bg="light" expand="lg">
+      <Nav variant="tabs" id="controlled-tab-example" className="mr-auto"
+        activeKey={activeTab}
+        onSelect={this.switchTabs}>
         <Nav.Item>
           <Nav.Link eventKey="models">Models</Nav.Link>
         </Nav.Item>
@@ -379,7 +415,7 @@ export class InvestJob extends React.Component {
           <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
         </Nav.Item>
         <Nav.Item>
-          <Nav.Link eventKey="log" disabled={logDisabled}>Log</Nav.Link>
+          <Nav.Link eventKey="log" disabled={logDisabled}>{spinner} Log</Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
@@ -388,6 +424,20 @@ export class InvestJob extends React.Component {
           <Nav.Link eventKey="docs">Docs</Nav.Link>
         </Nav.Item>
       </Nav>
+      <Form inline onSubmit={this.onSaveClick}>
+          <Form.Control
+            type="text"
+            placeholder={this.state.sessionID}
+            value={this.state.sessionID}
+            onChange={this.setSessionID}
+          />
+          <Button
+            onClick={this.onSaveClick}
+            variant="outline-secondary">
+            Save Session
+          </Button>
+      </Form>
+      </Navbar>
       <TabContent>
       <TabPane eventKey="models" title="Models">
         <ModelsTab
@@ -395,8 +445,7 @@ export class InvestJob extends React.Component {
           investGetSpec={this.investGetSpec}
           saveState={this.saveState}
           loadState={this.loadState}
-          setSessionID={this.setSessionID}
-          sessionID={this.state.sessionID}
+          recentSessions={this.state.recentSessions}
         />
       </TabPane>
       <TabPane eventKey="setup" title="Setup">
@@ -496,4 +545,27 @@ function argsValuesFromSpec(args) {
   }
   const args_dict_string = JSON.stringify(args_dict);
   return(args_dict_string)
+}
+
+function findRecentSessions(cache_dir) {
+  // Populate recentSessions from list of files in cache dir
+  // sorted by modified time.
+
+  // TODO: check that files are actually state config files
+  // before putting them on the array
+  return new Promise(function(resolve, reject) {
+    const files = fs.readdirSync(cache_dir);
+
+    // reverse sort (b - a) based on last-modified time
+    const sortedFiles = files.sort(function(a, b) {
+      return fs.statSync(path.join(cache_dir, b)).mtimeMs -
+           fs.statSync(path.join(cache_dir, a)).mtimeMs
+    });
+    // trim off extension, since that is how sessions
+    // were named orginally
+    resolve(sortedFiles
+      .map(f => path.parse(f).name)
+      .slice(0, 15) // max 15 items returned
+    );
+  });
 }

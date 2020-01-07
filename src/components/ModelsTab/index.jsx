@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import React from 'react';
 import { spawn } from 'child_process';
+import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
@@ -17,28 +18,6 @@ export class ModelsTab extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state = {
-      recentSessions: [],
-    };
-
-    this.onSaveClick = this.onSaveClick.bind(this);
-  }
-
-  async componentDidMount() {
-    const recentSessions = await findRecentSessions(CACHE_DIR);
-    this.setState(
-      {
-        recentSessions: recentSessions,
-      });
-  }
-
-  onSaveClick(event) {
-    event.preventDefault();
-    this.props.saveState();
-    // and append sessionID to list of recent sessions
-    let recentSessions = Object.assign([], this.state.recentSessions);
-    recentSessions.unshift(this.props.sessionID);
-    this.setState({recentSessions: recentSessions});
   }
 
   render () {
@@ -65,15 +44,9 @@ export class ModelsTab extends React.Component {
         </Col>
         <Col md={6}>
           <Row className="mt-2">
-            <SaveStateForm
-              sessionID={this.props.sessionID}
-              setSessionID={this.props.setSessionID}
-              onSaveClick={this.onSaveClick}/>
-          </Row>
-          <Row className="mt-2">
             <LoadStateForm
               loadState={this.props.loadState}
-              recentSessions={this.state.recentSessions}/>
+              recentSessions={this.props.recentSessions}/>
           </Row>
         </Col>
       </Row>
@@ -81,24 +54,6 @@ export class ModelsTab extends React.Component {
   }
 }
 
-function SaveStateForm(props) {
-  return(
-    <Form
-      onSubmit={props.onSaveClick}>
-      <Form.Control
-        type="text"
-        placeholder={props.sessionID}
-        value={props.sessionID}
-        onChange={props.setSessionID}
-      />
-      <Button
-        onClick={props.onSaveClick}
-        variant="primary">
-        Save State
-      </Button>
-    </Form>
-  );
-}
 
 class LoadStateForm extends React.Component {
   
@@ -107,27 +62,18 @@ class LoadStateForm extends React.Component {
     this.state = {
       session_id_to_load: ''
     }
-    this.handleTextChange = this.handleTextChange.bind(this);
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleLink = this.handleLink.bind(this);
+    this.selectFile = this.selectFile.bind(this);
   }
 
-  handleTextChange(event) {
-    const value = event.target.value;
-    this.setState({session_id_to_load: value})
-  }
-
-  handleSubmit(event) {
-    event.preventDefault();
-    this.props.loadState(this.state.session_id_to_load);
-  }
-
-  handleLink(event) {
-    event.preventDefault();
-    const value = event.target.value;
-    this.setState(
-      {session_id_to_load: value},
-      this.props.loadState(value));
+  selectFile(event) {
+    const dialog = Electron.remote.dialog;
+    // TODO: could add more filters based on argType (e.g. only show .csv)
+    dialog.showOpenDialog({
+      properties: ['openFile']
+    }, (filepath) => {
+      this.props.loadState(
+        path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
+    })
   }
 
   render() {
@@ -145,23 +91,20 @@ class LoadStateForm extends React.Component {
         </Button>
       );
     });
+    // Also a button to browse to a cached state file if it's not in recent list
+    recentButtons.push(
+      <Button
+        type="submit"
+        variant="secondary"
+        onClick={this.selectFile}>
+        Browse for saved session
+      </Button>
+    );
 
     return (
       <div>
-        <Form
-          onSubmit={this.handleSubmit}>
-          <Form.Control
-            type="text"
-            placeholder="Enter state name"
-            value={this.state.session_id_to_load}
-            onChange={this.handleTextChange}/>
-          <Button
-            type="submit">
-            Load State
-          </Button>
-        </Form>
         <div>
-          Recent Sessions:
+          Select Recent Session:
         </div>
         <ButtonGroup vertical className="mt-2">
           {recentButtons}
@@ -169,27 +112,4 @@ class LoadStateForm extends React.Component {
       </div>
     );
   }
-}
-
-function findRecentSessions(cache_dir) {
-  // Populate recentSessions from list of files in cache dir
-  // sorted by modified time.
-
-  // TODO: check that files are actually state config files
-  // before putting them on the array
-  return new Promise(function(resolve, reject) {
-    const files = fs.readdirSync(cache_dir);
-
-    // reverse sort (b - a) based on last-modified time
-    const sortedFiles = files.sort(function(a, b) {
-      return fs.statSync(path.join(cache_dir, b)).mtimeMs -
-           fs.statSync(path.join(cache_dir, a)).mtimeMs
-    });
-    // trim off extension, since that is how sessions
-    // were named orginally
-    resolve(sortedFiles
-      .map(f => path.parse(f).name)
-      .slice(0, 15) // max 15 items returned
-    );
-  });
 }
