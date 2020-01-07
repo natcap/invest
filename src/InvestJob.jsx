@@ -9,7 +9,11 @@ import { Provider } from 'react-redux';
 
 import Tabs from 'react-bootstrap/Tabs';
 import Tab from 'react-bootstrap/Tab';
+import TabPane from 'react-bootstrap/TabPane';
+import TabContent from 'react-bootstrap/TabContent';
+import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
+import Nav from 'react-bootstrap/Nav';
 
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
@@ -366,52 +370,71 @@ export class InvestJob extends React.Component {
     const vizDisabled = (sessionProgress !== 'viz');  // enable only on complete execute with no errors
 
     return(
-      <Tabs id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
-        <Tab eventKey="models" title="Models">
-          <ModelsTab
-            investList={this.props.investList}
-            investGetSpec={this.investGetSpec}
-            saveState={this.saveState}
-            loadState={this.loadState}
-            setSessionID={this.setSessionID}
-            sessionID={this.state.sessionID}
-          />
-        </Tab>
-        <Tab eventKey="setup" title="Setup" disabled={setupDisabled}>
-          <SetupTab
-            args={this.state.args}
-            argsValid={this.state.argsValid}
-            modulename={this.state.modelSpec.module}
-            updateArg={this.updateArg}
-            batchUpdateArgs={this.batchUpdateArgs}
-            investValidate={this.investValidate}
-            argsValuesFromSpec={argsValuesFromSpec}
-            investExecute={this.investExecute}
-          />
-        </Tab>
-        <Tab eventKey="log" title="Log" disabled={logDisabled}>
-          <LogDisplay
-            sessionProgress={this.state.sessionProgress}
-            logStdOut={this.state.logStdOut}
-            logStdErr={this.state.logStdErr}
-            investKill={this.investKill}
-          />
-        </Tab>
-        <Tab eventKey="viz" title="Viz" disabled={vizDisabled}>
-        <Provider store={store}>
-          <VizApp
-            model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
-            workspace={this.state.workspace}
-            sessionID={this.state.sessionID}
-            activeTab={activeTab}/> 
-        </Provider>
-        </Tab>
-        <Tab eventKey="docs" title="Docs">
-          <DocsTab 
-            docs={this.state.docs}
-          />
-        </Tab>
-      </Tabs>
+      <TabContainer activeKey={activeTab}>
+      <Nav variant="tabs" id="controlled-tab-example" activeKey={activeTab} onSelect={this.switchTabs}>
+        <Nav.Item>
+          <Nav.Link eventKey="models">Models</Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="log" disabled={logDisabled}>Log</Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
+        </Nav.Item>
+        <Nav.Item>
+          <Nav.Link eventKey="docs">Docs</Nav.Link>
+        </Nav.Item>
+      </Nav>
+      <TabContent>
+      <TabPane eventKey="models" title="Models">
+        <ModelsTab
+          investList={this.props.investList}
+          investGetSpec={this.investGetSpec}
+          saveState={this.saveState}
+          loadState={this.loadState}
+          setSessionID={this.setSessionID}
+          sessionID={this.state.sessionID}
+        />
+      </TabPane>
+      <TabPane eventKey="setup" title="Setup">
+        <SetupTab
+          args={this.state.args}
+          argsValid={this.state.argsValid}
+          modulename={this.state.modelSpec.module}
+          updateArg={this.updateArg}
+          batchUpdateArgs={this.batchUpdateArgs}
+          investValidate={this.investValidate}
+          argsValuesFromSpec={argsValuesFromSpec}
+          investExecute={this.investExecute}
+        />
+      </TabPane>
+      <TabPane eventKey="log" title="Log">
+        <LogDisplay
+          sessionProgress={this.state.sessionProgress}
+          logStdOut={this.state.logStdOut}
+          logStdErr={this.state.logStdErr}
+          investKill={this.investKill}
+        />
+      </TabPane>
+      <TabPane eventKey="viz" title="Viz">
+      <Provider store={store}>
+        <VizApp
+          model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
+          workspace={this.state.workspace}
+          sessionID={this.state.sessionID}
+          activeTab={activeTab}/> 
+      </Provider>
+      </TabPane>
+      <TabPane eventKey="docs" title="Docs">
+        <DocsTab 
+          docs={this.state.docs}
+        />
+      </TabPane>
+      </TabContent>
+      </TabContainer>
     );
   }
 }
