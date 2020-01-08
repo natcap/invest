@@ -3,7 +3,6 @@ import React from 'react';
 import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
-import Card from 'react-bootstrap/Card';
 import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -38,7 +37,7 @@ export class SetupTab extends React.Component {
     }
     // The SetupTab remains disabled in this route, so no need
     // to render anything here.
-    return(<div>'No args to see here'</div>)
+    return(<div>No args to see here</div>)
   }
 }
 

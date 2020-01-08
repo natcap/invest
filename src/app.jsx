@@ -19,7 +19,7 @@ export default class App extends React.Component {
   render() {
     return (
       <InvestJob 
-      	investList={this.state.investList}
+        investList={this.state.investList}
       />
     );
   }

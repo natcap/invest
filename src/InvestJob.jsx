@@ -1,14 +1,12 @@
 import fs from 'fs';
 import path from 'path';
-import { spawn, execFile } from 'child_process';
+import { spawn } from 'child_process';
 import request from 'request';
 
 import React from 'react';
 import { createStore } from 'redux';
 import { Provider } from 'react-redux';
 
-import Tabs from 'react-bootstrap/Tabs';
-import Tab from 'react-bootstrap/Tab';
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
 import TabContainer from 'react-bootstrap/TabContainer';
@@ -17,7 +15,6 @@ import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
-import InputGroup from 'react-bootstrap/InputGroup';
 
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
@@ -216,7 +213,6 @@ export class InvestJob extends React.Component {
         to that argument.
 
     */
-    let warningsIssued = false;
     let argsMeta = JSON.parse(JSON.stringify(this.state.args));
     let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
     let payload = { 
@@ -235,7 +231,6 @@ export class InvestJob extends React.Component {
           const results = body;
 
           if (results.length) {  // at least one invalid arg
-            warningsIssued = true
             results.forEach(result => {
               // Each result is an array of two elements
               // 0: array of arg keys

@@ -1,18 +1,12 @@
-import fs from 'fs';
 import path from 'path';
 import React from 'react';
-import { spawn } from 'child_process';
 import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
-import Form from 'react-bootstrap/Form';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-
-const INVEST_EXE = process.env.INVEST
-const CACHE_DIR = 'cache'
 
 export class ModelsTab extends React.Component {
 
@@ -71,8 +65,10 @@ class LoadStateForm extends React.Component {
     dialog.showOpenDialog({
       properties: ['openFile']
     }, (filepath) => {
-      this.props.loadState(
-        path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
+      if (filepath[0]) {
+        this.props.loadState(
+          path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
+      }
     })
   }
 
