@@ -16,7 +16,7 @@ class UrbanCoolingModel(model.InVESTModel):
         self.t_ref = inputs.Text(
             args_key='t_ref',
             helptext=('Reference air temperature (real).'),
-            label='Reference air temperature',
+            label='Baseline air temperature (°C)',
             validator=self.validator)
         self.t_ref.set_value("21.5")
         self.add_input(self.t_ref)
@@ -24,37 +24,37 @@ class UrbanCoolingModel(model.InVESTModel):
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
             helptext=('path to landcover raster.'),
-            label='Land Use / Land Cover raster',
+            label='Land Use / Land Cover (Raster)',
             validator=self.validator)
         self.add_input(self.lulc_raster_path)
 
         self.ref_eto_raster_path = inputs.File(
             args_key='ref_eto_raster_path',
             helptext=('path to evapotranspiration raster.'),
-            label='Reference Evapotranspiration raster',
+            label='Reference Evapotranspiration (Raster)',
             validator=self.validator)
         self.add_input(self.ref_eto_raster_path)
 
         self.aoi_vector_path = inputs.File(
             args_key='aoi_vector_path',
             helptext=('path to desired AOI.'),
-            label='Area of Interest vector',
+            label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
 
         self.biophysical_table_path = inputs.File(
             args_key='biophysical_table_path',
             helptext=(
-                "Table to map landcover codes to Shade, Kc, and Albed "
+                "Table to map landcover codes to Shade, Kc, and Albedo "
                 "values. Must contain the fields 'lucode', 'shade', 'kc', "
                 "and 'albedo'."),
-            label='Biophysical table',
+            label='Biophysical Table (CSV)',
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
 
         self.uhi_max = inputs.Text(
             args_key='uhi_max',
-            label='Magnitude of the UHI effect.',
+            label='Magnitude of the UHI effect (°C)',
             helptext=(
                 "The magnitude of the urban heat island effect, in degrees "
                 "C.  Example: the difference between the rural reference "
@@ -66,7 +66,7 @@ class UrbanCoolingModel(model.InVESTModel):
 
         self.t_air_average_radius = inputs.Text(
             args_key='t_air_average_radius',
-            label='T_air moving average radius (m).',
+            label='Air Temperature Maximum Blending Distance (m).',
             helptext=(
                 "Radius of the averaging filter for turning T_air_nomix "
                 "into T_air"),
@@ -76,7 +76,7 @@ class UrbanCoolingModel(model.InVESTModel):
 
         self.green_area_cooling_distance = inputs.Text(
             args_key='green_area_cooling_distance',
-            label='Green area max cooling distance effect (m).',
+            label='Green Area Maximum Cooling Distance (m).',
             helptext=(
                 "Distance (in m) over which large green areas (> 2 ha) "
                 "will have a cooling effect."),
@@ -97,7 +97,7 @@ class UrbanCoolingModel(model.InVESTModel):
             helptext=(
                 "Path to a vector of building footprints that contains at "
                 "least the field 'type'."),
-            label='Building footprints vector',
+            label='Building Footprints (Vector)',
             validator=self.validator)
         self.valuation_container.add_input(self.building_vector_path)
 
@@ -113,35 +113,43 @@ class UrbanCoolingModel(model.InVESTModel):
         self.energy_consumption_table_path = inputs.File(
             args_key='energy_consumption_table_path',
             helptext=("path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'."),
-            label='Energy consumption table',
+            label='Energy Consumption Table (CSV)',
             validator=self.validator)
         self.valuation_container.add_input(self.energy_consumption_table_path)
+
+        self.cooling_capacity_container = inputs.Container(
+            expandable=True,
+            expanded=True,
+            interactive=True,
+            label=u'Manually Adjust Cooling Capacity Index Weights'
+        )
+        self.add_input(self.cooling_capacity_container)
 
         self.cc_weight_shade = inputs.Text(
             args_key='cc_weight_shade',
             helptext=("Shade weight for cooling capacity index. "
                       "Default: 0.6"),
-            label='Cooling Capacity Weight: Shade',
+            label='Shade',
             validator=self.validator)
-        self.add_input(self.cc_weight_shade)
+        self.cooling_capacity_container.add_input(self.cc_weight_shade)
         self.cc_weight_shade.set_value("0.6")
 
         self.cc_weight_albedo = inputs.Text(
             args_key='cc_weight_albedo',
             helptext=("Albedo weight for cooling capacity index. "
                       "Default: 0.2"),
-            label='Cooling Capacity Weight: Albedo',
+            label='Albedo',
             validator=self.validator)
-        self.add_input(self.cc_weight_albedo)
+        self.cooling_capacity_container.add_input(self.cc_weight_albedo)
         self.cc_weight_albedo.set_value("0.2")
 
         self.cc_weight_eti = inputs.Text(
             args_key='cc_weight_eti',
             helptext=("Evapotranspiration index weight for cooling capacity. "
                       "Default: 0.2"),
-            label='Cooling Capacity Weight: ETI',
+            label='Evapotranspiration Index',
             validator=self.validator)
-        self.add_input(self.cc_weight_eti)
+        self.cooling_capacity_container.add_input(self.cc_weight_eti)
         self.cc_weight_eti.set_value("0.2")
 
 
