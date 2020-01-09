@@ -23,7 +23,7 @@ class UCMTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_uhim_regression(self):
-        """UHIM regression."""
+        """UCM: regression."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
@@ -72,7 +72,7 @@ class UCMTests(unittest.TestCase):
                     key, expected_value, actual_value))
 
     def test_bad_building_type(self):
-        """UHIM: regression test."""
+        """UCM: regression test."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
@@ -97,12 +97,12 @@ class UCMTests(unittest.TestCase):
             }
 
         gpkg_driver = gdal.GetDriverByName('GPKG')
-        building_vector = gdal.OpenEx(
-            args['building_vector_path'], gdal.OF_VECTOR)
         bad_building_vector_path = os.path.join(
             self.workspace_dir, 'bad_building_vector.gpkg')
-        bad_building_vector = gpkg_driver.CreateCopy(
-            bad_building_vector_path, building_vector)
+
+        shutil.copyfile(args['building_vector_path'], bad_building_vector_path)
+        bad_building_vector = gdal.OpenEx(bad_building_vector_path,
+                                          gdal.OF_VECTOR | gdal.GA_Update)
         bad_building_layer = bad_building_vector.GetLayer()
         feature = next(bad_building_layer)
         feature.SetField('type', -999)
@@ -119,7 +119,7 @@ class UCMTests(unittest.TestCase):
             str(context.exception))
 
     def test_bad_args(self):
-        """UHIM: test bad arguments validating."""
+        """UCM: test bad arguments validating."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
@@ -144,26 +144,25 @@ class UCMTests(unittest.TestCase):
             }
 
         del args['t_ref']
-        with self.assertRaises(KeyError) as context:
-            natcap.invest.urban_cooling_model.validate(args)
-        self.assertTrue(
-            "The following keys were expected" in str(context.exception))
+        warnings = natcap.invest.urban_cooling_model.validate(args)
+        self.assertTrue('Key is missing from the args dict' in warnings[0][1])
 
         args['t_ref'] = ''
         result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "parameter has no value")
+        self.assertEqual(result[0][1], "Input is required but has no value")
 
         args['t_ref'] = 35.0
         args['cc_weight_shade'] = -0.6
         result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "value should be positive")
+        self.assertEqual(result[0][1], "Value does not meet condition value > 0")
 
         args['cc_weight_shade'] = "not a number"
         result = natcap.invest.urban_cooling_model.validate(args)
-        self.assertEqual(result[0][1], "parameter is not a number")
+        self.assertEqual(result[0][1], ("Value 'not a number' could not be "
+                                        "interpreted as a number"))
 
     def test_flat_disk_kernel(self):
-        """UHIM: test flat disk kernel."""
+        """UCM: test flat disk kernel."""
         import natcap.invest.urban_cooling_model
 
         kernel_filepath = os.path.join(self.workspace_dir, 'kernel.tif')
