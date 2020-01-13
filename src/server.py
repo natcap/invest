@@ -6,6 +6,7 @@ import logging
 from flask import Flask
 from flask import request
 import natcap.invest.cli
+import natcap.invest.datastack
 
 logging.basicConfig(level=logging.DEBUG)
 LOGGER = logging.getLogger(__name__)
@@ -89,3 +90,18 @@ def get_invest_validate():
     results = model_module.validate(args_dict, limit_to=limit_to)
     LOGGER.debug(results)
     return json.dumps(results)
+
+
+@app.route('/post_datastack_file', methods=['POST'])
+def post_datastack_file():
+    filepath = request.get_json()['datastack_path']
+    stack_type, stack_info = natcap.invest.datastack.get_datastack_info(
+        filepath)
+    result_dict = {
+        'type': stack_type,
+        'args': stack_info.args,
+        'model_name': stack_info.model_name,
+        'invest_version': stack_info.invest_version
+    }
+    LOGGER.debug(result_dict)
+    return json.dumps(result_dict)

@@ -1,6 +1,7 @@
 import fs from 'fs';
 import React from 'react';
 import Electron from 'electron';
+import request from 'request';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -47,7 +48,7 @@ class ArgsForm extends React.Component {
     super(props);
     this.handleChange = this.handleChange.bind(this);
     this.selectFile = this.selectFile.bind(this);
-    this.onJsonDrop = this.onJsonDrop.bind(this);
+    this.onDragDrop = this.onDragDrop.bind(this);
   }
 
   componentDidMount() {
@@ -85,9 +86,8 @@ class ArgsForm extends React.Component {
     })
   }
 
-  onJsonDrop(event) {
-    // Handle drag-drop of datastack JSON files
-    // TODO: handle errors when dropped file is not valid JSON
+  onDragDrop(event) {
+    // Handle drag-drop of datastack JSON files and InVEST logfiles
     event.preventDefault();
     
     const fileList = event.dataTransfer.files;
@@ -95,13 +95,24 @@ class ArgsForm extends React.Component {
       throw alert('only drop one file at a time.')
     }
     const filepath = fileList[0].path;
-    const modelParams = JSON.parse(fs.readFileSync(filepath, 'utf8'));
-
-    if (this.props.modulename === modelParams.model_name) {
-      this.props.batchUpdateArgs(modelParams.args);
-    } else {
-      throw alert('parameter file does not match this model.')
-    }
+    request.post(
+      'http://localhost:5000/post_datastack_file',
+      { json: { 
+        datastack_path: filepath} 
+      },
+      (error, response, body) => {
+        if (!error) {
+          const datastack = body;
+          if (datastack['model_name'] === this.props.modulename) {
+            this.props.batchUpdateArgs(datastack['args']);
+          } else {
+            throw alert('Parameter/Log file does not match this model.')
+          }
+        } else {
+          console.log('Error: ' + error.message)
+        }
+      }
+    );
   }
 
   render() {
@@ -219,7 +230,7 @@ class ArgsForm extends React.Component {
     return (
       <Form 
         validated={false}
-        onDrop={this.onJsonDrop}
+        onDrop={this.onDragDrop}
         onDragOver={dragover_handler}>
         {formItems}
       </Form>
