@@ -53,10 +53,8 @@ class LoadStateForm extends React.Component {
   
   constructor(props) {
     super(props);
-    this.state = {
-      session_id_to_load: ''
-    }
     this.selectFile = this.selectFile.bind(this);
+    this.handleClick = this.handleClick.bind(this);
   }
 
   selectFile(event) {
@@ -72,6 +70,10 @@ class LoadStateForm extends React.Component {
     })
   }
 
+  handleClick(event) {
+    this.props.loadState(event.target.value);
+  }
+
   render() {
 
     // Buttons to load each recently saved state
@@ -81,7 +83,7 @@ class LoadStateForm extends React.Component {
         <Button  className="text-left"
           key={session}
           value={session}
-          onClick={this.handleLink}
+          onClick={this.handleClick}
           variant='outline-dark'>
           {session}
         </Button>

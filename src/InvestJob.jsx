@@ -63,7 +63,6 @@ export class InvestJob extends React.Component {
       sessionProgress: 'models', // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
       activeTab: 'models',
       docs: MODEL_DOCS,
-      recentSessions: [],
     };
     
     this.investGetSpec = this.investGetSpec.bind(this);
@@ -76,20 +75,10 @@ export class InvestJob extends React.Component {
     this.saveState = this.saveState.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
-    this.onSaveClick = this.onSaveClick.bind(this);
   }
 
-  async componentDidMount() {
-    const recentSessions = await findRecentSessions(CACHE_DIR);
-    this.setState(
-      {
-        recentSessions: recentSessions,
-      });
-  }
-
-  saveState() {
+  saveState(event) {
     // Save a snapshot of this component's state to a JSON file.
-
     const jsonContent = JSON.stringify(this.state, null, 2);
     const sessionID = this.state.sessionID;
     const filepath = path.join(CACHE_DIR, sessionID + '.json');
@@ -100,17 +89,16 @@ export class InvestJob extends React.Component {
       }
       console.log("saved" + sessionID);
     });
-  }
-
-  onSaveClick(event) {
-    event.preventDefault();
-    this.saveState();
-    // and append sessionID to list of recent sessions
-    let recentSessions = Object.assign([], this.state.recentSessions);
-    recentSessions.unshift(this.state.sessionID);
-    this.setState({recentSessions: recentSessions});
+    this.props.updateRecentSessions(sessionID);
   }
   
+  setSessionID(event) {
+    // Handle keystroke events to store a name for current session
+    const value = event.target.value;
+    this.setState(
+      {sessionID: value});
+  }
+
   loadState(sessionID) {
     // Set this component's state to the object parsed from a JSON file.
     // sessionID (string) : the name, without extension, of a saved JSON.
@@ -127,13 +115,6 @@ export class InvestJob extends React.Component {
     } else {
       console.log('state file not found: ' + filename);
     }
-  }
-
-  setSessionID(event) {
-    // Handle keystroke events to store a name for current session
-    const value = event.target.value;
-    this.setState(
-      {sessionID: value});
   }
 
   investExecute() {
@@ -419,7 +400,7 @@ export class InvestJob extends React.Component {
           <Nav.Link eventKey="docs">Docs</Nav.Link>
         </Nav.Item>
       </Nav>
-      <Form inline onSubmit={this.onSaveClick}>
+      <Form inline onSubmit={this.saveState}>
           <Form.Control
             type="text"
             placeholder={this.state.sessionID}
@@ -427,7 +408,7 @@ export class InvestJob extends React.Component {
             onChange={this.setSessionID}
           />
           <Button
-            onClick={this.onSaveClick}
+            onClick={this.saveState}
             variant="outline-secondary">
             Save Session
           </Button>
@@ -440,7 +421,7 @@ export class InvestJob extends React.Component {
           investGetSpec={this.investGetSpec}
           saveState={this.saveState}
           loadState={this.loadState}
-          recentSessions={this.state.recentSessions}
+          recentSessions={this.props.recentSessions}
         />
       </TabPane>
       <TabPane eventKey="setup" title="Setup">
@@ -540,27 +521,4 @@ function argsValuesFromSpec(args) {
   }
   const args_dict_string = JSON.stringify(args_dict);
   return(args_dict_string)
-}
-
-function findRecentSessions(cache_dir) {
-  // Populate recentSessions from list of files in cache dir
-  // sorted by modified time.
-
-  // TODO: check that files are actually state config files
-  // before putting them on the array
-  return new Promise(function(resolve, reject) {
-    const files = fs.readdirSync(cache_dir);
-
-    // reverse sort (b - a) based on last-modified time
-    const sortedFiles = files.sort(function(a, b) {
-      return fs.statSync(path.join(cache_dir, b)).mtimeMs -
-           fs.statSync(path.join(cache_dir, a)).mtimeMs
-    });
-    // trim off extension, since that is how sessions
-    // were named orginally
-    resolve(sortedFiles
-      .map(f => path.parse(f).name)
-      .slice(0, 15) // max 15 items returned
-    );
-  });
 }
