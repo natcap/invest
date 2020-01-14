@@ -738,6 +738,8 @@ class DatastackOptionsDialog(OptionsDialog):
     be stored relative to the location of the datastack file.  Both types of
     datastacks may optionally include the value of the workspace input.
 
+    Directories in the save file's path are created if they do not exist.
+
     Returns:
         An instance of :ref:DatastackSaveOpts namedtuple.
     """
@@ -774,36 +776,9 @@ class DatastackOptionsDialog(OptionsDialog):
             label='Include workspace path in datastack')
         self.include_workspace.set_value(False)
 
-        @validation.invest_validator
-        def _validate_parameter_file(args, limit_to=None):
-            """Validate a possible parameter file defined by the user.
-
-            This is a validation function that adheres to the InVEST validation
-            API.
-
-            Parameters:
-                args (dict): The args dictionary.
-                limit_to=None (string or None): The args key for which we
-                    should limit processing.
-
-            Returns:
-                ``warnings`` (list): A list of 2-element tuples with any
-                validation warnings for this input.  This list may be empty.
-            """
-            warnings = []
-            archive_dir = os.path.dirname(args['archive_path'])
-
-            if not os.path.exists(archive_dir):
-                warnings.append((('archive_path',),
-                                 'The parent folder of the specified path '
-                                 'does not exist.'))
-
-            return warnings
-
         self.save_parameters = inputs.SaveFile(
             label=_DATASTACK_SAVE_OPTS[_DATASTACK_PARAMETER_SET]['title'],
             args_key='archive_path',
-            validator=_validate_parameter_file,
             default_savefile='{model}_{file_base}'.format(
                 model=self.paramset_basename,
                 file_base=_DATASTACK_SAVE_OPTS[
@@ -813,7 +788,7 @@ class DatastackOptionsDialog(OptionsDialog):
         self._container.add_input(self.use_relative_paths)
         self._container.add_input(self.include_workspace)
         self._container.add_input(self.save_parameters)
-        self.ok_button.setEnabled(False)  # initially disable the ok button
+        self.ok_button.setEnabled(False)  # disabled until a value is entered
 
         @QtCore.Slot(unicode)
         def _optionally_disable(value):
@@ -840,19 +815,20 @@ class DatastackOptionsDialog(OptionsDialog):
                     file_base=_DATASTACK_SAVE_OPTS[value]['savefile']))
 
         @QtCore.Slot(bool)
-        def _enable_continue_button(new_validity):
-            """A slot to enable the continue button when inputs are valid.
+        def _enable_continue_button(new_value):
+            """A slot to enable the continue button when input is filled.
 
             Parameters:
-                new_validity (bool): The validity of the form.
+                new_value (string): The value of the form.
 
             Returns:
                 ``None``
             """
-            self.ok_button.setEnabled(new_validity)
+            self.ok_button.setEnabled(
+                (new_value is not None) and (new_value.strip() not in ''))
 
         self.datastack_type.value_changed.connect(_optionally_disable)
-        self.save_parameters.validity_changed.connect(_enable_continue_button)
+        self.save_parameters.value_changed.connect(_enable_continue_button)
 
     def exec_(self):
         """Execute the dialog.
@@ -1538,6 +1514,19 @@ class InVESTModel(QtWidgets.QMainWindow):
             del current_args['workspace_dir']
 
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
+
+        # if parent dir of archive_path does not exist, create it.
+        archive_dir = os.path.dirname(
+            os.path.abspath(datastack_opts.archive_path))
+        if not os.path.exists(archive_dir):
+            try:
+                os.makedirs(archive_dir)
+            except FileNotFoundError as error:
+                alert_message = error.strerror + ': ' + error.filename
+                self.statusBar().showMessage(
+                    alert_message, STATUSBAR_MSG_DURATION)
+                LOGGER.exception(error)
+                return
 
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
             self.datastack_progress_dialog.exec_build(
