@@ -182,39 +182,39 @@ ARGS_SPEC = {
             ),
         },
         "cc_weight_shade": {
-            "name": "",  # TODO: asked Chris about this
+            "name": "Cooling capacity: adjust shade weight",
             "type": "number",
-            "required": True,
+            "required": False,
             "validation_options": {
                 "expression": "value > 0",
             },
             "about": (
                 "The relative weight to apply to shade when calculating the "
-                "cooling index."
+                "cooling index.  Default: 0.6"
             ),
         },
         "cc_weight_albedo": {
-            "name": "",  # TODO: asked Chris about this
+            "name": "Cooling capacity: adjust albedo weight",
             "type": "number",
-            "required": True,
+            "required": False,
             "validation_options": {
                 "expression": "value > 0",
             },
             "about": (
                 "The relative weight to apply to albedo when calculating the "
-                "cooling index."
+                "cooling index.  Default: 0.2"
             ),
         },
         "cc_weight_eti": {
-            "name": "",  # TODO: asked Chris about this
+            "name": "Cooling capacity: adjust evapotranspiration weight",
             "type": "number",
-            "required": True,
+            "required": False,
             "validation_options": {
                 "expression": "value > 0",
             },
             "about": (
                 "The relative weight to apply to ETI when calculating the "
-                "cooling index."
+                "cooling index.  Default: 0.2"
             )
         },
     }
@@ -253,13 +253,13 @@ def execute(args):
             'consumption'.
         args['cc_weight_shade'] (str/float): floating point number
             representing the relative weight to apply to shade when
-            calculating the cooling index.
+            calculating the cooling index. Default: 0.6
         args['cc_weight_albedo'] (str/float): floating point number
             representing the relative weight to apply to albedo when
-            calculating the cooling index.
+            calculating the cooling index. Default: 0.2
         args['cc_weight_eti'] (str/float): floating point number
             representing the relative weight to apply to ETI when
-            calculating the cooling index.
+            calculating the cooling index. Default: 0.2
 
 
     Returns:
@@ -275,9 +275,11 @@ def execute(args):
         warn_if_missing=True)
 
     # cast to float and calculate relative weights
-    cc_weight_shade_raw = float(args['cc_weight_shade'])
-    cc_weight_albedo_raw = float(args['cc_weight_albedo'])
-    cc_weight_eti_raw = float(args['cc_weight_eti'])
+    # Use default weights for shade, albedo, eti if the user didn't provide
+    # weights.
+    cc_weight_shade_raw = float(args.get('cc_weight_shade', 0.6))
+    cc_weight_albedo_raw = float(args.get('cc_weight_albedo', 0.2))
+    cc_weight_eti_raw = float(args.get('cc_weight_eti', 0.2))
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
