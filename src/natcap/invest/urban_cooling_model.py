@@ -323,7 +323,10 @@ def execute(args):
 
     task_path_prop_map = {}
 
-    for prop in ['kc', 'shade', 'albedo', 'green_area']:
+    for prop, datatype in [('kc', gdal.GDT_Float32),
+                           ('shade', gdal.GDT_Float32),
+                           ('albedo', gdal.GDT_Float32),
+                           ('green_area', gdal.GDT_Byte)]:
         prop_map = dict(
             (lucode, x[prop])
             for lucode, x in biophysical_lucode_map.items())
@@ -334,7 +337,7 @@ def execute(args):
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
-                gdal.GDT_Float32, TARGET_NODATA),
+                datatype, TARGET_NODATA),
             kwargs={'values_required': True},
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
@@ -365,29 +368,12 @@ def execute(args):
         target_path_list=[area_kernel_path],
         task_name='area kernel')
 
-    green_area_mask_map = dict(
-        (lucode, 1 if x['green_area'] == 1 else 0)
-        for lucode, x in biophysical_lucode_map.items())
-
-    green_area_mask_raster_path = os.path.join(
-        temporary_working_dir, 'green_area_mask%s.tif' % file_suffix)
-    green_area_mask_task = task_graph.add_task(
-        func=pygeoprocessing.reclassify_raster,
-        args=(
-            (aligned_lulc_raster_path, 1), green_area_mask_map,
-            green_area_mask_raster_path,
-            gdal.GDT_Byte, TARGET_NODATA),
-        kwargs={'values_required': True},
-        target_path_list=[green_area_mask_raster_path],
-        dependent_task_list=[align_task],
-        task_name='mask green area')
-
     green_area_sum_raster_path = os.path.join(
         temporary_working_dir, 'green_area_sum%s.tif' % file_suffix)
     green_area_sum_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
-            (green_area_mask_raster_path, 1),
+            (task_path_prop_map['green_area'][1], 1),  # green area path
             (area_kernel_path, 1),
             green_area_sum_raster_path),
         kwargs={
@@ -395,7 +381,8 @@ def execute(args):
             'ignore_nodata': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
-            green_area_mask_task, area_kernel_task],
+            task_path_prop_map['green_area'][0],  # reclassed green area task
+            area_kernel_task],
         task_name='calculate green area')
 
     align_task.join()
