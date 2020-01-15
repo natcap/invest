@@ -323,10 +323,7 @@ def execute(args):
 
     task_path_prop_map = {}
 
-    for prop, datatype in [('kc', gdal.GDT_Float32),
-                           ('shade', gdal.GDT_Float32),
-                           ('albedo', gdal.GDT_Float32),
-                           ('green_area', gdal.GDT_Byte)]:
+    for prop in ('kc', 'shade', 'albedo', 'green_area'):
         prop_map = dict(
             (lucode, x[prop])
             for lucode, x in biophysical_lucode_map.items())
@@ -337,7 +334,7 @@ def execute(args):
             func=pygeoprocessing.reclassify_raster,
             args=(
                 (aligned_lulc_raster_path, 1), prop_map, prop_raster_path,
-                datatype, TARGET_NODATA),
+                gdal.GDT_Float32, TARGET_NODATA),
             kwargs={'values_required': True},
             target_path_list=[prop_raster_path],
             dependent_task_list=[align_task],
@@ -359,7 +356,7 @@ def execute(args):
             task_path_prop_map['green_area'][0]],
         task_name='calculate T air')
 
-    # calculate a raster that's the area
+    # Calculate the area of greenspace within a search radius of each pixel.
     area_kernel_path = os.path.join(
         temporary_working_dir, 'area_kernel%s.tif' % file_suffix)
     area_kernel_task = task_graph.add_task(
@@ -984,7 +981,7 @@ def calc_cc_op(
 
 def calc_eti_op(
         kc_array, kc_nodata, et0_array, et0_nodata, et_max, target_nodata):
-    """Calculate ETI =(K_c ET_0)/ET_max ."""
+    """Calculate ETI = (K_c ET_0) / ET_max."""
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = ~(
