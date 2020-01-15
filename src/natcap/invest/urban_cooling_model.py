@@ -280,12 +280,11 @@ def execute(args):
     cc_weight_eti_raw = float(args['cc_weight_eti'])
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
-    cc_weight_shade = cc_weight_shade_raw / (
-        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
-    cc_weight_albedo = cc_weight_albedo_raw / (
-        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
-    cc_weight_eti = cc_weight_eti_raw / (
-        cc_weight_shade_raw+cc_weight_albedo_raw+cc_weight_eti_raw)
+    cc_weight_sum = sum(
+        cc_weight_shade_raw, cc_weight_albedo_raw, cc_weight_eti_raw)
+    cc_weight_shade = cc_weight_shade_raw / cc_weight_sum
+    cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
+    cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
 
     n_workers = -1
     if 'n_workers' in args:
