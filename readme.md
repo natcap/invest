@@ -8,15 +8,10 @@ set system-specific environment variables at launch.
 `set INVEST=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\Scripts\\invest.exe && set GDAL_DATA=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\Library\\share\\gdal && set PYTHON=C:\\Users\\dmf\\Miniconda3\\envs\\invest-py37\\python && npm start`  
 
 GDAL_DATA path here is optional, do it if GDAL ERRORs suggest you need to.  
-PYTHON path must be able to import `flask`  
+PYTHON path must be able to import `flask` and `natcap.invest`
 
 ### linux:  
 `INVEST=/home/dmf/miniconda3/envs/invest-env-py36/bin/invest PYTHON=/home/dmf/miniconda3/envs/invest-env-py36/bin/python npm start`  
-
-
-**Temporary way to test various invest models:**  
-set this variable in InvestJob.jsx to a name found in `invest list`:  
-`const MODEL_NAME = 'carbon'`  
 
 
 ## To run linter or tests
