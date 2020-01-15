@@ -281,7 +281,7 @@ def execute(args):
     t_ref_raw = float(args['t_ref'])
     uhi_max_raw = float(args['uhi_max'])
     cc_weight_sum = sum(
-        cc_weight_shade_raw, cc_weight_albedo_raw, cc_weight_eti_raw)
+        (cc_weight_shade_raw, cc_weight_albedo_raw, cc_weight_eti_raw))
     cc_weight_shade = cc_weight_shade_raw / cc_weight_sum
     cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
     cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
@@ -299,7 +299,7 @@ def execute(args):
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
-    # ensure raster is square by picking the smallest dimension
+    # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
     # reproject vector inputs
@@ -324,9 +324,9 @@ def execute(args):
     task_path_prop_map = {}
 
     for prop in ['kc', 'shade', 'albedo', 'green_area']:
-        prop_map = dict([
+        prop_map = dict(
             (lucode, x[prop])
-            for lucode, x in biophysical_lucode_map.items()])
+            for lucode, x in biophysical_lucode_map.items())
 
         prop_raster_path = os.path.join(
             temporary_working_dir, '%s%s.tif' % (prop, file_suffix))
@@ -342,7 +342,7 @@ def execute(args):
         task_path_prop_map[prop] = (prop_task, prop_raster_path)
 
     green_area_decay_kernel_distance = int(numpy.round(
-     float(args['green_area_cooling_distance']) / cell_size))
+        float(args['green_area_cooling_distance']) / cell_size))
     cc_park_raster_path = os.path.join(
         temporary_working_dir, 'cc_park%s.tif' % file_suffix)
     cc_park_task = task_graph.add_task(
@@ -365,9 +365,9 @@ def execute(args):
         target_path_list=[area_kernel_path],
         task_name='area kernel')
 
-    green_area_mask_map = dict([
+    green_area_mask_map = dict(
         (lucode, 1 if x['green_area'] == 1 else 0)
-        for lucode, x in biophysical_lucode_map.items()])
+        for lucode, x in biophysical_lucode_map.items())
 
     green_area_mask_raster_path = os.path.join(
         temporary_working_dir, 'green_area_mask%s.tif' % file_suffix)
@@ -1089,19 +1089,19 @@ def flat_disk_kernel(max_distance, kernel_filepath):
     driver = gdal.GetDriverByName('GTiff')
     kernel_dataset = driver.Create(
         kernel_filepath.encode('utf-8'), kernel_size, kernel_size, 1,
-        gdal.GDT_Float32, options=[
+        gdal.GDT_Byte, options=[
             'BIGTIFF=IF_SAFER', 'TILED=YES', 'BLOCKXSIZE=256',
             'BLOCKYSIZE=256'])
 
-    # Make some kind of geotransform, it doesn't matter what but
-    # will make GIS libraries behave better if it's all defined
+    # Make some kind of geotransform and SRS. It doesn't matter what, but
+    # having one will make GIS libraries behave better if it's all defined
     kernel_dataset.SetGeoTransform([0, 1, 0, 0, 0, -1])
     srs = osr.SpatialReference()
     srs.SetWellKnownGeogCS('WGS84')
     kernel_dataset.SetProjection(srs.ExportToWkt())
 
     kernel_band = kernel_dataset.GetRasterBand(1)
-    kernel_band.SetNoDataValue(-9999)
+    kernel_band.SetNoDataValue(255)
 
     cols_per_block, rows_per_block = kernel_band.GetBlockSize()
 
