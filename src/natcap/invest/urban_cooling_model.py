@@ -289,6 +289,9 @@ def execute(args):
     cc_weight_albedo = cc_weight_albedo_raw / cc_weight_sum
     cc_weight_eti = cc_weight_eti_raw / cc_weight_sum
 
+    # Cast to a float upfront in case of casting errors.
+    t_air_average_radius_raw = float(args['t_air_average_radius'])
+
     n_workers = -1
     if 'n_workers' in args:
         n_workers = int(args['n_workers'])
@@ -461,7 +464,7 @@ def execute(args):
         task_name='calculate T air nomix')
 
     decay_kernel_distance = int(numpy.round(
-        float(args['t_air_average_radius']) / cell_size))
+        t_air_average_radius_raw / cell_size))
     t_air_raster_path = os.path.join(
         args['workspace_dir'], 'T_air%s.tif' % file_suffix)
     t_air_task = task_graph.add_task(
@@ -524,19 +527,17 @@ def execute(args):
             dependent_task_list=[t_air_task],
             task_name='vapor pressure')
 
-        light_work_temps = [31.5, 32, 32.5]
         light_work_loss_raster_path = os.path.join(
             temporary_working_dir,
             'light_work_loss_percent%s.tif' % file_suffix)
-        heavy_work_temps = [27.5, 29.5, 31.5]
         heavy_work_loss_raster_path = os.path.join(
             temporary_working_dir,
             'heavy_work_loss_percent%s.tif' % file_suffix)
 
         loss_task_path_map = {}
         for loss_type, temp_map, loss_raster_path in [
-                ('light', light_work_temps, light_work_loss_raster_path),
-                ('heavy', heavy_work_temps, heavy_work_loss_raster_path)]:
+                ('light', [31.5, 32.0, 32.5], light_work_loss_raster_path),
+                ('heavy', [27.5, 29.5, 31.5], heavy_work_loss_raster_path)]:
             work_loss_task = task_graph.add_task(
                 func=map_work_loss,
                 args=(temp_map, wbgt_raster_path, loss_raster_path),
@@ -1187,9 +1188,11 @@ def map_work_loss(
         None.
 
     """
+    byte_target_nodata = 255
+
     def classify_to_percent_op(temperature_array):
         result = numpy.empty(temperature_array.shape)
-        result[:] = TARGET_NODATA
+        result[:] = byte_target_nodata
         valid_mask = ~numpy.isclose(temperature_array, TARGET_NODATA)
         result[
             valid_mask &
@@ -1209,7 +1212,8 @@ def map_work_loss(
 
     pygeoprocessing.raster_calculator(
         [(temperature_raster_path, 1)], classify_to_percent_op,
-        work_loss_raster_path, gdal.GDT_Byte, TARGET_NODATA)
+        work_loss_raster_path, gdal.GDT_Byte,
+        nodata_target=byte_target_nodata)
 
 
 def _invoke_timed_callback(
