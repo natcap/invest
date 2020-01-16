@@ -55,6 +55,7 @@ ARGS_SPEC = {
             "required": True,
             "validation_options": {
                 "projected": True,
+                "projection_units": "m",
             },
             "about": (
                 "A GDAL-supported raster file containing integer values "
@@ -385,6 +386,8 @@ def execute(args):
         task_name='calculate green area')
 
     align_task.join()
+
+    # Evapotranspiration index (Equation #1)
     ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
     ref_eto_band = ref_eto_raster.GetRasterBand(1)
     _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
@@ -407,6 +410,7 @@ def execute(args):
         dependent_task_list=[task_path_prop_map['kc'][0]],
         task_name='calculate eti')
 
+    # Cooling Capacity calculations (Equation #2)
     cc_raster_path = os.path.join(
         args['workspace_dir'], 'cc%s.tif' % file_suffix)
     cc_task = task_graph.add_task(
@@ -426,6 +430,8 @@ def execute(args):
             eti_task],
         task_name='calculate cc index')
 
+    # Compute Heat Mitigation (HM) index.
+    #
     # convert 2 hectares to number of pixels
     green_area_threshold = 2e4 / cell_size**2
     hm_raster_path = os.path.join(
@@ -447,8 +453,7 @@ def execute(args):
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([
-            (t_ref_raw, 'raw'), (hm_raster_path, 1),
-            (float(args['uhi_max']), 'raw')],
+            (t_ref_raw, 'raw'), (hm_raster_path, 1), (uhi_max_raw, 'raw')],
             calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
             TARGET_NODATA),
         target_path_list=[t_air_nomix_raster_path],
@@ -941,11 +946,23 @@ def pickle_zonal_stats(
 
 
 def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
-    """Calculate air temperature T_(air,i)=T_ref+(1-HM_i)*UHI_max."""
+    """Calculate air temperature T_(air,i)=T_ref+(1-HM_i)*UHI_max.
+
+    Parameters:
+        t_ref_val (float): The user-defined reference air temperature in
+            degrees Celsius.
+        hm_array (numpy.ndarray): The calculated Heat Mitigation index from
+            equation 5 in the User's Guide.
+        uhi_max (float): The user-defined maximum UHI magnitude.
+
+    Returns:
+        A numpy array with the same dimensions as ``hm_array`` with the
+        calculated T_air_nomix values.
+
+    """
     result = numpy.empty(hm_array.shape, dtype=numpy.float32)
     result[:] = TARGET_NODATA
-    valid_mask = ~(
-        numpy.isclose(hm_array, TARGET_NODATA))
+    valid_mask = ~numpy.isclose(hm_array, TARGET_NODATA)
     result[valid_mask] = t_ref_val + (1-hm_array[valid_mask]) * uhi_max
     return result
 

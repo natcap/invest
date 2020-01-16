@@ -137,9 +137,7 @@ class UCMTests(unittest.TestCase):
             'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
             'energy_consumption_table_path': os.path.join(REGRESSION_DATA, "Energy.csv"),
             'avg_rel_humidity': '30.0',
-            'cc_weight_shade': '0.6',
-            'cc_weight_albedo': '0.2',
-            'cc_weight_eti': '0.2',
+            # Explicitly leaving CC weight parameters out.
             'n_workers': -1,
             }
 
