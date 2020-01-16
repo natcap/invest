@@ -14,17 +14,24 @@ export default class App extends React.Component {
     this.state = {
       investList: {},
       recentSessions: [],
+      investSettings: {},
     };
     this.updateRecentSessions = this.updateRecentSessions.bind(this);
+    this.saveSettings = this.saveSettings.bind(this);
   }
 
   async componentDidMount() {
+    // TODO: also load and set investSettings from a cached state
     const investList = await getInvestList();
     const recentSessions = await findRecentSessions(CACHE_DIR);
     this.setState(
       {
         investList: investList,
         recentSessions: recentSessions,
+        investSettings: {
+          nWorkers: -1,
+          loggingLevel: 'INFO',
+        }
       });
   }
 
@@ -35,12 +42,22 @@ export default class App extends React.Component {
     this.setState({recentSessions: recentSessions});
   }
 
+  saveSettings(settings) {
+    console.log(settings);
+    this.setState({
+      nWorkers: settings.nWorkers,
+      loggingLevel: settings.loggingLevel
+    });
+  }
+
   render() {
     return (
       <InvestJob 
         investList={this.state.investList}
+        investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
         updateRecentSessions={this.updateRecentSessions}
+        saveSettings={this.saveSettings}
       />
     );
   }

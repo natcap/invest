@@ -16,6 +16,7 @@ import Spinner from 'react-bootstrap/Spinner';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 
+import { SettingsModal } from './components/SettingsModal';
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
@@ -378,6 +379,8 @@ export class InvestJob extends React.Component {
       spinner = <div></div>
     }
 
+    // Button for more options in the context of setup
+
     return(
       <TabContainer activeKey={activeTab}>
       <Navbar bg="light" expand="lg">
@@ -385,7 +388,7 @@ export class InvestJob extends React.Component {
         activeKey={activeTab}
         onSelect={this.switchTabs}>
         <Nav.Item>
-          <Nav.Link eventKey="models">Models</Nav.Link>
+          <Nav.Link eventKey="models">Home</Nav.Link>
         </Nav.Item>
         <Nav.Item>
           <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
@@ -413,9 +416,13 @@ export class InvestJob extends React.Component {
             Save Session
           </Button>
       </Form>
+      <SettingsModal 
+        saveSettings={this.props.saveSettings}
+        investSettings={this.props.investSettings}
+      />
       </Navbar>
       <TabContent>
-      <TabPane eventKey="models" title="Models">
+      <TabPane eventKey="models" title="Home">
         <ModelsTab
           investList={this.props.investList}
           investGetSpec={this.investGetSpec}
