@@ -467,7 +467,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 583388
     !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 144
     !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 356
-    !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 191156
+    !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 191156
     !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
     !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
     !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
