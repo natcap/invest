@@ -3136,7 +3136,6 @@ def _simplify_geometry(
 
         # Use SimplifyPreserveTopology to prevent features from missing
         simplified_geometry = base_geometry.SimplifyPreserveTopology(tolerance)
-        base_geometry = None
         if (simplified_geometry is not None and
                 simplified_geometry.GetArea() > 0):
             target_feature.SetGeometry(simplified_geometry)
@@ -3148,7 +3147,11 @@ def _simplify_geometry(
 
         # If simplify doesn't work, fall back to the original geometry
         else:
-            target_simplified_layer.CreateFeature(base_feature)
+            # Still using the target_feature here because the preserve_field 
+            # option altered the layer defn between base and target.
+            target_feature.SetGeometry(base_geometry)
+            target_simplified_layer.CreateFeature(target_feature)
+        base_geometry = None
 
     target_simplified_layer.SyncToDisk()
     target_simplified_vector.CommitTransaction()
