@@ -892,16 +892,18 @@ def calculate_energy_savings(
                 100.0 * float(target_index+1) /
                 target_building_layer.GetFeatureCount()),
             _LOGGING_PERIOD)
+
         feature_id = target_feature.GetFID()
         t_air_mean = None
         if feature_id in t_air_stats:
-            pixel_count = t_air_stats[feature_id]['count']
+            pixel_count = float(t_air_stats[feature_id]['count'])
             if pixel_count > 0:
-                t_air_mean = (
-                    t_air_stats[feature_id]['sum'] /
-                    float(pixel_count))
-                target_feature.SetField('mean_t_air', float(t_air_mean))
+                t_air_mean = float(
+                    t_air_stats[feature_id]['sum'] / pixel_count)
+                target_feature.SetField('mean_t_air', t_air_mean)
 
+        # Building type should be an integer and has to match the building
+        # types in the energy consumption table.
         target_type = target_feature.GetField(int(type_field_index))
         if target_type not in energy_consumption_table:
             target_building_layer.CommitTransaction()
@@ -914,12 +916,28 @@ def calculate_energy_savings(
                 "at %s" % (
                     target_type, target_feature.GetFID(),
                     energy_consumption_table_path))
+
         consumption_increase = float(
             energy_consumption_table[target_type]['consumption'])
+
+        # Load building cost if we can, but don't adjust the value if the cost
+        # column is not there.
+        # NOTE: if the user has an empty column value but the 'cost' column
+        # exists, this will raise an error.
+        try:
+            building_cost = float(energy_consumption_table[target_type]['cost'])
+        except KeyError:
+            # KeyError when cost column not present.
+            building_cost = 1.0
+
+        # Calculate Equation 7: Energy Savings.
+        # We'll only calculate energy savings if there were polygons with valid
+        # stats that could be aggregated from t_air_mean.
         if t_air_mean:
-            target_feature.SetField(
-                'energy_sav', consumption_increase * (
-                    t_ref_raw-t_air_mean + uhi_max))
+            savings = (
+                consumption_increase * (
+                    t_ref_raw - t_air_mean + uhi_max) * building_cost)
+            target_feature.SetField('energy_sav', savings)
 
         target_building_layer.SetFeature(target_feature)
     target_building_layer.CommitTransaction()
