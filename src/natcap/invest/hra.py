@@ -3123,7 +3123,7 @@ def _simplify_geometry(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
         str(target_layer_name),
-        base_layer.GetSpatialRef(), ogr.wkbPolygon)
+        base_layer.GetSpatialRef(), base_layer.GetGeomType())
 
     target_simplified_vector.StartTransaction()
 
