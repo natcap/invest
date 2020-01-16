@@ -515,6 +515,7 @@ def execute(args):
     heavy_loss_stats_pickle_path = None
     energy_consumption_vector_path = None
     if bool(args['do_valuation']):
+        LOGGER.info('Starting valuation')
         # work productivity
         wbgt_raster_path = os.path.join(
             temporary_working_dir, 'wbgt%s.tif' % file_suffix)
