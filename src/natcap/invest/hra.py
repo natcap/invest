@@ -3148,7 +3148,7 @@ def _simplify_geometry(
 
         # If simplify doesn't work, fall back to the original geometry
         else:
-            target_simplified_layer.CreateFeature(target_feature)
+            target_simplified_layer.CreateFeature(base_feature)
 
     target_simplified_layer.SyncToDisk()
     target_simplified_vector.CommitTransaction()
