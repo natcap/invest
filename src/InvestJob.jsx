@@ -138,7 +138,7 @@ export class InvestJob extends React.Component {
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: '.',
         shell: true, // without true, IOError when datastack.py loads json
-        env: {GDAL_DATA: GDAL_DATA}
+        // env: {GDAL_DATA: GDAL_DATA}
       });
 
     // TODO: These setState calls on stdout and stderr trigger
@@ -178,6 +178,8 @@ export class InvestJob extends React.Component {
   }
 
   investKill() {
+    // TODO: this never worked properly. I think the pid here is from the node subprocess,
+    // when we actually want the pid from the python process it launched.
     if (this.state.procID){
       console.log(this.state.procID);
       process.kill(this.state.procID)
