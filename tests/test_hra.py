@@ -716,11 +716,11 @@ class HraUnitTests(unittest.TestCase):
         from natcap.invest.hra import _simplify_geometry
 
         complicated_vector_path = os.path.join(
-            TEST_DATA, 'complicated_vector2.gpkg')
+            TEST_DATA, 'complicated_vector.gpkg')
         expected_simplified_vector_path = os.path.join(
-            TEST_DATA, 'simplified_vector2.gpkg')
+            TEST_DATA, 'simplified_vector.gpkg')
         target_simplified_vector_path = os.path.join(
-            '.', 'simplified_vector.gpkg')
+            self.workspace_dir, 'simplified_vector.gpkg')
         # Create an existing target vector to test if it's properly removed
         open(target_simplified_vector_path, 'a').close()
 
