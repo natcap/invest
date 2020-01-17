@@ -693,29 +693,29 @@ def calculate_uhi_result_vector(
         "Calculate UHI summary results %s", os.path.basename(
             target_uhi_vector_path))
 
-    LOGGER.info("load t_air_stats")
+    LOGGER.info("Loading t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
-    LOGGER.info("load cc_stats")
+    LOGGER.info("Loading cc_stats")
     with open(cc_stats_pickle_path, 'rb') as cc_stats_pickle_file:
         cc_stats = pickle.load(cc_stats_pickle_file)
 
     wbgt_stats = None
     if wbgt_stats_pickle_path:
-        LOGGER.info("load wbgt_stats")
+        LOGGER.info("Loading wbgt_stats")
         with open(wbgt_stats_pickle_path, 'rb') as wbgt_stats_pickle_file:
             wbgt_stats = pickle.load(wbgt_stats_pickle_file)
 
     light_loss_stats = None
     if light_loss_stats_pickle_path:
-        LOGGER.info("load light_loss_stats")
+        LOGGER.info("Loading light_loss_stats")
         with open(light_loss_stats_pickle_path, 'rb') as (
                 light_loss_stats_pickle_file):
             light_loss_stats = pickle.load(light_loss_stats_pickle_file)
 
     heavy_loss_stats = None
     if heavy_loss_stats_pickle_path:
-        LOGGER.info("load heavy_loss_stats")
+        LOGGER.info("Loading heavy_loss_stats")
         with open(heavy_loss_stats_pickle_path, 'rb') as (
                 heavy_loss_stats_pickle_file):
             heavy_loss_stats = pickle.load(heavy_loss_stats_pickle_file)
@@ -727,7 +727,7 @@ def calculate_uhi_result_vector(
         os.remove(target_uhi_vector_path)
     except OSError:
         pass
-    LOGGER.info("creating %s", os.path.basename(target_uhi_vector_path))
+    LOGGER.info("Creating %s", os.path.basename(target_uhi_vector_path))
     shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
     base_aoi_vector = None
@@ -770,7 +770,7 @@ def calculate_uhi_result_vector(
             light_loss = (
                 light_loss_stats[feature_id]['sum'] /
                 light_loss_stats[feature_id]['count'])
-            LOGGER.debug(light_loss)
+            LOGGER.debug("Average light loss: %s", light_loss)
             feature.SetField('avg_ltls_v', float(light_loss))
 
         if heavy_loss_stats and feature_id in heavy_loss_stats and (
@@ -778,7 +778,7 @@ def calculate_uhi_result_vector(
             heavy_loss = (
                 heavy_loss_stats[feature_id]['sum'] /
                 heavy_loss_stats[feature_id]['count'])
-            LOGGER.debug(heavy_loss)
+            LOGGER.debug("Average heavy loss: %s", heavy_loss)
             feature.SetField('avg_hvls_v', float(heavy_loss))
 
         if energy_consumption_vector_path:
@@ -847,14 +847,14 @@ def calculate_energy_savings(
     """
     LOGGER.info(
         "Calculate energy savings for %s", target_building_vector_path)
-    LOGGER.info("load t_air_stats")
+    LOGGER.info("Loading t_air_stats")
     with open(t_air_stats_pickle_path, 'rb') as t_air_stats_pickle_file:
         t_air_stats = pickle.load(t_air_stats_pickle_file)
 
     base_building_vector = gdal.OpenEx(
         base_building_vector_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
-    LOGGER.info("creating %s", os.path.basename(target_building_vector_path))
+    LOGGER.info("Creating %s", os.path.basename(target_building_vector_path))
     try:
         # can't make a shapefile on top of an existing one
         os.remove(target_building_vector_path)
