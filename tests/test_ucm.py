@@ -6,6 +6,7 @@ import os
 
 import numpy
 from osgeo import gdal
+import pandas
 
 REGRESSION_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'ucm')
@@ -22,11 +23,11 @@ class UCMTests(unittest.TestCase):
         """Clean up remaining files."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_uhim_regression(self):
+    def test_ucm_regression(self):
         """UCM: regression."""
         import natcap.invest.urban_cooling_model
         args = {
-            'workspace_dir': self.workspace_dir,
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
             'results_suffix': 'test_suffix',
             't_ref': 35.0,
             't_obs_raster_path': os.path.join(REGRESSION_DATA, "Tair_Sept.tif"),
@@ -71,8 +72,75 @@ class UCMTests(unittest.TestCase):
                 msg='%s should be close to %f, actual: %f' % (
                     key, expected_value, actual_value))
 
+        results_layer = None
+        results_vector = None
+
+        # Assert that the decimal value of the energy savings value is what we
+        # expect.
+        expected_energy_sav = 9361.431821463711
+        energy_sav = 0.0
+        n_nonetype = 0
+        stats_vector_path = (
+            os.path.join(args['workspace_dir'],
+                         ('buildings_with_stats_%s.shp' %
+                          args['results_suffix'])))
+        try:
+            buildings_vector = gdal.OpenEx(stats_vector_path)
+            buildings_layer = buildings_vector.GetLayer()
+            for building_feature in buildings_layer:
+                try:
+                    energy_sav += building_feature.GetField('energy_sav')
+                except TypeError:
+                    # When energy_sav is NoneType
+                    n_nonetype += 1
+
+            self.assertAlmostEqual(energy_sav, expected_energy_sav, msg=(
+                '%f should be close to %f' % (
+                    energy_sav, expected_energy_sav)))
+            self.assertEqual(n_nonetype, 119)
+        finally:
+            buildings_layer = None
+            buildings_vector = None
+
+        # Now, re-run the model with the cost column and verify cost sum is
+        # reasonable.
+        new_csv_path = os.path.join(self.workspace_dir, 'cost_csv.csv')
+        multiplier = 3.0
+        df = pandas.read_csv(args['energy_consumption_table_path'])
+        df['Cost'] = pandas.Series([multiplier], index=df.index)
+        df.to_csv(new_csv_path)
+        args['energy_consumption_table_path'] = new_csv_path
+
+        natcap.invest.urban_cooling_model.execute(args)
+
+        # Assert that the decimal value of the energy savings value is what we
+        # expect.  Because we're re-running the model in the same workspace,
+        # taskgraph should only re-compute the output vector step.
+        expected_energy_sav = expected_energy_sav * multiplier
+        energy_sav = 0.0
+        n_nonetype = 0
+        try:
+            buildings_vector = gdal.OpenEx(os.path.join(
+                args['workspace_dir'], ('buildings_with_stats_%s.shp' %
+                                        args['results_suffix'])))
+            buildings_layer = buildings_vector.GetLayer()
+            for building_feature in buildings_layer:
+                try:
+                    energy_sav += building_feature.GetField('energy_sav')
+                except TypeError:
+                    # When energy_sav is Nonetype
+                    n_nonetype += 1
+
+            self.assertAlmostEqual(energy_sav, expected_energy_sav, msg=(
+                '%f should be close to %f' % (
+                    energy_sav, expected_energy_sav)))
+            self.assertEqual(n_nonetype, 119)
+        finally:
+            buildings_layer = None
+            buildings_vector = None
+
     def test_bad_building_type(self):
-        """UCM: regression test."""
+        """UCM: error on bad building type."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
@@ -119,7 +187,7 @@ class UCMTests(unittest.TestCase):
             str(context.exception))
 
     def test_bad_args(self):
-        """UCM: test bad arguments validating."""
+        """UCM: test validation of bad arguments."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': self.workspace_dir,
