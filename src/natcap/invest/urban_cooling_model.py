@@ -740,6 +740,27 @@ def calculate_uhi_result_vector(
             'avg_ltls_v', 'avg_hvls_v']:
         target_uhi_layer.CreateField(ogr.FieldDefn(field_id, ogr.OFTReal))
 
+    # I don't really like having two of the same conditions (one here and one
+    # in the for feature in target_uhi_layer loop), but if the user has
+    # multiple AOI features, we shouldn't have to rebuild the buildings spatial
+    # index every time.
+    if energy_consumption_vector_path:
+        energy_consumption_vector = gdal.OpenEx(
+            energy_consumption_vector_path, gdal.OF_VECTOR)
+        energy_consumption_layer = energy_consumption_vector.GetLayer()
+
+        LOGGER.info('Parsing building footprint geometry')
+        building_shapely_polygon_lookup = dict([
+            (poly_feat.GetFID(),
+             shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
+            for poly_feat in energy_consumption_layer])
+
+        LOGGER.info("Constructing building footprint spatial index")
+        poly_rtree_index = rtree.index.Index(
+            [(poly_fid, poly.bounds, None)
+             for poly_fid, poly in
+             building_shapely_polygon_lookup.items()])
+
     target_uhi_layer.StartTransaction()
     for feature in target_uhi_layer:
         feature_id = feature.GetFID()
@@ -782,22 +803,6 @@ def calculate_uhi_result_vector(
             feature.SetField('avg_hvls_v', float(heavy_loss))
 
         if energy_consumption_vector_path:
-            energy_consumption_vector = gdal.OpenEx(
-                energy_consumption_vector_path, gdal.OF_VECTOR)
-            energy_consumption_layer = energy_consumption_vector.GetLayer()
-
-            LOGGER.info('parsing building footprint geometry')
-            building_shapely_polygon_lookup = dict([
-                (poly_feat.GetFID(),
-                 shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
-                for poly_feat in energy_consumption_layer])
-
-            LOGGER.info("constructing building footprint spatial index")
-            poly_rtree_index = rtree.index.Index(
-                [(poly_fid, poly.bounds, None)
-                 for poly_fid, poly in
-                 building_shapely_polygon_lookup.items()])
-
             aoi_geometry = feature.GetGeometryRef()
             aoi_shapely_geometry = shapely.wkb.loads(
                 aoi_geometry.ExportToWkb())
