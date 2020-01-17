@@ -106,7 +106,7 @@ ARGS_SPEC = {
         "green_area_cooling_distance": {
             "name": "Green area max cooling distance effect (m)",
             "type": "number",
-            "required": True,  # TODO: is it?
+            "required": True,
             "validation_options": {
                 "expression": "value > 0",
             },
@@ -118,7 +118,7 @@ ARGS_SPEC = {
         "t_air_average_radius": {
             "name": "T_air moving average radius (m)",
             "type": "number",
-            "required": True,  # TODO: is it?
+            "required": True,
             "validation_options": {
                 "expression": "value > 0"
             },
@@ -237,7 +237,7 @@ def execute(args):
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
             'shade', 'kc', and 'albedo', and 'green_area'.
         args['green_area_cooling_distance'] (float): Distance (in m) over
-            which largegreen areas (> 2 ha) will have a cooling effect.
+            which large green areas (> 2 ha) will have a cooling effect.
         args['t_air_average_radius'] (float): radius of the averaging filter
             for turning T_air_nomix into T_air.
         args['uhi_max'] (float): Magnitude of the UHI effect.
