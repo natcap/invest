@@ -302,10 +302,13 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, churn_dir)], file_suffix)
 
-    n_workers = -1  # single process mode, but adjust if in args
-    if 'n_workers' in args:
+    try:
         n_workers = int(args['n_workers'])
-
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
         churn_dir, n_workers, reporting_interval=5.0)
 

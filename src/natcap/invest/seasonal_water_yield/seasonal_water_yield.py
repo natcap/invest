@@ -446,9 +446,13 @@ def _execute(args):
     output_dir = args['workspace_dir']
     utils.make_directories([intermediate_output_dir, cache_dir, output_dir])
 
-    n_workers = -1
-    if 'n_workers' in args:
+    try:
         n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
         cache_dir, n_workers, reporting_interval=5.0)
 
