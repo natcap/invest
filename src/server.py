@@ -36,7 +36,7 @@ MODEL_MODULE_MAP = {
     "scenario_generator_proximity": "scenario_gen_proximity",
     "scenic_quality": "scenic_quality.scenic_quality",
     "sdr": "sdr.sdr",
-    "seasonal_water_yield": "seasonal_water_yield",
+    "seasonal_water_yield": "seasonal_water_yield.seasonal_water_yield",
     "urban_flood_risk_mitigation": "urban_flood_risk_mitigation",
     "wave_energy": "wave_energy",
     "wind_energy": "wind_energy"
