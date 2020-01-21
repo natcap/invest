@@ -350,7 +350,7 @@ def execute(args):
     seasonality_constant = float(args['seasonality_constant'])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):

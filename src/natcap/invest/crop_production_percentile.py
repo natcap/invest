@@ -257,7 +257,7 @@ def execute(args):
 
     # Initialize a TaskGraph
     work_token_dir = os.path.join(
-        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_tmp_work_tokens')
+        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):

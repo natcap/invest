@@ -203,7 +203,7 @@ def execute(args):
         ``None``
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    task_cache_dir = os.path.join(args['workspace_dir'], '_tmp_work_tokens')
+    task_cache_dir = os.path.join(args['workspace_dir'], '_taskgraph_working_dir')
     utils.make_directories([args['workspace_dir'], task_cache_dir])
 
     if ('calculate_flow_direction' in args and
@@ -229,9 +229,11 @@ def execute(args):
 
     try:
         n_workers = int(args['n_workers'])
-    except (ValueError, KeyError):
-        LOGGER.info('Invalid n_workers parameter; defaulting to -1')
-        n_workers = -1
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
 
     graph = taskgraph.TaskGraph(task_cache_dir, n_workers=n_workers)
 

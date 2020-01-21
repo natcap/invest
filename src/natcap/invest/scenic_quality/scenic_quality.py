@@ -243,7 +243,7 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_dir)],
         file_suffix)
 
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):

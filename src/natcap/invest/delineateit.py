@@ -181,7 +181,10 @@ def execute(args):
     # same thread.
     try:
         n_workers = int(args['n_workers'])
-    except (KeyError, TypeError):
+    except (KeyError, TypeError, ValueError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
         n_workers = -1
     graph = taskgraph.TaskGraph(work_token_dir, n_workers=n_workers)
 
