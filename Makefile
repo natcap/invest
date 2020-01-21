@@ -274,7 +274,6 @@ ZIPDIRS = Annual_Water_Yield \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  Hydropower \
 		  Malaria \
 		  NDR \
 		  Pollination \
