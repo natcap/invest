@@ -306,7 +306,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     work_token_dir = os.path.join(
-        intermediate_output_dir, '_tmp_work_tokens')
+        intermediate_output_dir, '_taskgraph_working_dir')
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
@@ -334,7 +334,7 @@ def execute(args):
         # KeyError when n_workers is not present in args
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     if farm_vector_path is not None:

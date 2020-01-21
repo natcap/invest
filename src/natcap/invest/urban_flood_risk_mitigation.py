@@ -174,9 +174,13 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
-    n_workers = -1
-    if 'n_workers' in args and args['n_workers'] != '':
+    try:
         n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
 
     # Align LULC with soils

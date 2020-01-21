@@ -263,14 +263,14 @@ def execute(args):
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
         # KeyError when n_workers is not present in args
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
+        n_workers = -1  # Synchronous mode.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     cell_size_set = set()

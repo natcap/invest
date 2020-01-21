@@ -198,7 +198,7 @@ def execute(args):
     utils.make_directories(
         [output_dir, intermediate_output_dir, tmp_dir])
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
