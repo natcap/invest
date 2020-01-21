@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Habitat Risk Assessment model supports points and lines -- in addition to
+  previously supported polygons and rasters -- for habitats or stressors.
 * Updated raster percentile algorithms in Scenic Quality and Wave Energy
   models to use a more efficient and reliable raster percentile function
   from pygeoprocessing.
