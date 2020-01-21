@@ -1085,9 +1085,9 @@ def calculate_wbgt(
         wbgt[:] = TARGET_NODATA
         t_air_valid = t_air_array[valid_mask]
         e_i = (
-            avg_rel_humidity/100.0*6.105*numpy.exp(
-                17.27*t_air_valid/(237.7+t_air_valid)))
-        wbgt[valid_mask] = 0.567 * t_air_valid+0.393*e_i+3.94
+            (avg_rel_humidity / 100.0) * 6.105 * numpy.exp(
+                17.27 * (t_air_valid / (237.7 + t_air_valid))))
+        wbgt[valid_mask] = 0.567 * t_air_valid + 0.393 * e_i + 3.94
         return wbgt
 
     pygeoprocessing.raster_calculator(
