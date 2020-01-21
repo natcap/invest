@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 408434936d0a3e9d694c4100f8c998891c5d35c8
+GIT_SAMPLE_DATA_REPO_REV    := e6bda32404cc2cc314888eba545bafac23d7b72d
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -260,14 +260,14 @@ $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = Aquaculture \
-		  Freshwater \
-		  Marine \
-		  Terrestrial \
-		  carbon \
+ZIPDIRS = Annual_Water_Yield \
+		  Aquaculture \
+		  Base_Data \
+		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
+		  DelineateIt \
 		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
@@ -276,11 +276,14 @@ ZIPDIRS = Aquaculture \
 		  HabitatRiskAssess \
 		  Hydropower \
 		  Malaria \
-		  pollination \
+		  NDR \
+		  Pollination \
 		  recreation \
+		  RouteDEM \
 		  scenario_proximity \
 		  ScenicQuality \
-		  seasonal_water_yield \
+		  SDR \
+		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
 		  WaveEnergy \
@@ -288,9 +291,6 @@ ZIPDIRS = Aquaculture \
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
