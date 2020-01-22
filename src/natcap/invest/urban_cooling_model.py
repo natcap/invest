@@ -418,15 +418,14 @@ def execute(args):
         args['workspace_dir'], 'cc%s.tif' % file_suffix)
     cc_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([
-            (task_path_prop_map['shade'][1], 1),
-            (task_path_prop_map['albedo'][1], 1),
-            (eti_raster_path, 1),
-            (cc_weight_shade, 'raw'),
-            (cc_weight_albedo, 'raw'),
-            (cc_weight_eti, 'raw'),
-            ], calc_cc_op, cc_raster_path,
-            gdal.GDT_Float32, TARGET_NODATA),
+        args=([(task_path_prop_map['shade'][1], 1),
+               (task_path_prop_map['albedo'][1], 1),
+               (eti_raster_path, 1),
+               (cc_weight_shade, 'raw'),
+               (cc_weight_albedo, 'raw'),
+               (cc_weight_eti, 'raw')],
+              calc_cc_op, cc_raster_path,
+              gdal.GDT_Float32, TARGET_NODATA),
         target_path_list=[cc_raster_path],
         dependent_task_list=[
             task_path_prop_map['shade'][0], task_path_prop_map['albedo'][0],
@@ -455,10 +454,11 @@ def execute(args):
         args['workspace_dir'], 'T_air_nomix%s.tif' % file_suffix)
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
-        args=([
-            (t_ref_raw, 'raw'), (hm_raster_path, 1), (uhi_max_raw, 'raw')],
-            calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
-            TARGET_NODATA),
+        args=([(t_ref_raw, 'raw'),
+               (hm_raster_path, 1),
+               (uhi_max_raw, 'raw')],
+              calc_t_air_nomix_op, t_air_nomix_raster_path, gdal.GDT_Float32,
+              TARGET_NODATA),
         target_path_list=[t_air_nomix_raster_path],
         dependent_task_list=[hm_task, align_task],
         task_name='calculate T air nomix')
@@ -894,7 +894,7 @@ def calculate_energy_savings(
         last_time = _invoke_timed_callback(
             last_time, lambda: LOGGER.info(
                 "energy savings approximately %.1f%% complete ",
-                100.0 * float(target_index+1) /
+                100.0 * float(target_index + 1) /
                 target_building_layer.GetFeatureCount()),
             _LOGGING_PERIOD)
 
@@ -1029,7 +1029,7 @@ def calc_eti_op(
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = ~(
-        numpy.isclose(kc_array,  kc_nodata) |
+        numpy.isclose(kc_array, kc_nodata) |
         numpy.isclose(et0_array, et0_nodata))
     result[valid_mask] = (
         kc_array[valid_mask] * et0_array[valid_mask] / et_max)
