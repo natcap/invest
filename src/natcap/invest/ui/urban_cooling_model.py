@@ -84,6 +84,28 @@ class UrbanCoolingModel(model.InVESTModel):
         self.add_input(self.green_area_cooling_distance)
         self.green_area_cooling_distance.set_value("1000")
 
+        self.cc_method = inputs.Dropdown(
+            label=u'Cooling Capacity Calculation Method',
+            args_key=u'cc_method',
+            helptext=(
+                'The method selected here determines the predictor used for '
+                'night time temperature.  If <b>"Weighted Factors"</b> is '
+                'selected, the Cooling Capacity calculations will use the '
+                'weighted factors for shade, albedo and ETI as a predictor '
+                'for nighttime temperatures. <br/>'
+                'Alternatively, if <b>"Building Intensity"</b> is selected, '
+                'building intensity will be used as a predictor for nighttime '
+                'temperature instead of shade, albedo and ETI.'
+            ),
+            options=('Weighted Factors', 'Building Intensity'),
+            return_value_map={
+                'Weighted Factors': 'factors',
+                'Building Intensity': 'intensity',
+            })
+        self.cc_method.value_changed.connect(
+            self._enable_cc_options)
+        self.add_input(self.cc_method)
+
         self.valuation_container = inputs.Container(
             args_key=u'do_valuation',
             expandable=True,
@@ -152,6 +174,10 @@ class UrbanCoolingModel(model.InVESTModel):
         self.cooling_capacity_container.add_input(self.cc_weight_eti)
         self.cc_weight_eti.set_value("0.2")
 
+    def _enable_cc_options(self, new_value=None):
+        """Enable the Cooling Capacity options based on the CC method."""
+        self.cooling_capacity_container.set_interactive(
+            self.cc_method.value() == 'factors')
 
     def assemble_args(self):
         args = {
@@ -165,6 +191,7 @@ class UrbanCoolingModel(model.InVESTModel):
             self.uhi_max.args_key: self.uhi_max.value(),
             self.t_air_average_radius.args_key: self.t_air_average_radius.value(),
             self.green_area_cooling_distance.args_key: self.green_area_cooling_distance.value(),
+            self.cc_method.args_key: self.cc_method.value(),
             self.cc_weight_shade.args_key: self.cc_weight_shade.value(),
             self.cc_weight_albedo.args_key: self.cc_weight_albedo.value(),
             self.cc_weight_eti.args_key: self.cc_weight_eti.value(),
