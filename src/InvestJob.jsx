@@ -475,31 +475,38 @@ export class InvestJob extends React.Component {
   }
 }
 
-function argsToJsonFile(currentArgs, modulename, datastackPath) {
-  // TODO: should we use the datastack.py API to create the json? 
+function argsToJsonFile(currentArgs, moduleName, datastackPath) {
   // make simple args json for passing to python cli
+
   let args_dict = {};
   for (const argname in currentArgs) {
-    if (currentArgs[argname]['type'] === 'boolean') {
-      args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
-    } else {
-      args_dict[argname] = currentArgs[argname]['value'] || ''
+    if (currentArgs[argname]['value'] && currentArgs[argname]['value'] !== '') {
+      if (currentArgs[argname]['type'] === 'boolean') {
+        args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
+      } else {
+        args_dict[argname] = currentArgs[argname]['value']
+      }
     }
   }
-  const datastack = { // keys expected by datastack.py
-    args: args_dict,
-    model_name: modulename,
-    invest_version: '3.7.0',
-  };
 
-  const jsonContent = JSON.stringify(datastack, null, 2);
-  fs.writeFile(datastackPath, jsonContent, 'utf8', function (err) {
-    if (err) {
-        console.log("An error occured while writing JSON Object to File.");
-        return console.log(err);
+  request.post(
+    'http://localhost:5000/write_parameter_set_file',
+    { json: {
+        parameterSetPath: datastackPath, 
+        moduleName: moduleName,
+        relativePaths: true,
+        args: JSON.stringify(args_dict)
+      }
+    },
+    (error, response, body) => {
+      if (!error && response.statusCode == 200) {
+        console.log("JSON file was saved.");
+      } else {
+        console.log('Status: ' + response.statusCode);
+        console.log('Error: ' + error.message);
+      }
     }
-    console.log("JSON file was saved.");
-  });
+  );
 }
 
 function boolStringToBoolean(val) {

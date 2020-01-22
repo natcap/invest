@@ -106,6 +106,18 @@ def post_datastack_file():
     LOGGER.debug(result_dict)
     return json.dumps(result_dict)
 
+@app.route('/write_parameter_set_file', methods=['POST'])
+def write_parameter_set_file():
+    payload = request.get_json()
+    # LOGGER.debug(payload)
+    filepath = payload['parameterSetPath']
+    modulename = payload['moduleName']
+    args = json.loads(payload['args'])
+    LOGGER.debug(args)
+    relative_paths = payload['relativePaths']
+    natcap.invest.datastack.build_parameter_set(
+        args, modulename, filepath, relative=relative_paths)
+    return ('parameter set saved')
 
 # Borrowed this function from natcap.invest.model
 @app.route('/save_to_python', methods=['POST'])
