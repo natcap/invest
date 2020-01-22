@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+# InVEST sample data is re-organized to simply have one folder per model.
+  New datastacks were added for SDR, NDR, Seasonal Water Yield,
+  Annual Water Yield, DelineateIt, and Coastal Vulnerability.
 * Habitat Risk Assessment model supports points and lines -- in addition to
   previously supported polygons and rasters -- for habitats or stressors.
 * Updated raster percentile algorithms in Scenic Quality and Wave Energy
