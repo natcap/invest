@@ -326,9 +326,11 @@ export class InvestJob extends React.Component {
 
   batchUpdateArgs(args_dict) {
     // Update this.state.args in response to batch argument loading events
+
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    Object.keys(args_dict).forEach(argkey => {
-      argsMeta[argkey]['value'] = args_dict[argkey];
+    Object.keys(argsMeta).forEach(argkey => {
+      argsMeta[argkey]['value'] = args_dict[argkey] || '';
+      // label as touched even if the argkey was absent, since it's a batch load
       argsMeta[argkey]['touched'] = true;
     });
     this.setState({args: argsMeta},
