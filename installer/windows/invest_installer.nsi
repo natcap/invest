@@ -454,30 +454,30 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   ;here all the numbers indicate the size of the downloads in kilobytes
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
-    !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20
-    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 144
-    !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 9820
-    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 356
-    !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 191156
-    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 94336
-    !insertmacro downloadData "DelineateIt (optional)" "DelineateIt.zip" 191156
-    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
-    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8160
-    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 1896040
-    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
-    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
-    !insertmacro downloadData "Nutrient Delivery Ratio (optional)" "NDR.zip"
-    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
-    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5976
-    !insertmacro downloadData "RouteDEM (optional)" "RouteDEM.zip"
-    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
-    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
-    !insertmacro downloadData "Seasonal Water Yield: (optional)" "Seasonal_Water_Yield.zip" 512640
-    !insertmacro downloadData "Sediment Delivery Ratio (optional)" "SDR.zip"
-    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 694
-    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831616
-    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 8056
-    !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 102544
+    !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
+    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 116
+    !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
+    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 332
+    !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 169918
+    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 111898
+    !insertmacro downloadData "DelineateIt (optional)" "DelineateIt.zip" 536
+    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 637
+    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8060
+    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 186020
+    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1880
+    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 7791
+    !insertmacro downloadData "Nutrient Delivery Ratio (optional)" "NDR.zip" 10973
+    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 687
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5826
+    !insertmacro downloadData "RouteDEM (optional)" "RouteDEM.zip" 532
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7508
+    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 165792
+    !insertmacro downloadData "Seasonal Water Yield: (optional)" "Seasonal_Water_Yield.zip" 6044
+    !insertmacro downloadData "Sediment Delivery Ratio (optional)" "SDR.zip" 15853
+    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 688
+    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
+    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
+    !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322
 SectionGroupEnd
 
 Function .onInit
