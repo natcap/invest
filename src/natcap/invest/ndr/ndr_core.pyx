@@ -463,8 +463,8 @@ def ndr_eff_calculation(
 
                         # Only consider neighbor flow directions if the
                         # neighbor index is within the raster.
-                        if (neighbor_col > 0
-                                and neighbor_row > 0
+                        if (neighbor_col >= 0
+                                and neighbor_row >= 0
                                 and neighbor_col < n_cols
                                 and neighbor_row < n_rows):
                             neighbor_flow_dirs = (
