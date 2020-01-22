@@ -329,12 +329,18 @@ export class InvestJob extends React.Component {
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(argsMeta).forEach(argkey => {
+      // Loop over argsMeta instead of the args_dict extracted from the input
+      // in order to:
+        // 1) clear values for args that are absent from the input
+        // 2) skip over items from the input that have incorrect keys, otherwise
+        //    investValidate will crash on them.
       argsMeta[argkey]['value'] = args_dict[argkey] || '';
       // label as touched even if the argkey was absent, since it's a batch load
       argsMeta[argkey]['touched'] = true;
     });
+    
     this.setState({args: argsMeta},
-      () => { this.investValidate(JSON.stringify(args_dict)) }
+      () => { this.investValidate(argsValuesFromSpec(argsMeta)) }
     );
   }
 
