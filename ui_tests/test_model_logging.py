@@ -18,11 +18,13 @@ except ImportError:
     from StringIO import StringIO
     from urllib import urlencode
 
+from osgeo import gdal
+from osgeo import osr
+import pygeoprocessing
+import pygeoprocessing.testing
+import shapely.geometry
+import numpy
 import numpy.testing
-
-
-SAMPLE_DATA = os.path.join(
-    os.path.dirname(__file__), '..', 'data', 'invest-sample-data')
 
 
 class ModelLoggingTests(unittest.TestCase):
@@ -41,10 +43,36 @@ class ModelLoggingTests(unittest.TestCase):
         from natcap.invest import utils
         from natcap.invest.ui import usage
 
-        freshwater_dir = os.path.join(SAMPLE_DATA, 'Base_Data', 'Freshwater')
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(32731)  # WGS84 / UTM zone 31s
+        srs_wkt = srs.ExportToWkt()
+
+        raster_path = os.path.join(self.workspace_dir, 'raster.tif')
+        driver = gdal.GetDriverByName('GTiff')
+        raster_array = numpy.ones((20, 20))
+        raster = driver.Create(
+            raster_path, raster_array.shape[1], raster_array.shape[0],
+            1, gdal.GDT_Byte, options=(
+                'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=LZW',
+                'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
+        raster.SetProjection(srs_wkt)
+        raster_band = raster.GetRasterBand(1)
+        raster_band.WriteArray(raster_array)
+        raster_band.SetNoDataValue(255)
+        raster_geotransform = [2, 2, 0, -2, 0, -2]
+        raster.SetGeoTransform(raster_geotransform)
+        raster = None
+
+        vector_path = os.path.join(self.workspace_dir, 'vector.gpkg')
+        pygeoprocessing.testing.create_vector_on_disk(
+            [shapely.geometry.LineString([(4, -4), (10, -10)])],
+            projection=srs_wkt,
+            vector_format='GPKG',
+            filename=vector_path)
+
         model_args = {
-            'raster': os.path.join(freshwater_dir, 'dem'),
-            'vector': os.path.join(freshwater_dir, 'subwatersheds.shp'),
+            'raster': raster_path,
+            'vector': vector_path,
             'not_a_gis_input': 'foobar'
         }
 
@@ -53,9 +81,9 @@ class ModelLoggingTests(unittest.TestCase):
             bb_inter, bb_union = usage._calculate_args_bounding_box(model_args)
 
         numpy.testing.assert_allclose(
-            bb_inter, [-123.584877, 44.273852, -123.400091, 44.726233])
+            bb_inter, [-87.234108, -85.526151, -87.233424, -85.526205])
         numpy.testing.assert_allclose(
-            bb_union, [-123.658275, 44.415778, -123.253863, 44.725814])
+            bb_union, [-87.237771, -85.526132, -87.23321 , -85.526491])
 
         # Verify that no errors were raised in calculating the bounding boxes.
         self.assertTrue('ERROR' not in open(output_logfile).read(),
