@@ -23,7 +23,7 @@ class UCMTests(unittest.TestCase):
         """Clean up remaining files."""
         shutil.rmtree(self.workspace_dir)
 
-    def test_ucm_regression(self):
+    def test_ucm_regression_factors(self):
         """UCM: regression."""
         import natcap.invest.urban_cooling_model
         args = {
@@ -47,7 +47,7 @@ class UCMTests(unittest.TestCase):
             'cc_weight_albedo': '0.2',
             'cc_weight_eti': '0.2',
             'n_workers': -1,
-            }
+        }
 
         natcap.invest.urban_cooling_model.execute(args)
         results_vector = gdal.OpenEx(os.path.join(

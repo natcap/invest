@@ -354,8 +354,13 @@ def execute(args):
         task_name='align rasters')
 
     task_path_prop_map = {}
+    reclassification_props = ('kc', 'green_area')
+    if args['cc_method'] == 'factors':
+        reclassification_props += ('shade', 'albedo')
+    else:
+        reclassification_props += ('building_intensity',)
 
-    for prop in ('kc', 'shade', 'albedo', 'green_area'):
+    for prop in reclassification_props:
         prop_map = dict(
             (lucode, x[prop])
             for lucode, x in biophysical_lucode_map.items())
@@ -416,47 +421,60 @@ def execute(args):
 
     align_task.join()
 
-    # Evapotranspiration index (Equation #1)
-    ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
-    ref_eto_band = ref_eto_raster.GetRasterBand(1)
-    _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
-    ref_eto_max = numpy.round(ref_eto_max, decimals=9)
-    ref_eto_band = None
-    ref_eto_raster = None
-
-    eto_nodata = pygeoprocessing.get_raster_info(
-        args['ref_eto_raster_path'])['nodata'][0]
-    eti_raster_path = os.path.join(
-        args['workspace_dir'], 'eti%s.tif' % file_suffix)
-    eti_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=(
-            [(task_path_prop_map['kc'][1], 1), (TARGET_NODATA, 'raw'),
-             (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
-             (ref_eto_max, 'raw'), (TARGET_NODATA, 'raw')],
-            calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
-        target_path_list=[eti_raster_path],
-        dependent_task_list=[task_path_prop_map['kc'][0]],
-        task_name='calculate eti')
-
-    # Cooling Capacity calculations (Equation #2)
     cc_raster_path = os.path.join(
         args['workspace_dir'], 'cc%s.tif' % file_suffix)
-    cc_task = task_graph.add_task(
-        func=pygeoprocessing.raster_calculator,
-        args=([(task_path_prop_map['shade'][1], 1),
-               (task_path_prop_map['albedo'][1], 1),
-               (eti_raster_path, 1),
-               (cc_weight_shade, 'raw'),
-               (cc_weight_albedo, 'raw'),
-               (cc_weight_eti, 'raw')],
-              calc_cc_op, cc_raster_path,
-              gdal.GDT_Float32, TARGET_NODATA),
-        target_path_list=[cc_raster_path],
-        dependent_task_list=[
-            task_path_prop_map['shade'][0], task_path_prop_map['albedo'][0],
-            eti_task],
-        task_name='calculate cc index')
+    if args['cc_method'] == 'factors':
+        # Evapotranspiration index (Equation #1)
+        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
+        ref_eto_band = ref_eto_raster.GetRasterBand(1)
+        _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
+        ref_eto_max = numpy.round(ref_eto_max, decimals=9)
+        ref_eto_band = None
+        ref_eto_raster = None
+
+        eto_nodata = pygeoprocessing.get_raster_info(
+            args['ref_eto_raster_path'])['nodata'][0]
+        eti_raster_path = os.path.join(
+            args['workspace_dir'], 'eti%s.tif' % file_suffix)
+        eti_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=(
+                [(task_path_prop_map['kc'][1], 1), (TARGET_NODATA, 'raw'),
+                 (aligned_ref_eto_raster_path, 1), (eto_nodata, 'raw'),
+                 (ref_eto_max, 'raw'), (TARGET_NODATA, 'raw')],
+                calc_eti_op, eti_raster_path, gdal.GDT_Float32, TARGET_NODATA),
+            target_path_list=[eti_raster_path],
+            dependent_task_list=[task_path_prop_map['kc'][0]],
+            task_name='calculate eti')
+
+        # Cooling Capacity calculations (Equation #2)
+        cc_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([(task_path_prop_map['shade'][1], 1),
+                   (task_path_prop_map['albedo'][1], 1),
+                   (eti_raster_path, 1),
+                   (cc_weight_shade, 'raw'),
+                   (cc_weight_albedo, 'raw'),
+                   (cc_weight_eti, 'raw')],
+                  calc_cc_op_factors, cc_raster_path,
+                  gdal.GDT_Float32, TARGET_NODATA),
+            target_path_list=[cc_raster_path],
+            dependent_task_list=[
+                task_path_prop_map['shade'][0], task_path_prop_map['albedo'][0],
+                eti_task],
+            task_name='calculate cc index (weighted factors)')
+    else:
+        # args['cc_method'] must be 'intensity', so we use a modified CC
+        # function.
+        cc_task = task_graph.add_task(
+            func=pygeoprocessing.raster_calculator,
+            args=([(task_path_prop_map['building_intensity'][1], 1)],
+                  calc_cc_op_intensity, cc_raster_path,
+                  gdal.GDT_Float32, TARGET_NODATA),
+            target_path_list=[cc_raster_path],
+            dependent_task_list=[
+                task_path_prop_map['building_intensity'][0]],
+            task_name='calculate cc index (intensity)')
 
     # Compute Heat Mitigation (HM) index.
     #
@@ -1018,10 +1036,10 @@ def calc_t_air_nomix_op(t_ref_val, hm_array, uhi_max):
     return result
 
 
-def calc_cc_op(
+def calc_cc_op_factors(
         shade_array, albedo_array, eti_array, cc_weight_shade,
         cc_weight_albedo, cc_weight_eti):
-    """Calculate the cooling capacity index.
+    """Calculate the cooling capacity index using weighted factors.
 
     Parameters:
         shade_array (numpy.ndarray): array of shade index values 0..1
@@ -1046,6 +1064,23 @@ def calc_cc_op(
         cc_weight_shade*shade_array[valid_mask] +
         cc_weight_albedo*albedo_array[valid_mask] +
         cc_weight_eti*eti_array[valid_mask])
+    return result
+
+
+def calc_cc_op_intensity(intensity_array):
+    """Calculate the cooling capacity index using building intensity.
+
+    Parameters:
+        intensity_array (numpy.ndarray): array of intensity values.
+
+    Returns:
+        A numpy array of ``1 - intensity_array``.
+
+    """
+    result = numpy.empty(intensity_array.shape, dtype=numpy.float32)
+    result[:] = TARGET_NODATA
+    valid_mask = ~numpy.isclose(intensity_array, TARGET_NODATA)
+    result[valid_mask] = 1.0 - intensity_array[valid_mask]
     return result
 
 
