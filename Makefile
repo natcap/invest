@@ -254,9 +254,6 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
-
-# Zipping up the sample data zipfiles is a little odd because of the presence
-# of the Base_Data folder, where its subdirectories are zipped up separately.
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
@@ -276,7 +273,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  HabitatRiskAssess \
 		  Malaria \
 		  NDR \
-		  Pollination \
+		  pollination \
 		  recreation \
 		  RouteDEM \
 		  scenario_proximity \
@@ -287,6 +284,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  UrbanFloodMitigation \
 		  WaveEnergy \
 		  WindEnergy
+
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
