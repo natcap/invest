@@ -93,8 +93,7 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "validation_options": {
-                "required_fields": ["lucode", "shade", "kc", "albedo",
-                                    "green_area"],
+                "required_fields": ["lucode", "kc", "green_area"],
             },
             "about": (
                 "A CSV table containing model information corresponding "
@@ -182,6 +181,24 @@ ARGS_SPEC = {
                 "for various types of buildings, in kW/degC."
             ),
         },
+        "cc_method": {
+            "name": "Cooling capacity calculation method",
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ['factors', 'intensity'],
+            },
+            "about": (
+                'The method selected here determines the predictor used for '
+                'night time temperature.  If <b>"Weighted Factors"</b> is '
+                'selected, the Cooling Capacity calculations will use the '
+                'weighted factors for shade, albedo and ETI as a predictor '
+                'for nighttime temperatures. <br/>'
+                'Alternatively, if <b>"Building Intensity"</b> is selected, '
+                'building intensity will be used as a predictor for nighttime '
+                'temperature instead of shade, albedo and ETI.'
+            ),
+        },
         "cc_weight_shade": {
             "name": "Cooling capacity: adjust shade weight",
             "type": "number",
@@ -235,7 +252,10 @@ def execute(args):
         args['aoi_vector_path'] (str): path to desired AOI.
         args['biophysical_table_path'] (str): table to map landcover codes to
             Shade, Kc, and Albedo values. Must contain the fields 'lucode',
-            'shade', 'kc', and 'albedo', and 'green_area'.
+            'kc', and 'green_area'.  If ``args['cc_method'] == 'factors'``,
+            then this table must also contain the fields 'shade' and
+            'albedo'.  If ``args['cc_method'] == 'intensity'``, then this
+            table must also contain the field 'building_intensity'.
         args['green_area_cooling_distance'] (float): Distance (in m) over
             which large green areas (> 2 ha) will have a cooling effect.
         args['t_air_average_radius'] (float): radius of the averaging filter
@@ -252,6 +272,12 @@ def execute(args):
             'do_valuation') path to a table that maps building types to
             energy consumption. Must contain at least the fields 'type' and
             'consumption'.
+        args['cc_method'] (str): Either "intensity" or "factors".  If
+            "intensity", then the "building_intensity" column must be
+            present in the biophysical table.  If "factors", then
+            ``args['cc_weight_shade']``, ``args['cc_weight_albedo']``,
+            ``args['cc_weight_eti']`` may be set to alternative weights
+            if desired.
         args['cc_weight_shade'] (str/float): floating point number
             representing the relative weight to apply to shade when
             calculating the cooling index. Default: 0.6
@@ -1055,8 +1081,32 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    return validation.validate(args, ARGS_SPEC['args'],
-                               ARGS_SPEC['args_with_spatial_overlap'])
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    if ('biophysical_table_path' not in invalid_keys and
+            'cc_method' not in invalid_keys):
+        if args['cc_method'] == 'factors':
+            extra_biophysical_keys = ['shade', 'albedo']
+        else:
+            # args['cc_method'] must be 'intensity'.
+            # If args['cc_method'] isn't one of these two allowed values
+            # ('intensity' or 'factors'), it'll be caught by
+            # validation.validate due to the allowed values stated in
+            # ARGS_SPEC.
+            extra_biophysical_keys = ['building_intensity']
+
+        required_keys = (
+            extra_biophysical_keys +
+            ARGS_SPEC['args']['biophysical_table_path'][
+                'validation_options']['required_fields'][:])
+        error_msg = validation.check_csv(
+            args['biophysical_table_path'], required_fields=required_keys)
+        if error_msg:
+            validation_warnings.append((['biophysical_table_path'], error_msg))
+
+    return validation_warnings
 
 
 def calculate_wbgt(

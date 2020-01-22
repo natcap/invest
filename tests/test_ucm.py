@@ -37,6 +37,7 @@ class UCMTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
+            'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -153,6 +154,7 @@ class UCMTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
+            'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -200,6 +202,7 @@ class UCMTests(unittest.TestCase):
             'biophysical_table_path': os.path.join(REGRESSION_DATA, "biophysical_table_ucm.csv"),
             'green_area_cooling_distance': 1000.0,
             'uhi_max': 3,
+            'cc_method': 'factors',
             'do_valuation': True,
             't_air_average_radius': "1000.0",
             'building_vector_path': os.path.join(REGRESSION_DATA, "buildings_clip.gpkg"),
@@ -226,6 +229,12 @@ class UCMTests(unittest.TestCase):
         result = natcap.invest.urban_cooling_model.validate(args)
         self.assertEqual(result[0][1], ("Value 'not a number' could not be "
                                         "interpreted as a number"))
+
+        args['cc_method'] = 'nope'
+        result = natcap.invest.urban_cooling_model.validate(args)
+        self.assertEqual(
+            result[0][1], ("Value must be one of: ['factors', "
+                           "'intensity']"))
 
     def test_flat_disk_kernel(self):
         """UCM: test flat disk kernel."""
