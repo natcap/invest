@@ -15,17 +15,17 @@ environment:
     # For Python versions available on Appveyor, see
     # https://www.appveyor.com/docs/windows-images-software/#python
 
-    - PYTHON: "C:\\Python37"
-      TARGET: "test"
+    # - PYTHON: "C:\\Python37"
+    #   TARGET: "test"
 
-    - PYTHON: "C:\\Python37-x64"
-      TARGET: "test"
+    # - PYTHON: "C:\\Python37-x64"
+    #   TARGET: "test"
 
-    - PYTHON: "C:\\Python37"
-      TARGET: "test_ui"
+    # - PYTHON: "C:\\Python37"
+    #   TARGET: "test_ui"
 
-    - PYTHON: "C:\\Python37-x64"
-      TARGET: "validate_sampledata"
+    # - PYTHON: "C:\\Python37-x64"
+    #   TARGET: "validate_sampledata"
 
     - PYTHON: "C:\\Python37"
       TARGET: "appveyor_binaries"
