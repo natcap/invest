@@ -1,5 +1,7 @@
 import React from 'react';
 
+import Col from 'react-bootstrap/Col';
+import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
@@ -21,19 +23,17 @@ export class SettingsModal extends React.Component {
 
   componentDidUpdate(prevProps) {
     if (this.props.investSettings !== prevProps.investSettings) {
-      console.log(this.props.investSettings);
       const globalSettings = Object.assign({}, this.props.investSettings)
       this.setState({localSettings: globalSettings})
     }
   }
 
   handleClose() {
-    // reset the local settings from the app's state
-    const localSettings = Object.assign({}, this.props.investSettings)
-    console.log(localSettings);
+    // reset the local settings from the app's state because we closed w/o save
+    const appSettings = Object.assign({}, this.props.investSettings)
   	this.setState({
       show: false,
-      localSettings: localSettings
+      localSettings: appSettings
     });
   };
 
@@ -50,8 +50,7 @@ export class SettingsModal extends React.Component {
   handleChange(event) {
     let newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value
-    console.log(event.target.name);
-    console.log(event.target.value);
+
     this.setState({
       localSettings: newSettings
     });
@@ -61,8 +60,10 @@ export class SettingsModal extends React.Component {
     const logLevelOptions = [
       'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
 
+    const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
+
     return (
-      <>
+      <React.Fragment>
         <Button variant="primary" onClick={this.handleShow}>
           settings
         </Button>
@@ -73,17 +74,33 @@ export class SettingsModal extends React.Component {
               <Modal.Title>InVEST Settings</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <Form.Group>
-                <Form.Label column sm="3">Logging threshold</Form.Label>
-                <Form.Control
-                  as='select'
-                  name='loggingLevel'
-                  value={this.state.localSettings.loggingLevel}
-                  onChange={this.handleChange}>
-                  {logLevelOptions.map(opt =>
-                    <option value={opt} key={opt}>{opt}</option>
-                  )}
-                </Form.Control>
+              <Form.Group as={Row}>
+                <Form.Label column sm="8">Logging threshold</Form.Label>
+                <Col sm="3">
+                  <Form.Control
+                    as='select'
+                    name='loggingLevel'
+                    value={this.state.localSettings.loggingLevel}
+                    onChange={this.handleChange}>
+                    {logLevelOptions.map(opt =>
+                      <option value={opt} key={opt}>{opt}</option>
+                    )}
+                  </Form.Control>
+                </Col>
+              </Form.Group>
+              <Form.Group as={Row}>
+                <Form.Label column sm="8">
+                  Taskgraph n_workers parameter (must be an integer >= -1)
+                </Form.Label>
+                <Col sm="3">
+                  <Form.Control
+                    name="nWorkers"
+                    type="text" 
+                    value={this.state.localSettings.nWorkers}
+                    onChange={this.handleChange}
+                    isInvalid={!nWorkersIsValid}
+                  />
+                </Col>
               </Form.Group>
             </Modal.Body>
             <Modal.Footer>
@@ -93,13 +110,19 @@ export class SettingsModal extends React.Component {
               <Button 
                 variant="primary"
                 onClick={this.handleSubmit}
-                type="submit">
+                type="submit"
+                disabled={!nWorkersIsValid}>
                 Save Changes
               </Button>
             </Modal.Footer>
           </Form>
         </Modal>
-      </>
+      </React.Fragment>
     )
   }
+}
+
+function validateNWorkers(value) {
+  const nInt = parseInt(value)
+  return Number.isInteger(nInt) && nInt >= -1
 }

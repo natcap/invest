@@ -413,7 +413,7 @@ export class InvestJob extends React.Component {
           <Nav.Link eventKey="docs">Docs</Nav.Link>
         </Nav.Item>
       </Nav>
-      <Form inline onSubmit={this.saveState}>
+      <Form inline onSubmit={this.saveState} className="mx-3">
           <Form.Control
             type="text"
             placeholder={this.state.sessionID}
@@ -426,12 +426,12 @@ export class InvestJob extends React.Component {
             Save Session
           </Button>
       </Form>
-      <SettingsModal 
+      <SettingsModal
         saveSettings={this.props.saveSettings}
         investSettings={this.props.investSettings}
       />
       </Navbar>
-      <TabContent>
+      <TabContent className="mt-3">
       <TabPane eventKey="models" title="Home">
         <ModelsTab
           investList={this.props.investList}

@@ -43,10 +43,8 @@ export default class App extends React.Component {
   }
 
   saveSettings(settings) {
-    console.log(settings);
     this.setState({
-      nWorkers: settings.nWorkers,
-      loggingLevel: settings.loggingLevel
+      investSettings: settings
     });
   }
 
@@ -85,3 +83,4 @@ function findRecentSessions(cache_dir) {
     );
   });
 }
+
