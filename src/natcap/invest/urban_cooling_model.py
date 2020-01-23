@@ -1275,9 +1275,15 @@ def hm_op(cc_array, green_area_sum, cc_park_array, green_area_threshold):
         otherwise cc_park array is returned.
 
     """
-    return numpy.where(
-        (cc_array < cc_park_array) & (green_area_sum > green_area_threshold),
-        cc_park_array, cc_array)
+    result = numpy.empty(cc_array.shape, dtype=numpy.float32)
+    result[:] = TARGET_NODATA
+    valid_mask = ~(numpy.isclose(cc_array, TARGET_NODATA) &
+                   numpy.isclose(cc_park_array, TARGET_NODATA))
+    cc_mask = ((cc_array >= cc_park_array) |
+               (green_area_sum < green_area_threshold))
+    result[cc_mask & valid_mask] = cc_array[cc_mask & valid_mask]
+    result[~cc_mask & valid_mask] = cc_park_array[~cc_mask & valid_mask]
+    return result
 
 
 def map_work_loss(
