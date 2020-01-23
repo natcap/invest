@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := ecc8f587d2a0838e1d9cb87d8eb668ab76ff4720
+GIT_SAMPLE_DATA_REPO_REV    := 4f32a49eda78894f5994424ceedf5b54e7ca02fa
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
