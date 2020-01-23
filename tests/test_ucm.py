@@ -24,7 +24,7 @@ class UCMTests(unittest.TestCase):
         shutil.rmtree(self.workspace_dir)
 
     def test_ucm_regression_factors(self):
-        """UCM: regression."""
+        """UCM: regression: CC Factors."""
         import natcap.invest.urban_cooling_model
         args = {
             'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
@@ -139,6 +139,66 @@ class UCMTests(unittest.TestCase):
         finally:
             buildings_layer = None
             buildings_vector = None
+
+    def test_ucm_regression_intensity(self):
+        """UCM: regression: CC Building Intensity."""
+        import natcap.invest.urban_cooling_model
+        args = {
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'results_suffix': 'test_suffix',
+            't_ref': 35.0,
+            't_obs_raster_path': os.path.join(
+                REGRESSION_DATA, "Tair_Sept.tif"),
+            'lulc_raster_path': os.path.join(
+                REGRESSION_DATA, "LULC_SFBA.tif"),
+            'ref_eto_raster_path': os.path.join(
+                REGRESSION_DATA, "ETo_SFBA.tif"),
+            'aoi_vector_path': os.path.join(
+                REGRESSION_DATA, "watersheds_clippedDraft_Watersheds_SFEI.gpkg"),
+            'biophysical_table_path': os.path.join(
+                REGRESSION_DATA, "biophysical_table_ucm.csv"),
+            'green_area_cooling_distance': 1000.0,
+            'uhi_max': 3,
+            'cc_method': 'intensity',  # main difference in the reg. tests
+            'do_valuation': True,
+            't_air_average_radius': "1000.0",
+            'building_vector_path': os.path.join(
+                REGRESSION_DATA, "buildings_clip.gpkg"),
+            'energy_consumption_table_path': os.path.join(
+                REGRESSION_DATA, "Energy.csv"),
+            'avg_rel_humidity': '30.0',
+            'cc_weight_shade': '0.6',
+            'cc_weight_albedo': '0.2',
+            'cc_weight_eti': '0.2',
+            'n_workers': -1,
+        }
+
+        natcap.invest.urban_cooling_model.execute(args)
+        results_vector = gdal.OpenEx(os.path.join(
+            args['workspace_dir'],
+            'uhi_results_%s.shp' % args['results_suffix']))
+        results_layer = results_vector.GetLayer()
+        results_feature = results_layer.GetFeature(1)
+
+        expected_results = {
+            'avg_cc': 0.428302583240327,
+            'avg_tmp_v': 36.60869797039769,
+            'avg_tmp_an': 1.608697970397692,
+            'avd_eng_cn': 18787.273592787547,
+            'avg_wbgt_v': 36.60869797039769,
+            'avg_ltls_v': 28.744239631336406,
+            'avg_hvls_v': 75.000000000000000,
+        }
+        try:
+            for key, expected_value in expected_results.items():
+                actual_value = float(results_feature.GetField(key))
+                self.assertAlmostEqual(
+                    actual_value, expected_value,
+                    msg='%s should be close to %f, actual: %f' % (
+                        key, expected_value, actual_value))
+        finally:
+            results_layer = None
+            results_vector = None
 
     def test_bad_building_type(self):
         """UCM: error on bad building type."""
