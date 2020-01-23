@@ -446,7 +446,7 @@ Var INSTALLER_DIR
       SectionEnd
 !macroend
 
-SectionGroup /e "InVEST Datasets" SEC_DATA
+Section "InVEST Datasets" SEC_DATA
   ;here all the numbers indicate the size of the downloads in kilobytes
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
@@ -480,7 +480,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
    Push $0
    Call DumpLog
 
-SectionGroupEnd
+SectionEnd
 
 Function .onInit
  ${GetOptions} $CMDLINE "/?" $0
