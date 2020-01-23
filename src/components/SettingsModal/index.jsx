@@ -58,7 +58,7 @@ export class SettingsModal extends React.Component {
 
   render() {
     const logLevelOptions = [
-      'NOTSET', 'DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL'];
+      'DEBUG', 'INFO', 'WARNING', 'ERROR'];
 
     const nWorkersIsValid = validateNWorkers(this.state.localSettings.nWorkers)
 

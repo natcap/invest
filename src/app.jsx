@@ -29,7 +29,7 @@ export default class App extends React.Component {
         investList: investList,
         recentSessions: recentSessions,
         investSettings: {
-          nWorkers: -1,
+          nWorkers: '-1',
           loggingLevel: 'INFO',
         }
       });

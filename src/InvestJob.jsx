@@ -122,7 +122,18 @@ export class InvestJob extends React.Component {
     const datastackPath = path.join(
       TEMP_DIR, this.state.sessionID + '.json')
 
-    argsToJsonFile(this.state.args, this.state.modelSpec.module, datastackPath);
+    // to translate to the invest CLI's verbosity flag:
+    const loggingLevelLookup = {
+      'DEBUG':   '--debug',
+      'INFO':    '-vvv',
+      'WARNING': '-vv',
+      'ERROR':   '-v',
+    }
+    const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
+
+    argsToJsonFile(
+      this.state.args, this.props.investSettings.nWorkers,
+      this.state.modelSpec.module, datastackPath);
     
     this.setState(
       {
@@ -134,7 +145,7 @@ export class InvestJob extends React.Component {
     );
 
     const modelRunName = this.state.modelSpec.module.split('.').pop()
-    const cmdArgs = ['-vvv', 'run', modelRunName, '--headless', '-d ' + datastackPath]
+    const cmdArgs = [verbosity, 'run', modelRunName, '--headless', '-d ' + datastackPath]
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: '.',
         shell: true, // without true, IOError when datastack.py loads json
@@ -481,8 +492,12 @@ export class InvestJob extends React.Component {
   }
 }
 
-function argsToJsonFile(currentArgs, moduleName, datastackPath) {
+function argsToJsonFile(currentArgs, n_workers, moduleName, datastackPath) {
   // make simple args json for passing to python cli
+
+  // the n_workers value is set from the app's settings, so it still
+  // needs it's value inserted into the args dict
+  currentArgs['n_workers']['value'] = n_workers;
 
   let args_dict = {};
   for (const argname in currentArgs) {
