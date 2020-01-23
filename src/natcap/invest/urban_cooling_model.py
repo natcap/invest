@@ -294,9 +294,9 @@ def execute(args):
 
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-    temporary_working_dir = os.path.join(
-        args['workspace_dir'], 'temp_working_dir')
-    utils.make_directories([args['workspace_dir'], temporary_working_dir])
+    intermediate_dir = os.path.join(
+        args['workspace_dir'], 'intermediate')
+    utils.make_directories([args['workspace_dir'], intermediate_dir])
     biophysical_lucode_map = utils.build_lookup_from_csv(
         args['biophysical_table_path'], 'lucode', to_lower=True,
         warn_if_missing=True)
@@ -318,16 +318,22 @@ def execute(args):
     # Cast to a float upfront in case of casting errors.
     t_air_average_radius_raw = float(args['t_air_average_radius'])
 
-    n_workers = -1
-    if 'n_workers' in args:
+    try:
         n_workers = int(args['n_workers'])
-    task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args.
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+
+    task_graph = taskgraph.TaskGraph(
+        os.path.join(intermediate_dir, '_taskgraph_working_dir'), n_workers)
 
     # align all the input rasters.
     aligned_lulc_raster_path = os.path.join(
-        temporary_working_dir, 'lulc%s.tif' % file_suffix)
+        intermediate_dir, 'lulc%s.tif' % file_suffix)
     aligned_ref_eto_raster_path = os.path.join(
-        temporary_working_dir, 'ref_eto%s.tif' % file_suffix)
+        intermediate_dir, 'ref_eto%s.tif' % file_suffix)
 
     lulc_raster_info = pygeoprocessing.get_raster_info(
         args['lulc_raster_path'])
@@ -336,7 +342,7 @@ def execute(args):
 
     # reproject vector inputs
     aligned_aoi_vector_path = os.path.join(
-        temporary_working_dir, 'aoi%s.tif')
+        intermediate_dir, 'aoi%s.tif')
 
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
@@ -366,7 +372,7 @@ def execute(args):
             for lucode, x in biophysical_lucode_map.items())
 
         prop_raster_path = os.path.join(
-            temporary_working_dir, '%s%s.tif' % (prop, file_suffix))
+            intermediate_dir, '%s%s.tif' % (prop, file_suffix))
         prop_task = task_graph.add_task(
             func=pygeoprocessing.reclassify_raster,
             args=(
@@ -381,7 +387,7 @@ def execute(args):
     green_area_decay_kernel_distance = int(numpy.round(
         float(args['green_area_cooling_distance']) / cell_size))
     cc_park_raster_path = os.path.join(
-        temporary_working_dir, 'cc_park%s.tif' % file_suffix)
+        intermediate_dir, 'cc_park%s.tif' % file_suffix)
     cc_park_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
@@ -395,7 +401,7 @@ def execute(args):
 
     # Calculate the area of greenspace within a search radius of each pixel.
     area_kernel_path = os.path.join(
-        temporary_working_dir, 'area_kernel%s.tif' % file_suffix)
+        intermediate_dir, 'area_kernel%s.tif' % file_suffix)
     area_kernel_task = task_graph.add_task(
         func=flat_disk_kernel,
         args=(green_area_decay_kernel_distance, area_kernel_path),
@@ -403,7 +409,7 @@ def execute(args):
         task_name='area kernel')
 
     green_area_sum_raster_path = os.path.join(
-        temporary_working_dir, 'green_area_sum%s.tif' % file_suffix)
+        intermediate_dir, 'green_area_sum%s.tif' % file_suffix)
     green_area_sum_task = task_graph.add_task(
         func=pygeoprocessing.convolve_2d,
         args=(
@@ -411,7 +417,7 @@ def execute(args):
             (area_kernel_path, 1),
             green_area_sum_raster_path),
         kwargs={
-            'working_dir': temporary_working_dir,
+            'working_dir': intermediate_dir,
             'ignore_nodata': True},
         target_path_list=[green_area_sum_raster_path],
         dependent_task_list=[
@@ -522,7 +528,7 @@ def execute(args):
         task_name='calculate T air')
 
     intermediate_aoi_vector_path = os.path.join(
-        temporary_working_dir, 'intermediate_aoi%s.shp' % file_suffix)
+        intermediate_dir, 'intermediate_aoi%s.shp' % file_suffix)
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -533,7 +539,7 @@ def execute(args):
         task_name='reproject and label aoi')
 
     cc_aoi_stats_pickle_path = os.path.join(
-        temporary_working_dir, 'cc_ref_aoi_stats.pickle')
+        intermediate_dir, 'cc_ref_aoi_stats.pickle')
     _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
@@ -544,7 +550,7 @@ def execute(args):
         task_name='pickle cc ref stats')
 
     t_air_aoi_stats_pickle_path = os.path.join(
-        temporary_working_dir, 't_air_aoi_stats.pickle')
+        intermediate_dir, 't_air_aoi_stats.pickle')
     _ = task_graph.add_task(
         func=pickle_zonal_stats,
         args=(
@@ -562,7 +568,7 @@ def execute(args):
         LOGGER.info('Starting valuation')
         # work productivity
         wbgt_raster_path = os.path.join(
-            temporary_working_dir, 'wbgt%s.tif' % file_suffix)
+            intermediate_dir, 'wbgt%s.tif' % file_suffix)
         wbgt_task = task_graph.add_task(
             func=calculate_wbgt,
             args=(
@@ -573,10 +579,10 @@ def execute(args):
             task_name='vapor pressure')
 
         light_work_loss_raster_path = os.path.join(
-            temporary_working_dir,
+            intermediate_dir,
             'light_work_loss_percent%s.tif' % file_suffix)
         heavy_work_loss_raster_path = os.path.join(
-            temporary_working_dir,
+            intermediate_dir,
             'heavy_work_loss_percent%s.tif' % file_suffix)
 
         loss_task_path_map = {}
@@ -592,7 +598,7 @@ def execute(args):
             loss_task_path_map[loss_type] = (work_loss_task, loss_raster_path)
 
         intermediate_building_vector_path = os.path.join(
-            temporary_working_dir,
+            intermediate_dir,
             'intermediate_building_vector%s.shp' % file_suffix)
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
@@ -605,7 +611,7 @@ def execute(args):
 
         # zonal stats over buildings for t_air
         t_air_stats_pickle_path = os.path.join(
-            temporary_working_dir, 't_air_stats.pickle')
+            intermediate_dir, 't_air_stats.pickle')
         pickle_t_air_task = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
@@ -632,7 +638,7 @@ def execute(args):
 
         # pickle WBGI
         wbgt_stats_pickle_path = os.path.join(
-            temporary_working_dir, 'wbgt_stats.pickle')
+            intermediate_dir, 'wbgt_stats.pickle')
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
@@ -644,7 +650,7 @@ def execute(args):
             task_name='pickle WBgt stats')
         # pickle light loss
         light_loss_stats_pickle_path = os.path.join(
-            temporary_working_dir, 'light_loss_stats.pickle')
+            intermediate_dir, 'light_loss_stats.pickle')
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
@@ -657,7 +663,7 @@ def execute(args):
             task_name='pickle light_loss stats')
 
         heavy_loss_stats_pickle_path = os.path.join(
-            temporary_working_dir, 'heavy_loss_stats.pickle')
+            intermediate_dir, 'heavy_loss_stats.pickle')
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
