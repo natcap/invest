@@ -66,15 +66,16 @@ class UCMTests(unittest.TestCase):
             'avg_hvls_v': 75.000000000000000,
         }
 
-        for key, expected_value in expected_results.items():
-            actual_value = float(results_feature.GetField(key))
-            self.assertAlmostEqual(
-                actual_value, expected_value,
-                msg='%s should be close to %f, actual: %f' % (
-                    key, expected_value, actual_value))
-
-        results_layer = None
-        results_vector = None
+        try:
+            for key, expected_value in expected_results.items():
+                actual_value = float(results_feature.GetField(key))
+                self.assertAlmostEqual(
+                    actual_value, expected_value,
+                    msg='%s should be close to %f, actual: %f' % (
+                        key, expected_value, actual_value))
+        finally:
+            results_layer = None
+            results_vector = None
 
         # Assert that the decimal value of the energy savings value is what we
         # expect.
