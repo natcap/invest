@@ -8,19 +8,15 @@ import VizErrorBoundary from './VizErrorBoundary';
 
 // this.state.workspace is set on invest run subprocess exit,
 // until then workspace is null
-// this.props.model set on invest getspec subprocess exit
+// this.props.model is set on invest getspec response
 
 class VizApp extends React.Component {
 
   render() {
     if (this.props.workspace && this.props.model) {
       const model_viz_space = './components/Visualization/' + this.props.model;
-      // let Visualization;
-      // try {
       const Visualization = React.lazy(() => import(model_viz_space));
-      // } catch(Error) {
-        // Visualization = <div>{'Nothing to see here'}</div>;
-      // }
+
       return (
         <div>
           <VizErrorBoundary>
