@@ -415,6 +415,10 @@ Var INSTALLER_DIR
     failed:
        MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
     done:
+       ; Write the install log to a text file on disk.
+       StrCpy $0 "$INSTDIR\install_data_${LocalFilepath}_log.txt"
+       Push $0
+       Call DumpLog
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
@@ -446,7 +450,7 @@ Var INSTALLER_DIR
       SectionEnd
 !macroend
 
-Section "InVEST Datasets" SEC_DATA
+SectionGroup /e "InVEST Datasets" SEC_DATA
   ;here all the numbers indicate the size of the downloads in kilobytes
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
@@ -474,13 +478,7 @@ Section "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
     !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322
-
-   ; Write the install log to a text file on disk.
-   StrCpy $0 "$INSTDIR\install_data_log.txt"
-   Push $0
-   Call DumpLog
-
-SectionEnd
+SectionGroupEnd
 
 Function .onInit
  ${GetOptions} $CMDLINE "/?" $0
