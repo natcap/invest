@@ -15,12 +15,14 @@ import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
+import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import { SettingsModal } from './components/SettingsModal';
 import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
 import { DocsTab } from './components/DocsTab';
+import { SaveSessionDropdownItem } from './components/SaveDropdown'
 import VizApp from './VizApp'
 
 // Only the HraApp uses this redux store
@@ -404,89 +406,82 @@ export class InvestJob extends React.Component {
 
     return(
       <TabContainer activeKey={activeTab}>
-      <Navbar bg="light" expand="lg">
-      <Nav variant="tabs" id="controlled-tab-example" className="mr-auto"
-        activeKey={activeTab}
-        onSelect={this.switchTabs}>
-        <Nav.Item>
-          <Nav.Link eventKey="models">Home</Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="log" disabled={logDisabled}>{spinner} Log</Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
-        </Nav.Item>
-        <Nav.Item>
-          <Nav.Link eventKey="docs">Docs</Nav.Link>
-        </Nav.Item>
-      </Nav>
-      <Form inline onSubmit={this.saveState} className="mx-3">
-          <Form.Control
-            type="text"
-            placeholder={this.state.sessionID}
-            value={this.state.sessionID}
-            onChange={this.setSessionID}
+        <Navbar bg="light" expand="lg">
+          <Nav variant="tabs" id="controlled-tab-example" className="mr-auto"
+            activeKey={activeTab}
+            onSelect={this.switchTabs}>
+            <Nav.Item>
+              <Nav.Link eventKey="models">Home</Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="log" disabled={logDisabled}>{spinner} Log</Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
+            </Nav.Item>
+            <Nav.Item>
+              <Nav.Link eventKey="docs">Docs</Nav.Link>
+            </Nav.Item>
+          </Nav>
+          <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
+            <SaveSessionDropdownItem 
+              saveState={this.saveState}
+              sessionID={this.state.sessionID}
+              setSessionID={this.setSessionID}/>
+          </DropdownButton>
+          <SettingsModal
+            saveSettings={this.props.saveSettings}
+            investSettings={this.props.investSettings}
           />
-          <Button
-            onClick={this.saveState}
-            variant="outline-secondary">
-            Save Session
-          </Button>
-      </Form>
-      <SettingsModal
-        saveSettings={this.props.saveSettings}
-        investSettings={this.props.investSettings}
-      />
-      </Navbar>
-      <TabContent className="mt-3">
-      <TabPane eventKey="models" title="Home">
-        <ModelsTab
-          investList={this.props.investList}
-          investGetSpec={this.investGetSpec}
-          saveState={this.saveState}
-          loadState={this.loadState}
-          recentSessions={this.props.recentSessions}
-        />
-      </TabPane>
-      <TabPane eventKey="setup" title="Setup">
-        <SetupTab
-          args={this.state.args}
-          argsValid={this.state.argsValid}
-          modulename={this.state.modelSpec.module}
-          updateArg={this.updateArg}
-          batchUpdateArgs={this.batchUpdateArgs}
-          investValidate={this.investValidate}
-          argsValuesFromSpec={argsValuesFromSpec}
-          investExecute={this.investExecute}
-        />
-      </TabPane>
-      <TabPane eventKey="log" title="Log">
-        <LogDisplay
-          sessionProgress={this.state.sessionProgress}
-          logStdOut={this.state.logStdOut}
-          logStdErr={this.state.logStdErr}
-          investKill={this.investKill}
-        />
-      </TabPane>
-      <TabPane eventKey="viz" title="Viz">
-      <Provider store={store}>
-        <VizApp
-          model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
-          workspace={this.state.workspace}
-          sessionID={this.state.sessionID}
-          activeTab={activeTab}/> 
-      </Provider>
-      </TabPane>
-      <TabPane eventKey="docs" title="Docs">
-        <DocsTab 
-          docs={this.state.docs}
-        />
-      </TabPane>
-      </TabContent>
+        </Navbar>
+        <TabContent className="mt-3">
+          <TabPane eventKey="models" title="Home">
+            <ModelsTab
+              investList={this.props.investList}
+              investGetSpec={this.investGetSpec}
+              saveState={this.saveState}
+              loadState={this.loadState}
+              recentSessions={this.props.recentSessions}
+            />
+          </TabPane>
+          <TabPane eventKey="setup" title="Setup">
+            <SetupTab
+              args={this.state.args}
+              argsValid={this.state.argsValid}
+              modulename={this.state.modelSpec.module}
+              updateArg={this.updateArg}
+              batchUpdateArgs={this.batchUpdateArgs}
+              investValidate={this.investValidate}
+              argsValuesFromSpec={argsValuesFromSpec}
+              investExecute={this.investExecute}
+            />
+          </TabPane>
+          <TabPane eventKey="log" title="Log">
+            <LogDisplay
+              sessionProgress={this.state.sessionProgress}
+              logStdOut={this.state.logStdOut}
+              logStdErr={this.state.logStdErr}
+              investKill={this.investKill}
+            />
+          </TabPane>
+          <TabPane eventKey="viz" title="Viz">
+          <Provider store={store}>
+            <VizApp
+              model={this.state.modelSpec.model_temp_vizname} // TODO: later this name will change
+              workspace={this.state.workspace}
+              sessionID={this.state.sessionID}
+              activeTab={activeTab}/> 
+          </Provider>
+          </TabPane>
+          <TabPane eventKey="docs" title="Docs">
+            <DocsTab 
+              docs={this.state.docs}
+            />
+          </TabPane>
+        </TabContent>
       </TabContainer>
     );
   }

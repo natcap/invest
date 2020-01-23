@@ -65,7 +65,7 @@ export class SettingsModal extends React.Component {
     return (
       <React.Fragment>
         <Button variant="primary" onClick={this.handleShow}>
-          settings
+          Settings
         </Button>
 
         <Modal show={this.state.show} onHide={this.handleClose}>
