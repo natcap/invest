@@ -136,7 +136,10 @@ export class InvestJob extends React.Component {
         () => {
           this.switchTabs(loadedState.sessionProgress);
           // Validate args on load because referenced files may have moved
+          // this.investValidate(argsValuesFromSpec(this.state.args));
           this.batchUpdateArgs(JSON.parse(argsValuesFromSpec(this.state.args)));
+          // batchUpdateArgs does validation and also sets inputs to 'touched'
+          // which controls whether the validation messages appear or not.
         });
     } else {
       console.log('state file not found: ' + filename);
@@ -146,22 +149,9 @@ export class InvestJob extends React.Component {
   argsToJsonFile(datastackPath) {
     // make simple args json for passing to python cli
 
-    let currentArgs = Object.assign({}, this.state.args);
-    // the n_workers value is set from the app's settings, so it still
-    // needs it's value inserted into the args dict
-    currentArgs['n_workers']['value'] = this.props.investSettings.nWorkers;
-
-    // TODO: this is block is nearly complete duplicate of argsValuesFromSpec()
-    let args_dict = {};
-    for (const argname in currentArgs) {
-      if (currentArgs[argname]['value'] && currentArgs[argname]['value'] !== '') {
-        if (currentArgs[argname]['type'] === 'boolean') {
-          args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
-        } else {
-          args_dict[argname] = currentArgs[argname]['value']
-        }
-      }
-    }
+    // parsing it just to make it easy to insert the n_workers value
+    let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
+    args_dict['n_workers'] = this.props.investSettings.nWorkers;
 
     request.post(
       'http://localhost:5000/write_parameter_set_file',
@@ -347,8 +337,7 @@ export class InvestJob extends React.Component {
                   argIsValidArray.push(argsMeta[key]['valid'])
                 }
                 if (argIsValidArray.every(Boolean)) {
-                  const new_args_dict_string = argsValuesFromSpec(argsMeta);
-                  this.investValidate(new_args_dict_string);
+                  this.investValidate(argsValuesFromSpec(argsMeta));
                 }
               }
             );
@@ -434,9 +423,7 @@ export class InvestJob extends React.Component {
 
     this.setState({args: argsMeta}, 
       () => {
-        const args_dict_string = argsValuesFromSpec(argsMeta);
-        // this.investValidate(args_dict_string, key);
-        this.investValidate(args_dict_string);
+        this.investValidate(argsValuesFromSpec(argsMeta));
       });
   }
 
@@ -466,8 +453,6 @@ export class InvestJob extends React.Component {
       spinner = <div></div>
     }
 
-    // Button for more options in the context of setup
-
     return(
       <TabContainer activeKey={activeTab}>
         <Navbar bg="light" expand="lg">
@@ -490,6 +475,7 @@ export class InvestJob extends React.Component {
               <Nav.Link eventKey="docs">Docs</Nav.Link>
             </Nav.Item>
           </Nav>
+          <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
           <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
             <SaveSessionDropdownItem 
               saveState={this.saveState}
@@ -567,17 +553,17 @@ function boolStringToBoolean(val) {
   return valBoolean
 }
 
-// TODO: move this to a module for import instead of passing around in props?
+// TODO: move this (and boolStringToBoolean) to a module for import instead of passing around in props?
 function argsValuesFromSpec(args) {
-  /* Given a complete InVEST ARGS_SPEC, return just the key:value pairs
+  /* Given a complete InVEST ARGS_SPEC.args, return just the key:value pairs
 
   Parameters: 
-    args: JSON representation of an InVEST model's ARGS_SPEC dictionary.
+    args: JSON representation of an InVEST model's ARGS_SPEC.args dictionary.
+
+  Returns:
+    JSON.stringify'd args dict
 
   */
-
-  // TODO insert the n_workers
-  // TODO: redundant with argsToJsonFile
   let args_dict = {};
   for (const argname in args) {
     if (args[argname]['type'] === 'boolean') {
@@ -586,6 +572,5 @@ function argsValuesFromSpec(args) {
       args_dict[argname] = args[argname]['value'] || ''
     }
   }
-  const args_dict_string = JSON.stringify(args_dict);
-  return(args_dict_string)
+  return(JSON.stringify(args_dict));
 }

@@ -61,8 +61,7 @@ class ArgsForm extends React.Component {
     // TODO: could call batchUpdateArgs here instead
     // to avoid passing investValidate to this component at all.
     // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
-    const args_dict_string = this.props.argsValuesFromSpec(this.props.args);
-    this.props.investValidate(args_dict_string);
+    this.props.investValidate(this.props.argsValuesFromSpec(this.props.args));
   }
 
   handleChange(event) {
