@@ -22,7 +22,7 @@ import { ModelsTab } from './components/ModelsTab';
 import { SetupTab } from './components/SetupTab';
 import { LogDisplay } from './components/LogDisplay';
 import { DocsTab } from './components/DocsTab';
-import { SaveSessionDropdownItem } from './components/SaveDropdown'
+import { SaveSessionDropdownItem, SaveParametersDropdownItem, SavePythonDropdownItem } from './components/SaveDropdown'
 import VizApp from './VizApp'
 
 // Only the HraApp uses this redux store
@@ -68,6 +68,7 @@ export class InvestJob extends React.Component {
       docs: MODEL_DOCS,
     };
     
+    this.argsToJsonFile = this.argsToJsonFile.bind(this);
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
@@ -76,6 +77,7 @@ export class InvestJob extends React.Component {
     this.updateArg = this.updateArg.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
     this.saveState = this.saveState.bind(this);
+    this.savePythonScript = this.savePythonScript.bind(this);
     this.loadState = this.loadState.bind(this);
     this.setSessionID = this.setSessionID.bind(this);
   }
@@ -93,6 +95,29 @@ export class InvestJob extends React.Component {
       console.log("saved" + sessionID);
     });
     this.props.updateRecentSessions(sessionID);
+  }
+
+  savePythonScript(filepath) {
+    const args_dict_string = argsValuesFromSpec(this.state.args)
+
+    request.post(
+      'http://localhost:5000/save_to_python',
+      { json: { 
+          filepath: filepath,
+          modelname: this.state.modelSpec.module,
+          pyname: this.state.modelSpec.module,
+          args: args_dict_string
+        } 
+      },
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+         
+        } else {
+          console.log('Status: ' + response.statusCode)
+          console.log('Error: ' + error.message)
+        }
+      }
+    );
   }
   
   setSessionID(event) {
@@ -120,6 +145,46 @@ export class InvestJob extends React.Component {
     }
   }
 
+  argsToJsonFile(datastackPath) {
+    // make simple args json for passing to python cli
+
+    let currentArgs = Object.assign({}, this.state.args);
+    // the n_workers value is set from the app's settings, so it still
+    // needs it's value inserted into the args dict
+    currentArgs['n_workers']['value'] = this.props.investSettings.nWorkers;
+
+    // TODO: this is block is nearly complete duplicate of argsValuesFromSpec()
+    let args_dict = {};
+    for (const argname in currentArgs) {
+      if (currentArgs[argname]['value'] && currentArgs[argname]['value'] !== '') {
+        if (currentArgs[argname]['type'] === 'boolean') {
+          args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
+        } else {
+          args_dict[argname] = currentArgs[argname]['value']
+        }
+      }
+    }
+
+    request.post(
+      'http://localhost:5000/write_parameter_set_file',
+      { json: {
+          parameterSetPath: datastackPath, 
+          moduleName: this.state.modelSpec.module,
+          relativePaths: true,
+          args: JSON.stringify(args_dict)
+        }
+      },
+      (error, response, body) => {
+        if (!error && response.statusCode == 200) {
+          console.log("JSON file was saved.");
+        } else {
+          console.log('Status: ' + response.statusCode);
+          console.log('Error: ' + error.message);
+        }
+      }
+    );
+  }
+
   investExecute() {
     const datastackPath = path.join(
       TEMP_DIR, this.state.sessionID + '.json')
@@ -133,9 +198,7 @@ export class InvestJob extends React.Component {
     }
     const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
 
-    argsToJsonFile(
-      this.state.args, this.props.investSettings.nWorkers,
-      this.state.modelSpec.module, datastackPath);
+    this.argsToJsonFile(datastackPath);
     
     this.setState(
       {
@@ -431,6 +494,8 @@ export class InvestJob extends React.Component {
               saveState={this.saveState}
               sessionID={this.state.sessionID}
               setSessionID={this.setSessionID}/>
+            <SaveParametersDropdownItem argsToJsonFile={this.argsToJsonFile}/>
+            <SavePythonDropdownItem savePythonScript={this.savePythonScript}/>
           </DropdownButton>
           <SettingsModal
             saveSettings={this.props.saveSettings}
@@ -487,44 +552,6 @@ export class InvestJob extends React.Component {
   }
 }
 
-function argsToJsonFile(currentArgs, n_workers, moduleName, datastackPath) {
-  // make simple args json for passing to python cli
-
-  // the n_workers value is set from the app's settings, so it still
-  // needs it's value inserted into the args dict
-  currentArgs['n_workers']['value'] = n_workers;
-
-  let args_dict = {};
-  for (const argname in currentArgs) {
-    if (currentArgs[argname]['value'] && currentArgs[argname]['value'] !== '') {
-      if (currentArgs[argname]['type'] === 'boolean') {
-        args_dict[argname] = boolStringToBoolean(currentArgs[argname]['value'])
-      } else {
-        args_dict[argname] = currentArgs[argname]['value']
-      }
-    }
-  }
-
-  request.post(
-    'http://localhost:5000/write_parameter_set_file',
-    { json: {
-        parameterSetPath: datastackPath, 
-        moduleName: moduleName,
-        relativePaths: true,
-        args: JSON.stringify(args_dict)
-      }
-    },
-    (error, response, body) => {
-      if (!error && response.statusCode == 200) {
-        console.log("JSON file was saved.");
-      } else {
-        console.log('Status: ' + response.statusCode);
-        console.log('Error: ' + error.message);
-      }
-    }
-  );
-}
-
 function boolStringToBoolean(val) {
   let valBoolean;
   try {
@@ -537,7 +564,7 @@ function boolStringToBoolean(val) {
   return valBoolean
 }
 
-// TODO: move this to a module for import instead of passing around in props.
+// TODO: move this to a module for import instead of passing around in props?
 function argsValuesFromSpec(args) {
   /* Given a complete InVEST ARGS_SPEC, return just the key:value pairs
 
@@ -545,6 +572,9 @@ function argsValuesFromSpec(args) {
     args: JSON representation of an InVEST model's ARGS_SPEC dictionary.
 
   */
+
+  // TODO insert the n_workers
+  // TODO: redundant with argsToJsonFile
   let args_dict = {};
   for (const argname in args) {
     if (args[argname]['type'] === 'boolean') {

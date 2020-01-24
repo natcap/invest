@@ -3,6 +3,9 @@ import json
 import sys
 import logging
 import multiprocessing
+import codecs
+import textwrap
+import pprint
 
 from flask import Flask
 from flask import request
@@ -134,19 +137,19 @@ def save_to_python():
         ``None``.
     """
     payload = request.get_json()
-    filepath = payload['filepath']
+    save_filepath = payload['filepath']
     modelname = payload['modelname']
     pyname = payload['pyname']
     args_dict = payload['args']
 
-    if filepath is None:
-        save_filepath = self.file_dialog.save_file(
-            'Save parameters as a python script',
-            savefile='python_script.py')
-        if save_filepath == '':
-            return
-    else:
-        save_filepath = filepath
+    # if filepath is None:
+    #     save_filepath = self.file_dialog.save_file(
+    #         'Save parameters as a python script',
+    #         savefile='python_script.py')
+    #     if save_filepath == '':
+    #         return
+    # else:
+    #     save_filepath = filepath
 
     script_template = textwrap.dedent("""\
     # coding=UTF-8
@@ -181,4 +184,4 @@ def save_to_python():
             py_model=pyname,
             model_args=args))
 
-
+    return ('parameter set saved')
