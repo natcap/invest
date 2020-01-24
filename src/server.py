@@ -6,6 +6,7 @@ import multiprocessing
 import codecs
 import textwrap
 import pprint
+import datetime
 
 from flask import Flask
 from flask import request
@@ -140,16 +141,7 @@ def save_to_python():
     save_filepath = payload['filepath']
     modelname = payload['modelname']
     pyname = payload['pyname']
-    args_dict = payload['args']
-
-    # if filepath is None:
-    #     save_filepath = self.file_dialog.save_file(
-    #         'Save parameters as a python script',
-    #         savefile='python_script.py')
-    #     if save_filepath == '':
-    #         return
-    # else:
-    #     save_filepath = filepath
+    args_dict = json.loads(payload['args'])
 
     script_template = textwrap.dedent("""\
     # coding=UTF-8
@@ -166,10 +158,9 @@ def save_to_python():
     """)
 
     with codecs.open(save_filepath, 'w', encoding='utf-8') as py_file:
-        cast_args = dict((unicode(key), value) for (key, value)
-                         in args_dict)
-        args = pprint.pformat(cast_args,
-                              indent=4)  # 4 spaces
+        # cast_args = dict((unicode(key), value) for (key, value)
+        #                  in args_dict.items())
+        args = pprint.pformat(args_dict, indent=4)  # 4 spaces
 
         # Tweak formatting from pprint:
         # * Bump parameter inline with starting { to next line

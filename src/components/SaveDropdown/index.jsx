@@ -83,107 +83,42 @@ export class SaveSessionDropdownItem extends DropdownItemModal {
 }
 
 
-export class SaveParametersDropdownItem extends DropdownItemModal {
+export class SaveParametersDropdownItem extends React.Component {
 
   constructor(props) {
     super(props);
-    this.state['filepath'] = '';
-
-    this.handleSubmit = this.handleSubmit.bind(this);
-    this.handleChange = this.handleChange.bind(this);
     this.browseFile = this.browseFile.bind(this);
   }
 
-  handleSubmit(event) {
-    event.preventDefault();
-    this.props.argsToJsonFile(this.state.filepath);
-    this.setState({show: false});
-  }
-
-  handleChange(event) {
-    this.setState({ filepath: event.target.value })
-  }
-
   browseFile(event) {
-    // Handle clicks on form browse-button inputs
-    Electron.remote.dialog.showSaveDialog((filepath) => {
-      console.log(filepath); // 0 is safe since we only allow 1 selection
-      this.setState({ filepath: filepath })
+    Electron.remote.dialog.showSaveDialog(
+      { defaultPath: 'invest_args.json' }, (filepath) => {
+      this.props.argsToJsonFile(filepath);
     });
   }
 
   render() {
-    
-    return (
-      <React.Fragment>
-        
-        <Dropdown.Item onClick={this.handleShow}>Save parameters</Dropdown.Item>
-
-        <Modal show={this.state.show} onHide={this.handleClose}>
-          <Form>
-            <Modal.Header>
-              <Modal.Title>Save Parameters</Modal.Title>
-            </Modal.Header>
-            <Modal.Body>
-              <Form.Group as={Row} key="saveParameters">
-                <Form.Label column sm="3">Save as</Form.Label>
-                <Col sm="8">
-                  <InputGroup>
-                    <Form.Control
-                      name="saveParameters"
-                      type="text" 
-                      value={this.state.filepath || ''}
-                      onChange={this.handleChange}
-                    />
-                    <InputGroup.Append>
-                      <Button 
-                        variant="outline-secondary"
-                        name="browse"
-                        onClick={this.browseFile}>
-                        Browse
-                      </Button>
-                    </InputGroup.Append>
-                  </InputGroup>
-                </Col>
-              </Form.Group>
-            </Modal.Body>
-            <Modal.Footer>
-              <Button variant="secondary" onClick={this.handleClose}>
-                Cancel
-              </Button>
-              <Button 
-                variant="primary"
-                onClick={this.handleSubmit}
-                type="submit"
-                disabled={false}>
-                Save Session
-              </Button>
-            </Modal.Footer>
-          </Form>
-        </Modal>
-      </React.Fragment>
-    )
+    return(
+      <Dropdown.Item onClick={this.browseFile}>Save parameters to JSON</Dropdown.Item>
+    );
   }
 }
 
 export class SavePythonDropdownItem extends React.Component {
+  
   constructor(props) {
     super(props);
-
     this.browseFile = this.browseFile.bind(this);
   }
 
   browseFile(event) {
-    // Handle clicks on form browse-button inputs
     Electron.remote.dialog.showSaveDialog(
-      { defaultPath: 'python_script.py' }, (filepath) => {
-      console.log(filepath); // 0 is safe since we only allow 1 selection
+      { defaultPath: 'execute_invest.py' }, (filepath) => {
       this.props.savePythonScript(filepath)
     });
   }
 
   render() {
-
     return(
       <Dropdown.Item onClick={this.browseFile}>Save to Python script</Dropdown.Item>
     );

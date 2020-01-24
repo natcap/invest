@@ -494,8 +494,10 @@ export class InvestJob extends React.Component {
               saveState={this.saveState}
               sessionID={this.state.sessionID}
               setSessionID={this.setSessionID}/>
-            <SaveParametersDropdownItem argsToJsonFile={this.argsToJsonFile}/>
-            <SavePythonDropdownItem savePythonScript={this.savePythonScript}/>
+            <SaveParametersDropdownItem
+              argsToJsonFile={this.argsToJsonFile}/>
+            <SavePythonDropdownItem
+              savePythonScript={this.savePythonScript}/>
           </DropdownButton>
           <SettingsModal
             saveSettings={this.props.saveSettings}
