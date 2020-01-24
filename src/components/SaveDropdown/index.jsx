@@ -48,12 +48,12 @@ export class SaveSessionDropdownItem extends DropdownItemModal {
         <Dropdown.Item onClick={this.handleShow}>Save session</Dropdown.Item>
 
         <Modal show={this.state.show} onHide={this.handleClose}>
-          <Form>
+          <Form onSubmit={this.handleSubmit}>
             <Modal.Header>
               <Modal.Title>Save Session</Modal.Title>
             </Modal.Header>
             <Modal.Body>
-              <Form inline onSubmit={this.props.saveState} className="mx-3">
+              <Form.Group as={Row} key="1">
                 <Form.Label className="mx-3">Title</Form.Label>
                 <Form.Control
                   type="text"
@@ -61,7 +61,7 @@ export class SaveSessionDropdownItem extends DropdownItemModal {
                   value={this.props.sessionID}
                   onChange={this.props.setSessionID}
                 />
-              </Form>
+              </Form.Group>
             </Modal.Body>
             <Modal.Footer>
               <Button variant="secondary" onClick={this.handleClose}>
