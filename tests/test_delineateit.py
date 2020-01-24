@@ -74,7 +74,7 @@ class DelineateItTests(unittest.TestCase):
         missing_keys = {}
         validation_warnings = delineateit.validate(missing_keys)
         self.assertEqual(len(validation_warnings), 1)
-        self.assertEqual(len(validation_warnings[0][0]), 4)
+        self.assertEqual(len(validation_warnings[0][0]), 3)
 
         missing_values_args = {
             'workspace_dir': '',
@@ -83,9 +83,8 @@ class DelineateItTests(unittest.TestCase):
             'snap_points': False,
         }
         validation_warnings = delineateit.validate(missing_values_args)
-        self.assertEqual(len(validation_warnings), 2)
-        self.assertEqual(len(sorted(validation_warnings[1][0])), 3)
-        self.assertTrue('has no value' in validation_warnings[1][1])
+        self.assertEqual(len(validation_warnings), 1)
+        self.assertTrue('has no value' in validation_warnings[0][1])
 
         file_not_found_args = {
             'workspace_dir': os.path.join(self.workspace_dir),
@@ -93,7 +92,6 @@ class DelineateItTests(unittest.TestCase):
             'outlet_vector_path': os.path.join(self.workspace_dir,
                                                'outlets-not-here.shp'),
             'snap_points': False,
-            'crash_on_invalid_geometry': False,
         }
         validation_warnings = delineateit.validate(file_not_found_args)
         self.assertEqual(
@@ -110,7 +108,6 @@ class DelineateItTests(unittest.TestCase):
             'snap_points': True,
             'flow_threshold': -1,
             'snap_distance': 'fooooo',
-            'crash_on_invalid_geometry': False,
         }
         for key in ('dem_path', 'outlet_vector_path'):
             with open(bad_spatial_files_args[key], 'w') as spatial_file:
@@ -329,13 +326,13 @@ class DelineateItTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             delineateit.check_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
-                crash_on_invalid_geometry=True
+                skip_invalid_geometry=True
             )
         self.assertTrue('is invalid' in str(cm.exception))
 
         delineateit.check_geometries(
             outflow_vector_path, dem_raster_path, target_vector_path,
-            crash_on_invalid_geometry=False
+            skip_invalid_geometry=False
         )
 
         # I only expect to see 1 feature in the output layer, as there's only 1
