@@ -103,10 +103,10 @@ class ArgsForm extends React.Component {
       (error, response, body) => {
         if (!error) {
           const datastack = body;
-          if (datastack['model_name'] === this.props.modulename) {
+          if (datastack['module_name'] === this.props.modulename) {
             this.props.batchUpdateArgs(datastack['args']);
           } else {
-            throw alert('Parameter/Log file does not match this model.')
+            throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
           }
         } else {
           console.log('Error: ' + error.message)

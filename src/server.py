@@ -18,6 +18,7 @@ LOGGER = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
+# Maps the names returned by invest list to the module with ARGS_SPEC
 MODEL_MODULE_MAP = {
     "carbon": "carbon",
     "coastal_blue_carbon": "coastal_blue_carbon.coastal_blue_carbon",
@@ -90,7 +91,6 @@ def get_invest_validate():
         limit_to = payload['limit_to']
     except KeyError:
         limit_to = None
-    # target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
     model_module = importlib.import_module(name=target_module)
     results = model_module.validate(args_dict, limit_to=limit_to)
     LOGGER.debug(results)
@@ -105,21 +105,19 @@ def post_datastack_file():
     result_dict = {
         'type': stack_type,
         'args': stack_info.args,
-        'model_name': stack_info.model_name,
+        'module_name': stack_info.model_name,
         'invest_version': stack_info.invest_version
     }
-    LOGGER.debug(result_dict)
     return json.dumps(result_dict)
 
 @app.route('/write_parameter_set_file', methods=['POST'])
 def write_parameter_set_file():
     payload = request.get_json()
-    # LOGGER.debug(payload)
     filepath = payload['parameterSetPath']
     modulename = payload['moduleName']
     args = json.loads(payload['args'])
-    LOGGER.debug(args)
     relative_paths = payload['relativePaths']
+
     natcap.invest.datastack.build_parameter_set(
         args, modulename, filepath, relative=relative_paths)
     return ('parameter set saved')

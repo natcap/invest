@@ -29,4 +29,4 @@ To run snippets of code outside the electron runtime, but with the same ECMAscri
 
 
 ## Visualization components
-Visualization components (i.e. folders in `src/components/Visualization`) should be named with the same model name used in the `invest run <model>` command so that these components can be imported dynamically and lazily.
+Visualization components (i.e. folders in `src/components/Visualization`) should be named with the same model name used in the `invest run <model>` command so that these components can be imported dynamically and lazily. These are the same names returned by `invest list`.
