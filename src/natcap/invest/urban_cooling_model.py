@@ -558,7 +558,7 @@ def execute(args):
             t_air_raster_path, t_air_aoi_stats_pickle_path),
         target_path_list=[t_air_aoi_stats_pickle_path],
         dependent_task_list=[t_air_task, intermediate_uhi_result_vector_task],
-        task_name='pickle t-air stats')
+        task_name='pickle t-air over stats over AOI')
 
     wbgt_stats_pickle_path = None
     light_loss_stats_pickle_path = None
@@ -620,7 +620,7 @@ def execute(args):
             target_path_list=[t_air_stats_pickle_path],
             dependent_task_list=[
                 t_air_task, intermediate_building_vector_task],
-            task_name='pickle t-air stats')
+            task_name='pickle t-air stats over buildings')
 
         energy_consumption_vector_path = os.path.join(
             args['workspace_dir'], 'buildings_with_stats%s.shp' % file_suffix)
@@ -636,14 +636,14 @@ def execute(args):
                 pickle_t_air_task, intermediate_building_vector_task],
             task_name='calculate energy savings task')
 
-        # pickle WBGI
+        # pickle WBGT
         wbgt_stats_pickle_path = os.path.join(
             intermediate_dir, 'wbgt_stats.pickle')
         _ = task_graph.add_task(
             func=pickle_zonal_stats,
             args=(
                 intermediate_aoi_vector_path,
-                t_air_raster_path, wbgt_stats_pickle_path),
+                wbgt_raster_path, wbgt_stats_pickle_path),
             target_path_list=[wbgt_stats_pickle_path],
             dependent_task_list=[
                 wbgt_task, intermediate_uhi_result_vector_task],
