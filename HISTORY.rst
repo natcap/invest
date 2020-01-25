@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* InVEST sample data was re-organized to simply have one folder per model.
+  New datastacks were added for SDR, NDR, Seasonal Water Yield,
+  Annual Water Yield, DelineateIt, and Coastal Vulnerability.
 * Fixed an issue with NDR where the model was not properly checking for the
   bounds of the raster, which could in some cases lead to exceptions being
   printed to the command-line.  The model now correctly checks for these
