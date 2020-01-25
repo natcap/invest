@@ -44,8 +44,6 @@ export class ResourcesTab extends React.Component {
     let userGuideURL;
     let forumURL;
     let name;
-    console.log(this.props.docs);
-    console.log(this.props.modelName);
 
     if (this.props.docs && this.props.modelName) {
       userGuideURL = UG_ROOT + this.props.docs

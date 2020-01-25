@@ -109,6 +109,7 @@ export class InvestJob extends React.Component {
   
   setSessionID(event) {
     // Handle keystroke events to store a name for current session
+    event.preventDefault();
     const value = event.target.value;
     this.setState(
       {sessionID: value});
