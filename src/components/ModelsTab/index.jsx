@@ -59,7 +59,7 @@ class LoadStateForm extends React.Component {
 
   selectFile(event) {
     const dialog = Electron.remote.dialog;
-    // TODO: could add more filters based on argType (e.g. only show .csv)
+    // TODO: could add more filters to only show .json
     dialog.showOpenDialog({
       properties: ['openFile']
     }, (filepath) => {

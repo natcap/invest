@@ -38,16 +38,6 @@ if (process.env.GDAL_DATA) {
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
 
-// TODO: these ought to be dynamic, from invest getspec or a similar lookup
-const MODEL_DOCS = 'C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html'
-
-function defaultSessionID(modelName) {
-  const datetime = new Date()
-      .toISOString()
-      .replace(/:/g, '-').replace('T', '_').slice(0, -5)
-  return(modelName + '_' + datetime);
-}
-
 export class InvestJob extends React.Component {
   constructor(props) {
     super(props);
@@ -63,7 +53,6 @@ export class InvestJob extends React.Component {
       logStdOut: '',
       sessionProgress: 'models',       // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
       activeTab: 'models',
-      docs: MODEL_DOCS,
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -472,7 +461,7 @@ export class InvestJob extends React.Component {
               <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="docs">Docs</Nav.Link>
+              <Nav.Link eventKey="docs">Resources</Nav.Link>
             </Nav.Item>
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
@@ -530,9 +519,10 @@ export class InvestJob extends React.Component {
               activeTab={activeTab}/> 
           </Provider>
           </TabPane>
-          <TabPane eventKey="docs" title="Docs">
+          <TabPane eventKey="docs" title="Resources">
             <DocsTab 
-              docs={this.state.docs}
+              modelName={this.state.modelSpec.model_name}
+              docs={this.state.modelSpec.userguide_html}
             />
           </TabPane>
         </TabContent>
@@ -573,4 +563,11 @@ function argsValuesFromSpec(args) {
     }
   }
   return(JSON.stringify(args_dict));
+}
+
+function defaultSessionID(modelName) {
+  const datetime = new Date()
+      .toISOString()
+      .replace(/:/g, '-').replace('T', '_').slice(0, -5)
+  return(modelName + '_' + datetime);
 }

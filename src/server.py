@@ -110,6 +110,7 @@ def post_datastack_file():
     }
     return json.dumps(result_dict)
 
+
 @app.route('/write_parameter_set_file', methods=['POST'])
 def write_parameter_set_file():
     payload = request.get_json()
@@ -122,19 +123,10 @@ def write_parameter_set_file():
         args, modulename, filepath, relative=relative_paths)
     return ('parameter set saved')
 
+
 # Borrowed this function from natcap.invest.model
 @app.route('/save_to_python', methods=['POST'])
 def save_to_python():
-    """Save the current arguments to a python script.
-
-    Parameters:
-        filepath (string or None): If a string, this is the path to the
-            file that will be written.  If ``None``, a dialog will pop up
-            prompting the user to provide a filepath.
-
-    Returns:
-        ``None``.
-    """
     payload = request.get_json()
     save_filepath = payload['filepath']
     modelname = payload['modelname']
