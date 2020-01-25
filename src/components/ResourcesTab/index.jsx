@@ -34,7 +34,7 @@ function handleClick(event) {
   Electron.shell.openExternal(event.target.href);
 }
 
-export class DocsTab extends React.Component {
+export class ResourcesTab extends React.Component {
 
   constructor(props) {
     super(props);

@@ -8,7 +8,7 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
 
-export class ModelsTab extends React.Component {
+export class HomeTab extends React.Component {
 
   constructor(props) {
     super(props);

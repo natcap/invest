@@ -11,7 +11,7 @@ const logStyle = {
   overflowY: 'scroll',
 };
 
-export class LogDisplay extends React.Component {
+export class LogTab extends React.Component {
 
   constructor(props) {
     super(props);

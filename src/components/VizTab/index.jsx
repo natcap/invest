@@ -10,11 +10,11 @@ import VizErrorBoundary from './VizErrorBoundary';
 // until then workspace is null
 // this.props.model is set on invest getspec response
 
-class VizApp extends React.Component {
+export class VizTab extends React.Component {
 
   render() {
     if (this.props.workspace && this.props.model) {
-      const model_viz_space = './components/Visualization/' + this.props.model;
+      const model_viz_space = './Visualization/' + this.props.model;
       const Visualization = React.lazy(() => import(model_viz_space));
 
       return (
@@ -35,5 +35,3 @@ class VizApp extends React.Component {
     }
   }
 }
-
-export default VizApp;

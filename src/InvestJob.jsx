@@ -17,16 +17,16 @@ import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
-import { SettingsModal } from './components/SettingsModal';
-import { ModelsTab } from './components/ModelsTab';
+import { HomeTab } from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
-import { LogDisplay } from './components/LogDisplay';
-import { DocsTab } from './components/DocsTab';
+import { LogTab } from './components/LogTab';
+import { VizTab } from './components/VizTab'
+import { ResourcesTab } from './components/ResourcesTab';
 import { SaveSessionDropdownItem, SaveParametersDropdownItem, SavePythonDropdownItem } from './components/SaveDropdown'
-import VizApp from './VizApp'
+import { SettingsModal } from './components/SettingsModal';
 
 // TODO see issue #12
-import rootReducer from './components/Visualization/habitat_risk_assessment/reducers';
+import rootReducer from './components/VizTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
 const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
@@ -482,7 +482,7 @@ export class InvestJob extends React.Component {
         </Navbar>
         <TabContent className="mt-3">
           <TabPane eventKey="models" title="Home">
-            <ModelsTab
+            <HomeTab
               investList={this.props.investList}
               investGetSpec={this.investGetSpec}
               saveState={this.saveState}
@@ -503,7 +503,7 @@ export class InvestJob extends React.Component {
             />
           </TabPane>
           <TabPane eventKey="log" title="Log">
-            <LogDisplay
+            <LogTab
               sessionProgress={this.state.sessionProgress}
               logStdOut={this.state.logStdOut}
               logStdErr={this.state.logStdErr}
@@ -512,7 +512,7 @@ export class InvestJob extends React.Component {
           </TabPane>
           <TabPane eventKey="viz" title="Viz">
           <Provider store={store}>
-            <VizApp
+            <VizTab
               model={this.state.modelName}
               workspace={this.state.workspace}
               sessionID={this.state.sessionID}
@@ -520,7 +520,7 @@ export class InvestJob extends React.Component {
           </Provider>
           </TabPane>
           <TabPane eventKey="docs" title="Resources">
-            <DocsTab 
+            <ResourcesTab 
               modelName={this.state.modelSpec.model_name}
               docs={this.state.modelSpec.userguide_html}
             />
