@@ -1,5 +1,6 @@
 {
-  "sessionID": "carbon_complete",
+  "sessionID": "carbon_setup",
+  "modelName": "carbon",
   "modelSpec": {
     "model_name": "InVEST Carbon Model",
     "module": "natcap.invest.carbon",
@@ -10,8 +11,7 @@
         "lulc_fut_path",
         "lulc_redd_path"
       ]
-    },
-    "model_temp_vizname": "carbon"
+    }
   },
   "args": {
     "workspace_dir": {
@@ -23,8 +23,10 @@
         "exists": false,
         "permissions": "rwx"
       },
-      "valid": true,
-      "value": "carbon_workspace"
+      "value": "",
+      "touched": true,
+      "validationMessage": "Input is required but has no value",
+      "valid": false
     },
     "results_suffix": {
       "name": "File suffix",
@@ -37,8 +39,10 @@
           "case_sensitive": false
         }
       },
+      "value": "willamette",
+      "touched": true,
       "valid": true,
-      "value": ""
+      "validationMessage": ""
     },
     "n_workers": {
       "name": "Taskgraph n_workers parameter",
@@ -46,53 +50,71 @@
       "type": "number",
       "required": false,
       "validation_options": {
-        "regexp": {
-          "pattern": "-?[0-9]+",
-          "case_sensitive": false
-        },
         "expression": "value >= -1"
       },
-      "valid": true
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
     },
     "lulc_cur_path": {
       "type": "raster",
       "required": true,
+      "validation_options": {
+        "projected": true
+      },
       "about": "A GDAL-supported raster representing the land-cover of thecurrent scenario.",
       "name": "Current Land Use/Land Cover",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\lulc_current_willamette.tif",
+      "touched": true,
       "valid": true,
-      "value": "..\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_cur\\hdr.adf"
+      "validationMessage": ""
     },
     "calc_sequestration": {
       "type": "boolean",
-      "required": false,
+      "required": "do_valuation | do_redd",
       "about": "Check to enable sequestration analysis. This requires inputs of Land Use/Land Cover maps for both current and future scenarios.",
       "name": "Calculate Sequestration",
+      "value": true,
+      "touched": true,
       "valid": true,
-      "value": true
+      "validationMessage": ""
     },
     "lulc_fut_path": {
       "type": "raster",
       "required": "calc_sequestration",
+      "validation_options": {
+        "projected": true
+      },
       "about": "A GDAL-supported raster representing the land-cover of the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario.",
       "name": "Future Landcover",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\lulc_future_willamette.tif",
+      "touched": true,
       "valid": true,
-      "value": "..\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_fut\\hdr.adf"
+      "validationMessage": ""
     },
     "do_redd": {
       "type": "boolean",
       "required": false,
       "about": "Check to enable REDD scenario analysis.  This requires three Land Use/Land Cover maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
       "name": "REDD Scenario Analysis",
+      "value": "",
+      "touched": true,
       "valid": true,
-      "value": false
+      "validationMessage": ""
     },
     "lulc_redd_path": {
       "type": "raster",
       "required": "do_redd",
+      "validation_options": {
+        "projected": true
+      },
       "about": "A GDAL-supported raster representing the land-cover of the REDD policy future scenario.  This scenario will be compared to the baseline future scenario.",
       "name": "REDD Policy)",
+      "value": "",
+      "touched": true,
       "valid": true,
-      "value": "..\\invest\\data\\invest-sample-data\\carbon\\lulc_samp_redd.tif"
+      "validationMessage": ""
     },
     "carbon_pools_path": {
       "validation_options": {
@@ -108,8 +130,10 @@
       "required": true,
       "about": "A table that maps the land-cover IDs to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the User's Guide.  The values in LULC must at least include the LULC IDs in the land cover maps.",
       "name": "Carbon Pools",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\carbon_pools_willamette.csv",
+      "touched": true,
       "valid": true,
-      "value": "..\\invest\\data\\invest-sample-data\\carbon\\carbon_pools_samp.csv"
+      "validationMessage": ""
     },
     "lulc_cur_year": {
       "validation_options": {
@@ -119,8 +143,10 @@
       "required": "calc_sequestration",
       "about": "The calendar year of the current scenario.",
       "name": "Current Landcover Calendar Year",
+      "value": "2020",
+      "touched": true,
       "valid": true,
-      "value": "2016"
+      "validationMessage": ""
     },
     "lulc_fut_year": {
       "validation_options": {
@@ -130,44 +156,57 @@
       "required": "calc_sequestration",
       "about": "The calendar year of the future scenario.",
       "name": "Future Landcover Calendar Year",
+      "value": "2050",
+      "touched": true,
       "valid": true,
-      "value": "2030"
+      "validationMessage": ""
     },
     "do_valuation": {
       "type": "boolean",
       "required": false,
       "about": "if true then run the valuation model on available outputs.  At a minimum will run on carbon stocks, if sequestration with a future scenario is done and/or a REDD scenario calculate NPV for either and report in final HTML document.",
       "name": "Run Valuation Model",
+      "value": "",
+      "touched": true,
       "valid": true,
-      "value": false
+      "validationMessage": ""
     },
     "price_per_metric_ton_of_c": {
       "type": "number",
       "required": "do_valuation",
       "about": "Is the present value of carbon per metric ton. Used if ``args['do_valuation']`` is present and True.",
       "name": "Price/Metric ton of carbon",
-      "valid": true
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
     },
     "discount_rate": {
       "type": "number",
       "required": "do_valuation",
       "about": "The discount rate as a floating point percent.",
       "name": "Market Discount in Price of Carbon (%)",
-      "valid": true
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
     },
     "rate_change": {
       "type": "number",
       "required": "do_valuation",
       "about": "The floating point percent increase of the price of carbon per year.",
       "name": "Annual Rate of Change in Price of Carbon (%)",
-      "valid": true
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
     }
   },
-  "argsValid": true,
-  "workspace": "carbon_workspace",
+  "argsValid": false,
+  "workspace": null,
   "logStdErr": "",
-  "logStdOut": "10/07/2019 10:35:34  natcap.invest.cli  INFO     Imported target natcap.invest.carbon from <module 'natcap.invest.carbon' from 'c:\\\\users\\\\dmf\\\\miniconda3\\\\envs\\\\invest-py36\\\\lib\\\\site-packages\\\\natcap.invest-3.7.0.post440+h9ec91c2babf1-py3.6-win-amd64.egg\\\\natcap\\\\invest\\\\carbon.py'>\r\n10/07/2019 10:35:34  natcap.invest.utils INFO     Writing log messages to C:\\Users\\dmf\\projects\\invest-electron\\carbon_workspace\\InVEST-natcap.invest.carbon-log-2019-10-07--10_35_34.txt\r\n10/07/2019 10:35:34  natcap.invest.cli  Level 100 Arguments for InVEST natcap.invest.carbon 3.7.0.post440+h9ec91c2babf1:\r\ncalc_sequestration True\r\ncarbon_pools_path  C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\carbon\\carbon_pools_samp.csv\r\ndo_redd            False\r\ndo_valuation       False\r\nlulc_cur_path      C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_cur\\hdr.adf\r\nlulc_cur_year      2016\r\nlulc_fut_path      C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Base_Data\\Terrestrial\\lulc_samp_fut\\hdr.adf\r\nlulc_fut_year      2030\r\nlulc_redd_path     C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\carbon\\lulc_samp_redd.tif\r\nresults_suffix     \r\nworkspace_dir      C:\\Users\\dmf\\projects\\invest-electron\\carbon_workspace\r\n\r\n10/07/2019 10:35:34  natcap.invest.carbon INFO     Building file registry\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Map all carbon pools to carbon storage rasters.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_cur_path' to 'c_above_cur' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_cur_path' to 'c_below_cur' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_cur_path' to 'c_soil_cur' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_cur_path' to 'c_dead_cur' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Calculate carbon storage for 'tot_c_cur'\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_fut_path' to 'c_above_fut' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_fut_path' to 'c_below_fut' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_fut_path' to 'c_soil_fut' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_fut_path' to 'c_dead_fut' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Calculate carbon storage for 'tot_c_fut'\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_redd_path' to 'c_above_redd' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_redd_path' to 'c_below_redd' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_redd_path' to 'c_soil_redd' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Mapping carbon from 'lulc_redd_path' to 'c_dead_redd' scenario.\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Calculate carbon storage for 'tot_c_redd'\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Calculate sequestration scenario 'delta_cur_fut'\r\n10/07/2019 10:35:35  natcap.invest.carbon INFO     Calculate sequestration scenario 'delta_cur_redd'\r\n10/07/2019 10:35:35  natcap.invest.utils INFO     Elapsed time: 0.39s\r\n",
-  "sessionProgress": "viz",
-  "activeTab": "models",
-  "docs": "C:/InVEST_3.7.0_x86/documentation/userguide/habitat_risk_assessment.html"
+  "logStdOut": "",
+  "sessionProgress": "setup",
+  "activeTab": "setup",
+  "procID": null
 }
