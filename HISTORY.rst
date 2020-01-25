@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Updated the DelineateIt UI to improve the language around what the model
+  should do when it encounters invalid geometry.  The default is now
+  that it should skip invalid geometry.
 * Fixed an issue with NDR where the model was not properly checking for the
   bounds of the raster, which could in some cases lead to exceptions being
   printed to the command-line.  The model now correctly checks for these
