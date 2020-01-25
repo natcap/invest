@@ -2,7 +2,7 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 39d6cbd18ac52023db957fc4299b6b1a32c368e3
+GIT_SAMPLE_DATA_REPO_REV    := 2aae217ad0d328c9cdcf8f8386f4eab8bd7194af
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
@@ -256,43 +256,40 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
-
-# Zipping up the sample data zipfiles is a little odd because of the presence
-# of the Base_Data folder, where its subdirectories are zipped up separately.
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = Aquaculture \
-		  Freshwater \
-		  Marine \
-		  Terrestrial \
-		  carbon \
+ZIPDIRS = Annual_Water_Yield \
+		  Aquaculture \
+		  Base_Data \
+		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
+		  DelineateIt \
 		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  Hydropower \
 		  Malaria \
+		  NDR \
 		  pollination \
 		  recreation \
+		  RouteDEM \
 		  scenario_proximity \
 		  ScenicQuality \
-		  seasonal_water_yield \
+		  SDR \
+		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
 		  WaveEnergy \
 		  WindEnergy
+
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
