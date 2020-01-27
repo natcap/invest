@@ -2,8 +2,7 @@
 
 `npm install` from repo directory  
 
-set system-specific environment variables by creating a `.env` file.  
-See `.env-example`.  
+activate a python environment that can import `natcap.invest` and `flask`  
 
 `npm start`  
 

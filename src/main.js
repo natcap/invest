@@ -12,6 +12,9 @@ const isDevMode = process.execPath.match(/[\\/]electron/);
 
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
+const PYTHON = 'python';
+// const PYTHON = process.env.INVEST.trim();
+
 const createWindow = async () => {
   
   // Creating the process here with await because sometimes,
@@ -52,7 +55,7 @@ const createWindow = async () => {
 let pythonServerProcess;
 function createPythonProcess() {
   pythonServerProcess = spawn(
-    process.env.PYTHON, ['-m', 'flask', 'run'], {
+    PYTHON, ['-m', 'flask', 'run'], {
       shell: true,
       // stdio: 'ignore',
       detatched: true,

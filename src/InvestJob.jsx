@@ -22,14 +22,16 @@ import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { VizTab } from './components/VizTab'
 import { ResourcesTab } from './components/ResourcesTab';
-import { SaveSessionDropdownItem, SaveParametersDropdownItem, SavePythonDropdownItem } from './components/SaveDropdown'
+import { SaveSessionDropdownItem, SaveParametersDropdownItem,
+         SavePythonDropdownItem } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 
 // TODO see issue #12
 import rootReducer from './components/VizTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
+const INVEST_EXE = 'invest.exe'
+// const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
 
 if (process.env.GDAL_DATA) {
   var GDAL_DATA = process.env.GDAL_DATA.trim()
@@ -187,7 +189,6 @@ export class InvestJob extends React.Component {
       }
     );
 
-    // const modelRunName = this.state.modelSpec.module.split('.').pop()
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: '.',
@@ -195,11 +196,8 @@ export class InvestJob extends React.Component {
         // env: {GDAL_DATA: GDAL_DATA}
       });
 
-    // TODO: These setState calls on stdout and stderr trigger
-    // a re-render of this component (and it's children -- so everything).
-    // So far I see no performance penalty, but we may want a different
-    // solution for getting a streaming log. 
-    // Or we can suppress some re-renders manually, perhaps.
+    // TODO: Find a nicer way to stream a log to the page than
+    // passing all the text through this.state
     let stdout = Object.assign('', this.state.logStdOut);
     investRun.stdout.on('data', (data) => {
       stdout += `${data}`
