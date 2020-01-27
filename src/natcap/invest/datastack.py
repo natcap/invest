@@ -519,6 +519,13 @@ def extract_parameter_set(paramset_path):
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring) and len(args_param) > 0:
+            # Attempt to parse true/false strings.
+            try:
+                return {'true': True, 'false': False}[args_param.lower()]
+            except KeyError:
+                # Probably not a boolean, so continue checking paths.
+                pass
+
             # Convert paths to whatever makes sense for the current OS.
             expanded_param = os.path.expandvars(
                 os.path.expanduser(
@@ -530,6 +537,8 @@ def extract_parameter_set(paramset_path):
                     os.path.join(paramset_parent_dir, args_param))
                 if os.path.exists(paramset_rel_path):
                     return paramset_rel_path
+        else:
+            return args_param
         return args_param
 
     return ParameterSet(_recurse(read_params['args']),

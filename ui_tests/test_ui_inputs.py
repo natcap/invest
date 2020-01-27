@@ -1217,6 +1217,7 @@ class ContainerTest(InVESTModelInputTest):
         pass
 
 
+@unittest.skip('skipping MultiTest class. See issue #3936')
 class MultiTest(ContainerTest):
     @staticmethod
     def create_input(*args, **kwargs):
@@ -2033,8 +2034,8 @@ class DatastackOptionsDialogTests(_QtTest):
         _QtTest.tearDown(self)
         shutil.rmtree(self.workspace)
 
-    def test_dialog_invalid_datastack_path(self):
-        """UI Datastack Options: verify datastack file validity."""
+    def test_dialog_save_button_enable(self):
+        """UI Datastack Options: verify save button enable/disable."""
         from natcap.invest.ui import model
 
         options_dialog = model.DatastackOptionsDialog(
@@ -2042,13 +2043,14 @@ class DatastackOptionsDialogTests(_QtTest):
         new_paramset_path = os.path.join(
             self.workspace, 'testdir1', 'test.invs.json')
 
-        # I can't use os.chmod to set writeable permissions on Windows, per the
-        # python docs (https://docs.python.org/2/library/os.html#os.chmod).
-        # Mock allows me to simulate the change.
-        with mock.patch('os.access', return_value=False):
-            options_dialog.save_parameters.set_value(new_paramset_path)
+        options_dialog.save_parameters.set_value(new_paramset_path)
+        self.assertTrue(options_dialog.ok_button.isEnabled())
+
+        # whitespace and empty string are the only values that disable
+        invalids = ['  ', '']
+        for val in invalids:
+            options_dialog.save_parameters.set_value(val)
             self.assertFalse(options_dialog.ok_button.isEnabled())
-            self.assertFalse(options_dialog.save_parameters.valid())
 
     def test_dialog_return_value(self):
         """UI Datastack Options: Verify return value of dialog."""
@@ -2110,24 +2112,6 @@ class DatastackOptionsDialogTests(_QtTest):
         return_options = options_dialog.exec_()
 
         self.assertEqual(return_options, None)
-
-    def test_dialog_savefile_validation_fails(self):
-        """UI Datastack Options: Verify validation fails when expected."""
-        from natcap.invest.ui import model
-        from natcap.invest.ui import inputs
-
-        options_dialog = model.DatastackOptionsDialog(
-            paramset_basename='test_model')
-
-        save_path_with_missing_dir = os.path.join(
-            self.workspace, 'foo', 'parameters.invs.json')
-
-        options_dialog.datastack_type.set_value(model._DATASTACK_PARAMETER_SET)
-        options_dialog.save_parameters.set_value(save_path_with_missing_dir)
-        self.qt_app.processEvents()
-
-        self.assertFalse(options_dialog.save_parameters.valid())
-
 
 
 class ModelTests(_QtTest):
@@ -2940,12 +2924,7 @@ class ModelTests(_QtTest):
 
         @validation.invest_validator
         def _validate(args, limit_to=None):
-            context = validation.ValidationContext(args, limit_to)
-            # require workspace dir input.
-            if context.is_arg_complete('workspace_dir', require=True):
-                pass
-
-            return context.warnings
+            return [(['workspace_dir'], 'Some error message')]
 
         model_ui = ModelTests.build_model(_validate)
         try:

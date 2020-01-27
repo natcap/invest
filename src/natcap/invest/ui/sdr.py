@@ -1,7 +1,7 @@
 # coding=UTF-8
 
 from natcap.invest.ui import model, inputs
-import natcap.invest.sdr
+import natcap.invest.sdr.sdr
 
 
 class SDR(model.InVESTModel):
@@ -9,10 +9,9 @@ class SDR(model.InVESTModel):
         model.InVESTModel.__init__(
             self,
             label=u'Sediment Delivery Ratio Model (SDR)',
-            target=natcap.invest.sdr.execute,
-            validator=natcap.invest.sdr.validate,
-            localdoc=u'sdr.html')
-
+            target=natcap.invest.sdr.sdr.execute,
+            validator=natcap.invest.sdr.sdr.validate,
+            localdoc=u'../documentation/sdr.html')
         self.dem_path = inputs.File(
             args_key=u'dem_path',
             helptext=(

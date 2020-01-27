@@ -39,7 +39,7 @@ def assert_expected_results_in_vector(expected_results, vector_path):
         # Surprisingly, these differences are not washed out by an
         # aggregation such as zonal statistics.
         numpy.testing.assert_approx_equal(
-            expected_results[key], actual_results[key], significant=5)
+            expected_results[key], actual_results[key], significant=2)
 
 
 class SDRTests(unittest.TestCase):
@@ -76,7 +76,7 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation(self):
         """SDR test regular validation."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
@@ -90,7 +90,7 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_wrong_types(self):
         """SDR test validation for wrong GIS types."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
@@ -101,23 +101,22 @@ class SDRTests(unittest.TestCase):
         self.assertTrue(
             validate_result,
             "expected failed validations instead didn't get any")
-        self.assertTrue(all(
-            [x[1] in ['not a raster', 'not a vector']
-             for x in validate_result]))
+        for (validation_keys, error_msg), phrase in zip(
+                validate_result, ['GDAL raster', 'GDAL vector']):
+            self.assertTrue(phrase in error_msg)
 
     def test_sdr_validation_missing_key(self):
         """SDR test validation that's missing keys."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = {}
-        with self.assertRaises(KeyError) as context:
-            validate_result = sdr.validate(args, limit_to=None)
-        self.assertEquals(len(context.exception.args), 11)
+        validation_warnings = sdr.validate(args, limit_to=None)
+        self.assertEqual(len(validation_warnings[0][0]), 11)
 
     def test_sdr_validation_key_no_value(self):
         """SDR test validation that's missing a value on a key."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -130,7 +129,7 @@ class SDRTests(unittest.TestCase):
 
     def test_sdr_validation_watershed_missing_ws_id(self):
         """SDR test validation notices missing `ws_id` field on watershed."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
         test_watershed_path = os.path.join(
@@ -158,26 +157,28 @@ class SDRTests(unittest.TestCase):
             validate_result,
             'expected a validation error but didn\'t get one')
         self.assertTrue(
-            'does not have a `ws_id` field defined' in validate_result[0][1],
-            'expected a `ws_id` validation error, but got %s' % (
-                validate_result))
+            'Fields are missing from the first layer' in validate_result[0][1])
 
     def test_sdr_validation_watershed_missing_ws_id_value(self):
         """SDR test validation notices bad value in `ws_id` watershed."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         vector_driver = ogr.GetDriverByName("ESRI Shapefile")
         test_watershed_path = os.path.join(
             self.workspace_dir, 'watershed.shp')
         vector = vector_driver.CreateDataSource(test_watershed_path)
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(4326)
+        srs.ImportFromEPSG(26910)  #NAD83 / UTM zone 11N
         layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
         # forget to add a 'ws_id' field
         layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))
         feature = ogr.Feature(layer.GetLayerDefn())
+        # Point coordinates taken from the projected bounds noted on
+        # https://spatialreference.org/ref/epsg/nad83-utm-zone-10n/
+        feature.SetGeometry(ogr.CreateGeometryFromWkt(
+            "POINT(224215.89977 3810589.922)"))
+
         # intentionally not setting ws_id
-        feature.SetGeometry(ogr.CreateGeometryFromWkt("POINT(-112.2 42.5)"))
         layer.CreateFeature(feature)
         feature = None
         layer = None
@@ -189,13 +190,10 @@ class SDRTests(unittest.TestCase):
         args['watersheds_path'] = test_watershed_path
 
         validate_result = sdr.validate(args, limit_to=None)
+        self.assertTrue(len(validate_result) > 0,
+                        'Expected validation errors but none found')
         self.assertTrue(
-            validate_result,
-            'expected a validation error but didn\'t get one')
-        self.assertTrue(
-            'feature 0 has an invalid value of' in validate_result[0][1],
-            'expected an invalid `ws_id` value but got %s' % (
-                validate_result))
+            'features have a non-integer ws_id field' in validate_result[0][1])
 
     def test_base_regression(self):
         """SDR base regression test on sample data.
@@ -204,17 +202,27 @@ class SDRTests(unittest.TestCase):
         generated and that the aggregate shapefile fields are the same as the
         regression case.
         """
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
         # make args explicit that this is a base run of SWY
-        sdr.execute(args)
 
+        gpkg_driver = ogr.GetDriverByName('GPKG')
+        base_vector = ogr.Open(args['watersheds_path'])
+        target_watersheds_path = os.path.join(
+            args['workspace_dir'], 'input_watersheds.gpkg')
+        target_vector = gpkg_driver.CopyDataSource(
+            base_vector, target_watersheds_path)
+        base_vector = None
+        target_vector = None
+        args['watersheds_path'] = target_watersheds_path
+        sdr.execute(args)
         expected_results = {
+            'usle_tot': 12.69931602478,
             'sed_retent': 392771.84375,
             'sed_export': 0.77038854361,
-            'usle_tot': 12.69931602478,
+            'sed_dep': 8.29587092076114,
         }
         vector_path = os.path.join(
             args['workspace_dir'], 'watershed_results_sdr.shp')
@@ -226,10 +234,12 @@ class SDRTests(unittest.TestCase):
         Execute SDR with sample data with all rasters having undefined nodata
         values.
         """
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
+        # args_copy = args.copy()
+        # args_copy['workspace_dir'] = 'sdr_test_workspace'
 
         # set all input rasters to have undefined nodata values
         tmp_dir = os.path.join(args['workspace_dir'], 'nodata_raster_dir')
@@ -273,7 +283,7 @@ class SDRTests(unittest.TestCase):
 
         Execute SDR with a non-square DEM and get a good result back.
         """
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
@@ -297,7 +307,7 @@ class SDRTests(unittest.TestCase):
         output files are generated and that the aggregate shapefile fields
         are the same as the regression case.
         """
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(self.workspace_dir)
@@ -316,7 +326,7 @@ class SDRTests(unittest.TestCase):
 
     def test_base_usle_c_too_large(self):
         """SDR test exepected exception for USLE_C > 1.0."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(
@@ -329,7 +339,7 @@ class SDRTests(unittest.TestCase):
 
     def test_base_usle_p_nan(self):
         """SDR test expected exception for USLE_P not a number."""
-        from natcap.invest import sdr
+        from natcap.invest.sdr import sdr
 
         # use predefined directory so test can clean up files during teardown
         args = SDRTests.generate_base_args(

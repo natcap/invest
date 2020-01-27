@@ -10,6 +10,59 @@ Unreleased Changes
   Second, nodata values in threat rasters are converted to a threat value of 0.
   Any threat pixel values other than 0 or nodata are interpreted as a threat
   value of 1.
+* InVEST sample data was re-organized to simply have one folder per model.
+  New datastacks were added for SDR, NDR, Seasonal Water Yield,
+  Annual Water Yield, DelineateIt, and Coastal Vulnerability.
+* Fixed an issue with NDR where the model was not properly checking for the
+  bounds of the raster, which could in some cases lead to exceptions being
+  printed to the command-line.  The model now correctly checks for these
+  raster boundaries.
+* Habitat Risk Assessment model supports points and lines -- in addition to
+  previously supported polygons and rasters -- for habitats or stressors.
+* Updated raster percentile algorithms in Scenic Quality and Wave Energy
+  models to use a more efficient and reliable raster percentile function
+  from pygeoprocessing.
+* InVEST is now compatible with pygeoprocessing 1.9.1.
+* All InVEST models now have an ``ARGS_SPEC`` object that contains metadata
+  about the model and describes the model's arguments.  Validation has been
+  reimplemented across all models to use these ``ARGS_SPEC`` objects.
+* The results suffix key for the Wave Energy and Wind Energy models has been
+  renamed ``results_suffix`` (was previously ``suffix``).  This is for
+  consistency across InVEST models.
+* Speed and memory optimization of raster processing in the Recreation model.
+* Removed a constraint in Coastal Vulnerability so the AOI polygon no longer
+  needs to intersect the continental shelf contour line. So the AOI can now be
+  used exclusively to delineate the coastal area of interest.
+* Improved how Coastal Vulnerability calculates local wind-driven waves.
+  This requires a new bathymetry raster input and implements equation 10
+  of the User Guide. Also minor updates to fields in intermediate outputs,
+  notably a 'shore_id' field is now the unique ID for joining tables and
+  FIDs are no longer used.
+* Added a status message to the UI if a datastack file fails to load,
+  instead of staying silent.
+* Correcting an issue with repository fetching in the InVEST ``Makefile``.
+  Managed repositories will now be fetched and updated to the expected revision
+  even if the repository already exists.
+* Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
+* Added a human-friendly message on NDR model ``KeyError``.
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
+* Improved how Seasonal Water Yield handles nodata values when processing
+  floating-point precipitation and quickflow rasters.
+* Add SDR feature to model sediment deposition across the landscape.
+* Fixed an issue that would cause an exception if SDR landcover map was masked
+  out if the original landcover map had no-nodata value defined.
+* Fixed an issue in the SDR model that could cause reported result vector
+  values to not correspond with known input vectors if the input watershed
+  vector was not an ESRI Shapefile.
+* Fixed issue in Seasonal Water Yield model that would cause an unhandled
+  exception when input rasters had areas of a valid DEM but nodata in other
+  input layers that overlap that dem.
+* Fixed an issue in the NDR model that would cause an exception if the critical
+  length of a landcover field was set to 0.
+* Implemented PEP518-compatible build system definition in the file
+  ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
+  from a source distribution.
 * Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
   the Land-Use/Land-Cover raster did not have a defined nodata value.  This
   case is now handled correctly.
@@ -55,6 +108,9 @@ Unreleased Changes
   configuration of a nodata value would result in ``-inf`` values in
   output rasters.  Now, any values without a defined reclassification
   rule that make it past validation will be written out as nodata.
+* DelineateIt has been reimplemented using the latest version of
+  pygeoprocessing (and the watershed delineation routine it provides) and now
+  uses ``taskgraph`` for avoiding unnecessary recomputation.
 * Fixed a bug in Recreation Model that was causing server-side code
   to execute twice for every client-side call.
 * Fixed a bug in Recreation model that did not apply ``results_suffix`` to

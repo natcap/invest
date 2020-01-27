@@ -69,6 +69,118 @@ _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
 
+ARGS_SPEC = {
+    "model_name": "Habitat Risk Assessment",
+    "module": __name__,
+    "userguide_html": "habitat_risk_assessment.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "info_table_path": {
+            "name": "Habitat Stressor Information CSV or Excel File",
+            "about": (
+                "A CSV or Excel file that contains the name of the habitat "
+                "(H) or stressor (s) on the `NAME` column that matches the "
+                "names in `criteria_table_path`. Each H/S has its "
+                "corresponding vector or raster path on the `PATH` column. "
+                "The `STRESSOR BUFFER (meters)` column should have a buffer "
+                "value if the `TYPE` column is a stressor."),
+            "type": "csv",
+            "required": True,
+            "validation_options": {
+                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
+                "excel_ok": True,
+            }
+        },
+        "criteria_table_path": {
+            "name": "Criteria Scores Table",
+            "about": (
+                "A CSV or Excel file that contains the set of criteria "
+                "ranking  (rating, DQ and weight) of each stressor on each "
+                "habitat, as well as the habitat resilience attributes."),
+            "type": "csv",
+            "validation_options": {
+                "excel_ok": True,
+            },
+            "required": True,
+        },
+        "resolution": {
+            "name": "Resolution of Analysis (meters)",
+            "about": (
+                "The size that should be used to grid the given habitat and "
+                "stressor files into rasters. This value will be the pixel "
+                "size of the completed raster files."),
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            }
+        },
+        "max_rating": {
+            "name": "Maximum Criteria Score",
+            "about": (
+                "This is the highest score that is used to rate a criteria "
+                "within this model run. This value would be used to compare "
+                "with the values within Rating column of the Criteria Scores "
+                "table."),
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            }
+        },
+        "risk_eq": {
+            "name": "Risk Equation",
+            "about": (
+                "Each of these represents an option of a risk calculation "
+                "equation. This will determine the numeric output of risk "
+                "for every habitat and stressor overlap area."),
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ["Multiplicative", "Euclidean"],
+            }
+        },
+        "decay_eq": {
+            "name": "Decay Equation",
+            "about": (
+                "Each of these represents an option of a decay equation "
+                "for the buffered stressors. If stressor buffering is "
+                "desired, this equation will determine the rate at which "
+                "stressor data is reduced."),
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ["None", "Linear", "Exponential"],
+            }
+        },
+        "aoi_vector_path": {
+            "name": "Area of Interest",
+            "about": (
+                "A GDAL-supported vector file containing feature containing "
+                "one or more planning regions. subregions. An optional field "
+                "called `name` could be added to compute average risk values "
+                "within each subregion."),
+            "type": "vector",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+                "projection_units": "m",
+            }
+        },
+        "visualize_outputs": {
+            "name": "Generate GeoJSONs for Web Visualization",
+            "help": (
+                "Check to enable the generation of GeoJSON outputs. This "
+                "could be used to visualize the risk scores on a map in the "
+                "HRA visualization web application."),
+            "type": "boolean",
+            "required": True,
+        }
+    }
+}
+
 
 def execute(args):
     """InVEST Habitat Risk Assessment (HRA) Model.
@@ -115,9 +227,6 @@ def execute(args):
 
     """
     LOGGER.info('Validating arguments')
-    # Default visualization option to True if it's not in args
-    if 'visualize_outputs' not in args:
-        args['visualize_outputs'] = True
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
@@ -3014,7 +3123,7 @@ def _simplify_geometry(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
         str(target_layer_name),
-        base_layer.GetSpatialRef(), ogr.wkbPolygon)
+        base_layer.GetSpatialRef(), base_layer.GetGeomType())
 
     target_simplified_vector.StartTransaction()
 
@@ -3027,7 +3136,6 @@ def _simplify_geometry(
 
         # Use SimplifyPreserveTopology to prevent features from missing
         simplified_geometry = base_geometry.SimplifyPreserveTopology(tolerance)
-        base_geometry = None
         if (simplified_geometry is not None and
                 simplified_geometry.GetArea() > 0):
             target_feature.SetGeometry(simplified_geometry)
@@ -3039,7 +3147,11 @@ def _simplify_geometry(
 
         # If simplify doesn't work, fall back to the original geometry
         else:
+            # Still using the target_feature here because the preserve_field 
+            # option altered the layer defn between base and target.
+            target_feature.SetGeometry(base_geometry)
             target_simplified_layer.CreateFeature(target_feature)
+        base_geometry = None
 
     target_simplified_layer.SyncToDisk()
     target_simplified_vector.CommitTransaction()
@@ -3067,108 +3179,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-    max_rating_key = 'max_rating'
-    aoi_vector_key = 'aoi_vector_path'
-    resolution_key = 'resolution'
-    viz_option_key = 'visualize_outputs'
-
-    for key in [
-            'workspace_dir',
-            'info_table_path',
-            'criteria_table_path',
-            'resolution',
-            'max_rating',
-            'risk_eq',
-            'decay_eq',
-            'aoi_vector_path']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to is None or limit_to == viz_option_key:
-        if viz_option_key in args and not isinstance(
-                args[viz_option_key], bool):
-            validation_error_list.append(
-                ([viz_option_key], 'needs to be True or False'))
-
-    # Check if resolution is a positive number
-    if limit_to is None or limit_to == resolution_key:
-        resolution_value = args[resolution_key]
-        resolution_is_valid = True
-        if isinstance(resolution_value, basestring):
-            if not resolution_value.isdigit() or float(resolution_value) <= 0:
-                resolution_is_valid = False
-        elif (isinstance(resolution_value, (int, float))):
-            if resolution_value <= 0:
-                resolution_is_valid = False
-        if not resolution_is_valid:
-            validation_error_list.append(
-                ([resolution_key], 'should be a positive number'))
-
-    for key in [
-            'criteria_table_path', 'info_table_path']:
-        if (limit_to is None or limit_to == key):
-            if not os.path.exists(args[key]):
-                validation_error_list.append(([key], 'not found on disk'))
-
-            # Validate file type
-            file_ext = os.path.splitext(args[key])[1].lower()
-            if file_ext not in ['.csv', '.xlsx', '.xls']:
-                validation_error_list.append(
-                    ([key], 'not a CSV or an Excel file'))
-
-    for key, key_values in {
-            'risk_eq': ['Euclidean', 'Multiplicative'],
-            'decay_eq': ['Linear', 'Exponential', 'None']}.items():
-        if limit_to is None or limit_to == key:
-            if args[key] not in key_values:
-                validation_error_list.append(
-                    ([key], 'should be one of the following: %s, but is "%s" '
-                     'instead' % (key_values, args[key])))
-
-    if limit_to is None or limit_to == max_rating_key:
-        # If the argument isn't a number, check if it can be converted to a
-        # number
-        if not isinstance(args[max_rating_key], (int, float)):
-            if args[max_rating_key].lstrip("-").isdigit():
-                max_rating_value = float(args[max_rating_key])
-            else:
-                validation_error_list.append(
-                    ([max_rating_key], 'should be a number'))
-        else:
-            max_rating_value = args[max_rating_key]
-
-        # If the argument is a number, check if it's larger than 1
-        if 'max_rating_value' in locals() and max_rating_value <= 1:
-            validation_error_list.append(
-                ([max_rating_key], 'should be larger than 1'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        if ((limit_to is None or limit_to == aoi_vector_key) and
-                aoi_vector_key in args):
-            if not os.path.exists(args[aoi_vector_key]):
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not found on disk'))
-
-            vector = gdal.OpenEx(args[aoi_vector_key], gdal.OF_VECTOR)
-            if vector is None:
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not a vector'))
-            else:
-                vector = None
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'])

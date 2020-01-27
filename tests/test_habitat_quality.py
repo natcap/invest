@@ -239,7 +239,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             u'workspace_dir': self.workspace_dir,
         }
 
@@ -263,6 +263,66 @@ class HabitatQualityTests(unittest.TestCase):
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')
         make_threats_csv(args['threats_table_path'])
+
+        habitat_quality.execute(args)
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename, assert_value in {
+                'deg_sum_c_regression.tif': 1792.8088,
+                'deg_sum_f_regression.tif': 2308.9636,
+                'quality_c_regression.tif': 6928.5293,
+                'quality_f_regression.tif': 4916.338,
+                'rarity_c_regression.tif': 2500.0000000,
+                'rarity_f_regression.tif': 2500.0000000}.items():
+            assert_array_sum(
+                os.path.join(args['workspace_dir'], 'output', output_filename),
+                assert_value)
+
+    def test_habitat_quality_numeric_threats(self):
+        """Habitat Quality: regression test on numeric threat names."""
+        from natcap.invest import habitat_quality
+        threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
+
+        threatnames = ['1111', '2222']
+        threats_folder = os.path.join(self.workspace_dir, 'threats')
+        os.makedirs(threats_folder)
+        for suffix in ['_c', '_f']:
+            for i, threat in enumerate(threatnames):
+                raster_path = os.path.join(threats_folder,
+                                           threat + suffix + '.tif')
+                threat_array[100//(i+1):, :] = 1  # making variations among threats
+                make_raster_from_array(threat_array, raster_path)
+
+        threat_csv_path = os.path.join(self.workspace_dir, 'threats.csv')
+        with open(threat_csv_path, 'w') as open_table:
+            open_table.write('MAX_DIST,WEIGHT,THREAT,DECAY\n')
+            open_table.write('0.9,0.7,%s,linear\n' % threatnames[0])
+            open_table.write('0.5,1.0,%s,exponential\n' % threatnames[1])
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            'threats_table_path': threat_csv_path,
+            'workspace_dir': os.path.join(self.workspace_dir, 'workspace'),
+            'threat_raster_folder': threats_folder,
+            'sensitivity_table_path': os.path.join(self.workspace_dir,
+                                                   'sensitivity_samp.csv'),
+            'access_vector_path': os.path.join(self.workspace_dir,
+                                               'access_samp.shp')
+        }
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                self.workspace_dir, 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        with open(args['sensitivity_table_path'], 'w') as open_table:
+            open_table.write('LULC,NAME,HABITAT,L_%s,L_%s\n' % tuple(threatnames))
+            open_table.write('1,"lulc 1",1,1,1\n')
+            open_table.write('2,"lulc 2",0.5,0.5,1\n')
+            open_table.write('3,"lulc 3",0,0.3,1\n')
 
         habitat_quality.execute(args)
 
@@ -531,24 +591,15 @@ class HabitatQualityTests(unittest.TestCase):
         from natcap.invest import habitat_quality
 
         args = {
-            'suffix': 'regression',
+            'results_suffix': 'regression',
             'workspace_dir': self.workspace_dir,
             'threat_raster_folder': self.workspace_dir,
         }
 
-        with self.assertRaises(KeyError) as cm:
-            habitat_quality.validate(args)
-        self.assertEqual(len(cm.exception.args), 4)
+        validation_results = habitat_quality.validate(args)
+        self.assertEqual(len(validation_results), 1)
 
-        keys_without_value = [
+        keys_without_value = set([
             'lulc_cur_path', 'threats_table_path', 'sensitivity_table_path',
-            'half_saturation_constant']
-
-        for key in keys_without_value:
-            args[key] = ''
-
-        validation_error_list = habitat_quality.validate(args)
-        for key in keys_without_value:
-            self.assertTrue(
-                ([key], 'should have a value') in validation_error_list,
-                'exception not raised for %s')
+            'half_saturation_constant'])
+        self.assertEqual(set(validation_results[0][0]), keys_without_value)

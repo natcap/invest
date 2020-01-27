@@ -14,21 +14,167 @@ import logging
 
 from osgeo import gdal
 from osgeo import ogr
+from osgeo import osr
 import numpy
 
 import pygeoprocessing
 import pygeoprocessing.routing
 import taskgraph
-from . import utils
-from . import validation
+from .. import utils
+from .. import validation
+from . import sdr_core
 
-LOGGER = logging.getLogger('natcap.invest.sdr')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Sediment Delivery Ratio Model (SDR)",
+    "module": __name__,
+    "userguide_html": "sdr.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_path", "erosivity_path", "erodibility_path",
+                         "lulc_path", "drainage_path", "watersheds_path",],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file with an elevation value for "
+                "each cell.  Make sure the DEM is corrected by filling in "
+                "sinks, and if necessary burning hydrographic features into "
+                "the elevation model (recommended when unusual streams are "
+                "observed.) See the 'Working with the DEM' section of the "
+                "InVEST User's Guide for more information."),
+            "name": "Digital Elevation Model"
+        },
+        "erosivity_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file, with an erosivity index value "
+                "for each cell.  This variable depends on the intensity and "
+                "duration of rainfall in the area of interest.  The greater "
+                "the intensity and duration of the rain storm, the higher "
+                "the erosion potential. The erosivity index is widely used, "
+                "but in case of its absence, there are methods and equations "
+                "to help generate a grid using climatic data.  The units are "
+                "MJ*mm/(ha*h*yr)."),
+            "name": "Rainfall Erosivity Index (R)"
+        },
+        "erodibility_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file, with a soil erodibility value "
+                "for each cell which is a measure of the susceptibility of "
+                "soil particles to detachment and transport by rainfall and "
+                "runoff.  Units are in T*ha*h/(ha*MJ*mm)."),
+            "name": "Soil Erodibility"
+        },
+        "lulc_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file, with an integer LULC code "
+                "for each cell."),
+            "name": "Land-Use/Land-Cover"
+        },
+        "watersheds_path": {
+            "validation_options": {
+                "required_fields": ["ws_id"],
+                "projected": True,
+            },
+            "type": "vector",
+            "required": True,
+            "about": (
+                "This is a layer of polygons representing watersheds such "
+                "that each watershed contributes to a point of interest "
+                "where water quality will be analyzed.  It must have the "
+                "integer field 'ws_id' where the values uniquely identify "
+                "each watershed."),
+            "name": "Watersheds"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "usle_c", "usle_p"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'usle_c', and 'usle_p'.  "
+                "See the InVEST Sediment User's Guide for more information "
+                "about these fields."),
+            "name": "Biophysical Table"
+        },
+        "threshold_flow_accumulation": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that retention "
+                "stops and the remaining export is exported to the stream.  "
+                "Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumulation"
+        },
+        "k_param": {
+            "type": "number",
+            "required": True,
+            "about": "Borselli k parameter.",
+            "name": "Borselli k Parameter"
+        },
+        "sdr_max": {
+            "type": "number",
+            "required": True,
+            "about": "Maximum SDR value.",
+            "name": "Max SDR Value"
+        },
+        "ic_0_param": {
+            "type": "number",
+            "required": True,
+            "about": "Borselli IC0 parameter.",
+            "name": "Borselli IC0 Parameter"
+        },
+        "drainage_path": {
+            "type": "raster",
+            "required": False,
+            "about": (
+                "An optional GDAL-supported raster file mask, that indicates "
+                "areas that drain to the watershed.  Format is that 1's "
+                "indicate drainage areas and 0's or nodata indicate areas "
+                "with no additional drainage.  This model is most accurate "
+                "when the drainage raster aligns with the DEM."),
+            "name": "Drainages"
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'rkls_path': 'rkls.tif',
     'sed_export_path': 'sed_export.tif',
     'sed_retention_index_path': 'sed_retention_index.tif',
     'sed_retention_path': 'sed_retention.tif',
+    'sed_deposition_path': 'sed_deposition.tif',
     'stream_and_drainage_path': 'stream_and_drainage.tif',
     'stream_path': 'stream.tif',
     'usle_path': 'usle.tif',
@@ -42,6 +188,7 @@ _INTERMEDIATE_BASE_FILES = {
     'd_up_bare_soil_path': 'd_up_bare_soil.tif',
     'd_up_path': 'd_up.tif',
     'dem_offset_path': 'dem_offset.tif',
+    'f_path': 'f.tif',
     'flow_accumulation_path': 'flow_accumulation.tif',
     'flow_direction_path': 'flow_direction.tif',
     'ic_bare_soil_path': 'ic_bare_soil.tif',
@@ -61,6 +208,7 @@ _INTERMEDIATE_BASE_FILES = {
     'w_path': 'w.tif',
     'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
+    'e_prime_path': 'e_prime.tif',
     }
 
 _TMP_BASE_FILES = {
@@ -110,14 +258,21 @@ def execute(args):
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
             and >= 1 is number of processes.
+        args['target_pixel_size'] (list): requested target pixel size in
+            local projection coordinate system.
+        args['biophysical_table_lucode_field'] (str): optional, if exists
+            use this instead of 'lucode'.
 
     Returns:
         None.
+
     """
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
-
+    lufield_id = 'lucode'
+    if 'biophysical_table_lucode_field' in args:
+        lufield_id = args['biophysical_table_lucode_field']
     biophysical_table = utils.build_lookup_from_csv(
-        args['biophysical_table_path'], 'lucode')
+        args['biophysical_table_path'], lufield_id)
 
     # Test to see if c or p values are outside of 0..1
     for table_key in ['usle_c', 'usle_p']:
@@ -147,10 +302,13 @@ def execute(args):
          (_INTERMEDIATE_BASE_FILES, intermediate_output_dir),
          (_TMP_BASE_FILES, churn_dir)], file_suffix)
 
-    n_workers = -1  # single process mode, but adjust if in args
-    if 'n_workers' in args:
+    try:
         n_workers = int(args['n_workers'])
-
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
         churn_dir, n_workers, reporting_interval=5.0)
 
@@ -173,15 +331,18 @@ def execute(args):
     min_pixel_size = numpy.min(numpy.abs(dem_raster_info['pixel_size']))
     target_pixel_size = (min_pixel_size, -min_pixel_size)
 
+    target_sr_wkt = dem_raster_info['projection']
+    vector_mask_options = {'mask_vector_path': args['watersheds_path']}
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             base_list, aligned_list, interpolation_list,
             target_pixel_size, 'intersection'),
         kwargs={
-            'target_sr_wkt': dem_raster_info['projection'],
+            'target_sr_wkt': target_sr_wkt,
             'base_vector_path_list': (args['watersheds_path'],),
             'raster_align_index': 0,
+            'vector_mask_options': vector_mask_options,
             },
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
@@ -429,6 +590,28 @@ def execute(args):
         dependent_task_list=[usle_task, sdr_task],
         task_name='calculate sed export')
 
+    e_prime_task = task_graph.add_task(
+        func=_calculate_e_prime,
+        args=(
+            f_reg['usle_path'], f_reg['sdr_path'], f_reg['e_prime_path']),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['e_prime_path']],
+        dependent_task_list=[usle_task, sdr_task],
+        task_name='calculate export prime')
+
+    _ = task_graph.add_task(
+        func=sdr_core.calculate_sediment_deposition,
+        args=(
+            f_reg['flow_direction_path'], f_reg['e_prime_path'],
+            f_reg['f_path'], f_reg['sdr_path'],
+            f_reg['sed_deposition_path']),
+        dependent_task_list=[e_prime_task, sdr_task, flow_dir_task],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['sed_deposition_path']],
+        task_name='sediment deposition')
+
     _ = task_graph.add_task(
         func=_calculate_sed_retention_index,
         args=(
@@ -517,7 +700,7 @@ def execute(args):
         args=(
             args['watersheds_path'], f_reg['usle_path'],
             f_reg['sed_export_path'], f_reg['sed_retention_path'],
-            f_reg['watershed_results_sdr_path']),
+            f_reg['sed_deposition_path'], f_reg['watershed_results_sdr_path']),
         target_path_list=[f_reg['watershed_results_sdr_path']],
         dependent_task_list=[
             usle_task, sed_export_task, sed_retention_task],
@@ -545,6 +728,7 @@ def _calculate_ls_factor(
 
     Returns:
         None
+
     """
     slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
     aspect_nodata = pygeoprocessing.get_raster_info(aspect_path)['nodata'][0]
@@ -562,8 +746,10 @@ def _calculate_ls_factor(
             aspect_angle (numpy.ndarray): flow direction in radians
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
+
         Returns:
             ls_factor
+
         """
         valid_mask = (
             (aspect_angle != aspect_nodata) &
@@ -643,6 +829,7 @@ def _calculate_rkls(
 
     Returns:
         None
+
     """
     erosivity_nodata = pygeoprocessing.get_raster_info(
         erosivity_path)['nodata'][0]
@@ -707,6 +894,7 @@ def _threshold_slope(slope_path, out_thresholded_slope_path):
 
     Returns:
         None
+
     """
     slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
 
@@ -742,6 +930,7 @@ def _add_drainage(stream_path, drainage_path, out_stream_and_drainage_path):
 
     Returns:
         None
+
     """
     def add_drainage_op(stream, drainage):
         """Add drainage mask to stream layer."""
@@ -770,10 +959,17 @@ def _calculate_w(
 
     Returns:
         None
+
     """
     lulc_to_c = dict(
         [(lulc_code, float(table['usle_c'])) for
          (lulc_code, table) in biophysical_table.items()])
+    if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
+        # will get a case where the raster might be masked but nothing to
+        # replace so 0 is used by default. Ensure this exists in lookup.
+        if 0 not in lulc_to_c:
+            lulc_to_c = lulc_to_c.copy()
+            lulc_to_c[0] = 0.0
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), lulc_to_c, w_factor_path, gdal.GDT_Float32,
@@ -805,10 +1001,16 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
 
     Returns:
         None
+
     """
     lulc_to_cp = dict(
         [(lulc_code, float(table['usle_c']) * float(table['usle_p'])) for
          (lulc_code, table) in biophysical_table.items()])
+    if pygeoprocessing.get_raster_info(lulc_path)['nodata'][0] is None:
+        # will get a case where the raster might be masked but nothing to
+        # replace so 0 is used by default. Ensure this exists in lookup.
+        if 0 not in lulc_to_cp:
+            lulc_to_cp[0] = 0.0
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), lulc_to_cp, cp_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA, values_required=True)
@@ -817,7 +1019,6 @@ def _calculate_cp(biophysical_table, lulc_path, cp_factor_path):
 def _calculate_usle(
         rkls_path, cp_factor_path, drainage_raster_path, out_usle_path):
     """Calculate USLE, multiply RKLS by CP and set to 1 on drains."""
-
     def usle_op(rkls, cp_factor, drainage):
         """Calculate USLE."""
         result = numpy.empty(rkls.shape, dtype=numpy.float32)
@@ -853,6 +1054,7 @@ def _calculate_bar_factor(
 
     Returns:
         None.
+
     """
     flow_accumulation_nodata = pygeoprocessing.get_raster_info(
         flow_accumulation_path)['nodata'][0]
@@ -863,9 +1065,9 @@ def _calculate_bar_factor(
     pygeoprocessing.routing.flow_accumulation_mfd(
         (flow_direction_path, 1), accumulation_path,
         weight_raster_path_band=(factor_path, 1),
-        gtiff_creation_options=[
+        raster_driver_creation_tuple=('GTIFF', [
             'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
-            'PREDICTOR=3'])
+            'PREDICTOR=3']))
 
     def bar_op(base_accumulation, flow_accumulation):
         """Aggregate accumulation from base divided by the flow accum."""
@@ -965,7 +1167,6 @@ def _calculate_inverse_ws_factor(
 def _calculate_inverse_s_factor(
         thresholded_slope_path, out_s_factor_inverse_path):
     """Calculate 1/s."""
-
     slope_nodata = pygeoprocessing.get_raster_info(
         thresholded_slope_path)['nodata'][0]
 
@@ -1006,7 +1207,6 @@ def _calculate_ic(d_up_path, d_dn_path, out_ic_factor_path):
 def _calculate_sdr(
         k_factor, ic_0, sdr_max, ic_path, stream_path, out_sdr_path):
     """Derive SDR from k, ic0, ic; 0 on the stream and clamped to sdr_max."""
-
     def sdr_op(ic_factor, stream):
         """Calculate SDR factor."""
         valid_mask = (
@@ -1023,9 +1223,8 @@ def _calculate_sdr(
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
-def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
+def _calculate_sed_export(usle_path, sdr_path, target_sed_export_path):
     """Calculate USLE * SDR."""
-
     def sed_export_op(usle, sdr):
         """Sediment export."""
         valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
@@ -1035,7 +1234,22 @@ def _calculate_sed_export(usle_path, sdr_path, out_sed_export_path):
         return result
 
     pygeoprocessing.raster_calculator(
-        [(usle_path, 1), (sdr_path, 1)], sed_export_op, out_sed_export_path,
+        [(usle_path, 1), (sdr_path, 1)], sed_export_op,
+        target_sed_export_path, gdal.GDT_Float32, _TARGET_NODATA)
+
+
+def _calculate_e_prime(usle_path, sdr_path, target_e_prime):
+    """Calculate USLE * (1-SDR)."""
+    def e_prime_op(usle, sdr):
+        """Wash that does not reach stream."""
+        valid_mask = (usle != _TARGET_NODATA) & (sdr != _TARGET_NODATA)
+        result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
+        result[:] = _TARGET_NODATA
+        result[valid_mask] = usle[valid_mask] * (1-sdr[valid_mask])
+        return result
+
+    pygeoprocessing.raster_calculator(
+        [(usle_path, 1), (sdr_path, 1)], e_prime_op, target_e_prime,
         gdal.GDT_Float32, _TARGET_NODATA)
 
 
@@ -1043,7 +1257,6 @@ def _calculate_sed_retention_index(
         rkls_path, usle_path, sdr_path, sdr_max,
         out_sed_retention_index_path):
     """Calculate (rkls-usle) * sdr  / sdr_max."""
-
     def sediment_index_op(rkls, usle, sdr_factor):
         """Calculate sediment retention index."""
         valid_mask = (
@@ -1085,6 +1298,7 @@ def _calculate_sed_retention(
 
     Returns:
         None
+
     """
     stream_nodata = pygeoprocessing.get_raster_info(stream_path)['nodata'][0]
 
@@ -1114,37 +1328,42 @@ def _calculate_sed_retention(
 
 def _generate_report(
         watersheds_path, usle_path, sed_export_path, sed_retention_path,
-        watershed_results_sdr_path):
-    """Create shapefile with USLE, sed export, and sed retention fields."""
-    field_summaries = {
-        'usle_tot': pygeoprocessing.zonal_statistics(
-            (usle_path, 1), watersheds_path),
-        'sed_export': pygeoprocessing.zonal_statistics(
-            (sed_export_path, 1), watersheds_path),
-        'sed_retent': pygeoprocessing.zonal_statistics(
-            (sed_retention_path, 1), watersheds_path),
-        }
-
+        sed_deposition_path, watershed_results_sdr_path):
+    """Create shapefile with USLE, sed export, retention, and deposition."""
     original_datasource = gdal.OpenEx(watersheds_path, gdal.OF_VECTOR)
     driver = gdal.GetDriverByName('ESRI Shapefile')
-    datasource_copy = driver.CreateCopy(
+    target_vector = driver.CreateCopy(
         watershed_results_sdr_path, original_datasource)
-    layer = datasource_copy.GetLayer()
+    target_layer = target_vector.GetLayer()
+    target_layer.SyncToDisk()
+
+    field_summaries = {
+        'usle_tot': pygeoprocessing.zonal_statistics(
+            (usle_path, 1), watershed_results_sdr_path),
+        'sed_export': pygeoprocessing.zonal_statistics(
+            (sed_export_path, 1), watershed_results_sdr_path),
+        'sed_retent': pygeoprocessing.zonal_statistics(
+            (sed_retention_path, 1), watershed_results_sdr_path),
+        'sed_dep': pygeoprocessing.zonal_statistics(
+            (sed_deposition_path, 1), watershed_results_sdr_path),
+        }
 
     for field_name in field_summaries:
         field_def = ogr.FieldDefn(field_name, ogr.OFTReal)
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
-        layer.CreateField(field_def)
+        target_layer.CreateField(field_def)
 
-    layer.ResetReading()
-    for feature in layer:
+    target_layer.ResetReading()
+    for feature in target_layer:
         feature_id = feature.GetFID()
         for field_name in field_summaries:
             feature.SetField(
                 field_name,
                 float(field_summaries[field_name][feature_id]['sum']))
-        layer.SetFeature(feature)
+        target_layer.SetFeature(feature)
+    target_vector = None
+    target_layer = None
 
 
 @validation.invest_validator
@@ -1164,101 +1383,31 @@ def validate(args, limit_to=None):
             tuples. Where an entry indicates that the invalid keys caused
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
+
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
-    required_keys = [
-        'workspace_dir',
-        'dem_path',
-        'erosivity_path',
-        'erodibility_path',
-        'lulc_path',
-        'watersheds_path',
-        'biophysical_table_path',
-        'threshold_flow_accumulation',
-        'k_param',
-        'ic_0_param',
-        'sdr_max']
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    sufficient_keys = validation.get_sufficient_keys(args)
 
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
+    if ('watersheds_path' not in invalid_keys and
+            'watersheds_path' in sufficient_keys):
+        # The watersheds vector must have an integer column called WS_ID.
+        vector = gdal.OpenEx(args['watersheds_path'], gdal.OF_VECTOR)
+        layer = vector.GetLayer()
+        n_invalid_features = 0
+        for feature in layer:
+            try:
+                _ = int(feature.GetFieldAsString('ws_id'))
+            except ValueError:
+                n_invalid_features += 1
 
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
+        if n_invalid_features:
+            validation_warnings.append((
+                ['watersheds_path'],
+                ('%s features have a non-integer ws_id field' %
+                    n_invalid_features)))
+            invalid_keys.add('watersheds_path')
 
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('dem_path', 'raster'),
-        ('erosivity_path', 'raster'),
-        ('erodibility_path', 'raster'),
-        ('lulc_path', 'raster'),
-        ('watersheds_path', 'vector'),
-        ('biophysical_table_path', 'table')]
-
-    if limit_to in ['drainage_path', None] and (
-            'drainage_path' in args and
-            args['drainage_path'] not in ['', None]):
-        file_type_list.append(('drainage_path', 'raster'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-
-        if limit_to in ['watersheds_path', None]:
-            # checks that watersheds are a vector, that they have 'ws_id' and
-            # that all their fields are defined
-            if os.path.exists(args['watersheds_path']):
-                try:
-                    watersheds_vector = gdal.OpenEx(
-                        args['watersheds_path'], gdal.OF_VECTOR)
-                    if watersheds_vector is None:
-                        validation_error_list.append(
-                            (['watersheds_path'], 'not a vector'))
-                    else:
-                        watersheds_layer = watersheds_vector.GetLayer()
-                        watersheds_defn = watersheds_layer.GetLayerDefn()
-                        if watersheds_defn.GetFieldIndex('ws_id') == -1:
-                            validation_error_list.append((
-                                ['watersheds_path'],
-                                'does not have a `ws_id` field defined.'))
-                        else:
-                            for feature in watersheds_layer:
-                                try:
-                                    value = feature.GetFieldAsString('ws_id')
-                                    # value should be an integer
-                                    _ = int(value)
-                                except ValueError:
-                                    validation_error_list.append((
-                                        ['watersheds_path'],
-                                        'feature %s has an invalid value of '
-                                        '"%s" in \'ws_id\' column, it should '
-                                        'be an integer value' % (
-                                            str(feature.GetFID()), value)))
-                finally:
-                    feature = None
-                    watersheds_defn = None
-                    watersheds_layer = None
-                    watersheds_vector = None
-
-    return validation_error_list
+    return validation_warnings

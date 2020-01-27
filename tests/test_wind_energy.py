@@ -550,28 +550,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'output', vector_path),
             os.path.join(REGRESSION_DATA, 'priceval', vector_path))
 
-    def test_grid_points_no_aoi(self):
-        """WindEnergy: testing ValueError raised w/ grid points but w/o AOI."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_base_args(self.workspace_dir)
-
-        args['land_polygon_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'simple_north_america_polygon.shp')
-        args['min_distance'] = 0
-        args['max_distance'] = 200000
-        args['valuation_container'] = True
-        args['foundation_cost'] = 2
-        args['discount_rate'] = 0.07
-        # Provide the grid points but not AOI
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_pts.csv')
-        args['aoi_vector_path'] = ''  # Empty AOI value
-        args['price_table'] = False
-        args['wind_price'] = 0.187
-        args['rate_change'] = 0.2
-
-        self.assertRaises(ValueError, wind_energy.execute, args)
-
     def test_field_error_missing_bio_param(self):
         """WindEnergy: testing that ValueError raised when missing bio param."""
         from natcap.invest import wind_energy
@@ -607,55 +585,6 @@ class WindEnergyRegressionTests(unittest.TestCase):
             'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
             'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
             'turbine_cost': 8.0, 'turbines_per_circuit': 8
-        }
-        _create_vertical_csv(data, file_path)
-        args['turbine_parameters_path'] = file_path
-
-        self.assertRaises(ValueError, wind_energy.execute, args)
-
-    def test_missing_valuation_params(self):
-        """WindEnergy: testing that ValueError is thrown when val params miss."""
-        from natcap.invest import wind_energy
-
-        # for testing raised exceptions, running on a set of data that was
-        # created by hand and has no numerical validity. Helps test the
-        # raised exception quicker
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'wind_data_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
-            'bathymetry_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
-            'global_wind_parameters_path': os.path.join(
-                SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
-            'number_of_turbines': 80,
-            'min_depth': 3,
-            'max_depth': 200,
-            'aoi_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
-            'land_polygon_vector_path': os.path.join(
-                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
-            'min_distance': 0,
-            'max_distance': 200000,
-            'valuation_container': True,
-            'foundation_cost': 2,
-            'discount_rate': 0.07,
-            'avg_grid_distance': 4,
-            'price_table': True,
-            'wind_schedule': os.path.join(
-                SAMPLE_DATA, 'price_table_example.csv'),
-            'suffix': '_test'
-        }
-
-        # creating a stand in turbine parameter csv file that is missing
-        # a valuation field / value. This should raise the exception
-        tmp, file_path = tempfile.mkstemp(suffix='.csv',
-                                          dir=args['workspace_dir'])
-        os.close(tmp)
-        data = {
-            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
-            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
-            'turbines_per_circuit': 8, 'rotor_diameter': 40
         }
         _create_vertical_csv(data, file_path)
         args['turbine_parameters_path'] = file_path
@@ -718,296 +647,54 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         self.assertRaises(ValueError, wind_energy.execute, args)
 
-    @staticmethod
-    def generate_validate_args(workspace_dir):
-        """Generate an args list for testing validate function in the model."""
+    def test_missing_valuation_params(self):
+        """WindEnergy: testing that ValueError is thrown when val params miss."""
+        from natcap.invest import wind_energy
+
+        # for testing raised exceptions, running on a set of data that was
+        # created by hand and has no numerical validity. Helps test the
+        # raised exception quicker
         args = {
-            'workspace_dir': workspace_dir,
+            'workspace_dir': self.workspace_dir,
             'wind_data_path': os.path.join(
-                SAMPLE_DATA, 'resampled_wind_points.csv'),
+                REGRESSION_DATA, 'smoke', 'wind_data_smoke.csv'),
             'bathymetry_path': os.path.join(
-                SAMPLE_DATA, 'resampled_global_dem_unprojected.tif'),
+                REGRESSION_DATA, 'smoke', 'dem_smoke.tif'),
             'global_wind_parameters_path': os.path.join(
                 SAMPLE_DATA, 'global_wind_energy_parameters.csv'),
-            'turbine_parameters_path': os.path.join(
-                SAMPLE_DATA, '3_6_turbine.csv'),
             'number_of_turbines': 80,
             'min_depth': 3,
-            'max_depth': 180,
+            'max_depth': 200,
             'aoi_vector_path': os.path.join(
-                SAMPLE_DATA, 'New_England_US_Aoi.shp'),
+                REGRESSION_DATA, 'smoke', 'aoi_smoke.shp'),
             'land_polygon_vector_path': os.path.join(
-                SAMPLE_DATA, 'simple_north_america_polygon.shp'),
+                REGRESSION_DATA, 'smoke', 'landpoly_smoke.shp'),
             'min_distance': 0,
             'max_distance': 200000,
             'valuation_container': True,
             'foundation_cost': 2,
             'discount_rate': 0.07,
-            'grid_points_path': os.path.join(
-                SAMPLE_DATA, 'resampled_grid_pts.csv'),
-            'price_table': False,
-            'wind_price': 0.187,
-            'rate_change': 0.2,
-            'n_workers': -1
-            }
+            'avg_grid_distance': 4,
+            'price_table': True,
+            'wind_schedule': os.path.join(
+                SAMPLE_DATA, 'price_table_example.csv'),
+            'suffix': '_test'
+        }
 
-        return args
+        # creating a stand in turbine parameter csv file that is missing
+        # a valuation field / value. This should raise the exception
+        tmp, file_path = tempfile.mkstemp(suffix='.csv',
+                                          dir=args['workspace_dir'])
+        os.close(tmp)
+        data = {
+            'hub_height': 80, 'cut_in_wspd': 4.0, 'rated_wspd': 12.5,
+            'cut_out_wspd': 25.0, 'turbine_rated_pwr': 3.6,
+            'turbines_per_circuit': 8, 'rotor_diameter': 40
+        }
+        _create_vertical_csv(data, file_path)
+        args['turbine_parameters_path'] = file_path
 
-    def test_validate_missing_distance(self):
-        """WindEnergy: testing validate with missing max_distance."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Testing when min_distance is provided, but max_distance is None.
-        args['max_distance'] = None
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['max_distance'], 'Value must be defined.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_invalid_price_table(self):
-        """WindEnergy: testing price_table is neither True nor False."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Testing wrong value in price_table
-        args['price_table'] = 'wrong_value'
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['price_table'], 'Parameter must be either True or False.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_invalid_wind_schedule(self):
-        """WindEnergy: testing missing or invalid wind_schedule values."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Testing exception raised when missing wind_schedule, provided
-        # price_table is True
-        args['price_table'] = True
-        with self.assertRaises(AssertionError) as cm:
-            wind_energy.validate(args)
-        expected_message = (
-            "Key wind_schedule (from ['wind_schedule']) must be in args")
-        actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
-
-        # Testing invalid values in the wind schedule table
-        args['wind_schedule'] = os.path.join(
-            SAMPLE_DATA, 'price_table_bad_example.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_errors = [
-            (['wind_schedule'], 'Value(s) in Year column is not integer.'),
-            (['wind_schedule'], 'Value(s) in Price column is not numeric.')]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
-
-        # Testing duplicate years in the wind schedule table
-        args['wind_schedule'] = os.path.join(
-            SAMPLE_DATA, 'price_table_example_duplicate_years.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['wind_schedule'],
-            'The following year(s) showed up more than once:')
-        self.assertTrue(expected_error[0] == validation_error_list[0][0]
-                        and expected_error[1] in validation_error_list[0][1])
-
-    def test_validate_missing_grid_distance_keys(self):
-        """WindEnergy: testing missing distance keys when valuation checked."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Remove grid_points_path from args so both grid_points_path and
-        # avg_grid_distance are missing
-        args['grid_points_path'] = 'non_existing_file.csv'
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['grid_points_path'],
-            'Either avg_grid_distance or grid_points_path must be provided.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_missing_workspace(self):
-        """WindEnergy: testing missing workspace_dir."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        args['workspace_dir'] = ''
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['workspace_dir'], 'Parameter must have a value.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_invalid_aoi_vector(self):
-        """WindEnergy: testing invalid aoi_vector_path values in args."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Use a non-compatible vector file for AOI
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp.gz')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['aoi_vector_path'],
-            'Parameter must be a path to an OGR-compatible vector file.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a projection that's not in meters
-        args['aoi_vector_path'] = os.path.join(
-            SAMPLE_DATA, 'aoi_projected_in_ft.shp')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['aoi_vector_path'], 'Vector must be projected in meters')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_invalid_bathymetry_raster(self):
-        """WindEnergy: testing GDAL non-compatible bathymetry_path in args."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Use a non-compatible vector file for AOI
-        args['bathymetry_path'] = os.path.join(
-            SAMPLE_DATA, 'New_England_US_Aoi.shp.gz')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['bathymetry_path'],
-            'Parameter must be a path to a GDAL-compatible raster on disk.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_missing_required_fields_in_wind_data(self):
-        """WindEnergy: testing missing required fields in wind_data_path."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Use a CSV file that's missing the REF field
-        args['wind_data_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_wind_points_missing_ref_field.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['wind_data_path'], 'Missing REF field.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a CSV file that's missing some fields other than REF
-        args['wind_data_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_wind_points_missing_other_fields.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['wind_data_path'], 'CSV missing required fields:')
-        self.assertTrue(expected_error[0] == validation_error_list[0][0]
-                        and expected_error[1] in validation_error_list[0][1])
-
-        # Use a CSV file path that doesn't exist
-        args['wind_data_path'] = os.path.join(
-            SAMPLE_DATA, 'file_not_exist.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['wind_data_path'], 'Could not locate file.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a CSV file that has invalid field values
-        args['wind_data_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_wind_points_invalid_field_values.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_errors = [
-            (['wind_data_path'], 'Ref 10.2 must be an integer.'),
-            (['wind_data_path'], 'Ref 10.2 column k must be a number.')]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_csv_file_nonexist(self):
-        """WindEnergy: testing validate turbine_parameters_path not existing."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Use a non-compatible vector file for AOI
-        args['turbine_parameters_path'] = os.path.join(
-            SAMPLE_DATA, 'file_not_exist.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['turbine_parameters_path'], 'File not found.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_invalid_number_keys(self):
-        """WindEnergy: testing validate invalid values for number keys."""
-        from natcap.invest import wind_energy
-
-        # Use a float for number_of_turbines
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-        args['number_of_turbines'] = 0.5
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['number_of_turbines'], 'Parameter must be an integer.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a string for discount_rate
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-        args['discount_rate'] = 'string'
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['discount_rate'], 'Parameter must be a number.')
-        self.assertTrue(expected_error in validation_error_list)
-
-    def test_missing_required_fields_in_grid_points(self):
-        """WindEnergy: testing missing required fields in grid_points_path."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Use a CSV file that's missing the ID field
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_pts_missing_id_field.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['grid_points_path'], 'Missing ID field.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a CSV file that's missing some fields other than ID
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_pts_missing_other_fields.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (
-            ['grid_points_path'], 'CSV missing required fields:')
-        self.assertTrue(expected_error[0] == validation_error_list[0][0]
-                        and expected_error[1] in validation_error_list[0][1])
-
-        # Use a CSV file path that doesn't exist
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'file_not_exist.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_error = (['grid_points_path'], 'Could not locate file.')
-        self.assertTrue(expected_error in validation_error_list)
-
-        # Use a CSV file that has invalid field values
-        args['grid_points_path'] = os.path.join(
-            SAMPLE_DATA, 'resampled_grid_pts_invalid_field_values.csv')
-        validation_error_list = wind_energy.validate(args)
-        expected_errors = [
-            (['grid_points_path'], 'ID 10.5 must be an integer.'),
-            (['grid_points_path'], 'ID 10.5 column lati must be a number.'),
-            (['grid_points_path'], ('ID 30.0 column TYPE must be either ' +
-             '"land" or "grid" (case-insensitive)'))]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_missing_land_poly(self):
-        """WindEnergy: testing missing land_polygon_vector_path."""
-        from natcap.invest import wind_energy
-        args = WindEnergyRegressionTests.generate_validate_args(
-            self.workspace_dir)
-
-        # Remove land_polygon_vector_path while min_distance, max_distance
-        # and valuation_container remain in args
-        del args['land_polygon_vector_path']
-        with self.assertRaises(AssertionError) as cm:
-            wind_energy.validate(args)
-        expected_message = (
-            "Key land_polygon_vector_path (from ['land_polygon_vector_path'])")
-        actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
+        self.assertRaises(ValueError, wind_energy.execute, args)
 
     @staticmethod
     def _assert_vectors_equal(a_vector_path, b_vector_path):
@@ -1079,3 +766,100 @@ class WindEnergyRegressionTests(unittest.TestCase):
 
         a_shape = None
         b_shape = None
+
+
+class WindEnergyValidationTests(unittest.TestCase):
+    """Tests for the Wind Energy Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        self.base_required_keys = [
+            'workspace_dir',
+            'number_of_turbines',
+            'min_depth',
+            'max_depth',
+            'turbine_parameters_path',
+            'bathymetry_path',
+            'global_wind_parameters_path',
+            'wind_data_path'
+        ]
+
+    def test_missing_keys(self):
+        """Wind Energy Validate: assert missing required keys."""
+        from natcap.invest import wind_energy
+        from natcap.invest import validation
+
+        validation_errors = wind_energy.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_with_valuation(self):
+        """Wind Energy Validate: assert missing required for valuation."""
+        from natcap.invest import wind_energy
+        from natcap.invest import validation
+
+        base_required_valuation = ['land_polygon_vector_path',
+                                   'min_distance',
+                                   'max_distance',
+                                   'foundation_cost',
+                                   'discount_rate']
+        required_no_price_table = ['wind_price', 'rate_change']
+        required_no_grid_points = ['avg_grid_distance']
+        required_no_grid_distance = ['grid_points_path']
+
+        # Test that many args become required for valuation.
+        args = {'valuation_container': True}
+        validation_errors = wind_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            base_required_valuation +
+            ['price_table'] +
+            required_no_price_table +
+            required_no_grid_distance +
+            required_no_grid_points)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+        # Test wind_price, rate_change are not required if price_table
+        args = {
+            'valuation_container': True,
+            'price_table': True
+        }
+        validation_errors = wind_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            base_required_valuation +
+            ['wind_schedule'] +  # required when price_table
+            required_no_grid_distance +
+            required_no_grid_points)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+        # Test grid_points_path is not required if avg_grid_distance:
+        args = {
+            'valuation_container': True,
+            'avg_grid_distance': 9
+        }
+        validation_errors = wind_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            base_required_valuation +
+            ['price_table'] +
+            required_no_price_table)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+        # TestAOI becomes required when these two args present:
+        args = {
+            'valuation_container': True,
+            'grid_points_path': 'foo.shp'
+        }
+        validation_errors = wind_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            base_required_valuation +
+            ['price_table'] +
+            required_no_price_table +
+            ['grid_points_path', 'aoi_vector_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)

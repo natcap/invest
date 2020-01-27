@@ -9,6 +9,7 @@ import numpy
 from osgeo import gdal, ogr, osr
 import pygeoprocessing.testing
 import pygeoprocessing
+from shapely.geometry import Point, LineString
 
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hra')
@@ -731,6 +732,52 @@ class HraUnitTests(unittest.TestCase):
             target_simplified_vector_path, expected_simplified_vector_path,
             1E-6)
 
+    def test_simplify_geometry_points(self):
+        """HRA: test _simplify_geometry does not alter geometry given points."""
+        from natcap.invest.hra import _simplify_geometry
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(EPSG_CODE)
+        base_points_path = os.path.join(self.workspace_dir, 'base_points.gpkg')
+        points = [Point(0.0, 0.0), Point(10.0, 10.0)]
+        pygeoprocessing.testing.sampledata.create_vector_on_disk(
+            points, srs.ExportToWkt(),
+            filename=base_points_path, vector_format='GPKG')
+
+        target_simplified_vector_path = os.path.join(
+            self.workspace_dir, 'simplified_vector.gpkg')
+
+        tolerance = 3000  # in meters
+        _simplify_geometry(
+            base_points_path, tolerance, target_simplified_vector_path)
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            target_simplified_vector_path, base_points_path,
+            1E-6)
+
+    def test_simplify_geometry_lines(self):
+        """HRA: test _simplify_geometry does not alter geometry given lines."""
+        from natcap.invest.hra import _simplify_geometry
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(EPSG_CODE)
+        base_lines_path = os.path.join(self.workspace_dir, 'base_lines.gpkg')
+        lines = [LineString([(0.0, 0.0), (10.0, 10.0)])]
+        pygeoprocessing.testing.sampledata.create_vector_on_disk(
+            lines, srs.ExportToWkt(),
+            filename=base_lines_path, vector_format='GPKG')
+
+        target_simplified_vector_path = os.path.join(
+            self.workspace_dir, 'simplified_vector.gpkg')
+
+        tolerance = 3000  # in meters
+        _simplify_geometry(
+            base_lines_path, tolerance, target_simplified_vector_path)
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            target_simplified_vector_path, base_lines_path,
+            1E-6)
+
 
 class HraRegressionTests(unittest.TestCase):
     """Tests for the Pollination model."""
@@ -758,7 +805,8 @@ class HraRegressionTests(unittest.TestCase):
             'decay_eq': 'Linear',
             'aoi_vector_path': os.path.join(workspace_dir, 'aoi.shp'),
             'resolution': 1,
-            'n_workers': -1
+            'n_workers': -1,
+            'visualize_outputs': True,
         }
 
         return args
@@ -901,7 +949,7 @@ class HraRegressionTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
 
-        expected_message = 'not projected'
+        expected_message = 'Dataset must have a valid projection'
         actual_message = str(cm.exception)
         self.assertTrue(expected_message in actual_message, actual_message)
 
@@ -1002,7 +1050,7 @@ class HraRegressionTests(unittest.TestCase):
             'n_workers': -1
         }
 
-        with self.assertRaises(KeyError) as cm:
+        with self.assertRaises(ValueError) as cm:
             natcap.invest.hra.execute(args)
         self.assertEquals(len(cm.exception.args), 1)
 
@@ -1015,7 +1063,8 @@ class HraRegressionTests(unittest.TestCase):
         _make_criteria_csv(args['criteria_table_path'], self.workspace_dir)
         _make_aoi_vector(args['aoi_vector_path'])
 
-        natcap.invest.hra.validate(args)
+        validation_warnings = natcap.invest.hra.validate(args)
+        self.assertTrue([] == validation_warnings)
 
     def test_validate_max_rating_value(self):
         """HRA: testing validation with max_rating less than 1 in args."""
@@ -1025,7 +1074,8 @@ class HraRegressionTests(unittest.TestCase):
         args['max_rating'] = '-1'
 
         validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['max_rating'], 'should be larger than 1')
+        expected_error = (['max_rating'],
+                          'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
 
     def test_validate_negative_resolution(self):
@@ -1036,7 +1086,8 @@ class HraRegressionTests(unittest.TestCase):
         args['resolution'] = '-110'
 
         validation_error_list = natcap.invest.hra.validate(args)
-        expected_error = (['resolution'], 'should be a positive number')
+        expected_error = (['resolution'],
+                          'Value does not meet condition value > 0')
         self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod

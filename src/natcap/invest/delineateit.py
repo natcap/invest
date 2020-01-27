@@ -22,6 +22,87 @@ from . import validation
 
 LOGGER = logging.getLogger(__name__)
 
+ARGS_SPEC = {
+    "model_name": "DelineateIt: Watershed Delineation",
+    "module": __name__,
+    "userguide_html": "delineateit.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_path", "outlet_vector_path"],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "validation_options": {
+                "projected": True,
+            },
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file with an elevation value for "
+                "each cell."),
+            "name": "Digital Elevation Model"
+        },
+        "outlet_vector_path": {
+            "type": "vector",
+            "required": True,
+            "about": (
+                "This is a layer of geometries representing watershed "
+                "outlets such as municipal water intakes or lakes."),
+            "name": "Outlet Features"
+        },
+        "snap_points": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "Whether to snap point geometries to the nearest stream "
+                "pixel.  If ``True``, ``args['flow_threshold']`` and "
+                "``args['snap_distance']`` must also be defined."),
+            "name": "Snap points to the nearest stream"
+        },
+        "flow_threshold": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": "snap_points",
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that retention "
+                "stops and the remaining export is exported to the stream.  "
+                "Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumulation"
+        },
+        "snap_distance": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": "snap_points",
+            "about": (
+                "If provided, the maximum search radius in pixels to look "
+                "for stream pixels.  If a stream pixel is found within the "
+                "snap distance, the outflow point will be snapped to the "
+                "center of the nearest stream pixel.  Geometries that are "
+                "not points (such as Lines and Polygons) will not be "
+                "snapped.  MultiPoint geoemtries will also not be snapped."),
+            "name": "Pixel Distance to Snap Outlet Points"
+        },
+        "crash_on_invalid_geometry": {
+            "type": "boolean",
+            "required": True,
+            "about": (
+                "If ``True``, any invalid geometries encountered "
+                "in the outlet vector will not be included in the "
+                "delineation.  If ``False``, an invalid geometry "
+                "will cause DelineateIt to crash."),
+            "name": "Crash on invalid geometries"
+        }
+    }
+}
+
 _OUTPUT_FILES = {
     'preprocessed_geometries': 'preprocessed_geometries.gpkg',
     'filled_dem': 'filled_dem.tif',
@@ -100,7 +181,10 @@ def execute(args):
     # same thread.
     try:
         n_workers = int(args['n_workers'])
-    except (KeyError, TypeError):
+    except (KeyError, TypeError, ValueError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
         n_workers = -1
     graph = taskgraph.TaskGraph(work_token_dir, n_workers=n_workers)
 
@@ -527,73 +611,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'dem_path',
-        'outlet_vector_path',
-        'snap_points',
-    ]
-    if 'snap_points' in args and args['snap_points']:
-        required_keys += ['flow_threshold', 'snap_distance']
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('dem_path', 'raster'),
-        ('outlet_vector_path', 'vector')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if args[key] is None:
-                    # Error should already have been caught above
-                    # os.path.exists will throw an error if passed None
-                    continue
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    if 'snap_points' in args and args['snap_points']:
-        for key in ('flow_threshold', 'snap_distance'):
-            if limit_to in (None, key):
-                try:
-                    value = int(args[key])
-                    if value < 0:
-                        validation_error_list.append(
-                            ([key], 'must be a positive integer'))
-                except (TypeError, ValueError):
-                    validation_error_list.append(
-                        ([key], 'must be an integer'))
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])

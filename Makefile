@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 544b4822fe3193679723b6218f8b0618ae46f432
+GIT_SAMPLE_DATA_REPO_REV    := 2aae217ad0d328c9cdcf8f8386f4eab8bd7194af
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 687c255960157079c2190869c78be606e4836dbf
+GIT_TEST_DATA_REPO_REV      := 6f0e640c6f8cb1d67dbf838c438bac4c79ecd0ba
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := 1ebb37fe3088
+HG_UG_REPO_REV              := 1dfee03e6bf8
 
 
 ENV = env
@@ -37,8 +37,6 @@ ifeq ($(OS),Windows_NT)
 else
 	NULL := /dev/null
 	PROGRAM_CHECK_SCRIPT := ./scripts/check_required_programs.sh
-	ENV_SCRIPTS = $(ENV)/bin
-	ENV_ACTIVATE = source $(ENV_SCRIPTS)/activate
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
@@ -60,7 +58,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git hg
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs hg
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -111,7 +109,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(HG_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -179,10 +177,16 @@ $(HG_UG_REPO_PATH):
 
 $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
+	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
+	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
 fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
@@ -190,10 +194,17 @@ fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH
 
 # Python environment management
 env:
-	$(PYTHON) -m virtualenv --system-site-packages $(ENV)
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
-	$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    ifeq ($(OS),Windows_NT)
+		$(PYTHON) -m virtualenv --system-site-packages $(ENV)
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -r requirements.txt -r requirements-gui.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(PIP) install -I -r requirements-dev.txt"
+		$(BASHLIKE_SHELL_COMMAND) "$(ENV_ACTIVATE) && $(MAKE) install"
+    else
+		$(PYTHON) ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+		conda create -p $(ENV) -y -c conda-forge
+		conda env update -p $(ENV) --file requirements-all.yml
+		$(BASHLIKE_SHELL_COMMAND) "source activate ./$(ENV) && $(MAKE) install"
+    endif
 
 # compatible with pip>=7.0.0
 # REQUIRED: Need to remove natcap.invest.egg-info directory so recent versions
@@ -245,43 +256,40 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
-
-# Zipping up the sample data zipfiles is a little odd because of the presence
-# of the Base_Data folder, where its subdirectories are zipped up separately.
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = Aquaculture \
-		  Freshwater \
-		  Marine \
-		  Terrestrial \
-		  carbon \
+ZIPDIRS = Annual_Water_Yield \
+		  Aquaculture \
+		  Base_Data \
+		  Carbon \
 		  CoastalBlueCarbon \
-		  CoastalProtection \
+		  CoastalVulnerability \
 		  CropProduction \
+		  DelineateIt \
 		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  Hydropower \
 		  Malaria \
+		  NDR \
 		  pollination \
 		  recreation \
+		  RouteDEM \
 		  scenario_proximity \
 		  ScenicQuality \
-		  seasonal_water_yield \
+		  SDR \
+		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
 		  WaveEnergy \
 		  WindEnergy
+
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 
@@ -302,7 +310,7 @@ else
 endif
 WINDOWS_INSTALLER_FILE := $(DIST_DIR)/InVEST_$(INSTALLER_NAME_FORKUSER)$(VERSION)_$(PYTHON_ARCH)_Setup.exe
 windows_installer: $(WINDOWS_INSTALLER_FILE)
-$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe $(GIT_SAMPLE_DATA_REPO_PATH)
+$(WINDOWS_INSTALLER_FILE): $(INVEST_BINARIES_DIR) $(USERGUIDE_HTML_DIR) build/vcredist_x86.exe | $(GIT_SAMPLE_DATA_REPO_PATH)
 	-$(RM) $(WINDOWS_INSTALLER_FILE)
 	makensis /DVERSION=$(VERSION) /DBINDIR=$(INVEST_BINARIES_DIR) /DARCHITECTURE=$(PYTHON_ARCH) /DFORKNAME=$(INSTALLER_NAME_FORKUSER) /DDATA_LOCATION=$(DATA_BASE_URL) installer\windows\invest_installer.nsi
 

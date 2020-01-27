@@ -36,7 +36,7 @@ if shapely.speedups.available:
 from .. import utils
 from .. import validation
 
-LOGGER = logging.getLogger('natcap.invest.recmodel_client')
+LOGGER = logging.getLogger(__name__)
 
 # This URL is a NatCap global constant
 if sys.version_info >= (3,):
@@ -48,6 +48,134 @@ else:
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
+
+
+ARGS_SPEC = {
+    "model_name": "Recreation Model",
+    "module": __name__,
+    "userguide_html": "recreation.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "aoi_path": {
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-supported vector file representing the area of "
+                "interest where the model will run the analysis."),
+            "name": "Area of Interest (Vector)"
+        },
+        "hostname": {
+            "type": "freestyle_string",
+            "required": False,
+            "about": (
+                "FQDN to a recreation server.  If not provided, a default "
+                "is assumed."),
+        },
+        "port": {
+            "validation_options": {
+                "expression": "value >= 0",
+            },
+            "type": "number",
+            "required": False,
+            "about": (
+                "the port on ``hostname`` to use for contacting the "
+                "recreation server."),
+        },
+        "start_year": {
+            "validation_options": {
+                "expression": "value >= 2005",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "Year to start PUD calculations, date starts on Jan "
+                "1st."),
+            "name": "Start Year (inclusive, must be >= 2005)"
+        },
+        "end_year": {
+            "validation_options": {
+                "expression": "value <= 2017",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "Year to end PUD calculations, date ends and includes Dec "
+                "31st."),
+            "name": "End Year (inclusive, must be <= 2017)"
+        },
+        "grid_aoi": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "If true the polygon vector in `args['aoi_path']` should be "
+                "gridded into a new vector and the recreation model should "
+                "be executed on that"),
+            "name": "Grid the AOI"
+        },
+        "grid_type": {
+            "validation_options": {
+                "options": [
+                    "square",
+                    "hexagon"
+                ]
+            },
+            "type": "option_string",
+            "required": "grid_aoi",
+            "about": (
+                "Optional, but must exist if args['grid_aoi'] is True.  Is "
+                "one of 'hexagon' or 'square' and\nindicates the style of "
+                "gridding."),
+            "name": "Grid Type"
+        },
+        "cell_size": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": "grid_aoi",
+            "about": (
+                "The size of the grid units measured in the projection "
+                "units of the AOI. For example, UTM projections use "
+                "meters."),
+            "name": "Cell Size"
+        },
+        "compute_regression": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "If True, then process the predictor table and scenario "
+                "table (if present)."),
+            "name": "Compute Regression"
+        },
+        "predictor_table_path": {
+            "validation_options": {
+                "required_fields": ['id', 'path', 'type'],
+            },
+            "type": "csv",
+            "required": "compute_regression",
+            "about": (
+                "A table that maps predictor IDs to files and their types "
+                "with required headers of 'id', 'path', and 'type'.  The "
+                "file paths can be absolute, or relative to the table."),
+            "name": "Predictor Table"
+        },
+        "scenario_predictor_table_path": {
+            "validation_options": {
+                "required_fields": ['id', 'path', 'type'],
+            },
+            "type": "csv",
+            "required": False,
+            "about": (
+                "A table that maps predictor IDs to files and their types "
+                "with required headers of 'id', 'path', and 'type'.  The "
+                "file paths can be absolute, or relative to the table."),
+            "name": "Scenario Predictor Table"
+        }
+    }
+}
+
 
 # These are the expected extensions associated with an ESRI Shapefile
 # as part of the ESRI Shapefile driver standard, but some extensions
@@ -734,7 +862,8 @@ def _raster_sum_mean(
 
     """
     aggregate_results = pygeoprocessing.zonal_statistics(
-        (raster_path, 1), response_vector_path)
+        (raster_path, 1), response_vector_path,
+        polygons_might_overlap=False)
     # remove results for a feature when the pixel count is 0.
     # we don't have non-nodata predictor values for those features.
     aggregate_results = {
@@ -1433,85 +1562,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'aoi_path',
-        'start_year',
-        'end_year',
-        'compute_regression',
-        'grid_aoi']
-
-    if limit_to in [None, 'predictor_table_path']:
-        if 'compute_regression' in args and args['compute_regression']:
-            required_keys.append('predictor_table_path')
-
-    if limit_to in [None, 'grid_type', 'cell_size']:
-        if 'grid_aoi' in args and args['grid_aoi']:
-            required_keys.append('grid_type')
-            required_keys.append('cell_size')
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to in [None, 'scenario_predictor_table_path']:
-        if 'compute_regression' in args and args['compute_regression']:
-            if (limit_to in [None, 'scenario_predictor_table_path'] and
-                    'scenario_predictor_table_path' in args):
-                scenario_predictor_table_path = args[
-                    'scenario_predictor_table_path']
-                if (scenario_predictor_table_path not in [None, ''] and
-                        not os.path.exists(scenario_predictor_table_path)):
-                    validation_error_list.append(
-                        (['scenario_predictor_table_path'],
-                         'not found on disk'))
-
-    file_type_list = [
-        ('aoi_path', 'vector'),
-        ('predictor_table_path', 'table'),
-        ('lulc_path', 'raster'),
-        ('watersheds_path', 'vector'),
-        ('biophysical_table_path', 'table')]
-
-    if limit_to in ['drainage_path', None] and (
-            'drainage_path' in args and
-            args['drainage_path'] not in ['', None]):
-        file_type_list.append(('drainage_path', 'raster'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'])

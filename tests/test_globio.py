@@ -232,3 +232,66 @@ class GLOBIOTests(unittest.TestCase):
             result_layer = None
             gdal.Dataset.__swig_destroy__(result_vector)
             result_vector = None
+
+class GlobioValidationTests(unittest.TestCase):
+    """Tests for the GLOBIO Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'primary_threshold',
+            'pasture_path',
+            'pasture_threshold',
+            'lulc_path',
+            'potential_vegetation_path',
+            'msa_parameters_path',
+            'lulc_to_globio_table_path',
+            'workspace_dir',
+            'intensification_fraction',
+            'infrastructure_dir',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """GLOBIO Validate: assert missing required keys."""
+        from natcap.invest import globio
+        from natcap.invest import validation
+
+        validation_errors = globio.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_predefined_globio(self):
+        """GLOBIO Validate: assert missing required keys with predifined GLOBIO."""
+        from natcap.invest import globio
+        from natcap.invest import validation
+
+        validation_errors = globio.validate({'predefined_globio': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            ['workspace_dir',
+             'infrastructure_dir',
+             'intensification_fraction',
+             'msa_parameters_path',
+             'globio_lulc_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_field_in_msa_parameters(self):
+        """GLOBIO Validate: warning message on invalid fields."""
+        from natcap.invest import globio
+        msa_parameters_path = os.path.join(self.workspace_dir, 'bad_table.csv')
+        with open(msa_parameters_path, 'w') as file:
+            file.write('foo,bar\n')
+            file.write('1,2\n')
+        validation_warnings = globio.validate(
+            {'msa_parameters_path': msa_parameters_path})
+        expected_message = "Fields are missing from this table: ['MEASUREMENT', 'MSA_TYPE', 'MSA_X', 'SE', 'VALUE']"
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)

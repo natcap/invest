@@ -21,6 +21,102 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+ARGS_SPEC = {
+    "model_name": "Urban Flood Risk Mitigation",
+    "module": __name__,
+    "userguide_html": "urban_flood_risk_mitigation.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["aoi_watersheds_path", "lulc_path",
+                         "built_infrastructure_vector_path",
+                         "soils_hydrological_group_raster_path"],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "aoi_watersheds_path": {
+            "type": "vector",
+            "required": True,
+            "about": (
+                "Path to a vector of (sub)watersheds or sewersheds used to "
+                "indicate spatial area of interest."),
+            "name": "Watershed Vector"
+        },
+        "rainfall_depth": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": "Depth of rainfall in mm.",
+            "name": "Depth of rainfall in mm"
+        },
+        "lulc_path": {
+            "validation_options": {},
+            "type": "raster",
+            "validation_options": {
+                "projected": True,
+            },
+            "required": True,
+            "about": "Path to a landcover raster",
+            "name": "Landcover Raster"
+        },
+        "soils_hydrological_group_raster_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "Raster with values equal to 1, 2, 3, 4, corresponding to "
+                "soil hydrologic group A, B, C, or D, respectively (used to "
+                "derive the CN number)"),
+            "name": "Soils Hydrological Group Raster"
+        },
+        "curve_number_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "CN_A", "CN_B", "CN_C", "CN_D"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "Path to a CSV table that to map landcover codes to curve "
+                "numbers and contains at least the headers 'lucode', "
+                "'CN_A', 'CN_B', 'CN_C', 'CN_D'"),
+            "name": "Biophysical Table"
+        },
+        "built_infrastructure_vector_path": {
+            "validation_options": {
+                "required_fields": ["type"],
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "Path to a vector with built infrastructure footprints. "
+                "Attribute table contains a column 'Type' with integers "
+                "(e.g. 1=residential, 2=office, etc.)."),
+            "name": "Built Infrastructure Vector"
+        },
+        "infrastructure_damage_loss_table_path": {
+            "validation_options": {
+                "required_fields": ["type", "damage"],
+            },
+            "type": "csv",
+            "required": "built_infrastructure_vector_path",
+            "about": (
+                "Path to a a CSV table with columns 'Type' and 'Damage' with "
+                "values of built infrastructure type from the 'Type' field "
+                "in the 'Built Infrastructure Vector' and potential damage "
+                "loss (in $/m^2). Required if the built infrastructure vector "
+                "is provided."),
+            "name": "Built Infrastructure Damage Loss Table"
+        }
+    }
+}
+
+
+
 
 def execute(args):
     """Urban Flood Risk Mitigation model.
@@ -78,9 +174,13 @@ def execute(args):
     utils.make_directories([
         args['workspace_dir'], intermediate_dir, temporary_working_dir])
 
-    n_workers = -1
-    if 'n_workers' in args and args['n_workers'] != '':
+    try:
         n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(temporary_working_dir, n_workers)
 
     # Align LULC with soils
@@ -750,71 +850,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'aoi_watersheds_path',
-        'rainfall_depth',
-        'lulc_path',
-        'soils_hydrological_group_raster_path',
-        'curve_number_table_path',
-        'built_infrastructure_vector_path'
-        ]
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(*missing_key_list)
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if 'built_infrastructure_vector_path' in args and (
-            args['built_infrastructure_vector_path'] != ''):
-        if 'infrastructure_damage_loss_table_path' not in args or (
-                args['infrastructure_damage_loss_table_path'] == ''):
-            validation_error_list.append(
-                (['built_infrastructure_vector_path'],
-                 "A built infrastructure vector was provided but no damage "
-                 "loss table to go with it."))
-
-    file_type_list = [
-        ('aoi_watersheds_path', 'vector'),
-        ('lulc_path', 'raster'),
-        ('soils_hydrological_group_raster_path', 'raster'),
-        ('built_infrastructure_vector_path', 'vector'),
-        ]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and key in required_keys):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.Open(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'],
+                               ARGS_SPEC['args_with_spatial_overlap'])

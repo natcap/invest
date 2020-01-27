@@ -150,34 +150,6 @@ class WaveEnergyUnitTests(unittest.TestCase):
         for res, exp_res in zip(results, expected_results):
             pygeoprocessing.testing.assert_close(res, exp_res, 1e-6)
 
-    def test_calculate_percentiles_from_raster(self):
-        """WaveEnergy: testing '_calculate_percentiles_from_raster' function."""
-        from natcap.invest import wave_energy
-
-        raster_path = os.path.join(self.workspace_dir, 'percentile.tif')
-        srs = sampledata.SRS_WILLAMETTE
-
-        matrix = numpy.arange(1, 101)
-        matrix = matrix.reshape(10, 10)
-        raster_path = pygeoprocessing.testing.create_raster_on_disk(
-            [matrix],
-            srs.origin,
-            srs.projection,
-            -1,
-            srs.pixel_size(100),
-            datatype=gdal.GDT_Int32,
-            filename=raster_path)
-
-        percentiles = [1, 25, 50, 75]
-
-        results = wave_energy._calculate_percentiles_from_raster(
-            raster_path, percentiles)
-
-        expected_results = [1, 25, 50, 75]
-
-        for res, exp_res in zip(results, expected_results):
-            self.assertEqual(res, exp_res)
-
     def test_calculate_min_distances(self):
         """WaveEnergy: testing '_calculate_min_distances' function."""
         from natcap.invest import wave_energy
@@ -525,7 +497,7 @@ class WaveEnergyRegressionTests(unittest.TestCase):
         args['machine_econ_path'] = os.path.join(
             SAMPLE_DATA, 'Machine_Pelamis_Economic.csv')
         args['number_of_machines'] = 28
-        args['suffix'] = 'val'
+        args['results_suffix'] = 'val'
 
         wave_energy.execute(args)
 
@@ -554,65 +526,6 @@ class WaveEnergyRegressionTests(unittest.TestCase):
             self.assertTrue(
                 os.path.exists(
                     os.path.join(args['workspace_dir'], 'output', table_path)))
-
-    def test_missing_required_keys(self):
-        """WaveEnergy: testing missing required keys from args."""
-        from natcap.invest import wave_energy
-
-        args = {}
-        with self.assertRaises(KeyError) as cm:
-            wave_energy.execute(args)
-        expected_message = (
-            "Keys are missing from args: ['workspace_dir', " +
-            "'wave_base_data_path', 'analysis_area_path', " +
-            "'machine_perf_path', 'machine_param_path', 'dem_path']")
-        actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
-
-    def test_incorrect_analysis_area_path_value(self):
-        """WaveEnergy: testing incorrect analysis_area_path value."""
-        from natcap.invest import wave_energy
-
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['analysis_area_path'] = 'Incorrect Analysis Area'
-        with self.assertRaises(ValueError) as cm:
-            wave_energy.execute(args)
-        expected_message = (
-            "'analysis_area_path'], 'Parameter must be a known analysis area.")
-        actual_message = str(cm.exception)
-        self.assertTrue(expected_message in actual_message, actual_message)
-
-    def test_validate_keys_missing_values(self):
-        """WaveEnergy: testing validate when keys are missing values."""
-        from natcap.invest import wave_energy
-
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['wave_base_data_path'] = None
-        args['dem_path'] = None
-
-        validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['wave_base_data_path'],
-             'Parameter not found or is not a folder.'),
-            (['dem_path'],
-             'Parameter must be a filepath to a GDAL-compatible raster file.')]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
-
-    def test_validate_bad_aoi_format(self):
-        """WaveEnergy: testing bad AOI vector format with validate."""
-        from natcap.invest import wave_energy
-
-        args = WaveEnergyRegressionTests.generate_base_args(self.workspace_dir)
-        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
-
-        validation_error_list = wave_energy.validate(args)
-        expected_errors = [
-            (['aoi_path'], 'Vector must contain only polygons.'),
-            (['aoi_path'], 'Vector must be projected in meters.'),
-            (['aoi_path'], 'Vector must use the WGS_1984 datum.'),]
-        for expected_error in expected_errors:
-            self.assertTrue(expected_error in validation_error_list)
 
     @staticmethod
     def _assert_point_vectors_equal(a_path, b_path):
@@ -663,3 +576,84 @@ class WaveEnergyRegressionTests(unittest.TestCase):
 
         a_shape = None
         b_shape = None
+
+
+class WaveEnergyValidateTests(unittest.TestCase):
+    """Wave Energy Validate: tests for ARGS_SPEC and validate."""
+
+    def setUp(self):
+        self.base_required_keys = [
+            'workspace_dir',
+            'machine_param_path',
+            'wave_base_data_path',
+            'analysis_area_path',
+            'machine_perf_path',
+            'dem_path',
+        ]
+
+    def test_missing_required_keys(self):
+        """WaveEnergy: testing missing required keys from args."""
+        from natcap.invest import wave_energy
+        from natcap.invest import validation
+
+        args = {}
+        validation_error_list = wave_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_error_list)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_required_keys_if_valuation(self):
+        """WaveEnergy: testing missing required keys given valuation."""
+        from natcap.invest import wave_energy
+        from natcap.invest import validation
+
+        args = {'valuation_container': True}
+        validation_error_list = wave_energy.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_error_list)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['number_of_machines', 'machine_econ_path', 'land_gridPts_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_incorrect_analysis_area_path_value(self):
+        """WaveEnergy: testing incorrect analysis_area_path value."""
+        from natcap.invest import wave_energy
+
+        args = {}
+        args['analysis_area_path'] = 'Incorrect Analysis Area'
+        validation_error_list = wave_energy.validate(args)
+        expected_message = 'Value must be one of'  # Start of option error msg
+        actual_messages = ''
+        for keys, error_strings in validation_error_list:
+            actual_messages += error_strings
+        self.assertTrue(expected_message in actual_messages)
+
+    def test_validate_keys_missing_values(self):
+        """WaveEnergy: testing validate when keys are missing values."""
+        from natcap.invest import wave_energy
+
+        args = {}
+        args['wave_base_data_path'] = None
+        args['dem_path'] = None
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['dem_path', 'wave_base_data_path'],
+             'Input is required but has no value'),
+        ]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
+
+    def test_validate_bad_aoi_format(self):
+        """WaveEnergy: testing bad AOI vector format with validate."""
+        from natcap.invest import wave_energy
+
+        args = {}
+        args['aoi_path'] = os.path.join(SAMPLE_DATA, 'bad_AOI_WCVI.shp')
+
+        validation_error_list = wave_energy.validate(args)
+        expected_errors = [
+            (['aoi_path'], 'Layer must be projected in meters'),
+        ]
+        for expected_error in expected_errors:
+            self.assertTrue(expected_error in validation_error_list)
