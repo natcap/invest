@@ -5,7 +5,7 @@
   "description": "My Electron application description",
   "main": "src/main.js",
   "scripts": {
-    "start": "cross-env FLASK_APP=src/server.py npx electron -r @babel/register .",
+    "start": "cross-env FLASK_APP=src/server.py npx electron -r dotenv/config -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },
@@ -49,6 +49,7 @@
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.0.4",
     "cross-env": "^5.2.0",
+    "dotenv": "^8.2.0",
     "font-awesome": "^4.7.0",
     "google-palette": "^1.1.0",
     "leaflet": "^1.5.1",
