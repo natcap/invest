@@ -38,7 +38,7 @@ export class LogTab extends React.Component {
     if (current_err) {
       renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
     } else {
-      if (this.props.sessionProgress === 'viz') { // this was set if python exited w/o error
+      if (this.props.sessionProgress === 'results') { // this was set if python exited w/o error
         renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
       }
     }
