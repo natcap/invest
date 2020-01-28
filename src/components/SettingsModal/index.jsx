@@ -11,7 +11,7 @@ export class SettingsModal extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-    	show: false,
+      show: false,
       localSettings: {}
     }
 
@@ -31,15 +31,15 @@ export class SettingsModal extends React.Component {
   handleClose() {
     // reset the local settings from the app's state because we closed w/o save
     const appSettings = Object.assign({}, this.props.investSettings)
-  	this.setState({
+    this.setState({
       show: false,
       localSettings: appSettings
     });
-  };
+  }
 
   handleShow() {
-  	this.setState({show: true});
-  };
+    this.setState({show: true});
+  }
 
   handleSubmit(event) {
     event.preventDefault();
@@ -90,7 +90,7 @@ export class SettingsModal extends React.Component {
               </Form.Group>
               <Form.Group as={Row}>
                 <Form.Label column sm="8">
-                  Taskgraph n_workers parameter (must be an integer >= -1)
+                  Taskgraph n_workers parameter (must be an integer &gt;= -1)
                 </Form.Label>
                 <Col sm="3">
                   <Form.Control

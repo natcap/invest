@@ -13,8 +13,6 @@ import TabContainer from 'react-bootstrap/TabContainer';
 import Navbar from 'react-bootstrap/Navbar';
 import Nav from 'react-bootstrap/Nav';
 import Spinner from 'react-bootstrap/Spinner';
-import Form from 'react-bootstrap/Form';
-import Button from 'react-bootstrap/Button';
 import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import { HomeTab } from './components/HomeTab';

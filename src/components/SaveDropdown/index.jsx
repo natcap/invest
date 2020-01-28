@@ -1,13 +1,11 @@
 import React from 'react';
 import Electron from 'electron'
 
-import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Dropdown from 'react-bootstrap/Dropdown';
-import InputGroup from 'react-bootstrap/InputGroup';
 
 class DropdownItemModal extends React.Component {
   constructor(props) {
@@ -20,11 +18,11 @@ class DropdownItemModal extends React.Component {
 
   handleClose() {
     this.setState({ show: false });
-  };
+  }
 
   handleShow() {
     this.setState({show: true});
-  };  
+  }; 
 }
 
 export class SaveSessionDropdownItem extends DropdownItemModal {
