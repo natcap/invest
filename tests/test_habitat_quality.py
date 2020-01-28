@@ -109,7 +109,7 @@ def make_access_shp(access_shp_path):
     data_source = None
 
 
-def make_lulc_raster(raster_path, lulc_val):
+def make_lulc_raster(raster_path, lulc_val, side_length=100):
     """Create a 100x100 raster on raster path with designated LULC code.
 
     Parameters:
@@ -120,13 +120,14 @@ def make_lulc_raster(raster_path, lulc_val):
         None.
 
     """
-    lulc_array = numpy.ones((100, 100), dtype=numpy.int8)
+    lulc_array = numpy.ones((side_length, side_length), dtype=numpy.int8)
     lulc_array[50:, :] = lulc_val
     make_raster_from_array(lulc_array, raster_path)
 
 
-def make_threats_raster(folder_path, make_empty_raster=False):
-    """Create a 100x100 raster on designated path with 1 as threat and 0 as none.
+def make_threats_raster(folder_path, make_empty_raster=False, side_length=100):
+    """Create a side_lengthXside_length raster on designated path with 1 as
+    threat and 0 as none.
 
     Parameters:
         folder_path (str): the folder path for saving the threat rasters.
@@ -135,7 +136,7 @@ def make_threats_raster(folder_path, make_empty_raster=False):
         None.
 
     """
-    threat_array = numpy.zeros((100, 100), dtype=numpy.int8)
+    threat_array = numpy.zeros((side_length, side_length), dtype=numpy.int8)
 
     for suffix in ['_c', '_f']:
         for i, threat in enumerate(['threat_1', 'threat_2']):
@@ -293,6 +294,59 @@ class HabitatQualityTests(unittest.TestCase):
             raster_info = pygeoprocessing.get_raster_info(raster_path)
             raster_bbox = raster_info['bounding_box']
             raster_nodata = raster_info['nodata'][0]
+            numpy.testing.assert_array_almost_equal(
+                raster_bbox, base_lulc_bbox)
+
+    def test_habitat_quality_lulc_bbox(self):
+        """Habitat Quality: regression test for bbox sizes."""
+        from natcap.invest import habitat_quality
+
+        args = {
+            'half_saturation_constant': '0.5',
+            'results_suffix': 'regression',
+            u'workspace_dir': self.workspace_dir,
+        }
+
+        args['access_vector_path'] = os.path.join(args['workspace_dir'],
+                                                  'access_samp.shp')
+        make_access_shp(args['access_vector_path'])
+
+        scenarios = ['_bas_', '_cur_', '_fut_']
+        for lulc_val, scenario in enumerate(scenarios, start=1):
+            args['lulc' + scenario + 'path'] = os.path.join(
+                args['workspace_dir'], 'lc_samp' + scenario + 'b.tif')
+            make_lulc_raster(args['lulc' + scenario + 'path'], lulc_val)
+
+        args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
+                                                      'sensitivity_samp.csv')
+        make_sensitivity_samp_csv(args['sensitivity_table_path'])
+
+        args['threat_raster_folder'] = args['workspace_dir']
+        make_threats_raster(args['threat_raster_folder'], side_length=50)
+
+        args['threats_table_path'] = os.path.join(args['workspace_dir'],
+                                                  'threats_samp.csv')
+        make_threats_csv(args['threats_table_path'])
+
+        habitat_quality.execute(args)
+
+        base_lulc_bbox = pygeoprocessing.get_raster_info(
+            args['lulc_bas_path'])['bounding_box']
+
+        # Assert values were obtained by summing each output raster.
+        for output_filename in ['deg_sum_c_regression.tif',
+                                'deg_sum_f_regression.tif',
+                                'quality_c_regression.tif',
+                                'quality_f_regression.tif',
+                                'rarity_c_regression.tif',
+                                'rarity_f_regression.tif']:
+            raster_path = os.path.join(args['workspace_dir'], 'output',
+                                       output_filename)
+
+            # Check that the output raster has the same bounding box as the
+            # LULC rasters.
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            raster_bbox = raster_info['bounding_box']
             numpy.testing.assert_array_almost_equal(
                 raster_bbox, base_lulc_bbox)
 
