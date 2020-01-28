@@ -1,9 +1,9 @@
 import fs from 'fs';
 import path from 'path';
+import request from 'request';
 import React from 'react';
 
-import {InvestJob} from './InvestJob';
-import { getInvestList } from './getInvestList'
+import { InvestJob } from './InvestJob';
 
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 
@@ -84,3 +84,27 @@ function findRecentSessions(cache_dir) {
   });
 }
 
+function getInvestList() {
+  return new Promise(function(resolve, reject) {
+    setTimeout(() => {
+      request.get(
+        'http://localhost:5000/models',
+        (error, response, body) => {
+          if (!error && response.statusCode == 200) {
+            const models = JSON.parse(body);
+            resolve(models);
+          } else if (error) {
+            console.error(error);
+          } else {
+            try {
+              console.log('Status: ' + response.statusCode);
+            }
+            catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      );
+    }, 500)  // wait, the server only just launced in a subprocess.
+  });
+}
