@@ -8,492 +8,527 @@ exports[`SetupTab: a model input form 1`] = `
     onDrop={[Function]}
   >
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Workspace
       </label>
       <div
-        className="input-group"
+        className="col-sm-8"
+      >
+        <div
+          className="input-group"
+        >
+          <input
+            className="form-control"
+            name="workspace_dir"
+            onChange={[Function]}
+            type="text"
+            value=""
+          />
+          <div
+            className="input-group-append"
+          >
+            <button
+              className="btn btn-outline-secondary"
+              disabled={false}
+              name="workspace_dir"
+              onClick={[Function]}
+              type="button"
+              value="directory"
+            >
+              Browse
+            </button>
+          </div>
+          <div
+            className="invalid-feedback"
+          >
+            directory : 
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      className="form-group row"
+    >
+      <label
+        className="form-label col-form-label col-sm-3"
+      >
+        File suffix
+      </label>
+      <div
+        className="col-sm-4"
       >
         <input
-          className="form-control is-invalid"
-          name="workspace_dir"
+          className="form-control"
+          name="results_suffix"
           onChange={[Function]}
           type="text"
           value=""
         />
         <div
-          className="input-group-append"
-        >
-          <button
-            className="btn btn-outline-secondary"
-            disabled={false}
-            name="workspace_dir"
-            onClick={[Function]}
-            type="button"
-            value="directory"
-          >
-            Browse
-          </button>
-        </div>
-        <div
           className="invalid-feedback"
         >
-          directory : 
+          freestyle_string : 
         </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
-      >
-        File suffix
-      </label>
-      <input
-        className="form-control is-invalid"
-        name="results_suffix"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
-      <div
-        className="invalid-feedback"
-      >
-        freestyle_string : 
-      </div>
-    </div>
-    <div
-      className="form-group"
-    >
-      <label
-        className="form-label"
-      >
-        Taskgraph n_workers parameter
-      </label>
-      <input
-        className="form-control is-invalid"
-        name="n_workers"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
-      <div
-        className="invalid-feedback"
-      >
-        number : 
-      </div>
-    </div>
-    <div
-      className="form-group"
-    >
-      <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Current Land Use/Land Cover
       </label>
       <div
-        className="input-group"
+        className="col-sm-8"
       >
-        <input
-          className="form-control is-invalid"
-          name="lulc_cur_path"
-          onChange={[Function]}
-          type="text"
-          value=""
-        />
         <div
-          className="input-group-append"
+          className="input-group"
         >
-          <button
-            className="btn btn-outline-secondary"
-            disabled={false}
+          <input
+            className="form-control"
             name="lulc_cur_path"
-            onClick={[Function]}
-            type="button"
-            value="raster"
+            onChange={[Function]}
+            type="text"
+            value=""
+          />
+          <div
+            className="input-group-append"
           >
-            Browse
-          </button>
-        </div>
-        <div
-          className="invalid-feedback"
-        >
-          raster : 
+            <button
+              className="btn btn-outline-secondary"
+              disabled={false}
+              name="lulc_cur_path"
+              onClick={[Function]}
+              type="button"
+              value="raster"
+            >
+              Browse
+            </button>
+          </div>
+          <div
+            className="invalid-feedback"
+          >
+            raster : 
+          </div>
         </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Calculate Sequestration
       </label>
       <div
-        className="form-check"
+        className="col-sm-8"
       >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="calc_sequestration"
-          onChange={[Function]}
-          type="radio"
-          value="true"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+        <div
+          className="form-check form-check-inline"
         >
-          Yes
-        </label>
-      </div>
-      <div
-        className="form-check"
-      >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="calc_sequestration"
-          onChange={[Function]}
-          type="radio"
-          value="false"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+          <input
+            checked={false}
+            className="form-check-input"
+            disabled={false}
+            name="calc_sequestration"
+            onChange={[Function]}
+            type="radio"
+            value="true"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            Yes
+          </label>
+        </div>
+        <div
+          className="form-check form-check-inline"
         >
-          No
-        </label>
+          <input
+            checked={true}
+            className="form-check-input"
+            disabled={false}
+            name="calc_sequestration"
+            onChange={[Function]}
+            type="radio"
+            value="false"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            No
+          </label>
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Future Landcover
       </label>
       <div
-        className="input-group"
+        className="col-sm-8"
       >
-        <input
-          className="form-control is-invalid"
-          name="lulc_fut_path"
-          onChange={[Function]}
-          type="text"
-          value=""
-        />
         <div
-          className="input-group-append"
+          className="input-group"
         >
-          <button
-            className="btn btn-outline-secondary"
-            disabled={false}
+          <input
+            className="form-control"
             name="lulc_fut_path"
-            onClick={[Function]}
-            type="button"
-            value="raster"
+            onChange={[Function]}
+            type="text"
+            value=""
+          />
+          <div
+            className="input-group-append"
           >
-            Browse
-          </button>
-        </div>
-        <div
-          className="invalid-feedback"
-        >
-          raster : 
+            <button
+              className="btn btn-outline-secondary"
+              disabled={false}
+              name="lulc_fut_path"
+              onClick={[Function]}
+              type="button"
+              value="raster"
+            >
+              Browse
+            </button>
+          </div>
+          <div
+            className="invalid-feedback"
+          >
+            raster : 
+          </div>
         </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         REDD Scenario Analysis
       </label>
       <div
-        className="form-check"
+        className="col-sm-8"
       >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="do_redd"
-          onChange={[Function]}
-          type="radio"
-          value="true"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+        <div
+          className="form-check form-check-inline"
         >
-          Yes
-        </label>
-      </div>
-      <div
-        className="form-check"
-      >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="do_redd"
-          onChange={[Function]}
-          type="radio"
-          value="false"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+          <input
+            checked={false}
+            className="form-check-input"
+            disabled={false}
+            name="do_redd"
+            onChange={[Function]}
+            type="radio"
+            value="true"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            Yes
+          </label>
+        </div>
+        <div
+          className="form-check form-check-inline"
         >
-          No
-        </label>
+          <input
+            checked={true}
+            className="form-check-input"
+            disabled={false}
+            name="do_redd"
+            onChange={[Function]}
+            type="radio"
+            value="false"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            No
+          </label>
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         REDD Policy)
       </label>
       <div
-        className="input-group"
+        className="col-sm-8"
       >
-        <input
-          className="form-control is-invalid"
-          name="lulc_redd_path"
-          onChange={[Function]}
-          type="text"
-          value=""
-        />
         <div
-          className="input-group-append"
+          className="input-group"
         >
-          <button
-            className="btn btn-outline-secondary"
-            disabled={false}
+          <input
+            className="form-control"
             name="lulc_redd_path"
-            onClick={[Function]}
-            type="button"
-            value="raster"
+            onChange={[Function]}
+            type="text"
+            value=""
+          />
+          <div
+            className="input-group-append"
           >
-            Browse
-          </button>
-        </div>
-        <div
-          className="invalid-feedback"
-        >
-          raster : 
+            <button
+              className="btn btn-outline-secondary"
+              disabled={false}
+              name="lulc_redd_path"
+              onClick={[Function]}
+              type="button"
+              value="raster"
+            >
+              Browse
+            </button>
+          </div>
+          <div
+            className="invalid-feedback"
+          >
+            raster : 
+          </div>
         </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Carbon Pools
       </label>
       <div
-        className="input-group"
+        className="col-sm-8"
+      >
+        <div
+          className="input-group"
+        >
+          <input
+            className="form-control"
+            name="carbon_pools_path"
+            onChange={[Function]}
+            type="text"
+            value=""
+          />
+          <div
+            className="input-group-append"
+          >
+            <button
+              className="btn btn-outline-secondary"
+              disabled={false}
+              name="carbon_pools_path"
+              onClick={[Function]}
+              type="button"
+              value="csv"
+            >
+              Browse
+            </button>
+          </div>
+          <div
+            className="invalid-feedback"
+          >
+            csv : 
+          </div>
+        </div>
+      </div>
+    </div>
+    <div
+      className="form-group row"
+    >
+      <label
+        className="form-label col-form-label col-sm-3"
+      >
+        Current Landcover Calendar Year
+      </label>
+      <div
+        className="col-sm-4"
       >
         <input
-          className="form-control is-invalid"
-          name="carbon_pools_path"
+          className="form-control"
+          name="lulc_cur_year"
           onChange={[Function]}
           type="text"
           value=""
         />
         <div
-          className="input-group-append"
-        >
-          <button
-            className="btn btn-outline-secondary"
-            disabled={false}
-            name="carbon_pools_path"
-            onClick={[Function]}
-            type="button"
-            value="csv"
-          >
-            Browse
-          </button>
-        </div>
-        <div
           className="invalid-feedback"
         >
-          csv : 
+          number : 
         </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
-      >
-        Current Landcover Calendar Year
-      </label>
-      <input
-        className="form-control is-invalid"
-        name="lulc_cur_year"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
-      <div
-        className="invalid-feedback"
-      >
-        number : 
-      </div>
-    </div>
-    <div
-      className="form-group"
-    >
-      <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Future Landcover Calendar Year
       </label>
-      <input
-        className="form-control is-invalid"
-        name="lulc_fut_year"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
       <div
-        className="invalid-feedback"
+        className="col-sm-4"
       >
-        number : 
+        <input
+          className="form-control"
+          name="lulc_fut_year"
+          onChange={[Function]}
+          type="text"
+          value=""
+        />
+        <div
+          className="invalid-feedback"
+        >
+          number : 
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Run Valuation Model
       </label>
       <div
-        className="form-check"
+        className="col-sm-8"
       >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="do_valuation"
-          onChange={[Function]}
-          type="radio"
-          value="true"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+        <div
+          className="form-check form-check-inline"
         >
-          Yes
-        </label>
-      </div>
-      <div
-        className="form-check"
-      >
-        <input
-          checked={false}
-          className="form-check-input"
-          disabled={false}
-          name="do_valuation"
-          onChange={[Function]}
-          type="radio"
-          value="false"
-        />
-        <label
-          className="form-check-label"
-          title=""
-          type="checkbox"
+          <input
+            checked={false}
+            className="form-check-input"
+            disabled={false}
+            name="do_valuation"
+            onChange={[Function]}
+            type="radio"
+            value="true"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            Yes
+          </label>
+        </div>
+        <div
+          className="form-check form-check-inline"
         >
-          No
-        </label>
+          <input
+            checked={true}
+            className="form-check-input"
+            disabled={false}
+            name="do_valuation"
+            onChange={[Function]}
+            type="radio"
+            value="false"
+          />
+          <label
+            className="form-check-label"
+            title=""
+            type="checkbox"
+          >
+            No
+          </label>
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Price/Metric ton of carbon
       </label>
-      <input
-        className="form-control is-invalid"
-        name="price_per_metric_ton_of_c"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
       <div
-        className="invalid-feedback"
+        className="col-sm-4"
       >
-        number : 
+        <input
+          className="form-control"
+          name="price_per_metric_ton_of_c"
+          onChange={[Function]}
+          type="text"
+          value=""
+        />
+        <div
+          className="invalid-feedback"
+        >
+          number : 
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Market Discount in Price of Carbon (%)
       </label>
-      <input
-        className="form-control is-invalid"
-        name="discount_rate"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
       <div
-        className="invalid-feedback"
+        className="col-sm-4"
       >
-        number : 
+        <input
+          className="form-control"
+          name="discount_rate"
+          onChange={[Function]}
+          type="text"
+          value=""
+        />
+        <div
+          className="invalid-feedback"
+        >
+          number : 
+        </div>
       </div>
     </div>
     <div
-      className="form-group"
+      className="form-group row"
     >
       <label
-        className="form-label"
+        className="form-label col-form-label col-sm-3"
       >
         Annual Rate of Change in Price of Carbon (%)
       </label>
-      <input
-        className="form-control is-invalid"
-        name="rate_change"
-        onChange={[Function]}
-        type="text"
-        value=""
-      />
       <div
-        className="invalid-feedback"
+        className="col-sm-4"
       >
-        number : 
+        <input
+          className="form-control"
+          name="rate_change"
+          onChange={[Function]}
+          type="text"
+          value=""
+        />
+        <div
+          className="invalid-feedback"
+        >
+          number : 
+        </div>
       </div>
     </div>
   </form>
