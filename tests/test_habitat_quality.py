@@ -202,7 +202,7 @@ def make_threats_csv(csv_path,
             open_table.write('0.5,0.8,missing_threat,linear\n')
 
 
-def assert_array_sum(base_raster_path, desired_sum):
+def assert_array_sum(base_raster_path, desired_sum, include_nodata=True):
     """Assert that the sum of a raster is equal to the specified value.
 
     Parameters:
@@ -216,6 +216,10 @@ def assert_array_sum(base_raster_path, desired_sum):
     base_raster = gdal.OpenEx(base_raster_path, gdal.OF_RASTER)
     base_band = base_raster.GetRasterBand(1)
     base_array = base_band.ReadAsArray()
+    nodata = base_band.GetNoDataValue()
+    if not include_nodata:
+        base_array = base_array[~numpy.isclose(base_array, nodata)]
+
     raster_sum = numpy.sum(base_array)
     numpy.testing.assert_almost_equal(raster_sum, desired_sum, decimal=3)
 
@@ -266,6 +270,9 @@ class HabitatQualityTests(unittest.TestCase):
 
         habitat_quality.execute(args)
 
+        base_lulc_bbox = pygeoprocessing.get_raster_info(
+            args['lulc_bas_path'])['bounding_box']
+
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 1792.8088,
@@ -274,9 +281,21 @@ class HabitatQualityTests(unittest.TestCase):
                 'quality_f_regression.tif': 4916.338,
                 'rarity_c_regression.tif': 2500.0000000,
                 'rarity_f_regression.tif': 2500.0000000}.items():
-            assert_array_sum(
-                os.path.join(args['workspace_dir'], 'output', output_filename),
-                assert_value)
+            raster_path = os.path.join(args['workspace_dir'], 'output',
+                                       output_filename)
+            # Check that the raster's computed values are what we expect.
+            # In this case, the LULC and threat rasters should have been
+            # expanded to be beyond the bounds of the original threat values,
+            # so we should exclude those new nodata pixel values.
+            assert_array_sum(raster_path, assert_value, include_nodata=False)
+            # Check that the output raster has the same bounding box as the
+            # LULC rasters.
+            raster_info = pygeoprocessing.get_raster_info(raster_path)
+            raster_bbox = raster_info['bounding_box']
+            raster_nodata = raster_info['nodata'][0]
+            numpy.testing.assert_array_almost_equal(
+                raster_bbox, base_lulc_bbox)
+
 
     def test_habitat_quality_numeric_threats(self):
         """Habitat Quality: regression test on numeric threat names."""
