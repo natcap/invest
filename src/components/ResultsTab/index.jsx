@@ -10,7 +10,7 @@ import VizErrorBoundary from './VizErrorBoundary';
 // until then workspace is null
 // this.props.model is set on invest getspec response
 
-export class VizTab extends React.Component {
+export class ResultsTab extends React.Component {
 
   render() {
     if (this.props.workspace && this.props.model) {

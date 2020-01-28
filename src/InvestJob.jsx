@@ -20,14 +20,14 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 import { HomeTab } from './components/HomeTab';
 import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
-import { VizTab } from './components/VizTab'
+import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
 import { SaveSessionDropdownItem, SaveParametersDropdownItem,
          SavePythonDropdownItem } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 
 // TODO see issue #12
-import rootReducer from './components/VizTab/Visualization/habitat_risk_assessment/reducers';
+import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
 const INVEST_EXE = 'invest.exe'
@@ -54,8 +54,8 @@ export class InvestJob extends React.Component {
         directory: null, suffix: null},
       logStdErr: '', 
       logStdOut: '',
-      sessionProgress: 'models',       // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
-      activeTab: 'models',
+      sessionProgress: 'home',       // 'home', 'setup', 'log', 'results' (i.e. one of the tabs)
+      activeTab: 'home',
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -220,7 +220,7 @@ export class InvestJob extends React.Component {
     // can recycle the pid, and we don't want the kill Button killing
     // another random process.
     investRun.on('close', (code) => {
-      const progress = (code === 0 ? 'viz' : 'log')
+      const progress = (code === 0 ? 'results' : 'log')
       const workspace = {
         directory: this.state.args.workspace_dir.value,
         suffix: this.state.args.results_suffix.value
@@ -430,8 +430,8 @@ export class InvestJob extends React.Component {
     const activeTab = this.state.activeTab;
     const sessionProgress = this.state.sessionProgress;
     const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
-    const logDisabled = ['models', 'setup'].includes(sessionProgress);  // enable during and after execution
-    const vizDisabled = (sessionProgress !== 'viz');  // enable only on complete execute with no errors
+    const logDisabled = ['home', 'setup'].includes(sessionProgress);  // enable during and after execution
+    const resultsDisabled = (sessionProgress !== 'results');  // enable only on complete execute with no errors
     
     // state.procID only has a value during invest execution
     let spinner;
@@ -453,7 +453,7 @@ export class InvestJob extends React.Component {
             activeKey={activeTab}
             onSelect={this.switchTabs}>
             <Nav.Item>
-              <Nav.Link eventKey="models">Home</Nav.Link>
+              <Nav.Link eventKey="home">Home</Nav.Link>
             </Nav.Item>
             <Nav.Item>
               <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
@@ -462,10 +462,10 @@ export class InvestJob extends React.Component {
               <Nav.Link eventKey="log" disabled={logDisabled}>{spinner} Log</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="viz" disabled={vizDisabled}>Viz</Nav.Link>
+              <Nav.Link eventKey="results" disabled={resultsDisabled}>Results</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="docs">Resources</Nav.Link>
+              <Nav.Link eventKey="resources">Resources</Nav.Link>
             </Nav.Item>
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
@@ -485,7 +485,7 @@ export class InvestJob extends React.Component {
           />
         </Navbar>
         <TabContent className="mt-3">
-          <TabPane eventKey="models" title="Home">
+          <TabPane eventKey="home" title="Home">
             <HomeTab
               investList={this.props.investList}
               investGetSpec={this.investGetSpec}
@@ -514,16 +514,16 @@ export class InvestJob extends React.Component {
               investKill={this.investKill}
             />
           </TabPane>
-          <TabPane eventKey="viz" title="Viz">
+          <TabPane eventKey="results" title="Results">
           <Provider store={store}>
-            <VizTab
+            <ResultsTab
               model={this.state.modelName}
               workspace={this.state.workspace}
               sessionID={this.state.sessionID}
               activeTab={activeTab}/> 
           </Provider>
           </TabPane>
-          <TabPane eventKey="docs" title="Resources">
+          <TabPane eventKey="resources" title="Resources">
             <ResourcesTab 
               modelName={this.state.modelSpec.model_name}
               docs={this.state.modelSpec.userguide_html}
