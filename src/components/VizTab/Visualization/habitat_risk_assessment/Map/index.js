@@ -71,7 +71,7 @@ class Hramap extends React.Component {
   componentDidMount() {
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
-    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
+    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace.directory);
     this.loadVectors(fileMetadata.geojsonUrls); // fetch requests happening here
     // Update csv url and file suffix reducers
     this.props.getCsvUrl(fileMetadata.csvUrl);

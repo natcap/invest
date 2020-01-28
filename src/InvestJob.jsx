@@ -48,9 +48,10 @@ export class InvestJob extends React.Component {
       sessionID: defaultSessionID(''),
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
-      args: null,                      // ARGS_SPEC.args, to be modified to include values
+      args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
       argsValid: false,                // set on investValidate exit
-      workspace: null,
+      workspace: {                     // only set values when execute completes
+        directory: null, suffix: null},
       logStdErr: '', 
       logStdOut: '',
       sessionProgress: 'models',       // 'models', 'setup', 'log', 'viz' (i.e. one of the tabs)
@@ -220,9 +221,13 @@ export class InvestJob extends React.Component {
     // another random process.
     investRun.on('close', (code) => {
       const progress = (code === 0 ? 'viz' : 'log')
+      const workspace = {
+        directory: this.state.args.workspace_dir.value,
+        suffix: this.state.args.results_suffix.value
+      }
       this.setState({
         sessionProgress: progress,
-        workspace: this.state.args.workspace_dir.value,
+        workspace: workspace,
         procID: null,  // see above comment
       });
       console.log(this.state)
