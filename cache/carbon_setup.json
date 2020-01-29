@@ -1,0 +1,212 @@
+{
+  "sessionID": "carbon_setup",
+  "modelName": "carbon",
+  "modelSpec": {
+    "model_name": "InVEST Carbon Model",
+    "module": "natcap.invest.carbon",
+    "userguide_html": "carbonstorage.html",
+    "args_with_spatial_overlap": {
+      "spatial_keys": [
+        "lulc_cur_path",
+        "lulc_fut_path",
+        "lulc_redd_path"
+      ]
+    }
+  },
+  "args": {
+    "workspace_dir": {
+      "name": "Workspace",
+      "about": "The folder where all intermediate and output files of the model will be written.  If this folder does not exist, it will be created.",
+      "type": "directory",
+      "required": true,
+      "validation_options": {
+        "exists": false,
+        "permissions": "rwx"
+      },
+      "value": "",
+      "touched": true,
+      "validationMessage": "Input is required but has no value",
+      "valid": false
+    },
+    "results_suffix": {
+      "name": "File suffix",
+      "about": "A string that will be added to the end of all files written to the workspace.",
+      "type": "freestyle_string",
+      "required": false,
+      "validation_options": {
+        "regexp": {
+          "pattern": "[a-zA-Z0-9_-]*",
+          "case_sensitive": false
+        }
+      },
+      "value": "willamette",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "n_workers": {
+      "name": "Taskgraph n_workers parameter",
+      "about": "The n_workers parameter to provide to taskgraph. -1 will cause all jobs to run synchronously. 0 will run all jobs in the same process, but scheduling will take place asynchronously. Any other positive integer will cause that many processes to be spawned to execute tasks.",
+      "type": "number",
+      "required": false,
+      "validation_options": {
+        "expression": "value >= -1"
+      },
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "lulc_cur_path": {
+      "type": "raster",
+      "required": true,
+      "validation_options": {
+        "projected": true
+      },
+      "about": "A GDAL-supported raster representing the land-cover of thecurrent scenario.",
+      "name": "Current Land Use/Land Cover",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\lulc_current_willamette.tif",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "calc_sequestration": {
+      "type": "boolean",
+      "required": "do_valuation | do_redd",
+      "about": "Check to enable sequestration analysis. This requires inputs of Land Use/Land Cover maps for both current and future scenarios.",
+      "name": "Calculate Sequestration",
+      "value": true,
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "lulc_fut_path": {
+      "type": "raster",
+      "required": "calc_sequestration",
+      "validation_options": {
+        "projected": true
+      },
+      "about": "A GDAL-supported raster representing the land-cover of the future scenario. If REDD scenario analysis is enabled, this should be the reference, or baseline, future scenario against which to compare the REDD policy scenario.",
+      "name": "Future Landcover",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\lulc_future_willamette.tif",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "do_redd": {
+      "type": "boolean",
+      "required": false,
+      "about": "Check to enable REDD scenario analysis.  This requires three Land Use/Land Cover maps: one for the current scenario, one for the future baseline scenario, and one for the future REDD policy scenario.",
+      "name": "REDD Scenario Analysis",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "lulc_redd_path": {
+      "type": "raster",
+      "required": "do_redd",
+      "validation_options": {
+        "projected": true
+      },
+      "about": "A GDAL-supported raster representing the land-cover of the REDD policy future scenario.  This scenario will be compared to the baseline future scenario.",
+      "name": "REDD Policy)",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "carbon_pools_path": {
+      "validation_options": {
+        "required_fields": [
+          "LUCODE",
+          "C_above",
+          "C_below",
+          "C_soil",
+          "C_dead"
+        ]
+      },
+      "type": "csv",
+      "required": true,
+      "about": "A table that maps the land-cover IDs to carbon pools.  The table must contain columns of 'LULC', 'C_above', 'C_Below', 'C_Soil', 'C_Dead' as described in the User's Guide.  The values in LULC must at least include the LULC IDs in the land cover maps.",
+      "name": "Carbon Pools",
+      "value": "C:\\Users\\dmf\\projects\\invest\\data\\invest-sample-data\\Carbon\\carbon_pools_willamette.csv",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "lulc_cur_year": {
+      "validation_options": {
+        "expression": "int(value)"
+      },
+      "type": "number",
+      "required": "calc_sequestration",
+      "about": "The calendar year of the current scenario.",
+      "name": "Current Landcover Calendar Year",
+      "value": "2020",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "lulc_fut_year": {
+      "validation_options": {
+        "expression": "int(value)"
+      },
+      "type": "number",
+      "required": "calc_sequestration",
+      "about": "The calendar year of the future scenario.",
+      "name": "Future Landcover Calendar Year",
+      "value": "2050",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "do_valuation": {
+      "type": "boolean",
+      "required": false,
+      "about": "if true then run the valuation model on available outputs.  At a minimum will run on carbon stocks, if sequestration with a future scenario is done and/or a REDD scenario calculate NPV for either and report in final HTML document.",
+      "name": "Run Valuation Model",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "price_per_metric_ton_of_c": {
+      "type": "number",
+      "required": "do_valuation",
+      "about": "Is the present value of carbon per metric ton. Used if ``args['do_valuation']`` is present and True.",
+      "name": "Price/Metric ton of carbon",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "discount_rate": {
+      "type": "number",
+      "required": "do_valuation",
+      "about": "The discount rate as a floating point percent.",
+      "name": "Market Discount in Price of Carbon (%)",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    },
+    "rate_change": {
+      "type": "number",
+      "required": "do_valuation",
+      "about": "The floating point percent increase of the price of carbon per year.",
+      "name": "Annual Rate of Change in Price of Carbon (%)",
+      "value": "",
+      "touched": true,
+      "valid": true,
+      "validationMessage": ""
+    }
+  },
+  "argsValid": false,
+  "workspace": null,
+  "logStdErr": "",
+  "logStdOut": "",
+  "sessionProgress": "setup",
+  "activeTab": "setup",
+  "procID": null
+}
