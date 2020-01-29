@@ -416,7 +416,7 @@ def execute(args):
 
                     zero_threat = numpy.isclose(block, threat_nodata)
                     block[zero_threat] = 0
-                    block[block != 0] = 1
+                    block[~numpy.isclose(block, 0)] = 1
 
                     threat_band.WriteArray(
                         block, yoff=block_offset['yoff'],
