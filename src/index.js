@@ -1,61 +1,27 @@
-import { app, BrowserWindow } from 'electron';
-import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
-import { enableLiveReload } from 'electron-compile';
+"use strict";
 
-// Keep a global reference of the window object, if you don't, the window will
-// be closed automatically when the JavaScript object is garbage collected.
-let mainWindow;
+require("@babel/register");
 
-const isDevMode = process.execPath.match(/[\\/]electron/);
+var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
 
-if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
+var _react = _interopRequireDefault(require("react"));
 
-const createWindow = async () => {
-  // Create the browser window.
-  mainWindow = new BrowserWindow({
-    width: 800,
-    height: 600,
-  });
+var _reactDom = _interopRequireDefault(require("react-dom"));
 
-  // and load the index.html of the app.
-  mainWindow.loadURL(`file://${__dirname}/index.html`);
+var _reactHotLoader = require("react-hot-loader");
 
-  // Open the DevTools.
-  if (isDevMode) {
-    await installExtension(REACT_DEVELOPER_TOOLS);
-    mainWindow.webContents.openDevTools();
-  }
+var _app = _interopRequireDefault(require("./app.jsx")); // require won't find *.jsx without extension
 
-  // Emitted when the window is closed.
-  mainWindow.on('closed', () => {
-    // Dereference the window object, usually you would store windows
-    // in an array if your app supports multi windows, this is the time
-    // when you should delete the corresponding element.
-    mainWindow = null;
-  });
+var render = function render() {
+  _reactDom["default"].render(
+    _react["default"].createElement(
+      _reactHotLoader.AppContainer, null, _react["default"].createElement(
+        _app["default"], null)), document.getElementById('App'));
 };
 
-// This method will be called when Electron has finished
-// initialization and is ready to create browser windows.
-// Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+render();
 
-// Quit when all windows are closed.
-app.on('window-all-closed', () => {
-  // On OS X it is common for applications and their menu bar
-  // to stay active until the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
-
-app.on('activate', () => {
-  // On OS X it's common to re-create a window in the app when the
-  // dock icon is clicked and there are no other windows open.
-  if (mainWindow === null) {
-    createWindow();
-  }
-});
-
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+if (module.hot) {
+  console.log('if hot module');
+  module.hot.accept(render);
+}

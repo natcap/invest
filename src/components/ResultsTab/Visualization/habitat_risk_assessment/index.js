@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
-import HraMap from './components/Map';
-import Plot from './components/Plot';
+import HraMap from './Map';
+import Plot from './Plot';
 
 // The tab where this component renders is only enabled
 // for jobStatus === 0 (run completed w/o error).
@@ -20,6 +20,7 @@ class HraApp extends Component {
   // }
 
   render() {
+    // const model = this.props.model;
     if (this.props.workspace) {
       return (
         <div>

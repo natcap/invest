@@ -1,14 +1,24 @@
-To develeop and launch this Application
---------------------------
-
-clone repo  
+## To develop and launch this Application
 
 `npm install` from repo directory  
 
-set path to invest executeable at launch:  
+activate a python environment that can import `natcap.invest` and `flask`  
 
-windows:  
-set INVEST=C:\Users\dmf\Miniconda3\envs\invest-py36\Scripts\invest.exe && npm start  
-  
-linux:  
-INVEST=C:\Users\dmf\Miniconda3\envs\invest-py36\Scripts\invest.exe npm start  
+`npm start`  
+
+### To run linter or tests
+`npm run lint`  
+`npm run test`  
+
+see `package.json` `scripts` object.  
+
+To run these or other command-line utils of locally installed packages outside the context of the `package.json scripts`, use `npx` (e.g. `npx eslint ...`) as a shortcut to the executeable. 
+
+### To run a single test file:
+`npx jest main.test.js`  (note this is not the path to the test file, rather a pattern for matching)  
+
+To run snippets of code outside the electron runtime, but with the same ECMAscript features and babel configurations, use `node -r @babel/register script.js`.  
+
+
+### Developing Visualization components
+Visualization components (i.e. folders in `src/components/VizTab/Visualization`) should be named with the same model name used in the `invest run <model>` command so that these components can be imported dynamically and lazily. These are the same names returned by `invest list`.

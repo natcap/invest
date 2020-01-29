@@ -1,4 +1,3 @@
-import fs from 'fs';
 import path from 'path';
 import glob from 'glob';
 import { bbox } from "@turf/turf"
@@ -10,9 +9,7 @@ import { Map, TileLayer, LayersControl, ScaleControl } from "react-leaflet";
 import React from "react";
 
 import Control from "./Control";
-import { getCsvUrl } from "../../actions/index";
-import { getVectorsOnMap } from "../../actions/index";
-import { getFileSuffix } from "../../actions/index";
+import { getCsvUrl, getVectorsOnMap, getFileSuffix } from "../actions/index";
 
 const { BaseLayer } = LayersControl;
 
@@ -74,7 +71,7 @@ class Hramap extends React.Component {
   componentDidMount() {
     this.mapApi = this.mapRef.current.leafletElement; // the Leaflet Map object
     this.renderLegend();
-    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace);
+    const fileMetadata = this.gatherWorkspaceFiles(this.props.workspace.directory);
     this.loadVectors(fileMetadata.geojsonUrls); // fetch requests happening here
     // Update csv url and file suffix reducers
     this.props.getCsvUrl(fileMetadata.csvUrl);
@@ -308,7 +305,7 @@ class Hramap extends React.Component {
         if (vectorName.startsWith(prefix) & vectorName !== ecosystemRiskLayer) {
           let defaultCheck = false; // Boolean variable for setting default layer check box
           if (vectorsOnMap.includes(vectorName)) {
-            let defaultCheck = true;
+            defaultCheck = true;
           }
           layerControls.push(
             <label key={vectorName}>
@@ -413,7 +410,7 @@ class Hramap extends React.Component {
   }
 
   // Remove the display of coords when mouse leaves the map
-  removeCoords(e) {
+  removeCoords() {
     this.setState({coords: "Hover mouse over the map to display coordinates."});
   }
 

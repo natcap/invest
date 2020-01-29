@@ -6,11 +6,6 @@ import { ScatterplotChart } from 'react-easy-chart';
 import Legend from './Legend';
 import ToolTip from './ToolTip';
 
-<style>
-  import './style.css';
-</style>
-
-
 // Header names in stats CSV file
 const HABITAT_HEADER = 'HABITAT';
 const STRESSOR_HEADER = 'STRESSOR';

@@ -3,12 +3,9 @@
   "productName": "invest-electron",
   "version": "1.0.0",
   "description": "My Electron application description",
-  "main": "src/index.js",
+  "main": "src/main.js",
   "scripts": {
-    "start": "cross-env NODE_ENV=development electron-forge start",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish",
+    "start": "cross-env FLASK_APP=src/server.py npx electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },
@@ -48,19 +45,17 @@
     }
   },
   "dependencies": {
+    "@babel/runtime": "^7.6.2",
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.0.4",
     "cross-env": "^5.2.0",
-    "electron-compile": "^6.4.4",
-    "electron-devtools-installer": "^2.2.4",
-    "electron-squirrel-startup": "^1.0.0",
+    "dotenv": "^8.2.0",
     "font-awesome": "^4.7.0",
     "google-palette": "^1.1.0",
     "leaflet": "^1.5.1",
     "papaparse": "^5.0.2",
     "prop-types": "^15.7.2",
     "radium": "^0.25.2",
-    "react": "^16.9.0",
     "react-bootstrap": "^1.0.0-beta.11",
     "react-dom": "^16.9.0",
     "react-easy-chart": "^1.0.0",
@@ -71,13 +66,22 @@
     "redux": "^4.0.4"
   },
   "devDependencies": {
-    "electron-forge": "^5.2.4",
-    "electron-prebuilt-compile": "4.0.0",
+    "@babel/cli": "^7.6.2",
+    "@babel/plugin-transform-runtime": "^7.6.2",
+    "@babel/preset-env": "^7.6.2",
+    "@babel/preset-react": "^7.0.0",
+    "@babel/register": "^7.6.2",
+    "babel-eslint": "^10.0.3",
+    "electron": "^6.0.10",
+    "electron-devtools-installer": "^2.2.4",
     "eslint": "^3.19.0",
-    "eslint-config-airbnb": "^15.1.0",
-    "eslint-plugin-import": "^2.18.2",
-    "eslint-plugin-jsx-a11y": "^5.1.1",
     "eslint-plugin-react": "^7.14.3",
-    "jest": "^24.8.0"
+    "eslint-scope": "^5.0.0",
+    "jest": "^24.8.0",
+    "react": "^16.10.1",
+    "react-test-renderer": "^16.10.0",
+    "react-vega": "^7.0.1",
+    "vega": "^5.6.0",
+    "vega-lite": "^4.0.0-beta.8"
   }
 }

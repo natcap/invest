@@ -10,6 +10,10 @@
   />
   <link
     rel="stylesheet"
+    href="styles/style.css"
+  />
+  <link
+    rel="stylesheet"
     href="../node_modules/leaflet/dist/leaflet.css"
   />
   <link
@@ -18,30 +22,17 @@
   />
   <link
     rel="stylesheet"
-    href="./components/Map/style.css"
+    href="./components/ResultsTab/Visualization/habitat_risk_assessment/Map/style.css"
   />
   <link
     rel="stylesheet"
-    href="./components/Plot/style.css"
+    href="./components/ResultsTab/Visualization/habitat_risk_assessment/Plot/style.css"
   />
 </head>
+
 <body style="background-color: rgba(0,0,0,0); margin: 0; padding: 20px" >
   <div id="App"></div>
 </body>
+<script  type="text/javascript" src="./index.js"></script>
 
-<script type="text/jsx">
-import React from 'react';
-import ReactDOM from 'react-dom';
-import {AppContainer} from 'react-hot-loader';
-
-const render = () => {
-  const App = require('./app').default;
-  ReactDOM.render(<AppContainer><App /></AppContainer>, document.getElementById('App'));
-}
-
-render();
-if (module.hot) {
-  module.hot.accept(render);
-}
-</script>
 </html>
