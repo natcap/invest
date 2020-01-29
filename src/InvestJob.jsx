@@ -28,11 +28,14 @@ import { SettingsModal } from './components/SettingsModal';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
-const INVEST_EXE = 'invest.exe'
-// const INVEST_EXE = process.env.INVEST.trim() // sometimes trailing whitespace when set from command-line
+let INVEST_EXE = 'invest.exe'
+if (process.env.INVEST) {  // if it was set, override
+  INVEST_EXE = process.env.INVEST
+}
 
+let gdalEnv = null;
 if (process.env.GDAL_DATA) {
-  var GDAL_DATA = process.env.GDAL_DATA.trim()
+  gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
 }
 
 const CACHE_DIR = 'cache' //  for storing state snapshot files
@@ -192,7 +195,7 @@ export class InvestJob extends React.Component {
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: '.',
         shell: true, // without true, IOError when datastack.py loads json
-        // env: {GDAL_DATA: GDAL_DATA}
+        env: gdalEnv
       });
 
     // TODO: Find a nicer way to stream a log to the page than

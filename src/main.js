@@ -12,8 +12,10 @@ const isDevMode = process.execPath.match(/[\\/]electron/);
 
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
-const PYTHON = 'python';
-// const PYTHON = process.env.INVEST.trim();
+let PYTHON = 'python';
+if (process.env.INVEST) {  // if it was set, override
+  PYTHON = process.env.INVEST.trim();
+}
 
 const createWindow = async () => {
   
