@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed minor bug in HRA that was duplicating the `results_suffix` in some
+  output filenames.
 * Updating the ``psutil`` requirement to avoid a possible import issue when
   building binaries under WINE.  Any version of ``psutil`` should work
   except for ``5.6.0``.
