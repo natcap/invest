@@ -275,7 +275,8 @@ class HabitatQualityTests(unittest.TestCase):
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         args['threat_raster_folder'] = args['workspace_dir']
-        make_threats_raster(args['threat_raster_folder'])
+        make_threats_raster(args['threat_raster_folder'],
+                            threat_values=[0.5, 6.6])
 
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')
@@ -325,7 +326,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args['threat_raster_folder'] = args['workspace_dir']
         make_threats_raster(args['threat_raster_folder'], side_length=50,
-                            threat_values=[0.5, 5.5])
+                            threat_values=[1, 1])
 
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')
