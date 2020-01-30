@@ -125,23 +125,35 @@ def make_lulc_raster(raster_path, lulc_val, side_length=100):
     make_raster_from_array(lulc_array, raster_path)
 
 
-def make_threats_raster(folder_path, make_empty_raster=False, side_length=100):
+def make_threats_raster(folder_path, make_empty_raster=False, side_length=100,
+                        threat_values=None):
     """Create a side_lengthXside_length raster on designated path with 1 as
     threat and 0 as none.
 
     Parameters:
         folder_path (str): the folder path for saving the threat rasters.
+        make_empty_raster=False (bool): Whether to write a raster file
+            that has no values at all.
+        side_length=100 (int): The length of the sides of the threat raster.
+        threat_values=None (None or list): If None, threat values of 1 will be
+            used for the two threat rasters created.  Otherwise, a 2-element
+            list should include numeric threat values for the two threat
+            rasters.
 
     Returns:
         None.
 
     """
+    threat_names = ['threat_1', 'threat_2']
+    if not threat_values:
+        threat_values = [1, 1]  # Nonzero should mean threat presence.
+
     threat_array = numpy.zeros((side_length, side_length), dtype=numpy.int8)
 
     for suffix in ['_c', '_f']:
-        for i, threat in enumerate(['threat_1', 'threat_2']):
+        for (i, threat), value in zip(enumerate(threat_names), threat_values):
             raster_path = os.path.join(folder_path, threat + suffix + '.tif')
-            threat_array[100//(i+1):, :] = 1  # making variations among threats
+            threat_array[100//(i+1):, :] = value  # making variations among threats
             if make_empty_raster:
                 open(raster_path, 'a').close()  # writes an empty raster.
             else:
@@ -312,7 +324,8 @@ class HabitatQualityTests(unittest.TestCase):
         make_sensitivity_samp_csv(args['sensitivity_table_path'])
 
         args['threat_raster_folder'] = args['workspace_dir']
-        make_threats_raster(args['threat_raster_folder'], side_length=50)
+        make_threats_raster(args['threat_raster_folder'], side_length=50,
+                            threat_values=[0.5, 5.5])
 
         args['threats_table_path'] = os.path.join(args['workspace_dir'],
                                                   'threats_samp.csv')
