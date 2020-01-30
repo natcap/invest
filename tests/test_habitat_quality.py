@@ -271,9 +271,6 @@ class HabitatQualityTests(unittest.TestCase):
 
         habitat_quality.execute(args)
 
-        base_lulc_bbox = pygeoprocessing.get_raster_info(
-            args['lulc_bas_path'])['bounding_box']
-
         # Assert values were obtained by summing each output raster.
         for output_filename, assert_value in {
                 'deg_sum_c_regression.tif': 1792.8088,
@@ -289,13 +286,6 @@ class HabitatQualityTests(unittest.TestCase):
             # expanded to be beyond the bounds of the original threat values,
             # so we should exclude those new nodata pixel values.
             assert_array_sum(raster_path, assert_value, include_nodata=False)
-            # Check that the output raster has the same bounding box as the
-            # LULC rasters.
-            raster_info = pygeoprocessing.get_raster_info(raster_path)
-            raster_bbox = raster_info['bounding_box']
-            raster_nodata = raster_info['nodata'][0]
-            numpy.testing.assert_array_almost_equal(
-                raster_bbox, base_lulc_bbox)
 
     def test_habitat_quality_lulc_bbox(self):
         """Habitat Quality: regression test for bbox sizes."""
@@ -349,7 +339,6 @@ class HabitatQualityTests(unittest.TestCase):
             raster_bbox = raster_info['bounding_box']
             numpy.testing.assert_array_almost_equal(
                 raster_bbox, base_lulc_bbox)
-
 
     def test_habitat_quality_numeric_threats(self):
         """Habitat Quality: regression test on numeric threat names."""
