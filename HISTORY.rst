@@ -5,6 +5,9 @@ Unreleased Changes
 * Updated the DelineateIt UI to improve the language around what the model
   should do when it encounters invalid geometry.  The default is now
   that it should skip invalid geometry.
+* Updating the ``psutil`` requirement to avoid a possible import issue when
+  building binaries under WINE.  Any version of ``psutil`` should work
+  except for ``5.6.0``.
 * InVEST sample data was re-organized to simply have one folder per model.
   New datastacks were added for SDR, NDR, Seasonal Water Yield,
   Annual Water Yield, DelineateIt, and Coastal Vulnerability.
