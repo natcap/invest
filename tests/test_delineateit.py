@@ -326,13 +326,13 @@ class DelineateItTests(unittest.TestCase):
         with self.assertRaises(ValueError) as cm:
             delineateit.check_geometries(
                 outflow_vector_path, dem_raster_path, target_vector_path,
-                skip_invalid_geometry=True
+                skip_invalid_geometry=False
             )
         self.assertTrue('is invalid' in str(cm.exception))
 
         delineateit.check_geometries(
             outflow_vector_path, dem_raster_path, target_vector_path,
-            skip_invalid_geometry=False
+            skip_invalid_geometry=True
         )
 
         # I only expect to see 1 feature in the output layer, as there's only 1

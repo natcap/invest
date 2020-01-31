@@ -415,7 +415,7 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         except (shapely.errors.ReadingError, ValueError):
             # Parent class for shapely GEOS errors
             # Raised when the geometry is invalid.
-            if skip_invalid_geometry:
+            if not skip_invalid_geometry:
                 outflow_layer = None
                 outflow_vector = None
                 target_layer = None
