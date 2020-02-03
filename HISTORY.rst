@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+* Updated the DelineateIt UI to improve the language around what the model
+  should do when it encounters invalid geometry.  The default is now
+  that it should skip invalid geometry.
 * Updating how threat rasters are handled in Habitat Quality to address a few
   related and common usability issues for the model.  First, threat
   rasters are now aligned to the LULC instead of the intersection of the whole
