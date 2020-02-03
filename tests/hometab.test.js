@@ -1,7 +1,7 @@
 import React from 'react';
 // import ReactTestUtils from 'react-dom/test-utils';
 import renderer from 'react-test-renderer';
-import { shallow } from 'enzyme';
+import { shallow, mount } from 'enzyme';
 
 import { configure } from 'enzyme';
 import Adapter from 'enzyme-adapter-react-16';
@@ -58,5 +58,23 @@ test('an invest button click calls investGetSpec function', () => {
   const button = home.findWhere(Button => Button.key() === Object.keys(investList)[0])
   button.simulate('click');
   // console.log(home.instance().props);
+  expect(mockFn).toBeCalled();
+})
+
+test('a recent session button click calls loadState function', () => {
+  const mockFn = jest.fn();
+  // mount - not shallow - required because the functionality tested
+  // here is buried in a child component.
+  const home = mount(
+    <HomeTab
+      investList={null}
+      investGetSpec={() => {}}
+      saveState={() => {}}
+      loadState={mockFn}
+      recentSessions={['foo']}
+    />)
+
+  const button = home.findWhere(Button => Button.key() === 'foo')
+  button.simulate('click');
   expect(mockFn).toBeCalled();
 })
