@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`ModelsTab: a button for each model 1`] = `
+exports[`a HomeTab snapshot 1`] = `
 <div
   className="row"
 >
