@@ -177,6 +177,7 @@ $(HG_UG_REPO_PATH):
 
 $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
@@ -184,6 +185,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_TEST_DATA_REPO) $(GIT_TEST_DATA_REPO_PATH)
+	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
@@ -256,44 +258,41 @@ $(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
 $(USERGUIDE_ZIP_FILE): $(USERGUIDE_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(USERGUIDE_ZIP_FILE)) $(notdir $(USERGUIDE_HTML_DIR))"
 
-
-# Zipping up the sample data zipfiles is a little odd because of the presence
-# of the Base_Data folder, where its subdirectories are zipped up separately.
 # Tracking the expected zipfiles here avoids a race condition where we can't
 # know which data zipfiles to create until the data repo is cloned.
 # All data zipfiles are written to dist/data/*.zip
-ZIPDIRS = Aquaculture \
-		  Freshwater \
-		  Marine \
-		  Terrestrial \
-		  carbon \
+ZIPDIRS = Annual_Water_Yield \
+		  Aquaculture \
+		  Base_Data \
+		  Carbon \
 		  CoastalBlueCarbon \
 		  CoastalVulnerability \
 		  CropProduction \
+		  DelineateIt \
 		  Fisheries \
 		  forest_carbon_edge_effect \
 		  globio \
 		  GridSeascape \
 		  HabitatQuality \
 		  HabitatRiskAssess \
-		  Hydropower \
 		  Malaria \
+		  NDR \
 		  pollination \
 		  recreation \
+		  RouteDEM \
 		  scenario_proximity \
 		  ScenicQuality \
-		  seasonal_water_yield \
+		  SDR \
+		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
 		  UrbanCoolingModel\
 		  WaveEnergy \
 		  WindEnergy
+
 ZIPTARGETS = $(foreach dirname,$(ZIPDIRS),$(addprefix $(DIST_DATA_DIR)/,$(dirname).zip))
 
 sampledata: $(ZIPTARGETS)
-$(DIST_DATA_DIR)/Freshwater.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Marine.zip: DATADIR=Base_Data/
-$(DIST_DATA_DIR)/Terrestrial.zip: DATADIR=Base_Data/
 $(DIST_DATA_DIR)/%.zip: $(DIST_DATA_DIR) $(GIT_SAMPLE_DATA_REPO_PATH)
 	cd $(GIT_SAMPLE_DATA_REPO_PATH); $(BASHLIKE_SHELL_COMMAND) "zip -r $(addprefix ../../,$@) $(subst $(DIST_DATA_DIR)/,$(DATADIR),$(subst .zip,,$@))"
 

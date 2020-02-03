@@ -460,12 +460,19 @@ def ndr_eff_calculation(
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             should_seed = 1
                             outflow_dirs &= ~dir_mask
-                        neighbor_flow_dirs = (
-                            to_process_flow_directions_raster.get(
-                                neighbor_col, neighbor_row))
-                        if neighbor_flow_dirs == 0:
-                            should_seed = 1
-                            outflow_dirs &= ~dir_mask
+
+                        # Only consider neighbor flow directions if the
+                        # neighbor index is within the raster.
+                        if (neighbor_col >= 0
+                                and neighbor_row >= 0
+                                and neighbor_col < n_cols
+                                and neighbor_row < n_rows):
+                            neighbor_flow_dirs = (
+                                to_process_flow_directions_raster.get(
+                                    neighbor_col, neighbor_row))
+                            if neighbor_flow_dirs == 0:
+                                should_seed = 1
+                                outflow_dirs &= ~dir_mask
 
                 if should_seed:
                     # mark all outflow directions processed

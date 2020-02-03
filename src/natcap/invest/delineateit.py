@@ -90,9 +90,9 @@ ARGS_SPEC = {
                 "snapped.  MultiPoint geoemtries will also not be snapped."),
             "name": "Pixel Distance to Snap Outlet Points"
         },
-        "crash_on_invalid_geometry": {
+        "skip_invalid_geometry": {
             "type": "boolean",
-            "required": True,
+            "required": False,
             "about": (
                 "If ``True``, any invalid geometries encountered "
                 "in the outlet vector will not be included in the "
@@ -155,12 +155,12 @@ def execute(args):
             retention stops and the remaining export is exported to the stream.
             Used to define streams from the DEM.
         args['snap_distance'] (int):  Pixel Distance to Snap Outlet Points
-        args['crash_on_invalid_geometry'] (bool): Whether to crash when an
+        args['skip_invalid_geometry'] (bool): Whether to crash when an
             invalid geometry is passed or skip it, including all valid
             geometries in the vector to be passed to delineation.
-            If ``True``, this tool will crash if an invalid geometry is
-            found.  If ``False``, invalid geometries will be left out of
-            the vector to be delineated.
+            If ``False``, this tool will crash if an invalid geometry is
+            found.  If ``True``, invalid geometries will be left out of
+            the vector to be delineated.  Default: True
         args['n_workers'] (int): The number of worker processes to use with
             taskgraph. Defaults to -1 (no parallelism).
 
@@ -181,7 +181,10 @@ def execute(args):
     # same thread.
     try:
         n_workers = int(args['n_workers'])
-    except (KeyError, TypeError):
+    except (KeyError, TypeError, ValueError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
         n_workers = -1
     graph = taskgraph.TaskGraph(work_token_dir, n_workers=n_workers)
 
@@ -211,7 +214,7 @@ def execute(args):
         args=(args['outlet_vector_path'],
               file_registry['filled_dem'],
               file_registry['preprocessed_geometries'],
-              args.get('crash_on_invalid_geometry', False)),
+              args.get('skip_invalid_geometry', True)),
         dependent_task_list=[fill_pits_task],
         target_path_list=[file_registry['preprocessed_geometries']],
         task_name='check_geometries',
@@ -341,7 +344,7 @@ def _threshold_streams(flow_accum, src_nodata, out_nodata, threshold):
 
 
 def check_geometries(outlet_vector_path, dem_path, target_vector_path,
-                     crash_on_invalid_geometry=True):
+                     skip_invalid_geometry=False):
     """Perform reasonable checks and repairs on the incoming vector.
 
     This function will iterate through the vector at ``outlet_vector_path``
@@ -363,10 +366,10 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         dem_path (string): The path to a DEM on disk.
         target_vector_path (string): The target path to where the output
             geopackage should be written.
-        crash_on_invalid_geometry (bool): Whether to raise an exception
-            when invalid geometry is found.  If ``True``, an exception
+        skip_invalid_geometry (bool): Whether to raise an exception
+            when invalid geometry is found.  If ``False``, an exception
             will be raised when the first invalid geometry is found.
-            If ``False``, the invalid geometry will be not be included
+            If ``True``, the invalid geometry will be not be included
             in the output vector but any other valid geometries will.
 
     Returns:
@@ -412,7 +415,7 @@ def check_geometries(outlet_vector_path, dem_path, target_vector_path,
         except (shapely.errors.ReadingError, ValueError):
             # Parent class for shapely GEOS errors
             # Raised when the geometry is invalid.
-            if crash_on_invalid_geometry:
+            if not skip_invalid_geometry:
                 outflow_layer = None
                 outflow_vector = None
                 target_layer = None

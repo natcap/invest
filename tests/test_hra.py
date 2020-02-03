@@ -9,6 +9,7 @@ import numpy
 from osgeo import gdal, ogr, osr
 import pygeoprocessing.testing
 import pygeoprocessing
+from shapely.geometry import Point, LineString
 
 TEST_DATA = os.path.join(
     os.path.dirname(__file__), '..', 'data', 'invest-test-data', 'hra')
@@ -729,6 +730,52 @@ class HraUnitTests(unittest.TestCase):
 
         pygeoprocessing.testing.assert_vectors_equal(
             target_simplified_vector_path, expected_simplified_vector_path,
+            1E-6)
+
+    def test_simplify_geometry_points(self):
+        """HRA: test _simplify_geometry does not alter geometry given points."""
+        from natcap.invest.hra import _simplify_geometry
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(EPSG_CODE)
+        base_points_path = os.path.join(self.workspace_dir, 'base_points.gpkg')
+        points = [Point(0.0, 0.0), Point(10.0, 10.0)]
+        pygeoprocessing.testing.sampledata.create_vector_on_disk(
+            points, srs.ExportToWkt(),
+            filename=base_points_path, vector_format='GPKG')
+
+        target_simplified_vector_path = os.path.join(
+            self.workspace_dir, 'simplified_vector.gpkg')
+
+        tolerance = 3000  # in meters
+        _simplify_geometry(
+            base_points_path, tolerance, target_simplified_vector_path)
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            target_simplified_vector_path, base_points_path,
+            1E-6)
+
+    def test_simplify_geometry_lines(self):
+        """HRA: test _simplify_geometry does not alter geometry given lines."""
+        from natcap.invest.hra import _simplify_geometry
+
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(EPSG_CODE)
+        base_lines_path = os.path.join(self.workspace_dir, 'base_lines.gpkg')
+        lines = [LineString([(0.0, 0.0), (10.0, 10.0)])]
+        pygeoprocessing.testing.sampledata.create_vector_on_disk(
+            lines, srs.ExportToWkt(),
+            filename=base_lines_path, vector_format='GPKG')
+
+        target_simplified_vector_path = os.path.join(
+            self.workspace_dir, 'simplified_vector.gpkg')
+
+        tolerance = 3000  # in meters
+        _simplify_geometry(
+            base_lines_path, tolerance, target_simplified_vector_path)
+
+        pygeoprocessing.testing.assert_vectors_equal(
+            target_simplified_vector_path, base_lines_path,
             1E-6)
 
 
