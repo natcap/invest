@@ -23,6 +23,7 @@ import { ResourcesTab } from './components/ResourcesTab';
 import { SaveSessionDropdownItem, SaveParametersDropdownItem,
          SavePythonDropdownItem } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
+import { getSpec } from './server_requests';
 
 // TODO see issue #12
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
@@ -348,40 +349,35 @@ export class InvestJob extends React.Component {
     );
   }
 
-  investGetSpec(event) {
+  async investGetSpec(event) {
     const modelName = event.target.value;
+    const payload = { 
+      json: { 
+        model: modelName
+      } 
+    };
+    const spec = await getSpec(payload);
+    if (spec) {
+      // for clarity, state has a dedicated args property separte from spec
+      const args = JSON.parse(JSON.stringify(spec.args));
+      delete spec.args
 
-    request.post(
-      'http://localhost:5000/getspec',
-      { json: { 
-        model: modelName} 
-      },
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          const spec = body;
-          // for clarity, state has a dedicated args property separte from spec
-          const args = JSON.parse(JSON.stringify(spec.args));
-          delete spec.args
-
-          // This event represents a user selecting a model,
-          // and so some existing state should be reset.
-          this.setState({
-            modelName: modelName,
-            modelSpec: spec,
-            args: args,
-            argsValid: false,
-            sessionProgress: 'setup',
-            logStdErr: '',
-            logStdOut: '',
-            sessionID: defaultSessionID(modelName),
-            workspace: null,
-          }, () => this.switchTabs('setup'));
-        } else {
-          console.log('Status: ' + response.statusCode)
-          console.log('Error: ' + error.message)
-        }
-      }
-    );
+      // This event represents a user selecting a model,
+      // and so some existing state should be reset.
+      this.setState({
+        modelName: modelName,
+        modelSpec: spec,
+        args: args,
+        argsValid: false,
+        sessionProgress: 'setup',
+        logStdErr: '',
+        logStdOut: '',
+        sessionID: defaultSessionID(modelName),
+        workspace: null,
+      }, () => this.switchTabs('setup'));
+    } else {
+      console.log('no spec returned');
+    }
   }
 
   batchUpdateArgs(args_dict) {
