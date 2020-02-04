@@ -528,7 +528,7 @@ def execute(args):
         task_name='calculate T air')
 
     intermediate_aoi_vector_path = os.path.join(
-        intermediate_dir, 'intermediate_aoi%s.shp' % file_suffix)
+        intermediate_dir, 'reprojected_aoi%s.shp' % file_suffix)
     intermediate_uhi_result_vector_task = task_graph.add_task(
         func=pygeoprocessing.reproject_vector,
         args=(
@@ -599,7 +599,7 @@ def execute(args):
 
         intermediate_building_vector_path = os.path.join(
             intermediate_dir,
-            'intermediate_building_vector%s.shp' % file_suffix)
+            'reprojected_buildings%s.shp' % file_suffix)
         intermediate_building_vector_task = task_graph.add_task(
             func=pygeoprocessing.reproject_vector,
             args=(
