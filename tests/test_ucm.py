@@ -61,7 +61,7 @@ class UCMTests(unittest.TestCase):
             'avg_tmp_v': 37.325275675470998,
             'avg_tmp_an': 2.325275675470998,
             'avd_eng_cn': 9019.152329608312357,
-            'avg_wbgt_v': 37.325275675470998,
+            'avg_wbgt_v': 32.60417266705069,
             'avg_ltls_v': 75.000000000000000,
             'avg_hvls_v': 75.000000000000000,
         }
@@ -186,7 +186,7 @@ class UCMTests(unittest.TestCase):
             'avg_tmp_v': 36.60869797039769,
             'avg_tmp_an': 1.608697970397692,
             'avd_eng_cn': 18787.273592787547,
-            'avg_wbgt_v': 36.60869797039769,
+            'avg_wbgt_v': 31.91108630952381,
             'avg_ltls_v': 28.744239631336406,
             'avg_hvls_v': 75.000000000000000,
         }
