@@ -134,7 +134,10 @@ class UrbanCoolingModel(model.InVESTModel):
 
         self.energy_consumption_table_path = inputs.File(
             args_key='energy_consumption_table_path',
-            helptext=("path to a table that maps building types to energy consumption. Must contain at least the fields 'type' and 'consumption'."),
+            helptext=(
+                "Path to a table that maps building types to energy "
+                "consumption. Must contain at least the fields 'type' "
+                "and 'consumption'."),
             label='Energy Consumption Table (CSV)',
             validator=self.validator)
         self.valuation_container.add_input(self.energy_consumption_table_path)
