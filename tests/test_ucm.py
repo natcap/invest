@@ -297,6 +297,22 @@ class UCMTests(unittest.TestCase):
             result[0][1], ("Value must be one of: ['factors', "
                            "'intensity']"))
 
+        args['cc_method'] = 'intensity'
+        args['cc_weight_shade'] = 0.2  # reset this arg
+
+        # Create a new table like the original one, but without the building
+        # intensity column.
+        old_df = pandas.read_csv(args['biophysical_table_path'])
+        new_df = old_df.drop('building_intensity', axis='columns')
+
+        args['biophysical_table_path'] = os.path.join(
+            self.workspace_dir, 'new_csv.csv')
+        new_df.to_csv(args['biophysical_table_path'])
+
+        result = natcap.invest.urban_cooling_model.validate(args)
+        self.assertTrue(
+            'Fields are missing from this table' in result[0][1])
+
     def test_flat_disk_kernel(self):
         """UCM: test flat disk kernel."""
         import natcap.invest.urban_cooling_model
