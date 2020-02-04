@@ -428,7 +428,7 @@ def execute(args):
     align_task.join()
 
     cc_raster_path = os.path.join(
-        args['workspace_dir'], 'cc%s.tif' % file_suffix)
+        intermediate_dir, 'cc%s.tif' % file_suffix)
     if args['cc_method'] == 'factors':
         # Evapotranspiration index (Equation #1)
         ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
@@ -441,7 +441,7 @@ def execute(args):
         eto_nodata = pygeoprocessing.get_raster_info(
             args['ref_eto_raster_path'])['nodata'][0]
         eti_raster_path = os.path.join(
-            args['workspace_dir'], 'eti%s.tif' % file_suffix)
+            intermediate_dir, 'eti%s.tif' % file_suffix)
         eti_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=(
@@ -501,7 +501,7 @@ def execute(args):
         task_name='calculate HM index')
 
     t_air_nomix_raster_path = os.path.join(
-        args['workspace_dir'], 'T_air_nomix%s.tif' % file_suffix)
+        intermediate_dir, 'T_air_nomix%s.tif' % file_suffix)
     t_air_nomix_task = task_graph.add_task(
         func=pygeoprocessing.raster_calculator,
         args=([(t_ref_raw, 'raw'),
@@ -516,7 +516,7 @@ def execute(args):
     decay_kernel_distance = int(numpy.round(
         t_air_average_radius_raw / cell_size))
     t_air_raster_path = os.path.join(
-        args['workspace_dir'], 'T_air%s.tif' % file_suffix)
+        intermediate_dir, 'T_air%s.tif' % file_suffix)
     t_air_task = task_graph.add_task(
         func=convolve_2d_by_exponential,
         args=(
