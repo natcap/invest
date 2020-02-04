@@ -890,8 +890,7 @@ def execute(args):
             file_basename = 'STRESSOR_' + file_basename
             field_name = 'Stressor'
 
-        geojson_path = os.path.join(
-            viz_dir, file_basename + '%s.geojson' % file_suffix)
+        geojson_path = os.path.join(viz_dir, file_basename + '.geojson')
         task_graph.add_task(
             func=_raster_to_geojson,
             args=(out_raster_path, geojson_path, file_basename, field_name),
