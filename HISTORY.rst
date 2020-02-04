@@ -2,8 +2,19 @@
 
 Unreleased Changes
 ------------------
-* Fixed minor bug in HRA that was duplicating the `results_suffix` in some
+* Fixed minor bug in HRA that was duplicating the ``results_suffix`` in some
   output filenames.
+* Updated the DelineateIt UI to improve the language around what the model
+  should do when it encounters invalid geometry.  The default is now
+  that it should skip invalid geometry.
+* Updating how threat rasters are handled in Habitat Quality to address a few
+  related and common usability issues for the model.  First, threat
+  rasters are now aligned to the LULC instead of the intersection of the whole
+  stack.  This means that the model now handles threat inputs that do not all
+  completely overlap the LULC (they must all still be in the same projection).
+  Second, nodata values in threat rasters are converted to a threat value of 0.
+  Any threat pixel values other than 0 or nodata are interpreted as a threat
+  value of 1.
 * Updating the ``psutil`` requirement to avoid a possible import issue when
   building binaries under WINE.  Any version of ``psutil`` should work
   except for ``5.6.0``.
