@@ -591,6 +591,8 @@ def execute(args):
 
         loss_task_path_map = {}
         for loss_type, temp_map, loss_raster_path in [
+                # Breaks here are described in the UG chapter and are the
+                # result of a literature review.
                 ('light', [31.5, 32.0, 32.5], light_work_loss_raster_path),
                 ('heavy', [27.5, 29.5, 31.5], heavy_work_loss_raster_path)]:
             work_loss_task = task_graph.add_task(
