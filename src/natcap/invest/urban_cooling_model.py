@@ -190,7 +190,7 @@ ARGS_SPEC = {
             },
             "about": (
                 'The method selected here determines the predictor used for '
-                'night time temperature.  If <b>"Weighted Factors"</b> is '
+                'nighttime temperature.  If <b>"Weighted Factors"</b> is '
                 'selected, the Cooling Capacity calculations will use the '
                 'weighted factors for shade, albedo and ETI as a predictor '
                 'for nighttime temperatures. <br/>'
