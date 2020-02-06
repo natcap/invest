@@ -105,7 +105,8 @@ class UCMTests(unittest.TestCase):
             buildings_vector = None
 
         # Now, re-run the model with the cost column and verify cost sum is
-        # reasonable.
+        # reasonable.  Re-running within the same test function allows us to
+        # take advantage of taskgraph.
         new_csv_path = os.path.join(self.workspace_dir, 'cost_csv.csv')
         multiplier = 3.0
         df = pandas.read_csv(args['energy_consumption_table_path'])
