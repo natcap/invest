@@ -293,6 +293,7 @@ def execute(args):
         None.
 
     """
+    LOGGER.info('Starting Urban Cooling Model')
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
     intermediate_dir = os.path.join(
         args['workspace_dir'], 'intermediate')
@@ -429,6 +430,7 @@ def execute(args):
     cc_raster_path = os.path.join(
         intermediate_dir, 'cc%s.tif' % file_suffix)
     if args['cc_method'] == 'factors':
+        LOGGER.info('Calculating Cooling Coefficient from factors')
         # Evapotranspiration index (Equation #1)
         ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path,
                                      gdal.OF_RASTER)
@@ -472,6 +474,8 @@ def execute(args):
     else:
         # args['cc_method'] must be 'intensity', so we use a modified CC
         # function.
+        LOGGER.info('Calculating Cooling Coefficient using '
+                    'building intensity')
         cc_task = task_graph.add_task(
             func=pygeoprocessing.raster_calculator,
             args=([(task_path_prop_map['building_intensity'][1], 1)],
@@ -697,6 +701,7 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+    LOGGER.info('Urban Cooling Model complete.')
 
 
 def calculate_uhi_result_vector(
@@ -1014,6 +1019,8 @@ def pickle_zonal_stats(
         None.
 
     """
+    LOGGER.info('Taking zonal statistics of %s over %s',
+                base_vector_path, base_raster_path)
     zonal_stats = pygeoprocessing.zonal_statistics(
         (base_raster_path, 1), base_vector_path,
         polygons_might_overlap=True)
@@ -1170,6 +1177,7 @@ def calculate_wbgt(
             e_i  = RH/100*6.105*exp(17.27*T_air/(237.7+T_air))
 
     """
+    LOGGER.info('Calculating WBGT')
     t_air_nodata = pygeoprocessing.get_raster_info(
         t_air_raster_path)['nodata'][0]
 
@@ -1206,6 +1214,8 @@ def flat_disk_kernel(max_distance, kernel_filepath):
         None
 
     """
+    LOGGER.info('Creating a disk kernel of distance %s at %s',
+                max_distance, kernel_filepath)
     kernel_size = int(numpy.round(max_distance * 2 + 1))
 
     driver = gdal.GetDriverByName('GTiff')
@@ -1312,6 +1322,8 @@ def map_work_loss(
         None.
 
     """
+    LOGGER.info('Calculating work loss using thresholds: %s',
+                work_temp_threshold_array)
     byte_target_nodata = 255
 
     def classify_to_percent_op(temperature_array):
@@ -1381,6 +1393,8 @@ def convolve_2d_by_exponential(
         None.
 
     """
+    LOGGER.info("Starting a convolution over %s with a decay "
+                "distance of %s", signal_raster_path, decay_kernel_distance)
     temporary_working_dir = tempfile.mkdtemp(
         dir=os.path.dirname(target_convolve_raster_path))
     exponential_kernel_path = os.path.join(
