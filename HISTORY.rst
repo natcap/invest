@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Fixed minor bug in HRA that was duplicating the ``results_suffix`` in some
+  output filenames.
 * Updated the DelineateIt UI to improve the language around what the model
   should do when it encounters invalid geometry.  The default is now
   that it should skip invalid geometry.
