@@ -1052,13 +1052,15 @@ def calc_cc_op_factors(
         shade_array (numpy.ndarray): array of shade index values 0..1
         albedo_array (numpy.ndarray): array of albedo index values 0..1
         eti_array (numpy.ndarray): array of evapotransipration index values
-            0..1,
+            0..1
         cc_weight_shade (float): 0..1 weight to apply to shade
         cc_weight_albedo (float): 0..1 weight to apply to albedo
         cc_weight_eti (float): 0..1 weight to apply to eti
 
     Returns:
-         CC_i=cc_weight_shade*shade+cc_weight_albedo*albedo+cc_weight_eti*ETI
+         CC_i = ((cc_weight_shade * shade) +
+                 (cc_weight_albedo * albedo) +
+                 (cc_weight_eti * ETI))
 
     """
     result = numpy.empty(shade_array.shape, dtype=numpy.float32)
