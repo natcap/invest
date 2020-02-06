@@ -941,13 +941,12 @@ def calculate_energy_savings(
     target_building_layer.CreateField(
         ogr.FieldDefn('mean_t_air', ogr.OFTReal))
 
-    target_building_layer_defn = target_building_layer.GetLayerDefn()
-    # assume 'type' field is in layer, just not what it's called
-    for field_name in ['Type', 'type', 'TYPE']:
-        type_field_index = target_building_layer_defn.GetFieldIndex(
-            field_name)
-        if type_field_index != -1:
-            break
+    # Find the index of the 'type' column in a case-insensitive way.
+    # We can assume that the field exists because we're checking for it in
+    # validation as defined in ARGS_SPEC.
+    fieldnames = [field.GetName().lower()
+                  for field in target_building_layer.schema]
+    type_field_index = fieldnames.index('type')
 
     energy_consumption_table = utils.build_lookup_from_csv(
         energy_consumption_table_path, 'type', to_lower=True,
