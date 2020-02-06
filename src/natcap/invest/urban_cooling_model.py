@@ -1122,53 +1122,6 @@ def calc_eti_op(
     return result
 
 
-@validation.invest_validator
-def validate(args, limit_to=None):
-    """Validate args to ensure they conform to `execute`'s contract.
-
-    Parameters:
-        args (dict): dictionary of key(str)/value pairs where keys and
-            values are specified in `execute` docstring.
-        limit_to (str): (optional) if not None indicates that validation
-            should only occur on the args[limit_to] value. The intent that
-            individual key validation could be significantly less expensive
-            than validating the entire `args` dictionary.
-
-    Returns:
-        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
-            tuples. Where an entry indicates that the invalid keys caused
-            the error message in the second part of the tuple. This should
-            be an empty list if validation succeeds.
-
-    """
-    validation_warnings = validation.validate(
-        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
-
-    invalid_keys = validation.get_invalid_keys(validation_warnings)
-    if ('biophysical_table_path' not in invalid_keys and
-            'cc_method' not in invalid_keys):
-        if args['cc_method'] == 'factors':
-            extra_biophysical_keys = ['shade', 'albedo']
-        else:
-            # args['cc_method'] must be 'intensity'.
-            # If args['cc_method'] isn't one of these two allowed values
-            # ('intensity' or 'factors'), it'll be caught by
-            # validation.validate due to the allowed values stated in
-            # ARGS_SPEC.
-            extra_biophysical_keys = ['building_intensity']
-
-        required_keys = (
-            extra_biophysical_keys +
-            ARGS_SPEC['args']['biophysical_table_path'][
-                'validation_options']['required_fields'][:])
-        error_msg = validation.check_csv(
-            args['biophysical_table_path'], required_fields=required_keys)
-        if error_msg:
-            validation_warnings.append((['biophysical_table_path'], error_msg))
-
-    return validation_warnings
-
-
 def calculate_wbgt(
         avg_rel_humidity, t_air_raster_path, target_vapor_pressure_path):
     """Raster calculator op to calculate wet bulb globe temperature.
@@ -1415,3 +1368,50 @@ def convolve_2d_by_exponential(
         target_convolve_raster_path, working_dir=temporary_working_dir,
         ignore_nodata=True)
     shutil.rmtree(temporary_working_dir)
+
+
+@validation.invest_validator
+def validate(args, limit_to=None):
+    """Validate args to ensure they conform to `execute`'s contract.
+
+    Parameters:
+        args (dict): dictionary of key(str)/value pairs where keys and
+            values are specified in `execute` docstring.
+        limit_to (str): (optional) if not None indicates that validation
+            should only occur on the args[limit_to] value. The intent that
+            individual key validation could be significantly less expensive
+            than validating the entire `args` dictionary.
+
+    Returns:
+        list of ([invalid key_a, invalid_keyb, ...], 'warning/error message')
+            tuples. Where an entry indicates that the invalid keys caused
+            the error message in the second part of the tuple. This should
+            be an empty list if validation succeeds.
+
+    """
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    if ('biophysical_table_path' not in invalid_keys and
+            'cc_method' not in invalid_keys):
+        if args['cc_method'] == 'factors':
+            extra_biophysical_keys = ['shade', 'albedo']
+        else:
+            # args['cc_method'] must be 'intensity'.
+            # If args['cc_method'] isn't one of these two allowed values
+            # ('intensity' or 'factors'), it'll be caught by
+            # validation.validate due to the allowed values stated in
+            # ARGS_SPEC.
+            extra_biophysical_keys = ['building_intensity']
+
+        required_keys = (
+            extra_biophysical_keys +
+            ARGS_SPEC['args']['biophysical_table_path'][
+                'validation_options']['required_fields'][:])
+        error_msg = validation.check_csv(
+            args['biophysical_table_path'], required_fields=required_keys)
+        if error_msg:
+            validation_warnings.append((['biophysical_table_path'], error_msg))
+
+    return validation_warnings
