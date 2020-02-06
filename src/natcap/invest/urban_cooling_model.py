@@ -1095,7 +1095,7 @@ def calc_cc_op_intensity(intensity_array):
 
 def calc_eti_op(
         kc_array, kc_nodata, et0_array, et0_nodata, et_max, target_nodata):
-    """Calculate ETI = (K_c ET_0) / ET_max."""
+    """Calculate ETI = (K_c * ET_0) / ET_max."""
     result = numpy.empty(kc_array.shape, dtype=numpy.float32)
     result[:] = target_nodata
     valid_mask = ~(
