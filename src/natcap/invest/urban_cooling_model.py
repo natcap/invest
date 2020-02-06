@@ -428,7 +428,8 @@ def execute(args):
         intermediate_dir, 'cc%s.tif' % file_suffix)
     if args['cc_method'] == 'factors':
         # Evapotranspiration index (Equation #1)
-        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
+        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path,
+                                     gdal.OF_RASTER)
         ref_eto_band = ref_eto_raster.GetRasterBand(1)
         _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
         ref_eto_max = numpy.round(ref_eto_max, decimals=9)
@@ -797,10 +798,10 @@ def calculate_uhi_result_vector(
         energy_consumption_layer = energy_consumption_vector.GetLayer()
 
         LOGGER.info('Parsing building footprint geometry')
-        building_shapely_polygon_lookup = dict([
+        building_shapely_polygon_lookup = dict(
             (poly_feat.GetFID(),
              shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
-            for poly_feat in energy_consumption_layer])
+            for poly_feat in energy_consumption_layer)
 
         LOGGER.info("Constructing building footprint spatial index")
         poly_rtree_index = rtree.index.Index(
