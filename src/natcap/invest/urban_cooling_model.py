@@ -340,15 +340,17 @@ def execute(args):
     # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
-    # Reproject and align inputs
+    # Reproject and align inputs to the intersection of the AOI, ETO and LULC,
+    # with target raster sizes matching those of the LULC.
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            [args['lulc_raster_path'],
-             args['ref_eto_raster_path']], aligned_raster_path_list,
-            ['mode', 'cubicspline'], (cell_size, -cell_size), 'intersection'),
+        args=([args['lulc_raster_path'], args['ref_eto_raster_path']],
+              aligned_raster_path_list,
+              ['mode', 'cubicspline'],
+              (cell_size, -cell_size),
+              'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
