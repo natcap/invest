@@ -38,17 +38,6 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "t_ref": {
-            "name": "Reference Air Temperature",
-            "type": "number",
-            "required": True,
-            "about": (
-                "Rural reference temperature (where the urban heat island"
-                "effect is not observed) for the period of interest. This "
-                "could be nighttime or daytime temperature, for a specific "
-                "date or an average over several days. The results will be "
-                "given for the same period of interest)"),
-        },
         "lulc_raster_path": {
             "name": "Land Use / Land Cover Raster",
             "type": "raster",
@@ -124,6 +113,17 @@ ARGS_SPEC = {
             "about": (
                 "Radius of the averaging filter for turning T_air_nomix "
                 "into T_air")
+        },
+        "t_ref": {
+            "name": "Reference Air Temperature",
+            "type": "number",
+            "required": True,
+            "about": (
+                "Rural reference temperature (where the urban heat island"
+                "effect is not observed) for the period of interest. This "
+                "could be nighttime or daytime temperature, for a specific "
+                "date or an average over several days. The results will be "
+                "given for the same period of interest)"),
         },
         "uhi_max": {
             "name": "Magnitude of the UHI effect",
