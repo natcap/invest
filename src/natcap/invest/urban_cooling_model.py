@@ -773,10 +773,11 @@ def calculate_uhi_result_vector(
     base_aoi_vector = gdal.OpenEx(base_aoi_path, gdal.OF_VECTOR)
     shapefile_driver = gdal.GetDriverByName('ESRI Shapefile')
     try:
-        # can't make a shapefile on top of an existing one
+        # Can't make a shapefile on top of an existing one
         os.remove(target_uhi_vector_path)
-    except OSError:
+    except FileNotFoundError:
         pass
+
     LOGGER.info("Creating %s", os.path.basename(target_uhi_vector_path))
     shapefile_driver.CreateCopy(
         target_uhi_vector_path, base_aoi_vector)
