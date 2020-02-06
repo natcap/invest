@@ -23,21 +23,21 @@ class UrbanCoolingModel(model.InVESTModel):
 
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
-            helptext=('path to landcover raster.'),
+            helptext=('Path to landcover raster.'),
             label='Land Use / Land Cover (Raster)',
             validator=self.validator)
         self.add_input(self.lulc_raster_path)
 
         self.ref_eto_raster_path = inputs.File(
             args_key='ref_eto_raster_path',
-            helptext=('path to evapotranspiration raster.'),
+            helptext=('Path to evapotranspiration raster.'),
             label='Reference Evapotranspiration (Raster)',
             validator=self.validator)
         self.add_input(self.ref_eto_raster_path)
 
         self.aoi_vector_path = inputs.File(
             args_key='aoi_vector_path',
-            helptext=('path to desired AOI.'),
+            helptext=('Path to desired AOI.'),
             label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
