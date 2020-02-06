@@ -889,20 +889,27 @@ def calculate_energy_savings(
         t_air_stats_pickle_path, t_ref_raw, uhi_max,
         energy_consumption_table_path, base_building_vector_path,
         target_building_vector_path):
-    """Add watershed scale values of the given base_raster.
+    """Calculate energy savings.
+
+    Energy savings is calculated from equations 8 or 9 in the User's Guide
+    (depending on whether a cost has been provided in the energy consumption
+    table).
 
     Parameters:
         t_air_stats_pickle_path (str): path to t_air zonal stats indexed by
             FID.
         t_ref_raw (float): single value for Tref.
         uhi_max (float): UHI max parameter from documentation.
+        energy_consumption_table_path (str): path to energy consumption table
+            that contains at least the columns 'type', and 'consumption'.  If
+            the table also contains a 'cost' column, the output energy
+            savings field will be multiplied by the floating-point cost
+            provided in the 'cost' column.
         base_building_vector_path (str): path to existing vector to copy for
             the target vector that contains at least the field 'type'.
-        energy_consumption_table_path (str): path to energy consumption table
-            that contains at least the columns 'type', and 'consumption'.
         target_building_vector_path (str): path to target vector that
             will contain the additional field 'energy_sav' calculated as
-            consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))
+            ``consumption.increase(b) * ((T_(air,MAX)  - T_(air,i)))``.
 
     Return:
         None.
