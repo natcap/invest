@@ -340,10 +340,7 @@ def execute(args):
     # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
-    # reproject vector inputs
-    aligned_aoi_vector_path = os.path.join(
-        intermediate_dir, 'aoi%s.tif')
-
+    # Reproject and align inputs
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
