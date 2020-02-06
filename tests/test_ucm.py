@@ -13,10 +13,10 @@ REGRESSION_DATA = os.path.join(
 
 
 class UCMTests(unittest.TestCase):
-    """Regression tests for InVEST SDR model."""
+    """Regression tests for InVEST Urban Cooling Model."""
 
     def setUp(self):
-        """Initialize SDRRegression tests."""
+        """Initialize UCM Regression tests."""
         self.workspace_dir = tempfile.mkdtemp()
 
     def tearDown(self):
