@@ -13,31 +13,23 @@ class UrbanCoolingModel(model.InVESTModel):
             validator=natcap.invest.urban_cooling_model.validate,
             localdoc=u'urban_cooling_model.html')
 
-        self.t_ref = inputs.Text(
-            args_key='t_ref',
-            helptext=('Reference air temperature (real).'),
-            label='Baseline air temperature (°C)',
-            validator=self.validator)
-        self.t_ref.set_value("21.5")
-        self.add_input(self.t_ref)
-
         self.lulc_raster_path = inputs.File(
             args_key='lulc_raster_path',
-            helptext=('path to landcover raster.'),
+            helptext=('Path to landcover raster.'),
             label='Land Use / Land Cover (Raster)',
             validator=self.validator)
         self.add_input(self.lulc_raster_path)
 
         self.ref_eto_raster_path = inputs.File(
             args_key='ref_eto_raster_path',
-            helptext=('path to evapotranspiration raster.'),
+            helptext=('Path to evapotranspiration raster.'),
             label='Reference Evapotranspiration (Raster)',
             validator=self.validator)
         self.add_input(self.ref_eto_raster_path)
 
         self.aoi_vector_path = inputs.File(
             args_key='aoi_vector_path',
-            helptext=('path to desired AOI.'),
+            helptext=('Path to desired AOI.'),
             label='Area of Interest (Vector)',
             validator=self.validator)
         self.add_input(self.aoi_vector_path)
@@ -51,6 +43,14 @@ class UrbanCoolingModel(model.InVESTModel):
             label='Biophysical Table (CSV)',
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
+
+        self.t_ref = inputs.Text(
+            args_key='t_ref',
+            helptext=('Reference air temperature (real).'),
+            label='Baseline air temperature (°C)',
+            validator=self.validator)
+        self.t_ref.set_value("21.5")
+        self.add_input(self.t_ref)
 
         self.uhi_max = inputs.Text(
             args_key='uhi_max',

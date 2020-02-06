@@ -38,17 +38,6 @@ ARGS_SPEC = {
         "workspace_dir": validation.WORKSPACE_SPEC,
         "results_suffix": validation.SUFFIX_SPEC,
         "n_workers": validation.N_WORKERS_SPEC,
-        "t_ref": {
-            "name": "Reference Air Temperature",
-            "type": "number",
-            "required": True,
-            "about": (
-                "Rural reference temperature (where the urban heat island"
-                "effect is not observed) for the period of interest. This "
-                "could be nighttime or daytime temperature, for a specific "
-                "date or an average over several days. The results will be "
-                "given for the same period of interest)"),
-        },
         "lulc_raster_path": {
             "name": "Land Use / Land Cover Raster",
             "type": "raster",
@@ -125,6 +114,17 @@ ARGS_SPEC = {
                 "Radius of the averaging filter for turning T_air_nomix "
                 "into T_air")
         },
+        "t_ref": {
+            "name": "Reference Air Temperature",
+            "type": "number",
+            "required": True,
+            "about": (
+                "Rural reference temperature (where the urban heat island"
+                "effect is not observed) for the period of interest. This "
+                "could be nighttime or daytime temperature, for a specific "
+                "date or an average over several days. The results will be "
+                "given for the same period of interest)"),
+        },
         "uhi_max": {
             "name": "Magnitude of the UHI effect",
             "type": "number",
@@ -190,7 +190,7 @@ ARGS_SPEC = {
             },
             "about": (
                 'The method selected here determines the predictor used for '
-                'night time temperature.  If <b>"Weighted Factors"</b> is '
+                'nighttime temperature.  If <b>"Weighted Factors"</b> is '
                 'selected, the Cooling Capacity calculations will use the '
                 'weighted factors for shade, albedo and ETI as a predictor '
                 'for nighttime temperatures. <br/>'
@@ -340,18 +340,17 @@ def execute(args):
     # ensure raster has square pixels by picking the smallest dimension
     cell_size = numpy.min(numpy.abs(lulc_raster_info['pixel_size']))
 
-    # reproject vector inputs
-    aligned_aoi_vector_path = os.path.join(
-        intermediate_dir, 'aoi%s.tif')
-
+    # Reproject and align inputs to the intersection of the AOI, ETO and LULC,
+    # with target raster sizes matching those of the LULC.
     aligned_raster_path_list = [
         aligned_lulc_raster_path, aligned_ref_eto_raster_path]
     align_task = task_graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
-        args=(
-            [args['lulc_raster_path'],
-             args['ref_eto_raster_path']], aligned_raster_path_list,
-            ['mode', 'cubicspline'], (cell_size, -cell_size), 'intersection'),
+        args=([args['lulc_raster_path'], args['ref_eto_raster_path']],
+              aligned_raster_path_list,
+              ['mode', 'cubicspline'],
+              (cell_size, -cell_size),
+              'intersection'),
         kwargs={
             'base_vector_path_list': [args['aoi_vector_path']],
             'raster_align_index': 1,
@@ -431,7 +430,8 @@ def execute(args):
         intermediate_dir, 'cc%s.tif' % file_suffix)
     if args['cc_method'] == 'factors':
         # Evapotranspiration index (Equation #1)
-        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path, gdal.OF_RASTER)
+        ref_eto_raster = gdal.OpenEx(aligned_ref_eto_raster_path,
+                                     gdal.OF_RASTER)
         ref_eto_band = ref_eto_raster.GetRasterBand(1)
         _, ref_eto_max, _, _ = ref_eto_band.GetStatistics(0, 1)
         ref_eto_max = numpy.round(ref_eto_max, decimals=9)
@@ -801,10 +801,10 @@ def calculate_uhi_result_vector(
         energy_consumption_layer = energy_consumption_vector.GetLayer()
 
         LOGGER.info('Parsing building footprint geometry')
-        building_shapely_polygon_lookup = dict([
+        building_shapely_polygon_lookup = dict(
             (poly_feat.GetFID(),
              shapely.wkb.loads(poly_feat.GetGeometryRef().ExportToWkb()))
-            for poly_feat in energy_consumption_layer])
+            for poly_feat in energy_consumption_layer)
 
         LOGGER.info("Constructing building footprint spatial index")
         poly_rtree_index = rtree.index.Index(

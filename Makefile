@@ -286,7 +286,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
-		  UrbanCoolingModel\
+		  UrbanCoolingModel \
 		  WaveEnergy \
 		  WindEnergy
 
