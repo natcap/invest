@@ -276,6 +276,7 @@ FunctionEnd
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
     CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
 !macroend
@@ -351,6 +352,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
 
+    SetOutPath "${SAMPLEDATADIR}"
     ; Copy over all the sample parameter files
     File ..\..\data\invest-sample-data\*.invs.json
     File ..\..\data\invest-sample-data\*.invest.json
@@ -367,7 +369,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
-      nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
+      nsisunz::UnzipToLog $LocalDataZipFile "$SAMPLEDATADIR"
     ${EndIf}
 
     ; Write the install log to a text file on disk.
@@ -416,10 +418,6 @@ Var INSTALLER_DIR
     failed:
        MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
     done:
-       ; Write the install log to a text file on disk.
-       StrCpy $0 "$INSTDIR\install_data_${LocalFilepath}_log.txt"
-       Push $0
-       Call DumpLog
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
@@ -442,12 +440,12 @@ Var INSTALLER_DIR
 ;    MessageBox MB_OK "zip: $LocalDataZip"
     IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
     LocalFileExists:
-        nsisunz::UnzipToLog "$LocalDataZip" "$INSTDIR"
+        nsisunz::UnzipToLog "$LocalDataZip" "$SAMPLEDATADIR"
 ;        MessageBox MB_OK "found it locally"
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        SetOutPath "$INSTDIR"
+        SetOutPath "${SAMPLEDATADIR}"
         !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
@@ -482,6 +480,14 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
     !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322
+
+    Section "-hidden section"
+        ; StrCpy is only available inside a Section or Function.
+        ; Write the install log to a text file on disk.
+        StrCpy $0 "$INSTDIR\install_data_log.txt"
+        Push $0
+        Call DumpLog
+    SectionEnd
 SectionGroupEnd
 
 Function .onInit

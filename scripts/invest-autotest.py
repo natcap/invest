@@ -117,12 +117,12 @@ def main(user_args=None):
               'is on the PATH.'))
     parser.add_argument(
         '--cwd',
-        default='.',
+        default='sample_data',
         help=('The CWD from which to execute the models. '
               'If executing from a checked-out InVEST repo, this will probably '
-              'be ./data/invest-data/ or a directory at the same '
+              'be ./data/invest-sample-data/ or a directory at the same '
               'level. If executing from a built InVEST binary, this will be '
-              'the current directory (".").  Default value: "."'
+              'the sample_data directory.  Default value: "sample_data"'
              ))
     parser.add_argument(
         '--workspace',
