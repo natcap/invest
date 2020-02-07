@@ -2,6 +2,9 @@
 
 Unreleased Changes
 ------------------
+
+3.8.0 (2020-02-07)
+------------------
 * Created a sub-directory for the sample data in the installation directory.
 * Fixed minor bug in HRA that was duplicating the ``results_suffix`` in some
   output filenames.
