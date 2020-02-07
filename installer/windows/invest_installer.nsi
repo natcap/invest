@@ -368,7 +368,7 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
-      nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
+      nsisunz::UnzipToLog $LocalDataZipFile "$SAMPLEDATADIR"
     ${EndIf}
 
     ; Write the install log to a text file on disk.
@@ -437,7 +437,7 @@ Var INSTALLER_DIR
 ;    MessageBox MB_OK "zip: $LocalDataZip"
     IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
     LocalFileExists:
-        nsisunz::UnzipToLog "$LocalDataZip" "$INSTDIR"
+        nsisunz::UnzipToLog "$LocalDataZip" "$SAMPLEDATADIR"
 ;        MessageBox MB_OK "found it locally"
        goto done
     DownloadFile:
