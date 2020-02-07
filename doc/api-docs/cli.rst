@@ -67,4 +67,4 @@ To run a model directly from the command-line::
 
 For more detailed instructions, get the help for each command::
 
-    # invest run --help
+    $ invest run --help
