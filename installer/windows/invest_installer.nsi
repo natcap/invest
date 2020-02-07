@@ -276,6 +276,7 @@ FunctionEnd
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
     CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
 !macroend
@@ -350,6 +351,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
 
+    SetOutPath "${SAMPLEDATADIR}"
     ; Copy over all the sample parameter files
     File ..\..\data\invest-sample-data\*.invs.json
     File ..\..\data\invest-sample-data\*.invest.json
@@ -440,7 +442,7 @@ Var INSTALLER_DIR
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        SetOutPath "$INSTDIR"
+        SetOutPath "${SAMPLEDATADIR}"
         !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
