@@ -158,6 +158,11 @@ _MODEL_UIS = {
         pyname='natcap.invest.urban_flood_risk_mitigation',
         gui='urban_flood_risk_mitigation.UrbanFloodRiskMitigation',
         aliases=('ufrm',)),
+    'urban_cooling_model': _UIMETA(
+        humanname='Urban Cooling',
+        pyname='natcap.invest.urban_cooling_model',
+        gui='urban_cooling_model.UrbanCoolingModel',
+        aliases=('ucm',)),
 }
 
 # Build up an index mapping aliases to modelname.

@@ -2,15 +2,15 @@
 DATA_DIR := data
 GIT_SAMPLE_DATA_REPO        := https://bitbucket.org/natcap/invest-sample-data.git
 GIT_SAMPLE_DATA_REPO_PATH   := $(DATA_DIR)/invest-sample-data
-GIT_SAMPLE_DATA_REPO_REV    := 01296a2940f340f9f99250ad716aa5d37ff57c07
+GIT_SAMPLE_DATA_REPO_REV    := 63e403dd64085bdc353fe472eae1a8c3fc19dbdf
 
 GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
-GIT_TEST_DATA_REPO_REV      := 6f0e640c6f8cb1d67dbf838c438bac4c79ecd0ba
+GIT_TEST_DATA_REPO_REV      := 0dfeed7f216f6c1f9af815aabb3e7e04f8cf662b
 
 HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
 HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := 86a1183df108
+HG_UG_REPO_REV              := ec7070b5dea47089718795e71beff182240d4203
 
 
 ENV = env
@@ -180,6 +180,7 @@ $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
+	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
@@ -187,6 +188,7 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
+	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
 fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
@@ -284,6 +286,7 @@ ZIPDIRS = Annual_Water_Yield \
 		  Seasonal_Water_Yield \
 		  storm_impact \
 		  UrbanFloodMitigation \
+		  UrbanCoolingModel \
 		  WaveEnergy \
 		  WindEnergy
 

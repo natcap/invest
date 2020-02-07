@@ -317,6 +317,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
     !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -420,6 +421,8 @@ Var INSTALLER_DIR
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
+  ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
+  ; "$ du -BK -c <directory with model sample data>" and then use the total.
   Section "${Title}"
     AddSize "${AdditionalSizeKb}"
 
@@ -473,6 +476,7 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
     !insertmacro downloadData "Seasonal Water Yield: (optional)" "Seasonal_Water_Yield.zip" 6044
     !insertmacro downloadData "Sediment Delivery Ratio (optional)" "SDR.zip" 15853
     !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 688
+    !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip" 6885
     !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
     !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
     !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322
