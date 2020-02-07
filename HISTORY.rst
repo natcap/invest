@@ -2,6 +2,7 @@
 
 Unreleased Changes
 ------------------
+* Created a sub-directory for the sample data in the installation directory.
 * Fixed minor bug in HRA that was duplicating the ``results_suffix`` in some
   output filenames.
 * Updated the DelineateIt UI to improve the language around what the model
