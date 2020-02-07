@@ -12,11 +12,15 @@ These are the steps that will need to be taken in order to use the batch
 scripting framework for InVEST models available in the ``natcap.invest`` python
 package.
 
+For those wishing to do batch-processing with InVEST without setting up a
+Python scripting environment, see :ref:`cli` for examples of how to run
+InVEST models from the command-line. 
+
 ==================================
 Setting up your Python environment
 ==================================
 
-1. **Install Python 2.7.11 or later.**
+1. **Install Python 3.6 or later.**
 
    Python can be `downloaded from here <https://www.python.org/downloads/>`_.  When installing,
    be sure to allow ``python.exe`` to be added to the path in the installation options.
@@ -25,9 +29,9 @@ Setting up your Python environment
 2. **Put pip on the PATH.**
 
    The ``pip`` utility for installing python packages is already included with
-   Python 2.7.9 and later. Be sure to add ``C:\Python27\Scripts`` to the Windows
-   PATH environment variable so that ``pip`` can be called from the command line
-   without needing to use its full path.
+   Python 2.7.9 and later. Be sure to add ``C:\Python37\Scripts`` (or your custom
+   install location) to the Windows PATH environment variable so that ``pip`` can 
+   be called from the command line without needing to use its full path.
 
    After this is done (and you've opened a new command-line window), you will be
    able to use ``pip`` at the command-line to install packages like so::
@@ -52,8 +56,7 @@ Setting up your Python environment
 
    4a. Download a release of the ``natcap.invest`` python package.
 
-       * `Development ("nightly") builds <http://data.naturalcapitalproject.org/invest-releases/#dev>`_
-       * `Releases on the python package index <https://pypi.python.org/pypi/natcap.invest>`_
+       * `Releases on the python package index <https://pypi.org/project/natcap.invest/#files>`_
 
    4b. Install the downloaded python package..
 
@@ -62,7 +65,8 @@ Setting up your Python environment
          See the `pip docs for installing a package from a wheel
          <https://pip.pypa.io/en/stable/user_guide/#installing-from-wheels>`_
        * ``.zip`` and ``.tar.gz`` files are source archives.
-         See :ref:`installing-from-source` for details.
+         See :ref:`installing-from-source` for details, including how to
+         install specific development versions of ``natcap.invest``.
 
 
 .. _CreatingSamplePythonScripts:
@@ -99,11 +103,11 @@ Creating Sample Python Scripts
    Launch a Windows PowerShell from the Start menu (type “powershell” in the
    search box), then invoke the Python interpreter on the InVEST Python
    script from that shell.  In this example the Python interpreter is
-   installed in ``C:\Python27\python.exe`` and the script was saved in
+   installed in ``C:\Python37\python.exe`` and the script was saved in
    ``C:\Users\rpsharp\Desktop\ndr.py``, thus the command to invoke the
    interpreter is::
 
-    > C:\Python27\python.exe C:\Users\rpsharp\Desktop\ndr.py
+    > C:\Python37\python.exe C:\Users\rpsharp\Desktop\ndr.py
 
 |34ecba0.png|
 
