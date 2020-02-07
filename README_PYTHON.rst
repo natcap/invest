@@ -35,11 +35,6 @@ Python Dependencies
 
 Dependencies for ``natcap.invest`` are listed in ``requirements.txt``:
 
-.. These dependencies are listed here statically because when I push the
-   readme page to PyPI, they won't render if I use the .. include::
-   directive.  Annoying, but oh well.  It just means that we'll need to
-   periodically check that this list is accurate.
-
 .. code-block::
 
 {requirements}
