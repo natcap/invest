@@ -8,10 +8,9 @@ import time
 import logging
 import math
 import pickle
-import urllib
+import urllib.request
 import tempfile
 import shutil
-import sys
 
 import rtree
 import Pyro4
@@ -39,12 +38,7 @@ from .. import validation
 LOGGER = logging.getLogger(__name__)
 
 # This URL is a NatCap global constant
-if sys.version_info >= (3,):
-    # This avoids "ValueError: bad marshal data (unknown type code)"
-    # when a Python 2 Pyro tries to shake hands with Python 3 Pyro
-    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
-else:
-    RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model/'  # pylint: disable=line-too-long
+RECREATION_SERVER_URL = 'http://data.naturalcapitalproject.org/server_registry/invest_recreation_model_py36/'  # pylint: disable=line-too-long
 
 # 'marshal' serializer lets us pass null bytes in strings unlike the default
 Pyro4.config.SERIALIZER = 'marshal'
@@ -299,13 +293,8 @@ def execute(args):
             args['hostname'], args['port'])
     else:
         # else use a well known path to get active server
-        try:
-            server_url = urllib.urlopen(
-                RECREATION_SERVER_URL).read().rstrip()
-        except AttributeError:
-            # Python 3 packaging:
-            server_url = urllib.request.urlopen(
-                RECREATION_SERVER_URL).read().decode('utf-8').rstrip()
+        server_url = urllib.request.urlopen(
+            RECREATION_SERVER_URL).read().decode('utf-8').rstrip()
     file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     output_dir = args['workspace_dir']
