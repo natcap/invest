@@ -62,7 +62,7 @@ def main(sampledatadir):
         ValueError if any module's `validate` function issued warnings.
     """
     validation_messages = ''
-    for datastack_path in glob.glob(os.path.join(sampledatadir, '*invs.json')):
+    for datastack_path in glob.glob(os.path.join(sampledatadir, '*.json')):
 
         paramset = datastack.extract_parameter_set(datastack_path)
         if 'workspace_dir' in paramset.args and \
