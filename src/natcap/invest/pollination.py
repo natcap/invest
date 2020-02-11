@@ -17,7 +17,108 @@ import taskgraph
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.pollination')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Crop Pollination",
+    "module": __name__,
+    "userguide_html": "croppollination.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "landcover_raster_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "This is the landcover map that's used to map biophysical "
+                "properties about habitat and floral resources of landcover "
+                "types to a spatial layout."),
+            "name": "Land Cover Map"
+        },
+        "guild_table_path": {
+            "validation_options": {
+                "required_fields": ["species", "alpha", "relative_abundance"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A table indicating the bee species to analyze in this model "
+                "run.  Table headers must include:<br/>* 'species': a bee "
+                "species whose column string names will be referred to in "
+                "other tables and the model will output analyses per species."
+                "<br/> * any number of columns matching "
+                "_NESTING_SUITABILITY_PATTERN with values in the range "
+                "[0.0, 1.0] indicating the suitability of the given species "
+                "to nest in a particular substrate.<br/>* any number of "
+                "_FORAGING_ACTIVITY_PATTERN columns with values in the range "
+                "[0.0, 1.0] indicating the relative level of foraging "
+                "activity for that species during a particular season."
+                "<br/>* 'alpha': the sigma average flight distance of that "
+                "bee species in meters.<br/>* 'relative_abundance': a weight "
+                "indicating the relative abundance of the particular species "
+                "with respect to the sum of all relative abundance weights "
+                "in the table."),
+            "name": "Guild Table"
+        },
+        "landcover_biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table mapping landcover codes in the landcover raster "
+                "to indexes of nesting availability for each nesting "
+                "substrate referenced in guilds table as well as indexes of "
+                "abundance of floral resources on that landcover type per "
+                "season in the bee activity columns of the guild table."
+                "<br/>All indexes are in the range [0.0, 1.0].<br/>Columns "
+                "in the table must be at least<br/>* 'lucode': representing "
+                "all the unique landcover codes in the raster st "
+                "`args['landcover_path']`<br/>* For every nesting matching "
+                "_NESTING_SUITABILITY_PATTERN in the guild stable, a column "
+                "matching the pattern in `_LANDCOVER_NESTING_INDEX_HEADER`."
+                "<br/>* For every season matching _FORAGING_ACTIVITY_PATTERN "
+                "in the guilds table, a column matching the pattern in "
+                "`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
+            "name": "Land Cover Biophysical Table"
+        },
+        "farm_vector_path": {
+            "validation_options": {
+                "required_fields": ["crop_type", "half_sat", "season", "p_dep",
+                                    "p_managed"],
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "This is a layer of polygons representing farm sites to be "
+                "analyzed.  The vector must have at least the following "
+                "fields:<br/><br/>* season (string): season in which the "
+                "farm needs pollination.<br/>* half_sat (float): a real in "
+                "the range [0.0, 1.0] representing the proportion of wild "
+                "pollinators to achieve a 50% yield of that crop.<br/>* "
+                "p_wild_dep (float): a number in the range [0.0, 1.0] "
+                "representing the proportion of yield dependent on "
+                "pollinators.<br/>* p_managed (float): proportion of "
+                "pollinators that come from non-native/managed hives.<br/>"
+                "* f_[season] (float): any number of fields that match this "
+                "pattern such that `season` also matches the season headers "
+                "in the biophysical and guild table.  Any areas that overlap "
+                "the landcover map will replace seasonal floral resources "
+                "with this value.  Ranges from 0..1.<br/>* n_[substrate] "
+                "(float): any number of fields that match this pattern such "
+                "that `substrate` also matches the nesting substrate headers "
+                "in the biophysical and guild table.  Any areas that "
+                "overlap the landcover map will replace nesting substrate "
+                "suitability with this value.  Ranges from 0..1."),
+            "name": "Farm Vector"
+        }
+    }
+}
 
 _INDEX_NODATA = -1.0
 
@@ -205,7 +306,7 @@ def execute(args):
     intermediate_output_dir = os.path.join(
         args['workspace_dir'], 'intermediate_outputs')
     work_token_dir = os.path.join(
-        intermediate_output_dir, '_tmp_work_tokens')
+        intermediate_output_dir, '_taskgraph_working_dir')
     output_dir = os.path.join(args['workspace_dir'])
     utils.make_directories(
         [output_dir, intermediate_output_dir])
@@ -229,8 +330,11 @@ def execute(args):
 
     try:
         n_workers = int(args['n_workers'])
-    except KeyError:
-        n_workers = 0  # Threaded queue management, but same process.
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     if farm_vector_path is not None:
@@ -723,26 +827,26 @@ def execute(args):
                 _TOTAL_FARM_YIELD_FIELD_ID,
                 1 - nu * (
                     1 - total_farm_results[fid]['sum'] /
-                    total_farm_results[fid]['count']))
+                    float(total_farm_results[fid]['count'])))
 
             # this is PYW ('pdep_y_w')
             farm_feature.SetField(
                 _POLLINATOR_PROPORTION_FARM_YIELD_FIELD_ID,
                 (wild_pollinator_yield_aggregate[fid]['sum'] /
-                 wild_pollinator_yield_aggregate[fid]['count']))
+                 float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is YW ('y_wild')
             farm_feature.SetField(
                 _WILD_POLLINATOR_FARM_YIELD_FIELD_ID,
                 nu * (wild_pollinator_yield_aggregate[fid]['sum'] /
-                      wild_pollinator_yield_aggregate[fid]['count']))
+                      float(wild_pollinator_yield_aggregate[fid]['count'])))
 
             # this is PAT ('p_abund')
             farm_season = farm_feature.GetField(_FARM_SEASON_FIELD)
             farm_feature.SetField(
                 _POLLINATOR_ABUDNANCE_FARM_FIELD_ID,
                 pollinator_abundance_results[farm_season][fid]['sum'] /
-                pollinator_abundance_results[farm_season][fid]['count'])
+                float(pollinator_abundance_results[farm_season][fid]['count']))
 
         target_farm_layer.SetFeature(farm_feature)
     target_farm_layer.SyncToDisk()
@@ -876,7 +980,7 @@ def _parse_scenario_variables(args):
         guild_table_path, 'species', to_lower=True)
 
     LOGGER.info('Checking to make sure guild table has all expected headers')
-    guild_headers = guild_table.itervalues().next().keys()
+    guild_headers = list(guild_table.values())[0].keys()
     for header in _EXPECTED_GUILD_HEADERS:
         matches = re.findall(header, " ".join(guild_headers))
         if len(matches) == 0:
@@ -890,7 +994,7 @@ def _parse_scenario_variables(args):
     landcover_biophysical_table = utils.build_lookup_from_csv(
         landcover_biophysical_table_path, 'lucode', to_lower=True)
     biophysical_table_headers = (
-        landcover_biophysical_table.itervalues().next().keys())
+        list(landcover_biophysical_table.values())[0].keys())
     for header in _EXPECTED_BIOPHYSICAL_HEADERS:
         matches = re.findall(header, " ".join(biophysical_table_headers))
         if len(matches) == 0:
@@ -930,7 +1034,7 @@ def _parse_scenario_variables(args):
         farm_layer_defn = farm_layer.GetLayerDefn()
         farm_headers = [
             farm_layer_defn.GetFieldDefn(i).GetName()
-            for i in xrange(farm_layer_defn.GetFieldCount())]
+            for i in range(farm_layer_defn.GetFieldCount())]
         for header in _EXPECTED_FARM_HEADERS:
             matches = re.findall(header, " ".join(farm_headers))
             if not matches:
@@ -960,7 +1064,7 @@ def _parse_scenario_variables(args):
             substrate_to_header[substrate]['biophysical'] = match.group()
 
     for table_type, lookup_table in itertools.chain(
-            season_to_header.iteritems(), substrate_to_header.iteritems()):
+            season_to_header.items(), substrate_to_header.items()):
         if len(lookup_table) != 3 and farm_vector is not None:
             raise ValueError(
                 "Expected a biophysical, guild, and farm entry for '%s' but "
@@ -1009,7 +1113,7 @@ def _parse_scenario_variables(args):
     for species in result['species_list']:
         result['species_abundance'][species] = (
             guild_table[species][_RELATIVE_SPECIES_ABUNDANCE_FIELD] /
-            total_relative_abundance)
+            float(total_relative_abundance))
 
     # map the relative foraging activity of a species during a certain season
     # (species, season)
@@ -1021,7 +1125,7 @@ def _parse_scenario_variables(args):
         for season in result['season_list']:
             result['species_foraging_activity'][(species, season)] = (
                 guild_table[species][_FORAGING_ACTIVITY_PATTERN % season] /
-                total_activity)
+                float(total_activity))
 
     # * landcover_substrate_index[substrate][landcover] (float)
     result['landcover_substrate_index'] = collections.defaultdict(dict)
@@ -1084,7 +1188,8 @@ class _CalculateHabitatNestingIndex(object):
         # if the function has changed
         try:
             self.__name__ = hashlib.sha1(inspect.getsource(
-                _CalculateHabitatNestingIndex.__call__)).hexdigest()
+                    _CalculateHabitatNestingIndex.__call__
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = _CalculateHabitatNestingIndex.__name__
@@ -1130,7 +1235,7 @@ class _SumRasters(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _SumRasters.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1159,7 +1264,7 @@ class _PollinatorSupplyOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PollinatorSupplyOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1202,7 +1307,7 @@ class _PollinatorSupplyIndexOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PollinatorSupplyIndexOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1241,7 +1346,7 @@ class _MultByScalar(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _MultByScalar.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1267,7 +1372,7 @@ class _OnFarmPollinatorAbundance(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _OnFarmPollinatorAbundance.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1297,7 +1402,7 @@ class _PYTOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PYTOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1324,7 +1429,7 @@ class _PYWOp(object):
             self.__name__ = hashlib.sha1(
                 inspect.getsource(
                     _PYWOp.__call__
-                )).hexdigest()
+                ).encode('utf-8')).hexdigest()
         except IOError:
             # default to the classname if it doesn't work
             self.__name__ = (
@@ -1359,62 +1464,7 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    for key in [
-            'workspace_dir',
-            'landcover_raster_path',
-            'guild_table_path',
-            'landcover_biophysical_table_path']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing" +
-            ', '.join(missing_key_list))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    for key in [
-            'landcover_raster_path',
-            'guild_table_path',
-            'landcover_biophysical_table_path']:
-        if (limit_to is None or limit_to == key) and (
-                not os.path.exists(args[key])):
-            validation_error_list.append(
-                ([key], 'not found on disk'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in [
-                ('landcover_raster_path', 'raster'),
-                ('farm_vector_path', 'vector')]:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and args[key] != ''):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    # Deliberately not validating the interrelationship of the columns between
+    # the biophysical table and the guilds table as the model itself already
+    # does extensive checking for this.
+    return validation.validate(args, ARGS_SPEC['args'])

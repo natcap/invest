@@ -46,6 +46,33 @@ class HydropowerTests(unittest.TestCase):
         }
         return args
 
+    def test_invalid_lulc_veg(self):
+        """Hydro: catching invalid LULC_veg values."""
+        from natcap.invest.hydropower import hydropower_water_yield
+
+        args = HydropowerTests.generate_base_args(self.workspace_dir)
+
+        new_lulc_veg_path = os.path.join(self.workspace_dir,
+                                         'new_lulc_veg.csv')
+
+        table_df = pandas.read_csv(args['biophysical_table_path'])
+        table_df['LULC_veg'] = ['']*len(table_df.index)
+        table_df.to_csv(new_lulc_veg_path)
+        args['biophysical_table_path'] = new_lulc_veg_path
+
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args)
+        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+
+        table_df = pandas.read_csv(args['biophysical_table_path'])
+        table_df['LULC_veg'] = ['-1']*len(table_df.index)
+        table_df.to_csv(new_lulc_veg_path)
+        args['biophysical_table_path'] = new_lulc_veg_path
+
+        with self.assertRaises(ValueError) as cm:
+            hydropower_water_yield.execute(args)
+        self.assertTrue('veg value must be either 1 or 0' in str(cm.exception))
+
     def test_water_yield_subshed(self):
         """Hydro: testing water yield component only w/ subwatershed."""
         from natcap.invest.hydropower import hydropower_water_yield
@@ -173,22 +200,27 @@ class HydropowerTests(unittest.TestCase):
         args_bad_vector = args.copy()
         args_bad_vector['watersheds_path'] = args_bad_vector['eto_path']
         bad_vector_list = hydropower_water_yield.validate(args_bad_vector)
-        self.assertEqual(bad_vector_list[0][1], 'not a vector')
+        self.assertTrue('not be opened as a GDAL vector'
+                        in bad_vector_list[0][1])
 
         args_bad_raster = args.copy()
         args_bad_raster['eto_path'] = args_bad_raster['watersheds_path']
         bad_raster_list = hydropower_water_yield.validate(args_bad_raster)
-        self.assertEqual(bad_raster_list[0][1], 'not a raster')
+        self.assertTrue('not be opened as a GDAL raster'
+                        in bad_raster_list[0][1])
 
         args_bad_file = args.copy()
         args_bad_file['eto_path'] = 'non_existant_file.tif'
         bad_file_list = hydropower_water_yield.validate(args_bad_file)
-        self.assertEqual(bad_file_list[0][1], 'not found on disk')
+        self.assertTrue('File not found' in bad_file_list[0][1])
 
         args_missing_key = args.copy()
         del args_missing_key['eto_path']
-        with self.assertRaises(KeyError):
-            hydropower_water_yield.validate(args_missing_key)
+        validation_warnings = hydropower_water_yield.validate(
+            args_missing_key)
+        self.assertEqual(
+            validation_warnings,
+            [(['eto_path'], 'Key is missing from the args dict')])
 
         # ensure that a missing landcover code in the biophysical table will
         # raise an exception that's helpful

@@ -165,13 +165,38 @@ class PollinationTests(unittest.TestCase):
         # when I manually inspected a run that appeared to be correct.
         self.assertAlmostEqual(result_sum, 58.669518, places=2)
 
+    def test_pollination_constant_abundance(self):
+        """Pollination: regression testing when abundance is all 1."""
+        from natcap.invest import pollination
+
+        args = {
+            'results_suffix': u'',
+            'workspace_dir': self.workspace_dir,
+            'landcover_raster_path': os.path.join(
+                REGRESSION_DATA, 'input', 'clipped_landcover.tif'),
+            'guild_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'guild_table_rel_all_ones.csv'),
+            'landcover_biophysical_table_path': os.path.join(
+                REGRESSION_DATA, 'input', 'landcover_biophysical_table.csv')
+        }
+        pollination.execute(args)
+        result_raster_path = os.path.join(
+            self.workspace_dir, 'pollinator_abundance_apis_spring.tif')
+        result_sum = numpy.float32(0.0)
+        for _, data_block in pygeoprocessing.iterblocks(
+                (result_raster_path, 1)):
+            result_sum += numpy.sum(data_block)
+        # the number below is just what the sum rounded to two decimal places
+        # when I manually inspected a run that appeared to be correct.
+        self.assertAlmostEqual(result_sum, 68.44777, places=2)
+
     def test_pollination_bad_guild_headers(self):
         """Pollination: testing that model detects bad guild headers."""
         from natcap.invest import pollination
 
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
-        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+        with open(bad_guild_table_path, 'w') as bad_guild_table:
             bad_guild_table.write(
                 'species,nesting_suitability_cavity_index,alpha,'
                 'relative_abundance\n')
@@ -200,7 +225,7 @@ class PollinationTests(unittest.TestCase):
         temp_path = tempfile.mkdtemp(dir=self.workspace_dir)
         bad_biophysical_table_path = os.path.join(
             temp_path, 'bad_biophysical_table.csv')
-        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+        with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
                 'lucode,nesting_cavity_availability_index,nesting_ground_index\n'
                 '1,0.3,0.2\n')
@@ -226,12 +251,12 @@ class PollinationTests(unittest.TestCase):
         bad_biophysical_table_path = os.path.join(
             temp_path, 'bad_biophysical_table.csv')
         # one table has only spring the other has only fall.
-        with open(bad_biophysical_table_path, 'wb') as bad_biophysical_table:
+        with open(bad_biophysical_table_path, 'w') as bad_biophysical_table:
             bad_biophysical_table.write(
                 'lucode,nesting_cavity_availability_index,nesting_ground_index,floral_resources_spring_index\n'
                 '1,0.3,0.2,0.2\n')
         bad_guild_table_path = os.path.join(temp_path, 'bad_guild_table.csv')
-        with open(bad_guild_table_path, 'wb') as bad_guild_table:
+        with open(bad_guild_table_path, 'w') as bad_guild_table:
             bad_guild_table.write(
                 'species,nesting_suitability_cavity_index,'
                 'foraging_activity_fall_index,alpha,relative_abundance\n')
@@ -366,3 +391,26 @@ class PollinationTests(unittest.TestCase):
             raise AssertionError(
                 "The following files were expected but not found: " +
                 '\n'.join(missing_files))
+
+
+class PollinationValidationTests(unittest.TestCase):
+    """Tests for the Pollination Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create list of always required arguments."""
+        self.base_required_keys = [
+            'workspace_dir',
+            'landcover_raster_path',
+            'guild_table_path',
+            'landcover_biophysical_table_path',
+        ]
+
+    def test_missing_keys(self):
+        """Pollination Validate: assert missing required keys."""
+        from natcap.invest import pollination
+        from natcap.invest import validation
+
+        validation_errors = pollination.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)

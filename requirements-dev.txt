@@ -19,12 +19,13 @@ future
 wheel>=0.27.0
 pypiwin32; sys_platform == 'win32'  # pip-only
 setuptools>=8.0
-Sphinx>=1.3.1,<1.7.1
+Sphinx>=1.3.1,!=1.7.1
 sphinx-rtd-theme
-PyInstaller==3.3.1  # pip-only
+PyInstaller==3.5  # pip-only
 setuptools_scm
 requests
 coverage
+xlwt
 
 # Specifying dmgbuild and some dependencies.  Dmgbuild will probably work
 # with some other package versions, but I haven't had time to try to get

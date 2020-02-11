@@ -94,7 +94,7 @@ def make_lulc_raster(lulc_ras_path):
     """
     size = 100
     lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
-    lulc_array[size / 2:, :] = 1
+    lulc_array[size // 2:, :] = 1
     make_raster_from_array(lulc_array, lulc_ras_path)
 
 
@@ -190,7 +190,7 @@ def make_rain_csv(rain_csv_path):
     Returns:
         None.
     """
-    with open(rain_csv_path, 'wb') as open_table:
+    with open(rain_csv_path, 'w') as open_table:
         open_table.write('month,events\n')
         for month in range(1, 13):
             open_table.write(str(month) + ',' + '1\n')
@@ -205,7 +205,7 @@ def make_biophysical_csv(biophysical_csv_path):
     Returns:
         None.
     """
-    with open(biophysical_csv_path, 'wb') as open_table:
+    with open(biophysical_csv_path, 'w') as open_table:
         open_table.write(
             'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
         open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
@@ -226,7 +226,7 @@ def make_bad_biophysical_csv(biophysical_csv_path):
     Returns:
         None.
     """
-    with open(biophysical_csv_path, 'wb') as open_table:
+    with open(biophysical_csv_path, 'w') as open_table:
         open_table.write(
             'lucode,Description,CN_A,CN_B,CN_C,CN_D,Kc_1,Kc_2,Kc_3,Kc_4,')
         open_table.write('Kc_5,Kc_6,Kc_7,Kc_8,Kc_9,Kc_10,Kc_11,Kc_12\n')
@@ -247,7 +247,7 @@ def make_alpha_csv(alpha_csv_path):
     Returns:
         None.
     """
-    with open(alpha_csv_path, 'wb') as open_table:
+    with open(alpha_csv_path, 'w') as open_table:
         open_table.write('month,alpha\n')
         for month in range(1, 13):
             open_table.write(str(month) + ',0.083333333\n')
@@ -265,7 +265,7 @@ def make_climate_zone_csv(cz_csv_path):
     climate_zones = 100
     # Random rain events for each month
     rain_events = [14, 17, 14, 15, 20, 18, 4, 6, 5, 16, 16, 20]
-    with open(cz_csv_path, 'wb') as open_table:
+    with open(cz_csv_path, 'w') as open_table:
         open_table.write('cz_id,jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec\n')
 
         for cz in range(climate_zones):
@@ -292,7 +292,7 @@ def make_agg_results_csv(result_csv_path,
     Returns:
         None.
     """
-    with open(result_csv_path, 'wb') as open_table:
+    with open(result_csv_path, 'w') as open_table:
         if climate_zones:
             open_table.write('0,1.0,54.4764\n')
         elif recharge:
@@ -464,7 +464,7 @@ class SeasonalWaterYieldUnusualDataTests(unittest.TestCase):
         result_layer = result_vector.GetLayer()
         incorrect_value_list = []
 
-        with open(agg_results_csv_path, 'rb') as agg_result_file:
+        with open(agg_results_csv_path, 'r') as agg_result_file:
             for line in agg_result_file:
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
@@ -613,6 +613,28 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # use predefined directory so test can clean up files during teardown
         args = SeasonalWaterYieldRegressionTests.generate_base_args(
             self.workspace_dir)
+
+        # Ensure the model can pass when a nodata value is not defined.
+        srs = osr.SpatialReference()
+        srs.ImportFromEPSG(26910)  # UTM Zone 10N
+        project_wkt = srs.ExportToWkt()
+
+        size = 100
+        lulc_array = numpy.zeros((size, size), dtype=numpy.int8)
+        lulc_array[size // 2:, :] = 1
+
+        driver = gdal.GetDriverByName('GTiff')
+        new_raster = driver.Create(
+            args['lulc_raster_path'], lulc_array.shape[0],
+            lulc_array.shape[1], 1, gdal.GDT_Byte)
+        band = new_raster.GetRasterBand(1)
+        band.WriteArray(lulc_array)
+        geotransform = [1180000, 1, 0, 690000, 0, -1]
+        new_raster.SetGeoTransform(geotransform)
+        band = None
+        new_raster = None
+        driver = None
+
         # make args explicit that this is a base run of SWY
         args['user_defined_climate_zones'] = False
         args['user_defined_local_recharge'] = False
@@ -631,7 +653,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
             agg_results_csv_path)
 
     def test_bad_biophysical_table(self):
-        """SWY bad biophysical table with non-numerica values."""
+        """SWY bad biophysical table with non-numerical values."""
         from natcap.invest.seasonal_water_yield import seasonal_water_yield
 
         # use predefined directory so test can clean up files during teardown
@@ -782,7 +804,7 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
         # https://randomascii.wordpress.com/2012/02/25/comparing-floating-point-numbers-2012-edition/
         tolerance_places = 3
 
-        with open(agg_results_path, 'rb') as agg_result_file:
+        with open(agg_results_path, 'r') as agg_result_file:
             for line in agg_result_file:
                 fid, vri_sum, qb_val = [float(x) for x in line.split(',')]
                 feature = result_layer.GetFeature(int(fid))
@@ -796,3 +818,90 @@ class SeasonalWaterYieldRegressionTests(unittest.TestCase):
 
         result_layer = None
         result_vector = None
+
+
+class SWYValidationTests(unittest.TestCase):
+    """Tests for the SWY Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'gamma',
+            'alpha_m',
+            'soil_group_path',
+            'user_defined_climate_zones',
+            'rain_events_table_path',
+            'biophysical_table_path',
+            'monthly_alpha',
+            'lulc_raster_path',
+            'dem_raster_path',
+            'beta_i',
+            'et0_dir',
+            'aoi_path',
+            'precip_dir',
+            'threshold_flow_accumulation',
+            'user_defined_local_recharge',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """SWY Validate: assert missing required keys."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        from natcap.invest import validation
+
+        validation_errors = seasonal_water_yield.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_climate_zones(self):
+        """SWY Validate: assert missing required keys given climate zones."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        from natcap.invest import validation
+
+        validation_errors = seasonal_water_yield.validate(
+            {'user_defined_climate_zones': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['climate_zone_table_path', 'climate_zone_raster_path'])
+        expected_missing_keys.difference_update(
+            {'user_defined_climate_zones', 'rain_events_table_path'})
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_local_recharge(self):
+        """SWY Validate: assert missing required keys given local recharge."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        from natcap.invest import validation
+
+        validation_errors = seasonal_water_yield.validate(
+            {'user_defined_local_recharge': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['l_path'])
+        expected_missing_keys.difference_update(
+            {'user_defined_local_recharge',
+             'et0_dir',
+             'precip_dir',
+             'rain_events_table_path',
+             'soil_group_path'})
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_monthly_alpha_table(self):
+        """SWY Validate: assert missing required keys given monthly alpha."""
+        from natcap.invest.seasonal_water_yield import seasonal_water_yield
+        from natcap.invest import validation
+
+        validation_errors = seasonal_water_yield.validate(
+            {'monthly_alpha': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['monthly_alpha_path'])
+        expected_missing_keys.difference_update(
+            {'monthly_alpha', 'alpha_m'})
+        self.assertEqual(invalid_keys, expected_missing_keys)

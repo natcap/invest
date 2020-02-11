@@ -1,4 +1,4 @@
-'''
+"""
 The Fisheries Model module contains functions for running the model
 
 Variable Suffix Notation:
@@ -6,7 +6,7 @@ t: time
 x: area/region
 a: age/class
 s: sex
-'''
+"""
 
 import logging
 
@@ -16,7 +16,7 @@ LOGGER = logging.getLogger('natcap.invest.fisheries.model')
 
 
 def initialize_vars(vars_dict):
-    '''
+    """
     Initializes variables for model run
 
     Args:
@@ -38,7 +38,7 @@ def initialize_vars(vars_dict):
             'V_tx': np.array([...]), # t,x
             'Spawners_t': np.array([...]),
         }
-    '''
+    """
     # Initialize derived parameters
     # Survtotalfrac, P_survtotalfrac, G_survtotalfrac, N_tasx
     vars_dict['Survtotalfrac'] = _calc_survtotalfrac(vars_dict)
@@ -69,7 +69,7 @@ def initialize_vars(vars_dict):
 
 # Helper functions for initializing derived variables
 def _calc_survtotalfrac(vars_dict):
-    '''
+    """
     Implements the equation
         S_xsa = surv_xsa * (1 - Exploitationfraction_x * Vulnfishing_sa)
 
@@ -78,7 +78,7 @@ def _calc_survtotalfrac(vars_dict):
 
     Returns:
         Survtotalfrac (np.ndarray)
-    '''
+    """
     S_nat = vars_dict['Survnaturalfrac']
     E = vars_dict['Exploitationfraction']
     V = vars_dict['Vulnfishing']
@@ -94,7 +94,7 @@ def _calc_survtotalfrac(vars_dict):
 
 
 def _calc_p_g_survtotalfrac(vars_dict):
-    '''
+    """
     Implements the equations
         G_xsa = (S_xsa ** D_sa) * ((1 - S_xsa) / (1 - S_xsa ** D_sa))
 
@@ -107,7 +107,7 @@ def _calc_p_g_survtotalfrac(vars_dict):
         G (np.ndarray)
 
         P (np.ndarray)
-    '''
+    """
     S_tot = vars_dict['Survtotalfrac']
     D_sa = vars_dict['Duration']
 
@@ -123,7 +123,7 @@ def _calc_p_g_survtotalfrac(vars_dict):
 
 
 def set_recru_func(vars_dict):
-    '''
+    """
     Creates recruitment function that calculates the number of recruits for
     class 0 at time t for each region (currently sex agnostic). Also
     returns number of spawners
@@ -137,7 +137,7 @@ def set_recru_func(vars_dict):
     Example Output of Returned Recruitment Function::
 
         N_next[0], spawners = rec_func(N_prev)
-    '''
+    """
     sexsp = int(vars_dict['sexsp'])
     LarvDisp = vars_dict['Larvaldispersal']
 
@@ -213,7 +213,7 @@ def set_recru_func(vars_dict):
 
 
 def set_init_cond_func(vars_dict):
-    '''
+    """
     Creates a function to set the initial conditions of the model
 
     Args:
@@ -225,7 +225,7 @@ def set_init_cond_func(vars_dict):
     Example Return Array::
 
         N_asx = np.ndarray([...])
-    '''
+    """
     S = vars_dict['Survtotalfrac']  # S_asx
     LarvDisp = vars_dict['Larvaldispersal']
     sexsp = int(vars_dict['sexsp'])
@@ -234,10 +234,10 @@ def set_init_cond_func(vars_dict):
     num_classes = len(vars_dict['Classes'])
 
     def age_based_init_cond():
-        '''
+        """
         Returns:
             N_0_asx (np.ndarray): initial numbers
-        '''
+        """
 
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
@@ -252,10 +252,10 @@ def set_init_cond_func(vars_dict):
         return N_0
 
     def stage_based_init_cond():
-        '''
+        """
         Returns:
             N_0_asx (np.ndarray): initial numbers
-        '''
+        """
         N_0 = np.zeros([num_classes, sexsp, num_regions])
 
         N_0[0] = LarvDisp * total_init_recruits / sexsp
@@ -273,7 +273,7 @@ def set_init_cond_func(vars_dict):
 
 
 def set_cycle_func(vars_dict, rec_func):
-    '''
+    """
     Creates a function to run a single cycle in the model
 
     Args:
@@ -287,7 +287,7 @@ def set_cycle_func(vars_dict, rec_func):
         spawners = <int>
 
         N_next, spawners = cycle_func(N_prev)
-    '''
+    """
     S = vars_dict['Survtotalfrac']  # S_asx
     P = vars_dict['P_survtotalfrac']  # P_asx
     G = vars_dict['G_survtotalfrac']  # G_asx
@@ -295,7 +295,7 @@ def set_cycle_func(vars_dict, rec_func):
     Migration = vars_dict['Migration']
 
     def age_based_cycle_func(N_prev):
-        '''
+        """
         Computes an Age-Based Time Step
 
         Args:
@@ -305,7 +305,7 @@ def set_cycle_func(vars_dict, rec_func):
             N_next (np.ndarray): next cycle numbers
 
             Spawners (np.array): spawners by region
-        '''
+        """
         N_next = np.ndarray(N_prev.shape)
 
         N_prev_xsa = N_prev.swapaxes(0, 2)
@@ -328,17 +328,17 @@ def set_cycle_func(vars_dict, rec_func):
             N_next[0] = N_next_0_xsa
 
         for i in range(1, num_classes):
-            N_next[i] = np.array(map(lambda x: Migration[i-1].dot(
-                x), N_prev[i-1]))[:, 0, :] * S[i-1]
+            N_next[i] = np.array(
+                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * S[i-1]
 
         if len(N_prev) > 1:
-            N_next[-1] = N_next[-1] + np.array(map(lambda x: Migration[-1].dot(
-                x), N_prev[-1]))[:, 0, :] * S[-1]
+            N_next[-1] = N_next[-1] + np.array(
+                [Migration[-1].dot(x) for x in N_prev[-1]])[:, 0, :] * S[-1]
 
         return N_next, spawners
 
     def stage_based_cycle_func(N_prev):
-        '''
+        """
         Computes a Stage-Based Time Step
 
         Args:
@@ -348,7 +348,7 @@ def set_cycle_func(vars_dict, rec_func):
             N_next (np.ndarray): next cycle numbers
 
             Spawners (np.array): spawners by region
-        '''
+        """
         N_next = np.ndarray(N_prev.shape)
 
         N_prev_xsa = N_prev.swapaxes(0, 2)
@@ -360,13 +360,11 @@ def set_cycle_func(vars_dict, rec_func):
             N_next[0] = N_next_0_xsa
 
         N_next[0] = N_next[0] + np.array(Migration[0].dot(N_prev[0][0])) * S[0]
-
-
         for i in range(1, num_classes):
-            G_comp = np.array(map(lambda x: Migration[i-1].dot(
-                x), N_prev[i-1]))[:, 0, :] * G[i-1]
-            P_comp = np.array(map(lambda x: Migration[i].dot(
-                x), N_prev[i]))[:, 0, :] * P[i]
+            G_comp = np.array(
+                [Migration[i-1].dot(x) for x in N_prev[i-1]])[:, 0, :] * G[i-1]
+            P_comp = np.array(
+                [Migration[i].dot(x) for x in N_prev[i]])[:, 0, :] * P[i]
             N_next[i] = G_comp + P_comp
 
         return N_next, spawners
@@ -378,7 +376,7 @@ def set_cycle_func(vars_dict, rec_func):
 
 
 def set_harvest_func(vars_dict):
-    '''
+    """
     Creates harvest function that calculates the given harvest and valuation
     of the fisheries population over each time step for a given region.
     Returns None if harvest isn't selected by user.
@@ -390,7 +388,7 @@ def set_harvest_func(vars_dict):
         H_x = np.array([3.0, 4.5, 2.5, ...])
         V_x = np.array([6.0, 9.0, 5.0, ...])
 
-    '''
+    """
     sexsp = vars_dict['sexsp']
     frac_post_process = 0.0
     unit_price = 0
@@ -414,7 +412,7 @@ def set_harvest_func(vars_dict):
     I = np.array(I)
 
     def harv_func(N_asx):
-        '''
+        """
         Compute harvest and valuation
 
         Args:
@@ -424,10 +422,10 @@ def set_harvest_func(vars_dict):
             H_x (np.ndarray): Harvest by region
 
             V_x (np.ndarray): Value by region
-        '''
+        """
         N_xsa = N_asx.swapaxes(0, 2)
         H_xsa = N_xsa * I * Weight
-        H_x = np.array(map(lambda x: x.sum(), H_xsa))
+        H_x = np.array([x.sum() for x in H_xsa])
         V_x = H_x * (frac_post_process * unit_price)
         return H_x, V_x
 
@@ -435,7 +433,7 @@ def set_harvest_func(vars_dict):
 
 
 def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
-    '''Runs the model
+    """Runs the model
 
     Args:
         vars_dict (dictionary)
@@ -460,7 +458,7 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
             'Spawners_t': np,array([...]),
             'equilibrate_timestep': <int>,
         }
-    '''
+    """
     N_tasx = vars_dict['N_tasx']
     H_tx = vars_dict['H_tx']
     V_tx = vars_dict['V_tx']
@@ -473,7 +471,7 @@ def run_population_model(vars_dict, init_cond_func, cycle_func, harvest_func):
 
     # Run Cycles
     num_cycles = len(N_tasx)
-    for i in xrange(0, num_cycles):
+    for i in range(0, num_cycles):
         # Run Harvest and Check Equilibrium for Current Population
         # Consider Wrapping this into a function
         if harvest_func:

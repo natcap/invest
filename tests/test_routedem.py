@@ -34,6 +34,7 @@ class RouteDEMTests(unittest.TestCase):
         dem_array = numpy.vstack((
             valley_with_sink,
             numpy.tile(valley, (9, 1)) + elevation))
+        nodata_value = -1
 
         srs = osr.SpatialReference()
         srs.ImportFromEPSG(32731)
@@ -47,11 +48,11 @@ class RouteDEMTests(unittest.TestCase):
                 'BLOCKXSIZE=256', 'BLOCKYSIZE=256'))
         dem_raster.SetProjection(srs_wkt)
         ones_band = dem_raster.GetRasterBand(1)
-        ones_band.SetNoDataValue(0)
+        ones_band.SetNoDataValue(nodata_value)
         ones_band.WriteArray(numpy.ones(dem_array.shape))
 
         dem_band = dem_raster.GetRasterBand(2)
-        dem_band.SetNoDataValue(-1)
+        dem_band.SetNoDataValue(nodata_value)
         dem_band.WriteArray(dem_array)
         dem_geotransform = [2, 2, 0, -2, 0, -2]
         dem_raster.SetGeoTransform(dem_geotransform)
@@ -95,8 +96,8 @@ class RouteDEMTests(unittest.TestCase):
 
         # The first band has only values of 1, no hydrological pits.
         # So, the filled band should match the source band.
-        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[1]
-        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()[1]
+        expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[0]
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
         numpy.testing.assert_almost_equal(
             expected_filled_array,
             filled_array)
@@ -123,9 +124,9 @@ class RouteDEMTests(unittest.TestCase):
         expected_filled_array = gdal.OpenEx(args['dem_path']).ReadAsArray()[1]
         expected_filled_array[expected_filled_array < 1.3] = 1.3
 
-        # Filled rasters currently are copies of the target rasters, though
-        # pixels have only been filled from the desired band.
-        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()[1]
+        # Filled rasters are copies of only the desired band of the input DEM,
+        # and then with pixels filled.
+        filled_array = gdal.OpenEx(filled_raster_path).ReadAsArray()
         numpy.testing.assert_almost_equal(
             expected_filled_array,
             filled_array)
@@ -305,73 +306,60 @@ class RouteDEMTests(unittest.TestCase):
     def test_validation_required_args(self):
         """RouteDEM: test required args in validation."""
         from natcap.invest import routedem
+        from natcap.invest import validation
         args = {}
 
         required_keys = ['workspace_dir', 'dem_path']
 
-        with self.assertRaises(KeyError) as cm:
-            routedem.validate(args)
-        for key in required_keys:
-            self.assertTrue(key in repr(cm.exception))
+        validation_warnings = routedem.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_warnings)
+        self.assertTrue(set(required_keys).issubset(invalid_keys))
 
     def test_validation_required_args_threshold(self):
         """RouteDEM: test required args in validation (with threshold)."""
         from natcap.invest import routedem
+        from natcap.invest import validation
 
         args = {'calculate_stream_threshold': True}
         required_keys = [
-            'workspace_dir', 'dem_path', 'threshold_flow_accumulation']
+            'workspace_dir', 'dem_path', 'algorithm',
 
-        with self.assertRaises(KeyError) as cm:
-            routedem.validate(args)
+            # Required because calculate_stream_threshold
+            'threshold_flow_accumulation']
+
+        validation_warnings = routedem.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_warnings)
         for key in required_keys:
-            self.assertTrue(key in repr(cm.exception))
+            self.assertTrue(key in invalid_keys)
 
     def test_validation_required_args_none(self):
         """RouteDEM: test validation of a present but None args."""
         from natcap.invest import routedem
-        required_keys = ['workspace_dir', 'dem_path']
+        from natcap.invest import validation
+
+        required_keys = ['workspace_dir', 'dem_path', 'algorithm']
         args = dict((k, None) for k in required_keys)
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 1)
-        self.assertEqual(
-            set(required_keys) - set(validation_errors[0][0]),
-            set([]))
-        self.assertEqual(
-            validation_errors[0][1], 'parameter has no value')
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        self.assertEqual(invalid_keys, set(required_keys))
 
     def test_validation_required_args_empty(self):
         """RouteDEM: test validation of a present but empty args."""
         from natcap.invest import routedem
-        required_keys = ['workspace_dir', 'dem_path']
+        from natcap.invest import validation
+
+        required_keys = ['workspace_dir', 'dem_path', 'algorithm']
         args = dict((k, '') for k in required_keys)
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 1)
-        self.assertEqual(
-            set(required_keys) - set(validation_errors[0][0]),
-            set([]))
-        self.assertEqual(
-            validation_errors[0][1], 'parameter has no value')
-
-    def test_validation_dem_not_found(self):
-        """RouteDEM: test validation of a missing DEM."""
-        from natcap.invest import routedem
-
-        args = {
-            'workspace_dir': self.workspace_dir,
-            'dem_path': os.path.join(self.workspace_dir, 'notafile.txt')
-        }
-        validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 1)
-        self.assertEqual(
-            validation_errors[0],
-            (['dem_path'], 'not found on disk'))
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        self.assertEqual(invalid_keys, set(required_keys))
 
     def test_validation_invalid_raster(self):
         """RouteDEM: test validation of an invalid DEM."""
         from natcap.invest import routedem
+        from natcap.invest import validation
 
         args = {
             'workspace_dir': self.workspace_dir,
@@ -379,35 +367,33 @@ class RouteDEMTests(unittest.TestCase):
         }
 
         with open(args['dem_path'], 'w') as bad_raster:
-             bad_raster.write('This is an invalid raster format.')
+            bad_raster.write('This is an invalid raster format.')
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 1)
-        self.assertEqual(
-            validation_errors[0],
-            (['dem_path'], 'not a raster'))
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        self.assertTrue('dem_path' in invalid_keys)
 
     def test_validation_band_index_type(self):
         """RouteDEM: test validation of an invalid band index."""
         from natcap.invest import routedem
+        from natcap.invest import validation
+
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'notafile.txt'),
-            'dem_band_index': xrange(1, 5),
+            'dem_band_index': range(1, 5),
         }
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 2)
-        self.assertEqual(
-            validation_errors[0],
-            (['dem_band_index'], 'must be a positive, nonzero integer'))
-        self.assertEqual(
-            validation_errors[1],
-            (['dem_path'], 'not found on disk'))
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        self.assertEqual(invalid_keys, set(['algorithm', 'dem_path',
+                                            'dem_band_index']))
 
     def test_validation_band_index_negative_value(self):
         """RouteDEM: test validation of a negative band index."""
         from natcap.invest import routedem
+        from natcap.invest import validation
+
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'notafile.txt'),
@@ -415,17 +401,15 @@ class RouteDEMTests(unittest.TestCase):
         }
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 2)
-        self.assertEqual(
-            validation_errors[0],
-            (['dem_band_index'], 'must be a positive, nonzero integer'))
-        self.assertEqual(
-            validation_errors[1],
-            (['dem_path'], 'not found on disk'))
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        self.assertEqual(invalid_keys, set(['dem_path', 'dem_band_index',
+                                            'algorithm']))
 
     def test_validation_band_index_value_too_large(self):
         """RouteDEM: test validation of a too-large band index."""
         from natcap.invest import routedem
+        from natcap.invest import validation
+
         args = {
             'workspace_dir': self.workspace_dir,
             'dem_path': os.path.join(self.workspace_dir, 'raster.tif'),
@@ -436,7 +420,6 @@ class RouteDEMTests(unittest.TestCase):
         RouteDEMTests._make_dem(args['dem_path'])
 
         validation_errors = routedem.validate(args)
-        self.assertEqual(len(validation_errors), 1)
-        self.assertEqual(
-            validation_errors[0],
-            (['dem_band_index'], 'Must be between 1 and 2'))
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+
+        self.assertEqual(invalid_keys, set(['algorithm', 'dem_band_index']))

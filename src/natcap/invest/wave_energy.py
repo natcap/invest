@@ -24,6 +24,130 @@ from . import utils
 
 LOGGER = logging.getLogger(__name__)
 
+ARGS_SPEC = {
+    "model_name": "Wave Energy",
+    "module": __name__,
+    "userguide_html": "wave_energy.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "wave_base_data_path": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": True,
+            "about": "Select the folder that has the packaged Wave Energy Data.",
+            "name": "Wave Base Data Folder"
+        },
+        "analysis_area_path": {
+            "validation_options": {
+                "options": [
+                    "West Coast of North America and Hawaii",
+                    "East Coast of North America and Puerto Rico",
+                    "North Sea 4 meter resolution",
+                    "North Sea 10 meter resolution",
+                    "Australia",
+                    "Global"
+                ]
+            },
+            "type": "option_string",
+            "required": True,
+            "about": (
+                "A list of analysis areas for which the model can currently "
+                "be run.  All the wave energy data needed for these areas "
+                "are pre-packaged in the WaveData folder."),
+            "name": "Analysis Area"
+        },
+        "aoi_path": {
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters"
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "An OGR-supported vector file containing a single polygon "
+                "representing the area of interest.  This input is required "
+                "for computing valuation and is recommended for biophysical "
+                "runs as well.  The AOI should be projected in linear units "
+                "of meters."),
+            "name": "Area of Interest"
+        },
+        "machine_perf_path": {
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV Table that has the performance of a particular wave "
+                "energy machine at certain sea state conditions."),
+            "name": "Machine Performance Table"
+        },
+        "machine_param_path": {
+            "validation_options": {
+                "required_fields": ["name", "value", "note"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV Table that has parameter values for a wave energy "
+                "machine.  This includes information on the maximum "
+                "capacity of the device and the upper limits for wave height "
+                "and period."),
+            "name": "Machine Parameter Table"
+        },
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A GDAL-supported raster file containing a digital elevation "
+                "model dataset that has elevation values in meters.  Used to "
+                "get the cable distance for wave energy transmission."),
+            "name": "Global Digital Elevation Model"
+        },
+        "valuation_container": {
+            "type": "boolean",
+            "required": False,
+            "about": "Indicates whether the model includes valuation",
+            "name": "Valuation"
+        },
+        "land_gridPts_path": {
+            "validation_options": {
+                "required_fields": ['id', 'type', 'lat', 'long', 'location'],
+            },
+            "type": "csv",
+            "required": "valuation_container",
+            "about": (
+                "A CSV Table that has the landing points and grid points "
+                "locations for computing cable distances."),
+            "name": "Grid Connection Points Table"
+        },
+        "machine_econ_path": {
+            "validation_options": {
+                'required_fields': ['name', 'value', 'note'],
+            },
+            "type": "csv",
+            "required": "valuation_container",
+            "about": (
+                "A CSV Table that has the economic parameters for the wave "
+                "energy machine."),
+            "name": "Machine Economic Table"
+        },
+        "number_of_machines": {
+            "validation_options": {
+                "expression": "int(value) > 0"
+            },
+            "type": "number",
+            "required": "valuation_container",
+            "about": (
+                "An integer for how many wave energy machines will be in the "
+                "wave farm."),
+            "name": "Number of Machines"
+        }
+    }
+}
+
+
 # Set nodata value and target_pixel_type for new rasters
 _NODATA = float(numpy.finfo(numpy.float32).min) + 1.0
 _TARGET_PIXEL_TYPE = gdal.GDT_Float32
@@ -114,7 +238,7 @@ def execute(args):
             machine parameter table. (required)
         dem_path (str): The path of the Global Digital Elevation Model (DEM).
             (required)
-        suffix (str): A python string of characters to append to each output
+        results_suffix (str): A python string of characters to append to each output
             filename (optional)
         valuation_container (boolean): Indicates whether the model includes
             valuation
@@ -127,23 +251,6 @@ def execute(args):
         n_workers (int): The number of worker processes to use for processing
             this model.  If omitted, computation will take place in the current
             process. (optional)
-
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'wave_base_data_path': 'path/to/base_data_dir',
-            'analysis_area_path': 'West Coast of North America and Hawaii',
-            'aoi_path': 'path/to/vector',
-            'machine_perf_path': 'path/to/csv',
-            'machine_param_path': 'path/to/csv',
-            'dem_path': 'path/to/raster',
-            'suffix': '_results',
-            'valuation_container': True,
-            'land_gridPts_path': 'path/to/csv',
-            'machine_econ_path': 'path/to/csv',
-            'number_of_machines': 28,
-        }
 
     """
     LOGGER.info('Starting the Wave Energy Model.')
@@ -170,7 +277,7 @@ def execute(args):
     task_graph = taskgraph.TaskGraph(taskgraph_working_dir, n_workers)
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    file_suffix = utils.make_suffix_string(args, 'suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Get the path for the DEM
     dem_path = args['dem_path']
@@ -454,23 +561,20 @@ def execute(args):
         dependent_task_list=[create_wave_energy_and_power_raster_task,
                              create_unclipped_power_raster_task])
 
-    # Clip wave energy and power rasters to the aoi vector
     clip_energy_raster_task = task_graph.add_task(
-        func=pygeoprocessing.warp_raster,
-        args=(interpolated_energy_raster_path, target_pixel_size,
-              energy_raster_path, _TARGET_RESAMPLE_METHOD),
-        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
-                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        func=pygeoprocessing.mask_raster,
+        args=((interpolated_energy_raster_path, 1), aoi_vector_path,
+              energy_raster_path,),
+        kwargs={'all_touched': True},
         target_path_list=[energy_raster_path],
         task_name='clip_energy_raster',
         dependent_task_list=[interpolate_energy_points_task])
 
     clip_power_raster_task = task_graph.add_task(
-        func=pygeoprocessing.warp_raster,
-        args=(interpolated_power_raster_path, target_pixel_size,
-              wave_power_raster_path, _TARGET_RESAMPLE_METHOD),
-        kwargs={'vector_mask_options': {'mask_vector_path': aoi_vector_path},
-                'gdal_warp_options': ['CUTLINE_ALL_TOUCHED=TRUE']},
+        func=pygeoprocessing.mask_raster,
+        args=((interpolated_power_raster_path, 1), aoi_vector_path,
+              wave_power_raster_path,),
+        kwargs={'all_touched': True},
         target_path_list=[wave_power_raster_path],
         task_name='clip_power_raster',
         dependent_task_list=[interpolate_power_points_task])
@@ -483,7 +587,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(energy_raster_path, capwe_rc_path, _CAPWE_UNITS_SHORT,
-              _CAPWE_UNITS_LONG, _PERCENTILES),
+              _CAPWE_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[capwe_rc_path],
         task_name='create_energy_percentile_raster',
@@ -492,7 +596,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(wave_power_raster_path, wp_rc_path, _WP_UNITS_SHORT,
-              _WP_UNITS_LONG, _PERCENTILES),
+              _WP_UNITS_LONG, _PERCENTILES, intermediate_dir),
         kwargs={'start_value': _STARTING_PERC_RANGE},
         target_path_list=[wp_rc_path],
         task_name='create_power_percentile_raster',
@@ -579,7 +683,7 @@ def execute(args):
     task_graph.add_task(
         func=_create_percentile_rasters,
         args=(target_npv_raster_path, target_npv_rc_path, _NPV_UNITS_SHORT,
-              _NPV_UNITS_LONG, _PERCENTILES),
+              _NPV_UNITS_LONG, _PERCENTILES, intermediate_dir),
         target_path_list=[target_npv_rc_path],
         task_name='create_npv_percentile_raster',
         dependent_task_list=[create_npv_raster_task])
@@ -686,14 +790,12 @@ def _create_npv_raster(
         _TARGET_RESAMPLE_METHOD)
 
     # Clip the raster to the AOI vector
-    LOGGER.info('Clipping NPV raster with AOI vector.')
-    pygeoprocessing.warp_raster(
-        inter_npv_raster_path,
-        target_pixel_size,
+    LOGGER.info('Masking NPV raster with AOI vector.')
+    pygeoprocessing.mask_raster(
+        (inter_npv_raster_path, 1),
+        base_aoi_vector_path,
         target_npv_raster_path,
-        _TARGET_RESAMPLE_METHOD,
-        vector_mask_options={'mask_vector_path': base_aoi_vector_path},
-        gdal_warp_options=['CUTLINE_ALL_TOUCHED=TRUE'])
+        all_touched=True)
 
 
 def _get_npv_results(captured_wave_energy, depth, number_of_machines,
@@ -909,7 +1011,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
     LOGGER.info('Creating new vector')
     output_driver = ogr.GetDriverByName(_VECTOR_DRIVER_NAME)
     output_vector = output_driver.CreateDataSource(target_vector_path)
-    target_layer = output_vector.CreateLayer(layer_name, target_sr,
+    target_layer = output_vector.CreateLayer(str(layer_name), target_sr,
                                              ogr.wkbPoint)
 
     # Construct a dictionary of field names and their corresponding types
@@ -928,7 +1030,7 @@ def _dict_to_point_vector(base_dict_data, target_vector_path, layer_name,
 
     LOGGER.info('Entering iteration to create and set the features')
     # For each inner dictionary (for each point) create a point
-    for point_dict in base_dict_data.itervalues():
+    for point_dict in base_dict_data.values():
         latitude = float(point_dict['LAT'])
         longitude = float(point_dict['LONG'])
         # When projecting to WGS84, extents -180 to 180 are used for longitude.
@@ -1163,7 +1265,7 @@ def _get_coordinate_transformation(source_sr, target_sr):
 
 def _create_percentile_rasters(base_raster_path, target_raster_path,
                                units_short, units_long, percentile_list,
-                               start_value=None):
+                               working_dir, start_value=None):
     """Create a percentile (quartile) raster based on the raster_dataset.
 
     An attribute table is also constructed for the raster_dataset that displays
@@ -1187,32 +1289,55 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
 
     """
     LOGGER.info('Creating Percentile Rasters')
+    temp_dir = tempfile.mkdtemp(dir=working_dir)
 
     # If the target_raster_path is already a file, delete it
     if os.path.isfile(target_raster_path):
         os.remove(target_raster_path)
 
-    # Set nodata to a negative number
     target_nodata = 255
-    base_nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][
-        0]
+    base_raster_info = pygeoprocessing.get_raster_info(base_raster_path)
+    base_nodata = base_raster_info['nodata'][0]
+    base_dtype = base_raster_info['datatype']
+
+    def _mask_below_start_value(array):
+        valid_mask = (array != base_nodata) & (array >= float(start_value))
+        result = numpy.empty_like(array)
+        result[:] = base_nodata
+        result[valid_mask] = array[valid_mask]
+        return result
+
+    if start_value is not None:
+        masked_raster_path = os.path.join(
+            temp_dir, os.path.basename(base_raster_path))
+        pygeoprocessing.raster_calculator(
+            [(base_raster_path, 1)], _mask_below_start_value,
+            masked_raster_path, base_dtype, base_nodata)
+        input_raster_path = masked_raster_path
+    else:
+        input_raster_path = base_raster_path
 
     # Get the percentile values for each percentile
-    percentile_values = _calculate_percentiles_from_raster(
-        base_raster_path, percentile_list, start_value)
+    percentile_values = pygeoprocessing.raster_band_percentile(
+        (input_raster_path, 1),
+        os.path.join(temp_dir, 'percentile'),
+        percentile_list)
+
+    shutil.rmtree(temp_dir, ignore_errors=True)
 
     # Get the percentile ranges as strings so that they can be added to the
-    # output table
+    # output table. Also round them for readability.
     value_ranges = []
+    rounded_percentiles = numpy.round(percentile_values, decimals=2)
     # Add the first range with the starting value if it exists
     if start_value:
-        value_ranges.append('%s to %s' % (start_value, percentile_values[0]))
+        value_ranges.append('%s to %s' % (start_value, rounded_percentiles[0]))
     else:
-        value_ranges.append('Less than or equal to %s' % percentile_values[0])
+        value_ranges.append('Less than or equal to %s' % rounded_percentiles[0])
     value_ranges += ['%s to %s' % (p, q) for (p, q) in
-                     zip(percentile_values[:-1], percentile_values[1:])]
+                     zip(rounded_percentiles[:-1], rounded_percentiles[1:])]
     # Add the last range to the range of values list
-    value_ranges.append('Greater than %s' % percentile_values[-1])
+    value_ranges.append('Greater than %s' % rounded_percentiles[-1])
     LOGGER.debug('Range_values : %s', value_ranges)
 
     def raster_percentile(band):
@@ -1241,7 +1366,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
     # Initialize a dictionary where percentile groups map to a string
     # of corresponding percentile ranges. Used to create RAT
     percentile_dict = {}
-    for idx in xrange(len(percentile_groups)):
+    for idx in range(len(percentile_groups)):
         percentile_dict[percentile_groups[idx]] = value_ranges[idx]
     value_range_field = 'Value Range (' + units_long + ',' + units_short + ')'
     _create_raster_attr_table(
@@ -1267,7 +1392,7 @@ def _create_percentile_rasters(base_raster_path, target_raster_path,
         'Pixel Count'
     ]
     table_dict = dict((col_name, []) for col_name in column_names)
-    for idx in xrange(len(percentile_groups)):
+    for idx in range(len(percentile_groups)):
         table_dict['Percentile Group'].append(percentile_groups[idx])
         table_dict['Percentile Range'].append(percentile_ranges[idx])
         table_dict[value_range_field].append(value_ranges[idx])
@@ -1476,7 +1601,7 @@ def _wave_energy_capacity_to_dict(wave_data, interp_z, machine_param):
 
     # For all the wave watch points, multiply the occurrence matrix by the
     # interpolated machine performance matrix to get the captured wave energy
-    for key, val in wave_data['bin_matrix'].iteritems():
+    for key, val in wave_data['bin_matrix'].items():
         # Convert all values to type float
         temp_matrix = numpy.array(val, dtype='f')
         mult_matrix = numpy.multiply(temp_matrix, interp_z)
@@ -1573,6 +1698,7 @@ def _index_raster_value_to_point_vector(
     vector_idx = index.Index(generator_function(), interleaved=False)
 
     # For all the features (points) add the proper raster value
+    encountered_fids = set()
     for block_info, block_matrix in pygeoprocessing.iterblocks(
             (base_raster_path, 1)):
         # Calculate block bounding box in decimal degrees
@@ -1592,18 +1718,34 @@ def _index_raster_value_to_point_vector(
 
         for vector in intersect_vectors:
             vector_fid = vector.id
+
+            # Occasionally there will be points that intersect multiple block
+            # bounding boxes (like points that lie on the boundary of two
+            # blocks) and we don't want to double-count.
+            if vector_fid in encountered_fids:
+                continue
+
             vector_trans_x, vector_trans_y = vector.bbox[0], vector.bbox[1]
 
             # To get proper raster value we must index into the dem matrix
             # by getting where the point is located in terms of the matrix
             i = int((vector_trans_x - block_min_x) / pixel_size_x)
             j = int((block_max_y - vector_trans_y) / pixel_size_y)
-            block_value = block_matrix[j][i]
+
+            try:
+                block_value = block_matrix[j][i]
+            except IndexError:
+                # It is possible for an index to be *just* on the edge of a
+                # block and exceed the block dimensions.  If this happens,
+                # pass on this point, as another block's bounding box should
+                # catch this point instead.
+                continue
 
             # There are cases where the DEM may be too coarse and thus a
             # wave energy point falls on land. If the raster value taken is
             # greater than or equal to zero we need to delete that point as
             # it should not be used in calculations
+            encountered_fids.add(vector_fid)
             if block_value >= 0.0:
                 target_layer.DeleteFeature(vector_fid)
             else:
@@ -1705,87 +1847,6 @@ def _energy_and_power_to_wave_vector(
     target_wave_vector = None
 
 
-def _calculate_percentiles_from_raster(
-        base_raster_path, percentile_list, start_value=None):
-    """Determine the _PERCENTILES of a raster using the nearest-rank method.
-
-    Iterate through the raster blocks and round the unique values for
-    efficiency. Then add each unique value-count pair into a dictionary.
-    Compute ordinal ranks given the percentile list.
-
-    Parameters:
-        base_raster_path (str): path to a gdal raster on disk
-        percentile_list (list): a list of desired _PERCENTILES to lookup,
-            ex: [25,50,75,90]
-        start_value (str): the first value that goes to the first percentile
-            range (start_value: percentile_one). (optional)
-
-    Returns:
-            a list of values corresponding to the _PERCENTILES from the list
-
-    """
-    nodata = pygeoprocessing.get_raster_info(base_raster_path)['nodata'][0]
-    if start_value:
-        start_value = float(start_value)
-    unique_value_counts = {}
-    for _, block_matrix in pygeoprocessing.iterblocks((base_raster_path, 1)):
-        # Sum the values with the same key in both dictionaries
-        unique_values, counts = numpy.unique(block_matrix, return_counts=True)
-        # Remove the nodata value from the array
-        if start_value:
-            valid_pixel_mask = (unique_values != nodata) & (
-                unique_values >= start_value)
-        else:
-            valid_pixel_mask = (unique_values != nodata)
-        unique_values = unique_values[valid_pixel_mask]
-        counts = counts[valid_pixel_mask]
-        # Round the array so the unique values won't explode the dictionary
-        numpy.round(unique_values, decimals=1, out=unique_values)
-
-        block_unique_value_counts = dict(zip(unique_values, counts))
-        for value in block_unique_value_counts.keys():
-            unique_value_counts[value] = unique_value_counts.get(
-                value, 0) + block_unique_value_counts.get(value, 0)
-
-    LOGGER.debug('Unique_value_counts: %s', unique_value_counts)
-
-    # Get the total pixel count except nodata pixels
-    total_count = sum(unique_value_counts.values())
-
-    # Calculate the ordinal rank
-    ordinal_rank = [
-        numpy.ceil(percentile / 100.0 * total_count)
-        for percentile in percentile_list
-    ]
-
-    # Get values from the ordered dictionary that correspond to the ranks
-    percentile_values = []  # list for corresponding values
-    ith_element = 0  # indexing the ith element in the percentile_values list
-    cumulative_count = 0  # for checking if the percentile value is reached
-
-    # Get the unique_value keys in the ascending order
-    for unique_value in sorted(unique_value_counts.keys()):
-        # stop iteration when all corresponding values are obtained
-        if ith_element > len(ordinal_rank) - 1:
-            break
-
-        # Add count from the unique value
-        count = unique_value_counts[unique_value]
-        cumulative_count += count
-
-        while cumulative_count == ordinal_rank[ith_element] or \
-                cumulative_count > ordinal_rank[ith_element]:
-            percentile_values.append(unique_value)
-            ith_element += 1
-
-            # stop iteration when all corresponding values are obtained
-            if ith_element == len(ordinal_rank):
-                break
-
-    LOGGER.debug('Percentile_values: %s', percentile_values)
-    return percentile_values
-
-
 def _count_pixels_groups(raster_path, group_values):
     """Count pixels for each value in 'group_values' over a raster.
 
@@ -1803,7 +1864,7 @@ def _count_pixels_groups(raster_path, group_values):
 
     for _, block_matrix in pygeoprocessing.iterblocks((raster_path, 1)):
         # Cumulatively add the pixels count for each value in 'group_values'
-        for idx in xrange(len(group_values)):
+        for idx in range(len(group_values)):
             val = group_values[idx]
             count_mask = numpy.zeros(block_matrix.shape)
             numpy.equal(block_matrix, val, count_mask)
@@ -1949,126 +2010,4 @@ def validate(args, limit_to=None):
             validation warning.
 
     """
-    warnings = []
-    keys_missing_value = []
-    missing_keys = []
-    for required_key in ('workspace_dir', 'wave_base_data_path',
-                         'analysis_area_path', 'machine_perf_path',
-                         'machine_param_path', 'dem_path'):
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_value.append(required_key)
-        except KeyError:
-            missing_keys.append(required_key)
-
-    if missing_keys:
-        raise KeyError('Keys are missing from args: %s' % str(missing_keys))
-
-    if keys_missing_value:
-        warnings.append((keys_missing_value,
-                         'Parameter is required but has no value'))
-
-    if limit_to in ('wave_base_data_path', None):
-        if not args['wave_base_data_path'] or (
-                not os.path.isdir(args['wave_base_data_path'])):
-            warnings.append((['wave_base_data_path'],
-                             'Parameter not found or is not a folder.'))
-
-    if limit_to in ('analysis_area_path', None):
-        if args['analysis_area_path'] not in (
-                "West Coast of North America and Hawaii",
-                "East Coast of North America and Puerto Rico",
-                "North Sea 4 meter resolution",
-                "North Sea 10 meter resolution", "Australia", "Global"):
-            warnings.append((['analysis_area_path'],
-                             'Parameter must be a known analysis area.'))
-
-    if limit_to in ('aoi_path', None):
-        try:
-            if args['aoi_path'] not in ('', None):
-                with utils.capture_gdal_logging():
-                    vector = gdal.OpenEx(args['aoi_path'], gdal.OF_VECTOR)
-                    layer = vector.GetLayer()
-                    geometry_type = layer.GetGeomType()
-                    if geometry_type != ogr.wkbPolygon:
-                        warnings.append((['aoi_path'],
-                                         'Vector must contain only polygons.'))
-                    srs = layer.GetSpatialRef()
-                    units = srs.GetLinearUnitsName().lower()
-                    if units not in ('meter', 'metre'):
-                        warnings.append((['aoi_path'],
-                                         'Vector must be projected in meters.'))
-
-                    datum = srs.GetAttrValue('DATUM')
-                    if datum != 'WGS_1984':
-                        warnings.append(
-                            (['aoi_path'],
-                             'Vector must use the WGS_1984 datum.'))
-                    layer = None
-                    vector = None
-        except KeyError:
-            # Parameter is not required.
-            pass
-
-    for csv_key, required_fields in (
-            ('machine_perf_path', set([])),
-            ('machine_param_path', set(['name', 'value', 'note'])),
-            ('land_gridPts_path',
-                set(['id', 'type', 'lat', 'long', 'location'])),
-            ('machine_econ_path', set(['name', 'value', 'note']))):
-        try:
-            _, missing_fields = _get_validated_dataframe(
-                args[csv_key], required_fields)
-            if missing_fields:
-                warnings.append('CSV is missing columns: %s' % ', '.join(
-                    sorted(missing_fields)))
-        except KeyError:
-            # Not all these are required inputs.
-            pass
-        except IOError:
-            warnings.append(([csv_key], 'File not found.'))
-
-    if limit_to in ('dem_path', None):
-        if args['dem_path']:
-            with utils.capture_gdal_logging():
-                raster = gdal.OpenEx(args['dem_path'], gdal.OF_RASTER)
-        if not args['dem_path'] or raster is None:
-            warnings.append(
-                (['dem_path'],
-                 ('Parameter must be a filepath to a GDAL-compatible '
-                  'raster file.')))
-        raster = None
-
-    if limit_to in ('number_of_machines', None):
-        try:
-            num_machines = args['number_of_machines']
-            if (int(float(num_machines)) != float(num_machines)
-                    or float(num_machines) < 0):
-                warnings.append((['number_of_machines'],
-                                 'Parameter must be a positive integer.'))
-        except KeyError:
-            pass
-        except ValueError:
-            warnings.append((['number_of_machines'],
-                             'Parameter must be a number.'))
-
-    if limit_to is None:
-        if 'valuation_container' in args and args['valuation_container']:
-            missing_keys = []
-            keys_with_no_value = []
-            for required_key in ('land_gridPts_path', 'machine_econ_path',
-                                 'number_of_machines'):
-                try:
-                    if args[required_key] in ('', None):
-                        keys_with_no_value.append(required_key)
-                except KeyError:
-                    missing_keys.append(required_key)
-
-            if missing_keys:
-                raise KeyError('Keys are missing: %s' % missing_keys)
-
-            if keys_with_no_value:
-                warnings.append((keys_with_no_value,
-                                 'Parameter must have a value'))
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])

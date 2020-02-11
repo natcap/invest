@@ -16,7 +16,174 @@ from .. import validation
 from .. import utils
 from . import ndr_core
 
-LOGGER = logging.getLogger('natcap.invest.ndr.ndr')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Nutrient Delivery Ratio Model (NDR)",
+    "module": __name__,
+    "userguide_html": "ndr.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["dem_path", "lulc_path", "runoff_proxy_path",
+                         "watersheds_path"],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "dem_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing elevation values for "
+                "each cell.  Make sure the DEM is corrected by filling in "
+                "sinks, and if necessary burning hydrographic features into "
+                "the elevation model (recommended when unusual streams are "
+                "observed.) See the Working with the DEM section of the "
+                "InVEST User's Guide for more information."),
+            "name": "DEM"
+        },
+        "lulc_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing integer values "
+                "representing the LULC code for each cell.  The LULC code "
+                "should be an integer."),
+            "name": "Land Use"
+        },
+        "runoff_proxy_path": {
+            "type": "raster",
+            "required": True,
+            "about": (
+                "Weighting factor to nutrient loads.  Internally this value "
+                "is normalized by its average values so a variety of data "
+                "can be used including precipitation or quickflow."),
+            "name": "Nutrient Runoff Proxy"
+        },
+        "watersheds_path": {
+            "type": "vector",
+            "required": True,
+            "validation_options": {
+                "required_fields": ['ws_id'],
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported vector file containing watersheds such "
+                "that each watershed contributes to a point of interest "
+                "where water quality will be analyzed.  It must have the "
+                "integer field 'ws_id' where the values uniquely identify "
+                "each watershed."),
+            "name": "Watersheds"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table containing model information corresponding to "
+                "each of the land use classes in the LULC raster input.  It "
+                "must contain the fields 'lucode', 'load_n' (or p), 'eff_n' "
+                "(or p), and 'crit_len_n' (or p) depending on which "
+                "nutrients are selected."),
+            "name": "Biophysical Table"
+        },
+        "calc_p": {
+            "type": "boolean",
+            "required": True,
+            "about": "Select to calculate phosphorous export.",
+            "name": "Calculate phosphorous retention"
+        },
+        "calc_n": {
+            "type": "boolean",
+            "required": True,
+            "about": "Select to calculate nitrogen export.",
+            "name": "Calculate Nitrogen Retention"
+        },
+        "threshold_flow_accumulation": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "The number of upstream cells that must flow into a cell "
+                "before it's considered part of a stream such that "
+                "retention stops and the remaining export is exported to the "
+                "stream.  Used to define streams from the DEM."),
+            "name": "Threshold Flow Accumulation"
+        },
+        "k_param": {
+            "type": "number",
+            "required": True,
+            "about": (
+                "Calibration parameter that determines the shape of the "
+                "relationship between hydrologic connectivity (the degree of "
+                "connection from patches of land to the stream) and the "
+                "nutrient delivery ratio (percentage of nutrient that "
+                "actually reaches the stream)"),
+            "name": "Borselli k parameter",
+        },
+        "subsurface_critical_length_n": {
+            "type": "number",
+            "required": "calc_n",
+            "name": "Subsurface Critical Length (Nitrogen)",
+            "about": (
+                "The distance (traveled subsurface and downslope) after "
+                "which it is assumed that soil retains nutrient at its "
+                "maximum capacity, given in meters. If dissolved nutrients "
+                "travel a distance smaller than Subsurface Critical Length, "
+                "the retention efficiency will be lower than the Subsurface "
+                "Maximum Retention Efficiency value defined. Setting this "
+                "value to a distance smaller than the pixel size will result "
+                "in the maximum retention efficiency being reached within "
+                "one pixel only."),
+        },
+        "subsurface_critical_length_p": {
+            "type": "number",
+            "required": "calc_p",
+            "name": "Subsurface Critical Length (Phosphorous)",
+            "about": (
+                "The distance (traveled subsurface and downslope) after "
+                "which it is assumed that soil retains nutrient at its "
+                "maximum capacity, given in meters. If dissolved nutrients "
+                "travel a distance smaller than Subsurface Critical Length, "
+                "the retention efficiency will be lower than the Subsurface "
+                "Maximum Retention Efficiency value defined. Setting this "
+                "value to a distance smaller than the pixel size will result "
+                "in the maximum retention efficiency being reached within "
+                "one pixel only."),
+        },
+        "subsurface_eff_n": {
+            "type": "number",
+            "required": "calc_n",
+            "name": "Subsurface Maximum Retention Efficiency (Nitrogen)",
+            "about": (
+                "The maximum nutrient retention efficiency that can be "
+                "reached through subsurface flow, a floating point value "
+                "between 0 and 1. This field characterizes the retention due "
+                "to biochemical degradation in soils."),
+        },
+        "subsurface_eff_p": {
+            "type": "number",
+            "required": "calc_p",
+            "name": "Subsurface Maximum Retention Efficiency (Phosphorous)",
+            "about": (
+                "The maximum nutrient retention efficiency that can be "
+                "reached through subsurface flow, a floating point value "
+                "between 0 and 1. This field characterizes the retention due "
+                "to biochemical degradation in soils."),
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'n_export_path': 'n_export.tif',
@@ -110,6 +277,35 @@ def execute(args):
             all output files
         args['threshold_flow_accumulation']: a number representing the flow
             accumulation in terms of upstream pixels.
+        args['k_param'] (number): The Borselli k parameter. This is a
+            calibration parameter that determines the shape of the
+            relationship between hydrologic connectivity.
+        args['subsurface_critical_length_n'] (number): The distance (traveled
+            subsurface and downslope) after which it is assumed that soil
+            retains nutrient at its maximum capacity, given in meters. If
+            dissolved nutrients travel a distance smaller than Subsurface
+            Critical Length, the retention efficiency will be lower than the
+            Subsurface Maximum Retention Efficiency value defined. Setting this
+            value to a distance smaller than the pixel size will result in the
+            maximum retention efficiency being reached within one pixel only.
+            Required if ``calc_n``.
+        args['subsurface_critical_length_p'] (number): The distance (traveled
+            subsurface and downslope) after which it is assumed that soil
+            retains nutrient at its maximum capacity, given in meters. If
+            dissolved nutrients travel a distance smaller than Subsurface
+            Critical Length, the retention efficiency will be lower than the
+            Subsurface Maximum Retention Efficiency value defined. Setting this
+            value to a distance smaller than the pixel size will result in the
+            maximum retention efficiency being reached within one pixel only.
+            Required if ``calc_p``.
+        args['subsurface_eff_n'] (number): The maximum nutrient retention
+            efficiency that can be reached through subsurface flow, a floating
+            point value between 0 and 1. This field characterizes the retention
+            due to biochemical degradation in soils.  Required if ``calc_n``.
+        args['subsurface_eff_p'] (number): The maximum nutrient retention
+            efficiency that can be reached through subsurface flow, a floating
+            point value between 0 and 1. This field characterizes the retention
+            due to biochemical degradation in soils.  Required if ``calc_p``.
         args['n_workers'] (int): if present, indicates how many worker
             processes should be used in parallel processing. -1 indicates
             single process mode, 0 is single process but non-blocking mode,
@@ -146,7 +342,7 @@ def execute(args):
         # is missing.
         row_header_table_list = []
 
-        lu_parameter_row = lucode_to_parameters.values()[0]
+        lu_parameter_row = list(lucode_to_parameters.values())[0]
         row_header_table_list.append(
             (lu_parameter_row, ['load_', 'eff_', 'crit_len_'],
              args['biophysical_table_path']))
@@ -184,9 +380,13 @@ def execute(args):
         except OSError:
             pass
 
-    n_workers = -1  # single process mode, but adjust if in args
-    if 'n_workers' in args:
+    try:
         n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
     task_graph = taskgraph.TaskGraph(
         cache_dir, n_workers, reporting_interval=5.0)
 
@@ -580,7 +780,7 @@ def _add_fields_to_shapefile(
         field_def.SetWidth(24)
         field_def.SetPrecision(11)
         target_layer.CreateField(field_def)
-        with open(field_pickle_map[field_name]) as pickle_file:
+        with open(field_pickle_map[field_name], 'rb') as pickle_file:
             field_summaries[field_name] = pickle.load(pickle_file)
 
     for feature in target_layer:
@@ -613,81 +813,43 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
+    validation_warnings = validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
 
-    required_keys = [
-        'workspace_dir',
-        'dem_path',
-        'lulc_path',
-        'runoff_proxy_path',
-        'watersheds_path',
-        'biophysical_table_path',
-        'calc_p',
-        'calc_n',
-        'threshold_flow_accumulation',
-        'k_param']
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
 
-    if 'calc_n' in args and args['calc_n']:
-        required_keys.extend([
-            'subsurface_critical_length_n', 'subsurface_eff_n'])
+    LOGGER.debug('Starting logging for biophysical table')
+    if 'biophysical_table_path' not in invalid_keys:
+        # Check required fields given the state of ``calc_n`` and ``calc_p``
+        required_fields = ARGS_SPEC['args'][
+            'biophysical_table_path']['validation_options'][
+                'required_fields'][:]
 
-    if 'calc_p' in args and args['calc_p']:
-        required_keys.extend([
-            'subsurface_critical_length_p', 'subsurface_eff_p'])
+        nutrients_selected = set()
+        for nutrient_letter in ('n', 'p'):
+            do_nutrient_key = 'calc_%s' % nutrient_letter
+            if do_nutrient_key in args and args[do_nutrient_key]:
+                nutrients_selected.add(do_nutrient_key)
+                required_fields += [
+                    'load_%s' % nutrient_letter,
+                    'eff_%s' % nutrient_letter,
+                    'crit_len_%s' % nutrient_letter,
+                ]
 
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
+        if not nutrients_selected:
+            validation_warnings.append(
+                (['calc_n', 'calc_p'],
+                 'Either calc_n or calc_p must be True'))
 
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
+        LOGGER.debug('Required keys in CSV: %s', required_fields)
+        error_msg = validation.check_csv(
+            args['biophysical_table_path'], required_fields=required_fields)
+        LOGGER.debug('Error: %s', error_msg)
+        if error_msg:
+            validation_warnings.append(
+                (['biophysical_table_path'], error_msg))
 
-    if limit_to is None and (not args['calc_p'] and not args['calc_n']):
-        validation_error_list.append(
-            (['calc_p', 'calc_n', 'dem_path', 'lulc_path'],
-             "At least nitrogen or phosphorous must be selected"))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('lulc_path', 'raster'),
-        ('dem_path', 'raster'),
-        ('runoff_proxy_path', 'raster'),
-        ('biophysical_table_path', 'table'),
-        ('watersheds_path', 'vector')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation_warnings
 
 
 def _normalize_raster(base_raster_path_band, target_normalized_raster_path):
@@ -761,9 +923,14 @@ def _calculate_load(
         result[:] = _TARGET_NODATA
         for lucode in numpy.unique(lucode_array):
             if lucode != nodata_landuse:
+                try:
                     result[lucode_array == lucode] = (
                         lucode_to_parameters[lucode][load_type] *
                         cell_area_ha)
+                except KeyError:
+                    raise KeyError(
+                        'lucode: %d is present in the landuse raster but '
+                        'missing from the biophysical table' % lucode)
         return result
 
     pygeoprocessing.raster_calculator(
@@ -829,7 +996,7 @@ def _map_surface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     if subsurface_proportion_type is not None:
         subsurface_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
@@ -879,7 +1046,7 @@ def _map_subsurface_load(
     lulc_raster_info = pygeoprocessing.get_raster_info(lulc_raster_path)
     nodata_landuse = lulc_raster_info['nodata'][0]
 
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     if subsurface_proportion_type is not None:
         subsurface_permeance_values = numpy.array(
             [lucode_to_parameters[x][subsurface_proportion_type]
@@ -928,7 +1095,7 @@ def _map_lulc_to_val_mask_stream(
         None.
 
     """
-    keys = sorted(numpy.array(lucode_to_parameters.keys()))
+    keys = sorted(numpy.array(list(lucode_to_parameters)))
     values = numpy.array(
         [lucode_to_parameters[x][map_id] for x in keys])
 
@@ -1164,7 +1331,7 @@ def _aggregate_and_pickle_total(
         base_raster_path_band, aggregate_vector_path,
         working_dir=os.path.dirname(target_pickle_path))
 
-    with open(target_pickle_path, 'w') as target_pickle_file:
+    with open(target_pickle_path, 'wb') as target_pickle_file:
         pickle.dump(result, target_pickle_file)
 
 

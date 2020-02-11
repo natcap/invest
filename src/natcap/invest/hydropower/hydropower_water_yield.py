@@ -15,7 +15,177 @@ import taskgraph
 from .. import validation
 from .. import utils
 
-LOGGER = logging.getLogger('natcap.invest.hydropower.hydropower_water_yield')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Hydropower Water Yield",
+    "module": __name__,
+    "userguide_html": "reservoirhydropowerproduction.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["depth_to_root_rest_layer_path",
+                         "precipitation_path",
+                         "pawc_path",
+                         "eto_path",
+                         "watersheds_path",
+                         "sub_watersheds_path"],
+        "different_projections_ok": False,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "lulc_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing LULC code "
+                "(expressed as integers) for each cell."),
+            "name": "Land Use"
+        },
+        "depth_to_root_rest_layer_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing an average root "
+                "restricting layer depth value for each cell. The root "
+                "restricting layer depth value should be in "
+                "millimeters (mm)."),
+            "name": "Depth To Root Restricting Layer"
+        },
+        "precipitation_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing non-zero, average "
+                "annual precipitation values for each cell. The "
+                "precipitation values should be in millimeters "
+                "(mm)."),
+            "name": "Precipitation"
+        },
+        "pawc_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing plant available "
+                "water content values for each cell.  The plant available "
+                "water content fraction should be a value between 0 "
+                "and 1."),
+            "name": "Plant Available Water Fraction"
+        },
+        "eto_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file containing annual average "
+                "reference evapotranspiration values for each cell.  The "
+                "reference evapotranspiration values should be in "
+                "millimeters (mm)."),
+            "name": "Reference Evapotranspiration"
+        },
+        "watersheds_path": {
+            "validation_options": {
+                "required_fields": ['ws_id'],
+                "projected": True,
+            },
+            "type": "vector",
+            "required": True,
+            "about": (
+                "A GDAL-supported vector file containing one polygon per "
+                "watershed.  Each polygon that represents a watershed is "
+                "required to have a field 'ws_id' that is a unique integer "
+                "which identifies that watershed."),
+            "name": "Watersheds"
+        },
+        "sub_watersheds_path": {
+            "validation_options": {
+                "required_fields": ["subws_id"],
+                "projected": True
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "A GDAL-supported vector file with one polygon per "
+                "sub-watershed within the main watersheds specified in the "
+                "Watersheds shapefile.  Each polygon that represents a "
+                "sub-watershed is required to have a field 'subws_id' that "
+                "is a unique integer which identifies that sub-watershed."),
+            "name": "Sub-Watersheds"
+        },
+        "biophysical_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "root_depth", "Kc"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table of land use/land cover (LULC) classes, "
+                "containing data on biophysical coefficients used in this "
+                "model.  The following columns are required: "
+                "'lucode' (integer), 'root_depth' (mm), 'Kc' (coefficient)."),
+            "name": "Biophysical Table"
+        },
+        "seasonality_constant": {
+            "validation_options": {
+                "expression": "value > 0"
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "Floating point value on the order of 1 to 30 "
+                "corresponding to the seasonal distribution of "
+                "precipitation."),
+            "name": "Z parameter"
+        },
+        "demand_table_path": {
+            "validation_options": {
+                "required_fields": ["lucode", "demand"],
+            },
+            "type": "csv",
+            "required": False,
+            "about": (
+                "A CSV table of LULC classes, showing consumptive water use "
+                "for each land-use/land-cover type.  The table requires two "
+                "column fields: 'lucode' and 'demand'. The demand values "
+                "should be the estimated average consumptive water use for "
+                "each land-use/land- cover type.  Water use should be given "
+                "in cubic meters per year for a pixel in the "
+                "land-use/land-cover map.  NOTE: the accounting for pixel "
+                "area is important since larger areas will consume more "
+                "water for the same land-cover type."),
+            "name": "Water Demand Table"
+        },
+        "valuation_table_path": {
+            "validation_options": {
+                "required_fields": ["ws_id", "efficiency", "fraction",
+                                    "height", "kw_price", "cost", "time_span",
+                                    "discount"],
+            },
+            "type": "csv",
+            "required": False,
+            "about": (
+                "A CSV table of hydropower stations with associated model "
+                "values.  The table should have the following column "
+                "fields: 'ws_id', 'efficiency', 'fraction', 'height', "
+                "'kw_price', 'cost', 'time_span', and 'discount'."),
+            "name": "Hydropower Valuation Table"
+        }
+    }
+}
 
 
 def execute(args):
@@ -180,7 +350,7 @@ def execute(args):
     seasonality_constant = float(args['seasonality_constant'])
 
     # Initialize a TaskGraph
-    work_token_dir = os.path.join(intermediate_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -264,7 +434,19 @@ def execute(args):
 
     for lulc_code in bio_dict:
         Kc_dict[lulc_code] = bio_dict[lulc_code]['kc']
-        vegetated_dict[lulc_code] = bio_dict[lulc_code]['lulc_veg']
+
+        # Catch invalid LULC_veg values with an informative error.
+        lulc_veg_value = bio_dict[lulc_code]['lulc_veg']
+        try:
+            vegetated_dict[lulc_code] = int(lulc_veg_value)
+            if vegetated_dict[lulc_code] not in set([0, 1]):
+                raise ValueError()
+        except ValueError:
+            # If the user provided an invalid LULC_veg value, raise an
+            # informative error.
+            raise ValueError('LULC_veg value must be either 1 or 0, not %s',
+                             lulc_veg_value)
+
         # If LULC_veg value is 1 get root depth value
         if vegetated_dict[lulc_code] == 1.0:
             root_dict[lulc_code] = bio_dict[lulc_code]['root_depth']
@@ -469,7 +651,7 @@ def create_vector_output(
     watershed_vector = None
 
     for pickle_path, key_name in stats_path_list:
-        with open(pickle_path, 'r') as picklefile:
+        with open(pickle_path, 'rb') as picklefile:
             ws_stats_dict = pickle.load(picklefile)
 
             if key_name == 'wyield_mn':
@@ -536,7 +718,7 @@ def zonal_stats_tofile(base_vector_path, raster_path, target_stats_pickle):
     """
     ws_stats_dict = pygeoprocessing.zonal_statistics(
         (raster_path, 1), base_vector_path, ignore_nodata=True)
-    with open(target_stats_pickle, 'w') as picklefile:
+    with open(target_stats_pickle, 'wb') as picklefile:
         picklefile.write(pickle.dumps(ws_stats_dict))
 
 
@@ -997,80 +1179,5 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'precipitation_path',
-        'eto_path',
-        'depth_to_root_rest_layer_path',
-        'pawc_path',
-        'lulc_path',
-        'watersheds_path',
-        'biophysical_table_path',
-        'seasonality_constant']
-
-    # Valuation calculation is dependent on demand data
-    if limit_to in [None, 'valuation_table_path', 'demand_table_path']:
-        if ('valuation_table_path' in args and
-                args['valuation_table_path'] != ''):
-            required_keys.append('demand_table_path')
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('lulc_path', 'raster'),
-        ('eto_path', 'raster'),
-        ('precipitation_path', 'raster'),
-        ('depth_to_root_rest_layer_path', 'raster'),
-        ('pawc_path', 'raster'),
-        ('watersheds_path', 'vector'),
-        ('biophysical_table_path', 'table'),
-        ('demand_table_path', 'table'),
-        ('valuation_table_path', 'table'),
-        ]
-
-    if ('sub_watersheds_path' in args and
-            args['sub_watersheds_path'] != ''):
-        file_type_list.append(('sub_watersheds_path', 'vector'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if ((limit_to is None or limit_to == key)
-                    and key in args and args[key] != ''):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key], gdal.OF_RASTER)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key], gdal.OF_VECTOR)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])

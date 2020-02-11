@@ -371,6 +371,7 @@ class DatastacksTest(unittest.TestCase):
             'a': 1,
             'b': u'hello there',
             'c': 'plain bytestring',
+            'd': 'true',
             'nested': {
                 'level1': 123,
             },
@@ -398,6 +399,7 @@ class DatastacksTest(unittest.TestCase):
         # parameter set calculations normalizes all paths.
         # These are relative paths and must be patched.
         normalized_params = params.copy()
+        normalized_params['d'] = True  # should be read in as a bool
         for key in ('raster', 'vector', 'table'):
             normalized_params[key] = os.path.normpath(normalized_params[key])
 

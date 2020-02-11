@@ -1,18 +1,199 @@
-"""inVEST finfish aquaculture filehandler for biophysical and valuation data"""
+"""InVEST Finfish Aquaculture"""
 from __future__ import absolute_import
 
 import os
 import csv
 import logging
 
-from osgeo import gdal
-
 from natcap.invest.finfish_aquaculture import finfish_aquaculture_core
 from .. import validation
-from .. import utils
 
 
-LOGGER = logging.getLogger('natcap.invest.finfish_aquaculture.finfish_aquaculture')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "module_name": "Finfish Aquaculture",
+    "module": __name__,
+    "userguide_html": "marine_fish.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "ff_farm_loc": {
+            "name": "Finfish Farm Location",
+            "about": (
+                "A GDAL-supported vector file containing polygon or "
+                "point geometries, with a latitude and longitude value and a "
+                "numerical identifier for each farm.  File can be "
+                "named anything, but no spaces in the name."),
+            "type": "vector",
+            "required": True,
+        },
+        "farm_ID": {
+            "name": "Farm Identifier Name",
+            "about": (
+                "The name of a column heading used to identify each "
+                "farm and link the spatial information from the "
+                "vector to subsequent table input data (farm "
+                "operation and daily water temperature at farm "
+                "tables). Additionally, the numbers underneath this "
+                "farm identifier name must be unique integers for all "
+                "the inputs."),
+            "type": "freestyle_string",
+            "required": True,
+        },
+        "g_param_a": {
+            "name": "Fish Growth Parameter (a)",
+            "about": (
+                "Default a = (0.038 g/day). If the user chooses to "
+                "adjust these parameters, we recommend using them in "
+                "the simple growth model to determine if the time "
+                "taken for a fish to reach a target harvest weight "
+                "typical for the region of interest is accurate."),
+            "type": "number",
+            "required": True,
+        },
+        "g_param_b": {
+            "name": "Fish Growth Parameter (b)",
+            "about": (
+                "Default b = (0.6667 g/day). If the user chooses to "
+                "adjust these parameters, we recommend using them in "
+                "the simple growth model to determine if the time "
+                "taken for a fish to reach a target harvest weight "
+                "typical for the region of interest is accurate."),
+            "type": "number",
+            "required": True,
+        },
+        "g_param_tau": {
+            "name": "Fish Growth Parameter (tau)",
+            "about": (
+                "Default tau = (0.08 C^-1).  Specifies how sensitive "
+                "finfish growth is to temperature.  If the user "
+                "chooses to adjust these parameters, we recommend "
+                "using them in the simple growth model to determine if "
+                "the time taken for a fish to reach a target harvest "
+                "weight typical for the region of interest is "
+                "accurate."),
+            "type": "number",
+            "required": True,
+        },
+        "use_uncertainty": {
+            "name": "Enable uncertainty analysis",
+            "about": "Enable uncertainty analysis.",
+            "type": "boolean",
+            "required": True,
+        },
+        "g_param_a_sd": {
+            "name": "Standard Deviation for Parameter (a)",
+            "about": (
+                "Standard deviation for fish growth parameter a. "
+                "This indicates the level of uncertainty in the "
+                "estimate for parameter a."),
+            "type": "number",
+            "required": "use_uncertainty",
+        },
+        "g_param_b_sd": {
+            "name": "Standard Deviation for Parameter (b)",
+            "about": (
+                "Standard deviation for fish growth parameter b. "
+                "This indicates the level of uncertainty in the "
+                "estimate for parameter b."),
+            "type": "number",
+            "required": "use_uncertainty",
+        },
+        "num_monte_carlo_runs": {
+            "name": "Number of Monte Carlo Simulation Runs",
+            "about": (
+                u"Number of runs of the model to perform as part of a "
+                u"Monte Carlo simulation.  A larger number will tend to "
+                u"produce more consistent and reliable output, but will "
+                u"also take longer to run."),
+            "type": "number",
+            "required": "use_uncertainty",
+        },
+        "water_temp_tbl": {
+            "name": "Table of Daily Water Temperature at Farm",
+            "type": "csv",
+            "required": True,
+            "about": (
+                "Users must provide a time series of daily water "
+                "temperature (C) for each farm in the vector.  When "
+                "daily temperatures are not available, users can "
+                "interpolate seasonal or monthly temperatures to a "
+                "daily resolution.  Water temperatures collected at "
+                "existing aquaculture facilities are preferable, but "
+                "if unavailable, users can consult online sources such "
+                "as NOAAs 4 km AVHRR Pathfinder Data and Canadas "
+                "Department of Fisheries and Oceans Oceanographic "
+                "Database.  The most appropriate temperatures to use "
+                "are those from the upper portion of the water column, "
+                "which are the temperatures experienced by the fish in "
+                "the netpens."),
+        },
+        "farm_op_tbl": {
+            "name": "Farm Operations Table",
+            "type": "csv",
+            "required": True,
+            "about": (
+                u"A table of general and farm-specific operations "
+                u"parameters.  Please refer to the sample data table "
+                u"for reference to ensure correct incorporation of data "
+                u"in the model. The values for 'farm operations' "
+                u"(applied to all farms) and 'add new farms' (beginning "
+                u"with row 32) may be modified according to the user's "
+                u"needs . However, the location of cells in this "
+                u"template must not be modified.  If for example, if "
+                u"the model is to run for three farms only, the farms "
+                u"should be listed in rows 10, 11 and 12 (farms 1, 2, "
+                u"and 3, respectively). Several default values that are "
+                u"applicable to Atlantic salmon farming in British "
+                u"Columbia are also included in the sample data table."),
+        },
+        "outplant_buffer": {
+            "name": "Outplant Date Buffer",
+            "type": "number",
+            "required": True,
+            "about": (
+                u"This value will allow the outplant start day to "
+                u"start plus or minus the number of days specified "
+                u"here."),
+        },
+        "do_valuation": {
+            "name": "Run valuation model",
+            "about": "Run valuation model",
+            "type": "boolean",
+            "required": True,
+        },
+        "p_per_kg": {
+            "name": "Market Price per Kilogram of Processed Fish",
+            "about": (
+                "Default value comes from Urner-Berry monthly fresh "
+                "sheet reports on price of farmed Atlantic salmon."),
+            "type": "number",
+            "required": "do_valuation",
+        },
+        "frac_p": {
+            "name": "Fraction of Price that Accounts to Costs",
+            "about": (
+                "Fraction of market price that accounts for costs "
+                "rather than profit.  Default value is 0.3 (30%)."),
+            "required": "do_valuation",
+            "type": "number",
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            }
+        },
+        "discount": {
+            "name": "Daily Market Discount Rate",
+            "about": (
+                u"We use a 7% annual discount rate, adjusted to a "
+                u"daily rate of 0.000192 for 0.0192% (7%/365 days)."),
+            "required": "do_valuation",
+            "type": "number",
+            "validation_options": {
+                "expression": "(value >= 0) & (value <= 1)",
+            }
+        }
+    }
+}
 
 
 def execute(args):
@@ -132,7 +313,7 @@ def execute(args):
 
 
 def format_ops_table(op_path, farm_ID, ff_aqua_args):
-    '''Takes in the path to the operating parameters table as well as the
+    """Takes in the path to the operating parameters table as well as the
     keyword to look for to identify the farm number to go with the parameters,
     and outputs a 2D dictionary that contains all parameters by farm and
     description. The outer key is farm number, and the inner key is a string
@@ -152,7 +333,7 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
             inner keys are strings of parameter names.
 
     Returns nothing.
-    '''
+    """
 
     #NOTE: Have to do some explicit calls to strings here. This is BAD. Don't
     #do it if you don't have to. THESE EXPLICIT STRINGS COME FROM THE "Farm
@@ -220,7 +401,7 @@ def format_ops_table(op_path, farm_ID, ff_aqua_args):
 
 
 def format_temp_table(temp_path, ff_aqua_args):
-    ''' This function is doing much the same thing as format_ops_table- it
+    """ This function is doing much the same thing as format_ops_table- it
     takes in information from a temperature table, and is formatting it into a
     2D dictionary as an output.
 
@@ -236,7 +417,7 @@ def format_temp_table(temp_path, ff_aqua_args):
             manually shift down by 1, and the inner keys are farm ID numbers.
 
     Returns nothing.
-    '''
+    """
 
     #EXPLICIT STRINGS FROM "Temp_Daily"
     water_temp_file = open(temp_path)
@@ -299,67 +480,16 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-    keys_missing_values = set([])
-    missing_keys = set([])
-    for required_key in ('workspace_dir',
-                         'ff_farm_loc',
-                         'farm_ID',
-                         'g_param_a',
-                         'g_param_b',
-                         'g_param_tau',
-                         'use_uncertainty',
-                         'water_temp_tbl',
-                         'farm_op_tbl',
-                         'outplant_buffer',
-                         'do_valuation'):
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_values.add(required_key)
-        except KeyError:
-            missing_keys.add(required_key)
+    validation_warnings = validation.validate(args, ARGS_SPEC['args'])
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
 
-    if len(missing_keys) > 0:
-        raise KeyError('Args is missing keys: %s' % ', '.join(
-            sorted(missing_keys)))
+    if 'ff_farm_loc' not in invalid_keys and 'farm_ID' not in invalid_keys:
+        fieldnames = validation.load_fields_from_vector(
+            args['ff_farm_loc'])
+        error_msg = validation.check_option_string(args['farm_ID'],
+                                                   fieldnames)
+        if error_msg:
+            validation_warnings.append((['farm_ID'], error_msg))
 
-    if len(keys_missing_values) > 0:
-        warnings.append((keys_missing_values, 'Parameter must have a value'))
+    return validation_warnings
 
-    if limit_to in ('ff_farm_loc', None):
-        with utils.capture_gdal_logging():
-            vector = gdal.OpenEx(args['ff_farm_loc'], gdal.OF_VECTOR)
-            if vector is None:
-                warnings.append((['ff_farm_loc'],
-                                 ('Parameter must be a filepath to an '
-                                  'OGR-compatible vector')))
-
-    for float_key in ('g_param_a', 'g_param_b', 'g_param_tau', 'g_param_a_sd',
-                      'g_param_b_sd', 'num_monte_carlo_runs',
-                      'outplant_buffer', 'p_per_kg', 'frac_p', 'discount'):
-        if limit_to in (float_key, None):
-            try:
-                if args[float_key] not in ('', None):
-                    try:
-                        float(args[float_key])
-                    except ValueError:
-                        warnings.append(([float_key],
-                                        'Parameter must be a number.'))
-            except KeyError:
-                # Not all of these parameters are required.
-                pass
-
-    for csv_key in ('water_temp_tbl', 'farm_op_tbl'):
-        if limit_to in (csv_key, None):
-            try:
-                csv.reader(open(args[csv_key], 'r'))
-            except (csv.Error, IOError):
-                warnings.append(([csv_key],
-                                 'Parameter must be a valid CSV file.'))
-
-    if limit_to in ('do_valuation', None):
-        if args['do_valuation'] not in (True, False):
-            warnings.append((['do_valuation'],
-                             'Parameter must be either True or False.'))
-
-    return warnings

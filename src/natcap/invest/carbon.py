@@ -2,10 +2,10 @@
 """Carbon Storage and Sequestration."""
 from __future__ import absolute_import
 import codecs
-import collections
 import logging
 import os
 import time
+from functools import reduce
 
 from osgeo import gdal
 from osgeo import ogr
@@ -16,7 +16,143 @@ import taskgraph
 from . import validation
 from . import utils
 
-LOGGER = logging.getLogger('natcap.invest.carbon')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "InVEST Carbon Model",
+    "module": __name__,
+    "userguide_html": "carbonstorage.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_redd_path"],
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "lulc_cur_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster representing the land-cover of the"
+                "current scenario."),
+            "name": "Current Land Use/Land Cover"
+        },
+        "calc_sequestration": {
+            "type": "boolean",
+            "required": "do_valuation | do_redd",
+            "about": (
+                "Check to enable sequestration analysis. This requires "
+                "inputs of Land Use/Land Cover maps for both current and "
+                "future scenarios."),
+            "name": "Calculate Sequestration"
+        },
+        "lulc_fut_path": {
+            "type": "raster",
+            "required": "calc_sequestration",
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster representing the land-cover of the "
+                "future scenario. If REDD scenario analysis is "
+                "enabled, this should be the reference, or baseline, future "
+                "scenario against which to compare the REDD policy "
+                "scenario."),
+            "name": "Future Landcover"
+        },
+        "do_redd": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "Check to enable REDD scenario analysis.  This requires "
+                "three Land Use/Land Cover maps: one for the current "
+                "scenario, one for the future baseline scenario, and one for "
+                "the future REDD policy scenario."),
+            "name": "REDD Scenario Analysis"
+        },
+        "lulc_redd_path": {
+            "type": "raster",
+            "required": "do_redd",
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster representing the land-cover of "
+                "the REDD policy future scenario.  This scenario will be "
+                "compared to the baseline future scenario."),
+            "name": "REDD Policy)"
+        },
+        "carbon_pools_path": {
+            "validation_options": {
+                "required_fields": ["LUCODE", "C_above", "C_below", "C_soil",
+                                    "C_dead"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A table that maps the land-cover IDs to carbon pools.  "
+                "The table must contain columns of 'LULC', 'C_above', "
+                "'C_Below', 'C_Soil', 'C_Dead' as described in the User's "
+                "Guide.  The values in LULC must at least include the LULC "
+                "IDs in the land cover maps."),
+            "name": "Carbon Pools"
+        },
+        "lulc_cur_year": {
+            "validation_options": {
+                "expression": "int(value)"
+            },
+            "type": "number",
+            "required": "calc_sequestration",
+            "about": "The calendar year of the current scenario.",
+            "name": "Current Landcover Calendar Year"
+        },
+        "lulc_fut_year": {
+            "validation_options": {
+                "expression": "int(value)"
+            },
+            "type": "number",
+            "required": "calc_sequestration",
+            "about": "The calendar year of the future scenario.",
+            "name": "Future Landcover Calendar Year"
+        },
+        "do_valuation": {
+            "type": "boolean",
+            "required": False,
+            "about": (
+                "if true then run the valuation model on available outputs.  "
+                "At a minimum will run on carbon stocks, if sequestration "
+                "with a future scenario is done and/or a REDD scenario "
+                "calculate NPV for either and report in final HTML "
+                "document."),
+            "name": "Run Valuation Model"
+        },
+        "price_per_metric_ton_of_c": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": (
+                "Is the present value of carbon per metric ton. Used if "
+                "``args['do_valuation']`` is present and True."),
+            "name": "Price/Metric ton of carbon"
+        },
+        "discount_rate": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": "The discount rate as a floating point percent.",
+            "name": "Market Discount in Price of Carbon (%)"
+        },
+        "rate_change": {
+            "type": "number",
+            "required": "do_valuation",
+            "about": (
+                "The floating point percent increase of the price of "
+                "carbon per year."),
+            "name": "Annual Rate of Change in Price of Carbon (%)"
+        }
+    }
+}
 
 _OUTPUT_BASE_FILES = {
     'tot_c_cur': 'tot_c_cur.tif',
@@ -127,14 +263,14 @@ def execute(args):
     carbon_pool_table = utils.build_lookup_from_csv(
         args['carbon_pools_path'], 'lucode')
 
-    work_token_dir = os.path.join(intermediate_output_dir, '_tmp_work_tokens')
+    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
         # KeyError when n_workers is not present in args
         # ValueError when n_workers is an empty string.
         # TypeError when n_workers is None.
-        n_workers = 0  # Threaded queue management, but same process.
+        n_workers = -1  # Synchronous mode.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
     cell_size_set = set()
@@ -248,8 +384,8 @@ def execute(args):
             tifs_to_summarize.add(file_registry[output_key])
 
     # Report aggregate results
-    tasks_to_report = (sum_rasters_task_lookup.values()
-                       + diff_rasters_task_lookup.values()
+    tasks_to_report = (list(sum_rasters_task_lookup.values())
+                       + list(diff_rasters_task_lookup.values())
                        + calculate_npv_tasks)
     generate_report_task = graph.add_task(
         _generate_report,
@@ -297,7 +433,7 @@ def _generate_carbon_map(
     pixel_area = abs(numpy.prod(lulc_info['pixel_size']))
     carbon_stock_by_type = dict([
         (lulcid, stock * pixel_area / 10**4)
-        for lulcid, stock in carbon_pool_by_type.iteritems()])
+        for lulcid, stock in carbon_pool_by_type.items()])
 
     pygeoprocessing.reclassify_raster(
         (lulc_path, 1), carbon_stock_by_type, out_carbon_stock_path,
@@ -374,7 +510,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
     Parameters:
         delta_carbon_path (string): path to change in carbon storage over
             time.
-        valulation_constant (float): value to multiply each carbon storage
+        valuation_constant (float): value to multiply each carbon storage
             value by to calculate NPV.
         npv_out_path (string): path to output net present value raster.
     Returns:
@@ -396,7 +532,7 @@ def _calculate_npv(delta_carbon_path, valuation_constant, npv_out_path):
 def _generate_report(raster_file_set, model_args, file_registry):
     """Generate a human readable HTML report of summary stats of model run.
 
-    Paramters:
+    Parameters:
         raster_file_set (set): paths to rasters that need summary stats.
         model_args (dict): InVEST argument dictionary.
         file_registry (dict): file path dictionary for InVEST workspace.
@@ -426,7 +562,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
 
         # Report input arguments
         report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
-        for key, value in model_args.iteritems():
+        for key, value in model_args.items():
             report_doc.write(u'<tr><td>%s</td><td>%s</td></tr>' % (key, value))
         report_doc.write('</table>')
 
@@ -475,70 +611,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'lulc_cur_path',
-        'carbon_pools_path',
-        'do_valuation']
-
-    if 'calc_sequestration' in args and args['calc_sequestration']:
-        required_keys.extend(
-            ['lulc_cur_year', 'lulc_fut_path', 'lulc_fut_year', 'do_redd'])
-
-        if 'do_redd' in args and args['do_redd']:
-            required_keys.append('lulc_redd_path')
-
-    if 'do_valuation' in args and args['do_valuation']:
-        required_keys.extend(
-            ['price_per_metric_ton_of_c', 'discount_rate', 'rate_change'])
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing: " +
-            ', '.join(missing_key_list))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('lulc_cur_path', 'raster'),
-        ('lulc_fut_path', 'raster'),
-        ('lulc_redd_path', 'raster'),
-        ('carbon_pools_path', 'table')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if ((limit_to is None or limit_to == key) and
-                    key in args and key in required_keys):
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.Open(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = ogr.Open(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])

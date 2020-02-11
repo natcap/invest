@@ -3,6 +3,148 @@
 Unreleased Changes
 ------------------
 
+3.8.0 (2020-02-07)
+------------------
+* Created a sub-directory for the sample data in the installation directory.
+* Fixed minor bug in HRA that was duplicating the ``results_suffix`` in some
+  output filenames.
+* Updated the DelineateIt UI to improve the language around what the model
+  should do when it encounters invalid geometry.  The default is now
+  that it should skip invalid geometry.
+* Updating how threat rasters are handled in Habitat Quality to address a few
+  related and common usability issues for the model.  First, threat
+  rasters are now aligned to the LULC instead of the intersection of the whole
+  stack.  This means that the model now handles threat inputs that do not all
+  completely overlap the LULC (they must all still be in the same projection).
+  Second, nodata values in threat rasters are converted to a threat value of 0.
+  Any threat pixel values other than 0 or nodata are interpreted as a threat
+  value of 1.
+* Updating the ``psutil`` requirement to avoid a possible import issue when
+  building binaries under WINE.  Any version of ``psutil`` should work
+  except for ``5.6.0``.
+* InVEST sample data was re-organized to simply have one folder per model.
+  New datastacks were added for SDR, NDR, Seasonal Water Yield,
+  Annual Water Yield, DelineateIt, and Coastal Vulnerability.
+* Fixed an issue with NDR where the model was not properly checking for the
+  bounds of the raster, which could in some cases lead to exceptions being
+  printed to the command-line.  The model now correctly checks for these
+  raster boundaries.
+* Habitat Risk Assessment model supports points and lines -- in addition to
+  previously supported polygons and rasters -- for habitats or stressors.
+* Updated raster percentile algorithms in Scenic Quality and Wave Energy
+  models to use a more efficient and reliable raster percentile function
+  from pygeoprocessing.
+* InVEST is now compatible with pygeoprocessing 1.9.1.
+* All InVEST models now have an ``ARGS_SPEC`` object that contains metadata
+  about the model and describes the model's arguments.  Validation has been
+  reimplemented across all models to use these ``ARGS_SPEC`` objects.
+* The results suffix key for the Wave Energy and Wind Energy models has been
+  renamed ``results_suffix`` (was previously ``suffix``).  This is for
+  consistency across InVEST models.
+* Speed and memory optimization of raster processing in the Recreation model.
+* Removed a constraint in Coastal Vulnerability so the AOI polygon no longer
+  needs to intersect the continental shelf contour line. So the AOI can now be
+  used exclusively to delineate the coastal area of interest.
+* Improved how Coastal Vulnerability calculates local wind-driven waves.
+  This requires a new bathymetry raster input and implements equation 10
+  of the User Guide. Also minor updates to fields in intermediate outputs,
+  notably a 'shore_id' field is now the unique ID for joining tables and
+  FIDs are no longer used.
+* Added a status message to the UI if a datastack file fails to load,
+  instead of staying silent.
+* Correcting an issue with repository fetching in the InVEST ``Makefile``.
+  Managed repositories will now be fetched and updated to the expected revision
+  even if the repository already exists.
+* Fixed the duplicate ``results_suffix`` input in Wave Energy UI.
+* Added a human-friendly message on NDR model ``KeyError``.
+* Adding a check to Annual Water Yield to ensure that the ``LULC_veg`` column
+  has correct values.
+* Improved how Seasonal Water Yield handles nodata values when processing
+  floating-point precipitation and quickflow rasters.
+* Add SDR feature to model sediment deposition across the landscape.
+* Fixed an issue that would cause an exception if SDR landcover map was masked
+  out if the original landcover map had no-nodata value defined.
+* Fixed an issue in the SDR model that could cause reported result vector
+  values to not correspond with known input vectors if the input watershed
+  vector was not an ESRI Shapefile.
+* Fixed issue in Seasonal Water Yield model that would cause an unhandled
+  exception when input rasters had areas of a valid DEM but nodata in other
+  input layers that overlap that dem.
+* Fixed an issue in the NDR model that would cause an exception if the critical
+  length of a landcover field was set to 0.
+* Implemented PEP518-compatible build system definition in the file
+  ``pyproject.toml``.  This should make it easier to install ``natcap.invest``
+  from a source distribution.
+* Fixed a ``TypeError`` issue in Seasonal Water Yield that would occur when
+  the Land-Use/Land-Cover raster did not have a defined nodata value.  This
+  case is now handled correctly.
+* The binary build process for InVEST on Windows (which includes binaries
+  based on PyInstaller and an NSIS Installer package) has been migrated
+  to 32-bit Python 3.7.  The build itself is taking place on AppVeyor, and
+  the configuration for this is contained within ``appveyor.yml``.
+  Various python scripts involved in the distribution and release processes
+  have been updated for compatibility with python 3.7 as a part of this
+  migration.
+* Fixed an ``IndexError`` issue in Wave Energy encountered in runs using
+  the global wave energy dataset.  This error was the result of an incorrect
+  spatial query of points and resulted in some wave energy points being
+  double-counted.
+* Fixed taskgraph-related issues with Habitat Risk Assessment where
+  1) asynchronous mode was failing due to missing task dependencies and
+  2) avoided recomputation was confounded by two tasks modifying the same files.
+* Fixed an issue with Habitat Quality where the model was incorrectly
+  expecting the sensitivity table to have a landcover code of 0.
+* The InVEST CLI has been completely rebuilt to divide
+  functionality into various topic-specific subcommands.  The various internal
+  consumers of this API have been updated accordingly.  ``invest --help`` will
+  contain details of the new interface.
+* Updated the InVEST Launcher to list the human-readable model names rather
+  than the internal model identifiers.
+* Updated Coastal Vulnerability Model with significant speedups including
+  ~40x speedup for geomorphology process and ~3x speedup for wind exposure process.
+  Also saving an intermediate vector with wave energy values and a geomorphology
+  vector with points that were assigned the ``geomorphology_fill_value``.
+* Updated trove classifiers to indicate support for python versions 2.7, 3.6
+  and 3.7.
+* Updated all InVEST models to be compatible with a Python 2.7 or a Python 3.6
+  environment. Also tested all models against GDAL versions 2.2.4 and 2.4.1.
+* Fixed an issue with Habitat Quality where convolutions over threat rasters
+  were not excluding nodata values, leading to incorrect outputs.  Nodata values
+  are now handled correctly and excluded from the convolution entirely.
+* Updated the subpackage ``natcap.invest.ui`` to work with python 3.6 and later
+  and also to support the PySide2 bindings to Qt5.
+* InVEST Coastal Blue Carbon model now writes out a net present value
+  raster for the year of the current landcover, each transition year,
+  and the final analysis year (if provided).
+* Correcting an issue with InVEST Coastal Blue Carbon where incorrect
+  configuration of a nodata value would result in ``-inf`` values in
+  output rasters.  Now, any values without a defined reclassification
+  rule that make it past validation will be written out as nodata.
+* DelineateIt has been reimplemented using the latest version of
+  pygeoprocessing (and the watershed delineation routine it provides) and now
+  uses ``taskgraph`` for avoiding unnecessary recomputation.
+* Fixed a bug in Recreation Model that was causing server-side code
+  to execute twice for every client-side call.
+* Fixed a bug in Recreation model that did not apply ``results_suffix`` to
+  the monthly_table.csv output.
+* Various fixes in Coastal Vulnerability Model. CSV output files now
+  have FID column for joining to vector outputs. ``results_suffix`` can be
+  used without triggering task re-execution. Raster processing maintains original
+  resolution of the input raster so long as it is projected. Otherwise resamples
+  to ``model_resolution``.
+* Fixed a bug in Coastal Vulnerability model's task graph that sometimes
+  caused an early task to re-execute when it should be deemed pre-calculated.
+* Fixed a bug in the pollination model that would cause outputs to be all 0
+  rasters if all the ``relative_abundance`` fields in the guild table were
+  integers.
+* Fixed a file cache flushing issue observed on Debian in
+  ``utils.exponential_decay_kernel_raster`` that would cause an exponential
+  kernel raster to contain random values rather than expected value.
+* Added a new InVEST model: Urban Flood Risk Mitigation.
+* Fixed an issue in the SDR model that would cause an unhandled exception
+  if either the erosivity or erodibility raster had an undefined nodata value.
+* Added a new InVEST model: Urban Cooling Model.
+
 3.7.0 (2019-05-09)
 ------------------
 * Refactoring Coastal Vulnerability (CV) model. CV now uses TaskGraph and
@@ -10,8 +152,8 @@ Unreleased Changes
   raster-based. Fewer input datasets are required for the same functionality.
   Runtime in sycnhronous mode is similar to previous versions, but runtime can
   be reduced with multiprocessing. CV also supports avoided recomputation for
-  successive runs in the same workspace, even if a different file suffix is used.
-  Output vector files are in CSV and geopackage formats.
+  successive runs in the same workspace, even if a different file suffix is
+  used. Output vector files are in CSV and geopackage formats.
 * Model User Interface 'Report an Issue' link points to our new
   community.naturalcapitalproject.org
 * Correcting an issue with the Coastal Blue Carbon preprocessor where
@@ -760,7 +902,7 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Nutrient 3.0 Beta:
       - This is a standalone model that executes an order of magnitude faster
         than the original ArcGIS model, but may have memory issues with
@@ -769,20 +911,20 @@ for any issues relating to software:
       - Includes a more accurate LS factor.
       - Outputs are now summarized by polygon rather than rasterized polygons.
         Users can view results directly as a table rather than sampling a
-	GIS raster.
+        GIS raster.
   - *new* Wind Energy:
       - A new offshore wind energy model.  This is a standalone-only model
         available under the windows start menu.
   - *new* Recreation Alpha:
       - This is a working demo of our soon to be released future land and near
         shore recreation model.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
+        be used as a demo or by NatCap partners that know what they're doing.
   - *new* Habitat Risk Assessment 3.0 Alpha:
       - This is a working demo of our soon to be released 3.0 version of habitat
         risk assessment.  The model itself is incomplete and should only
-	be used as a demo or by NatCap partners that know what they're doing.
-	Users that need to use the habitat risk assessment should use the ArcGIS
-	version of this model.
+    	be used as a demo or by NatCap partners that know what they're doing.
+    	Users that need to use the habitat risk assessment should use the
+        ArcGIS version of this model.
 
   - Improvements to the InVEST 2.x ArcGIS-based toolset:
       - Bug fixes to the ArcGIS based Coastal Protection toolset.

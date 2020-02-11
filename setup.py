@@ -13,12 +13,14 @@ import Cython.Build
 import numpy
 
 
-# Read in requirements.txt and populate the python readme with the non-comment
-# contents.
-_REQUIREMENTS = [req for req in open('requirements.txt').readlines()
-                 if not req.startswith(('#', 'hg+')) and len(req) > 0]
-_GUI_REQUIREMENTS = [req for req in open('requirements-gui.txt').readlines()
-                     if not req.startswith(('#', 'hg+')) and len(req) > 0]
+# Read in requirements.txt and populate the python readme with the
+# non-comment, non-environment-specifier contents.
+_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
+                 open('requirements.txt').readlines()
+                 if not req.startswith(('#', 'hg+', 'git+')) and len(req.strip()) > 0]
+_GUI_REQUIREMENTS = [req.split(';')[0].split('#')[0].strip() for req in
+                     open('requirements-gui.txt').readlines()
+                     if not req.startswith(('#', 'hg+')) and len(req.strip()) > 0]
 README = open('README_PYTHON.rst').read().format(
     requirements='\n'.join(['    ' + r for r in _REQUIREMENTS]))
 
@@ -40,15 +42,11 @@ setup(
         'natcap.invest.hydropower',
         'natcap.invest.ui',
         'natcap.invest.ndr',
+        'natcap.invest.sdr',
         'natcap.invest.recreation',
         'natcap.invest.reporting',
-        'natcap.invest.routing',
         'natcap.invest.scenic_quality',
         'natcap.invest.seasonal_water_yield',
-        'natcap.invest.pygeoprocessing_0_3_3',
-        'natcap.invest.pygeoprocessing_0_3_3.routing',
-        'natcap.invest.pygeoprocessing_0_3_3.dbfpy',
-        'natcap.invest.pygeoprocessing_0_3_3.testing',
     ],
     package_dir={
         'natcap': 'src/natcap'
@@ -69,7 +67,10 @@ setup(
         'Operating System :: MacOS :: MacOS X',
         'Operating System :: Microsoft',
         'Operating System :: POSIX',
-        'Programming Language :: Python :: 2 :: Only',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: Cython',
         'License :: OSI Approved :: BSD License',
         'Topic :: Scientific/Engineering :: GIS'
     ],
@@ -93,22 +94,15 @@ setup(
             include_dirs=[numpy.get_include()],
             language="c++"),
         Extension(
+            name="natcap.invest.sdr.sdr_core",
+            sources=['src/natcap/invest/sdr/sdr_core.pyx'],
+            include_dirs=[numpy.get_include()],
+            language="c++"),
+        Extension(
             name="natcap.invest.seasonal_water_yield.seasonal_water_yield_core",
             sources=['src/natcap/invest/seasonal_water_yield/seasonal_water_yield_core.pyx'],
             include_dirs=[numpy.get_include()],
             language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.geoprocessing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/geoprocessing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++"),
-        Extension(
-            name="natcap.invest.pygeoprocessing_0_3_3.routing.routing_core",
-            sources=[
-                'src/natcap/invest/pygeoprocessing_0_3_3/routing/routing_core.pyx'],
-            include_dirs=[numpy.get_include()],
-            language="c++")
     ],
     cmdclass={'build_ext': Cython.Build.build_ext},
     entry_points={

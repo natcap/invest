@@ -12,11 +12,182 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
-LOGGER = logging.getLogger('natcap.invest.habitat_quality')
+LOGGER = logging.getLogger(__name__)
 
 _OUT_NODATA = -1.0
 _RARITY_NODATA = -64329.0
 _SCALING_PARAM = 2.5
+
+ARGS_SPEC = {
+    "model_name": "Habitat Quality",
+    "module": __name__,
+    "userguide_html": "../documentation/habitat_quality.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "lulc_cur_path": {
+            "type": "raster",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A GDAL-supported raster file.  The current LULC must have "
+                "its' own threat rasters, where each threat raster file path "
+                "has a suffix of <b>_c</b>.  Each cell should "
+                "represent a LULC code as an Integer. The dataset should be "
+                "in a projection where the units are in meters and the "
+                "projection used should be defined.  The LULC codes must "
+                "match the codes in the Sensitivity table."),
+            "name": "Current Land Cover"
+        },
+        "lulc_fut_path": {
+            "type": "raster",
+            "required": False,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "Optional.  A GDAL-supported raster file.  Inputting a "
+                "future LULC will generate degradation, habitat quality, and "
+                "habitat rarity (If baseline is input) outputs.  The future "
+                "LULC must have it's own threat rasters, where each threat "
+                "raster file path has a suffix of _f. Each "
+                "cell should represent a LULC code as an Integer.  The "
+                "dataset should be in a projection where the units are in "
+                "meters and the projection used should be defined. The "
+                "LULC codes must match the codes in the Sensitivity "
+                "table."),
+            "name": "Future Land Cover"
+        },
+        "lulc_bas_path": {
+            "type": "raster",
+            "required": False,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "Optional.  A GDAL-supported raster file.  If the baseline "
+                "LULC is provided, rarity outputs will be created for the "
+                "current and future LULC. The baseline LULC can have it's "
+                "own threat rasters (optional), where each threat raster "
+                "file path has a suffix of <b>_b</b>. If no threat rasters "
+                "are found, degradation and habitat quality outputs will not "
+                "be generated for the baseline LULC.<br/><br/> Each cell "
+                "should  represent a LULC code as an Integer.  The dataset "
+                "should be in a projection where the units are in meters and "
+                "the projection used should be defined. The LULC codes must "
+                "match the codes in the Sensitivity table.  If possible the "
+                "baseline map should refer to a time when intensive "
+                "management of the landscape was relatively rare."),
+            "name": "Baseline Land Cover"
+        },
+        "threat_raster_folder": {
+            "validation_options": {
+                "exists": True,
+            },
+            "type": "directory",
+            "required": True,
+            "about": (
+                "A path to the directory that will contain all "
+                "threat rasters."),
+        },
+        "threats_table_path": {
+            "validation_options": {
+                "required_fields": ["THREAT", "MAX_DIST", "WEIGHT"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file of all the threats for the model to consider. "
+                "Each row in the table is a degradation source and each "
+                "column contains a different attribute of each degradation "
+                "source (THREAT, MAX_DIST, WEIGHT). THREAT: "
+                "The name of the threat source and this name must match "
+                "exactly to the name of the threat raster and to the name of "
+                "it's corresponding column in the sensitivity table. "
+                "NOTE: The threat raster path should have a suffix indicator "
+                "( _c, _f, _b ) and the sensitivity column should have a "
+                "prefix indicator (L_). The THREAT name in the threat table "
+                "should not include either the suffix or prefix. "
+                "MAX_DIST: A number in kilometres (km) for the maximum "
+                "distance a threat has an affect. WEIGHT: A "
+                "floating point value between 0 and 1 for the threats "
+                "weight relative to the other threats.  Depending on the "
+                "type of habitat under review, certain threats may cause "
+                "greater degradation than other threats. "
+                "DECAY: A string value of either exponential or "
+                "linear representing the type of decay over space for "
+                "the threat. See the user's guide for valid values "
+                "for these columns."),
+            "name": "Threats Data"
+        },
+        "access_vector_path": {
+            "validation_options": {
+                "required_fields": ["access"],
+                "projected": True,
+            },
+            "type": "vector",
+            "required": False,
+            "about": (
+                "A GDAL-supported vector file.  The input contains data on "
+                "the relative protection that legal / institutional / social "
+                "/ physical barriers provide against threats.  The vector "
+                "file should contain polygons with a field ACCESS. "
+                "The ACCESS values should range from 0 - 1, where 1 "
+                "is fully accessible.  Any cells not covered by a polygon "
+                "will be set to 1."),
+            "name": "Accessibility to Threats (Vector) (Optional)"
+        },
+        "sensitivity_table_path": {
+            "validation_options": {
+                "required_fields": ["LULC", "HABITAT"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV file of LULC types, whether or not the are considered "
+                "habitat, and, for LULC types that are habitat, their "
+                "specific sensitivity to each threat. Each row is a LULC "
+                "type with the following columns: LULC, HABITAT, "
+                "L_THREAT1, L_THREAT2, ... LULC: Integer "
+                "values that reflect each LULC code found in current, "
+                "future, and baseline rasters. HABITAT: "
+                "A value of 0 or 1 (presence / absence) or a value between 0 "
+                "and 1 (continuum) depicting the suitability of "
+                "habitat. L_THREATN: Each L_THREATN should "
+                "match exactly with the threat names given in the threat "
+                "CSV file, where the THREATN is the name that matches.  This "
+                "is an floating point value between 0 and 1 that represents "
+                "the sensitivity of a habitat to a threat."
+                "Please see the users guide for more detailed information on "
+                "proper column values and column names for each threat."),
+            "name": "Sensitivity of Land Cover Types to Each Threat"
+        },
+        "half_saturation_constant": {
+            "validation_options": {
+                "expression": "value > 0",
+            },
+            "type": "number",
+            "required": True,
+            "about": (
+                "A positive floating point value that is defaulted at 0.5. "
+                "This is the value of the parameter k in equation (4). In "
+                "general, set k to half of the highest grid cell degradation "
+                "value on the landscape.  To perform this model calibration "
+                "the model must be run once in order to find the highest "
+                "degradation value and set k for the provided landscape.  "
+                "Note that the choice of k only determines the spread and "
+                "central tendency of habitat quality cores and does not "
+                "affect the rank."),
+            "name": "Half-Saturation Constant"
+        },
+    }
+}
 
 
 def execute(args):
@@ -25,7 +196,7 @@ def execute(args):
     Open files necessary for the portion of the habitat_quality
     model.
 
-    Args:
+    Parameters:
         workspace_dir (string): a path to the directory that will write output
             and other temporary files (required)
         lulc_cur_path (string): a path to an input land use/land cover raster
@@ -34,8 +205,8 @@ def execute(args):
             (optional)
         lulc_bas_path (string): a path to an input land use/land cover raster
             (optional, but required for rarity calculations)
-        threat_folder (string): a path to the directory that will contain all
-            threat rasters (required)
+        threat_raster_folder (string): a path to the directory that will
+            contain all threat rasters (required)
         threats_table_path (string): a path to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
@@ -48,7 +219,7 @@ def execute(args):
         half_saturation_constant (float): a python float that determines
             the spread and central tendency of habitat quality scores
             (required)
-        suffix (string): a python string that will be inserted into all
+        results_suffix (string): a python string that will be inserted into all
             raster path paths just before the file extension.
 
     Example Args Dictionary::
@@ -72,7 +243,7 @@ def execute(args):
     workspace = args['workspace_dir']
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    suffix = utils.make_suffix_string(args, 'suffix')
+    suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
@@ -84,14 +255,16 @@ def execute(args):
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
-    threat_dict = utils.build_lookup_from_csv(
-        args['threats_table_path'], 'THREAT', to_lower=False)
+    # Ensure the key is a string.
+    threat_dict = {
+        str(key): value for key, value in utils.build_lookup_from_csv(
+            args['threats_table_path'], 'THREAT', to_lower=False).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
 
     # check that the required headers exist in the sensitivity table.
     # Raise exception if they don't.
-    sens_header_list = sensitivity_dict.items()[0][1].keys()
+    sens_header_list = list(sensitivity_dict.values())[0]
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
         h for h in required_sens_header_list if h not in sens_header_list]
@@ -192,8 +365,9 @@ def execute(args):
     # and tore them in the intermediate folder
     LOGGER.info('Starting aligning and resizing land cover and threat rasters')
 
-    lulc_pixel_size = (
-        pygeoprocessing.get_raster_info(args['lulc_cur_path']))['pixel_size']
+    lulc_raster_info = pygeoprocessing.get_raster_info(args['lulc_cur_path'])
+    lulc_pixel_size = lulc_raster_info['pixel_size']
+    lulc_bbox = lulc_raster_info['bounding_box']
 
     aligned_raster_list = [
         os.path.join(inter_dir, os.path.basename(path).replace(
@@ -202,21 +376,53 @@ def execute(args):
     pygeoprocessing.align_and_resize_raster_stack(
         lulc_and_threat_raster_list, aligned_raster_list,
         ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
-        'intersection')
+        lulc_bbox)
 
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
 
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
-    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+    for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
             inter_dir, os.path.basename(lulc_path).replace(
                 '.tif', '_aligned.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
-                threat_path_dict['threat' + lulc_key][threat] = os.path.join(
+                aligned_threat_path = os.path.join(
                     inter_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
+                threat_path_dict['threat' + lulc_key][threat] = (
+                    aligned_threat_path)
+
+                # Iterate though the threat raster and update pixel values
+                # as needed so that:
+                #  * Nodata values are replaced with 0
+                #  * Anything other than 0 or nodata is replaced with 1
+                LOGGER.info('Preprocessing threat values for %s',
+                            aligned_threat_path)
+                threat_nodata = pygeoprocessing.get_raster_info(
+                    aligned_threat_path)['nodata'][0]
+                threat_raster = gdal.OpenEx(aligned_threat_path,
+                                            gdal.OF_RASTER | gdal.GA_Update)
+                threat_band = threat_raster.GetRasterBand(1)
+                for block_offset in pygeoprocessing.iterblocks(
+                        (aligned_threat_path, 1), offset_only=True):
+                    block = threat_band.ReadAsArray(**block_offset)
+
+                    # First check if we actually need to set anything.
+                    # No need to perform unnecessary writes!
+                    if set(numpy.unique(block)) == set([0, 1]):
+                        continue
+
+                    zero_threat = numpy.isclose(block, threat_nodata)
+                    block[zero_threat] = 0
+                    block[~numpy.isclose(block, 0)] = 1
+
+                    threat_band.WriteArray(
+                        block, yoff=block_offset['yoff'],
+                        xoff=block_offset['xoff'])
+                threat_band = None
+                threat_raster = None
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
 
@@ -242,14 +448,14 @@ def execute(args):
 
     # calculate the weight sum which is the sum of all the threats' weights
     weight_sum = 0.0
-    for threat_data in threat_dict.itervalues():
+    for threat_data in threat_dict.values():
         # Sum weight of threats
         weight_sum = weight_sum + threat_data['WEIGHT']
 
     LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
 
     # for each land cover raster provided compute habitat quality
-    for lulc_key, lulc_path in lulc_path_dict.iteritems():
+    for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
@@ -271,7 +477,7 @@ def execute(args):
         exit_landcover = False
 
         # adjust each threat/threat raster for distance, weight, and access
-        for threat, threat_data in threat_dict.iteritems():
+        for threat, threat_data in threat_dict.items():
             LOGGER.info('Calculating threat: %s.\nThreat data: %s' %
                         (threat, threat_data))
 
@@ -322,7 +528,8 @@ def execute(args):
                 inter_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
-                filtered_threat_raster_path)
+                filtered_threat_raster_path,
+                ignore_nodata=True)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
@@ -369,7 +576,7 @@ def execute(args):
             # so we handle each filtered threat and sensitivity raster
             # in pairs
             sum_degradation = numpy.zeros(raster[0].shape)
-            for index in range(len(raster) / 2):
+            for index in range(len(raster) // 2):
                 step = index * 2
                 sum_degradation += (
                     raster[step] * raster[step + 1] * weight_list[index])
@@ -512,7 +719,7 @@ def execute(args):
             # compute rarity index for each lulc code
             # define 0.0 if an lulc code is found in the cur/fut landcover
             # but not the baseline
-            for code in lulc_code_count_x.iterkeys():
+            for code in lulc_code_count_x:
                 if code in lulc_code_count_b:
                     numerator = lulc_code_count_x[code] * lulc_area
                     denominator = lulc_code_count_b[code] * base_area
@@ -679,9 +886,9 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
     kernel_band = kernel_dataset.GetRasterBand(1)
     kernel_band.SetNoDataValue(-9999)
 
-    col_index = numpy.array(xrange(kernel_size))
+    col_index = numpy.array(range(kernel_size))
     integration = 0.0
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         distance_kernel_row = numpy.sqrt(
             (row_index - max_distance) ** 2 +
             (col_index - max_distance) ** 2).reshape(1, kernel_size)
@@ -691,7 +898,7 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
         integration += numpy.sum(kernel)
         kernel_band.WriteArray(kernel, xoff=0, yoff=row_index)
 
-    for row_index in xrange(kernel_size):
+    for row_index in range(kernel_size):
         kernel_row = kernel_band.ReadAsArray(
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
@@ -716,71 +923,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    # required args
-    for key in [
-            'workspace_dir',
-            'lulc_cur_path',
-            'threat_raster_folder',
-            'threats_table_path',
-            'sensitivity_table_path',
-            'half_saturation_constant']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, raise an exception
-        raise KeyError(
-            "The following keys were expected in `args` but were missing: " +
-            ', '.join(missing_key_list))
-
-    # if any value for required keys is empty, append to the validation
-    # error list
-    if no_value_list:
-        for key in no_value_list:
-            if limit_to is None or limit_to == key:
-                validation_error_list.append(([key], 'should have a value'))
-
-    # check for required file existence:
-    for key in [
-            'lulc_cur_path',
-            'threat_raster_folder',
-            'threats_table_path',
-            'sensitivity_table_path']:
-        if (limit_to is None or limit_to == key) and (
-                not os.path.exists(args[key])):
-            validation_error_list.append(
-                ([key], 'not found on disk'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in [
-                ('lulc_cur_path', 'raster'),
-                ('lulc_fut_path', 'raster'),
-                ('lulc_bas_path', 'raster'),
-                ('access_vector_path', 'vector')]:
-            if (limit_to is None or limit_to == key) and key in args:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(args[key])
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(args[key])
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])

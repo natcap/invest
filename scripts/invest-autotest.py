@@ -19,12 +19,12 @@ DATASTACKS = {
     'carbon': ['carbon_willamette.invs.json'],
     'coastal_blue_carbon': ['cbc_galveston_bay.invs.json'],
     'coastal_blue_carbon_preprocessor': ['cbc_pre_galveston_bay.invs.json'],
-    'coastal_vulnerability': ['coastal_vuln_wcvi.invs.json'],
+    'coastal_vulnerability': ['coastal_vuln_grandbahama.invs.json'],
     'crop_production_percentile': [
         'crop_production_percentile_demo.invs.json'],
     'crop_production_regression': [
         'crop_production_regression_demo.invs.json'],
-    'delineateit': ['delineateit_willamette.invs.json'],
+    'delineateit': ['delineateit_gura.invs.json'],
     'finfish_aquaculture': ['atlantic_salmon_british_columbia.invs.json'],
     'fisheries': [
         'blue_crab_galveston_bay.invs.json',
@@ -37,15 +37,17 @@ DATASTACKS = {
     'globio': ['globio_demo.invs.json'],
     'habitat_quality': ['habitat_quality_willamette.invs.json'],
     'hra': ['hra_wcvi.invs.json'],
-    'hydropower_water_yield': ['annual_water_yield_willamette.invs.json'],
-    'ndr': ['ndr_n_p_willamette.invs.json'],
+    'hydropower_water_yield': ['annual_water_yield_gura.invs.json'],
+    'ndr': ['ndr_gura.invs.json'],
     'pollination': ['pollination_willamette.invs.json'],
     'recreation': ['recreation_andros.invs.json'],
-    'routedem': ['routedem_willamette.invs.json'],
+    'routedem': ['routedem_gura.invs.json'],
     'scenario_generator_proximity': ['scenario_proximity_amazonia.invs.json'],
     'scenic_quality': ['wind_turbines_wcvi.invs.json'],
-    'sdr': ['sdr_willamette.invs.json'],
-    'seasonal_water_yield': ['swy_willamette.invs.json'],
+    'sdr': ['sdr_gura.invs.json'],
+    'seasonal_water_yield': ['seasonal_water_yield_gura.invs.json'],
+    'urban_flood_risk_mitigation': ['urban_flood_risk_mitigation.invs.json'],
+    'urban_cooling_model': ['urban_cooling_model_datastack.invest.json'],
     'wind_energy': ['wind_energy_new_england.invs.json'],
     'wave_energy': [
         'wave_energy_aquabuoy_wcvi.invs.json',
@@ -69,13 +71,12 @@ def sh(command, capture=True):
 def run_model(modelname, binary, workspace, datastack, headless=False):
     """Run an InVEST model, checking the error code of the process."""
     # Using a list here allows subprocess to handle escaping of paths.
-    command = [binary, '--workspace', workspace, '--datastack', datastack,
-               modelname]
     if headless:
-        command.append('--headless')
-        command.append('--overwrite')
+        command = [binary, 'run', '--workspace', workspace,
+                   '--datastack', datastack, '--headless', modelname]
     else:
-        command.append('--quickrun')
+        command = [binary, 'quickrun', '--workspace', workspace,
+                   modelname, datastack]
 
     # Subprocess on linux/mac seems to prefer a list of args, but path escaping
     # (by passing the command as a list) seems to work better on Windows.
@@ -116,12 +117,12 @@ def main(user_args=None):
               'is on the PATH.'))
     parser.add_argument(
         '--cwd',
-        default='.',
+        default='sample_data',
         help=('The CWD from which to execute the models. '
               'If executing from a checked-out InVEST repo, this will probably '
-              'be ./data/invest-data/ or a directory at the same '
+              'be ./data/invest-sample-data/ or a directory at the same '
               'level. If executing from a built InVEST binary, this will be '
-              'the current directory (".").  Default value: "."'
+              'the sample_data directory.  Default value: "sample_data"'
              ))
     parser.add_argument(
         '--workspace',
@@ -139,7 +140,7 @@ def main(user_args=None):
     LOGGER.info('Running on %s CPUs', args.max_cpus)
 
     pairs = []
-    for name, datastacks in DATASTACKS.iteritems():
+    for name, datastacks in DATASTACKS.items():
         if not name.startswith(args.prefix):
             continue
 
@@ -184,16 +185,16 @@ def main(user_args=None):
     # new line.
     status_messages = ''
     status_messages += '\n%s %s %s\n' % (
-        string.ljust('MODELNAME', max_width+1),
-        string.ljust('EXIT CODE', 10),  # len('EXIT CODE')+1
+        'MODELNAME'.ljust(max_width+1),
+        'EXIT CODE'.ljust(10),  # len('EXIT CODE')+1
         'DATASTACK')
     for (modelname, datastack, headless, _), exitcode in sorted(
-            model_results.iteritems(), key=lambda x: x[0]):
+            model_results.items(), key=lambda x: x[0]):
         if headless:
             modelname += ' (headless)'
         status_messages += "%s %s %s\n" % (
-            string.ljust(modelname, max_width+1),
-            string.ljust(str(exitcode[0]), 10),
+            modelname.ljust(max_width+1),
+            str(exitcode[0]).ljust(10),
             datastack)
         if exitcode[0] > 0:
             failures += 1
@@ -201,25 +202,25 @@ def main(user_args=None):
     if failures > 0:
         status_messages += '\n********FAILURES********\n'
         status_messages += '%s %s %s %s\n' % (
-            string.ljust('MODELNAME', max_width+1),
-            string.ljust('EXIT CODE', 10),
-            string.ljust('DATASTACK', datastack_width),
+            'MODELNAME'.ljust(max_width+1),
+            'EXIT CODE'.ljust(10),
+            'DATASTACK'.ljust(datastack_width),
             'WORKSPACE'
         )
         for (modelname, datastack, headless, workspace), exitcode in sorted(
-                [(k, v) for (k, v) in model_results.iteritems()
+                [(k, v) for (k, v) in model_results.items()
                  if v[0] != 0],
                 key=lambda x: x[0]):
             if headless:
                 modelname += ' (headless)'
             status_messages += "%s %s %s %s\n" % (
-                string.ljust(modelname, max_width+1),
-                string.ljust(str(exitcode[0]), 10),
-                string.ljust(datastack, datastack_width),
+                modelname.ljust(max_width+1),
+                str(exitcode[0]).ljust(10),
+                datastack.ljust(datastack_width),
                 workspace
             )
 
-    print status_messages
+    print(status_messages)
     with open(os.path.join(args.workspace, 'model_results.txt'), 'w') as log:
         log.write(status_messages)
 

@@ -20,6 +20,17 @@ import codecs
 import multiprocessing
 import threading
 
+try:
+    unicode
+except NameError:
+    unicode = str
+
+try:
+    import PyQt4
+except ImportError:
+    # PySide2 seems to be the only package that works with qtpy under python3.
+    import PySide2
+
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
@@ -102,7 +113,7 @@ def is_probably_datastack(filepath):
         return True
 
     # Is it a datastack parameter set?
-    with open(filepath) as opened_file:
+    with codecs.open(filepath, encoding='UTF-8') as opened_file:
         # Valid JSON starts with '{'
         if opened_file.read(1) == '{':
             return True
@@ -110,8 +121,14 @@ def is_probably_datastack(filepath):
         # Is it a logfile?
         # "Arguments" might be at the very beginning of the file.
         opened_file.seek(0)
-        if 'Arguments' in ' '.join(opened_file.readlines(200)):
-            return True
+        try:
+            if 'Arguments' in ' '.join(opened_file.readlines(200)):
+                return True
+        except UnicodeDecodeError:
+            # When ``filepath`` is a .tar.gz, the text read in probably won't
+            # be valid UTF-8, which will raise a UnicodeDecodeError when python
+            # tries to decode it.
+            pass
 
     try:
         # If we can open it as a .tar.gz, assume it's a datastack
@@ -273,7 +290,7 @@ class QuitConfirmDialog(QtWidgets.QMessageBox):
         Returns:
             The int return code from the QMessageBox's ``exec_()`` method.
         """
-        self.checkbox.setChecked(starting_checkstate)
+        self.checkbox.setChecked(bool(starting_checkstate))
         return QtWidgets.QMessageBox.exec_(self)
 
 
@@ -322,8 +339,8 @@ class ModelMismatchConfirmDialog(ConfirmDialog):
 
         self._body_text = (
             "This datastack was created for the model \"{datastack_model}\", "
-            "which looks different from this model (\"{current_model}\"). Load "
-            "these parameters anyways?"
+            "which looks different from this model (\"{current_model}\").\n\n "
+            "Load these parameters anyway?"
         )
 
         ConfirmDialog.__init__(
@@ -390,7 +407,7 @@ class SettingsDialog(OptionsDialog):
             helptext=('Where local files will be stored.'
                       'Default value: %s') % cache_dir)
         self.cache_directory.set_value(inputs.INVEST_SETTINGS.value(
-            'cache_dir', cache_dir, unicode))
+            'cache_dir', cache_dir))
         self._global_opts_container.add_input(self.cache_directory)
 
         logging_options = (
@@ -408,7 +425,7 @@ class SettingsDialog(OptionsDialog):
                       'run dialog. Default: INFO'),
             options=logging_options)
         self.dialog_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/run_dialog', 'INFO', unicode))
+            'logging/run_dialog', 'INFO'))
         self._global_opts_container.add_input(self.dialog_logging_level)
 
         self.logfile_logging_level = inputs.Dropdown(
@@ -419,7 +436,7 @@ class SettingsDialog(OptionsDialog):
                       'logfile. Default: NOTSET'),
             options=logging_options)
         self.logfile_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/logfile', 'NOTSET', unicode))
+            'logging/logfile', 'NOTSET'))
         self._global_opts_container.add_input(self.logfile_logging_level)
 
         self.taskgraph_logging_level = inputs.Dropdown(
@@ -430,7 +447,7 @@ class SettingsDialog(OptionsDialog):
                       'written to the logfile. Default: ERROR'),
             options=logging_options)
         self.taskgraph_logging_level.set_value(inputs.INVEST_SETTINGS.value(
-            'logging/taskgraph', 'ERROR', unicode))
+            'logging/taskgraph', 'ERROR'))
         self._global_opts_container.add_input(self.taskgraph_logging_level)
 
         # Taskgraph n_workers settings.
@@ -463,7 +480,7 @@ class SettingsDialog(OptionsDialog):
                 n_workers_values.items(), key=lambda x: int(x[1]))],
             return_value_map=n_workers_values)
         self.taskgraph_n_workers.set_value(inputs.INVEST_SETTINGS.value(
-            'taskgraph/n_workers', '-1', unicode))
+            'taskgraph/n_workers', '-1'))
         self._global_opts_container.add_input(self.taskgraph_n_workers)
 
     def postprocess(self, exitcode):
@@ -651,11 +668,7 @@ class WindowTitle(QtCore.QObject):
     # instance attributes on object initialization.
     title_changed = QtCore.Signal(unicode)
 
-    # Python strings are immutable; this can be accessed like an instance
-    # variable.
-    format_string = "{modelname}: {filename}{modified}"
-
-    def __init__(self, modelname=None, filename=None, modified=False):
+    def __init__(self, modelname='', filename='', modified=''):
         """Initialize the WindowTitle.
 
         Parameters:
@@ -663,12 +676,17 @@ class WindowTitle(QtCore.QObject):
             filename (string or None): The filename to use.
             modified (bool): Whether the datastack file has been modified.
         """
-        QtCore.QObject.__init__(self)
+        super(WindowTitle, self).__init__()
+
         self.modelname = modelname
         self.filename = filename
         self.modified = modified
 
-    def __setattr__(self, name, value):
+        # Python strings are immutable; this can be accessed like an instance
+        # variable.
+        self._format_string = "{modelname}: {filename}{modified}"
+
+    def set_title_attr(self, name, value):
         """Attribute setter.
 
         Set the given attribute and emit the ``title_changed`` signal with
@@ -681,7 +699,7 @@ class WindowTitle(QtCore.QObject):
         """
         LOGGER.info('__setattr__: %s, %s', name, value)
         old_attr = getattr(self, name, 'None')
-        QtCore.QObject.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
         if old_attr != value:
             new_value = repr(self)
             LOGGER.info('Emitting new title %s', new_value)
@@ -694,7 +712,7 @@ class WindowTitle(QtCore.QObject):
             The string wundow title.
         """
         try:
-            return WindowTitle.format_string.format(
+            return self._format_string.format(
                 modelname=self.modelname if self.modelname else 'InVEST',
                 filename=self.filename if self.filename else 'new datastack',
                 modified='*' if self.modified else '')
@@ -719,6 +737,8 @@ class DatastackOptionsDialog(OptionsDialog):
     type of datastack is desired.  If a parameter set is selected, paths may
     be stored relative to the location of the datastack file.  Both types of
     datastacks may optionally include the value of the workspace input.
+
+    Directories in the save file's path are created if they do not exist.
 
     Returns:
         An instance of :ref:DatastackSaveOpts namedtuple.
@@ -756,36 +776,9 @@ class DatastackOptionsDialog(OptionsDialog):
             label='Include workspace path in datastack')
         self.include_workspace.set_value(False)
 
-        @validation.invest_validator
-        def _validate_parameter_file(args, limit_to=None):
-            """Validate a possible parameter file defined by the user.
-
-            This is a validation function that adheres to the InVEST validation
-            API.
-
-            Parameters:
-                args (dict): The args dictionary.
-                limit_to=None (string or None): The args key for which we
-                    should limit processing.
-
-            Returns:
-                ``warnings`` (list): A list of 2-element tuples with any
-                validation warnings for this input.  This list may be empty.
-            """
-            warnings = []
-            archive_dir = os.path.dirname(args['archive_path'])
-
-            if not os.path.exists(archive_dir):
-                warnings.append((('archive_path',),
-                                 'The parent folder of the specified path '
-                                 'does not exist.'))
-
-            return warnings
-
         self.save_parameters = inputs.SaveFile(
             label=_DATASTACK_SAVE_OPTS[_DATASTACK_PARAMETER_SET]['title'],
             args_key='archive_path',
-            validator=_validate_parameter_file,
             default_savefile='{model}_{file_base}'.format(
                 model=self.paramset_basename,
                 file_base=_DATASTACK_SAVE_OPTS[
@@ -795,7 +788,7 @@ class DatastackOptionsDialog(OptionsDialog):
         self._container.add_input(self.use_relative_paths)
         self._container.add_input(self.include_workspace)
         self._container.add_input(self.save_parameters)
-        self.ok_button.setEnabled(False)  # initially disable the ok button
+        self.ok_button.setEnabled(False)  # disabled until a value is entered
 
         @QtCore.Slot(unicode)
         def _optionally_disable(value):
@@ -822,19 +815,20 @@ class DatastackOptionsDialog(OptionsDialog):
                     file_base=_DATASTACK_SAVE_OPTS[value]['savefile']))
 
         @QtCore.Slot(bool)
-        def _enable_continue_button(new_validity):
-            """A slot to enable the continue button when inputs are valid.
+        def _enable_continue_button(new_value):
+            """A slot to enable the continue button when input is filled.
 
             Parameters:
-                new_validity (bool): The validity of the form.
+                new_value (string): The value of the form.
 
             Returns:
                 ``None``
             """
-            self.ok_button.setEnabled(new_validity)
+            self.ok_button.setEnabled(
+                (new_value is not None) and (new_value.strip() not in ''))
 
         self.datastack_type.value_changed.connect(_optionally_disable)
-        self.save_parameters.validity_changed.connect(_enable_continue_button)
+        self.save_parameters.value_changed.connect(_enable_continue_button)
 
     def exec_(self):
         """Execute the dialog.
@@ -1238,7 +1232,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.window_title = WindowTitle()
         self.window_title.title_changed.connect(self.setWindowTitle)
-        self.window_title.modelname = self.label
+        self.window_title.set_title_attr('modelname', self.label)
 
         # Add InVEST version update button and links at the top of the window.
         self.links_layout = QtWidgets.QHBoxLayout()
@@ -1401,7 +1395,6 @@ class InVESTModel(QtWidgets.QMainWindow):
                 self._load_recent_datastack_from_action)
             self.open_menu.addAction(datastack_action)
 
-    @QtCore.Slot()
     def _load_recent_datastack_from_action(self):
         """Load a recent datastack when an action is triggered.
 
@@ -1484,7 +1477,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if isinstance(value, inputs.InVESTModelInput):
             self.inputs.add(value)
-        QtWidgets.QMainWindow.__setattr__(self, name, value)
+        object.__setattr__(self, name, value)
 
     def _check_local_docs(self, link=None):
         if link in (None, 'localdocs'):
@@ -1522,6 +1515,19 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         LOGGER.info('Current parameters:\n%s', pprint.pformat(current_args))
 
+        # if parent dir of archive_path does not exist, create it.
+        archive_dir = os.path.dirname(
+            os.path.abspath(datastack_opts.archive_path))
+        if not os.path.exists(archive_dir):
+            try:
+                os.makedirs(archive_dir)
+            except FileNotFoundError as error:
+                alert_message = error.strerror + ': ' + error.filename
+                self.statusBar().showMessage(
+                    alert_message, STATUSBAR_MSG_DURATION)
+                LOGGER.exception(error)
+                return
+
         if datastack_opts.datastack_type == _DATASTACK_DATA_ARCHIVE:
             self.datastack_progress_dialog.exec_build(
                 args=current_args,
@@ -1541,7 +1547,8 @@ class InVESTModel(QtWidgets.QMainWindow):
             'Saved current parameters to %s' % save_filepath)
         LOGGER.info(alert_message)
         self.statusBar().showMessage(alert_message, STATUSBAR_MSG_DURATION)
-        self.window_title.filename = os.path.basename(save_filepath)
+        self.window_title.set_title_attr('filename',
+                                         os.path.basename(save_filepath))
 
     def add_input(self, input_obj):
         """Add an input to the model.
@@ -1595,11 +1602,13 @@ class InVESTModel(QtWidgets.QMainWindow):
             self.validation_report_dialog.exec_()
             return
 
-        # If the workspace exists, confirm the overwrite.
+        # If the workspace exists and contains files, confirm the overwrite.
         if os.path.exists(args['workspace_dir']):
-            button_pressed = self.workspace_overwrite_confirm_dialog.exec_()
-            if button_pressed != QtWidgets.QMessageBox.Yes:
-                return
+            if len(os.listdir(args['workspace_dir'])) > 0:
+                button_pressed = (
+                    self.workspace_overwrite_confirm_dialog.exec_())
+                if button_pressed != QtWidgets.QMessageBox.Yes:
+                    return
 
         # This is the thread that the UI is executing within.
         ui_thread_name = threading.current_thread().name
@@ -1610,7 +1619,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                     'n_workers defined in args. It should not be defined.')
 
             args['n_workers'] = inputs.INVEST_SETTINGS.value(
-                'taskgraph/n_workers', '-1', unicode)
+                'taskgraph/n_workers', '-1')
 
             name = getattr(self, 'label', self.target.__module__)
             logfile_log_level = getattr(logging, inputs.INVEST_SETTINGS.value(
@@ -1692,7 +1701,9 @@ class InVESTModel(QtWidgets.QMainWindow):
             stack_type, stack_info = datastack.get_datastack_info(
                 datastack_path)
         except Exception:
-            LOGGER.exception('Could not load datastack %s', datastack_path)
+            fail_message = 'Could not load datastack %s' % datastack_path
+            self.statusBar().showMessage(fail_message, STATUSBAR_MSG_DURATION)
+            LOGGER.exception(fail_message)
             return
 
         if stack_info.model_name != self.target.__module__:
@@ -1722,7 +1733,7 @@ class InVESTModel(QtWidgets.QMainWindow):
             raise ValueError('Unknown stack type "%s"' % stack_type)
 
         self.load_args(args)
-        self.window_title.filename = window_title_filename
+        self.window_title.set_title_attr('filename', window_title_filename)
 
         self._add_to_open_menu(datastack_path)
         self.statusBar().showMessage(
@@ -1743,7 +1754,7 @@ class InVESTModel(QtWidgets.QMainWindow):
                        self.inputs)
         LOGGER.debug(pprint.pformat(_inputs))
 
-        for args_key, args_value in datastack_args.iteritems():
+        for args_key, args_value in datastack_args.items():
             try:
                 _inputs[args_key].set_value(args_value)
             except KeyError:
@@ -1782,13 +1793,23 @@ class InVESTModel(QtWidgets.QMainWindow):
             icon = inputs.ICON_ENTER
         self.form.run_button.setIcon(icon)
 
-        # post warnings to the WMV dialog
-        args_to_inputs = dict((input_.args_key, input_) for input_ in
-                              self.inputs)
+        # Post warnings to the WMV dialog and to the inputs themselves if the
+        # error only affects that one input.
+        # We can only post validation warnings if the input supports it (is a
+        # GriddedInput instance).
+        args_to_inputs = {}
+        for input_ in self.inputs:
+            if isinstance(input_, inputs.GriddedInput):
+                args_to_inputs[input_.args_key] = input_
+
         warnings_ = []
         for keys, warning in validation_warnings:
             warnings_.append(
-                ((args_to_inputs[key].label for key in keys), warning))
+                (list(args_to_inputs[key].label for key in keys), warning))
+
+        for key in args_to_inputs:
+            args_to_inputs[key]._validation_finished(validation_warnings)
+
         self.validation_report_dialog.post_warnings(warnings_)
 
     def validate(self, block=False):
@@ -1917,7 +1938,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """
         if self.prompt_on_close:
             starting_checkstate = self.settings.value(
-                'remember_lastrun', True, bool)
+                'remember_lastrun', True)
             button_pressed = self.quit_confirm_dialog.exec_(
                 starting_checkstate)
             if button_pressed != QtWidgets.QMessageBox.Yes:
@@ -1966,7 +1987,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         with codecs.open(save_filepath, 'w', encoding='utf-8') as py_file:
             cast_args = dict((unicode(key), value) for (key, value)
-                             in self.assemble_args().iteritems())
+                             in self.assemble_args().items())
             args = pprint.pformat(cast_args,
                                   indent=4)  # 4 spaces
 
@@ -2009,7 +2030,7 @@ class InVESTModel(QtWidgets.QMainWindow):
 
         self.statusBar().showMessage('Loaded parameters from previous run.',
                                      STATUSBAR_MSG_DURATION)
-        self.window_title.filename = 'loaded from autosave'
+        self.window_title.set_title_attr('filename', 'loaded from autosave')
 
     def dragEnterEvent(self, event):
         """Handle the event where something has been dragged into the window.

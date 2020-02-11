@@ -77,7 +77,7 @@ def make_pools_csv(pools_csv_path):
         None.
 
     """
-    with open(pools_csv_path, 'wb') as open_table:
+    with open(pools_csv_path, 'w') as open_table:
         open_table.write('C_above,C_below,C_soil,C_dead,lucode,LULC_Name\n')
         open_table.write('15,10,60,1,1,"lulc code 1"\n')
         open_table.write('5,3,20,0,2,"lulc code 2"\n')
@@ -254,3 +254,75 @@ class CarbonTests(unittest.TestCase):
             os.path.join(args['workspace_dir'], 'npv_fut.tif'), -0.3422078)
         assert_raster_equal_value(
             os.path.join(args['workspace_dir'], 'npv_redd.tif'), -0.4602106)
+
+
+class CarbonValidationTests(unittest.TestCase):
+    """Tests for the Carbon Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'lulc_cur_path',
+            'carbon_pools_path',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Carbon Validate: assert missing required keys."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        validation_errors = carbon.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_sequestration(self):
+        """Carbon Validate: assert missing calc_sequestration keys."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'calc_sequestration': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['lulc_cur_year',
+             'lulc_fut_year',
+             'lulc_fut_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_redd(self):
+        """Carbon Validate: assert missing do_redd keys."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'do_redd': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['calc_sequestration',
+             'lulc_redd_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_valuation(self):
+        """Carbon Validate: assert missing do_valuation keys."""
+        from natcap.invest import carbon
+        from natcap.invest import validation
+
+        args = {'do_valuation': True}
+        validation_errors = carbon.validate(args)
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['calc_sequestration',
+             'price_per_metric_ton_of_c',
+             'discount_rate',
+             'rate_change'])
+        self.assertEqual(invalid_keys, expected_missing_keys)

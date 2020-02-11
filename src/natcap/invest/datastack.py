@@ -1,3 +1,4 @@
+# coding=UTF-8
 """Functions for reading and writing InVEST model parameters.
 
 A **datastack** for InVEST is a compressed archive that includes the
@@ -28,6 +29,11 @@ import collections
 import re
 import ast
 import warnings
+
+try:
+    basestring
+except NameError:
+    basestring = str
 
 from osgeo import gdal
 from osgeo import ogr
@@ -224,7 +230,7 @@ def format_args_dict(args_dict, model_name):
     Returns:
         A formatted, unicode string.
     """
-    sorted_args = sorted(six.iteritems(args_dict), key=lambda x: x[0])
+    sorted_args = sorted(args_dict.items(), key=lambda x: x[0])
 
     max_key_width = 0
     if len(sorted_args) > 0:
@@ -310,7 +316,7 @@ def build_datastack_archive(args, model_name, datastack_path):
     def _recurse(args_param, handler, nested_key=None):
         if isinstance(args_param, dict):
             new_dict = {}
-            for args_key, args_value in args_param.iteritems():
+            for args_key, args_value in args_param.items():
                 # log the key via a filter installed to the handler.
                 if nested_key:
                     args_key_label = "%s['%s']" % (nested_key, args_key)
@@ -371,7 +377,6 @@ def build_datastack_archive(args, model_name, datastack_path):
                                   'parameters' + PARAMETER_SET_EXTENSION)
     with codecs.open(param_file_uri, 'w', encoding='UTF-8') as params:
         params.write(json.dumps(new_args,
-                                encoding='UTF-8',
                                 indent=4,
                                 sort_keys=True))
 
@@ -410,7 +415,7 @@ def extract_datastack_archive(datastack_path, dest_dir_path):
         """Converts paths in `args_param` to paths in `dest_dir_path."""
         if isinstance(args_param, dict):
             _args = {}
-            for key, value in args_param.iteritems():
+            for key, value in args_param.items():
                 _args[key] = _rewrite_paths(value)
             return _args
         elif isinstance(args_param, list):
@@ -453,7 +458,7 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
     def _recurse(args_param):
         if isinstance(args_param, dict):
             return dict((key, _recurse(value))
-                        for (key, value) in args_param.iteritems())
+                        for (key, value) in args_param.items())
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring):
@@ -476,8 +481,11 @@ def build_parameter_set(args, model_name, paramset_path, relative=False):
         'invest_version': __version__,
         'args': _recurse(args)
     }
-    json.dump(parameter_data, codecs.open(paramset_path, 'w', encoding='UTF-8'),
-              encoding='UTF-8', indent=4, sort_keys=True)
+    with codecs.open(paramset_path, 'w', encoding='UTF-8') as paramset_file:
+        paramset_file.write(
+            json.dumps(parameter_data,
+                       indent=4,
+                       sort_keys=True))
 
 
 def extract_parameter_set(paramset_path):
@@ -499,15 +507,25 @@ def extract_parameter_set(paramset_path):
                 arguments are intended for.
     """
     paramset_parent_dir = os.path.dirname(os.path.abspath(paramset_path))
-    read_params = json.load(codecs.open(paramset_path, 'r', encoding='UTF-8'))
+    with codecs.open(paramset_path, 'r', encoding='UTF-8') as paramset_file:
+        params_raw = paramset_file.read()
+
+    read_params = json.loads(params_raw)
 
     def _recurse(args_param):
         if isinstance(args_param, dict):
             return dict((key, _recurse(value)) for (key, value) in
-                        args_param.iteritems())
+                        args_param.items())
         elif isinstance(args_param, list):
             return [_recurse(param) for param in args_param]
         elif isinstance(args_param, basestring) and len(args_param) > 0:
+            # Attempt to parse true/false strings.
+            try:
+                return {'true': True, 'false': False}[args_param.lower()]
+            except KeyError:
+                # Probably not a boolean, so continue checking paths.
+                pass
+
             # Convert paths to whatever makes sense for the current OS.
             expanded_param = os.path.expandvars(
                 os.path.expanduser(
@@ -519,6 +537,8 @@ def extract_parameter_set(paramset_path):
                     os.path.join(paramset_parent_dir, args_param))
                 if os.path.exists(paramset_rel_path):
                     return paramset_rel_path
+        else:
+            return args_param
         return args_param
 
     return ParameterSet(_recurse(read_params['args']),

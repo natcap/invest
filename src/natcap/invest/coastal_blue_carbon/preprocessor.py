@@ -6,6 +6,7 @@ import itertools
 from itertools import product
 import logging
 import copy
+from functools import reduce
 
 from osgeo import gdal
 import numpy
@@ -18,8 +19,45 @@ from .. import validation
 
 NODATA_INT = -9999  # typical integer nodata value used in rasters
 
+LOGGER = logging.getLogger(__name__)
 
-LOGGER = logging.getLogger('natcap.invest.coastal_blue_carbon.preprocessor')
+ARGS_SPEC = {
+    "model_name": "Coastal Blue Carbon Preprocessor",
+    "module": __name__,
+    "userguide_html": "coastal_blue_carbon.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "lulc_lookup_uri": {
+            "name": "LULC Lookup Table",
+            "type": "csv",
+            "about": (
+                "A CSV table used to map lulc classes to their values "
+                "in a raster, as well as to indicate whether or not "
+                "the lulc class is a coastal blue carbon habitat."),
+            "required": True,
+            "validation_options": {
+                "required_fields": ["lulc-class", "code",
+                                    "is_coastal_blue_carbon_habitat"]
+            },
+        },
+        "lulc_snapshot_list": {
+            "name": "Land Use/Land Cover Rasters",
+            "type": "other",
+            "required": True,
+            "about": (
+                "One or more GDAL-supported land use/land cover rasters "
+                "representing the land/seascape at particular points in time. "
+                "The values for this rater are unique integers representing "
+                "each LULC class and must have matching values in the "
+                "``code`` column of the LULC lookup table.  The Land Use/ "
+                "Land Cover rasters must be entered into the user "
+                "interface in chronological order. All pixel stacks across "
+                "all timesteps must have valid pixels in order for "
+                "calculations to take place."),
+        },
+    }
+}
 
 _OUTPUT = {
     'aligned_lulc_template': 'aligned_lulc_%s.tif',
@@ -34,7 +72,7 @@ def execute(args):
 
     The preprocessor accepts a list of rasters and checks for cell-transitions
     across the rasters.  The preprocessor outputs a CSV file representing a
-    matrix of land cover transitions, each cell prefilled with a string
+    matrix of land cover transitions, each cell pre-filled with a string
     indicating whether carbon accumulates or is disturbed as a result of the
     transition, if a transition occurs.
 
@@ -84,7 +122,7 @@ def execute(args):
     # Outputs
     _create_transition_table(
         reg['transitions'],
-        vars_dict['lulc_to_code_dict'].iterkeys(),
+        vars_dict['lulc_to_code_dict'].keys(),
         vars_dict['transition_matrix_dict'],
         vars_dict['code_to_lulc_dict'])
 
@@ -116,7 +154,7 @@ def _get_inputs(args):
     lulc_lookup_dict = utils.build_lookup_from_csv(
         args['lulc_lookup_uri'], 'code')
 
-    for code in lulc_lookup_dict.iterkeys():
+    for code in lulc_lookup_dict.keys():
         sub_dict = lulc_lookup_dict[code]
         if not isinstance(sub_dict['is_coastal_blue_carbon_habitat'], bool):
             raise ValueError(
@@ -126,7 +164,7 @@ def _get_inputs(args):
         lulc_lookup_dict[code] = sub_dict
 
     code_to_lulc_dict = {key: lulc_lookup_dict[key][
-        'lulc-class'] for key in lulc_lookup_dict.iterkeys()}
+        'lulc-class'] for key in lulc_lookup_dict.keys()}
     lulc_to_code_dict = {v: k for k, v in code_to_lulc_dict.items()}
 
     # Create workspace and output directories
@@ -167,12 +205,12 @@ def _validate_inputs(lulc_snapshot_list, lulc_lookup_dict):
     # assert all raster values in lookup table
     raster_val_set = set(reduce(
         lambda accum_value, x: numpy.unique(
-            numpy.append(accum_value, x.next()[1].flat)),
+            numpy.append(accum_value, next(x)[1].flat)),
         itertools.chain(pygeoprocessing.iterblocks((snapshot, 1))
                         for snapshot in lulc_snapshot_list),
         numpy.array([])))
 
-    code_set = set(lulc_lookup_dict.iterkeys())
+    code_set = set(lulc_lookup_dict)
     code_set.add(
         pygeoprocessing.get_raster_info(lulc_snapshot_list[0])['nodata'][0])
 
@@ -271,7 +309,7 @@ def _preprocess_data(lulc_lookup_dict, lulc_snapshot_list):
 
     # Transition Matrix
     transition_matrix_dict = dict(
-        (i, '') for i in product(lulc_lookup_dict.iterkeys(), repeat=2))
+        (i, '') for i in product(lulc_lookup_dict.keys(), repeat=2))
 
     # Determine Transitions and Directions
     for snapshot_idx in range(0, len(lulc_snapshot_list)-1):
@@ -298,13 +336,13 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
     """
     LOGGER.info('Creating transition table as output...')
 
-    code_list = sorted(code_to_lulc_dict.iterkeys())
+    code_list = sorted(code_to_lulc_dict)
     lulc_class_list_sorted = [code_to_lulc_dict[code] for code in code_list]
 
     transition_by_lulc_class_dict = dict(
         (lulc_class, {}) for lulc_class in lulc_class_list)
 
-    for transition in transition_matrix_dict.iterkeys():
+    for transition in transition_matrix_dict:
         top_dict = transition_by_lulc_class_dict[
             code_to_lulc_dict[transition[0]]]
         top_dict[code_to_lulc_dict[transition[1]]] = transition_matrix_dict[
@@ -312,7 +350,7 @@ def _create_transition_table(filepath, lulc_class_list, transition_matrix_dict,
         transition_by_lulc_class_dict[code_to_lulc_dict[transition[0]]] = \
             top_dict
 
-    with open(filepath, 'wb') as csv_file:
+    with open(filepath, 'w') as csv_file:
         fieldnames = ['lulc-class'] + lulc_class_list_sorted
         csv_file.write(','.join(fieldnames)+'\n')
         for code in code_list:
@@ -340,9 +378,9 @@ def _create_carbon_pool_initial_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'wb') as csv_file:
+    with open(filepath, 'w') as csv_file:
         csv_file.write('code,lulc-class,biomass,soil,litter\n')
-        for code in code_to_lulc_dict.iterkeys():
+        for code in code_to_lulc_dict:
             csv_file.write('%s,%s,,,\n' % (code, code_to_lulc_dict[code]))
 
 
@@ -353,14 +391,14 @@ def _create_carbon_pool_transient_table_template(filepath, code_to_lulc_dict):
         filepath (str): filepath to carbon pool initial conditions
         code_to_lulc_dict (dict): map lulc codes to lulc classes
     """
-    with open(filepath, 'wb') as csv_file:
+    with open(filepath, 'w') as csv_file:
         csv_file.write(
             'code,lulc-class,biomass-half-life,biomass-low-impact-disturb,'
             'biomass-med-impact-disturb,biomass-high-impact-disturb,'
             'biomass-yearly-accumulation,soil-half-life,'
             'soil-low-impact-disturb,soil-med-impact-disturb,'
             'soil-high-impact-disturb,soil-yearly-accumulation\n')
-        for code in code_to_lulc_dict.iterkeys():
+        for code in code_to_lulc_dict:
             csv_file.write('%s,%s,,,,,,,,,,\n' % (
                 code, code_to_lulc_dict[code]))
 
@@ -379,44 +417,4 @@ def validate(args, limit_to=None):
         A list of tuples where tuple[0] is an iterable of keys that the error
         message applies to and tuple[1] is the string validation warning.
     """
-    warnings = []
-    missing_keys = []
-    keys_missing_value = []
-    for required_key in ('workspace_dir', 'lulc_lookup_uri'):
-        try:
-            if args[required_key] in ('', None):
-                keys_missing_value.append(required_key)
-        except KeyError:
-            missing_keys.append(required_key)
-
-    if missing_keys:
-        raise KeyError('Args is missing these keys: %s'
-                       % ', '.join(missing_keys))
-
-    if keys_missing_value:
-        warnings.append((keys_missing_value,
-                         'Parameter must have a value.'))
-
-    if limit_to in ('lulc_lookup_uri', None):
-        if not os.path.exists(args['lulc_lookup_uri']):
-            warnings.append((['lulc_lookup_uri'], 'File not found.'))
-        try:
-            pandas.read_csv(args['lulc_lookup_uri'])
-        except:
-            warnings.append((['lulc_lookup_uri'], 'Could not open CSV.'))
-
-    if limit_to in ('lulc_snapshot_list', None):
-        try:
-            with utils.capture_gdal_logging():
-                for index, raster_path in enumerate(
-                        args['lulc_snapshot_list']):
-                    raster = gdal.OpenEx(raster_path)
-                    if raster is None:
-                        warnings.append(
-                            (['lulc_snapshot_list'],
-                             ('Raster index %s must be a path to a '
-                              'GDAL-compatible file on disk.') % index))
-        except KeyError:
-            pass
-
-    return warnings
+    return validation.validate(args, ARGS_SPEC['args'])

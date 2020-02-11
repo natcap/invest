@@ -460,12 +460,19 @@ def ndr_eff_calculation(
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             should_seed = 1
                             outflow_dirs &= ~dir_mask
-                        neighbor_flow_dirs = (
-                            to_process_flow_directions_raster.get(
-                                neighbor_col, neighbor_row))
-                        if neighbor_flow_dirs == 0:
-                            should_seed = 1
-                            outflow_dirs &= ~dir_mask
+
+                        # Only consider neighbor flow directions if the
+                        # neighbor index is within the raster.
+                        if (neighbor_col >= 0
+                                and neighbor_row >= 0
+                                and neighbor_col < n_cols
+                                and neighbor_row < n_rows):
+                            neighbor_flow_dirs = (
+                                to_process_flow_directions_raster.get(
+                                    neighbor_col, neighbor_row))
+                            if neighbor_flow_dirs == 0:
+                                should_seed = 1
+                                outflow_dirs &= ~dir_mask
 
                 if should_seed:
                     # mark all outflow directions processed
@@ -513,8 +520,12 @@ def ndr_eff_calculation(
                         step_size = <float>(cell_size*1.41421356237)
                     else:
                         step_size = cell_size
-                    # guard against an area that has flow but no landcover
-                    current_step_factor = <float>(exp(-5*step_size/crit_len))
+                    # guard against a critical length factor that's 0
+                    if crit_len > 0:
+                        current_step_factor = <float>(
+                            exp(-5*step_size/crit_len))
+                    else:
+                        current_step_factor = 0.0
 
                     neighbor_effective_retention = (
                         effective_retention_raster.get(ds_col, ds_row))

@@ -13,14 +13,6 @@ class WaveEnergy(model.InVESTModel):
             validator=natcap.invest.wave_energy.validate,
             localdoc=u'wave_energy.html')
 
-        self.results_suffix = inputs.Text(
-            args_key=u'suffix',
-            helptext=(
-                u'A string that will be added to the end of the output file '
-                u'paths.'),
-            label=u'Results Suffix (Optional)',
-            validator=self.validator)
-        self.add_input(self.results_suffix)
         self.wave_base_data = inputs.Folder(
             args_key=u'wave_base_data_path',
             helptext=(
@@ -126,8 +118,7 @@ class WaveEnergy(model.InVESTModel):
             self.dem.args_key: self.dem.value(),
             self.valuation_container.args_key: self.valuation_container.value(),
         }
-        if self.results_suffix.value():
-            args[self.results_suffix.args_key] = self.results_suffix.value()
+
         if self.aoi.value():
             args[self.aoi.args_key] = self.aoi.value()
         if self.valuation_container.value():

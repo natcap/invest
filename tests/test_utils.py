@@ -161,7 +161,7 @@ class FileRegistryUtilsTests(unittest.TestCase):
     def _norm_dict(path_dict):
         """Take a dictionary of paths and normalize the paths."""
         result_dict = {}
-        for key, path in path_dict.iteritems():
+        for key, path in path_dict.items():
             if isinstance(path, str):
                 result_dict[key] = os.path.normpath(path)
             elif isinstance(path, list):
@@ -279,8 +279,9 @@ class LogToFileTests(unittest.TestCase):
             thread.join()
             handler.flush()
 
-        messages = [msg for msg in open(logfile).read().split('\n')
-                    if msg if msg]
+        with open(logfile) as opened_logfile:
+            messages = [msg for msg in opened_logfile.read().split('\n')
+                        if msg if msg]
         self.assertEqual(len(messages), 3)
 
     def test_log_to_file_from_thread(self):
@@ -305,8 +306,9 @@ class LogToFileTests(unittest.TestCase):
             thread.join()
             handler.flush()
 
-        messages = [msg for msg in open(logfile).read().split('\n')
-                    if msg if msg]
+        with open(logfile) as opened_logfile:
+            messages = [msg for msg in opened_logfile.read().split('\n')
+                        if msg if msg]
         self.assertEqual(len(messages), 1)
 
 
@@ -452,8 +454,9 @@ class GDALWarningsLoggingTests(unittest.TestCase):
         # warning should go to stdout
         gdal.Open('this_file_should_not_exist.tif')
 
-        messages = [msg for msg in open(logfile).read().split('\n')
-                    if msg]
+        with open(logfile) as opened_logfile:
+            messages = [msg for msg in opened_logfile.read().split('\n')
+                        if msg if msg]
 
         self.assertEqual(len(messages), 1)
 

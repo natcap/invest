@@ -66,7 +66,7 @@
 !define PRODUCT_NAME "InVEST"
 !define PRODUCT_VERSION "${VERSION} ${ARCHITECTURE}"
 !define PRODUCT_PUBLISHER "The Natural Capital Project"
-!define PRODUCT_WEB_SITE "https://www.naturalcapitalproject.org"
+!define PRODUCT_WEB_SITE "https://naturalcapitalproject.stanford.edu"
 !define MUI_COMPONENTSPAGE_NODESC
 !define PACKAGE_NAME "${PRODUCT_NAME} ${PRODUCT_VERSION}"
 
@@ -276,8 +276,9 @@ FunctionEnd
 ; Copied into the invest folder later in the NSIS script
 !define INVEST_BINARIES "$INSTDIR\invest-3-x86"
 !define INVEST_ICON "${INVEST_BINARIES}\InVEST-2.ico"
+!define SAMPLEDATADIR "$INSTDIR\sample_data"
 !macro StartMenuLink linkName modelName
-    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "${modelName}" "${INVEST_ICON}"
+    CreateShortCut "${linkName}.lnk" "${INVEST_BINARIES}\invest.exe" "run ${modelName}" "${INVEST_ICON}"
 !macroend
 
 Section "InVEST Tools" Section_InVEST_Tools
@@ -315,6 +316,8 @@ Section "InVEST Tools" Section_InVEST_Tools
     !insertmacro StartMenuLink "${SMPATH}\RouteDEM" "routedem"
     !insertmacro StartMenuLink "${SMPATH}\DelineateIt" "delineateit"
     !insertmacro StartMenuLink "${SMPATH}\Recreation" "recreation"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Flood Risk Mitigation" "ufrm"
+    !insertmacro StartMenuLink "${SMPATH}\Urban Cooling Model" "ucm"
     !insertmacro StartMenuLink "${SMPATH}\Habitat Risk Assessment" "hra"
 
     !define COASTALBLUECARBON "${SMPATH}\Coastal Blue Carbon"
@@ -349,6 +352,7 @@ Section "InVEST Tools" Section_InVEST_Tools
     File ..\..\LICENSE.txt
     file ..\..\HISTORY.rst
 
+    SetOutPath "${SAMPLEDATADIR}"
     ; Copy over all the sample parameter files
     File ..\..\data\invest-sample-data\*.invs.json
     File ..\..\data\invest-sample-data\*.invest.json
@@ -362,11 +366,10 @@ Section "InVEST Tools" Section_InVEST_Tools
 
     SetOutPath "$INSTDIR\documentation"
     File /r /x *.hg* /x *.svn* ..\..\dist\userguide
-    File ..\..\dist\InVEST_${VERSION}_Documentation.pdf
 
     ; If the user has provided a custom data zipfile, unzip the data.
     ${If} $LocalDataZipFile != ""
-      nsisunz::UnzipToLog $LocalDataZipFile "$INSTDIR"
+      nsisunz::UnzipToLog $LocalDataZipFile "${SAMPLEDATADIR}"
     ${EndIf}
 
     ; Write the install log to a text file on disk.
@@ -415,13 +418,11 @@ Var INSTALLER_DIR
     failed:
        MessageBox MB_OK "Download failed: $R0 ${RemoteFilepath}. This might have happened because your Internet connection timed out, or our download server is experiencing problems.  The installation will continue normally, but you'll be missing the ${RemoteFilepath} dataset in your installation.  You can manually download that later by visiting the 'Individual inVEST demo datasets' section of our download page at www.naturalcapitalproject.org."
     done:
-       ; Write the install log to a text file on disk.
-       StrCpy $0 "$INSTDIR\install_data_${LocalFilepath}_log.txt"
-       Push $0
-       Call DumpLog
 !macroend
 
 !macro downloadData Title Filename AdditionalSizeKb
+  ; AdditionalSizeKb is in kilobytes.  Easy way to find this out is to do
+  ; "$ du -BK -c <directory with model sample data>" and then use the total.
   Section "${Title}"
     AddSize "${AdditionalSizeKb}"
 
@@ -439,12 +440,12 @@ Var INSTALLER_DIR
 ;    MessageBox MB_OK "zip: $LocalDataZip"
     IfFileExists "$LocalDataZip" LocalFileExists DownloadFile
     LocalFileExists:
-        nsisunz::UnzipToLog "$LocalDataZip" "$INSTDIR"
+        nsisunz::UnzipToLog "$LocalDataZip" "${SAMPLEDATADIR}"
 ;        MessageBox MB_OK "found it locally"
        goto done
     DownloadFile:
         ;This is hard coded so that all the download data macros go to the same site
-        SetOutPath "$INSTDIR"
+        SetOutPath "${SAMPLEDATADIR}"
         !insertmacro downloadFile "${DATA_LOCATION}/${Filename}" "${Filename}"
       end_of_section:
       SectionEnd
@@ -454,35 +455,39 @@ SectionGroup /e "InVEST Datasets" SEC_DATA
   ;here all the numbers indicate the size of the downloads in kilobytes
   ;they were calculated by hand by decompressing all the .zip files and recording
   ;the size by hand.
-  SectionGroup "Freshwater Datasets" SEC_FRESHWATER_DATA
-    !insertmacro downloadData "Freshwater Base Datasets (optional for freshwater models)" "Freshwater.zip" 102544
-    !insertmacro downloadData "Hydropower (optional)" "Hydropower.zip" 20
-    !insertmacro downloadData "Seasonal Water Yield: (optional)" "seasonal_water_yield.zip" 512640
-  SectionGroupEnd
+    !insertmacro downloadData "Annual Water Yield (optional)" "Annual_Water_Yield.zip" 20513
+    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 116
+    !insertmacro downloadData "Carbon (optional)" "Carbon.zip" 17748
+    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 332
+    !insertmacro downloadData "Coastal Vulnerability (optional)" "CoastalVulnerability.zip" 169918
+    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 111898
+    !insertmacro downloadData "DelineateIt (optional)" "DelineateIt.zip" 536
+    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 637
+    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8060
+    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 186020
+    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1880
+    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 7791
+    !insertmacro downloadData "Nutrient Delivery Ratio (optional)" "NDR.zip" 10973
+    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 687
+    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5826
+    !insertmacro downloadData "RouteDEM (optional)" "RouteDEM.zip" 532
+    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7508
+    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 165792
+    !insertmacro downloadData "Seasonal Water Yield: (optional)" "Seasonal_Water_Yield.zip" 6044
+    !insertmacro downloadData "Sediment Delivery Ratio (optional)" "SDR.zip" 15853
+    !insertmacro downloadData "Urban Flood Risk Mitigation (optional)" "UrbanFloodMitigation.zip" 688
+    !insertmacro downloadData "Urban Cooling Model (optional)" "UrbanCoolingModel.zip" 6885
+    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831423
+    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 7984
+    !insertmacro downloadData "Global DEM & Polygon (optional)" "Base_Data.zip" 631322
 
-  SectionGroup "Marine Datasets" SEC_MARINE_DATA
-    !insertmacro downloadData "Marine Base Datasets (required for many marine models)" "Marine.zip" 583388
-    !insertmacro downloadData "Aquaculture (optional)" "Aquaculture.zip" 144
-    !insertmacro downloadData "Coastal Blue Carbon (optional)" "CoastalBlueCarbon.zip" 356
-    !insertmacro downloadData "Coastal Protection (optional)" "CoastalProtection.zip" 191156
-    !insertmacro downloadData "Fisheries (optional)" "Fisheries.zip" 752
-    !insertmacro downloadData "Habitat Risk Assessment (optional)" "HabitatRiskAssess.zip" 20640
-    !insertmacro downloadData "Scenic Quality (optional)" "ScenicQuality.zip" 4600
-    !insertmacro downloadData "Wave Energy (required to run model)" "WaveEnergy.zip" 831616
-    !insertmacro downloadData "Wind Energy (required to run model)" "WindEnergy.zip" 8056
-    !insertmacro downloadData "Recreation (optional)" "recreation.zip" 5976
-  SectionGroupEnd
-
-  SectionGroup "Terrestrial Datasets" SEC_TERRESTRIAL_DATA
-    !insertmacro downloadData "Crop Production (optional)" "CropProduction.zip" 94336
-    !insertmacro downloadData "GLOBIO (optional)" "globio.zip" 1896040
-    !insertmacro downloadData "Forest Carbon Edge Effect (required for forest carbon edge model)" "forest_carbon_edge_effect.zip" 8160
-    !insertmacro downloadData "Carbon (optional)" "carbon.zip" 9820
-    !insertmacro downloadData "Terrestrial base datasets (optional for many terrestrial)" "Terrestrial.zip" 4656
-    !insertmacro downloadData "Habitat Quality (optional)" "HabitatQuality.zip" 1904
-    !insertmacro downloadData "Pollination (optional)" "pollination.zip" 712
-    !insertmacro downloadData "Scenario Generator: Proximity Based (optional)" "scenario_proximity.zip" 7524
-  SectionGroupEnd
+    Section "-hidden section"
+        ; StrCpy is only available inside a Section or Function.
+        ; Write the install log to a text file on disk.
+        StrCpy $0 "$INSTDIR\install_data_log.txt"
+        Push $0
+        Call DumpLog
+    SectionEnd
 SectionGroupEnd
 
 Function .onInit
@@ -492,7 +497,7 @@ Function .onInit
      MessageBox MB_OK "InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs$\r$\n\
      $\r$\n\
      For more information about InVEST or the Natural Capital Project, visit our \
-     website: http://naturalcapitalproject.org/invest$\r$\n\
+     website: https://naturalcapitalproject.stanford.edu/invest$\r$\n\
      $\r$\n\
      Command-Line Options:$\r$\n\
          /?$\t$\t=$\tDisplay this help and exit$\r$\n\

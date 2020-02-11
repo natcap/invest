@@ -150,7 +150,7 @@ class CropProductionTests(unittest.TestCase):
         }
 
         with open(args['landcover_to_crop_table_path'],
-                  'wb') as landcover_crop_table:
+                  'w') as landcover_crop_table:
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 
@@ -181,7 +181,7 @@ class CropProductionTests(unittest.TestCase):
         }
 
         with open(args['landcover_to_crop_table_path'],
-                  'wb') as landcover_crop_table:
+                  'w') as landcover_crop_table:
             landcover_crop_table.write(
                 'crop_name,lucode\nfakecrop,20\n')
 
@@ -295,3 +295,42 @@ class CropProductionTests(unittest.TestCase):
             result_table_path)
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
+
+class CropValidationTests(unittest.TestCase):
+    """Tests for the Crop Productions' ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'landcover_raster_path',
+            'landcover_to_crop_table_path',
+            'model_data_path',
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys_percentile(self):
+        """Crop Percentile Validate: assert missing required keys."""
+        from natcap.invest import crop_production_percentile
+        from natcap.invest import validation
+
+        validation_errors = crop_production_percentile.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_regression(self):
+        """Crop Regression Validate: assert missing required keys."""
+        from natcap.invest import crop_production_regression
+        from natcap.invest import validation
+
+        validation_errors = crop_production_regression.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys +
+            ['fertilization_rate_table_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)

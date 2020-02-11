@@ -102,6 +102,10 @@ def main(args=None):
         if any([name.endswith(x) for x in EXCLUDED_MODULES]):
             continue
 
+        # Skip anything within the UI.
+        if name.startswith('natcap.invest.ui'):
+            continue
+
         try:
             module = importlib.import_module(name)
         except Exception:
@@ -121,7 +125,7 @@ def main(args=None):
             module_title = None
         all_modules[name] = module_title
 
-    print '\n\n'
+    print('\n\n')
 
     if os.path.isabs(parsed_args.outfile):
         filename = parsed_args.outfile
@@ -133,7 +137,7 @@ def main(args=None):
     with open(filename, 'w') as models_rst:
         models_rst.write(MODEL_RST_TEMPLATE)
 
-        for name, module_title in sorted(all_modules.iteritems(),
+        for name, module_title in sorted(all_modules.items(),
                                          key=lambda x: x[1]):
             if module_title is None:
                 warnings.warn('%s has no title' % name)

@@ -1,6 +1,6 @@
-'''
+"""
 The Fisheries IO module contains functions for handling inputs and outputs
-'''
+"""
 
 import logging
 import os
@@ -14,20 +14,26 @@ import pygeoprocessing.testing
 from .. import reporting
 from .. import utils
 
+try:
+    unicode
+except NameError:
+    # No unicode in Python 3
+    unicode = str
+
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 
 
 class MissingParameter(ValueError):
-    '''
+    """
     An exception class that may be raised when a necessary parameter is not
     provided by the user.
-    '''
+    """
     pass
 
 
 # Fetch and Verify Arguments
 def fetch_args(args, create_outputs=True):
-    '''
+    """
     Fetches input arguments from the user, verifies for correctness and
     completeness, and returns a list of variables dictionaries
 
@@ -89,7 +95,7 @@ def fetch_args(args, create_outputs=True):
     Note:
         This function receives an unmodified 'args' dictionary from the user
 
-    '''
+    """
     args['do_batch'] = bool(args['do_batch'])
 
     try:
@@ -108,13 +114,13 @@ def fetch_args(args, create_outputs=True):
     pop_list = read_population_csvs(args)
 
     mig_dict = read_migration_tables(
-        args, pop_list[0]['Classes'], pop_list[0]['Regions'])
+        args, list(pop_list[0]['Classes']), list(pop_list[0]['Regions']))
 
     # Create model_list Here
     model_list = []
     for pop_dict in pop_list:
-        vars_dict = dict(pop_dict.items() + mig_dict.items() +
-                         params_dict.items())
+        vars_dict = dict(list(pop_dict.items()) + list(mig_dict.items()) +
+                         list(params_dict.items()))
 
         # When writing out files, we need to ensure that the
         # 'population_csv_path' key is exactly where we expect it to be in the
@@ -128,7 +134,7 @@ def fetch_args(args, create_outputs=True):
 
 
 def read_population_csvs(args):
-    '''
+    """
     Parses and verifies the Population Parameters CSV files
 
     Args:
@@ -162,7 +168,7 @@ def read_population_csvs(args):
                 ...
             }
         ]
-    '''
+    """
     if args['do_batch'] is False:
         population_csv_path_list = [args['population_csv_path']]
     else:
@@ -180,7 +186,7 @@ def read_population_csvs(args):
 
 
 def read_population_csv(args, path):
-    '''
+    """
     Parses and verifies a single Population Parameters CSV file
 
     Parses and verifies inputs from the Population Parameters CSV file.
@@ -220,7 +226,7 @@ def read_population_csv(args, path):
             'Exploitationfraction': numpy.array([...]),
             'Larvaldispersal': numpy.array([...]),
         }
-    '''
+    """
     pop_dict = _parse_population_csv(path, args['sexsp'])
     pop_dict['population_csv_path'] = path
 
@@ -302,7 +308,7 @@ def read_population_csv(args, path):
 
 
 def _parse_population_csv(path, sexsp):
-    '''
+    """
     Parses the given Population Parameters CSV file and returns a dictionary
     of lists, arrays, and matrices
 
@@ -327,11 +333,11 @@ def _parse_population_csv(path, sexsp):
             'Vulnfishing': numpy.array([...], [...]),
             ...
         }
-    '''
+    """
     csv_data = []
     pop_dict = {}
 
-    with open(path, 'rb') as csvfile:
+    with open(path, 'r') as csvfile:
         reader = csv.reader(csvfile)
         for line in reader:
             csv_data.append(line)
@@ -344,9 +350,9 @@ def _parse_population_csv(path, sexsp):
     classes = _get_col(
         csv_data, start_rows[0])[0:end_rows[0]+1]
 
-    pop_dict["Classes"] = map(lambda x: x.lower(), classes[1:])
+    pop_dict["Classes"] = [x.lower() for x in classes[1:]]
     if sexsp == 2:
-        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])/2]
+        pop_dict["Classes"] = pop_dict["Classes"][0:len(pop_dict["Classes"])//2]
 
     regions = _get_row(csv_data, start_cols[0])[0: end_cols[0]+1]
 
@@ -365,8 +371,8 @@ def _parse_population_csv(path, sexsp):
             [surv_table], dtype=numpy.float_).swapaxes(1, 2).swapaxes(0, 1)
     elif sexsp == 2:
         # Sex Specific
-        female = numpy.array(surv_table[0:len(surv_table)/sexsp], dtype=numpy.float_)
-        male = numpy.array(surv_table[len(surv_table)/sexsp:], dtype=numpy.float_)
+        female = numpy.array(surv_table[0:len(surv_table)//sexsp], dtype=numpy.float_)
+        male = numpy.array(surv_table[len(surv_table)//sexsp:], dtype=numpy.float_)
         pop_dict['Survnaturalfrac'] = numpy.array(
             [female, male]).swapaxes(1, 2).swapaxes(0, 1)
 
@@ -382,7 +388,7 @@ def _parse_population_csv(path, sexsp):
 
 
 def read_migration_tables(args, class_list, region_list):
-    '''
+    """
     Parses, verifies and orders list of migration matrices necessary for
     program.
 
@@ -403,14 +409,14 @@ def read_migration_tables(args, class_list, region_list):
     Note:
         If migration matrices are not provided for all classes, the function will
         generate identity matrices for missing classes
-    '''
+    """
     migration_dict = {}
 
     # If Migration:
     mig_dict = _parse_migration_tables(args, class_list)
 
     # Create indexed list
-    matrix_list = map(lambda x: None, class_list)
+    matrix_list = [None] * len(class_list)
 
     # Map numpy.matrices to indices in list
     for i in range(0, len(class_list)):
@@ -437,7 +443,7 @@ def read_migration_tables(args, class_list, region_list):
 
 
 def _parse_migration_tables(args, class_list):
-    '''
+    """
     Parses the migration tables given by user
 
     Parses all files in the given directory as migration matrices and returns a
@@ -458,7 +464,7 @@ def _parse_migration_tables(args, class_list):
             {'stage2': numpy.matrix},
             # ...
         }
-    '''
+    """
     mig_dict = {}
 
     if args['migr_cont']:
@@ -490,7 +496,7 @@ def _parse_migration_tables(args, class_list):
 
 
 def _verify_single_params(args, create_outputs=True):
-    '''
+    """
     Example Returned Parameters Dictionary::
 
         {
@@ -519,7 +525,7 @@ def _verify_single_params(args, create_outputs=True):
             'output_dir': 'path/to/output_dir',
             'intermediate_dir': 'path/to/intermediate_dir',
         }
-    '''
+    """
     params_dict = args
 
     if create_outputs:
@@ -539,7 +545,7 @@ def _verify_single_params(args, create_outputs=True):
 
 # Helper function
 def _listdir(path):
-    '''
+    """
     A replacement for the standar os.listdir which, instead of returning
     only the filename, will include the entire path. This will use os as a
     base, then just lambda transform the whole list.
@@ -550,9 +556,9 @@ def _listdir(path):
 
     Returns:
         paths (list): A list of full paths contained within 'path'
-    '''
+    """
     file_names = os.listdir(path)
-    paths = map(lambda x: os.path.join(path, x), file_names)
+    paths = [os.path.join(path, x) for x in file_names]
 
     return paths
 
@@ -635,7 +641,7 @@ def _get_table_col_end_indexes(lsts, top):
 def _vectorize_attribute(lst, rows):
     d = {}
     a = numpy.array(lst[1:], dtype=numpy.float_)
-    a = numpy.reshape(a, (rows, a.shape[0] / rows))
+    a = numpy.reshape(a, (rows, a.shape[0] // rows))
     d[lst[0].strip().capitalize()] = a
     return d
 
@@ -649,7 +655,7 @@ def _vectorize_reg_attribute(lst):
 
 # Create Outputs
 def create_outputs(vars_dict):
-    '''
+    """
     Creates outputs from variables generated in the run_population_model()
     function in the fisheries_model module
 
@@ -663,7 +669,7 @@ def create_outputs(vars_dict):
     Args:
         vars_dict (dictionary): contains variables generated by model run
 
-    '''
+    """
     # CSV results page
     _create_intermediate_csv(vars_dict)
     _create_results_csv(vars_dict)
@@ -675,10 +681,10 @@ def create_outputs(vars_dict):
 
 
 def _create_intermediate_csv(vars_dict):
-    '''
+    """
     Creates an intermediate output that gives the number of
     individuals within each area for each time step for each age/stage.
-    '''
+    """
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
@@ -699,7 +705,7 @@ def _create_intermediate_csv(vars_dict):
     sexsp = int(vars_dict['sexsp'])
     Sexes = ['Female', 'Male']
 
-    with open(path, 'wb') as c_file:
+    with open(path, 'w') as c_file:
         # c_writer = csv.writer(c_file)
         if sexsp == 2:
             line = "Time Step, Region, Class, Sex, Numbers\n"
@@ -729,10 +735,10 @@ def _create_intermediate_csv(vars_dict):
 
 
 def _create_results_csv(vars_dict):
-    '''
+    """
     Generates a CSV file that contains a summary of all harvest totals
     for each subregion.
-    '''
+    """
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
@@ -751,41 +757,42 @@ def _create_results_csv(vars_dict):
     equilibrate_timestep = float(vars_dict['equilibrate_timestep'])
     Regions = vars_dict['Regions']
 
-    with open(path, 'wb') as csv_file:
-        csv_writer = csv.writer(csv_file)
+    with open(path, 'w') as csv_file:
 
         total_timesteps = vars_dict['total_timesteps']
 
         #Header for final results table
-        csv_writer.writerow(
-            ['Final Harvest by Subregion after ' + str(total_timesteps-1) +
-                ' Time Steps'])
-        csv_writer.writerow([])
+        csv_file.write(','.join(['Final Harvest by Subregion after ' +
+                                 str(total_timesteps-1) +
+                                 ' Time Steps']) + '\n')
+        csv_file.write('\n')
 
         # Breakdown Harvest and Valuation for each Region of Final Cycle
         sum_headers_row = ['Subregion', 'Harvest']
         if vars_dict['val_cont']:
             sum_headers_row.append('Valuation')
-        csv_writer.writerow(sum_headers_row)
+        csv_file.write(','.join(sum_headers_row) + '\n')
+
         for i in range(0, len(H_tx[-1])):  # i is a cycle
             line = [Regions[i], "%.2f" % H_tx[-1, i]]
             if vars_dict['val_cont']:
                 line.append("%.2f" % V_tx[-1, i])
-            csv_writer.writerow(line)
+            csv_file.write(','.join(line) + '\n')
         line = ['Total', "%.2f" % H_tx[-1].sum()]
+
         if vars_dict['val_cont']:
             line.append("%.2f" % V_tx[-1].sum())
-        csv_writer.writerow(line)
-        csv_writer.writerow([])
+        csv_file.write(','.join(line) + '\n')
+        csv_file.write('\n')
 
         # Give Total Harvest for Each Cycle
-        csv_writer.writerow(['Time Step Breakdown'])
-        csv_writer.writerow([])
+        csv_file.write('Time Step Breakdown' + '\n')
+        csv_file.write('\n')
         line = ['Time Step', 'Equilibrated?', 'Spawners', 'Harvest']
-        csv_writer.writerow(line)
+        csv_file.write(','.join(line) + '\n')
 
         for i in range(0, len(H_tx)):  # i is a cycle
-            line = [i]
+            line = [str(i)]
             if equilibrate_timestep and i >= equilibrate_timestep:
                 line.append('Y')
             else:
@@ -797,14 +804,14 @@ def _create_results_csv(vars_dict):
             else:
                 line.append("%.2f" % Spawners_t[i])
             line.append("%.2f" % H_tx[i].sum())
-            csv_writer.writerow(line)
+            csv_file.write(','.join(line) + '\n')
 
 
 def _create_results_html(vars_dict):
-    '''
+    """
     Creates an HTML file that contains a summary of all harvest totals
     for each subregion.
-    '''
+    """
     do_batch = vars_dict['do_batch']
     if do_batch is True:
         basename = os.path.splitext(os.path.basename(
@@ -974,13 +981,13 @@ def _create_results_html(vars_dict):
 
 
 def _create_results_aoi(vars_dict):
-    '''
+    """
     Appends the final harvest and valuation values for each region to an
     input shapefile.  The 'Name' attributes (case-sensitive) of each region
     in the input shapefile must exactly match the names of each region in the
     population parameters file.
 
-    '''
+    """
     base_aoi_vector_path = vars_dict['aoi_vector_path']
     Regions = vars_dict['Regions']
     H_tx = vars_dict['H_tx']

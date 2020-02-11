@@ -18,6 +18,12 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
+
 LOGGER = logging.getLogger('natcap.invest.hra')
 
 # Parameters from the user-provided criteria and info tables
@@ -62,6 +68,118 @@ _RESAMPLE_METHOD = 'near'
 _DEFAULT_GTIFF_CREATION_OPTIONS = (
     'TILED=YES', 'BIGTIFF=YES', 'COMPRESS=DEFLATE',
     'BLOCKXSIZE=256', 'BLOCKYSIZE=256')
+
+ARGS_SPEC = {
+    "model_name": "Habitat Risk Assessment",
+    "module": __name__,
+    "userguide_html": "habitat_risk_assessment.html",
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "info_table_path": {
+            "name": "Habitat Stressor Information CSV or Excel File",
+            "about": (
+                "A CSV or Excel file that contains the name of the habitat "
+                "(H) or stressor (s) on the `NAME` column that matches the "
+                "names in `criteria_table_path`. Each H/S has its "
+                "corresponding vector or raster path on the `PATH` column. "
+                "The `STRESSOR BUFFER (meters)` column should have a buffer "
+                "value if the `TYPE` column is a stressor."),
+            "type": "csv",
+            "required": True,
+            "validation_options": {
+                "required_fields": ["NAME", "PATH", "TYPE", _BUFFER_HEADER],
+                "excel_ok": True,
+            }
+        },
+        "criteria_table_path": {
+            "name": "Criteria Scores Table",
+            "about": (
+                "A CSV or Excel file that contains the set of criteria "
+                "ranking  (rating, DQ and weight) of each stressor on each "
+                "habitat, as well as the habitat resilience attributes."),
+            "type": "csv",
+            "validation_options": {
+                "excel_ok": True,
+            },
+            "required": True,
+        },
+        "resolution": {
+            "name": "Resolution of Analysis (meters)",
+            "about": (
+                "The size that should be used to grid the given habitat and "
+                "stressor files into rasters. This value will be the pixel "
+                "size of the completed raster files."),
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            }
+        },
+        "max_rating": {
+            "name": "Maximum Criteria Score",
+            "about": (
+                "This is the highest score that is used to rate a criteria "
+                "within this model run. This value would be used to compare "
+                "with the values within Rating column of the Criteria Scores "
+                "table."),
+            "type": "number",
+            "required": True,
+            "validation_options": {
+                "expression": "value > 0",
+            }
+        },
+        "risk_eq": {
+            "name": "Risk Equation",
+            "about": (
+                "Each of these represents an option of a risk calculation "
+                "equation. This will determine the numeric output of risk "
+                "for every habitat and stressor overlap area."),
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ["Multiplicative", "Euclidean"],
+            }
+        },
+        "decay_eq": {
+            "name": "Decay Equation",
+            "about": (
+                "Each of these represents an option of a decay equation "
+                "for the buffered stressors. If stressor buffering is "
+                "desired, this equation will determine the rate at which "
+                "stressor data is reduced."),
+            "type": "option_string",
+            "required": True,
+            "validation_options": {
+                "options": ["None", "Linear", "Exponential"],
+            }
+        },
+        "aoi_vector_path": {
+            "name": "Area of Interest",
+            "about": (
+                "A GDAL-supported vector file containing feature containing "
+                "one or more planning regions. subregions. An optional field "
+                "called `name` could be added to compute average risk values "
+                "within each subregion."),
+            "type": "vector",
+            "required": True,
+            "validation_options": {
+                "projected": True,
+                "projection_units": "m",
+            }
+        },
+        "visualize_outputs": {
+            "name": "Generate GeoJSONs for Web Visualization",
+            "help": (
+                "Check to enable the generation of GeoJSON outputs. This "
+                "could be used to visualize the risk scores on a map in the "
+                "HRA visualization web application."),
+            "type": "boolean",
+            "required": True,
+        }
+    }
+}
 
 
 def execute(args):
@@ -109,9 +227,6 @@ def execute(args):
 
     """
     LOGGER.info('Validating arguments')
-    # Default visualization option to True if it's not in args
-    if 'visualize_outputs' not in args:
-        args['visualize_outputs'] = True
     invalid_parameters = validate(args)
     if invalid_parameters:
         raise ValueError("Invalid parameters passed: %s" % invalid_parameters)
@@ -288,7 +403,7 @@ def execute(args):
 
     # Create a raster from vector extent with 0's, then burn the vector
     # onto the raster with 1's, for all the H/S layers that are not a raster
-    align_and_resize_dependent_tasks = []
+    align_and_resize_dependency_list = []
     for _, row in info_df.iterrows():
         if not row['IS_RASTER']:
             vector_name = row['NAME']
@@ -308,6 +423,7 @@ def execute(args):
                 target_path_list=[simplified_vector_path],
                 task_name='simplify_%s_vector' % vector_name)
 
+            rasterize_kwargs = {'burn_values': None, 'option_list': None}
             if vector_type == _SPATIAL_CRITERIA_TYPE:
                 # Fill value for the target raster should be nodata float,
                 # since criteria rating could be float
@@ -315,8 +431,7 @@ def execute(args):
 
                 # If it's a spatial criteria vector, burn the values from the
                 # ``rating`` attribute
-                rasterize_kwargs = {
-                    'option_list': ["ATTRIBUTE=" + _RATING_FIELD]}
+                rasterize_kwargs['option_list'] = ["ATTRIBUTE=" + _RATING_FIELD]
                 rasterize_nodata = _TARGET_NODATA_FLT
                 rasterize_pixel_type = _TARGET_PIXEL_FLT
 
@@ -326,28 +441,19 @@ def execute(args):
                 fill_value = _TARGET_NODATA_INT
 
                 # Fill the raster with 1s on where a vector geometry exists
-                rasterize_kwargs = {'burn_values': [1],
-                                    'option_list': ["ALL_TOUCHED=TRUE"]}
+                rasterize_kwargs['burn_values'] = [1]
+                rasterize_kwargs['option_list'] = ["ALL_TOUCHED=TRUE"]
                 rasterize_nodata = _TARGET_NODATA_INT
                 rasterize_pixel_type = _TARGET_PIXEL_INT
 
-            # Create raster from the simplified vector and fill with 0s
-            create_raster_task = task_graph.add_task(
-                func=pygeoprocessing.create_raster_from_vector_extents,
+            align_and_resize_dependency_list.append(task_graph.add_task(
+                func=_create_raster_and_rasterize_vector,
                 args=(simplified_vector_path, target_raster_path,
-                      target_pixel_size, rasterize_pixel_type, rasterize_nodata),
-                kwargs={'fill_value': fill_value},
-                target_path_list=[target_raster_path],
-                task_name='create_raster_from_%s' % vector_name,
-                dependent_task_list=[simplify_geometry_task])
-
-            align_and_resize_dependent_tasks.append(task_graph.add_task(
-                func=pygeoprocessing.rasterize,
-                args=(simplified_vector_path, target_raster_path),
-                kwargs=rasterize_kwargs,
+                      target_pixel_size, rasterize_pixel_type,
+                      rasterize_nodata, fill_value, rasterize_kwargs),
                 target_path_list=[target_raster_path],
                 task_name='rasterize_%s' % vector_name,
-                dependent_task_list=[create_raster_task]))
+                dependent_task_list=[simplify_geometry_task]))
 
     # Align and resize all the rasters, including rasters provided by the user,
     # and rasters created from the vectors.
@@ -363,7 +469,7 @@ def execute(args):
         kwargs={'target_sr_wkt': target_sr_wkt},
         target_path_list=align_raster_list,
         task_name='align_and_resize_raster_task',
-        dependent_task_list=align_and_resize_dependent_tasks)
+        dependent_task_list=align_and_resize_dependency_list)
 
     # Make buffer stressors based on their impact distance and decay function
     align_stressor_raster_list = info_df[
@@ -426,12 +532,14 @@ def execute(args):
             'R_NUM_RASTER_PATH']
         habitat_recovery_denom = habitat_recovery_df['R_DENOM']
 
-        task_graph.add_task(
-            func=_calc_habitat_recovery,
-            args=(habitat_raster_path, habitat_recovery_df, max_rating),
-            target_path_list=[recovery_raster_path, recovery_num_raster_path],
-            task_name='calculate_%s_recovery' % habitat,
-            dependent_task_list=[align_and_resize_rasters_task])
+        calc_habitat_recovery_task_list = []
+        calc_habitat_recovery_task_list.append(
+            task_graph.add_task(
+                func=_calc_habitat_recovery,
+                args=(habitat_raster_path, habitat_recovery_df, max_rating),
+                target_path_list=[recovery_raster_path, recovery_num_raster_path],
+                task_name='calculate_%s_recovery' % habitat,
+                dependent_task_list=[align_and_resize_rasters_task]))
 
         total_expo_dependent_tasks = []
         total_conseq_dependent_tasks = []
@@ -491,7 +599,8 @@ def execute(args):
                 target_path_list=pair_conseq_target_path_list,
                 task_name='calculate_%s_%s_consequence' % (habitat, stressor),
                 dependent_task_list=[
-                    align_and_resize_rasters_task, distance_transform_task])
+                    align_and_resize_rasters_task,
+                    distance_transform_task] + calc_habitat_recovery_task_list)
             total_conseq_dependent_tasks.append(pair_conseq_task)
 
             # Calculate pairwise habitat-stressor risks.
@@ -647,7 +756,7 @@ def execute(args):
     # Join here because zonal_rasters needs to be loaded from the pickle file
     task_graph.join()
     zonal_rasters = pickle.load(open(rasterized_aoi_pickle_path, 'rb'))
-    region_list = zonal_rasters.keys()
+    region_list = list(zonal_rasters)
 
     # Dependent task list used when converting all the calculated stats to CSV
     zonal_stats_dependent_tasks = []
@@ -656,7 +765,7 @@ def execute(args):
     habitats_info_df = info_df.loc[info_df.TYPE == _HABITAT_TYPE]
 
     # Calculate and pickle zonal stats to files
-    for region_name, zonal_raster_path in zonal_rasters.iteritems():
+    for region_name, zonal_raster_path in zonal_rasters.items():
         # Compute zonal E and C stats on each habitat-stressor pair
         for hab_str_idx, row in overlap_df.iterrows():
             # Get habitat-stressor name without extension
@@ -781,8 +890,7 @@ def execute(args):
             file_basename = 'STRESSOR_' + file_basename
             field_name = 'Stressor'
 
-        geojson_path = os.path.join(
-            viz_dir, file_basename + '%s.geojson' % file_suffix)
+        geojson_path = os.path.join(viz_dir, file_basename + '.geojson')
         task_graph.add_task(
             func=_raster_to_geojson,
             args=(out_raster_path, geojson_path, file_basename, field_name),
@@ -804,12 +912,29 @@ def execute(args):
         'naturalcapitalproject.org/ to visualize your outputs.')
 
 
+def _create_raster_and_rasterize_vector(
+        simplified_vector_path, target_raster_path, target_pixel_size,
+        rasterize_pixel_type, rasterize_nodata, fill_value, rasterize_kwargs):
+    """Wrap these related operations so they can be captured in one task."""
+    pygeoprocessing.create_raster_from_vector_extents(
+        simplified_vector_path, target_raster_path,
+        target_pixel_size, rasterize_pixel_type, rasterize_nodata,
+        fill_value=fill_value)
+    pygeoprocessing.rasterize(
+        simplified_vector_path, target_raster_path,
+        burn_values=rasterize_kwargs['burn_values'],
+        option_list=rasterize_kwargs['option_list'])
+
+
 def _raster_to_geojson(
         base_raster_path, target_geojson_path, layer_name, field_name,
         target_sr_wkt=None):
     """Convert a raster to a GeoJSON file with layer and field name.
 
-    The GeoJSON file will be in the shape and projection of the raster.
+    Typically the base raster will be projected and the target GeoJSON should
+    end up with geographic coordinates (EPSG: 4326 per the GeoJSON spec).
+    So a GPKG serves as intermediate storage for the polygonized projected
+    features.
 
     Parameters:
         base_raster_path (str): the raster that needs to be turned into a
@@ -828,25 +953,21 @@ def _raster_to_geojson(
     band = raster.GetRasterBand(1)
     mask = band.GetMaskBand()
 
-    driver = gdal.GetDriverByName('GeoJSON')
-    vector = driver.Create(target_geojson_path, 0, 0, 0, gdal.GDT_Unknown)
-    vector.StartTransaction()
-
-    # Use raster projection wkt for the GeoJSON
+    # Use raster SRS for the temp GPKG
     base_sr = osr.SpatialReference()
     base_sr_wkt = raster.GetProjectionRef()
     base_sr.ImportFromWkt(base_sr_wkt)
 
-    layer_name = layer_name.encode('utf-8')
-    if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        target_sr = osr.SpatialReference()
-        target_sr.ImportFromWkt(target_sr_wkt)
-        vector_layer = vector.CreateLayer(layer_name, target_sr, ogr.wkbPolygon)
-    else:
-        vector_layer = vector.CreateLayer(layer_name, base_sr, ogr.wkbPolygon)
+    # Polygonize onto a GPKG
+    gpkg_driver = gdal.GetDriverByName('GPKG')
+    temp_gpkg_path = os.path.splitext(target_geojson_path)[0] + '.gpkg'
+    vector = gpkg_driver.Create(temp_gpkg_path, 0, 0, 0, gdal.GDT_Unknown)
+
+    vector.StartTransaction()
+    vector_layer = vector.CreateLayer(str(layer_name), base_sr, ogr.wkbPolygon)
 
     # Create an integer field that contains values from the raster
-    field_defn = ogr.FieldDefn(field_name.encode('utf-8'), ogr.OFTInteger)
+    field_defn = ogr.FieldDefn(str(field_name), ogr.OFTInteger)
     field_defn.SetWidth(3)
     field_defn.SetPrecision(0)
     vector_layer.CreateField(field_defn)
@@ -859,21 +980,16 @@ def _raster_to_geojson(
     band = None
     raster = None
 
-    # Reproject the vector to target projection
+    # Convert GPKG to GeoJSON, reprojecting if necessary
     if target_sr_wkt and base_sr_wkt != target_sr_wkt:
-        vector = gdal.OpenEx(
-            target_geojson_path, gdal.OF_VECTOR | gdal.OF_UPDATE)
-        vector.StartTransaction()
-        vector_layer = vector.GetLayer()
-        coord_trans = osr.CoordinateTransformation(base_sr, target_sr)
-        for feat in vector_layer:
-            geom = feat.GetGeometryRef()
-            geom.Transform(coord_trans)
-            feat.SetGeometry(geom)
-            vector_layer.SetFeature(feat)
-        vector.CommitTransaction()
-        vector_layer = None
-        vector = None
+        pygeoprocessing.reproject_vector(
+            temp_gpkg_path, target_sr_wkt, target_geojson_path,
+            driver_name='GeoJSON')
+    else:
+        geojson_driver = gdal.GetDriverByName('GeoJSON')
+        geojson_driver.CreateCopy(target_geojson_path, temp_gpkg_path)
+
+    os.remove(temp_gpkg_path)
 
 
 def _calc_and_pickle_zonal_stats(
@@ -1133,12 +1249,12 @@ def _create_rasters_from_geometries(
         open(geom_pickle_path, 'rb'))
     raster_paths_by_field = {}
 
-    for field_value, shapely_geoms_wkb in geom_sets_by_field.iteritems():
+    for field_value, shapely_geoms_wkb in geom_sets_by_field.items():
         # Create file basename based on field value
         if not isinstance(field_value, basestring):
             field_value = str(field_value)
 
-        field_value = field_value.encode('utf-8')
+        field_value = field_value
         file_basename = 'rasterized_' + field_value
         target_raster_path = os.path.join(working_dir, file_basename + '.tif')
 
@@ -1525,7 +1641,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
             habitat existence and 0's non-existence.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_expo_arr (array): an exposure float array calculated by dividing
@@ -1549,8 +1666,8 @@ def _total_exposure_op(habitat_arr, *num_denom_list):
     tot_denom = 0
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -1586,7 +1703,8 @@ def _total_consequence_op(
             score.
         *num_denom_list (list): if exists, it's a list of numerator float
             arrays in the first half of the list, and denominator scores
-            (float) in the second half.
+            (float) in the second half. Must always be even-number
+            of elements.
 
     Returns:
         tot_conseq_arr (array): a consequence float array calculated by
@@ -1608,8 +1726,8 @@ def _total_consequence_op(
     tot_denom = recov_denom
 
     # Numerator arrays are in the first half of the list
-    num_arr_list = num_denom_list[:len(num_denom_list)/2]
-    denom_list = num_denom_list[len(num_denom_list)/2:]
+    num_arr_list = num_denom_list[:len(num_denom_list)//2]
+    denom_list = num_denom_list[len(num_denom_list)//2:]
 
     # Calculate the cumulative numerator and denominator values
     for num_arr in num_arr_list:
@@ -2403,8 +2521,8 @@ def _get_info_dataframe(base_info_table_path, file_preprocessing_dir,
 
     for column_name, criteria_type in {
             'TOT_E_RASTER_PATH': '_E_',
-            'TOT_C_RASTER_PATH': '_C_'}.iteritems():
-        suffix_front = 'TOTAL'+criteria_type  # front suffix for file names
+            'TOT_C_RASTER_PATH': '_C_'}.items():
+        suffix_front = 'TOTAL' + criteria_type  # front suffix for file names
         # Generate raster paths with exposure and consequence suffixes.
         info_df[column_name] = info_df.apply(
             lambda row: _generate_raster_path(
@@ -2667,7 +2785,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
     """
     for key, value in {
             _DQ_KEY: dq,
-            _WEIGHT_KEY: weight}.iteritems():
+            _WEIGHT_KEY: weight}.items():
 
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
@@ -2725,10 +2843,8 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     """
     # Create column headers and initialize default values in numerator,
     # denominator, and spatial columns
-    column_headers = ['_NUM', '_DENOM', '_SPATIAL']
-    len_header = len(column_headers)
-    overlap_column_headers = map(
-        str.__add__, ['E']*len_header + ['C']*len_header, column_headers*2)
+    overlap_column_headers = [
+        'E_NUM', 'E_DENOM', 'E_SPATIAL', 'C_NUM', 'C_DENOM', 'C_SPATIAL']
 
     # Create an empty dataframe, indexed by habitat-stressor pairs.
     stressor_names = stressor_attributes.keys()
@@ -2741,7 +2857,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     overlap_df = pandas.DataFrame(
         # Data values on each row corresponds to each column header
         data=[[0, 0, {}, 0, 0, {}]
-              for _ in xrange(len(habitat_names)*len(stressor_names))],
+              for _ in range(len(habitat_names)*len(stressor_names))],
         columns=overlap_column_headers, index=multi_index)
 
     # Start iterating from row indicating the beginning of habitat and stressor
@@ -2758,15 +2874,12 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
         elif stressor and row_idx:
             criteria_name = row_idx
             criteria_type = row_data[_CRITERIA_TYPE_HEADER]
-            if isinstance(criteria_type, unicode):
-                criteria_type = criteria_type.encode('utf-8').upper()
-            else:
-                criteria_type = criteria_type.upper()
+            criteria_type = criteria_type.upper()
             if criteria_type not in ['E', 'C']:
                 raise ValueError('Criteria Type in the criteria scores table '
                                  'should be either E or C.')
 
-            for idx, (row_key, row_value) in enumerate(row_data.iteritems()):
+            for idx, (row_key, row_value) in enumerate(row_data.items()):
                 # The first value in the criteria row should be a rating value
                 # with habitat name as key, after a stressor was found
                 if idx % 3 == 0:
@@ -2853,7 +2966,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
     # If any stressor-habitat doesn't have at least one E or C criteria rating,
     # raise an exception
     for criteria_type, criteria_type_long in {
-            'E': 'exposure', 'C': 'consequence'}.iteritems():
+            'E': 'exposure', 'C': 'consequence'}.items():
         if (overlap_df[criteria_type + '_DENOM'] == 0).any():
             raise ValueError(
                 'The following stressor-habitat pair(s) do not have at least '
@@ -2905,7 +3018,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
     # Create the dataframe whose data is 0 for numerators and denominators,
     # None for raster paths, and an empty dict for spatially explicit criteria.
     recovery_df = pandas.DataFrame(
-        data=[[0, 0, {}, None, None] for i in xrange(len(habitat_names))],
+        data=[[0, 0, {}, None, None] for _ in range(len(habitat_names))],
         index=habitat_names, columns=recovery_column_headers)
 
     i = 0
@@ -2992,16 +3105,13 @@ def _simplify_geometry(
             # Find the first field name, case-insensitive
             if base_field_name == preserved_field_name:
                 # Create a target field definition with lowercased field name
-                target_field_name = preserved_field_name.encode('utf-8')
+                target_field_name = str(preserved_field_name)
                 target_field = ogr.FieldDefn(
                     target_field_name, preserved_field[1])
                 break
 
-    # Convert a Unicode string into UTF-8 standard to avoid TypeError when
-    # creating layer with the basename
     target_layer_name = os.path.splitext(
         os.path.basename(target_simplified_vector_path))[0]
-    target_layer_name = target_layer_name.encode('utf-8')
 
     if os.path.exists(target_simplified_vector_path):
         os.remove(target_simplified_vector_path)
@@ -3011,8 +3121,8 @@ def _simplify_geometry(
     target_simplified_vector = gpkg_driver.Create(
         target_simplified_vector_path, 0, 0, 0, gdal.GDT_Unknown)
     target_simplified_layer = target_simplified_vector.CreateLayer(
-        target_layer_name,
-        base_layer.GetSpatialRef(), ogr.wkbPolygon)
+        str(target_layer_name),
+        base_layer.GetSpatialRef(), base_layer.GetGeomType())
 
     target_simplified_vector.StartTransaction()
 
@@ -3025,7 +3135,6 @@ def _simplify_geometry(
 
         # Use SimplifyPreserveTopology to prevent features from missing
         simplified_geometry = base_geometry.SimplifyPreserveTopology(tolerance)
-        base_geometry = None
         if (simplified_geometry is not None and
                 simplified_geometry.GetArea() > 0):
             target_feature.SetGeometry(simplified_geometry)
@@ -3037,7 +3146,11 @@ def _simplify_geometry(
 
         # If simplify doesn't work, fall back to the original geometry
         else:
+            # Still using the target_feature here because the preserve_field 
+            # option altered the layer defn between base and target.
+            target_feature.SetGeometry(base_geometry)
             target_simplified_layer.CreateFeature(target_feature)
+        base_geometry = None
 
     target_simplified_layer.SyncToDisk()
     target_simplified_vector.CommitTransaction()
@@ -3065,110 +3178,4 @@ def validate(args, limit_to=None):
             be an empty list if validation succeeds.
 
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-    max_rating_key = 'max_rating'
-    aoi_vector_key = 'aoi_vector_path'
-    resolution_key = 'resolution'
-    viz_option_key = 'visualize_outputs'
-
-    for key in [
-            'workspace_dir',
-            'info_table_path',
-            'criteria_table_path',
-            'resolution',
-            'max_rating',
-            'risk_eq',
-            'decay_eq',
-            'aoi_vector_path']:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if missing_key_list:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in ``args`` but were missing: " +
-            ', '.join(missing_key_list))
-
-    if no_value_list:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    if limit_to is None or limit_to == viz_option_key:
-        if viz_option_key in args and not isinstance(
-                args[viz_option_key], bool):
-            validation_error_list.append(
-                ([viz_option_key], 'needs to be True or False'))
-
-    # Check if resolution is a positive number
-    if limit_to is None or limit_to == resolution_key:
-        resolution_value = args[resolution_key]
-        resolution_is_valid = True
-        if isinstance(resolution_value, basestring):
-            if not resolution_value.isdigit() or float(resolution_value) <= 0:
-                resolution_is_valid = False
-        elif (isinstance(resolution_value, (int, float))):
-            if resolution_value <= 0:
-                resolution_is_valid = False
-        if not resolution_is_valid:
-            validation_error_list.append(
-                ([resolution_key], 'should be a positive number'))
-
-    for key in [
-            'criteria_table_path', 'info_table_path']:
-        if (limit_to is None or limit_to == key):
-            if not os.path.exists(args[key]):
-                validation_error_list.append(([key], 'not found on disk'))
-
-            # Validate file type
-            file_ext = os.path.splitext(args[key])[1].lower()
-            if file_ext not in ['.csv', '.xlsx', '.xls']:
-                validation_error_list.append(
-                    ([key], 'not a CSV or an Excel file'))
-
-    for key, key_values in {
-            'risk_eq': ['Euclidean', 'Multiplicative'],
-            'decay_eq': ['Linear', 'Exponential', 'None']}.iteritems():
-        if limit_to is None or limit_to == key:
-            if args[key] not in key_values:
-                validation_error_list.append(
-                    ([key], 'should be one of the following: %s, but is "%s" '
-                     'instead' % (key_values, args[key])))
-
-    if limit_to is None or limit_to == max_rating_key:
-        # If the argument isn't a number, check if it can be converted to a
-        # number
-        if not isinstance(args[max_rating_key], (int, float)):
-            if args[max_rating_key].lstrip("-").isdigit():
-                max_rating_value = float(args[max_rating_key])
-            else:
-                validation_error_list.append(
-                    ([max_rating_key], 'should be a number'))
-        else:
-            max_rating_value = args[max_rating_key]
-
-        # If the argument is a number, check if it's larger than 1
-        if 'max_rating_value' in locals() and max_rating_value <= 1:
-            validation_error_list.append(
-                ([max_rating_key], 'should be larger than 1'))
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        if ((limit_to is None or limit_to == aoi_vector_key) and
-                aoi_vector_key in args):
-            if not os.path.exists(args[aoi_vector_key]):
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not found on disk'))
-
-            vector = gdal.OpenEx(args[aoi_vector_key], gdal.OF_VECTOR)
-            if vector is None:
-                validation_error_list.append(
-                    ([aoi_vector_key], 'not a vector'))
-            else:
-                vector = None
-
-    return validation_error_list
+    return validation.validate(args, ARGS_SPEC['args'])

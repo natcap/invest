@@ -4,12 +4,18 @@ import os
 import logging
 import codecs
 import re
-from types import StringType
 import copy
 
 from ... import invest
-import natcap.invest.pygeoprocessing_0_3_3.geoprocessing
-import table_generator
+from .. import utils
+from osgeo import gdal
+from . import table_generator
+
+try:
+    from builtins import basestring
+except ImportError:
+    # Python3 doesn't have a basestring.
+    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
 REPORTING_DATA = os.path.join(invest.local_dir(__file__), 'reporting_data/')
@@ -17,7 +23,15 @@ JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
-u = lambda string: unicode(string, 'utf-8')
+
+def u(string):
+    if type(string) is basestring:
+        try:
+            return unicode(string, 'utf-8')
+        except NameError:
+            # Python 3 has no unicode function
+            return string
+    return string
 
 
 def generate_report(args):
@@ -230,7 +244,7 @@ def write_html(html_obj, out_uri):
 
         for element in sect_elements:
             # Add each element to the html string
-            if type(element) is StringType:
+            if type(element) is basestring:
                 element = u(element)
             html_str += element
 
@@ -325,14 +339,14 @@ def build_table(param_args):
     # accordingly
     if data_type == 'shapefile':
         key = param_args['key']
-        data_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.extract_datasource_table_by_key(
+        data_dict = extract_datasource_table_by_key(
             input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
     elif data_type == 'csv':
         key = param_args['key']
-        data_dict = natcap.invest.pygeoprocessing_0_3_3.geoprocessing.get_lookup_from_csv(input_data, key)
+        data_dict = utils.build_lookup_from_csv(input_data, key)
         # Convert the data_dict to a list of dictionaries where each dictionary
         # in the list represents a row of the table
         data_list = data_dict_to_list(data_dict)
@@ -383,6 +397,48 @@ def build_table(param_args):
     return table_generator.generate_table(table_dict)
 
 
+def extract_datasource_table_by_key(datasource_uri, key_field):
+    """Return vector attribute table of first layer as dictionary.
+
+    Create a dictionary lookup table of the features in the attribute table
+    of the datasource referenced by datasource_uri.
+
+    Args:
+        datasource_uri (string): a uri to an OGR datasource
+        key_field: a field in datasource_uri that refers to a key value
+            for each row such as a polygon id.
+
+    Returns:
+        attribute_dictionary (dict): returns a dictionary of the
+            form {key_field_0: {field_0: value0, field_1: value1}...}
+    """
+    # Pull apart the datasource
+    datasource = gdal.OpenEx(datasource_uri)
+    layer = datasource.GetLayer()
+    layer_def = layer.GetLayerDefn()
+
+    # Build up a list of field names for the datasource table
+    field_names = []
+    for field_id in range(layer_def.GetFieldCount()):
+        field_def = layer_def.GetFieldDefn(field_id)
+        field_names.append(field_def.GetName())
+
+    # Loop through each feature and build up the dictionary representing the
+    # attribute table
+    attribute_dictionary = {}
+    for feature in layer:
+        feature_fields = {}
+        for field_name in field_names:
+            feature_fields[field_name] = feature.GetField(field_name)
+        key_value = feature.GetField(key_field)
+        attribute_dictionary[key_value] = feature_fields
+
+    # Explictly clean up the layers so the files close
+    layer = None
+    datasource = None
+    return attribute_dictionary
+
+
 def data_dict_to_list(data_dict):
     """Abstract out inner dictionaries from data_dict into a list, where
         the inner dictionaries are added to the list in the order of
@@ -394,7 +450,7 @@ def data_dict_to_list(data_dict):
         returns - a list of dictionaries, or empty list if data_dict is empty"""
 
     data_list = []
-    data_keys = data_dict.keys()
+    data_keys = list(data_dict)
     data_keys.sort()
     for key in data_keys:
         data = data_dict[key]
@@ -459,7 +515,7 @@ def add_head_element(param_args):
 
     attr = ''
     if 'attributes' in param_args:
-        for key, val in param_args['attributes'].iteritems():
+        for key, val in param_args['attributes'].items():
             attr += '%s="%s" ' % (key, val)
 
     # List of regular expression strings to search against
@@ -474,11 +530,11 @@ def add_head_element(param_args):
                     ' the header elements' % exp)
 
     if form == 'style':
-        html_str = '''<style type=text/css %s> %s </style>''' % (attr, file_str)
+        html_str = """<style type=text/css %s> %s </style>""" % (attr, file_str)
     elif form == 'script':
-        html_str = '''<script type=text/javascript %s> %s </script>''' % (attr, file_str)
+        html_str = """<script type=text/javascript %s> %s </script>""" % (attr, file_str)
     elif form == 'json':
-        html_str = '''<script type=application/json %s> %s </script>''' % (attr, file_str)
+        html_str = """<script type=application/json %s> %s </script>""" % (attr, file_str)
     else:
         raise Exception('Currently this type of head element is not supported'
                 ' : %s' % form)

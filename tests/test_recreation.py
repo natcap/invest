@@ -4,7 +4,6 @@ import glob
 import zipfile
 import socket
 import threading
-import Queue
 import unittest
 import tempfile
 import shutil
@@ -23,6 +22,12 @@ import taskgraph
 
 from natcap.invest import utils
 
+try:
+    import queue
+except ImportError:
+    # python 2 uses capital Q
+    import Queue as queue
+
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
 REGRESSION_DATA = os.path.join(
@@ -37,8 +42,8 @@ def _timeout(max_timeout):
     """Timeout decorator, parameter in seconds."""
     def timeout_decorator(target):
         """Wrap the original function."""
-        work_queue = Queue.Queue()
-        result_queue = Queue.Queue()
+        work_queue = queue.Queue()
+        result_queue = queue.Queue()
 
         def worker():
             """Read one func,args,kwargs tuple and execute."""
@@ -63,7 +68,7 @@ def _timeout(max_timeout):
                 if isinstance(result, Exception):
                     raise result
                 return result
-            except Queue.Empty:
+            except queue.Empty:
                 raise RuntimeError("Timeout of %f exceeded" % max_timeout)
         return func_wrapper
     return timeout_decorator
@@ -97,8 +102,8 @@ def _resample_csv(base_csv_path, base_dst_path, resample_factor):
         None
 
     """
-    with open(base_csv_path, 'rb') as read_table:
-        with open(base_dst_path, 'wb') as write_table:
+    with open(base_csv_path, 'r') as read_table:
+        with open(base_dst_path, 'w') as write_table:
             for i, line in enumerate(read_table):
                 if i % resample_factor == 0:
                     write_table.write(line)
@@ -157,7 +162,10 @@ class TestRecServer(unittest.TestCase):
         from natcap.invest.recreation import recmodel_server
         file_hash = recmodel_server._hashfile(
             self.resampled_data_path, blocksize=2**20, fast_hash=False)
-        self.assertEqual(file_hash, 'c052e7a0a4c5e528')
+        # The exact encoded string that is hashed is dependent on python version,
+        # with Python 3 including b prefix and \n suffix.
+        # these hashes are for [py2.7, py3.6]
+        self.assertIn(file_hash, ['c052e7a0a4c5e528', 'c8054b109d7a9d2a'])
 
     def test_hashfile_fast(self):
         """Recreation test for hash and fast hash of file."""
@@ -378,10 +386,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = Queue.Queue()
+        poly_test_queue = queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = Queue.Queue()
+        pud_poly_feature_queue = queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
@@ -408,10 +416,10 @@ class TestRecServer(unittest.TestCase):
             numpy.datetime64('2005-01-01'),
             numpy.datetime64('2014-12-31'))
 
-        poly_test_queue = Queue.Queue()
+        poly_test_queue = queue.Queue()
         poly_test_queue.put(0)
         poly_test_queue.put('STOP')
-        pud_poly_feature_queue = Queue.Queue()
+        pud_poly_feature_queue = queue.Queue()
         recmodel_server._calc_poly_pud(
             recreation_server.qt_pickle_filename,
             os.path.join(SAMPLE_DATA, 'test_aoi_for_subset.shp'),
@@ -425,10 +433,10 @@ class TestRecServer(unittest.TestCase):
         """Recreation test parsing raw CSV."""
         from natcap.invest.recreation import recmodel_server
 
-        block_offset_size_queue = Queue.Queue()
+        block_offset_size_queue = queue.Queue()
         block_offset_size_queue.put((0, 2**10))
         block_offset_size_queue.put('STOP')
-        numpy_array_queue = Queue.Queue()
+        numpy_array_queue = queue.Queue()
         recmodel_server._parse_input_csv(
             block_offset_size_queue, self.resampled_data_path,
             numpy_array_queue)
@@ -555,15 +563,63 @@ class TestRecServer(unittest.TestCase):
             args['workspace_dir'], 'predictor_data.shp')
         expected_grid_vector_path = os.path.join(
             REGRESSION_DATA, 'predictor_data_all_metrics.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_grid_vector_path, expected_grid_vector_path, 1E-6)
+        _assert_vector_attributes_eq(
+            out_grid_vector_path, expected_grid_vector_path, 3)
 
         out_scenario_path = os.path.join(
             args['workspace_dir'], 'scenario_results.shp')
         expected_scenario_path = os.path.join(
             REGRESSION_DATA, 'scenario_results_all_metrics.shp')
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_scenario_path, expected_scenario_path, 1E-6)
+        _assert_vector_attributes_eq(
+            out_scenario_path, expected_scenario_path, 3)
+
+    def test_results_suffix_on_serverside_files(self):
+        """Recreation test suffix gets added to files created on server."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest.recreation import recmodel_server
+
+        # attempt to get an open port; could result in race condition but
+        # will be okay for a test. if this test ever fails because of port
+        # in use, that's probably why
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind(('', 0))
+        port = sock.getsockname()[1]
+        sock.close()
+        sock = None
+
+        server_args = {
+            'hostname': 'localhost',
+            'port': port,
+            'raw_csv_point_data_path': self.resampled_data_path,
+            'cache_workspace': self.workspace_dir,
+            'min_year': 2014,
+            'max_year': 2015,
+            'max_points_per_node': 200,
+        }
+
+        server_thread = threading.Thread(
+            target=recmodel_server.execute, args=(server_args,))
+        server_thread.daemon = True
+        server_thread.start()
+
+        args = {
+            'aoi_path': os.path.join(
+                SAMPLE_DATA, 'andros_aoi_with_extra_fields_features.shp'),
+            'compute_regression': False,
+            'start_year': '2014',
+            'end_year': '2015',
+            'grid_aoi': False,
+            'results_suffix': u'hello',
+            'workspace_dir': self.workspace_dir,
+            'hostname': server_args['hostname'],
+            'port': server_args['port'],
+        }
+        recmodel_client.execute(args)
+
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'monthly_table_hello.csv')))
+        self.assertTrue(os.path.exists(
+            os.path.join(args['workspace_dir'], 'pud_results_hello.shp')))
 
 
 class TestLocalRecServer(unittest.TestCase):
@@ -592,10 +648,10 @@ class TestLocalRecServer(unittest.TestCase):
             aoi_path, self.workspace_dir, date_range, out_vector_filename)
 
         output_lines = open(os.path.join(
-            self.workspace_dir, 'monthly_table.csv'), 'rb').readlines()
+            self.workspace_dir, 'monthly_table.csv'), 'r').readlines()
         expected_lines = open(os.path.join(
             REGRESSION_DATA, 'expected_monthly_table_for_subset.csv'),
-                              'rb').readlines()
+                              'r').readlines()
 
         if output_lines != expected_lines:
             raise ValueError(
@@ -924,8 +980,8 @@ class RecreationRegressionTests(unittest.TestCase):
         expected_coeff_vector_path = os.path.join(
             REGRESSION_DATA, 'test_regression_coefficients.shp')
 
-        pygeoprocessing.testing.assert_vectors_equal(
-            out_coefficient_vector_path, expected_coeff_vector_path, 1E-6)
+        _assert_vector_attributes_eq(
+            out_coefficient_vector_path, expected_coeff_vector_path, 6)
 
     def test_predictor_table_absolute_paths(self):
         """Recreation test validation from full path."""
@@ -955,7 +1011,7 @@ class RecreationRegressionTests(unittest.TestCase):
              'raster_mean'),
             ]
 
-        with open(predictor_table_path, 'wb') as table_file:
+        with open(predictor_table_path, 'w') as table_file:
             table_file.write('id,path,type\n')
             for predictor_id, path, predictor_type in predictor_list:
                 table_file.write(
@@ -1023,7 +1079,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'aoi_path': os.path.join(SAMPLE_DATA, 'andros_aoi.shp'),
             'cell_size': 7000.0,
             'compute_regression': True,
-            'start_year': '2219',  # start year ridiculously out of range
+            'start_year': '1219',  # start year ridiculously out of range
             'end_year': '2014',
             'grid_aoi': True,
             'grid_type': 'hexagon',
@@ -1060,6 +1116,118 @@ class RecreationRegressionTests(unittest.TestCase):
 
         with self.assertRaises(ValueError):
             recmodel_client.execute(args)
+
+
+class RecreationValidationTests(unittest.TestCase):
+    """Tests for the Recreation Model ARGS_SPEC and validation."""
+
+    def setUp(self):
+        """Create a temporary workspace."""
+        self.workspace_dir = tempfile.mkdtemp()
+        self.base_required_keys = [
+            'workspace_dir',
+            'aoi_path',
+            'start_year',
+            'end_year'
+        ]
+
+    def tearDown(self):
+        """Remove the temporary workspace after a test."""
+        shutil.rmtree(self.workspace_dir)
+
+    def test_missing_keys(self):
+        """Recreation Validate: assert missing required keys."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({})  # empty args dict.
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(self.base_required_keys)
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_grid_aoi(self):
+        """Recreation Validate: assert missing keys for grid option."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({'grid_aoi': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['grid_type', 'cell_size'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_missing_keys_compute_regression(self):
+        """Recreation Validate: assert missing keys for regression option."""
+        from natcap.invest.recreation import recmodel_client
+        from natcap.invest import validation
+
+        validation_errors = recmodel_client.validate({'compute_regression': True})
+        invalid_keys = validation.get_invalid_keys(validation_errors)
+        expected_missing_keys = set(
+            self.base_required_keys + ['predictor_table_path'])
+        self.assertEqual(invalid_keys, expected_missing_keys)
+
+    def test_bad_predictor_table_header(self):
+        """Recreation Validate: assert messages for bad table headers."""
+        from natcap.invest.recreation import recmodel_client
+
+        table_path = os.path.join(self.workspace_dir, 'table.csv')
+        with open(table_path, 'w') as file:
+            file.write('foo,bar,baz\n')
+            file.write('a,b,c\n')
+
+        expected_message = "Fields are missing from this table: ['ID', 'PATH', 'TYPE']"
+        validation_warnings = recmodel_client.validate(
+            {'predictor_table_path': table_path})
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)
+
+        validation_warnings = recmodel_client.validate(
+            {'scenario_predictor_table_path': table_path})
+        actual_messages = set()
+        for keys, error_strings in validation_warnings:
+            actual_messages.add(error_strings)
+        self.assertTrue(expected_message in actual_messages)
+
+
+def _assert_vector_attributes_eq(
+        actual_vector_path, expected_vector_path, tolerance_places=3):
+    """Assert fieldnames and values are equal with no respect to order."""
+    try:
+        actual_vector = gdal.OpenEx(actual_vector_path, gdal.OF_VECTOR)
+        actual_layer = actual_vector.GetLayer()
+        expected_vector = gdal.OpenEx(expected_vector_path, gdal.OF_VECTOR)
+        expected_layer = expected_vector.GetLayer()
+
+        assert(
+            actual_layer.GetFeatureCount() == expected_layer.GetFeatureCount())
+
+        field_names = [field.name for field in expected_layer.schema]
+        for feature in expected_layer:
+            fid = feature.GetFID()
+            expected_values = [
+                feature.GetField(field) for field in field_names]
+
+            actual_feature = actual_layer.GetFeature(fid)
+            actual_values = [
+                actual_feature.GetField(field) for field in field_names]
+
+            for av, ev in zip(actual_values, expected_values):
+                if av is not None:
+                    numpy.testing.assert_almost_equal(
+                        av, ev, decimal=tolerance_places)
+                else:
+                    # Could happen when a raster predictor is only nodata
+                    assert(ev is None)
+            feature = None
+            actual_feature = None
+    finally:
+        actual_layer = None
+        actual_vector = None
+        expected_layer = None
+        expected_vector = None
 
 
 def _assert_regression_results_eq(

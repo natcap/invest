@@ -14,7 +14,106 @@ from . import utils
 from . import validation
 
 
-LOGGER = logging.getLogger('natcap.invest.crop_production_percentile')
+LOGGER = logging.getLogger(__name__)
+
+ARGS_SPEC = {
+    "model_name": "Crop Production Percentile Model",
+    "module": __name__,
+    "userguide_html": "crop_production.html",
+    "args_with_spatial_overlap": {
+        "spatial_keys": [
+            "landcover_raster_path",
+            "aggregate_polygon_path",
+        ],
+        "different_projections_ok": True,
+    },
+    "args": {
+        "workspace_dir": validation.WORKSPACE_SPEC,
+        "results_suffix": validation.SUFFIX_SPEC,
+        "n_workers": validation.N_WORKERS_SPEC,
+        "landcover_raster_path": {
+            "validation_options": {
+                "projected": True,
+                "projection_units": "meters",
+            },
+            "type": "raster",
+            "required": True,
+            "about": (
+                "A raster file, representing integer land use/land code "
+                "covers for each cell. This raster should have a projected "
+                "coordinate system with units of meters (e.g. UTM) because "
+                "pixel areas are divided by 10000 in order to report some "
+                "results in hectares."),
+            "name": "Land-Use/Land-Cover Map"
+        },
+        "landcover_to_crop_table_path": {
+            "validation_options": {
+                "required_fields": ["crop_name", "lucode"],
+            },
+            "type": "csv",
+            "required": True,
+            "about": (
+                "A CSV table mapping canonical crop names to land use codes "
+                "contained in the landcover/use raster.   The allowed crop "
+                "names are abaca, agave, alfalfa, almond, aniseetc, apple, "
+                "apricot, areca, artichoke, asparagus, avocado, bambara, "
+                "banana, barley, bean, beetfor, berrynes, blueberry, brazil, "
+                "broadbean, buckwheat, cabbage, cabbagefor, canaryseed, "
+                "carob, carrot, carrotfor, cashew, cashewapple, cassava, "
+                "castor, cauliflower, cerealnes, cherry, chestnut, chickpea, "
+                "chicory, chilleetc, cinnamon, citrusnes, clove, clover, "
+                "cocoa, coconut, coffee, cotton, cowpea, cranberry, "
+                "cucumberetc, currant, date, eggplant, fibrenes, fig, flax, "
+                "fonio, fornes, fruitnes, garlic, ginger, gooseberry, grape, "
+                "grapefruitetc, grassnes, greenbean, greenbroadbean, "
+                "greencorn, greenonion, greenpea, groundnut, hazelnut, hemp, "
+                "hempseed, hop, jute, jutelikefiber, kapokfiber, kapokseed, "
+                "karite, kiwi, kolanut, legumenes, lemonlime, lentil, "
+                "lettuce, linseed, lupin, maize, maizefor, mango, mate, "
+                "melonetc, melonseed, millet, mixedgrain, mixedgrass, "
+                "mushroom, mustard, nutmeg, nutnes, oats, oilpalm, "
+                "oilseedfor, oilseednes, okra, olive, onion, orange, papaya, "
+                "pea, peachetc, pear, pepper, peppermint, persimmon, "
+                "pigeonpea, pimento, pineapple, pistachio, plantain, plum, "
+                "poppy, potato, pulsenes, pumpkinetc, pyrethrum, quince, "
+                "quinoa, ramie, rapeseed, rasberry, rice, rootnes, rubber, "
+                "rye, ryefor, safflower, sesame, sisal, sorghum, sorghumfor, "
+                "sourcherry, soybean, spicenes, spinach, stonefruitnes, "
+                "strawberry, stringbean, sugarbeet, sugarcane, sugarnes, "
+                "sunflower, swedefor, sweetpotato, tangetc, taro, tea, "
+                "tobacco, tomato, triticale, tropicalnes, tung, turnipfor, "
+                "vanilla, vegetablenes, vegfor, vetch, walnut, watermelon, "
+                "wheat, yam, and yautia."),
+            "name": "Landcover to Crop Table"
+        },
+        "aggregate_polygon_path": {
+            "type": "vector",
+            "required": False,
+            "validation_options": {
+                "projected": True,
+            },
+            "about": (
+                "A polygon vector containing features with which to "
+                "aggregate/summarize final results. It is fine to have "
+                "overlapping polygons."),
+            "name": "Aggregate results polygon"
+        },
+        "model_data_path": {
+            "type": "directory",
+            "required": True,
+            "validation_options": {
+                "exists": True,
+            },
+            "about": (
+                "A path to the InVEST Crop Production Data directory. These "
+                "data would have been included with the InVEST installer if "
+                "selected, or can be manually downloaded from "
+                "http://releases.naturalcapitalproject.org/.  If downloaded "
+                "with InVEST, the default value should be used."),
+            "name": "Directory to model data"
+        }
+    }
+}
 
 _INTERMEDIATE_OUTPUT_DIR = 'intermediate_output'
 
@@ -158,7 +257,7 @@ def execute(args):
 
     # Initialize a TaskGraph
     work_token_dir = os.path.join(
-        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_tmp_work_tokens')
+        output_dir, _INTERMEDIATE_OUTPUT_DIR, '_taskgraph_working_dir')
     try:
         n_workers = int(args['n_workers'])
     except (KeyError, ValueError, TypeError):
@@ -202,7 +301,7 @@ def execute(args):
         crop_climate_percentile_table = utils.build_lookup_from_csv(
             climate_percentile_yield_table_path, 'climate_bin', to_lower=True)
         yield_percentile_headers = [
-            x for x in crop_climate_percentile_table.itervalues().next()
+            x for x in list(crop_climate_percentile_table.values())[0]
             if x != 'climate_bin']
 
         for yield_percentile_id in yield_percentile_headers:
@@ -504,7 +603,7 @@ def tabulate_results(
         for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
         for yield_percentile_id in sorted(yield_percentile_headers) + [
             'yield_observed']]
-    with open(target_table_path, 'wb') as result_table:
+    with open(target_table_path, 'w') as result_table:
         result_table.write(
             'crop,area (ha),' + 'production_observed,' +
             ','.join(production_percentile_headers) + ',' + ','.join(
@@ -612,7 +711,7 @@ def aggregate_to_polygons(
     pygeoprocessing.reproject_vector(
         base_aggregate_vector_path,
         landcover_raster_projection,
-        target_aggregate_vector_path, layer_index=0,
+        target_aggregate_vector_path,
         driver_name='ESRI Shapefile')
 
     # loop over every crop and query with pgp function
@@ -668,7 +767,7 @@ def aggregate_to_polygons(
                         nutrient_table[crop_name][nutrient_id])
 
     # report everything to a table
-    with open(target_aggregate_table_path, 'wb') as aggregate_table:
+    with open(target_aggregate_table_path, 'w') as aggregate_table:
         # write header
         aggregate_table.write('FID,')
         aggregate_table.write(','.join(sorted(total_yield_lookup)) + ',')
@@ -677,11 +776,11 @@ def aggregate_to_polygons(
                 '%s_%s' % (nutrient_id, model_type)
                 for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS
                 for model_type in sorted(
-                    total_nutrient_table.itervalues().next())]))
+                    list(total_nutrient_table.values())[0])]))
         aggregate_table.write('\n')
 
         # iterate by polygon index
-        for id_index in total_yield_lookup.itervalues().next():
+        for id_index in list(total_yield_lookup.values())[0]:
             aggregate_table.write('%s,' % id_index)
             aggregate_table.write(','.join([
                 str(total_yield_lookup[yield_header][id_index]['sum'])
@@ -689,7 +788,7 @@ def aggregate_to_polygons(
 
             for nutrient_id in _EXPECTED_NUTRIENT_TABLE_HEADERS:
                 for model_type in sorted(
-                        total_nutrient_table.itervalues().next()):
+                        list(total_nutrient_table.values())[0]):
                     aggregate_table.write(
                         ',%s' % total_nutrient_table[
                             nutrient_id][model_type][id_index])
@@ -715,63 +814,5 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    missing_key_list = []
-    no_value_list = []
-    validation_error_list = []
-
-    required_keys = [
-        'workspace_dir',
-        'model_data_path',
-        'landcover_raster_path',
-        'landcover_to_crop_table_path'
-        ]
-
-    if limit_to in [None, 'aggregate_polygon_path']:
-        if ('aggregate_polygon_path' in args and
-                args['aggregate_polygon_path'] not in ['', None]):
-            required_keys.append('aggregate_polygon_path')
-
-    for key in required_keys:
-        if limit_to is None or limit_to == key:
-            if key not in args:
-                missing_key_list.append(key)
-            elif args[key] in ['', None]:
-                no_value_list.append(key)
-
-    if len(missing_key_list) > 0:
-        # if there are missing keys, we have raise KeyError to stop hard
-        raise KeyError(
-            "The following keys were expected in `args` but were missing " +
-            ', '.join(missing_key_list))
-
-    if len(no_value_list) > 0:
-        validation_error_list.append(
-            (no_value_list, 'parameter has no value'))
-
-    file_type_list = [
-        ('landcover_raster_path', 'raster'),
-        ('aggregate_polygon_path', 'vector')]
-
-    # check that existing/optional files are the correct types
-    with utils.capture_gdal_logging():
-        for key, key_type in file_type_list:
-            if (limit_to in [None, key]) and key in required_keys:
-                if not os.path.exists(args[key]):
-                    validation_error_list.append(
-                        ([key], 'not found on disk'))
-                    continue
-                if key_type == 'raster':
-                    raster = gdal.OpenEx(
-                        args[key], gdal.OF_RASTER | gdal.OF_READONLY)
-                    if raster is None:
-                        validation_error_list.append(
-                            ([key], 'not a raster'))
-                    del raster
-                elif key_type == 'vector':
-                    vector = gdal.OpenEx(
-                        args[key], gdal.OF_VECTOR | gdal.OF_READONLY)
-                    if vector is None:
-                        validation_error_list.append(
-                            ([key], 'not a vector'))
-                    del vector
-    return validation_error_list
+    return validation.validate(
+        args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
