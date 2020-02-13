@@ -61,7 +61,7 @@ def get_is_ready():
     return json.dumps('Flask ready')
 
 
-@app.route('/shutdown', methods=['POST'])
+@app.route('/shutdown', methods=['GET'])
 def shutdown():
     shutdown_server()
     return 'Flask server shutting down...'
@@ -166,4 +166,4 @@ def save_to_python():
             py_model=pyname,
             model_args=args))
 
-    return ('parameter set saved')
+    return ('python script saved')

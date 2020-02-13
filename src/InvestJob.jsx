@@ -23,7 +23,8 @@ import { ResourcesTab } from './components/ResourcesTab';
 import { SaveSessionDropdownItem, SaveParametersDropdownItem,
          SavePythonDropdownItem } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec } from './server_requests';
+import { getSpec, saveToPython, writeParametersToFile,
+         } from './server_requests';
 
 // TODO see issue #12
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
@@ -91,25 +92,13 @@ export class InvestJob extends React.Component {
 
   savePythonScript(filepath) {
     const args_dict_string = argsValuesFromSpec(this.state.args)
-
-    request.post(
-      'http://localhost:5000/save_to_python',
-      { json: { 
-          filepath: filepath,
-          modelname: this.state.modelName,
-          pyname: this.state.modelSpec.module,
-          args: args_dict_string
-        } 
-      },
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-         
-        } else {
-          console.log('Status: ' + response.statusCode)
-          console.log('Error: ' + error.message)
-        }
-      }
-    );
+    const payload = { 
+      filepath: filepath,
+      modelname: this.state.modelName,
+      pyname: this.state.modelSpec.module,
+      args: args_dict_string
+    }
+    saveToPython(payload);
   }
   
   setSessionID(event) {
@@ -142,30 +131,18 @@ export class InvestJob extends React.Component {
   }
 
   argsToJsonFile(datastackPath) {
-    // make simple args json for passing to python cli
+    // make simple args json for passing to invest cli
 
     // parsing it just to make it easy to insert the n_workers value
     let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
     args_dict['n_workers'] = this.props.investSettings.nWorkers;
-
-    request.post(
-      'http://localhost:5000/write_parameter_set_file',
-      { json: {
-          parameterSetPath: datastackPath, 
-          moduleName: this.state.modelSpec.module,
-          relativePaths: true,
-          args: JSON.stringify(args_dict)
-        }
-      },
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          console.log("JSON file was saved.");
-        } else {
-          console.log('Status: ' + response.statusCode);
-          console.log('Error: ' + error.message);
-        }
-      }
-    );
+    const payload = {
+      parameterSetPath: datastackPath, 
+      moduleName: this.state.modelSpec.module,
+      relativePaths: true,
+      args: JSON.stringify(args_dict)
+    }
+    writeParametersToFile(payload);
   }
 
   investExecute() {
@@ -352,9 +329,7 @@ export class InvestJob extends React.Component {
   async investGetSpec(event) {
     const modelName = event.target.value;
     const payload = { 
-      json: { 
         model: modelName
-      } 
     };
     const spec = await getSpec(payload);
     if (spec) {

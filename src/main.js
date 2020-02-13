@@ -1,8 +1,9 @@
 import { spawn } from 'child_process';
 import { app, BrowserWindow } from 'electron';
 import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
-import request from 'request';
 // import { enableLiveReload } from 'electron-compile';
+
+import { shutdownPythonProcess } from './server_requests';
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -81,19 +82,6 @@ function createPythonProcess() {
   });
 }
 
-function exitPythonProcess() {
-  request.post(
-    'http://localhost:5000/shutdown',
-    (error, response, body) => {
-      if (!error) {
-        console.log('python killed')
-      } else {
-        console.log('Error: ' + error.message)
-      }
-    }
-  );
-}
-
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -104,7 +92,7 @@ app.on('window-all-closed', async () => {
   // On OS X it is common for applications and their menu bar
   // to stay active until the user quits explicitly with Cmd + Q
   if (process.platform !== 'darwin') {
-    exitPythonProcess();
+    shutdownPythonProcess();
     // It's crucial to wait before the app.quit here, otherwise
     // the parent process dies before flask has time to kill its server.
     setTimeout(app.quit, 10);
@@ -121,4 +109,4 @@ app.on('activate', () => {
 
 // Couldn't get this callback to fire, moved to 'window-all-closed',
 // but that doesn't cover OSX
-// app.on('will-quit', exitPythonProcess);
+// app.on('will-quit', shutdownPythonProcess);
