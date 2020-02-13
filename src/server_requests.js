@@ -1,19 +1,11 @@
-import request from 'request';
+import fetch from 'node-fetch';
 
 export function getSpec(payload) {
-  return new Promise(function(resolve, reject) {
-    request.post(
-      'http://localhost:5000/getspec',
-      payload,
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          resolve(body);
-        } else {
-          console.log('Status: ' + response.statusCode)
-          console.log('Error: ' + error.message)
-          return null;
-        }
-      }
-    );
-  });
+  return (
+    fetch('http://localhost:5000/getspec', {
+      method: 'post',
+      body: payload,
+    })
+    .then((response) => { return response })
+    .catch((error) => { console.log(error) }))
 }

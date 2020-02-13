@@ -44,6 +44,7 @@ MODEL_MODULE_MAP = {
     "sdr": "sdr.sdr",
     "seasonal_water_yield": "seasonal_water_yield.seasonal_water_yield",
     "urban_flood_risk_mitigation": "urban_flood_risk_mitigation",
+    "urban_cooling_model": "urban_cooling_model",
     "wave_energy": "wave_energy",
     "wind_energy": "wind_energy"
 }

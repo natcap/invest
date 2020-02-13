@@ -71,6 +71,8 @@
     "@babel/preset-env": "^7.6.2",
     "@babel/preset-react": "^7.0.0",
     "@babel/register": "^7.6.2",
+    "@testing-library/dom": "^6.12.2",
+    "@testing-library/react": "^9.4.0",
     "babel-eslint": "^10.0.3",
     "electron": "^6.0.10",
     "electron-devtools-installer": "^2.2.4",
