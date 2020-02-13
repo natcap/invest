@@ -16,5 +16,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v1
+    - name: Install dependencies
+      run: python3 -m pip install nose
     - name: Validate sample data
       run: make validate_sampledata
