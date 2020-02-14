@@ -38,13 +38,18 @@ jobs:
       # https://stackoverflow.com/a/37110747/299084
       run: |
           $CONDA/python -m pip install -r requirements.txt -r requirements-dev.txt
+          $CONDA/python -m pip install flake8
           $CONDA/python setup.py install
 
     - name: Install InVEST (Linux, Mac)
       if: matrix.os != 'windows-latest'
       run: |
+          # Force instal of packages from pip so that conda won't search for
+          # them.
+          $CONDA/python -m pip install taskgraph pyro4 pygeoprocessing -c requirements.txt
           conda install --file requirements.txt
           conda install --file requirements-dev.txt
+          conda install flake8
           python setup.py install
 
     - name: Lint with flake8
