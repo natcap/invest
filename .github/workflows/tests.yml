@@ -28,16 +28,16 @@ jobs:
         python-version: ${{ matrix.python-version }}
         architecture: ${{ matrix.python-architecture }}
         run: |
-          pip install --upgrade pip nose setuptools flake8 
-          pip install -r requirements.txt -r requirements-dev.txt
+          python -m pip install --upgrade pip nose setuptools flake8 
+          python -m pip install -r requirements.txt -r requirements-dev.txt
           python setup.py install
 
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
         # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
     - name: Validate Sample Data
       run: make validate_sampledata
