@@ -43,7 +43,8 @@ jobs:
     - name: Install InVEST (Linux, Mac)
       if: matrix.os != 'windows-latest'
       run: |
-          conda install -r requirements.txt -r requirements-dev.txt
+          conda install --file requirements.txt
+          conda install --file requirements-dev.txt
           python setup.py install
 
     - name: Lint with flake8
