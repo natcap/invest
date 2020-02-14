@@ -12,44 +12,24 @@ jobs:
       max-parallel: 4
       matrix:
         python-version: [3.6, 3.7]
-        os: [ubuntu-16.04, windows-latest, macos-latest]
+        python-architecture: [x86, x64]
+        os: [windows-latest]
 
     steps:
     - uses: actions/checkout@v1
-    - name: setup-conda
-      uses: s-weigand/setup-conda@v1.0.0
-      with:
-        update-conda: false
-        python-version: ${{ matrix.python-version }}
-        conda-channels: defaults
-    - name: Install dependencies
-      shell: bash
-      run: |
-          conda upgrade -y pip setuptools
 
-    - name: Install InVEST (Windows)
-      if: matrix.os == 'windows-latest'
+    - name: Set up python
+      uses: actions/setup-python@v1
       env:
           PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
           PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
           PIP_PREFER_BINARY: 1
-      shell: bash
-      # Replace numpy and scipy with PyPI versions to circumvent import issue.
-      # https://stackoverflow.com/a/37110747/299084
-      run: |
-          $CONDA/python -m pip install -r requirements.txt -r requirements-dev.txt
-          $CONDA/python -m pip install flake8
-          $CONDA/python setup.py install
-
-    - name: Install InVEST (Linux, Mac)
-      if: matrix.os != 'windows-latest'
-      run: |
-          # Force instal of packages from pip so that conda won't search for
-          # them.
-          $CONDA/python -m pip install taskgraph pyro4 pygeoprocessing -c requirements.txt
-          conda install --file requirements.txt
-          conda install --file requirements-dev.txt
-          conda install flake8
+      with: 
+        python-version: ${{ matrix.python-version }}
+        architecture: ${{ matrix.python-architecture }}
+        run: |
+          pip install --upgrade pip nose setuptools flake8 
+          pip install -r requirements.txt -r requirements-dev.txt
           python setup.py install
 
     - name: Lint with flake8
