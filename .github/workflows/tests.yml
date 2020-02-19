@@ -45,13 +45,13 @@ jobs:
               uses: actions/cache@v1
               with:
                   path: data/invest-sample-data
-                  key: git-lfs-sampledata-${GITHUB_SHA}
+                  key: git-lfs-sampledata-${{ hashfiles('Makefile') }}
 
             - name: Restore git-LFS test data cache
               uses: actions/cache@v1
               with:
                   path: data/invest-test-data
-                  key: git-lfs-testdata-${GITHUB_SHA}
+                  key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up python
               uses: actions/setup-python@v1
@@ -101,7 +101,7 @@ jobs:
               uses: actions/cache@v1
               with:
                   path: data/invest-test-data
-                  key: git-lfs-testdata-${GITHUB_SHA}
+                  key: git-lfs-testdata-${{ hashfiles('Makefile') }}
 
             - name: Set up python
               uses: actions/setup-python@v1
