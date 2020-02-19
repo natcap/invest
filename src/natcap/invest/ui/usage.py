@@ -11,14 +11,8 @@ import threading
 import traceback
 import uuid
 
-try:
-    from urllib.request import urlopen, Request
-    from urllib.parse import urlencode
-    string_types = (str,)
-except ImportError:
-    from urllib2 import urlopen, Request
-    from urllib import urlencode
-    string_types = (str, unicode)
+from urllib.request import urlopen, Request
+from urllib.parse import urlencode
 
 from osgeo import gdal
 from osgeo import osr
@@ -130,7 +124,7 @@ def _calculate_args_bounding_box(args_dict):
             bounding boxes are None.
         """
         def _is_spatial(arg):
-            if isinstance(arg, string_types) and os.path.exists(arg):
+            if isinstance(arg, str) and os.path.exists(arg):
                 with utils.capture_gdal_logging():
                     dataset = gdal.OpenEx(arg)
                     if dataset is not None:
