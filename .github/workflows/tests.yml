@@ -3,9 +3,26 @@ name: Run InVEST Tests
 on: [push, pull_request, check_run]
 
 jobs:
+    check-syntax-errors:
+        name: "Check for syntax errors"
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Set up environment
+              run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
+
+            - name: Lint with flake8
+              run: |
+                # stop the build if there are Python syntax errors or undefined names
+                python -m flake8 src --count --select=E9,F63,F7,F82 --show-source --statistics
+                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+                python -m flake8 src --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
     run-model-tests:
         name: "Run model tests"
         runs-on: ${{ matrix.os }}
+        needs: check-syntax-errors
         strategy:
             fail-fast: false
             max-parallel: 4
@@ -52,13 +69,6 @@ jobs:
                   python -m pip install -r requirements.txt -r requirements-dev.txt
                   python setup.py install
 
-            - name: Lint with flake8
-              run: |
-                # stop the build if there are Python syntax errors or undefined names
-                python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-                python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
-
             - name: Validate Sample Data
               run: make validate_sampledata
 
@@ -68,6 +78,7 @@ jobs:
     run-ui-tests:
         name: "Run UI Tests"
         runs-on: ${{ matrix.os }}
+        needs: check-syntax-errors
         strategy:
             fail-fast: False
             max-parallel: 4
