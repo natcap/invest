@@ -23,7 +23,6 @@ jobs:
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
-                  restore-keys: ${{ runner.os }}-pip-
 
             - name: Set up python
               uses: actions/setup-python@v1
@@ -74,7 +73,6 @@ jobs:
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
-                  restore-keys: ${{ runner.os }}-pip-
 
             - name: Set up python
               uses: actions/setup-python@v1
