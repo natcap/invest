@@ -3,46 +3,81 @@ name: Run InVEST Tests
 on: [push, pull_request, check_run]
 
 jobs:
-  Test:
-    runs-on: ${{ matrix.os }}
-    env:
-        PACKAGES: "nose flake8"
-    strategy:
-      fail-fast: false
-      max-parallel: 4
-      matrix:
-        python-version: [3.6, 3.7]
-        python-architecture: [x86, x64]
-        os: [windows-latest]
+    run-model-tests:
+        name: "Run model tests"
+        runs-on: ${{ matrix.os }}
+        env:
+            PACKAGES: "nose flake8"
+        strategy:
+            fail-fast: false
+            max-parallel: 4
+            matrix:
+                python-version: [3.6, 3.7]
+                python-architecture: [x86, x64]
+                os: [windows-latest]
 
-    steps:
-    - uses: actions/checkout@v1
+        steps:
+            - uses: actions/checkout@v1
 
-    - name: Set up python
-      uses: actions/setup-python@v1
-      with: 
-        python-version: ${{ matrix.python-version }}
-        architecture: ${{ matrix.python-architecture }}
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                python-version: ${{ matrix.python-version }}
+                architecture: ${{ matrix.python-architecture }}
 
-    - name: Install dependencies
-      env:
-          PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
-          PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
-          PIP_PREFER_BINARY: 1
-      run: |
-          python -m pip install --upgrade pip nose setuptools flake8 
-          python -m pip install -r requirements.txt -r requirements-dev.txt
-          python setup.py install
+            - name: Install dependencies
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
+              run: |
+                  python -m pip install --upgrade pip nose setuptools flake8
+                  python -m pip install -r requirements.txt -r requirements-dev.txt
+                  python setup.py install
 
-    - name: Lint with flake8
-      run: |
-        # stop the build if there are Python syntax errors or undefined names
-        python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-        # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-        python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+            - name: Lint with flake8
+              run: |
+                # stop the build if there are Python syntax errors or undefined names
+                python -m flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+                # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+                python -m flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-    - name: Validate Sample Data
-      run: make validate_sampledata
+            - name: Validate Sample Data
+              run: make validate_sampledata
 
-    - name: Run model tests
-      run: make test
+            - name: Run model tests
+              run: make test
+
+    run-ui-tests:
+        name: "Run UI Tests"
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: False
+            max-parallel: 4
+            matrix:
+                python-version: [3.6, 3.7]
+                python-architecture: [x86, x64]
+                os: [windows-latest]
+
+
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ matrix.python-version }}
+                  architecture: ${{ matrix.python-architecture }}
+
+            - name: Install dependencies
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
+              run: |
+                  python -m pip install --upgrade pip nose setuptools
+                  python -m pip install -r requirements.txt -r requirements-gui.txt
+                  python setup.py install
+
+            - name: Run UI tests
+              run: make test_ui
