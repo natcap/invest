@@ -24,6 +24,18 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
+            - name: Restore git-LFS sample data cache
+              uses: actions/cache@v1
+              with:
+                  path: data/invest-sample-data
+                  key: git-lfs-sampledata-${GITHUB_SHA}
+
+            - name: Restore git-LFS test data cache
+              uses: actions/cache@v1
+              with:
+                  path: data/invest-test-data
+                  key: git-lfs-testdata-${GITHUB_SHA}
+
             - name: Set up python
               uses: actions/setup-python@v1
               with:
@@ -73,6 +85,12 @@ jobs:
               with:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-ui-tests
+
+            - name: Restore git-LFS test data cache
+              uses: actions/cache@v1
+              with:
+                  path: data/invest-test-data
+                  key: git-lfs-testdata-${GITHUB_SHA}
 
             - name: Set up python
               uses: actions/setup-python@v1
