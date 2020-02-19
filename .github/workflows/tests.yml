@@ -3,6 +3,11 @@ name: Run InVEST Tests
 on: [push, pull_request, check_run]
 
 jobs:
+    # This job will check for obvious syntax errors.
+    # The other jobs in this file depend on this one and won't show up in the
+    # jobs list on actions until this one completes successfully.
+    # Best to run in linux ... windows won't honor nonzero exit statuses
+    # by default.
     check-syntax-errors:
         name: "Check for syntax errors"
         runs-on: ubuntu-latest
@@ -46,12 +51,10 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: ${{ runner.os }}-py${{ matrix.python-version }}-${{ matrix.python-architecture }}-pip-${{ hashFiles('**/requirements*.txt') }}-model-tests
 
-            - name: Restore git-LFS sample data cache
-              uses: actions/cache@v1
-              with:
-                  path: data/invest-sample-data
-                  key: git-lfs-sampledata-${{ hashfiles('Makefile') }}
-
+            # NOTE: It takes twice as long to save the sample data cache
+            # as it does to do a fresh clone (almost 5 minutes vs. 2.5 minutes)
+            # Test data is way, way faster by contrast (on the order of a few
+            # seconds to archive).
             - name: Restore git-LFS test data cache
               uses: actions/cache@v1
               with:
