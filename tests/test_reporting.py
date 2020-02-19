@@ -4,6 +4,7 @@ import tempfile
 import shutil
 import os
 import codecs
+import itertools
 
 import pygeoprocessing.testing
 from pygeoprocessing.testing import scm
@@ -106,10 +107,16 @@ class ReportingRegressionTests(unittest.TestCase):
 
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
-            args['out_uri'],
-            os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'html_reports', 'report_dict_script.html')
+        for source_line, regression_line in itertools.zip_longest(
+                open(args['out_uri']).readlines(),
+                open(regression_path).readlines(), fillvalue=None):
+            if source_line is None or regression_line is None:
+                raise AssertionError('Number of lines are unequal.')
+
+            # Strip trailing newlines.
+            self.assertEqual(source_line.rstrip(), regression_line.rstrip())
 
     @unittest.skip("skipping due to different number truncation in py36 and py27")
     def test_generate_report_shape_json(self):
@@ -215,10 +222,16 @@ class ReportingRegressionTests(unittest.TestCase):
         # Run again to make sure output file that was created is removed
         reporting.generate_report(args)
 
-        pygeoprocessing.testing.assert_text_equal(
-            args['out_uri'],
-            os.path.join(
-                REGRESSION_DATA, 'html_reports', 'report_dict_script.html'))
+        regression_path = os.path.join(
+            REGRESSION_DATA, 'html_reports', 'report_dict_script.html')
+        for source_line, regression_line in itertools.zip_longest(
+                open(args['out_uri']).readlines(),
+                open(regression_path).readlines(), fillvalue=None):
+            if source_line is None or regression_line is None:
+                raise AssertionError('Number of lines are unequal.')
+
+            # Strip trailing newlines.
+            self.assertEqual(source_line.rstrip(), regression_line.rstrip())
 
     @scm.skip_if_data_missing(REGRESSION_DATA)
     def test_table_generator_attributes(self):
