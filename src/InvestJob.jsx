@@ -1,7 +1,6 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-import request from 'request';
 
 import React from 'react';
 import { createStore } from 'redux';
@@ -24,7 +23,7 @@ import { SaveSessionDropdownItem, SaveParametersDropdownItem,
          SavePythonDropdownItem } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile,
-         } from './server_requests';
+         fetchValidation } from './server_requests';
 
 // TODO see issue #12
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
@@ -222,7 +221,7 @@ export class InvestJob extends React.Component {
     }
   }
 
-  investValidate(args_dict_string, limit_to) {
+  async investValidate(args_dict_string, limit_to) {
     /*
     Validate an arguments dictionary using the InVEST model's validate func.
 
@@ -239,91 +238,79 @@ export class InvestJob extends React.Component {
       model_module: this.state.modelSpec.module,
       args: args_dict_string
     };
+
+    // TODO: is there a use-case for `limit_to`? 
+    // Right now we're never calling validate with a limit_to,
+    // but we have an awful lot of logic here to cover it.
     if (limit_to) {
       payload['limit_to'] = limit_to
     }
 
-    request.post(
-      'http://localhost:5000/validate',
-      { json: payload},
-      (error, response, body) => {
-        if (!error && response.statusCode == 200) {
-          const results = body;
+    const results = await fetchValidation(payload);
 
-          // A) At least one arg was invalid:
-          if (results.length) { 
+    // A) At least one arg was invalid:
+    if (results.length) { 
 
-            results.forEach(result => {
-              // Each result is an array of two elements
-              // 0: array of arg keys
-              // 1: string message that pertains to those args
-              // TODO: test this indexing against all sorts of results
-              const argkeys = result[0];
-              const message = result[1];
-              argkeys.forEach(key => {
-                argsMeta[key]['validationMessage'] = message
-                argsMeta[key]['valid'] = false
-                keyset.delete(key);
-              })
-            });
-            if (!limit_to) {  // validated all, so ones left in keyset are valid
-              keyset.forEach(k => {
-                argsMeta[k]['valid'] = true
-                argsMeta[k]['validationMessage'] = ''
-              })
-            }
-            this.setState({
-              args: argsMeta,
-              argsValid: false
-            });
+      results.forEach(result => {
+        // Each result is an array of two elements
+        // 0: array of arg keys
+        // 1: string message that pertains to those args
+        const argkeys = result[0];
+        const message = result[1];
+        argkeys.forEach(key => {
+          argsMeta[key]['validationMessage'] = message
+          argsMeta[key]['valid'] = false
+          keyset.delete(key);
+        })
+      });
+      if (!limit_to) {  // validated all, so ones left in keyset are valid
+        keyset.forEach(k => {
+          argsMeta[k]['valid'] = true
+          argsMeta[k]['validationMessage'] = ''
+        })
+      }
+      this.setState({
+        args: argsMeta,
+        argsValid: false
+      });
 
-          // B) All args were validated and none were invalid:
-          } else if (!limit_to) {
-            
-            keyset.forEach(k => {
-              argsMeta[k]['valid'] = true
-              argsMeta[k]['validationMessage'] = ''
-            })
-            // It's possible all args were already valid, in which case
-            // it's nice to avoid the re-render that this setState call
-            // triggers. Although only the Viz app components re-render 
-            // in a noticeable way. Due to use of redux there?
-            if (!this.state.argsValid) {
-              this.setState({
-                args: argsMeta,
-                argsValid: true
-              })
-            }
+    // B) All args were validated and none were invalid:
+    } else if (!limit_to) {
+      
+      keyset.forEach(k => {
+        argsMeta[k]['valid'] = true
+        argsMeta[k]['validationMessage'] = ''
+      })
+      // It's possible all args were already valid, in which case
+      // it's nice to avoid the re-render that this setState call
+      // triggers. Although only the Viz app components re-render 
+      // in a noticeable way. Due to use of redux there?
+      if (!this.state.argsValid) {
+        this.setState({
+          args: argsMeta,
+          argsValid: true
+        })
+      }
 
-          // C) Limited args were validated and none were invalid
-          } else if (limit_to) {
+    // C) Limited args were validated and none were invalid
+    } else if (limit_to) {
 
-            argsMeta[limit_to]['valid'] = true
-            // this could be the last arg that needed to go valid,
-            // in which case we should trigger a full args_dict validation
-            // in order to properly set state.argsValid
-            this.setState({ args: argsMeta },
-              () => {
-                let argIsValidArray = [];
-                for (const key in argsMeta) {
-                  argIsValidArray.push(argsMeta[key]['valid'])
-                }
-                if (argIsValidArray.every(Boolean)) {
-                  this.investValidate(argsValuesFromSpec(argsMeta));
-                }
-              }
-            );
+      argsMeta[limit_to]['valid'] = true
+      // this could be the last arg that needed to go valid,
+      // in which case we should trigger a full args_dict validation
+      // in order to properly set state.argsValid
+      this.setState({ args: argsMeta },
+        () => {
+          let argIsValidArray = [];
+          for (const key in argsMeta) {
+            argIsValidArray.push(argsMeta[key]['valid'])
           }
-
-        } else {
-          console.log('Status: ' + response.statusCode);
-          console.log(body);
-          if (error) {
-            console.error(error);
+          if (argIsValidArray.every(Boolean)) {
+            this.investValidate(argsValuesFromSpec(argsMeta));
           }
         }
-      }
-    );
+      );
+    }
   }
 
   async investGetSpec(event) {

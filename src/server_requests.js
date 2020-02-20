@@ -31,6 +31,30 @@ export function getSpec(payload) {
   )
 }
 
+export function fetchValidation(payload) {
+  return (
+    fetch('http://localhost:5000/validate', {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then((response) => { return response.json() })
+    .catch((error) => { console.log(error) })
+  )
+}
+
+export function fetchDatastackFromFile(payload) {
+  return (
+    fetch('http://localhost:5000/post_datastack_file', {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then((response) => { return response.json() })
+    .catch((error) => { console.log(error) })
+  )
+}
+
 export function saveToPython(payload) {
   fetch('http://localhost:5000/save_to_python', {
     method: 'post',

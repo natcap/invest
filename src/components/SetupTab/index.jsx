@@ -8,6 +8,8 @@ import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 
+import { fetchDatastackFromFile } from '../../server_requests';
+
 export class SetupTab extends React.Component {
 
   render () {
@@ -80,11 +82,11 @@ class ArgsForm extends React.Component {
     dialog.showOpenDialog({
       properties: [prop]
     }, (filepath) => {
-      this.props.updateArg(argname, filepath[0]); // 0 is safe since we only allow 1 selection
+      this.props.updateArg(argname, filepath[0]); // 0 because we only allow 1 selection
     })
   }
 
-  onDragDrop(event) {
+  async onDragDrop(event) {
     // Handle drag-drop of datastack JSON files and InVEST logfiles
     event.preventDefault();
     
@@ -92,25 +94,28 @@ class ArgsForm extends React.Component {
     if (fileList.length !== 1) {
       throw alert('only drop one file at a time.')
     }
-    const filepath = fileList[0].path;
-    request.post(
-      'http://localhost:5000/post_datastack_file',
-      { json: { 
-        datastack_path: filepath} 
-      },
-      (error, response, body) => {
-        if (!error) {
-          const datastack = body;
-          if (datastack['module_name'] === this.props.modulename) {
-            this.props.batchUpdateArgs(datastack['args']);
-          } else {
-            throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
-          }
-        } else {
-          console.log('Error: ' + error.message)
-        }
-      }
-    );
+    const payload = { 
+      datastack_path: fileList[0].path
+    }
+    const datastack = await fetchDatastackFromFile(payload)
+    // request.post(
+    //   'http://localhost:5000/post_datastack_file',
+    //   { json: { 
+    //     datastack_path: filepath} 
+    //   },
+    //   (error, response, body) => {
+    //     if (!error) {
+    //       const datastack = body;
+    if (datastack['module_name'] === this.props.modulename) {
+      this.props.batchUpdateArgs(datastack['args']);
+    } else {
+      throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
+    }
+        // } else {
+        //   console.log('Error: ' + error.message)
+        // }
+      // }
+    // );
   }
 
   render() {
