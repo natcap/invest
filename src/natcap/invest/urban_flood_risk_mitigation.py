@@ -53,7 +53,6 @@ ARGS_SPEC = {
             "name": "Depth of rainfall in mm"
         },
         "lulc_path": {
-            "validation_options": {},
             "type": "raster",
             "validation_options": {
                 "projected": True,
