@@ -511,6 +511,7 @@ def main(user_args=None):
                                      name=parsed_datastack.model_name,
                                      logging_level=log_level):
             LOGGER.log(datastack.ARGS_LOG_LEVEL,
+                       'Starting model with parameters: \n%s',
                        datastack.format_args_dict(parsed_datastack.args,
                                                   parsed_datastack.model_name))
 
