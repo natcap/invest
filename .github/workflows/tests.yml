@@ -73,15 +73,44 @@ jobs:
                   PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
                   PIP_PREFER_BINARY: 1
               run: |
-                  python -m pip install --upgrade pip nose setuptools flake8
+                  python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt
                   python setup.py install
 
-            - name: Validate Sample Data
-              run: make validate_sampledata
-
             - name: Run model tests
               run: make test
+
+    validate-sampledata:
+        name: "Validate Sample Datastacks"
+        runs-on: windows-latest
+        needs: check-syntax-errors
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Restore pip cache
+              uses: actions/cache@v1
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: windows-py37-pipcache-sampledata-${{ hashfiles('requirements.txt') }}
+
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+                  python-architecture: x64
+
+            - name: Install dependencies
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
+              run: |
+                  python -m pip install --upgrade pip wheel
+                  python -m pip install -r requirements.txt
+                  python setup.py install
+
+            - name: Validate sample data
+              run: make validate_sampledata
 
     run-ui-tests:
         name: "Run UI Tests"
