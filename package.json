@@ -9,6 +9,9 @@
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest"
   },
+  "jest": {
+    "collectCoverage": true
+  },
   "keywords": [],
   "author": "dmf",
   "license": "MIT",
