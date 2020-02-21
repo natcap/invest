@@ -236,7 +236,7 @@ class UCMTests(unittest.TestCase):
         bad_building_vector = gdal.OpenEx(bad_building_vector_path,
                                           gdal.OF_VECTOR | gdal.GA_Update)
         bad_building_layer = bad_building_vector.GetLayer()
-        feature = next(bad_building_layer)
+        feature = bad_building_layer.GetNextFeature()
         feature.SetField('type', -999)
         bad_building_layer.SetFeature(feature)
         bad_building_layer.SyncToDisk()

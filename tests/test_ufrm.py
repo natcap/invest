@@ -60,7 +60,7 @@ class UFRMTests(unittest.TestCase):
             args['workspace_dir'], 'flood_risk_service_Test1.shp'),
             gdal.OF_VECTOR)
         result_layer = result_vector.GetLayer()
-        result_feature = next(result_layer)
+        result_feature = result_layer.GetNextFeature()
         result_val = result_feature.GetField('serv_bld')
         result_feature = None
         result_layer = None
