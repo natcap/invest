@@ -1,20 +1,19 @@
 import React from 'react';
-import { render, fireEvent, waitForElement } from '@testing-library/react'
+import { fireEvent, render, wait, waitForElement } from '@testing-library/react'
 
 import { InvestJob } from '../src/InvestJob';
 
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
-import fetch from 'node-fetch';
-jest.mock('node-fetch');
+
+import { getSpec, saveToPython, writeParametersToFile,
+         fetchValidation } from '../src/server_requests';
+jest.mock('../src/server_requests');
+getSpec.mockResolvedValue({});
+fetchValidation.mockResolvedValue({});
 
 
-test('click on an invest button enables SetupTab', async () => {
-  // This is the value I want returned by the first call to post,
-  // from within getInvestSpec. But then there are other posts that
-  // happen subsequently, which should return other things.
-  // request.post.mockResolvedValue(SAMPLE_SPEC)
-  fetch.mockResolvedValue(SAMPLE_SPEC);
-  // const getSpecSpy = jest.spyOn(getSpec);
+test('Clicking an invest button renders SetupTab', async () => {
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
   const spy = jest.spyOn(InvestJob.prototype, 'investGetSpec');
 
   const { getByText, debug } = render(
@@ -25,16 +24,12 @@ test('click on an invest button enables SetupTab', async () => {
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
     />);
-  // debug();
-  console.log('PRE-CLICK');
-  fireEvent.click(getByText('Carbon'));
-  console.log('POST-CLICK');
-  // debug();
-  const setupNode = await waitForElement(() => {
-    getByText('Execute')
-  })
-  expect(getByText('Execute')).toHaveAttribute('disabled');
-  expect(fetch).toHaveBeenCalledTimes(1);
+  const carbon = getByText('Carbon');
+  fireEvent.click(carbon);  // Choosing a model from the list
+  await wait(() => {
+    expect(getByText('Execute')).toBeTruthy()
+  });
+  
+  expect(getSpec).toHaveBeenCalledTimes(1);
   expect(spy).toHaveBeenCalledTimes(1);
-  // expect(getByText('Setup')).toHaveAttribute('disabled');
 })

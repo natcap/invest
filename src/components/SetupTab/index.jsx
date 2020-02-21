@@ -1,6 +1,5 @@
 import React from 'react';
 import Electron from 'electron';
-import request from 'request';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -13,7 +12,6 @@ import { fetchDatastackFromFile } from '../../server_requests';
 export class SetupTab extends React.Component {
 
   render () {
-
     // Only mount the ArgsForm when there are actually args
     // This lets us have an ArgsForm.componentDidMount() that
     // does useful initialization of args state.
