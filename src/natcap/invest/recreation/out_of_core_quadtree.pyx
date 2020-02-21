@@ -1,4 +1,5 @@
 # cython: profile=True
+# cython: language_level=2
 """A hierarchical spatial index for fast culling of points in 2D space."""
 
 import os

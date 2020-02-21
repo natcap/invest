@@ -8,6 +8,12 @@ Unreleased Changes
   differences in handling spatial references.
 * Adding function in utils.py to handle InVEST coordindate transformations.
 * Adding tests for new coordinate transformation function in utils.py.
+* Automated tests are now configured to use Github Actions for 32- and 64-bit
+  build targets for Python 3.6 and 3.7 on Windows.  We are still using
+  AppVeyor for our binary builds for the time being.
+* Makefile has been updated to fetch the version string from ``git`` rather
+  than ``hg``.  A mercurial client is still needed in order to clone the
+  InVEST User's Guide.
 
 3.8.0 (2020-02-07)
 ------------------

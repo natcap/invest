@@ -75,12 +75,11 @@ DIST_DIR := dist
 DIST_DATA_DIR := $(DIST_DIR)/data
 BUILD_DIR := build
 
-# The fork name and user here are derived from the mercurial path.
-# They will need to be set manually (e.g. make FORKNAME=natcap/invest)
-# if someone wants to build from source outside of mercurial (like if
-# they grabbed a zipfile of the source code)
-# FORKUSER should not need to be set from the CLI.
-FORKNAME := $(filter-out ssh: http: https:, $(subst /, ,$(shell hg config paths.default)))
+# The fork name and user here are derived from the git path on github.
+# The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
+# if someone wants to build from source outside of git (like if they grabbed
+# a zipfile of the source code).
+FORKNAME := $(filter-out ssh: http: https: git@,$(subst /, ,$(subst :, ,$(shell git remote get-url origin))))
 FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
