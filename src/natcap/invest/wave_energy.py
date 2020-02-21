@@ -1664,7 +1664,7 @@ def _index_raster_value_to_point_vector(
     vector_sr.ImportFromWkt(
         pygeoprocessing.get_vector_info(target_point_vector_path)[
             'projection'])
-    vector_coord_trans = osr.CoordinateTransformation(vector_sr, raster_sr)
+    vector_coord_trans = utils.create_coordinate_transformer(vector_sr, raster_sr)
 
     # Initialize an R-Tree indexing object with point geom from base_vector
     def generator_function():
