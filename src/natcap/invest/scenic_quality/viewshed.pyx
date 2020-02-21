@@ -1,5 +1,6 @@
 # coding=UTF-8
 # distutils: language=c++
+# cython: language_level=2
 """
 Implements the Wang et al (2000) viewshed based on reference planes.
 
