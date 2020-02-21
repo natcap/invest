@@ -634,7 +634,7 @@ def _build_affected_vector(
     infrastructure_layer = infrastructure_vector.GetLayer()
 
     infrastructure_srs = infrastructure_layer.GetSpatialRef()
-    infrastructure_to_target = osr.CoordinateTransformation(
+    infrastructure_to_target = utils.create_coordinate_transformer(
         infrastructure_srs, target_srs)
 
     infrastructure_layer_defn = infrastructure_layer.GetLayerDefn()

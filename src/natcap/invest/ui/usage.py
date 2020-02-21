@@ -176,7 +176,7 @@ def _calculate_args_bounding_box(args_dict):
                     # lat/lng
                     lat_lng_ref = osr.SpatialReference()
                     lat_lng_ref.ImportFromEPSG(4326)  # EPSG 4326 is lat/lng
-                    to_lat_trans = osr.CoordinateTransformation(
+                    to_lat_trans = utils.create_coordinate_transformer(
                         spatial_ref, lat_lng_ref)
                     for point_index in [0, 2]:
                         local_bb[point_index], local_bb[point_index + 1], _ = (

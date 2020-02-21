@@ -2239,7 +2239,7 @@ def _wind_data_to_point_vector(wind_data_pickle_path,
         ref_sr = osr.SpatialReference(wkt=ref_projection_wkt)
         if ref_sr.IsProjected:
             # Get coordinate transformation between two projections
-            coord_trans = osr.CoordinateTransformation(target_sr, ref_sr)
+            coord_trans = utils.create_coordinate_transformer(target_sr, ref_sr)
             need_geotranform = True
     else:
         need_geotranform = False
