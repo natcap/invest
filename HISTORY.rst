@@ -2,6 +2,12 @@
 
 Unreleased Changes
 ------------------
+* Migrating over to GDAL 3 from GDAL 2 and leaving GDAL 2 behind.
+* Updating requirements to reflect GDAL version >= 3.
+* Updating crop production tests that varied slightly due to GDAL 3 
+  differences in handling spatial references.
+* Adding function in utils.py to handle InVEST coordindate transformations.
+* Adding tests for new coordinate transformation function in utils.py.
 
 3.8.0 (2020-02-07)
 ------------------
