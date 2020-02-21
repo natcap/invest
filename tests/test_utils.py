@@ -14,6 +14,7 @@ import textwrap
 from pygeoprocessing.testing import scm
 import pygeoprocessing.testing
 from osgeo import gdal
+from osgeo import osr
 
 
 class SuffixUtilsTests(unittest.TestCase):
@@ -621,3 +622,103 @@ class BuildLookupFromCSVTests(unittest.TestCase):
         self.assertEqual(lookup_dict[4]['header 2'], 5)
         self.assertEqual(lookup_dict[4]['header 3'], 'foo')
         self.assertEqual(lookup_dict[1]['header 1'], 1)
+
+
+class CreateCoordinateTransformationTests(unittest.TestCase):
+    """Tests for natcap.invest.utils.create_coordinate_transformer."""
+
+    def test_latlon_to_latlon_transformer(self):
+        """Utils: test transformer for lat/lon to lat/lon"""
+        from natcap.invest import utils
+
+        # Willamette valley in lat/lon for reference
+        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
+        lon = -124.525
+        lat = 44.525
+
+        base_srs = osr.SpatialReference()
+        base_srs.ImportFromEPSG(4326) # WSG84 EPSG
+
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(4326)
+
+        transformer = utils.create_coordinate_transformer(base_srs, target_srs)
+        x, y, _ = transformer.TransformPoint(lon, lat)
+
+        expected_x = -124.525 
+        expected_y = 44.525
+
+        self.assertEqual(expected_x, x)
+        self.assertEqual(expected_y, y)
+
+    def test_latlon_to_projected_transformer(self):
+        """Utils: test transformer for lat/lon to projected."""
+        from natcap.invest import utils
+
+        # Willamette valley in lat/lon for reference
+        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
+        lon = -124.525
+        lat = 44.525
+
+        base_srs = osr.SpatialReference()
+        base_srs.ImportFromEPSG(4326) # WSG84 EPSG
+
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(26910) # UTM10N EPSG
+
+        transformer = utils.create_coordinate_transformer(base_srs, target_srs)
+        x, y, _ = transformer.TransformPoint(lon, lat)
+
+        expected_x = 378816.2531852932 
+        expected_y = 4931317.807472325 
+
+        self.assertEqual(expected_x, x)
+        self.assertEqual(expected_y, y)
+
+    def test_projected_to_latlon_transformer(self):
+        """Utils: test transformer for projected to lat/lon."""
+        from natcap.invest import utils
+
+        # Willamette valley in lat/lon for reference
+        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
+        known_x = 378816.2531852932 
+        known_y = 4931317.807472325 
+
+        base_srs = osr.SpatialReference()
+        base_srs.ImportFromEPSG(26910) # UTM10N EPSG
+
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(4326) # WSG84 EPSG
+
+        transformer = utils.create_coordinate_transformer(base_srs, target_srs)
+        x, y, _ = transformer.TransformPoint(known_x, known_y)
+
+        expected_x = -124.52500000000002
+        expected_y = 44.525 
+
+        self.assertEqual(expected_x, x)
+        self.assertEqual(expected_y, y)
+
+    def test_projected_to_projected_transformer(self):
+        """Utils: test transformer for projected to projected."""
+        from natcap.invest import utils
+
+        # Willamette valley in lat/lon for reference
+        bounding_box = [-123.587984, 44.415778, -123.397976, 44.725814]
+        known_x = 378816.2531852932 
+        known_y = 4931317.807472325 
+
+        base_srs = osr.SpatialReference()
+        base_srs.ImportFromEPSG(26910) # UTM10N EPSG
+
+        target_srs = osr.SpatialReference()
+        target_srs.ImportFromEPSG(26910) # UTM10N EPSG
+
+        transformer = utils.create_coordinate_transformer(base_srs, target_srs)
+        x, y, _ = transformer.TransformPoint(known_x, known_y)
+
+        expected_x = 378816.2531852932 
+        expected_y = 4931317.807472325 
+
+        self.assertEqual(expected_x, x)
+        self.assertEqual(expected_y, y)
