@@ -27,7 +27,9 @@ test('Clicking an invest button renders SetupTab', async () => {
   const carbon = getByText('Carbon');
   fireEvent.click(carbon);  // Choosing a model from the list
   await wait(() => {
-    expect(getByText('Execute')).toBeTruthy()
+    const execute = getByText('Execute');
+    expect(execute).toBeTruthy();
+    expect(execute).toHaveProperty('disabled', true);
   });
   
   expect(getSpec).toHaveBeenCalledTimes(1);
