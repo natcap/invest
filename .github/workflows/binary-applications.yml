@@ -78,5 +78,8 @@ jobs:
                   path: ~/opt/anaconda3
                   key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
 
+            - name: Install python dependencies
+              run: pip install --upgrade pip setuptools requests setuptools_scm
+
             - name: Build env and binaries
               run: make jenkins
