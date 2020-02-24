@@ -158,3 +158,54 @@ jobs:
 
             - name: Run UI tests
               run: make test_ui
+
+    build-windows-binaries:
+        name: "Build windows binaries"
+        runs-on: windows-latest
+        env:
+            PYTHON: 3.7
+            ARCH: x86
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Restore pip cache
+              uses: actions/cache@v1
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: windows-py${{ env.PYTHON }}-${{ env.ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ env.PYTHON }}
+                  architecture: ${{ env.ARCH }}
+
+            - name: Install python dependencies
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
+              run: |
+                  python -m pip install --upgrade pip nose setuptools
+                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  python setup.py install
+
+            - name: Build sampledata
+              run: |
+                  make -j3 sampledata
+
+            - name: Build windows binaries
+              run: make windows_installer
+
+            - name: Sign and deploy binaries
+              shell: powershell
+              env:
+                  GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+                  STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+              run: ./ci/appveyor-sign-windows-binary.ps1
+
+            - name: Save build artifacts
+              uses: actions/upload-artifacts@v1
+              with:
+                  name: InVEST build artifacts
+                  path: dist
