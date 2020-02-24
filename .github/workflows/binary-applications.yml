@@ -102,7 +102,7 @@ jobs:
             - name: Set up conda
               uses: s-weigand/setup-conda@v1
               with:
-                  python=3.7
+                  python-version: 3.7
 
             - name: Install python dependencies
               run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
