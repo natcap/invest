@@ -1,0 +1,82 @@
+name: Build App Binaries
+
+on: [push, pull_request, check_run]
+
+jobs:
+    build-windows-binaries:
+        name: "Build windows binaries"
+        needs: check-syntax-errors
+        runs-on: windows-latest
+        env:
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x86
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Restore pip cache
+              uses: actions/cache@v1
+              with:
+                  path: ~\AppData\Local\pip\Cache
+                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  architecture: ${{ env.PYTHON_ARCH }}
+
+            - name: Install python dependencies
+              env:
+                  PIP_EXTRA_INDEX_URL: "http://pypi.naturalcapitalproject.org/simple/"
+                  PIP_TRUSTED_HOST: "pypi.naturalcapitalproject.org"
+                  PIP_PREFER_BINARY: 1
+              run: |
+                  python -m pip install --upgrade pip nose setuptools
+                  python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
+                  python setup.py install
+
+            - name: Install build dependencies
+              shell: powershell
+              run: |
+                  # Appveror build scripts expects PYTHON to point to the dir containing python.
+                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
+                  ./ci/appveyor-binary-install.ps1
+
+            - name: Build sampledata
+              run: |
+                  make -j3 sampledata
+
+            - name: Build windows binaries
+              run: make windows_installer
+
+            - name: Sign and deploy binaries
+              shell: powershell
+              env:
+                  GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+                  STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
+              run: ./ci/appveyor-sign-windows-binary.ps1
+
+            - name: Save build artifacts
+              uses: actions/upload-artifact@v1
+              with:
+                  name: InVEST build artifacts
+                  path: dist
+
+    build-mac-binaries:
+        name: "Build mac binaries"
+        needs: check-syntax-errors
+        runs-on: macos-10.15
+        env:
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x86
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Restore conda cache
+              uses: actions/cache@v1
+              with:
+                  path: ~/opt/anaconda3
+                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Build env and binaries
+              run: make jenkins
