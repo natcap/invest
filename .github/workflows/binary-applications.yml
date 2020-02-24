@@ -95,6 +95,11 @@ jobs:
         steps:
             - uses: actions/checkout@v1
 
+            - name: Install homebrew dependencies
+              run:
+                  brew update
+                  brew install mercurial pandoc
+
             - name: Restore conda cache
               uses: actions/cache@v1
               with:
@@ -111,3 +116,10 @@ jobs:
 
             - name: Build env and binaries
               run: make PYTHON=`which python` jenkins
+
+            - name: Build env and binaries
+              run: |
+                  python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
+                  conda install -y -c conda-forge requirements-all.yml
+                  make install
+                  make mac_zipfile userguide
