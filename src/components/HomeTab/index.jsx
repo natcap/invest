@@ -92,6 +92,7 @@ class LoadStateForm extends React.Component {
     // Also a button to browse to a cached state file if it's not in recent list
     recentButtons.push(
       <Button
+        key="browse"
         type="submit"
         variant="secondary"
         onClick={this.selectFile}>
