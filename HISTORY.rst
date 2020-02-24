@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
+  refer to the repository's new home on github.
 * Automated tests are now configured to use Github Actions for 32- and 64-bit
   build targets for Python 3.6 and 3.7 on Windows.  We are still using
   AppVeyor for our binary builds for the time being.

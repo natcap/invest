@@ -20,7 +20,7 @@ InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
   * `InVEST API documentation <http://invest.readthedocs.io/>`_
-  * InVEST on `bitbucket <https://github.com/natcap/invest>`__
+  * InVEST on `GitHub <https://github.com/natcap/invest>`__
   * The `Natural Capital Project website <http://naturalcapitalproject.org>`__.
 
 
