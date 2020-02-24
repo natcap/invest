@@ -217,3 +217,22 @@ jobs:
               with:
                   name: InVEST build artifacts
                   path: dist
+
+    build-mac-binaries:
+        name: "Build mac binaries"
+        needs: check-syntax-errors
+        runs-on: macos-10.15
+        env:
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x86
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Restore conda cache
+              uses: actions/cache@v1
+              with:
+                  path: ~/opt/anaconda3
+                  key: mac-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-conda-${{ hashFiles('**/requirements*.txt') }}-exe
+
+            - name: Build env and binaries
+              run: make jenkins

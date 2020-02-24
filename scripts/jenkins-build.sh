@@ -10,6 +10,6 @@
 make env
 env/bin/python -m pip install --upgrade .
 env/bin/python -m pip install -r requirements-gui.txt
-make PYTHON=env/bin/python mac_zipfile userguide 
+make PYTHON=env/bin/python mac_zipfile userguide
 env/bin/python setup.py bdist_wheel
 env/bin/python scripts/jenkins_push_artifacts.py
