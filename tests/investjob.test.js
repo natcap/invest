@@ -28,11 +28,41 @@ test('Clicking an invest button renders SetupTab', async () => {
   fireEvent.click(carbon);  // Choosing a model from the list
   await wait(() => {
     const execute = getByText('Execute');
-    // Expect a disabled Execute button:
+    // Expect a disabled Execute button and a visible SetupTab
     expect(execute).toBeTruthy();
     expect(execute.hasAttribute('disabled')).toBeFalsy();
+    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
   });
   
   expect(spy).toHaveBeenCalledTimes(1);  // the click handler
   expect(getSpec).toHaveBeenCalledTimes(1);  // the wrapper around fetch
 })
+
+test('Clicking a recent session renders SetupTab', async () => {
+  const spy = jest.spyOn(InvestJob.prototype, 'loadState');
+
+  const { getByText, debug } = render(
+    <InvestJob 
+      investList={{}}
+      investSettings={null}
+      recentSessions={['carbon_setup']}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+  const recent = getByText('carbon_setup');
+  fireEvent.click(recent);  // a recent session button
+  await wait(() => {
+    const execute = getByText('Execute');
+    // Expect a disabled Execute button and a visible SetupTab
+    expect(execute).toBeTruthy();
+    expect(execute.hasAttribute('disabled')).toBeFalsy();
+    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+  });
+  
+  expect(spy).toHaveBeenCalledTimes(1);  // called by the click handler
+})
+
+// test('Browsing for recent session renders SetupTab', async () => {
+//   // TODO: This functionality might be dropped.
+// })
+
