@@ -161,6 +161,7 @@ jobs:
 
     build-windows-binaries:
         name: "Build windows binaries"
+        needs: check-syntax-errors
         runs-on: windows-latest
         env:
             PYTHON: 3.7
@@ -205,7 +206,7 @@ jobs:
               run: ./ci/appveyor-sign-windows-binary.ps1
 
             - name: Save build artifacts
-              uses: actions/upload-artifacts@v1
+              uses: actions/upload-artifact@v1
               with:
                   name: InVEST build artifacts
                   path: dist
