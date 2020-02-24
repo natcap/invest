@@ -20,7 +20,7 @@ InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
   * `InVEST API documentation <http://invest.readthedocs.io/>`_
-  * InVEST on `bitbucket <https://bitbucket.org/natcap/invest>`__
+  * InVEST on `bitbucket <https://github.com/natcap/invest>`__
   * The `Natural Capital Project website <http://naturalcapitalproject.org>`__.
 
 
@@ -62,12 +62,12 @@ is:
 Installing the latest development version
 -----------------------------------------
 
-The latest development version of InVEST can be installed from our mercurial
+The latest development version of InVEST can be installed from our git
 source tree:
 
 .. code-block:: console
 
-    $ pip install hg+https://bitbucket.org/natcap/invest@develop
+    $ pip install git+https://github.com/natcap/invest@master#egg=natcap.invest
 
 Development
 ===========
@@ -82,4 +82,4 @@ Support
 Participate in the NatCap forums here:
 http://community.naturalcapitalproject.org
 
-Bugs may be reported at http://bitbucket.org/natcap/invest
+Bugs may be reported at http://github.com/natcap/invest
