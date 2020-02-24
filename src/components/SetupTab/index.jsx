@@ -96,24 +96,12 @@ class ArgsForm extends React.Component {
       datastack_path: fileList[0].path
     }
     const datastack = await fetchDatastackFromFile(payload)
-    // request.post(
-    //   'http://localhost:5000/post_datastack_file',
-    //   { json: { 
-    //     datastack_path: filepath} 
-    //   },
-    //   (error, response, body) => {
-    //     if (!error) {
-    //       const datastack = body;
+
     if (datastack['module_name'] === this.props.modulename) {
       this.props.batchUpdateArgs(datastack['args']);
     } else {
       throw alert('Parameter/Log file for ' + datastack['module_name'] + ' does not match this model: ' + this.props.modulename)
     }
-        // } else {
-        //   console.log('Error: ' + error.message)
-        // }
-      // }
-    // );
   }
 
   render() {
