@@ -75,7 +75,9 @@ jobs:
               env:
                   GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
                   STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
-              run: ./ci/appveyor-sign-windows-binary.ps1
+              run: |
+                  choco install nsis
+                  ./ci/appveyor-sign-windows-binary.ps1
 
             - name: Save build artifacts
               uses: actions/upload-artifact@v1
