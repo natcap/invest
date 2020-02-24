@@ -108,4 +108,4 @@ jobs:
               run: pip install --upgrade pip setuptools requests setuptools_scm
 
             - name: Build env and binaries
-              run: make jenkins
+              run: make PYTHON=`which python` jenkins
