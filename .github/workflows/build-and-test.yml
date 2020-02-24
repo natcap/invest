@@ -164,8 +164,8 @@ jobs:
         needs: check-syntax-errors
         runs-on: windows-latest
         env:
-            PYTHON: 3.7
-            ARCH: x86
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v1
 
@@ -173,13 +173,13 @@ jobs:
               uses: actions/cache@v1
               with:
                   path: ~\AppData\Local\pip\Cache
-                  key: windows-py${{ env.PYTHON }}-${{ env.ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
+                  key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up python
               uses: actions/setup-python@v1
               with:
-                  python-version: ${{ env.PYTHON }}
-                  architecture: ${{ env.ARCH }}
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  architecture: ${{ env.PYTHON_ARCH }}
 
             - name: Install python dependencies
               env:
@@ -190,6 +190,13 @@ jobs:
                   python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
                   python setup.py install
+
+            - name: Install build dependencies
+              shell: powershell
+              run: |
+                  # Appveror build scripts expects PYTHON to point to the dir containing python.
+                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
+                  ./ci/appveyor-binary-install.ps1
 
             - name: Build sampledata
               run: |
