@@ -40,6 +40,13 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
+            - name: Install build dependencies
+              shell: powershell
+              run: |
+                  # Appveror build scripts expects PYTHON to point to the dir containing python.
+                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
+                  ./ci/appveyor-binary-install.ps1
+
             - name: Set up python
               uses: actions/setup-python@v1
               with:
@@ -55,13 +62,6 @@ jobs:
                   python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
                   python setup.py install
-
-            - name: Install build dependencies
-              shell: powershell
-              run: |
-                  # Appveror build scripts expects PYTHON to point to the dir containing python.
-                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
-                  ./ci/appveyor-binary-install.ps1
 
             - name: Build sampledata
               run: |
@@ -121,8 +121,9 @@ jobs:
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
                   conda env create -p ./env --file requirements-all.yml
-                  ./env/python setup.py install
-                  make PYTHON=./env/python mac_zipfile userguide
+                  conda activate ./env
+                  python setup.py install
+                  make PYTHON=`which python` mac_zipfile userguide
 
             - name: Save build artifacts
               uses: actions/upload-artifact@v1

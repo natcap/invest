@@ -10,6 +10,8 @@
 
 choco install make wget vcredist140 pandoc zip
 
+$env:PATH += ";C:\ProgramData\chocolatey\bin"
+
 # The binary build requires the shapely DLL to be named something specific.
 # /B copies the file as a binary file.
 Write-Host "Copying shapely DLL"
