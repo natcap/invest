@@ -76,7 +76,7 @@ jobs:
                   GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
                   STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
               run: |
-                  choco install nsis
+                  choco install nsis 7zip curl unzip
                   ./ci/appveyor-sign-windows-binary.ps1
 
             - name: Save build artifacts
