@@ -126,9 +126,8 @@ jobs:
             - name: Build binaries
               shell: bash
               run: |
-                  conda activate ./env
-                  python setup.py install
-                  make PYTHON=`which python` mac_zipfile userguide
+                  $(pwd)/env/python setup.py install
+                  make PYTHON=$(pwd)/env/python mac_zipfile userguide
 
             - name: Save build artifacts
               uses: actions/upload-artifact@v1
