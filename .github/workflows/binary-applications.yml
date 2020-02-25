@@ -43,7 +43,7 @@ jobs:
             - name: Install build dependencies
               shell: powershell
               run: |
-                  # Appveror build scripts expects PYTHON to point to the dir containing python.
+                  # Appveyor build scripts expects PYTHON to point to the dir containing python.
                   $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
                   ./ci/appveyor-binary-install.ps1
 
@@ -76,7 +76,6 @@ jobs:
                   GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
                   STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
               run: |
-                  choco install nsis 7zip curl unzip
                   ./ci/appveyor-sign-windows-binary.ps1
 
             - name: Save build artifacts

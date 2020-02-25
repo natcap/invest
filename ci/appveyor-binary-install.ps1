@@ -8,7 +8,7 @@
 #       PYTHON - the directory of the python installation to use.  Packages for this build
 #                are already assumed to be installed and available in this installation.
 
-choco install make wget vcredist140 pandoc zip
+choco install make wget vcredist140 pandoc zip nsis 7zip unzip
 
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
 
