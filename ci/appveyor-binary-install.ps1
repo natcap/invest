@@ -8,7 +8,8 @@
 #       PYTHON - the directory of the python installation to use.  Packages for this build
 #                are already assumed to be installed and available in this installation.
 
-choco install make wget vcredist140 pandoc zip nsis 7zip unzip
+choco install make wget vcredist140 pandoc zip 7zip unzip
+choco install nsis --install-directory="C:\Program Files (x86)\NSIS"
 
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
 
