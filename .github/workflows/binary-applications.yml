@@ -114,12 +114,14 @@ jobs:
               run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
 
             - name: Build env and binaries
+              shell: bash
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py \
                         requirements.txt \
                         requirements-dev.txt \
                         requirements-gui.txt > requirements-all.yml
                   conda env create -p ./env --file requirements-all.yml
+                  conda init bash
                   conda activate ./env
                   python setup.py install
                   make PYTHON=`which python` mac_zipfile userguide
