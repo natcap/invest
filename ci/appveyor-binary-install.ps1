@@ -32,9 +32,9 @@ cmd.exe --% /c copy /B %PYTHON%\Lib\site-packages\shapely\DLLs\geos_c.dll %PYTHO
 
 # Download and install NSIS plugins to their correct places.
 Write-Host "Downloading and extracting NSIS"
-Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
-Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip
-Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
+Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip -OutFile Inetc.zip
+Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip -OutFile Nsisunz.zip
+Invoke-WebRequest https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip -OutFile NsProcess.zip
 & 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
 & 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
 & 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
