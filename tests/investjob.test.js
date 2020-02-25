@@ -66,3 +66,31 @@ test('Clicking a recent session renders SetupTab', async () => {
 //   // TODO: This functionality might be dropped.
 // })
 
+test('Save Parameters/Python enable after model select ', async () => {
+  // const spy = jest.spyOn(InvestJob.prototype, 'loadState');
+
+  const { getByText, debug } = render(
+    <InvestJob 
+      investList={{}}
+      investSettings={null}
+      recentSessions={['carbon_setup']}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+
+  // Check the dropdown before any model setup
+  fireEvent.click(getByText('Save'));
+  expect(getByText('Save parameters to JSON')
+    .classList.contains('disabled')).toBeTruthy();
+  expect(getByText('Save to Python script')
+    .classList.contains('disabled')).toBeTruthy();
+
+  // Now load a model setup using a recent session
+  fireEvent.click(getByText('carbon_setup'));
+  await wait(() => {
+    expect(getByText('Save parameters to JSON')
+    .classList.contains('disabled')).toBeFalsy();
+    expect(getByText('Save to Python script')
+      .classList.contains('disabled')).toBeFalsy();
+  });
+})

@@ -96,8 +96,13 @@ export class SaveParametersDropdownItem extends React.Component {
   }
 
   render() {
+    // disabled when there's no modelSpec, i.e. before a model is selected
     return(
-      <Dropdown.Item onClick={this.browseFile}>Save parameters to JSON</Dropdown.Item>
+      <Dropdown.Item 
+        onClick={this.browseFile}
+        disabled={this.props.disabled}>
+        Save parameters to JSON
+      </Dropdown.Item>
     );
   }
 }
@@ -117,8 +122,14 @@ export class SavePythonDropdownItem extends React.Component {
   }
 
   render() {
+    // disabled when there's no modelSpec, i.e. before a model is selected
+    console.log(this.props.disabled);
     return(
-      <Dropdown.Item onClick={this.browseFile}>Save to Python script</Dropdown.Item>
+      <Dropdown.Item 
+        onClick={this.browseFile}
+        disabled={this.props.disabled}>
+        Save to Python script
+      </Dropdown.Item>
     );
   }
 }

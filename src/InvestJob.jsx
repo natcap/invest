@@ -391,7 +391,8 @@ export class InvestJob extends React.Component {
     const setupDisabled = !(this.state.args); // enable once modelSpec has loaded
     const logDisabled = ['home', 'setup'].includes(sessionProgress);  // enable during and after execution
     const resultsDisabled = (sessionProgress !== 'results');  // enable only on complete execute with no errors
-    
+    const dropdownsDisabled = (this.state.args == null);
+
     // state.procID only has a value during invest execution
     let spinner;
     if (this.state.procID) {
@@ -404,7 +405,7 @@ export class InvestJob extends React.Component {
     } else {
       spinner = <div></div>
     }
-
+    
     return(
       <TabContainer activeKey={activeTab}>
         <Navbar bg="light" expand="lg">
@@ -434,9 +435,11 @@ export class InvestJob extends React.Component {
               sessionID={this.state.sessionID}
               setSessionID={this.setSessionID}/>
             <SaveParametersDropdownItem
-              argsToJsonFile={this.argsToJsonFile}/>
+              argsToJsonFile={this.argsToJsonFile}
+              disabled={dropdownsDisabled}/>
             <SavePythonDropdownItem
-              savePythonScript={this.savePythonScript}/>
+              savePythonScript={this.savePythonScript}
+              disabled={dropdownsDisabled}/>
           </DropdownButton>
           <SettingsModal
             saveSettings={this.props.saveSettings}
