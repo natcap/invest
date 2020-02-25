@@ -125,7 +125,7 @@ jobs:
                   make PYTHON=./env/python mac_zipfile userguide
 
             - name: Save build artifacts
-              uses: actions/upload-artifacts@v1
+              uses: actions/upload-artifact@v1
               with:
                   name: InVEST Mac build artifacts
                   path: dist
