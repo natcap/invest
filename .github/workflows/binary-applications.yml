@@ -128,7 +128,7 @@ jobs:
             - name: Build binaries
               shell: bash
               run: |
-                  make PYTHON=$(pwd)/env/python install
+                  make PYTHON=$(pwd)/env/bin/python install
                   make PYTHON=$(pwd)/env/bin/python mac_zipfile userguide
 
             - name: Save build artifacts
