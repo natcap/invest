@@ -113,7 +113,7 @@ jobs:
             - name: Install python dependencies
               run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
 
-            - name: Build env and binaries
+            - name: Build conda env
               shell: bash
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py \
@@ -122,6 +122,10 @@ jobs:
                         requirements-gui.txt > requirements-all.yml
                   conda env create -p ./env --file requirements-all.yml
                   conda init bash
+
+            - name: Build binaries
+              shell: bash
+              run: |
                   conda activate ./env
                   python setup.py install
                   make PYTHON=`which python` mac_zipfile userguide
