@@ -21,7 +21,9 @@ refreshenv
 # the choco CLI option --install-directory isn't available in the OSS
 # version of choco.
 Invoke-WebRequest https://iweb.dl.sourceforge.net/project/nsis/NSIS%203/3.05/nsis-3.05-setup.exe -OutFile nsis.exe
-nsis.exe /S /D="C:\Program Files (x86)\NSIS"
+
+# See http://www.silentinstall.org/nsis for flags used.
+nsis.exe /SD /D="C:\Program Files (x86)\NSIS"
 
 # The binary build requires the shapely DLL to be named something specific.
 # /B copies the file as a binary file.
