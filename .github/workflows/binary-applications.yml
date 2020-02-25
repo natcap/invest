@@ -115,9 +115,6 @@ jobs:
               run: pip install --upgrade pip setuptools requests setuptools_scm cython numpy
 
             - name: Build env and binaries
-              run: make PYTHON=`which python` jenkins
-
-            - name: Build env and binaries
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda install -y -c conda-forge requirements-all.yml
