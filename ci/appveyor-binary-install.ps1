@@ -9,9 +9,16 @@
 #                are already assumed to be installed and available in this installation.
 
 choco install make wget vcredist140 pandoc zip 7zip unzip
-choco install nsis --install-directory="C:\Program Files (x86)\NSIS"
-
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
+
+# Choco-provided command to reload environment variables
+refreshenv
+
+# Install NSIS.  The choco-provided NSIS puts it somewhere else and
+# the choco CLI option --install-directory isn't available in the OSS
+# version of choco.
+wget --no-check-certificate https://iweb.dl.sourceforge.net/project/nsis/NSIS%203/3.05/nsis-3.05-setup.exe
+nsis-3.05-setup.exe /S /D="C:\Program Files (x86)\NSIS"
 
 # The binary build requires the shapely DLL to be named something specific.
 # /B copies the file as a binary file.
