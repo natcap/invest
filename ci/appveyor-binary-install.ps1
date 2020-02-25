@@ -20,7 +20,7 @@ Write-Host "Downloading and extracting NSIS"
 wget https://storage.googleapis.com/natcap-build-dependencies/windows/Inetc.zip
 wget https://storage.googleapis.com/natcap-build-dependencies/windows/Nsisunz.zip
 wget https://storage.googleapis.com/natcap-build-dependencies/windows/NsProcess.zip
-cmd.exe --% /c 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
-cmd.exe --% /c 7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
-cmd.exe --% /c 7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
-cmd.exe --% /c 7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
+7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugin\nsProcess.dll
+7z e NsProcess.zip -o"C:\Program Files (x86)\NSIS\Include" Include\nsProcess.nsh
+7z e Inetc.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" Plugins\x86-ansi\INetC.dll
+7z e Nsisunz.zip -o"C:\Program Files (x86)\NSIS\Plugins\x86-ansi" nsisunz\Release\nsisunz.dll
