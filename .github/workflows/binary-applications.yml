@@ -121,5 +121,5 @@ jobs:
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
                   conda install -y -c conda-forge requirements-all.yml
-                  make install
+                  python setup.py install
                   make mac_zipfile userguide
