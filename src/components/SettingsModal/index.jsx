@@ -80,7 +80,7 @@ export class SettingsModal extends React.Component {
                   <Form.Control
                     as='select'
                     name='loggingLevel'
-                    value={this.state.localSettings.loggingLevel}
+                    defaultValue={this.state.localSettings.loggingLevel}
                     onChange={this.handleChange}>
                     {logLevelOptions.map(opt =>
                       <option value={opt} key={opt}>{opt}</option>
