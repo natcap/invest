@@ -16,19 +16,6 @@ environment:
     # https://www.appveyor.com/docs/windows-images-software/#python
 
     - PYTHON: "C:\\Python37"
-      TARGET: "test"
-
-    - PYTHON: "C:\\Python37-x64"
-      TARGET: "test"
-
-    - PYTHON: "C:\\Python37"
-      TARGET: "test_ui"
-
-    - PYTHON: "C:\\Python37-x64"
-      TARGET: "validate_sampledata"
-
-    - PYTHON: "C:\\Python37"
-      TARGET: "appveyor_binaries"
 
 install:
     - "SET PATH=%PYTHON%;%PYTHON%\\Scripts;%PATH%"
@@ -44,17 +31,16 @@ install:
     - "python -m pip install -I --no-deps natcap.invest --find-links dist"
     - "choco install make"
 
-    # If we're building appveyor binaries, run the extra install script.
-    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-binary-install.ps1)
+    - powershell.exe ci/appveyor-binary-install.ps1
 
 build: off
 
 test_script:
-    - if "%TARGET%"=="appveyor_binaries" (make -j3 sampledata windows_installer) else (make %TARGET%)
+    - make -j3 sampledata windows_installer
 
     # If everything passed (and we're in a binary build), sign the installer
     # and upload to GCS
-    - if "%TARGET%"=="appveyor_binaries" (powershell.exe ci/appveyor-sign-and-upload.ps1)
+    - powershell.exe ci/appveyor-sign-and-upload.ps1
 
 artifacts:
     # bdist_wheel puts your built wheel in the dist directory
