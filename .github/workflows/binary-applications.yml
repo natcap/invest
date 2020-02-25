@@ -117,6 +117,6 @@ jobs:
             - name: Build env and binaries
               run: |
                   python ./scripts/convert-requirements-to-conda-yml.py requirements.txt requirements-dev.txt requirements-gui.txt > requirements-all.yml
-                  conda install -y -c conda-forge --file requirements-all.yml
+                  conda install -y --file requirements-all.yml
                   python setup.py install
                   make mac_zipfile userguide
