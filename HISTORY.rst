@@ -4,6 +4,9 @@ Unreleased Changes
 ------------------
 * Added error-handling in Urban Flood Risk Mitigation to provide a helpful
   error message.
+* Fixed a bug in CLI logging where logfiles created by the CLI were 
+  incompatible with the ``natcap.invest.datastack`` operation that
+  allows the UI to load model arguments from logfiles.
 * Automated tests are now configured to use Github Actions for 32- and 64-bit
   build targets for Python 3.6 and 3.7 on Windows.  We are still using
   AppVeyor for our binary builds for the time being.
