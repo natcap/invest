@@ -90,9 +90,10 @@ jobs:
                     -Include 'signtool.exe' -File -Recurse `
                     -ErrorAction SilentlyContinue)[0] | Select-Object -ExpandProperty FullName
                 $env:INSTALLER_BINARY = @(gci 'dist/*.exe')[0] | Select-Object -ExpandProperty FullName
+                $env:GSUTIL_PATH = (Get-Command gsutil).path
 
                 make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
-                        GSUTIL=$(Get-Command gsutil).path `
+                        GSUTIL=$env:GSUTIL_PATH `
                         BIN_TO_SIGN=$env:INSTALLER_BINARY `
                         SIGNTOOL=$env:SIGNTOOL_PATH `
                     signcode_windows
