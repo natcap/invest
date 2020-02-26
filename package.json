@@ -10,7 +10,9 @@
     "test": "jest"
   },
   "jest": {
-    "collectCoverage": true
+    "collectCoverage": true,
+    "runner": "@jest-runner/electron",
+    "testEnvironment": "@jest-runner/electron/environment"
   },
   "keywords": [],
   "author": "dmf",
@@ -74,6 +76,7 @@
     "@babel/preset-env": "^7.8.4",
     "@babel/preset-react": "^7.8.3",
     "@babel/register": "^7.8.3",
+    "@jest-runner/electron": "^2.0.3",
     "@testing-library/dom": "^6.12.2",
     "@testing-library/react": "^9.4.0",
     "babel-eslint": "^10.0.3",
