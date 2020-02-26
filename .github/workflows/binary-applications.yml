@@ -40,13 +40,6 @@ jobs:
                   path: ~\AppData\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
-            - name: Install build dependencies
-              shell: powershell
-              run: |
-                  # Appveyor build scripts expects PYTHON to point to the dir containing python.
-                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
-                  ./ci/appveyor-binary-install.ps1
-
             - name: Set up python
               uses: actions/setup-python@v1
               with:
@@ -63,6 +56,13 @@ jobs:
                   python -m pip install --upgrade pip nose setuptools
                   python -m pip install -r requirements.txt -r requirements-dev.txt -r requirements-gui.txt
                   python -m pip install .
+
+            - name: Install build dependencies
+              shell: powershell
+              run: |
+                  # Appveyor build scripts expects PYTHON to point to the dir containing python.
+                  $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
+                  ./ci/appveyor-binary-install.ps1
 
             - name: Build sampledata
               run: |
