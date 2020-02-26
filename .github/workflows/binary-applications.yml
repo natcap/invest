@@ -62,7 +62,7 @@ jobs:
               run: |
                   # Appveyor build scripts expects PYTHON to point to the dir containing python.
                   $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
-                  ./ci/appveyor-binary-install.ps1
+                  ./ci/windows-ci-binary-install.ps1
 
             - name: Build sampledata
               run: |
