@@ -148,6 +148,15 @@ jobs:
                   make PYTHON=$(pwd)/env/bin/python install
                   make PYTHON=$(pwd)/env/bin/python mac_zipfile userguide
 
+            - name: Set up GCP
+              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+              with:
+                  version: '281.0.0'
+                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
+            - name: Deploy artifacts to GCS
+              run: make deploy
+
             - name: Save build artifacts
               uses: actions/upload-artifact@v1
               with:
