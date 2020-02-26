@@ -64,9 +64,11 @@ jobs:
                   $env:PYTHON = python -c "import sys, os; print(os.path.dirname(sys.executable))"
                   ./ci/windows-ci-binary-install.ps1
 
+            - name: Clone dependent repositories
+              run: make -j3 fetch
+
             - name: Build sampledata
-              run: |
-                  make -j3 sampledata
+              run: make -j3 sampledata
 
             - name: Build windows binaries
               run: make binaries
