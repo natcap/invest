@@ -106,6 +106,38 @@ jobs:
                   name: InVEST Windows build artifacts
                   path: dist
 
+    windows-invest-autotest:
+        name: Run InVEST-autotest
+        needs: build-windows-binaries
+        runs-on: windows-latest
+        env:
+            PYTHON_VERSION: 3.7
+            PYTHON_ARCH: x64
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Get the windows build artifacts
+              uses: actions/download-artifact@v1
+              with:
+                  name: InVEST Windows build artifacts
+
+            - name: Fetch sampledata
+              run: make data/invest-sample-data
+
+            - uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ env.PYTHON_VERSION }}
+                  architecture: ${{ env.PYTHON_ARCH }}
+
+            - name: Run invest-autotest
+              run: |
+                  cd dist/invest
+                  python invest-autotest.py --help
+                  python invest-autotest.py `
+                        --binary=(Get-Location).path/invest.exe `
+                        --cwd=(Get-Location).path/../data/invest-sample-data `
+                        --workspace=(Get-Location).path/../workspace/
+
     build-mac-binaries:
         name: "Build mac binaries"
         needs: check-syntax-errors
