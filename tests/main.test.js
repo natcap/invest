@@ -1,12 +1,12 @@
 import { spawn, spawnSync } from 'child_process';
 import request from 'request';
 
-const main = spawn(
-    'npx', ['electron', '-r', '@babel/register', '.'], {
-    shell: true,
-    // stdio: 'ignore',
-    detatched: false,
-  });
+// const main = spawn(
+//     'npx', ['electron', '-r', '@babel/register', '.'], {
+//     shell: true,
+//     // stdio: 'ignore',
+//     detatched: false,
+//   });
 
 // let readydata;
 // let statusCode;
@@ -22,21 +22,21 @@ const main = spawn(
 //   );
 
 // verify flask server is running after electron app is ready
-let readydata;
-let statusCode;
-main.stderr.on('data', (data) => {
-  console.log(data.toString());
-  request.get('http://localhost:5000/ready', 
-      (error, response, body) => {
-        readydata = JSON.parse(body);
-        statusCode = response.statusCode;
-        console.assert(readydata === 'Flask ready');
-        console.assert(statusCode === 200);
-        // const mainKiller = spawnSync(
-        //   'taskkill /PID ' + main.pid + ' /T /F', {shell: true});
-      }
-    );
-});
+// let readydata;
+// let statusCode;
+// main.stderr.on('data', (data) => {
+//   console.log(data.toString());
+//   request.get('http://localhost:5000/ready', 
+//       (error, response, body) => {
+//         readydata = JSON.parse(body);
+//         statusCode = response.statusCode;
+//         console.assert(readydata === 'Flask ready');
+//         console.assert(statusCode === 200);
+//         // const mainKiller = spawnSync(
+//         //   'taskkill /PID ' + main.pid + ' /T /F', {shell: true});
+//       }
+//     );
+// });
 
   //   setTimeout(() => {
   //     let errorCode;
