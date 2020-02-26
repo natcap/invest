@@ -2,9 +2,7 @@ import React from 'react';
 import { fireEvent, render, wait, waitForElement } from '@testing-library/react'
 
 import { InvestJob } from '../src/InvestJob';
-
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
-
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
@@ -94,28 +92,3 @@ test('Save Parameters/Python enable after model select ', async () => {
   });
 })
 
-test('Settings dialog interactions', async () => {
-  // const spy = jest.spyOn(InvestJob.prototype, 'loadState');
-
-  const { getByText, getByLabelText, getByDisplayValue, debug } = render(
-    <InvestJob 
-      investList={{}}
-      investSettings={null}
-      recentSessions={[]}
-      updateRecentSessions={() => {}}
-      saveSettings={() => {}}
-    />);
-
-  // Check the default settings
-  fireEvent.click(getByText('Settings'));
-  await wait(() => {
-    // const info = getByLabelText('Logging threshold');
-    // const info = getByText('INFO');
-    // const info = getByText('Logging threshold');
-    // debug(info);
-    console.log(getByText('INFO').getAttributeNames());
-    expect(getByText('INFO').hasAttribute('selected')).toBeTruthy();
-    // expect(getByDisplayValue('INFO')).toBeTruthy();
-  })
-  
-})

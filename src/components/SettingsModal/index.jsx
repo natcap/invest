@@ -81,7 +81,7 @@ export class SettingsModal extends React.Component {
                     id="logging-select"
                     as="select"
                     name="loggingLevel"
-                    defaultValue={this.state.localSettings.loggingLevel}
+                    value={this.state.localSettings.loggingLevel}
                     onChange={this.handleChange}>
                     {logLevelOptions.map(opt =>
                       <option value={opt} key={opt}>{opt}</option>
