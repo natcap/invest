@@ -71,13 +71,28 @@ jobs:
             - name: Build windows binaries
               run: make windows_installer
 
+            - name: Set up GCP
+              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+              with:
+                  version: '281.0.0'
+                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
             - name: Sign and deploy binaries
               shell: powershell
-              env:
-                  GOOGLE_SERVICE_ACC_KEY: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
-                  STANFORD_CERT_KEY_PASS: ${{ secrets.STANFORD_CERT_KEY_PASS }}
               run: |
-                  ./ci/appveyor-sign-windows-binary.ps1
+                # figure out the path to signtool.exe (it keeps changing with SDK updates)
+                $env:SIGNTOOL_PATH = @(Get-ChildItem -Path 'C:\Program Files (x86)\\Windows Kits\\10' `
+                    -Include 'signtool.exe' -File -Recurse `
+                    -ErrorAction SilentlyContinue)[0] | Select-Object -ExpandProperty FullName
+                $env:INSTALLER_BINARY = @(gci 'dist/*.exe')[0] | Select-Object -ExpandProperty FullName
+
+                make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
+                        BIN_TO_SIGN=$env:INSTALLER_BINARY `
+                        SIGNTOOL=$env:SIGNTOOL_PATH `
+                    signcode_windows
+
+            - name: Deploy artifacts to GCS
+              run: make deploy
 
             - name: Save build artifacts
               uses: actions/upload-artifact@v1
