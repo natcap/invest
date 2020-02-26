@@ -2,6 +2,10 @@
 
 Unreleased Changes
 ------------------
+* Fixing an issue with the InVEST Makefile where ``make deploy`` was
+  attempting to synchronize nonexistent sample data zipfiles with a storage
+  bucket on GCP.  Sample data zipfiles are only built on Windows, and so
+  ``make deploy`` will only attempt to upload them when running on Windows.
 * Automated tests are now configured to use Github Actions for 32- and 64-bit
   build targets for Python 3.6 and 3.7 on Windows.  We are still using
   AppVeyor for our binary builds for the time being.
