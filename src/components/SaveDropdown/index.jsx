@@ -123,7 +123,6 @@ export class SavePythonDropdownItem extends React.Component {
 
   render() {
     // disabled when there's no modelSpec, i.e. before a model is selected
-    console.log(this.props.disabled);
     return(
       <Dropdown.Item 
         onClick={this.browseFile}

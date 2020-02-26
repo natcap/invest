@@ -75,11 +75,12 @@ export class SettingsModal extends React.Component {
             </Modal.Header>
             <Modal.Body>
               <Form.Group as={Row}>
-                <Form.Label column sm="8">Logging threshold</Form.Label>
+                <Form.Label column sm="8" htmlFor="logging-select">Logging threshold</Form.Label>
                 <Col sm="3">
                   <Form.Control
-                    as='select'
-                    name='loggingLevel'
+                    id="logging-select"
+                    as="select"
+                    name="loggingLevel"
                     defaultValue={this.state.localSettings.loggingLevel}
                     onChange={this.handleChange}>
                     {logLevelOptions.map(opt =>
@@ -89,11 +90,12 @@ export class SettingsModal extends React.Component {
                 </Col>
               </Form.Group>
               <Form.Group as={Row}>
-                <Form.Label column sm="8">
+                <Form.Label column sm="8" htmlFor="nworkers-text">
                   Taskgraph n_workers parameter (must be an integer &gt;= -1)
                 </Form.Label>
                 <Col sm="3">
                   <Form.Control
+                    id="nworkers-text"
                     name="nWorkers"
                     type="text" 
                     value={this.state.localSettings.nWorkers}

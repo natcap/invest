@@ -67,7 +67,6 @@ test('Clicking a recent session renders SetupTab', async () => {
 // })
 
 test('Save Parameters/Python enable after model select ', async () => {
-  // const spy = jest.spyOn(InvestJob.prototype, 'loadState');
 
   const { getByText, debug } = render(
     <InvestJob 
@@ -93,4 +92,30 @@ test('Save Parameters/Python enable after model select ', async () => {
     expect(getByText('Save to Python script')
       .classList.contains('disabled')).toBeFalsy();
   });
+})
+
+test('Settings dialog interactions', async () => {
+  // const spy = jest.spyOn(InvestJob.prototype, 'loadState');
+
+  const { getByText, getByLabelText, getByDisplayValue, debug } = render(
+    <InvestJob 
+      investList={{}}
+      investSettings={null}
+      recentSessions={[]}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+
+  // Check the default settings
+  fireEvent.click(getByText('Settings'));
+  await wait(() => {
+    // const info = getByLabelText('Logging threshold');
+    // const info = getByText('INFO');
+    // const info = getByText('Logging threshold');
+    // debug(info);
+    console.log(getByText('INFO').getAttributeNames());
+    expect(getByText('INFO').hasAttribute('selected')).toBeTruthy();
+    // expect(getByDisplayValue('INFO')).toBeTruthy();
+  })
+  
 })
