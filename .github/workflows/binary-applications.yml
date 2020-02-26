@@ -76,6 +76,12 @@ jobs:
             - name: Build installer
               run: make windows_installer
 
+            - name: Set up GCP
+              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
+              with:
+                  version: '281.0.0'
+                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
+
             - name: Sign binaries
               shell: powershell
               run: |
@@ -86,15 +92,10 @@ jobs:
                 $env:INSTALLER_BINARY = @(gci 'dist/*.exe')[0] | Select-Object -ExpandProperty FullName
 
                 make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
+                        GSUTIL=$(Get-Command gsutil).path `
                         BIN_TO_SIGN=$env:INSTALLER_BINARY `
                         SIGNTOOL=$env:SIGNTOOL_PATH `
                     signcode_windows
-
-            - name: Set up GCP
-              uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
-              with:
-                  version: '281.0.0'
-                  service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Deploy artifacts to GCS
               run: make deploy
