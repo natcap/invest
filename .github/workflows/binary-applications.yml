@@ -121,7 +121,7 @@ jobs:
                   path: dist
 
     windows-invest-autotest:
-        name: Run InVEST-autotest
+        name: Run InVEST-autotest (windows)
         needs: build-windows-binaries
         runs-on: windows-latest
         env:
