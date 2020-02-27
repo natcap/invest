@@ -150,11 +150,12 @@ jobs:
                   # Invest-autotest isn't in the binary directory by default
                   # (added by NSIS installer), so read directly from the source
                   # tree.
+                  $CWD = (Get-Location).path
                   python ../../scripts/invest-autotest.py --help
                   python ../../scripts/invest-autotest.py `
-                        --binary=(Get-Location).path/invest.exe `
-                        --cwd=(Get-Location).path/../data/invest-sample-data `
-                        --workspace=(Get-Location).path/../workspace/
+                        --binary=$CWD/invest.exe `
+                        --cwd=$CWD/../data/invest-sample-data `
+                        --workspace=$CWD/../workspace/
 
     build-mac-binaries:
         name: "Build mac binaries"
