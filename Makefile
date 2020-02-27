@@ -8,9 +8,9 @@ GIT_TEST_DATA_REPO          := https://bitbucket.org/natcap/invest-test-data.git
 GIT_TEST_DATA_REPO_PATH     := $(DATA_DIR)/invest-test-data
 GIT_TEST_DATA_REPO_REV      := 0dfeed7f216f6c1f9af815aabb3e7e04f8cf662b
 
-HG_UG_REPO                  := https://bitbucket.org/natcap/invest.users-guide
-HG_UG_REPO_PATH             := doc/users-guide
-HG_UG_REPO_REV              := ec7070b5dea47089718795e71beff182240d4203
+GIT_UG_REPO                  := https://github.com/natcap/invest.users-guide
+GIT_UG_REPO_PATH             := doc/users-guide
+GIT_UG_REPO_REV              := 0f8c6328d0ff1cf1f452e56de1e86095d08657b3
 
 
 ENV = env
@@ -58,7 +58,7 @@ else
 	endif
 endif
 
-REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs hg
+REQUIRED_PROGRAMS := make zip pandoc $(PYTHON) git git-lfs
 ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
@@ -108,7 +108,7 @@ MAC_BINARIES_ZIP_FILE := "$(DIST_DIR)/InVEST-$(VERSION)-mac.zip"
 MAC_APPLICATION_BUNDLE := "$(BUILD_DIR)/mac_app_$(VERSION)/InVEST.app"
 
 
-.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(HG_UG_REPO_REV)
+.PHONY: fetch install binaries apidocs userguide windows_installer mac_installer sampledata sampledata_single test test_ui clean help check python_packages jenkins purge mac_zipfile deploy signcode $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH) $(GIT_UG_REPO_REV)
 
 # Very useful for debugging variables!
 # $ make print-FORKNAME, for example, would print the value of the variable $(FORKNAME)
@@ -157,7 +157,7 @@ clean:
 
 purge: clean
 	-$(RM_DATA_DIR)
-	-$(RMDIR) $(HG_UG_REPO_PATH)
+	-$(RMDIR) $(GIT_UG_REPO_PATH)
 	-$(RMDIR) $(ENV)
 
 check:
@@ -169,17 +169,16 @@ check:
 
 
 # Subrepository management.
-$(HG_UG_REPO_PATH):
-	-hg clone --noupdate $(HG_UG_REPO) $(HG_UG_REPO_PATH)
-	-hg pull $(HG_UG_REPO) -R $(HG_UG_REPO_PATH)
-	hg update -r $(HG_UG_REPO_REV) -R $(HG_UG_REPO_PATH)
+$(GIT_UG_REPO_PATH):
+	-git clone $(GIT_UG_REPO) $(GIT_UG_REPO_PATH)
+	git -C $(GIT_UG_REPO_PATH) fetch
+	git -C $(GIT_UG_REPO_PATH) checkout $(GIT_UG_REPO_REV)
 
 $(GIT_SAMPLE_DATA_REPO_PATH): | $(DATA_DIR)
 	-git clone $(GIT_SAMPLE_DATA_REPO) $(GIT_SAMPLE_DATA_REPO_PATH)
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs install
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) lfs fetch
-	git -C $(GIT_SAMPLE_DATA_REPO_PATH) fetch
 	git -C $(GIT_SAMPLE_DATA_REPO_PATH) checkout $(GIT_SAMPLE_DATA_REPO_REV)
 
 $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
@@ -187,10 +186,9 @@ $(GIT_TEST_DATA_REPO_PATH): | $(DATA_DIR)
 	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs install
 	git -C $(GIT_TEST_DATA_REPO_PATH) lfs fetch
-	git -C $(GIT_TEST_DATA_REPO_PATH) fetch
 	git -C $(GIT_TEST_DATA_REPO_PATH) checkout $(GIT_TEST_DATA_REPO_REV)
 
-fetch: $(HG_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
+fetch: $(GIT_UG_REPO_PATH) $(GIT_SAMPLE_DATA_REPO_PATH) $(GIT_TEST_DATA_REPO_PATH)
 
 
 # Python environment management
@@ -249,7 +247,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 	$(BASHLIKE_SHELL_COMMAND) "cd $(DIST_DIR) && zip -r $(notdir $(APIDOCS_ZIP_FILE)) $(notdir $(APIDOCS_HTML_DIR))"
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
-$(USERGUIDE_HTML_DIR): $(HG_UG_REPO_PATH) | $(DIST_DIR)
+$(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
 	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
