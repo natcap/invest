@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Adding a GitHub Actions workflow for building python wheels for Mac and Windows
+  as well as a source distribution.
 * Fixed a bug in CLI logging where logfiles created by the CLI were 
   incompatible with the ``natcap.invest.datastack`` operation that
   allows the UI to load model arguments from logfiles.
