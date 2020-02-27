@@ -134,6 +134,7 @@ jobs:
               uses: actions/download-artifact@v1
               with:
                   name: InVEST Windows build artifacts
+                  path: dist
 
             - name: Fetch sampledata
               run: make data/invest-sample-data
