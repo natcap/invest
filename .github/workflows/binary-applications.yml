@@ -120,43 +120,6 @@ jobs:
                   name: InVEST Windows build artifacts
                   path: dist
 
-    windows-invest-autotest:
-        name: Run InVEST-autotest (windows)
-        needs: build-windows-binaries
-        runs-on: windows-latest
-        env:
-            PYTHON_VERSION: 3.7
-            PYTHON_ARCH: x64
-        steps:
-            - uses: actions/checkout@v1
-
-            - name: Get the windows build artifacts
-              uses: actions/download-artifact@v1
-              with:
-                  name: InVEST Windows build artifacts
-                  path: dist
-
-            - name: Fetch sampledata
-              run: make data/invest-sample-data
-
-            - uses: actions/setup-python@v1
-              with:
-                  python-version: ${{ env.PYTHON_VERSION }}
-                  architecture: ${{ env.PYTHON_ARCH }}
-
-            - name: Run invest-autotest
-              run: |
-                  cd dist/invest
-                  # Invest-autotest isn't in the binary directory by default
-                  # (added by NSIS installer), so read directly from the source
-                  # tree.
-                  $CWD = (Get-Location).path
-                  python ../../scripts/invest-autotest.py --help
-                  python ../../scripts/invest-autotest.py `
-                        --binary=$CWD/invest.exe `
-                        --cwd=$CWD/../data/invest-sample-data `
-                        --workspace=$CWD/../workspace/
-
     build-mac-binaries:
         name: "Build mac binaries"
         needs: check-syntax-errors
