@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Binary builds for Windows and Mac OS X have been moved to GitHub Actions from
+  AppVeyor.  All AppVeyor-specific configuration has been removed.
 * Fixing an issue with the InVEST Makefile where ``make deploy`` was
   attempting to synchronize nonexistent sample data zipfiles with a storage
   bucket on GCP.  Sample data zipfiles are only built on Windows, and so
