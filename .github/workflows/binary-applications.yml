@@ -92,6 +92,11 @@ jobs:
                 $env:INSTALLER_BINARY = @(gci 'dist/*.exe')[0] | Select-Object -ExpandProperty FullName
                 $env:GSUTIL_PATH = (Get-Command gsutil).path
 
+                # Specify which python version we want to use (it's the one we're using
+                # in actions/setup-python.
+                $env:CLOUDSDK_PYTHON = (Get-Command python).path
+                $env:CLOUDSDK_GSUTIL_PYTHON = (Get-Command python).path
+
                 make CERT_KEY_PASS=${{ secrets.STANFORD_CERT_KEY_PASS }} `
                         GSUTIL=$env:GSUTIL_PATH `
                         BIN_TO_SIGN=$env:INSTALLER_BINARY `
