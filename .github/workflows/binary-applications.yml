@@ -77,14 +77,14 @@ jobs:
               run: make windows_installer
 
             - name: Set up GCP
-              if: ${{ secrets.GOOGLE_SERVICE_ACC_KEY != '' }}
+              if: secrets.GOOGLE_SERVICE_ACC_KEY != ''
               uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
               with:
                   version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Sign binaries
-              if: ${{ secrets.GOOGLE_SERVICE_ACC_KEY != '' }}
+              if: secrets.GOOGLE_SERVICE_ACC_KEY != ''
               shell: powershell
               run: |
                 # figure out the path to signtool.exe (it keeps changing with SDK updates)
@@ -106,7 +106,7 @@ jobs:
                     signcode_windows
 
             - name: Deploy artifacts to GCS
-              if: ${{ secrets.GOOGLE_SERVICE_ACC_KEY != '' }}
+              if: secrets.GOOGLE_SERVICE_ACC_KEY != ''
               run: |
                   $env:GSUTIL_PATH = (Get-Command gsutil).path
 
@@ -169,14 +169,14 @@ jobs:
                   make PYTHON=$(pwd)/env/bin/python mac_zipfile userguide
 
             - name: Set up GCP
-              if: ${{ secrets.GOOGLE_SERVICE_ACC_KEY != '' }}
+              if: secrets.GOOGLE_SERVICE_ACC_KEY != ''
               uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
               with:
                   version: '281.0.0'
                   service_account_key: ${{ secrets.GOOGLE_SERVICE_ACC_KEY }}
 
             - name: Deploy artifacts to GCS
-              if: ${{ secrets.GOOGLE_SERVICE_ACC_KEY != '' }}
+              if: secrets.GOOGLE_SERVICE_ACC_KEY != ''
               run: make deploy
 
             - name: Save build artifacts
