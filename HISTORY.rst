@@ -2,8 +2,9 @@
 
 Unreleased Changes
 ------------------
-* Added error-handling in Urban Flood Risk Mitigation to provide a helpful
-  error message.
+* Added error-handling in Urban Flood Risk Mitigation to tell users to
+  "Check that the Soil Group raster does not contain values other than 
+  (1, 2, 3, 4)" when a ``ValueError`` is raised from ``_lu_to_cn_op``.
 * Fixed a bug in CLI logging where logfiles created by the CLI were 
   incompatible with the ``natcap.invest.datastack`` operation that
   allows the UI to load model arguments from logfiles.
