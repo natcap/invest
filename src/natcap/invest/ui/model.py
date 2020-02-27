@@ -560,9 +560,9 @@ class AboutDialog(QtWidgets.QDialog):
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
-                 'http://github.com/natcap/pygeoprocessing'),
+                 'https://github.com/natcap/pygeoprocessing'),
                 ('PyQt', 'GPL',
-                 'http://riverbankcomputing.com/software/pyqt/intro'),
+                 'https://riverbankcomputing.com/software/pyqt/intro'),
                 ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
                 ('scipy', 'BSD', 'http://www.scipy.org/'),
                 ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:
