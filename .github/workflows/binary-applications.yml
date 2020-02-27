@@ -37,7 +37,7 @@ jobs:
             - name: Restore pip cache
               uses: actions/cache@v1
               with:
-                  path: ~\AppData\Local\pip\Cache
+                  path: $env:APPDATA\Local\pip\Cache
                   key: windows-py${{ env.PYTHON_VERSION }}-${{ env.PYTHON_ARCH}}-pip-${{ hashFiles('**/requirements*.txt') }}-exe
 
             - name: Set up python
@@ -65,7 +65,7 @@ jobs:
                   ./ci/windows-ci-binary-install.ps1
 
             - name: Clone dependent repositories
-              run: make -j3 fetch
+              run: make -j2 doc/users-guide data/invest-sample-data
 
             - name: Build sampledata
               run: make -j3 sampledata
