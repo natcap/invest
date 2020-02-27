@@ -147,8 +147,11 @@ jobs:
             - name: Run invest-autotest
               run: |
                   cd dist/invest
-                  python invest-autotest.py --help
-                  python invest-autotest.py `
+                  # Invest-autotest isn't in the binary directory by default
+                  # (added by NSIS installer), so read directly from the source
+                  # tree.
+                  python ../../scripts/invest-autotest.py --help
+                  python ../../scripts/invest-autotest.py `
                         --binary=(Get-Location).path/invest.exe `
                         --cwd=(Get-Location).path/../data/invest-sample-data `
                         --workspace=(Get-Location).path/../workspace/
