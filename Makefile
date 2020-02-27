@@ -79,8 +79,8 @@ BUILD_DIR := build
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
 # if someone wants to build from source outside of git (like if they grabbed
 # a zipfile of the source code).
-FORKNAME := $(filter-out ssh: http: https: git@,$(subst /, ,$(subst :, ,$(shell git remote get-url origin))))
-FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
+FORKNAME := $(word 2, $(subst github.com/, ,$(shell git remote get-url origin)))
+FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
