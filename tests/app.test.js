@@ -2,8 +2,6 @@ import React from 'react';
 import { fireEvent, render, wait } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
-// import electron from 'electron'
-
 import App from '../src/app';
 import { investList } from '../src/server_requests';
 jest.mock('../src/server_requests');
@@ -73,10 +71,4 @@ test('Settings dialog interactions: n workers', async () => {
   fireEvent.change(input, { target: { value: badValue } })
   expect(input.classList.contains('is-invalid')).toBeTruthy();
   expect(getByText('Save Changes')).toBeDisabled();
-  // // The real test: still newValue after saving and re-opening
-  // fireEvent.click(getByText('Save Changes'));
-  // fireEvent.click(getByText('Settings'));
-  // await wait(() => {  // the value to test is inherited through props
-  //   expect(input).toHaveValue(newValue);
-  // })
 })

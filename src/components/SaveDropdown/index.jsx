@@ -7,6 +7,7 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Dropdown from 'react-bootstrap/Dropdown';
 
+// TODO: there's some convoluted components going on here.
 class DropdownItemModal extends React.Component {
   constructor(props) {
     super(props);
@@ -43,7 +44,7 @@ export class SaveSessionDropdownItem extends DropdownItemModal {
     return (
       <React.Fragment>
         
-        <Dropdown.Item onClick={this.handleShow}>Save session</Dropdown.Item>
+        <Button onClick={this.handleShow} variant="link">Save session</Button>
 
         <Modal show={this.state.show} onHide={this.handleClose}>
           <Form onSubmit={this.handleSubmit}>
@@ -98,11 +99,12 @@ export class SaveParametersDropdownItem extends React.Component {
   render() {
     // disabled when there's no modelSpec, i.e. before a model is selected
     return(
-      <Dropdown.Item 
+      <Button 
         onClick={this.browseFile}
-        disabled={this.props.disabled}>
+        disabled={this.props.disabled}
+        variant="link">
         Save parameters to JSON
-      </Dropdown.Item>
+      </Button>
     );
   }
 }
@@ -124,11 +126,12 @@ export class SavePythonDropdownItem extends React.Component {
   render() {
     // disabled when there's no modelSpec, i.e. before a model is selected
     return(
-      <Dropdown.Item 
+      <Button 
         onClick={this.browseFile}
-        disabled={this.props.disabled}>
+        disabled={this.props.disabled}
+        variant="link">
         Save to Python script
-      </Dropdown.Item>
+      </Button>
     );
   }
 }

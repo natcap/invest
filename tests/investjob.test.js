@@ -80,14 +80,16 @@ test('Save Parameters/Python enable after model select ', async () => {
 
   // Check the dropdown before any model setup
   fireEvent.click(getByText('Save'));
-  expect(getByText('Save parameters to JSON')).toHaveClass('disabled');
-  expect(getByText('Save to Python script')).toHaveClass('disabled');
+  await wait(() => {
+    expect(getByText('Save parameters to JSON')).toBeDisabled();
+    expect(getByText('Save to Python script')).toBeDisabled();
+  })
 
   // Now load a model setup using a recent session
   fireEvent.click(getByText('carbon_setup'));
   await wait(() => {
-    expect(getByText('Save parameters to JSON')).not.toHaveClass('disabled');
-    expect(getByText('Save to Python script')).not.toHaveClass('disabled');
+    expect(getByText('Save parameters to JSON')).toBeEnabled();
+    expect(getByText('Save to Python script')).toBeEnabled();
   });
 })
 
