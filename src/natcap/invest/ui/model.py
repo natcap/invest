@@ -543,10 +543,10 @@ class AboutDialog(QtWidgets.QDialog):
                         naturalcapitalproject.org</a><br/>
             Copyright 2017, The Natural Capital Project<br/>
             License:
-            <a href="https://bitbucket.org/natcap/invest/src/tip/LICENSE.txt">
+            <a href="https://github.com/natcap/invest/blob/master/LICENSE.txt">
                         BSD 3-clause</a><br/>
-            Project page: <a href="https://bitbucket.org/natcap/invest">
-                        bitbucket.org/natcap/invest</a><br/>
+            Project page: <a href="https://github.com/natcap/invest">
+                        github.com/natcap/invest</a><br/>
 
             <h2>Open-Source Licenses</h2>
             """.format(
@@ -560,9 +560,9 @@ class AboutDialog(QtWidgets.QDialog):
                 ('numpy', 'BSD', 'http://numpy.org'),
                 ('pyamg', 'BSD', 'http://github.com/pyamg/pyamg'),
                 ('pygeoprocessing', 'BSD',
-                 'http://bitbucket.org/richsharp/pygeoprocessing'),
+                 'https://github.com/natcap/pygeoprocessing'),
                 ('PyQt', 'GPL',
-                 'http://riverbankcomputing.com/software/pyqt/intro'),
+                 'https://riverbankcomputing.com/software/pyqt/intro'),
                 ('rtree', 'LGPL', 'http://toblerity.org/rtree/'),
                 ('scipy', 'BSD', 'http://www.scipy.org/'),
                 ('shapely', 'BSD', 'http://github.com/Toblerity/Shapely')]:

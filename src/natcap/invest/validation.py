@@ -520,8 +520,7 @@ def check_csv(filepath, required_fields=None, excel_ok=False):
         return file_warning
 
     try:
-        # Check if the file encoding is UTF-8 BOM first, related to issue
-        # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+        # Check if the file encoding is UTF-8 BOM first
         encoding = None
         with open(filepath) as file_obj:
             first_line = file_obj.readline()

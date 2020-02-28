@@ -79,8 +79,8 @@ BUILD_DIR := build
 # The fork name will need to be set manually (e.g. make FORKNAME=natcap/invest)
 # if someone wants to build from source outside of git (like if they grabbed
 # a zipfile of the source code).
-FORKNAME := $(filter-out ssh: http: https: git@,$(subst /, ,$(subst :, ,$(shell git remote get-url origin))))
-FORKUSER := $(word 2, $(subst /, ,$(FORKNAME)))
+FORKNAME := $(word 2, $(subst github.com/, ,$(shell git remote get-url origin)))
+FORKUSER := $(word 1, $(subst /, ,$(FORKNAME)))
 ifeq ($(FORKUSER),natcap)
 	BUCKET := gs://releases.naturalcapitalproject.org
 	DIST_URL_BASE := $(BUCKET)/invest/$(VERSION)
@@ -248,7 +248,7 @@ $(APIDOCS_ZIP_FILE): $(APIDOCS_HTML_DIR)
 
 userguide: $(USERGUIDE_HTML_DIR) $(USERGUIDE_ZIP_FILE)
 $(USERGUIDE_HTML_DIR): $(GIT_UG_REPO_PATH) | $(DIST_DIR)
-	$(MAKE) -C doc/users-guide SPHINXBUILD=sphinx-build BUILDDIR=../../build/userguide html
+	$(MAKE) -C doc/users-guide SPHINXBUILD="$(PYTHON) -m sphinx" BUILDDIR=../../build/userguide html
 	-$(RMDIR) $(USERGUIDE_HTML_DIR)
 	$(COPYDIR) build/userguide/html dist/userguide
 
@@ -358,9 +358,12 @@ signcode_windows:
 	@echo "Installer was signed with signtool"
 
 deploy:
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
-	$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
 	$(GSUTIL) -m rsync $(DIST_DIR) $(DIST_URL_BASE)
+
+    ifeq ($(OS),Windows_NT)
+		$(GSUTIL) -m rsync -r $(DIST_DIR)/data $(DIST_URL_BASE)/data
+		$(GSUTIL) -m rsync -r $(DIST_DIR)/userguide $(DIST_URL_BASE)/userguide
+    endif
 	@echo "Binaries (if they were created) can be downloaded from:"
 	@echo "  * $(DOWNLOAD_DIR_URL)/$(subst $(DIST_DIR)/,,$(WINDOWS_INSTALLER_FILE))"
     ifeq ($(BUCKET),gs://releases.naturalcapitalproject.org)  # ifeq cannot follow TABs, only spaces

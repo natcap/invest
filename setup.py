@@ -31,7 +31,7 @@ setup(
     long_description=README,
     maintainer='James Douglass',
     maintainer_email='jdouglass@stanford.edu',
-    url='http://bitbucket.org/natcap/invest',
+    url='http://github.com/natcap/invest',
     namespace_packages=['natcap'],
     packages=[
         'natcap',

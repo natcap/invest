@@ -1,5 +1,5 @@
 ================================================================
-InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs 
+InVEST: Integrated Valuation of Ecosystem Services and Tradeoffs
 ================================================================
 
 Release: |release|
@@ -18,9 +18,9 @@ but have almost all been ported over to a purely open-source python environment.
 InVEST is licensed under a permissive, modified BSD license.
 
 For more information, see:
-  * InVEST on `bitbucket <https://bitbucket.org/natcap/invest>`_
-  * The latest `InVEST User's Guide <http://data.naturalcapitalproject.org/nightly-build/invest-users-guide/html/>`_
-  * The `Natural Capital Project website <http://naturalcapitalproject.org/invest>`_.
+  * InVEST on `GitHub <https://github.com/natcap/invest>`_
+  * The latest `InVEST User's Guide <http://releases.naturalcapitalproject.org/invest-userguide/latest/index.html>`_
+  * The `Natural Capital Project website <http://naturalcapitalproject.stanford.edu/software/invest>`_.
 
 
 Getting Started
