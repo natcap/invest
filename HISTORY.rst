@@ -2,12 +2,20 @@
 
 Unreleased Changes
 ------------------
-* Migrating over to GDAL 3 from GDAL 2 and leaving GDAL 2 behind.
+* Migrating over to GDAL 3 from GDAL 2.
 * Updating requirements to reflect GDAL version >= 3.
 * Updating crop production tests that varied slightly due to GDAL 3 
   differences in handling spatial references.
 * Adding function in utils.py to handle InVEST coordindate transformations.
 * Adding tests for new coordinate transformation function in utils.py.
+* Added error-handling in Urban Flood Risk Mitigation to tell users to
+  "Check that the Soil Group raster does not contain values other than 
+  (1, 2, 3, 4)" when a ``ValueError`` is raised from ``_lu_to_cn_op``.
+* Updated the ``Makefile`` to use the new git location of the InVEST User's
+  Guide repository at https://github.com/natcap/invest.users-guide
+* Fixed a bug in CLI logging where logfiles created by the CLI were
+  incompatible with the ``natcap.invest.datastack`` operation that
+  allows the UI to load model arguments from logfiles.
 * Automated tests are now configured to use Github Actions for 32- and 64-bit
   build targets for Python 3.6 and 3.7 on Windows.  We are still using
   AppVeyor for our binary builds for the time being.
