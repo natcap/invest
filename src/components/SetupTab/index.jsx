@@ -55,7 +55,8 @@ class ArgsForm extends React.Component {
     // but converted to empty strings by `argsValuesFromSpec` 
     // Validation will handle updating the `valid` property
     // of the optional and conditionally required args so that they 
-    // can validate without any user-interaction.
+    // can validate without any user-interaction. Validation messages
+    // won't appear to the user until an argument has been touched.
 
     // TODO: could call batchUpdateArgs here instead
     // to avoid passing investValidate to this component at all.
