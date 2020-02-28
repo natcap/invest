@@ -35,6 +35,8 @@ GDAL_ERROR_LEVELS = {
     gdal.CE_Failure: logging.ERROR,
     gdal.CE_Fatal: logging.CRITICAL,
 }
+# GDAL 3 Coordinate Transformation Axis Order strategy Lon,Lat
+DEFAULT_OSR_AXIS_MAPPING_STRATEGY = osr.OAMS_TRADITIONAL_GIS_ORDER
 
 
 @contextlib.contextmanager
@@ -541,31 +543,37 @@ def mean_pixel_size_and_area(pixel_size_tuple):
     return (x_size, x_size*y_size)
 
 
-def create_coordinate_transformer(base_ref, target_ref):
+def create_coordinate_transformer(base_ref, target_ref, 
+            osr_axis_mapping_strategy=DEFAULT_OSR_AXIS_MAPPING_STRATEGY):
     """Create a spatial reference coordinate transformation function.
 
     The function creates a transformer that is compatable with gdal 3, 
     that uses the gdal 2 to gdal 3 migration recommendation from: 
     https://trac.osgeo.org/gdal/wiki/rfc73_proj6_wkt2_srsbarn.
+    Specifically, gdal 3 now expects Lat,Lon Axis Order but InVESET 
+    traditionally deals with Lon,Lat order, so this swaps the order to 
+    be Lon,Lat friendly.
 
     Parameter:
         base_ref (osr spatial reference): A defined spatial reference to 
             transform FROM
         target_ref (osr spatial reference): A defined spatial reference 
             to transform TO
+        osr_axis_mapping_strategy (tuple): A tuple containing the 
+            OSR Axis Mapping Strategy as the first element. Defaults to 
+            a GIS friendly Lon,Lat order defined at 
+            utils.DEFAULT_OSR_AXIS_MAPPING_STRATEGY.
 
     Returns:
         An OSR Coordinate Transformation object
 
     """
     # GDAL 3 handles lat/lon transformations differently where the transformer
-    # expects lat,lon instead of lon,lat. GDAL migration help recommends 
-    # using SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) as a 
-    # workaround. Only need to worry about this for unprojected references.
-    if not base_ref.IsProjected():
-            base_ref.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) 
-    if not target_ref.IsProjected():
-            target_ref.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) 
+    # expects lat,lon instead of lon,lat. 
+    # SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER) swaps the Axis 
+    # Order to Lon,Lat.
+    base_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
+    target_ref.SetAxisMappingStrategy(osr_axis_mapping_strategy) 
 
     transformer = osr.CreateCoordinateTransformation(base_ref, target_ref)
     return transformer
