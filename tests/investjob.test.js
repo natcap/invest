@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, wait, waitForElement } from '@testing-library/react'
+import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
@@ -28,7 +29,7 @@ test('Clicking an invest button renders SetupTab', async () => {
     const execute = getByText('Execute');
     // Expect a disabled Execute button and a visible SetupTab
     expect(execute).toBeTruthy();
-    expect(execute.hasAttribute('disabled')).toBeFalsy();
+    expect(execute).toBeEnabled();
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
   });
   
@@ -53,8 +54,12 @@ test('Clicking a recent session renders SetupTab', async () => {
     const execute = getByText('Execute');
     // Expect a disabled Execute button and a visible SetupTab
     expect(execute).toBeTruthy();
-    expect(execute.hasAttribute('disabled')).toBeFalsy();
+    expect(execute).toBeEnabled();
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+    expect(getByText('Setup')).toBeVisible();
+    debug(getByText('Setup'));
+    debug(getByText('Resources'));
+    expect(getByText('Resources')).toBeVisible();
   });
   
   expect(spy).toHaveBeenCalledTimes(1);  // called by the click handler
@@ -77,18 +82,14 @@ test('Save Parameters/Python enable after model select ', async () => {
 
   // Check the dropdown before any model setup
   fireEvent.click(getByText('Save'));
-  expect(getByText('Save parameters to JSON')
-    .classList.contains('disabled')).toBeTruthy();
-  expect(getByText('Save to Python script')
-    .classList.contains('disabled')).toBeTruthy();
+  expect(getByText('Save parameters to JSON')).toHaveClass('disabled');
+  expect(getByText('Save to Python script')).toHaveClass('disabled');
 
   // Now load a model setup using a recent session
   fireEvent.click(getByText('carbon_setup'));
   await wait(() => {
-    expect(getByText('Save parameters to JSON')
-    .classList.contains('disabled')).toBeFalsy();
-    expect(getByText('Save to Python script')
-      .classList.contains('disabled')).toBeFalsy();
+    expect(getByText('Save parameters to JSON')).not.toHaveClass('disabled');
+    expect(getByText('Save to Python script')).not.toHaveClass('disabled');
   });
 })
 
