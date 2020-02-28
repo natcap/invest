@@ -4,7 +4,12 @@ Unreleased Changes
 ------------------
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
   as well as a source distribution.
-* Fixed a bug in CLI logging where logfiles created by the CLI were 
+* Added error-handling in Urban Flood Risk Mitigation to tell users to
+  "Check that the Soil Group raster does not contain values other than 
+  (1, 2, 3, 4)" when a ``ValueError`` is raised from ``_lu_to_cn_op``.
+* Updated the ``Makefile`` to use the new git location of the InVEST User's
+  Guide repository at https://github.com/natcap/invest.users-guide
+* Fixed a bug in CLI logging where logfiles created by the CLI were
   incompatible with the ``natcap.invest.datastack`` operation that
   allows the UI to load model arguments from logfiles.
 * Automated tests are now configured to use Github Actions for 32- and 64-bit

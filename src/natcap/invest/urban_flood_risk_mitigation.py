@@ -53,7 +53,6 @@ ARGS_SPEC = {
             "name": "Depth of rainfall in mm"
         },
         "lulc_path": {
-            "validation_options": {},
             "type": "raster",
             "validation_options": {
                 "projected": True,
@@ -824,9 +823,14 @@ def _lu_to_cn_op(
 
     # soil arrays are 1.0 - 4.0, remap to 0 - 3 and choose from the per
     # pixel CN array
-    result[valid_mask] = numpy.choose(
-        soil_choose_array,
-        per_pixel_cn_array)
+    try:
+        result[valid_mask] = numpy.choose(
+            soil_choose_array,
+            per_pixel_cn_array)
+    except ValueError as error:
+        err_msg = 'Check that the Soil Group raster does not contain values ' \
+            'other than (1, 2, 3, 4)'
+        raise ValueError(str(error) + '\n' + err_msg)
 
     return result
 
