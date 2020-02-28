@@ -455,8 +455,7 @@ def build_lookup_from_csv(
         if `to_lower` all strings including key_fields and values are
         converted to lowercase unicode.
     """
-    # Check if the file encoding is UTF-8 BOM first, related to issue
-    # https://bitbucket.org/natcap/invest/issues/3832/invest-table-parsing-does-not-support-utf
+    # Check if the file encoding is UTF-8 BOM first
     encoding = None
     with open(table_path) as file_obj:
         first_line = file_obj.readline()

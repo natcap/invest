@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
+  refer to the repository's new home on github.
 * Binary builds for Windows and Mac OS X have been moved to GitHub Actions from
   AppVeyor.  All AppVeyor-specific configuration has been removed.
 * Fixing an issue with the InVEST Makefile where ``make deploy`` was
