@@ -1,0 +1,67 @@
+name: Python distributions
+on: [push, pull_request]
+jobs:
+    build-wheels:
+        name: Wheel
+        runs-on: ${{ matrix.os }}
+        strategy:
+            fail-fast: false
+            matrix:
+                os: [windows-latest, macos-latest]
+                python-version: [3.6, 3.7, 3.8]
+                python-arch: [x86, x64]
+                include:
+                    - python-version: 3.6
+                      numpy: "numpy~=1.14"
+
+                    - python-version: 3.7
+                      numpy: "numpy~=1.15"
+
+                    - python-version: 3.8
+                      numpy: "numpy~=1.17"
+
+                exclude:
+                    - os: macos-latest
+                      python-arch: x86
+
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Set up python ${{ matrix.python-version }} ${{ matrix.python-arch }}
+              uses: actions/setup-python@v1
+              with:
+                  python-version: ${{ matrix.python-version }}
+                  architecture: ${{ matrix.python-arch }}
+
+            - name: Install dependencies
+              run: python -m pip install ${{ matrix.numpy }} setuptools_scm cython wheel
+
+            - name: Build wheel
+              run: python setup.py bdist_wheel
+
+            - uses: actions/upload-artifact@v1
+              with:
+                  name: Wheel for ${{ matrix.os }} ${{ matrix.python-version }} ${{ matrix.python-arch }}
+                  path: dist
+
+    build-sdist:
+        name: Source Dist
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v1
+
+            - name: Set up python
+              uses: actions/setup-python@v1
+              with:
+                  python-version: 3.7
+
+            - name: Install python dependencies
+              run: python -m pip install --upgrade pip numpy setuptools_scm cython
+
+            - name: Build source distribution
+              run: python setup.py build_ext sdist
+
+            - uses: actions/upload-artifact@v1
+              with:
+                  name: Source distribution
+                  path: dist
