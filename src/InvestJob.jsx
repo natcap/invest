@@ -19,8 +19,8 @@ import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
-import { SaveSessionDropdownItem, SaveParametersDropdownItem,
-         SavePythonDropdownItem } from './components/SaveDropdown'
+import { SaveSessionButtonModal, SaveParametersButton,
+         SavePythonButton } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation } from './server_requests';
@@ -430,14 +430,14 @@ export class InvestJob extends React.Component {
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
           <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
-            <SaveSessionDropdownItem 
+            <SaveSessionButtonModal 
               saveState={this.saveState}
               sessionID={this.state.sessionID}
               setSessionID={this.setSessionID}/>
-            <SaveParametersDropdownItem
+            <SaveParametersButton
               argsToJsonFile={this.argsToJsonFile}
               disabled={dropdownsDisabled}/>
-            <SavePythonDropdownItem
+            <SavePythonButton
               savePythonScript={this.savePythonScript}
               disabled={dropdownsDisabled}/>
           </DropdownButton>

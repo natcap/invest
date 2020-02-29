@@ -93,3 +93,7 @@ test('Save Parameters/Python enable after model select ', async () => {
   });
 })
 
+
+// Tests:
+test('Populating arguments enables Execute button')
+test('Execute launches a python subprocess and switches to Log display')

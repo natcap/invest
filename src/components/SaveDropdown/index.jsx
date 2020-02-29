@@ -7,14 +7,16 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import Dropdown from 'react-bootstrap/Dropdown';
 
-// TODO: there's some convoluted components going on here.
-class DropdownItemModal extends React.Component {
+
+export class SaveSessionButtonModal extends React.Component {
+
   constructor(props) {
     super(props);
     this.state = { show: false }
 
     this.handleClose = this.handleClose.bind(this);
     this.handleShow = this.handleShow.bind(this);
+    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   handleClose() {
@@ -23,14 +25,6 @@ class DropdownItemModal extends React.Component {
 
   handleShow() {
     this.setState({show: true});
-  }; 
-}
-
-export class SaveSessionDropdownItem extends DropdownItemModal {
-
-  constructor(props) {
-    super(props);
-    this.handleSubmit = this.handleSubmit.bind(this);
   }
 
   handleSubmit(event) {
@@ -82,7 +76,7 @@ export class SaveSessionDropdownItem extends DropdownItemModal {
 }
 
 
-export class SaveParametersDropdownItem extends React.Component {
+export class SaveParametersButton extends React.Component {
 
   constructor(props) {
     super(props);
@@ -109,7 +103,7 @@ export class SaveParametersDropdownItem extends React.Component {
   }
 }
 
-export class SavePythonDropdownItem extends React.Component {
+export class SavePythonButton extends React.Component {
   
   constructor(props) {
     super(props);
