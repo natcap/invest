@@ -1,4 +1,5 @@
 import React from 'react';
+import { Tail } from 'tail';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -25,10 +26,19 @@ export class LogTab extends React.Component {
   render() {
     const current_err = this.props.logStdErr;
     // Include the stderr in the main log even though it also gets an Alert
-    const current_out = this.props.logStdOut + current_err;
+    // const current_out = this.props.logStdOut + current_err;
     let renderedLog;
     let renderedAlert;
     let killButton;
+    let current_out = '';
+
+    if (this.props.logfile) {
+      console.log(this.props.logfile);
+      tail = new Tail(this.props.logfile);
+      tail.on('line', function(data) {
+        current_out + data
+      })
+    }
 
     renderedLog =
         <Col ref={this.content} style={logStyle}>

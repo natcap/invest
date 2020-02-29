@@ -88,6 +88,7 @@
     "react": "^16.12.0",
     "react-test-renderer": "^16.12.0",
     "react-vega": "^7.2.1",
+    "tail": "^2.0.3",
     "vega": "^5.9.1",
     "vega-lite": "^4.4.0"
   }

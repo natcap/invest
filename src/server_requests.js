@@ -43,6 +43,18 @@ export function fetchValidation(payload) {
   )
 }
 
+export function fetchLogfilename(payload) {
+  return (
+    fetch('http://localhost:5000/get_invest_logfilename', {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then((response) => { return response.text() })
+    .catch((error) => { console.log(error) })
+    )
+}
+
 export function fetchDatastackFromFile(payload) {
   return (
     fetch('http://localhost:5000/post_datastack_file', {

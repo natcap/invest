@@ -23,7 +23,7 @@ import { SaveSessionButtonModal, SaveParametersButton,
          SavePythonButton } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile,
-         fetchValidation } from './server_requests';
+         fetchValidation, fetchLogfilename } from './server_requests';
 
 // TODO see issue #12
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
@@ -52,11 +52,12 @@ export class InvestJob extends React.Component {
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
       argsValid: false,                // set on investValidate exit
-      workspace: {                     // only set values when execute completes
-        directory: null, suffix: null},
-      logStdErr: '', 
-      logStdOut: '',
-      sessionProgress: 'home',       // 'home', 'setup', 'log', 'results' (i.e. one of the tabs)
+      workspace: { 
+        directory: null, suffix: null
+      },                               // only set values when execute completes
+      logfile: null,
+      logStdErr: null,
+      sessionProgress: 'home',         // 'home', 'setup', 'log', 'results' (i.e. one of the tabs)
       activeTab: 'home',
     };
     
@@ -144,7 +145,7 @@ export class InvestJob extends React.Component {
     writeParametersToFile(payload);
   }
 
-  investExecute() {
+  async investExecute() {
     const datastackPath = path.join(
       TEMP_DIR, this.state.sessionID + '.json')
 
@@ -158,13 +159,15 @@ export class InvestJob extends React.Component {
     const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
 
     this.argsToJsonFile(datastackPath);
+    const logfilename = await fetchLogfilename({
+      workspace: this.state.args.workspace_dir.value,
+      name: this.state.modelSpec.module
+    })
     
     this.setState(
       {
         sessionProgress: 'log',
-        activeTab: 'log',
-        logStdErr: '',
-        logStdOut: ''
+        activeTab: 'log'
       }
     );
 
@@ -175,14 +178,12 @@ export class InvestJob extends React.Component {
         env: gdalEnv
       });
 
-    // TODO: Find a nicer way to stream a log to the page than
-    // passing all the text through this.state
-    let stdout = Object.assign('', this.state.logStdOut);
+    // TODO: Find a nicer way to setState after spawn has started,
+    // since this callback triggers on every stdout
     investRun.stdout.on('data', (data) => {
-      stdout += `${data}`
       this.setState({
-        logStdOut: stdout,
-        procID: investRun.pid
+        procID: investRun.pid,
+        logfile: logfilename
       });
     });
 
@@ -199,6 +200,7 @@ export class InvestJob extends React.Component {
     // another random process.
     investRun.on('close', (code) => {
       const progress = (code === 0 ? 'results' : 'log')
+      // TODO: why wait to set workspace on close?
       const workspace = {
         directory: this.state.args.workspace_dir.value,
         suffix: this.state.args.results_suffix.value
@@ -471,7 +473,7 @@ export class InvestJob extends React.Component {
           <TabPane eventKey="log" title="Log">
             <LogTab
               sessionProgress={this.state.sessionProgress}
-              logStdOut={this.state.logStdOut}
+              logfile={this.state.logfile}
               logStdErr={this.state.logStdErr}
               investKill={this.investKill}
             />

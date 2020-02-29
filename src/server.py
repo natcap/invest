@@ -6,7 +6,8 @@ import multiprocessing
 import codecs
 import textwrap
 import pprint
-import datetime
+from datetime import datetime
+import os
 
 from flask import Flask
 from flask import request
@@ -97,6 +98,17 @@ def get_invest_validate():
     LOGGER.debug(results)
     return json.dumps(results)
 
+@app.route('/get_invest_logfilename', methods=['POST'])
+def get_invest_logfilename():
+    payload = request.get_json()
+    LOGGER.debug(payload)
+    logfile = os.path.join(
+        payload['workspace'],
+        'InVEST-{modelname}-log-{timestamp}.txt'.format(
+            modelname='-'.join(payload['name'].replace(':', '').split(' ')),
+            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
+    return logfile
+
 
 @app.route('/post_datastack_file', methods=['POST'])
 def post_datastack_file():
@@ -161,7 +173,7 @@ def save_to_python():
         args = args.replace('}', ',\n}')
         py_file.write(script_template.format(
             invest_version=natcap.invest.cli.__version__,
-            today=datetime.datetime.now().strftime('%c'),
+            today=datetime.now().strftime('%c'),
             modelname=modelname,
             py_model=pyname,
             model_args=args))
