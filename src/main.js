@@ -5,6 +5,9 @@ import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-insta
 
 import { shutdownPythonProcess } from './server_requests';
 
+import dotenv from 'dotenv';
+dotenv.config();  // loads a '.env' file
+
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
@@ -14,8 +17,9 @@ const isDevMode = process.execPath.match(/[\\/]electron/);
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
 let PYTHON = 'python';
-if (process.env.INVEST) {  // if it was set, override
-  PYTHON = process.env.INVEST.trim();
+console.log(process.env.PYTHON);
+if (process.env.PYTHON) {  // if it was set, override
+  PYTHON = process.env.PYTHON.trim();
 }
 
 const createWindow = async () => {
