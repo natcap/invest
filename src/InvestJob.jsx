@@ -24,6 +24,7 @@ import { SaveSessionButtonModal, SaveParametersButton,
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation, fetchLogfilename } from './server_requests';
+import { findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
@@ -145,7 +146,7 @@ export class InvestJob extends React.Component {
     writeParametersToFile(payload);
   }
 
-  async investExecute() {
+  investExecute() {
     const datastackPath = path.join(
       TEMP_DIR, this.state.sessionID + '.json')
 
@@ -159,10 +160,6 @@ export class InvestJob extends React.Component {
     const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
 
     this.argsToJsonFile(datastackPath);
-    const logfilename = await fetchLogfilename({
-      workspace: this.state.args.workspace_dir.value,
-      name: this.state.modelSpec.module
-    })
     
     this.setState(
       {
@@ -180,11 +177,16 @@ export class InvestJob extends React.Component {
 
     // TODO: Find a nicer way to setState after spawn has started,
     // since this callback triggers on every stdout
-    investRun.stdout.on('data', (data) => {
-      this.setState({
-        procID: investRun.pid,
-        logfile: logfilename
-      });
+    let logfilename = ''
+    investRun.stdout.on('data', async () => {
+      if (!logfilename) {
+        logfilename = await findMostRecentLogfile(
+          this.state.args.workspace_dir.value)
+        this.setState({
+          procID: investRun.pid,
+          logfile: logfilename
+        });
+      }
     });
 
     let stderr = Object.assign('', this.state.logStdErr);

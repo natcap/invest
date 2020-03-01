@@ -34,8 +34,9 @@ export class LogTab extends React.Component {
 
     if (this.props.logfile) {
       console.log(this.props.logfile);
-      tail = new Tail(this.props.logfile);
+      const tail = new Tail(this.props.logfile);
       tail.on('line', function(data) {
+        console.log(data);
         current_out + data
       })
     }
