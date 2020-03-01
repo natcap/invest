@@ -1,50 +1,31 @@
 import React from 'react';
 import { Tail } from 'tail';
+import { LazyLog } from 'react-lazylog';
+import path from 'path';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
+import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
 import Button from 'react-bootstrap/Button';
 
-const logStyle = {
-  whiteSpace: 'pre-line',
-  maxHeight: '700px',
-  overflowY: 'scroll',
-};
 
 export class LogTab extends React.Component {
 
   constructor(props) {
     super(props);
-    this.content = React.createRef();
-  }
-
-  componentDidUpdate() {
-    this.content.current.scrollTop = this.content.current.scrollHeight;
   }
 
   render() {
     const current_err = this.props.logStdErr;
     // Include the stderr in the main log even though it also gets an Alert
-    // const current_out = this.props.logStdOut + current_err;
     let renderedLog;
     let renderedAlert;
     let killButton;
-    let current_out = '';
 
     if (this.props.logfile) {
-      console.log(this.props.logfile);
-      const tail = new Tail(this.props.logfile);
-      tail.on('line', function(data) {
-        console.log(data);
-        current_out + data
-      })
+      renderedLog = <LazyLog height={600} stream={true} url={path.resolve(this.props.logfile)} />
     }
-
-    renderedLog =
-        <Col ref={this.content} style={logStyle}>
-          {current_out}
-        </Col>
 
     if (current_err) {
       renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
@@ -63,10 +44,14 @@ export class LogTab extends React.Component {
       </Button>
 
     return (
-      <React.Fragment>
-        <Row>{renderedLog}</Row>
+      <Container>
+        <Row>
+          <Col md="12">
+            {renderedLog}
+          </Col>
+        </Row>
         <Row>{renderedAlert}</Row>
-      </React.Fragment>
+      </Container>
     );
   }
 }
