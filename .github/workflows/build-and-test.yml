@@ -13,6 +13,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
             - name: Set up python 3.7
               uses: actions/setup-python@v1
@@ -43,6 +46,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
@@ -86,6 +92,9 @@ jobs:
         needs: check-syntax-errors
         steps:
             - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
             - name: Restore pip cache
               uses: actions/cache@v1
@@ -126,6 +135,9 @@ jobs:
 
         steps:
             - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
               # Taken from https://github.com/actions/cache/blob/master/examples.md#python---pip
             - name: Restore pip cache
