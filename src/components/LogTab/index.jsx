@@ -44,8 +44,8 @@ export class LogTab extends React.Component {
     }
   }
 
-  componentDidUpdate(newProps) {
-    if (newProps.logfile != this.props.logfile) {
+  componentDidUpdate(prevProps) {
+    if (prevProps.logfile !== this.props.logfile && this.props.logfile) {
       let tail = new Tail(this.props.logfile, {
         fromBeginning: true
       });
@@ -54,6 +54,8 @@ export class LogTab extends React.Component {
         logdata += `${data}` + os.EOL
         this.setState({ logdata: logdata })
       })
+    } else if (this.state.logdata === '') {
+      this.setState({logdata: 'Starting...'})
     }
   }
 

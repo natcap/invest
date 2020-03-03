@@ -43,6 +43,14 @@ if (process.env.GDAL_DATA) {
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
 
+// to translate to the invest CLI's verbosity flag:
+const LOGLEVELMAP = {
+  'DEBUG':   '--debug',
+  'INFO':    '-vvv',
+  'WARNING': '-vv',
+  'ERROR':   '-v',
+}
+
 export class InvestJob extends React.Component {
   constructor(props) {
     super(props);
@@ -76,7 +84,7 @@ export class InvestJob extends React.Component {
     this.setSessionID = this.setSessionID.bind(this);
   }
 
-  saveState(event) {
+  saveState() {
     // Save a snapshot of this component's state to a JSON file.
     const jsonContent = JSON.stringify(this.state, null, 2);
     const sessionID = this.state.sessionID;
@@ -147,45 +155,44 @@ export class InvestJob extends React.Component {
   }
 
   async investExecute() {
+
     const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath);
 
-    // to translate to the invest CLI's verbosity flag:
-    const loggingLevelLookup = {
-      'DEBUG':   '--debug',
-      'INFO':    '-vvv',
-      'WARNING': '-vv',
-      'ERROR':   '-v',
-    }
-    const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
-
-    this.setState(
-      {
-        sessionProgress: 'log',
-        activeTab: 'log'
-      }
-    );
-
+    const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
-    console.log(cmdArgs);
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: process.cwd(),
         shell: true, // without true, IOError when datastack.py loads json
         env: gdalEnv
       });
 
+    const workspace = {
+      directory: this.state.args.workspace_dir.value,
+      suffix: this.state.args.results_suffix.value
+    }
+    const sessionName = [
+      this.state.modelName, workspace.directory, workspace.suffix].join('-')
+    
     // There's no general way to know that a spawned process started,
-    // so this logic in when listening for stdout seems like the way.
+    // so this logic when listening for stdout seems like the way.
     let logfilename = ''
     investRun.stdout.on('data', async () => {
       if (!logfilename) {
-        logfilename = await findMostRecentLogfile(
-          this.state.args.workspace_dir.value)
-        this.setState({
-          procID: investRun.pid,
-          logfile: logfilename
-        });
+        logfilename = await findMostRecentLogfile(workspace.directory)
+        this.setState(
+          {
+            procID: investRun.pid,
+            logfile: logfilename,
+            sessionID: sessionName,
+            sessionProgress: 'log',
+            workspace: workspace
+          }, () => {
+            this.switchTabs('log')
+            this.saveState()
+          }
+        );
       }
     });
 
@@ -202,14 +209,8 @@ export class InvestJob extends React.Component {
     // another random process.
     investRun.on('close', (code) => {
       const progress = (code === 0 ? 'results' : 'log')
-      // TODO: why wait to set workspace on close?
-      const workspace = {
-        directory: this.state.args.workspace_dir.value,
-        suffix: this.state.args.results_suffix.value
-      }
       this.setState({
         sessionProgress: progress,
-        workspace: workspace,
         procID: null,  // see above comment
       });
       console.log(this.state)
