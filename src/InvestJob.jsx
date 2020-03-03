@@ -131,7 +131,7 @@ export class InvestJob extends React.Component {
     }
   }
 
-  argsToJsonFile(datastackPath) {
+  async argsToJsonFile(datastackPath) {
     // make simple args json for passing to invest cli
 
     // parsing it just to make it easy to insert the n_workers value
@@ -140,15 +140,16 @@ export class InvestJob extends React.Component {
     const payload = {
       parameterSetPath: datastackPath, 
       moduleName: this.state.modelSpec.module,
-      relativePaths: true,
+      relativePaths: false,
       args: JSON.stringify(args_dict)
     }
-    writeParametersToFile(payload);
+    await writeParametersToFile(payload);
   }
 
-  investExecute() {
-    const datastackPath = path.join(
-      TEMP_DIR, this.state.sessionID + '.json')
+  async investExecute() {
+    const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
+    const datastackPath = path.join(temp_dir, 'datastack.json')
+    const _ = await this.argsToJsonFile(datastackPath);
 
     // to translate to the invest CLI's verbosity flag:
     const loggingLevelLookup = {
@@ -159,8 +160,6 @@ export class InvestJob extends React.Component {
     }
     const verbosity = loggingLevelLookup[this.props.investSettings.loggingLevel]
 
-    this.argsToJsonFile(datastackPath);
-    
     this.setState(
       {
         sessionProgress: 'log',
@@ -169,14 +168,15 @@ export class InvestJob extends React.Component {
     );
 
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
+    console.log(cmdArgs);
     const investRun = spawn(INVEST_EXE, cmdArgs, {
-        cwd: '.',
+        cwd: process.cwd(),
         shell: true, // without true, IOError when datastack.py loads json
         env: gdalEnv
       });
 
-    // TODO: Find a nicer way to setState after spawn has started,
-    // since this callback triggers on every stdout
+    // There's no general way to know that a spawned process started,
+    // so this logic in when listening for stdout seems like the way.
     let logfilename = ''
     investRun.stdout.on('data', async () => {
       if (!logfilename) {

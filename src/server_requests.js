@@ -79,12 +79,17 @@ export function saveToPython(payload) {
 }
 
 export function writeParametersToFile(payload) {
-  fetch('http://localhost:5000/write_parameter_set_file', {
-    method: 'post',
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
-  })
-  .then((response) => { return response.text() })
-  .then((text) => { console.log(text) })
-  .catch((error) => { console.log(error) })
+  // even though we don't need a response sent back
+  // from this fetch, ``return`` seems to be required
+  // in order to ``await writeParametersToFile``.
+  return (
+    fetch('http://localhost:5000/write_parameter_set_file', {
+      method: 'post',
+      body: JSON.stringify(payload),
+      headers: { 'Content-Type': 'application/json' },
+    })
+    .then((response) => { return response.text() })
+    .then((text) => { console.log(text) })
+    .catch((error) => { console.log(error) })
+  );
 }
