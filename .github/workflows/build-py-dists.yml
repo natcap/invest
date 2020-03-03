@@ -25,7 +25,10 @@ jobs:
                       python-arch: x86
 
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
             - name: Set up python ${{ matrix.python-version }} ${{ matrix.python-arch }}
               uses: actions/setup-python@v1
@@ -48,7 +51,10 @@ jobs:
         name: Source Dist
         runs-on: ubuntu-latest
         steps:
-            - uses: actions/checkout@v1
+            - uses: actions/checkout@v2
+              with:
+                  # Fetch complete history for accurate versioning
+                  fetch-depth: 0
 
             - name: Set up python
               uses: actions/setup-python@v1
