@@ -1,7 +1,7 @@
 import React from 'react';
 import { Tail } from 'tail';
-import { LazyLog } from 'react-lazylog';
 import path from 'path';
+import os from 'os';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
@@ -15,50 +15,52 @@ const logStyle = {
   overflowY: 'scroll',
 };
 
-export class LogTab extends React.Component {
+class LogDisplay extends React.Component {
 
   constructor(props) {
     super(props);
     this.content = React.createRef();
+  }
+
+  componentDidUpdate() {
+    this.content.current.scrollTop = this.content.current.scrollHeight;
+  }
+
+  render() {
+    return (
+      <Col ref={this.content} style={logStyle}>
+        {this.props.logdata}
+      </Col>
+      );
+  }
+}
+
+export class LogTab extends React.Component {
+
+  constructor(props) {
+    super(props);
     this.state = {
       logdata: ''
     }
   }
 
-  componentDidUpdate() {
-    this.content.current.scrollTop = this.content.current.scrollHeight;
-    if (this.props.logfile) {
+  componentDidUpdate(newProps) {
+    if (newProps.logfile != this.props.logfile) {
       let tail = new Tail(this.props.logfile, {
         fromBeginning: true
       });
+      let logdata = Object.assign('', this.state.logdata);
       tail.on('line', (data) => {
-        logdata += `${data}`
+        logdata += `${data}` + os.EOL
         this.setState({ logdata: logdata })
       })
     }
   }
 
   render() {
-    console.log('render log')
     const current_err = this.props.logStdErr;
-    // Include the stderr in the main log even though it also gets an Alert
-    let renderedLog;
-    let renderedAlert;
-    let killButton;
-    let logdata;
-
-    // if (this.props.logfile) {
-    //   renderedLog = <LazyLog
-    //     height={600}
-    //     stream={true}
-    //     url={path.resolve(this.props.logfile)}/>
-    // }
     
-    renderedLog =
-        <Col ref={this.content} style={logStyle}>
-          {this.state.logdata}
-        </Col>
-
+    let renderedAlert;
     if (current_err) {
       renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
     } else {
@@ -67,7 +69,7 @@ export class LogTab extends React.Component {
       }
     }
 
-    killButton = 
+    let killButton = 
       <Button
         variant="primary" 
         size="lg"
@@ -78,9 +80,7 @@ export class LogTab extends React.Component {
     return (
       <Container>
         <Row>
-          <Col md="12">
-            {renderedLog}
-          </Col>
+          <LogDisplay logdata={this.state.logdata}/>
         </Row>
         <Row>{renderedAlert}</Row>
       </Container>
