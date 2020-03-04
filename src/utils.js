@@ -2,6 +2,14 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
+export function loadRecentSessions() {
+  return new Promise(function(resolve, reject) {
+    const db = JSON.parse(fs.readFileSync('jobdb.json', 'utf8'));
+    const sortedJobs = Object.entries(db).sort((a, b) => b[1]['mtime'] - a[1]['mtime'])
+    resolve(sortedJobs)
+  })
+}
+
 export function findRecentSessions(cache_dir) {
   // Populate recentSessions from list of files in cache dir
   // sorted by modified time.

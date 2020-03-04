@@ -2,7 +2,7 @@ import React from 'react';
 
 import { InvestJob } from './InvestJob';
 import { investList } from './server_requests';
-import { findRecentSessions } from './utils';
+import { findRecentSessions, loadRecentSessions } from './utils';
 
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 
@@ -22,7 +22,8 @@ export default class App extends React.Component {
   async componentDidMount() {
     // TODO: also load and set investSettings from a cached state
     const investList = await getInvestList();
-    const recentSessions = await findRecentSessions(CACHE_DIR);
+    const recentSessions = await loadRecentSessions()
+    console.log(recentSessions);
     this.setState(
       {
         investList: investList,
@@ -34,11 +35,15 @@ export default class App extends React.Component {
       });
   }
 
-  updateRecentSessions(sessionID) {
+  async updateRecentSessions() {
     // This triggers on saveState clicks
-    let recentSessions = Object.assign([], this.state.recentSessions);
-    recentSessions.unshift(sessionID);
-    this.setState({recentSessions: recentSessions});
+    // let recentSessions = Object.assign([], this.state.recentSessions);
+    // recentSessions.unshift(sessionID);
+    // this.setState({recentSessions: recentSessions});
+    const recentSessions = await loadRecentSessions();
+    this.setState({
+      recentSessions: recentSessions
+    })
   }
 
   saveSettings(settings) {

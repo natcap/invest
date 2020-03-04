@@ -68,6 +68,7 @@ export class InvestJob extends React.Component {
       logStdErr: null,
       sessionProgress: 'home',         // 'home', 'setup', 'log', 'results' (i.e. one of the tabs)
       activeTab: 'home',
+      jobStatus: null                  // 'running', 'error', 'success'
     };
     
     this.argsToJsonFile = this.argsToJsonFile.bind(this);
@@ -96,7 +97,7 @@ export class InvestJob extends React.Component {
       }
       console.log("saved" + sessionID);
     });
-    this.props.updateRecentSessions(sessionID);
+    this.props.updateRecentSessions();
   }
 
   savePythonScript(filepath) {
@@ -187,7 +188,8 @@ export class InvestJob extends React.Component {
             logfile: logfilename,
             sessionID: sessionName,
             sessionProgress: 'log',
-            workspace: workspace
+            workspace: workspace,
+            jobStatus: 'running'
           }, () => {
             this.switchTabs('log')
             this.saveState()
@@ -209,9 +211,14 @@ export class InvestJob extends React.Component {
     // another random process.
     investRun.on('close', (code) => {
       const progress = (code === 0 ? 'results' : 'log')
+      const status = (code === 0 ? 'success' : 'error')
       this.setState({
         sessionProgress: progress,
+        jobStatus: status,
         procID: null,  // see above comment
+      }, () => {
+        this.saveState();
+        this.props.updateRecentSessions()
       });
       console.log(this.state)
     });
@@ -337,6 +344,7 @@ export class InvestJob extends React.Component {
         args: args,
         argsValid: false,
         sessionProgress: 'setup',
+        jobStatus: null,
         logStdErr: '',
         logStdOut: '',
         sessionID: defaultSessionID(modelName),
@@ -397,19 +405,6 @@ export class InvestJob extends React.Component {
     const logDisabled = ['home', 'setup'].includes(sessionProgress);  // enable during and after execution
     const resultsDisabled = (sessionProgress !== 'results');  // enable only on complete execute with no errors
     const dropdownsDisabled = (this.state.args == null);
-
-    // state.procID only has a value during invest execution
-    let spinner;
-    if (this.state.procID) {
-      spinner = <Spinner
-                  animation='border'
-                  size='sm'
-                  role='status'
-                  aria-hidden='true'
-                />
-    } else {
-      spinner = <div></div>
-    }
     
     return(
       <TabContainer activeKey={activeTab}>
@@ -424,7 +419,11 @@ export class InvestJob extends React.Component {
               <Nav.Link eventKey="setup" disabled={setupDisabled}>Setup</Nav.Link>
             </Nav.Item>
             <Nav.Item>
-              <Nav.Link eventKey="log" disabled={logDisabled}>{spinner} Log</Nav.Link>
+              <Nav.Link eventKey="log" disabled={logDisabled}>
+                {this.state.jobStatus === 'running' && 
+                 <Spinner animation='border' size='sm' role='status' aria-hidden='true'/>
+                } Log
+              </Nav.Link>
             </Nav.Item>
             <Nav.Item>
               <Nav.Link eventKey="results" disabled={resultsDisabled}>Results</Nav.Link>

@@ -1,12 +1,23 @@
 import path from 'path';
+import fs from 'fs';
 import React from 'react';
 import Electron from 'electron';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
+import CardGroup from 'react-bootstrap/CardGroup';
+import CardColumns from 'react-bootstrap/CardColumns';
+import Card from 'react-bootstrap/Card';
+import Spinner from 'react-bootstrap/Spinner';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+const CACHE_DIR = 'cache' //  for storing state snapshot files
+const STATUS_COLOR_MAP = {
+  running: 'warning',
+  error: 'danger',
+  success: 'success'
+}
 
 export class HomeTab extends React.Component {
 
@@ -37,11 +48,9 @@ export class HomeTab extends React.Component {
           </ButtonGroup>
         </Col>
         <Col md={6}>
-          <Row className="mt-2">
-            <LoadStateForm
-              loadState={this.props.loadState}
-              recentSessions={this.props.recentSessions}/>
-          </Row>
+          <LoadStateForm
+            loadState={this.props.loadState}
+            recentSessions={this.props.recentSessions}/>
         </Col>
       </Row>
     );
@@ -70,8 +79,8 @@ class LoadStateForm extends React.Component {
     })
   }
 
-  handleClick(event) {
-    this.props.loadState(event.target.value);
+  handleClick(sessionName) {
+    this.props.loadState(sessionName);
   }
 
   render() {
@@ -79,14 +88,29 @@ class LoadStateForm extends React.Component {
     // Buttons to load each recently saved state
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
+      const name = session[0];
+      const status = session[1]['status'];
+      const description = session[1]['description'];
+      const mtime = session[1]['mtime'];
+
       recentButtons.push(
-        <Button  className="text-left"
-          key={session}
-          value={session}
-          onClick={this.handleClick}
-          variant='outline-dark'>
-          {session}
-        </Button>
+        <Card className="text-left" style={{ width: '24rem' }}
+          as="button"
+          key={name}
+          value={name} // TODO: send the actual filename with json ext
+          onClick={() => this.handleClick(name)}
+          border={STATUS_COLOR_MAP[status] || 'dark'}>
+          <Card.Body>
+            <Card.Title>
+              {name}   
+              {status === 'running' && 
+               <Spinner as='span' animation='border' size='sm' role='status' aria-hidden='true'/>
+              }
+            </Card.Title>
+            <Card.Text>{description}</Card.Text>
+          </Card.Body>
+          <Card.Footer className="text-muted">last modified: {mtime}</Card.Footer>
+        </Card>
       );
     });
     // Also a button to browse to a cached state file if it's not in recent list
@@ -105,9 +129,9 @@ class LoadStateForm extends React.Component {
         <div>
           Select Recent Session:
         </div>
-        <ButtonGroup vertical className="mt-2">
+        <div>
           {recentButtons}
-        </ButtonGroup>
+        </div>
       </div>
     );
   }
