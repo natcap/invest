@@ -89,27 +89,36 @@ class LoadStateForm extends React.Component {
     let recentButtons = [];
     this.props.recentSessions.forEach(session => {
       const name = session[0];
+      const model = session[1].model;
+      const workspaceDir = session[1].workspace.directory;
+      const suffix = session[1].workspace.suffix;
       const status = session[1]['status'];
       const description = session[1]['description'];
-      const mtime = session[1]['mtime'];
+      const datetime = session[1]['humanTime'];
 
       recentButtons.push(
-        <Card className="text-left" style={{ width: '24rem' }}
+        <Card className="text-left session-card w-100"
           as="button"
           key={name}
           value={name} // TODO: send the actual filename with json ext
           onClick={() => this.handleClick(name)}
           border={STATUS_COLOR_MAP[status] || 'dark'}>
           <Card.Body>
-            <Card.Title>
-              {name}   
+            <Card.Header>
+              {model}  
               {status === 'running' && 
-               <Spinner as='span' animation='border' size='sm' role='status' aria-hidden='true'/>
+                <Spinner as='span' animation='border' size='sm' role='status' aria-hidden='true'/>
               }
+            </Card.Header>
+            <Card.Title>
+              <em>Workspace: </em>{workspaceDir}
             </Card.Title>
-            <Card.Text>{description}</Card.Text>
+            <Card.Title>
+              { suffix && <em>Suffix: </em> }{suffix}
+            </Card.Title>
+            <Card.Text>{description || <em>no description</em>}</Card.Text>
+          <Card.Footer className="text-muted">last modified: {datetime}</Card.Footer>
           </Card.Body>
-          <Card.Footer className="text-muted">last modified: {mtime}</Card.Footer>
         </Card>
       );
     });
@@ -125,14 +134,14 @@ class LoadStateForm extends React.Component {
     );
 
     return (
-      <div>
+      <React.Fragment>
         <div>
           Select Recent Session:
         </div>
-        <div>
+        <CardGroup className='session-card-group'>
           {recentButtons}
-        </div>
-      </div>
+        </CardGroup>
+      </React.Fragment>
     );
   }
 }

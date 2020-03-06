@@ -1,10 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
-
 import React from 'react';
-import { createStore } from 'redux';
-import { Provider } from 'react-redux';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -27,6 +24,8 @@ import { getSpec, saveToPython, writeParametersToFile,
 import { findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
+import { createStore } from 'redux';
+import { Provider } from 'react-redux';
 import rootReducer from './components/ResultsTab/Visualization/habitat_risk_assessment/reducers';
 const store = createStore(rootReducer)
 
@@ -56,7 +55,7 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
-      sessionID: defaultSessionID(''),
+      sessionID: null,
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
@@ -87,17 +86,27 @@ export class InvestJob extends React.Component {
 
   saveState() {
     // Save a snapshot of this component's state to a JSON file.
-    const jsonContent = JSON.stringify(this.state, null, 2);
     const sessionID = this.state.sessionID;
+    const jsonContent = JSON.stringify(this.state, null, 2);
     const filepath = path.join(CACHE_DIR, sessionID + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
       }
-      console.log("saved" + sessionID);
+      console.log("saved: " + sessionID);
     });
-    this.props.updateRecentSessions();
+    const jobName = this.state.sessionID;
+    let job = {};
+    job[jobName] = {
+      model: this.state.modelName,
+      workspace: this.state.workspace,
+      statefile: filepath,
+      status: this.state.jobStatus,
+      humanTime: new Date().toLocaleString(),
+      systemTime: new Date().getTime(),
+    }
+    this.props.updateRecentSessions(job);
   }
 
   savePythonScript(filepath) {
@@ -218,7 +227,6 @@ export class InvestJob extends React.Component {
         procID: null,  // see above comment
       }, () => {
         this.saveState();
-        this.props.updateRecentSessions()
       });
       console.log(this.state)
     });
@@ -533,11 +541,4 @@ function argsValuesFromSpec(args) {
     }
   }
   return(JSON.stringify(args_dict));
-}
-
-function defaultSessionID(modelName) {
-  const datetime = new Date()
-      .toISOString()
-      .replace(/:/g, '-').replace('T', '_').slice(0, -5)
-  return(modelName + '_' + datetime);
 }

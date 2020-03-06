@@ -1,3 +1,8 @@
 .navbar-light .navbar-nav .nav-link{
-    color:blue;
+    color: blue;
+}
+
+.session-card-group {
+	flex-flow: column;
+	width: 100%;
 }
