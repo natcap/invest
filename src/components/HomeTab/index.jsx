@@ -79,8 +79,8 @@ class LoadStateForm extends React.Component {
     })
   }
 
-  handleClick(sessionName) {
-    this.props.loadState(sessionName);
+  handleClick(sessionFilename) {
+    this.props.loadState(sessionFilename);
   }
 
   render() {
@@ -100,8 +100,8 @@ class LoadStateForm extends React.Component {
         <Card className="text-left session-card w-100"
           as="button"
           key={name}
-          value={name} // TODO: send the actual filename with json ext
-          onClick={() => this.handleClick(name)}
+          // value={session[1]['statefile']} 
+          onClick={() => this.handleClick(session[1]['statefile'])}
           border={STATUS_COLOR_MAP[status] || 'dark'}>
           <Card.Body>
             <Card.Header>
@@ -117,7 +117,7 @@ class LoadStateForm extends React.Component {
               { suffix && <em>Suffix: </em> }{suffix}
             </Card.Title>
             <Card.Text>{description || <em>no description</em>}</Card.Text>
-          <Card.Footer className="text-muted">last modified: {datetime}</Card.Footer>
+          <Card.Footer className="text-muted">{datetime}</Card.Footer>
           </Card.Body>
         </Card>
       );

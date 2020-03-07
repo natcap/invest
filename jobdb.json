@@ -1,38 +1,37 @@
 {
- "carbon_setup": {
-  "model": "carbon",
-  "workspace": { 
-    "directory": null,
-    "suffix": null
+  "carbon_setup": {
+    "model": "carbon",
+    "workspace": {
+      "directory": null,
+      "suffix": null
+    },
+    "statefile": "carbon_setup.json",
+    "status": null,
+    "humanTime": "3/5/2020, 10:43:14 AM",
+    "systemTime": 1583259376573.759,
+    "description": "loaded model sample data but haven't run yet"
   },
-  "statefile": "carbon_setup.json",
-  "status": null,
-  "humanTime": "3/5/2020, 10:43:14 AM",
-  "systemTime": 1583259376573.759,
-  "description": "loaded model sample data but haven't run yet"
- },
- "foo": {
-  "model": "carbon",
-  "workspace": { 
-    "directory": "foo",
-    "suffix": null
+  "duck": {
+    "model": "carbon",
+    "workspace": {
+      "directory": "duck",
+      "suffix": "goose"
+    },
+    "statefile": "duck.json",
+    "status": "success",
+    "humanTime": "3/5/2020, 10:43:14 AM",
+    "SystemTime": 1243259376573.759,
+    "description": "ducks are natural capital...or are they ecosystem services?"
   },
-  "statefile": "foo.json",
-  "status": "running",
-  "humanTime": "3/5/2020, 10:43:14 AM",
-  "systemTime": 1593259376573.759,
-  "description": "the scenario with the 10m lulc"
- },
- "duck": {
-  "model": "carbon",
-  "workspace": { 
-    "directory": "duck",
-    "suffix": "goose"
-  },
-  "statefile": "duck.json",
-  "status": "success",
-  "humanTime": "3/5/2020, 10:43:14 AM",
-  "SystemTime": 1243259376573.759,
-  "description": "ducks are natural capital...or are they ecosystem services?"
- }
+  "coastal_vulnerability-cv-sample-": {
+    "model": "coastal_vulnerability",
+    "workspace": {
+      "directory": "cv-sample",
+      "suffix": ""
+    },
+    "statefile": "cache/coastal_vulnerability-cv-sample-.json",
+    "status": "success",
+    "humanTime": "3/7/2020, 9:02:55 AM",
+    "systemTime": 1583600575994
+  }
 }

@@ -23,7 +23,6 @@ export default class App extends React.Component {
     // TODO: also load and set investSettings from a cached state
     const investList = await getInvestList();
     const recentSessions = await loadRecentSessions()
-    console.log(recentSessions);
     this.setState(
       {
         investList: investList,

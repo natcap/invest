@@ -128,11 +128,11 @@ export class InvestJob extends React.Component {
       {sessionID: value});
   }
 
-  loadState(sessionID) {
+  loadState(sessionFilename) {
     // Set this component's state to the object parsed from a JSON file.
     // sessionID (string) : the name, without extension, of a saved JSON.
 
-    const filename = path.join(CACHE_DIR, sessionID + '.json');
+    const filename = path.join(CACHE_DIR, sessionFilename);
     if (fs.existsSync(filename)) {
       const loadedState = JSON.parse(fs.readFileSync(filename, 'utf8'));
       this.setState(loadedState,
@@ -355,7 +355,7 @@ export class InvestJob extends React.Component {
         jobStatus: null,
         logStdErr: '',
         logStdOut: '',
-        sessionID: defaultSessionID(modelName),
+        sessionID: null,
         workspace: null,
       }, () => this.switchTabs('setup'));
     } else {

@@ -5,6 +5,20 @@ import glob from 'glob';
 const JOBS_DATA = 'jobdb.json'
 
 export function loadRecentSessions() {
+  /*
+  Returns: Array:
+    [ [ "job1",
+      {
+        "model": "carbon",
+        "workspace": { "directory": null, "suffix": null },
+        "statefile": "carbon_setup.json",
+        "status": null,
+        "humanTime": "3/5/2020, 10:43:14 AM",
+        "systemTime": 1583259376573.759,
+        "description": null } ],
+      [ "job2",
+        { ... } ] ]
+  */
   return new Promise(function(resolve, reject) {
     const db = JSON.parse(fs.readFileSync(JOBS_DATA, 'utf8'));
     const sortedJobs = Object.entries(db).sort((a, b) => b[1]['systemTime'] - a[1]['systemTime'])

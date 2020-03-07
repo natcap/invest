@@ -1,5 +1,6 @@
 import React from 'react';
-import { fireEvent, render, wait, waitForElement } from '@testing-library/react'
+import { fireEvent, render,
+         wait, waitForElement } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 import { InvestJob } from '../src/InvestJob';
@@ -8,9 +9,21 @@ import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
+const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
+const MOCK_RECENT_SESSIONS_VALUE = 
+  [ [ "job1",
+      {
+        "model": "carbon",
+        "workspace": { "directory": "carbon_setup", "suffix": null },
+        "statefile": "carbon_setup.json",
+        "status": null,
+        "humanTime": "3/5/2020, 10:43:14 AM",
+        "systemTime": 1583259376573.759,
+        "description": null } ] ]
+
 test('Clicking an invest button renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
-  fetchValidation.mockResolvedValue([[['workspace_dir'], 'invalid because']]);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   const spy = jest.spyOn(InvestJob.prototype, 'investGetSpec');
 
   const { getByText, debug } = render(
@@ -36,17 +49,18 @@ test('Clicking an invest button renders SetupTab', async () => {
 })
 
 test('Clicking a recent session renders SetupTab', async () => {
-  fetchValidation.mockResolvedValue([[['workspace_dir'], 'invalid because']]);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
   const spy = jest.spyOn(InvestJob.prototype, 'loadState');
 
   const { getByText, debug } = render(
     <InvestJob 
       investList={{}}
       investSettings={null}
-      recentSessions={['carbon_setup']}
+      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
     />);
+
   const recent = getByText('carbon_setup');
   fireEvent.click(recent);  // a recent session button
   await wait(() => {
@@ -73,7 +87,7 @@ test('Save Parameters/Python enable after model select ', async () => {
     <InvestJob 
       investList={{}}
       investSettings={null}
-      recentSessions={['carbon_setup']}
+      recentSessions={MOCK_RECENT_SESSIONS_VALUE}
       updateRecentSessions={() => {}}
       saveSettings={() => {}}
     />);
@@ -95,5 +109,5 @@ test('Save Parameters/Python enable after model select ', async () => {
 
 
 // Tests:
-test('Populating arguments enables Execute button')
-test('Execute launches a python subprocess and switches to Log display')
+// test('Populating arguments enables Execute button')
+// test('Execute launches a python subprocess and switches to Log display')
