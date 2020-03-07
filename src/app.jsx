@@ -22,7 +22,7 @@ export default class App extends React.Component {
   async componentDidMount() {
     // TODO: also load and set investSettings from a cached state
     const investList = await getInvestList();
-    const recentSessions = await loadRecentSessions()
+    const recentSessions = await loadRecentSessions(this.props.appdata)
     this.setState(
       {
         investList: investList,
@@ -39,7 +39,7 @@ export default class App extends React.Component {
     // let recentSessions = Object.assign([], this.state.recentSessions);
     // recentSessions.unshift(sessionID);
     // this.setState({recentSessions: recentSessions});
-    const recentSessions = await updateRecentSessions(jobdata);
+    const recentSessions = await updateRecentSessions(jobdata, this.props.appdata);
     this.setState({
       recentSessions: recentSessions
     })
@@ -57,6 +57,7 @@ export default class App extends React.Component {
         investList={this.state.investList}
         investSettings={this.state.investSettings}
         recentSessions={this.state.recentSessions}
+        appdata={this.props.appdata}
         updateRecentSessions={this.updateRecentSessions}
         saveSettings={this.saveSettings}
       />

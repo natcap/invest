@@ -39,6 +39,7 @@ if (process.env.GDAL_DATA) {
   gdalEnv = { GDAL_DATA: process.env.GDAL_DATA }
 }
 
+// TODO: some of these 'global' vars are defined in multiple files
 const CACHE_DIR = 'cache' //  for storing state snapshot files
 const TEMP_DIR = 'tmp'  // for saving datastack json files prior to investExecute
 
@@ -106,7 +107,7 @@ export class InvestJob extends React.Component {
       humanTime: new Date().toLocaleString(),
       systemTime: new Date().getTime(),
     }
-    this.props.updateRecentSessions(job);
+    this.props.updateRecentSessions(job, this.props.appdata);
   }
 
   savePythonScript(filepath) {

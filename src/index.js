@@ -14,6 +14,8 @@ var _app = _interopRequireDefault(require("./app.jsx")); // require won't find *
 
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
+const { path } = require('path');
+const JOBS_DATABASE = path.join(__dirname, 'jobdb.json')
 
 let rightClickPosition = null
 const menu = new Menu();
@@ -35,7 +37,7 @@ var render = function render() {
   _reactDom["default"].render(
     _react["default"].createElement(
       _reactHotLoader.AppContainer, null, _react["default"].createElement(
-        _app["default"], null)), document.getElementById('App'));
+        _app["default"], { appdata: JOBS_DATABASE })), document.getElementById('App'));
 };
 
 render();

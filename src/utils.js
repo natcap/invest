@@ -2,9 +2,7 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
-const JOBS_DATA = 'jobdb.json'
-
-export function loadRecentSessions() {
+export function loadRecentSessions(jobDatabase) {
   /*
   Returns: Array:
     [ [ "job1",
@@ -20,26 +18,26 @@ export function loadRecentSessions() {
         { ... } ] ]
   */
   return new Promise(function(resolve, reject) {
-    const db = JSON.parse(fs.readFileSync(JOBS_DATA, 'utf8'));
+    const db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
     const sortedJobs = Object.entries(db).sort((a, b) => b[1]['systemTime'] - a[1]['systemTime'])
     resolve(sortedJobs)
   })
 }
 
-export async function updateRecentSessions(jobdata) {
-  let db = JSON.parse(fs.readFileSync(JOBS_DATA, 'utf8'));
+export async function updateRecentSessions(jobdata, jobDatabase) {
+  let db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
   Object.keys(jobdata).forEach(job => {
     db[job] = jobdata[job]
   })
   const jsonContent = JSON.stringify(db, null, 2);
-  fs.writeFileSync(JOBS_DATA, jsonContent, 'utf8', function (err) {
+  fs.writeFileSync(jobDatabase, jsonContent, 'utf8', function (err) {
     if (err) {
       console.log("An error occured while writing JSON Object to File.");
       return console.log(err);
     }
     console.log("updated" + this.state.sessionID);
   });
-  const updated = await loadRecentSessions();
+  const updated = await loadRecentSessions(jobDatabase);
   return updated
 }
 

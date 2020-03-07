@@ -9,6 +9,7 @@ import { getSpec, saveToPython, writeParametersToFile,
          fetchValidation } from '../src/server_requests';
 jest.mock('../src/server_requests');
 
+const APP_DATA = './data/jobdb.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
 const MOCK_RECENT_SESSIONS_VALUE = 
   [ [ "job1",
