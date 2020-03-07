@@ -209,6 +209,7 @@ _INTERMEDIATE_BASE_FILES = {
     'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
+    'weighted_avg_aspect_path': 'aspect_mfd_weighted_avg.tif'
     }
 
 _TMP_BASE_FILES = {
@@ -391,6 +392,15 @@ def execute(args):
         dependent_task_list=[pit_fill_task],
         task_name='flow direction calculation')
 
+    weighted_avg_aspect_task = task_graph.add_task(
+        func=_calculate_aspect_weighted_avg,
+        args=[[(f_reg['flow_direction_path'], 1)]],
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=[f_reg['weighted_avg_aspect_path']],
+        dependent_task_list=[flow_dir_task],
+        task_name='weighted average of multiple-flow aspects')
+
     flow_accumulation_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
         args=(
@@ -477,7 +487,8 @@ def execute(args):
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, ls_factor_task, drainage_raster_path_task[1]],
+            align_task, ls_factor_task, weighted_avg_aspect_task,
+            drainage_raster_path_task[1]],
         task_name='calculate RKLS')
 
     usle_task = task_graph.add_task(
@@ -708,6 +719,20 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
+
+
+def _calculate_aspect_weighted_avg(flow_accumulation_path,
+                                   target_aspect_avg_path):
+    flow_accumulation_info = pygeoprocessing.get_raster_info(
+        flow_accumulation_path)
+    flow_accumulation_nodata = flow_accumulation_info['nodata']
+
+    def weighted_aspect_function(flow_accumulation):
+        pass
+
+    pygeoprocessing.raster_calculator(
+        [(flow_accumulation_path, 1)], weighted_aspect_function,
+        target_aspect_avg_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_ls_factor(
