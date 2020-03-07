@@ -14,8 +14,8 @@ var _app = _interopRequireDefault(require("./app.jsx")); // require won't find *
 
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
-const { path } = require('path');
-const JOBS_DATABASE = path.join(__dirname, 'jobdb.json')
+const path = require('path');
+const JOBS_DATABASE = 'jobdb.json'
 
 let rightClickPosition = null
 const menu = new Menu();

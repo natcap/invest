@@ -116,10 +116,11 @@ class ArgsForm extends React.Component {
       if (['csv', 'vector', 'raster', 'directory'].includes(argument.type)) {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <InputGroup>
                 <Form.Control
+                  id={argname}
                   name={argname}
                   type="text" 
                   value={argument.value || ''} // empty string is handled better than `undefined`
@@ -128,7 +129,8 @@ class ArgsForm extends React.Component {
                   isInvalid={argument.touched && argument.validationMessage}
                 />
                 <InputGroup.Append>
-                  <Button 
+                  <Button
+                    id={argname}
                     variant="outline-secondary"
                     value={argument.type}  // dialog will limit options to files or dirs accordingly
                     name={argname}
@@ -147,9 +149,10 @@ class ArgsForm extends React.Component {
       } else if (['freestyle_string', 'number'].includes(argument.type)) {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3"  htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
               <Form.Control
+                id={argname}
                 name={argname}
                 type="text" 
                 value={argument.value || ''} // empty string is handled better than `undefined`
@@ -171,9 +174,10 @@ class ArgsForm extends React.Component {
         // So, `checked` property must accomodate both types to determine state.
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="8">
               <Form.Check
+                id={argname}
                 inline
                 type="radio"
                 label="Yes"
@@ -183,6 +187,7 @@ class ArgsForm extends React.Component {
                 name={argname}
               />
               <Form.Check
+                id={argname}
                 inline
                 type="radio"
                 label="No"
@@ -198,9 +203,10 @@ class ArgsForm extends React.Component {
       } else if (argument.type === 'option_string') {
         formItems.push(
           <Form.Group as={Row} key={argname}>
-            <Form.Label column sm="3">{argument.name}</Form.Label>
+            <Form.Label column sm="3" htmlFor={argname}>{argument.name}</Form.Label>
             <Col sm="4">
               <Form.Control
+                id={argname}
                 as='select'
                 name={argname}
                 value={argument.value}
