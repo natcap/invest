@@ -574,6 +574,21 @@ def calculate_sediment_deposition(
 
 def calculate_average_aspect(
     mfd_flow_direction_path, target_average_aspect_path):
+    """Calculate the Average Proportional Flow from MFD.
+
+    Calculates the weighted average of proportional flow for every MFD flow
+    direction pixel provided.
+
+    Parameters:
+        mfd_flow_direction_path (string): The path to an MFD flow direction
+            raster.
+        target_average_aspect_path (string): The path to where the calculated
+            average proportional flow raster should be written.
+
+    Returns:
+        ``None``.
+
+    """
     LOGGER.info('Calculating average aspect')
 
     cdef float average_aspect_nodata = -1.0
