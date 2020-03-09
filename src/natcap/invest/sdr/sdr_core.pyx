@@ -572,8 +572,8 @@ def calculate_sediment_deposition(
     sediment_deposition_raster.close()
 
 
-def calculate_average_aspect(
-    mfd_flow_direction_path, target_average_aspect_path):
+def calculate_average_flow(
+    mfd_flow_direction_path, target_average_flow_path):
     """Calculate the Average Proportional Flow from MFD.
 
     Calculates the weighted average of proportional flow for every MFD flow
@@ -582,7 +582,7 @@ def calculate_average_aspect(
     Parameters:
         mfd_flow_direction_path (string): The path to an MFD flow direction
             raster.
-        target_average_aspect_path (string): The path to where the calculated
+        target_average_flow_path (string): The path to where the calculated
             average proportional flow raster should be written.
 
     Returns:
@@ -591,10 +591,10 @@ def calculate_average_aspect(
     """
     LOGGER.info('Calculating average aspect')
 
-    cdef float average_aspect_nodata = -1.0
+    cdef float average_flow_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
-        mfd_flow_direction_path, target_average_aspect_path,
-        gdal.GDT_Float32, [average_aspect_nodata])
+        mfd_flow_direction_path, target_average_flow_path,
+        gdal.GDT_Float32, [average_flow_nodata])
 
     flow_direction_info = pygeoprocessing.get_raster_info(
         mfd_flow_direction_path)
@@ -605,8 +605,8 @@ def calculate_average_aspect(
     cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
         mfd_flow_direction_path, 1, False)
 
-    cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
-        target_average_aspect_path, 1, True)
+    cdef _ManagedRaster average_flow_raster = _ManagedRaster(
+        target_average_flow_path, 1, True)
 
     cdef int* neighbor_flows = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int combined_flow_value
@@ -632,7 +632,7 @@ def calculate_average_aspect(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('Average aspect %.2f%% complete', 100.0 * (
+        LOGGER.info('Average proportional flow %.2f%% complete', 100.0 * (
             (seed_row * seed_col) / float(n_cols * n_rows)))
 
         for row_index in range(win_ysize):
@@ -645,13 +645,13 @@ def calculate_average_aspect(
 
                 # Skip this seed if it's nodata.
                 if seed_flow_value == mfd_flow_direction_nodata:
-                    average_aspect_raster.set(
-                        seed_col, seed_row, average_aspect_nodata)
+                    average_flow_raster.set(
+                        seed_col, seed_row, average_flow_nodata)
                     continue
 
                 # Skip iterating over neighbors if there's no flow at all.
                 if seed_flow_value == 0:
-                    average_aspect_raster.set(seed_col, seed_row, 0.0)
+                    average_flow_raster.set(seed_col, seed_row, 0.0)
                     continue
 
                 for neighbor_index in range(8):
@@ -699,10 +699,10 @@ def calculate_average_aspect(
                             flow_value_weighted_average += (
                                 (1.0 / flow_length) * proportional_flow)
 
-                average_aspect_raster.set(
+                average_flow_raster.set(
                     seed_col, seed_row, flow_value_weighted_average)
 
     LOGGER.info('Average aspect 100.00% complete')
 
     mfd_flow_direction_raster.close()
-    average_aspect_raster.close()
+    average_flow_raster.close()

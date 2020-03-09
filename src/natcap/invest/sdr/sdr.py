@@ -209,7 +209,7 @@ _INTERMEDIATE_BASE_FILES = {
     'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'aspect_mfd_weighted_avg.tif'
+    'weighted_avg_flow_path': 'weighted_avg_flow.tif'
     }
 
 _TMP_BASE_FILES = {
@@ -392,15 +392,15 @@ def execute(args):
         dependent_task_list=[pit_fill_task],
         task_name='flow direction calculation')
 
-    weighted_avg_aspect_task = task_graph.add_task(
-        func=sdr_core.calculate_average_aspect,
+    weighted_avg_flow_task = task_graph.add_task(
+        func=sdr_core.calculate_average_flow,
         args=(f_reg['flow_direction_path'],
-              f_reg['weighted_avg_aspect_path']),
+              f_reg['weighted_avg_flow_path']),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
-        target_path_list=[f_reg['weighted_avg_aspect_path']],
+        target_path_list=[f_reg['weighted_avg_flow_path']],
         dependent_task_list=[flow_dir_task],
-        task_name='weighted average of multiple-flow aspects')
+        task_name='weighted average of proportional, multiple flow')
 
     flow_accumulation_task = task_graph.add_task(
         func=pygeoprocessing.routing.flow_accumulation_mfd,
@@ -484,13 +484,13 @@ def execute(args):
             f_reg['aligned_erosivity_path'],
             f_reg['aligned_erodibility_path'],
             drainage_raster_path_task[0],
-            f_reg['weighted_avg_aspect_path'],
+            f_reg['weighted_avg_flow_path'],
             f_reg['rkls_path']),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, ls_prime_factor_task, weighted_avg_aspect_task,
+            align_task, ls_prime_factor_task, weighted_avg_flow_task,
             drainage_raster_path_task[1]],
         task_name='calculate RKLS')
 
@@ -737,7 +737,7 @@ def _calculate_ls_prime_factor(
     described above has been adapted, hence the name ``LS'``.  The aspect
     term ``x`` has been removed from the LS calculations and will instead be
     accounted for by a raster representing the weighted average of the flow
-    values from a pixel.  See ``sdr_core.calculate_average_aspect``.
+    values from a pixel.  See ``sdr_core.calculate_average_flow``.
 
     Parameters:
         flow_accumulation_path (string): path to raster, pixel values are the
