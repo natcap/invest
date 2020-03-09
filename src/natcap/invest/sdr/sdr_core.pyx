@@ -387,8 +387,6 @@ def calculate_sediment_deposition(
     cdef _ManagedRaster sediment_deposition_raster = _ManagedRaster(
         target_sediment_deposition_path, 1, True)
 
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
     cdef int *inflow_offsets = [4, 5, 6, 7, 0, 1, 2, 3]
 
     cdef int n_cols, n_rows
@@ -428,10 +426,10 @@ def calculate_sediment_deposition(
                     continue
                 seed_pixel = 1
                 for j in range(8):
-                    neighbor_row = seed_row + row_offsets[j]
+                    neighbor_row = seed_row + ROW_OFFSETS[j]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
                         continue
-                    neighbor_col = seed_col + col_offsets[j]
+                    neighbor_col = seed_col + COL_OFFSETS[j]
                     if neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
                     neighbor_flow_val = <int>mfd_flow_direction_raster.get(
@@ -461,10 +459,10 @@ def calculate_sediment_deposition(
                     # calculate the upstream Fj contribution to this pixel
                     f_j_weighted_sum = 0
                     for j in range(8):
-                        neighbor_row = global_row + row_offsets[j]
+                        neighbor_row = global_row + ROW_OFFSETS[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
-                        neighbor_col = global_col + col_offsets[j]
+                        neighbor_col = global_col + COL_OFFSETS[j]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
@@ -493,10 +491,10 @@ def calculate_sediment_deposition(
                         flow_sum += (flow_val >> (k*4)) & 0xF
 
                     for j in range(8):
-                        neighbor_row = global_row + row_offsets[j]
+                        neighbor_row = global_row + ROW_OFFSETS[j]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
-                        neighbor_col = global_col + col_offsets[j]
+                        neighbor_col = global_col + COL_OFFSETS[j]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
                         # if this direction flows out, add to weighted sum
@@ -525,11 +523,11 @@ def calculate_sediment_deposition(
                                     continue
                                 # see if there's an inflow
                                 ds_neighbor_row = (
-                                    neighbor_row + row_offsets[k])
+                                    neighbor_row + ROW_OFFSETS[k])
                                 if ds_neighbor_row < 0 or ds_neighbor_row >= n_rows:
                                     continue
                                 ds_neighbor_col = (
-                                    neighbor_col + col_offsets[k])
+                                    neighbor_col + COL_OFFSETS[k])
                                 if ds_neighbor_col < 0 or ds_neighbor_col >= n_cols:
                                     continue
                                 ds_neighbor_flow_val = (
