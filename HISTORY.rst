@@ -2,6 +2,11 @@
 
 Unreleased Changes
 ------------------
+* Fixing an issue with SDR's ``LS`` calculations.  The ``x`` term is now
+  the weighted mean of proportional flow from the current pixel into its
+  neighbors.  Note that for ease of debugging, this has been implemented as a
+  separate raster and is now included in ``RKLS`` calculations instead of in
+  the ``LS`` calculations.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
   as well as a source distribution.
 * Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
@@ -12,11 +17,11 @@ Unreleased Changes
   attempting to synchronize nonexistent sample data zipfiles with a storage
   bucket on GCP.  Sample data zipfiles are only built on Windows, and so
   ``make deploy`` will only attempt to upload them when running on Windows.
-* Fixed a bug in CLI logging where logfiles created by the CLI were 
+* Fixed a bug in CLI logging where logfiles created by the CLI were
   incompatible with the ``natcap.invest.datastack`` operation that
   allows the UI to load model arguments from logfiles.
 * Added error-handling in Urban Flood Risk Mitigation to tell users to
-  "Check that the Soil Group raster does not contain values other than 
+  "Check that the Soil Group raster does not contain values other than
   (1, 2, 3, 4)" when a ``ValueError`` is raised from ``_lu_to_cn_op``.
 * Updated the ``Makefile`` to use the new git location of the InVEST User's
   Guide repository at https://github.com/natcap/invest.users-guide
