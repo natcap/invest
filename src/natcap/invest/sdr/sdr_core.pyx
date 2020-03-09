@@ -651,9 +651,16 @@ def calculate_average_aspect(
                 if flow_sum > 0:
                     flow_value_weighted_average = 0.0
                     for neighbor_index in range(8):
+                        neighbor_row = seed_row + row_offsets[neighbor_index]
+                        if neighbor_row < 0 or neighbor_row >= n_rows:
+                            continue
+
+                        neighbor_col = seed_col + row_offsets[neighbor_index]
+                        if neighbor_col < 0 or neighbor_col >= n_cols:
+                            continue
 
                         # Flow_sum will always be greater than 0 at this point
-                        # because we check for it three lines prior.
+                        # because we check for it up above.
                         with cython.cdivision(True):
                             proportional_flow = (
                                 neighbor_flows[neighbor_index] /
