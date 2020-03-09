@@ -30,6 +30,14 @@ cdef int BLOCK_BITS = 8
 # Number of raster blocks to hold in memory at once per Managed Raster
 cdef int MANAGED_RASTER_N_BLOCKS = 2**6
 
+# These offsets are for the neighbor rows and columns according to the
+# ordering: 3 2 1
+#           4 x 0
+#           5 6 7
+cdef int *ROW_OFFSETS = [0, -1, -1, -1,  0,  1, 1, 1]
+cdef int *COL_OFFSETS = [1,  1,  0, -1, -1, -1, 0, 1]
+
+
 cdef int is_close(double x, double y):
     return abs(x-y) <= (1e-8+1e-05*abs(y))
 
@@ -582,10 +590,6 @@ def calculate_average_aspect(
     cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
         target_average_aspect_path, 1, True)
 
-    # TODO: make these module-level arrays
-    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
-    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
-
     cdef int* neighbor_flows = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int combined_flow_value
     cdef int seed_row = 0
@@ -634,11 +638,11 @@ def calculate_average_aspect(
 
                 for neighbor_index in range(8):
                     neighbor_flows[neighbor_index] = 0
-                    neighbor_row = seed_row + row_offsets[neighbor_index]
+                    neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
                         continue
 
-                    neighbor_col = seed_col + row_offsets[neighbor_index]
+                    neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
                     if neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
 
@@ -651,11 +655,11 @@ def calculate_average_aspect(
                 if flow_sum > 0:
                     flow_value_weighted_average = 0.0
                     for neighbor_index in range(8):
-                        neighbor_row = seed_row + row_offsets[neighbor_index]
+                        neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
 
-                        neighbor_col = seed_col + row_offsets[neighbor_index]
+                        neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
