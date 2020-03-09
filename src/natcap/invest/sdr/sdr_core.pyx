@@ -401,7 +401,7 @@ def calculate_sediment_deposition(
         e_prime_path)['nodata'][0]
     cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef int global_col, global_row, flat_index, j, k
-    cdef int seed_col, seed_row
+    cdef int seed_col, seed_row = 0
     cdef int neighbor_row, neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
@@ -415,8 +415,10 @@ def calculate_sediment_deposition(
         win_ysize = offset_dict['win_ysize']
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
+
         LOGGER.info('%.2f%% complete', 100.0 * (
-            (yoff*n_cols+xoff) / float(n_cols*n_rows)))
+            (seed_row * seed_col) / float(n_cols*n_rows)))
+
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
@@ -566,6 +568,7 @@ def calculate_sediment_deposition(
                         global_col, global_row, r_i)
                     f_raster.set(global_col, global_row, f_i)
 
+    LOGGER.info('100% complete')
     sediment_deposition_raster.close()
 
 
