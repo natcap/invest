@@ -590,6 +590,11 @@ def calculate_average_aspect(
     cdef int combined_flow_value
     cdef int seed_row = 0
     cdef int seed_col = 0
+    cdef int win_xsize, win_ysize, xoff, yoff
+    cdef int row_index, col_index, neighbor_index
+    cdef int flow_in_direction
+    cdef float flow_sum, flow_value_weighted_average
+    cdef float proportional_flow
 
     # Loop over iterblocks to maintain cache locality
     # Find each non-nodata pixel and calculate proportional flow
@@ -643,18 +648,25 @@ def calculate_average_aspect(
                     neighbor_flows[neighbor_index] = flow_in_direction
 
                 flow_value_weighted_average = 0.0
-                if not is_close(flow_sum, 0):
+                if flow_sum > 0:
                     for neighbor_index in range(8):
-                        proportional_flow = (
-                            neighbor_flows[neighbor_index] / flow_sum)
+
+                        # Flow_sum will always be greater than 0 at this point
+                        # because we check for it three lines prior.
+                        with cython.cdivision(True):
+                            proportional_flow = (
+                                neighbor_flows[neighbor_index] / flow_sum)
 
                         if neighbor_index % 2 == 0:
                             flow_length = 1
                         else:
                             flow_length = cmath.M_SQRT2
 
-                        flow_value_weighted_average += (
-                            (1.0 / flow_length) * proportional_flow)
+                        # Flow_length will always be greater than 0 since it
+                        # can only be 1 or sqrt(2).
+                        with cython.cdivision(True):
+                            flow_value_weighted_average += (
+                                (1.0 / flow_length) * proportional_flow)
 
                 average_aspect_raster.set(
                     seed_col, seed_row, flow_value_weighted_average)
