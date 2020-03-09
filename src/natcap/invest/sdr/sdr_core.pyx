@@ -399,7 +399,8 @@ def calculate_sediment_deposition(
         e_prime_path)['nodata'][0]
     cdef int col_index, row_index, win_xsize, win_ysize, xoff, yoff
     cdef int global_col, global_row, flat_index, j, k
-    cdef int seed_col, seed_row = 0
+    cdef int seed_col = 0
+    cdef int seed_row = 0
     cdef int neighbor_row, neighbor_col
     cdef int flow_val, neighbor_flow_val, ds_neighbor_flow_val
     cdef int flow_weight, neighbor_flow_weight
@@ -684,17 +685,17 @@ def calculate_average_flow(
                         with cython.cdivision(True):
                             proportional_flow = (
                                 neighbor_flows[neighbor_index] /
-                                float(flow_sum))
+                                (<float>flow_sum))
 
                         if neighbor_index % 2 == 0:
                             flow_length = 1.0
                         else:
-                            flow_length = cmath.M_SQRT2
+                            flow_length = <float>cmath.M_SQRT2
 
                         # Flow_length will always be greater than 0 since it
                         # can only be 1 or sqrt(2).
                         with cython.cdivision(True):
-                            flow_value_weighted_average += (
+                            flow_value_weighted_average += <float>(
                                 (1.0 / flow_length) * proportional_flow)
 
                 average_flow_raster.set(
