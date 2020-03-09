@@ -558,3 +558,102 @@ def calculate_sediment_deposition(
                     f_raster.set(global_col, global_row, f_i)
 
     sediment_deposition_raster.close()
+
+
+def calculate_average_aspect(
+    mfd_flow_direction_path, target_average_aspect_path):
+    LOGGER.info('Calculating average aspect')
+
+    cdef float average_aspect_nodata = -1.0
+    pygeoprocessing.new_raster_from_base(
+        mfd_flow_direction_path, target_average_aspect_path,
+        gdal.GDT_Float32, [average_aspect_nodata])
+
+    flow_direction_info = pygeoprocessing.get_raster_info(
+        mfd_flow_direction_path)
+    cdef float mfd_flow_direction_nodata = flow_direction_info['nodata']
+    cdef int n_cols, n_rows
+    n_cols, n_rows = flow_direction_info['raster_size']
+
+    cdef _ManagedRaster mfd_flow_direction_raster = _ManagedRaster(
+        mfd_flow_direction_path, 1, False)
+
+    cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
+        target_average_aspect_path, 1, False)
+
+    # TODO: make these module-level arrays
+    cdef int *row_offsets = [0, -1, -1, -1,  0,  1, 1, 1]
+    cdef int *col_offsets = [1,  1,  0, -1, -1, -1, 0, 1]
+
+    cdef int* neighbor_flows = [0, 0, 0, 0, 0, 0, 0, 0]
+    cdef float sqrt2 = cmath.sqrt(2)
+
+    # Loop over iterblocks to maintain cache locality
+    # Find each non-nodata pixel and calculate proportional flow
+    # Multiply proportional flow times the flow length x_d
+    # write the final value to the raster.
+    for offset_dict in pygeoprocessing.iterblocks(
+            (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
+        win_xsize = offset_dict['win_xsize']
+        win_ysize = offset_dict['win_ysize']
+        xoff = offset_dict['xoff']
+        yoff = offset_dict['yoff']
+
+        LOGGER.info('%.2f%% complete', 100.0 * (
+            (yoff * n_cols + xoff) / float(n_cols * n_rows)))
+
+        for row_index in range(win_ysize):
+            seed_row = yoff + row_index
+            for col_index in range(win_xsize):
+                flow_sum = 0.0
+                seed_col = xoff + col_index
+                seed_flow_value = mfd_flow_direction_raster.get(
+                    seed_row, seed_col)
+
+                # Skip this seed if it's nodata.
+                if is_close(seed_flow_value, mfd_flow_direction_nodata):
+                    average_aspect_raster.set(
+                        seed_rol, seed_row, average_aspect_nodata)
+                    continue
+
+                # Skip iterating over neighbors if there's no flow at all.
+                if seed_flow_value == 0:
+                    average_aspect_raster.set(
+                        seed_rol, seed_row, 0.0)
+                    continue
+
+                for neighbor_index in range(8):
+                    neighbor_flows[neighbor_index] = 0
+                    neighbor_row = seed_row + row_offsets[neighbor_index]
+                    if neighbor_row < 0 or neighbor_row >= n_rows:
+                        continue
+
+                    neigbor_col = seed_col + row_offsets[neighbor_index]
+                    if neighbor_col < 0 or neighbor_col >= n_cols:
+                        continue
+
+                    combined_flow_value = mfd_flow_direction_raster.get(
+                        neighbor_col, neighbor_row)
+                    flow_in_direction = (combined_flow_value >> (
+                        neighbor_index * 4) & 0xF)
+                    flow_sum += flow_in_direction
+                    neighbor_flows[neighbor_index] = flow_in_direction
+
+                flow_value_weighted_average = 0.0
+                for neighbor_index in range(8):
+                    proportional_flow = (
+                        neighbor_flows[neighbor_index] / flow_sum)
+
+                    if neighbor_index % 2 == 0:
+                        flow_length = 1
+                    else:
+                        flow_length = sqrt2
+
+                    flow_value_weighted_average += (
+                        (1.0 / flow_length) * proportional_flow)
+
+                average_aspect_raster.set(
+                    seed_col, seed_row, flow_value_weighted_average)
+
+    mfd_flow_direction_raster.close()
+    average_aspect_raster.close()

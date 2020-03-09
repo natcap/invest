@@ -393,8 +393,9 @@ def execute(args):
         task_name='flow direction calculation')
 
     weighted_avg_aspect_task = task_graph.add_task(
-        func=_calculate_aspect_weighted_avg,
-        args=[[(f_reg['flow_direction_path'], 1)]],
+        func=sdr_core.calculate_average_aspect,
+        args=(f_reg['flow_direction_path'],
+              f_reg['weighted_avg_aspect_path']),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['weighted_avg_aspect_path']],
@@ -719,20 +720,6 @@ def execute(args):
 
     task_graph.close()
     task_graph.join()
-
-
-def _calculate_aspect_weighted_avg(flow_accumulation_path,
-                                   target_aspect_avg_path):
-    flow_accumulation_info = pygeoprocessing.get_raster_info(
-        flow_accumulation_path)
-    flow_accumulation_nodata = flow_accumulation_info['nodata']
-
-    def weighted_aspect_function(flow_accumulation):
-        pass
-
-    pygeoprocessing.raster_calculator(
-        [(flow_accumulation_path, 1)], weighted_aspect_function,
-        target_aspect_avg_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
 def _calculate_ls_factor(
