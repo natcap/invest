@@ -588,6 +588,8 @@ def calculate_average_aspect(
 
     cdef int* neighbor_flows = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int combined_flow_value
+    cdef int seed_row = 0
+    cdef int seed_col = 0
 
     # Loop over iterblocks to maintain cache locality
     # Find each non-nodata pixel and calculate proportional flow
@@ -600,8 +602,8 @@ def calculate_average_aspect(
         xoff = offset_dict['xoff']
         yoff = offset_dict['yoff']
 
-        LOGGER.info('%.2f%% complete', 100.0 * (
-            (yoff * n_cols + xoff) / float(n_cols * n_rows)))
+        LOGGER.info('Average aspect %.2f%% complete', 100.0 * (
+            (seed_row * seed_col) / float(n_cols * n_rows)))
 
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
@@ -609,7 +611,7 @@ def calculate_average_aspect(
                 flow_sum = 0.0
                 seed_col = xoff + col_index
                 seed_flow_value = mfd_flow_direction_raster.get(
-                    seed_row, seed_col)
+                    seed_col, seed_row)
 
                 # Skip this seed if it's nodata.
                 if is_close(seed_flow_value, mfd_flow_direction_nodata):
@@ -656,6 +658,8 @@ def calculate_average_aspect(
 
                 average_aspect_raster.set(
                     seed_col, seed_row, flow_value_weighted_average)
+
+    LOGGER.info('Average aspect 100.00% complete')
 
     mfd_flow_direction_raster.close()
     average_aspect_raster.close()

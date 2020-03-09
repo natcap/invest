@@ -413,7 +413,7 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='flow accumulation calculation')
 
-    ls_factor_task = task_graph.add_task(
+    ls_prime_factor_task = task_graph.add_task(
         func=_calculate_ls_prime_factor,
         args=(
             f_reg['flow_accumulation_path'],
@@ -490,7 +490,7 @@ def execute(args):
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, ls_factor_task, weighted_avg_aspect_task,
+            align_task, ls_prime_factor_task, weighted_avg_aspect_task,
             drainage_raster_path_task[1]],
         task_name='calculate RKLS')
 
