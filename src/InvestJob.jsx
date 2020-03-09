@@ -342,14 +342,15 @@ export class InvestJob extends React.Component {
     const spec = await getSpec(payload);
     if (spec) {
       // for clarity, state has a dedicated args property separte from spec
-      const args = JSON.parse(JSON.stringify(spec.args));
-      delete spec.args
+      // const args = JSON.parse(JSON.stringify(spec.args));
+      // delete spec.args // bad idea to mutate var like this.
+      const {args, ...modelSpec} = spec;
 
       // This event represents a user selecting a model,
       // and so some existing state should be reset.
       this.setState({
         modelName: modelName,
-        modelSpec: spec,
+        modelSpec: modelSpec,
         args: args,
         argsValid: false,
         sessionProgress: 'setup',

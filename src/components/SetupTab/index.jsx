@@ -138,7 +138,7 @@ class ArgsForm extends React.Component {
                     Browse
                   </Button>
                 </InputGroup.Append>
-                <Form.Control.Feedback type='invalid'>
+                <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                   {argument.type + ' : ' + (argument.validationMessage || '')}
                 </Form.Control.Feedback>
               </InputGroup>
@@ -160,7 +160,7 @@ class ArgsForm extends React.Component {
                 isValid={argument.touched && argument.valid}
                 isInvalid={argument.touched && argument.validationMessage}
               />
-              <Form.Control.Feedback type='invalid'>
+              <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                 {argument.type + ' : ' + (argument.validationMessage || '')}
               </Form.Control.Feedback>
             </Col>
@@ -215,7 +215,7 @@ class ArgsForm extends React.Component {
                   <option value={opt} key={opt}>{opt}</option>
                 )}
               </Form.Control>
-              <Form.Control.Feedback type='invalid'>
+              <Form.Control.Feedback type='invalid' id={argname + '-feedback'}>
                 {argument.type + ' : ' + (argument.validationMessage || '')}
               </Form.Control.Feedback>
             </Col>
