@@ -130,6 +130,7 @@ jobs:
                   make GSUTIL=$env:GSUTIL_PATH deploy
 
             - name: Save build artifacts
+              if: !cancelled()  # Save artifacts unless cancelled
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Windows build artifacts
@@ -200,6 +201,7 @@ jobs:
               run: make deploy
 
             - name: Save build artifacts
+              if: !cancelled()  # Save artifacts unless cancelled
               uses: actions/upload-artifact@v1
               with:
                   name: InVEST Mac build artifacts
