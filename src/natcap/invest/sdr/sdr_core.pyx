@@ -593,11 +593,11 @@ def calculate_average_aspect(
     cdef float average_aspect_nodata = -1.0
     pygeoprocessing.new_raster_from_base(
         mfd_flow_direction_path, target_average_aspect_path,
-        gdal.GDT_Float32, [average_aspect_nodata])
+        gdal.GDT_Float32, [average_aspect_nodata], [average_aspect_nodata])
 
     flow_direction_info = pygeoprocessing.get_raster_info(
         mfd_flow_direction_path)
-    cdef float mfd_flow_direction_nodata = flow_direction_info['nodata'][0]
+    cdef int mfd_flow_direction_nodata = flow_direction_info['nodata'][0]
     cdef int n_cols, n_rows
     n_cols, n_rows = flow_direction_info['raster_size']
 
@@ -636,23 +636,17 @@ def calculate_average_aspect(
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
-                weight_sum = 0
                 seed_col = xoff + col_index
                 seed_flow_value = <int>mfd_flow_direction_raster.get(
                     seed_col, seed_row)
 
-                # Skip this seed if it's nodata.
+                # Skip this seed if it's nodata (Currently expected to be 0).
+                # No need to set the nodata value here since we have already
+                # filled the raster with nodata values at creation time.
                 if seed_flow_value == mfd_flow_direction_nodata:
-                    average_aspect_raster.set(
-                        seed_col, seed_row, average_aspect_nodata)
                     continue
 
-                # Skip iterating over neighbors if there's no flow at all.
-                # If no flow, the average aspect is also 0.
-                if seed_flow_value == 0:
-                    average_aspect_raster.set(seed_col, seed_row, 0.0)
-                    continue
-
+                weight_sum = 0
                 for neighbor_index in range(8):
                     neighbor_weights[neighbor_index] = 0
                     neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
