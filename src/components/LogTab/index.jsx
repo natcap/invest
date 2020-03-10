@@ -45,6 +45,7 @@ export class LogTab extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
+    console.log(this.props.logfile);
     if (prevProps.logfile !== this.props.logfile && this.props.logfile) {
       let tail = new Tail(this.props.logfile, {
         fromBeginning: true
@@ -70,14 +71,6 @@ export class LogTab extends React.Component {
         renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
       }
     }
-
-    let killButton = 
-      <Button
-        variant="primary" 
-        size="lg"
-        onClick={this.props.investKill}>
-        Kill Subprocess
-      </Button>
 
     return (
       <Container>

@@ -75,7 +75,6 @@ export class InvestJob extends React.Component {
     this.investGetSpec = this.investGetSpec.bind(this);
     this.investValidate = this.investValidate.bind(this);
     this.investExecute = this.investExecute.bind(this);
-    this.investKill = this.investKill.bind(this);
     this.switchTabs = this.switchTabs.bind(this);
     this.updateArg = this.updateArg.bind(this);
     this.batchUpdateArgs = this.batchUpdateArgs.bind(this);
@@ -231,15 +230,6 @@ export class InvestJob extends React.Component {
       });
       console.log(this.state)
     });
-  }
-
-  investKill() {
-    // TODO: this never worked properly. I think the pid here is from the node subprocess,
-    // when we actually want the pid from the python process it launched.
-    if (this.state.procID){
-      console.log(this.state.procID);
-      process.kill(this.state.procID)
-    }
   }
 
   async investValidate(args_dict_string, limit_to) {
@@ -487,7 +477,6 @@ export class InvestJob extends React.Component {
               sessionProgress={this.state.sessionProgress}
               logfile={this.state.logfile}
               logStdErr={this.state.logStdErr}
-              investKill={this.investKill}
             />
           </TabPane>
           <TabPane eventKey="results" title="Results">
