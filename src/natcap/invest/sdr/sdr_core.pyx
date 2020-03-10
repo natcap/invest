@@ -610,6 +610,7 @@ def calculate_average_aspect(
     cdef int* neighbor_weights = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int seed_row = 0
     cdef int seed_col = 0
+    cdef int n_pixels_visited = 0
     cdef int win_xsize, win_ysize, xoff, yoff
     cdef int row_index, col_index, neighbor_index
     cdef int flow_weight_in_direction
@@ -618,6 +619,12 @@ def calculate_average_aspect(
     cdef float aspect_weighted_average
     cdef float proportional_flow
     cdef float flow_length
+    cdef float* flow_lengths = [
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2,
+        1.0, <float>cmath.M_SQRT2
+    ]
 
     # Loop over iterblocks to maintain cache locality
     # Find each non-nodata pixel and calculate proportional flow
@@ -631,11 +638,12 @@ def calculate_average_aspect(
         yoff = offset_dict['yoff']
 
         LOGGER.info('Average aspect %.2f%% complete', 100.0 * (
-            (seed_row * seed_col) / float(n_cols * n_rows)))
+            n_pixels_visited / float(n_cols * n_rows)))
 
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
+                n_pixels_visited += 1
                 seed_col = xoff + col_index
                 seed_flow_value = <int>mfd_flow_direction_raster.get(
                     seed_col, seed_row)
@@ -671,15 +679,11 @@ def calculate_average_aspect(
                 else:
                     aspect_weighted_average = 0.0
                     for neighbor_index in range(8):
-                        # This conditional is the functional equivalent of
-                        # calculating |sin(alpha)| + |cos(alpha)|.
-                        if neighbor_index % 2 == 0:
-                            flow_length = 1.0
-                        else:
-                            flow_length = <float>cmath.M_SQRT2
-
+                        # the flow_lengths array is the functional equivalent
+                        # of calculating |sin(alpha)| + |cos(alpha)|.
                         aspect_weighted_average += (
-                            flow_length * neighbor_weights[neighbor_index])
+                            flow_lengths[neighbor_index] *
+                            neighbor_weights[neighbor_index])
 
                     # We already know that weight_sum will be > 0 because we
                     # check for it in the condition above.
