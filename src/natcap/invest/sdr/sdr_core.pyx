@@ -612,7 +612,7 @@ def calculate_average_aspect(
     cdef int seed_col = 0
     cdef int win_xsize, win_ysize, xoff, yoff
     cdef int row_index, col_index, neighbor_index
-    cdef int flow_in_direction
+    cdef int flow_weight_in_direction
     cdef int weight_sum
     cdef int seed_flow_value
     cdef float aspect_weighted_average
@@ -648,6 +648,7 @@ def calculate_average_aspect(
                     continue
 
                 # Skip iterating over neighbors if there's no flow at all.
+                # If no flow, the average aspect is also 0.
                 if seed_flow_value == 0:
                     average_aspect_raster.set(seed_col, seed_row, 0.0)
                     continue
@@ -662,13 +663,17 @@ def calculate_average_aspect(
                     if neighbor_col < 0 or neighbor_col >= n_cols:
                         continue
 
-                    flow_in_direction = (seed_flow_value >> (
+                    flow_weight_in_direction = (seed_flow_value >> (
                         neighbor_index * 4) & 0xF)
-                    weight_sum += flow_in_direction
-                    neighbor_weights[neighbor_index] = flow_in_direction
+                    weight_sum += flow_weight_in_direction
+                    neighbor_weights[neighbor_index] = flow_weight_in_direction
 
-                aspect_weighted_average = -1.0
-                if weight_sum > 0:
+                # Weight sum should never be less than 0.
+                # Since it's an int, we can compare it directly against the
+                # value of 0.
+                if weight_sum == 0:
+                    aspect_weighted_average = average_aspect_nodata
+                else:
                     aspect_weighted_average = 0.0
                     for neighbor_index in range(8):
                         neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
