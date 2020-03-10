@@ -826,7 +826,7 @@ def _calculate_ls_prime_factor(
 
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
-        avg_flow_path, rkls_path):
+        avg_aspect_path, rkls_path):
     """Calculate per-pixel potential soil loss using the RKLS.
 
     (revised universal soil loss equation with no C or P).
@@ -838,7 +838,7 @@ def _calculate_rkls(
         erodibility_path (string): path to erodibility raster
         stream_path (string): path to drainage raster
             (1 is drainage, 0 is not)
-        avg_flow_path (string): The path to to raster of weighted MFD
+        avg_aspect_path (string): The path to to raster of weighted MFD
             flow values.
         rkls_path (string): path to RKLS raster
 
@@ -857,7 +857,7 @@ def _calculate_rkls(
         pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
     cell_area_ha = cell_size**2 / 10000.0
 
-    def rkls_function(ls_factor, erosivity, erodibility, stream, avg_flow):
+    def rkls_function(ls_factor, erosivity, erodibility, stream, avg_aspect):
         """Calculate the RKLS equation.
 
         Parameters:
@@ -866,10 +866,10 @@ def _calculate_rkls(
         erodibility (numpy.ndarray): related to the potential for soil to
             erode
         stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
-        avg_flow (numpy.ndarray): the average flow/aspect from MFD
+        avg_aspect (numpy.ndarray): the average flow/aspect from MFD
 
         Returns:
-            ls_factor * erosivity * erodibility * usle_c_p * avg_flow or
+            ls_factor * erosivity * erodibility * usle_c_p * avg_aspect or
             nodata if any values are nodata themselves.
 
         """
@@ -886,7 +886,7 @@ def _calculate_rkls(
 
         rkls[valid_mask] = (
             ls_factor[valid_mask] * erosivity[valid_mask] *
-            erodibility[valid_mask] * avg_flow[valid_mask] * cell_area_ha)
+            erodibility[valid_mask] * avg_aspect[valid_mask] * cell_area_ha)
 
         # rkls is 1 on the stream
         rkls[nodata_mask & (stream == 1)] = 1
@@ -897,7 +897,7 @@ def _calculate_rkls(
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
             ls_factor_path, erosivity_path, erodibility_path, stream_path,
-            avg_flow_path]],
+            avg_aspect_path]],
         rkls_function, rkls_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 
