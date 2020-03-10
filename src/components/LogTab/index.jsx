@@ -42,34 +42,37 @@ export class LogTab extends React.Component {
     this.state = {
       logdata: ''
     }
+    this.tail = null;
   }
 
   componentDidUpdate(prevProps) {
-    console.log(this.props.logfile);
-    if (prevProps.logfile !== this.props.logfile && this.props.logfile) {
-      let tail = new Tail(this.props.logfile, {
+    // if there is a logfile and it's new, start tailing the file.
+    if (this.props.logfile && prevProps.logfile !== this.props.logfile) {
+      this.tail = new Tail(this.props.logfile, {
         fromBeginning: true
       });
       let logdata = Object.assign('', this.state.logdata);
-      tail.on('line', (data) => {
+      this.tail.on('line', (data) => {
         logdata += `${data}` + os.EOL
         this.setState({ logdata: logdata })
       })
+
+    // No new logfile. No existing logdata.
     } else if (this.state.logdata === '') {
       this.setState({logdata: 'Starting...'})
+
+    // No new logfile. Existing logdata. Invest process exited. 
+    } else if (['success', 'error'].includes(this.props.jobStatus)) {
+      this.tail.unwatch()
     }
   }
 
-  render() {
-    const current_err = this.props.logStdErr;
-    
+  render() {    
     let renderedAlert;
-    if (current_err) {
-      renderedAlert = <Alert variant={'danger'}>{current_err}</Alert>
-    } else {
-      if (this.props.sessionProgress === 'results') { // this was set if python exited w/o error
-        renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
-      }
+    if (this.props.jobStatus === 'error') {
+      renderedAlert = <Alert variant={'danger'}>{this.props.logStdErr}</Alert>
+    } else if (this.props.jobStatus === 'success') {
+      renderedAlert = <Alert variant={'success'}>{'Model Completed'}</Alert>
     }
 
     return (

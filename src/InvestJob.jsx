@@ -474,7 +474,7 @@ export class InvestJob extends React.Component {
           </TabPane>
           <TabPane eventKey="log" title="Log">
             <LogTab
-              sessionProgress={this.state.sessionProgress}
+              jobStatus={this.state.jobStatus}
               logfile={this.state.logfile}
               logStdErr={this.state.logStdErr}
             />
