@@ -19,8 +19,10 @@ refreshenv
 
 # Install Zip.  This has been failing recently, so better to just install directly.
 # See http://gnuwin32.sourceforge.net/setup.html for full list of installer CLI flags.
+# The installer doesn't add the target directory to the PATH, so we need to do that too.
 Invoke-WebRequest https://managedway.dl.sourceforge.net/project/gnuwin32/zip/3.0/zip-3.0-setup.exe -OutFile zip-setup.exe
 & ./zip-setup.exe /VERYSILENT
+[Environment]::SetEnvironmentVariable("Path", $env:Path + ";C:\Program Files (x86)\GnuWin32\bin", "Machine")
 
 # Install NSIS.  The choco-provided NSIS puts it somewhere else and
 # the choco CLI option --install-directory isn't available in the OSS
