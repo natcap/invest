@@ -648,13 +648,14 @@ def calculate_average_aspect(
 
                 weight_sum = 0
                 for neighbor_index in range(8):
-                    neighbor_weights[neighbor_index] = 0
                     neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
+                        neighbor_weights[neighbor_index] = 0
                         continue
 
                     neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
                     if neighbor_col < 0 or neighbor_col >= n_cols:
+                        neighbor_weights[neighbor_index] = 0
                         continue
 
                     flow_weight_in_direction = (seed_flow_value >> (
@@ -670,14 +671,6 @@ def calculate_average_aspect(
                 else:
                     aspect_weighted_average = 0.0
                     for neighbor_index in range(8):
-                        neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
-                        if neighbor_row < 0 or neighbor_row >= n_rows:
-                            continue
-
-                        neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
-                        if neighbor_col < 0 or neighbor_col >= n_cols:
-                            continue
-
                         # This conditional is the functional equivalent of
                         # calculating |sin(alpha)| + |cos(alpha)|.
                         if neighbor_index % 2 == 0:
