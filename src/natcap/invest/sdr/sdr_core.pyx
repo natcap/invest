@@ -655,15 +655,20 @@ def calculate_average_aspect(
 
                 weight_sum = 0
                 for neighbor_index in range(8):
-                    neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
-                    if neighbor_row < 0 or neighbor_row >= n_rows:
-                        neighbor_weights[neighbor_index] = 0
-                        continue
+                    # We only need to check the neighbors relative to the
+                    # boundaries if we're in the first or last rows and
+                    # columns.
+                    if seed_row == 0 or seed_row == n_rows:
+                        neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
+                        if neighbor_row < 0 or neighbor_row >= n_rows:
+                            neighbor_weights[neighbor_index] = 0
+                            continue
 
-                    neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
-                    if neighbor_col < 0 or neighbor_col >= n_cols:
-                        neighbor_weights[neighbor_index] = 0
-                        continue
+                    if seed_col == 0 or seed_col == n_cols:
+                        neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
+                        if neighbor_col < 0 or neighbor_col >= n_cols:
+                            neighbor_weights[neighbor_index] = 0
+                            continue
 
                     flow_weight_in_direction = (seed_flow_value >> (
                         neighbor_index * 4) & 0xF)
