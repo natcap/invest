@@ -643,7 +643,6 @@ def calculate_average_aspect(
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
-                n_pixels_visited += 1
                 seed_col = xoff + col_index
                 seed_flow_value = <int>mfd_flow_direction_raster.get(
                     seed_col, seed_row)
@@ -692,6 +691,8 @@ def calculate_average_aspect(
 
                 average_aspect_raster.set(
                     seed_col, seed_row, aspect_weighted_average)
+
+        n_pixels_visited += win_xsize * win_ysize
 
     LOGGER.info('Average aspect 100.00% complete')
 
