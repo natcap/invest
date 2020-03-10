@@ -745,7 +745,7 @@ def _calculate_ls_factor(
             contributing upstream area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
         avg_aspect_path (string): The path to to raster of the weighted average
-            of proportional flow.
+            of aspects based on proportional flow.
         out_ls_prime_factor_path (string): path to output ls_prime_factor
             raster
 
@@ -769,7 +769,7 @@ def _calculate_ls_factor(
         Parameters:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
-            avg_aspect (numpy.ndarray): the average flow/aspect from MFD
+            avg_aspect (numpy.ndarray): the weighted average aspect from MFD
 
         Returns:
             ls_factor

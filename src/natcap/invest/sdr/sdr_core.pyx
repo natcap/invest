@@ -582,7 +582,7 @@ def calculate_average_aspect(
         mfd_flow_direction_path (string): The path to an MFD flow direction
             raster.
         target_average_aspect_path (string): The path to where the calculated
-            average proportional flow raster should be written.
+            weighted average aspect raster should be written.
 
     Returns:
         ``None``.
@@ -607,16 +607,15 @@ def calculate_average_aspect(
     cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
         target_average_aspect_path, 1, True)
 
-    cdef int* neighbor_flows = [0, 0, 0, 0, 0, 0, 0, 0]
-    cdef int combined_flow_value
+    cdef int* neighbor_weights = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int seed_row = 0
     cdef int seed_col = 0
     cdef int win_xsize, win_ysize, xoff, yoff
     cdef int row_index, col_index, neighbor_index
     cdef int flow_in_direction
-    cdef int flow_sum
+    cdef int weight_sum
     cdef int seed_flow_value
-    cdef float flow_value_weighted_average
+    cdef float aspect_weighted_average
     cdef float proportional_flow
     cdef float flow_length
 
@@ -637,7 +636,7 @@ def calculate_average_aspect(
         for row_index in range(win_ysize):
             seed_row = yoff + row_index
             for col_index in range(win_xsize):
-                flow_sum = 0
+                weight_sum = 0
                 seed_col = xoff + col_index
                 seed_flow_value = <int>mfd_flow_direction_raster.get(
                     seed_col, seed_row)
@@ -654,7 +653,7 @@ def calculate_average_aspect(
                     continue
 
                 for neighbor_index in range(8):
-                    neighbor_flows[neighbor_index] = 0
+                    neighbor_weights[neighbor_index] = 0
                     neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                     if neighbor_row < 0 or neighbor_row >= n_rows:
                         continue
@@ -665,12 +664,12 @@ def calculate_average_aspect(
 
                     flow_in_direction = (seed_flow_value >> (
                         neighbor_index * 4) & 0xF)
-                    flow_sum += flow_in_direction
-                    neighbor_flows[neighbor_index] = flow_in_direction
+                    weight_sum += flow_in_direction
+                    neighbor_weights[neighbor_index] = flow_in_direction
 
-                flow_value_weighted_average = -1.0
-                if flow_sum > 0:
-                    flow_value_weighted_average = 0.0
+                aspect_weighted_average = -1.0
+                if weight_sum > 0:
+                    aspect_weighted_average = 0.0
                     for neighbor_index in range(8):
                         neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
@@ -680,26 +679,23 @@ def calculate_average_aspect(
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
-                        # Flow_sum will always be greater than 0 at this point
-                        # because we check for it up above.
-                        with cython.cdivision(True):
-                            proportional_flow = (
-                                neighbor_flows[neighbor_index] /
-                                (<float>flow_sum))
-
+                        # This conditional is the functional equivalent of
+                        # calculating |sin(alpha)| + |cos(alpha)|.
                         if neighbor_index % 2 == 0:
                             flow_length = 1.0
                         else:
                             flow_length = <float>cmath.M_SQRT2
 
-                        # Flow_length will always be greater than 0 since it
-                        # can only be 1 or sqrt(2).
-                        with cython.cdivision(True):
-                            flow_value_weighted_average += <float>(
-                                flow_length * proportional_flow)
+                        aspect_weighted_average += (
+                            flow_length * neighbor_weights[neighbor_index])
+
+                    # We already know that weight_sum will be > 0 because we
+                    # check for it in the condition above.
+                    with cython.cdivision(True):
+                        aspect_weighted_average = aspect_weighted_average / <float>weight_sum
 
                 average_aspect_raster.set(
-                    seed_col, seed_row, flow_value_weighted_average)
+                    seed_col, seed_row, aspect_weighted_average)
 
     LOGGER.info('Average aspect 100.00% complete')
 
