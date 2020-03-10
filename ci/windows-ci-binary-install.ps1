@@ -11,11 +11,16 @@
 # NOTE: it turns out that `wget` is an alias for the powershell command `Invoke-WebRequest`,
 # which I've made a point of using here instead of the actual wget. See https://superuser.com/a/693179
 
-choco install make vcredist140 pandoc zip 7zip unzip
+choco install make vcredist140 pandoc 7zip unzip
 $env:PATH += ";C:\ProgramData\chocolatey\bin"
 
 # Choco-provided command to reload environment variables
 refreshenv
+
+# Install Zip.  This has been failing recently, so better to just install directly.
+# See http://gnuwin32.sourceforge.net/setup.html for full list of installer CLI flags.
+Invoke-WebRequest https://managedway.dl.sourceforge.net/project/gnuwin32/zip/3.0/zip-3.0-setup.exe -OutFile zip-setup.exe
+& zip-setup.exe /VERYSILENT
 
 # Install NSIS.  The choco-provided NSIS puts it somewhere else and
 # the choco CLI option --install-directory isn't available in the OSS

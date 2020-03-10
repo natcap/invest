@@ -20,7 +20,6 @@ ifeq ($(OS),Windows_NT)
 	ENV_SCRIPTS = $(ENV)\Scripts
 	ENV_ACTIVATE = $(ENV_SCRIPTS)\activate
 	CP := powershell.exe Copy-Item
-	ZIP := powershell.exe scripts/zip.ps1
 	COPYDIR := $(CP) -Recurse
 	MKDIR := powershell.exe mkdir -Force -Path
 	RM := powershell.exe Remove-Item -Force -Recurse -Path
@@ -41,7 +40,6 @@ else
 	SHELL := /bin/bash
 	BASHLIKE_SHELL_COMMAND := $(SHELL) -c
 	CP := cp
-	ZIP := zip
 	COPYDIR := $(CP) -r
 	MKDIR := mkdir -p
 	RM := rm -r
@@ -65,6 +63,7 @@ ifeq ($(OS),Windows_NT)
 	REQUIRED_PROGRAMS += makensis
 endif
 
+ZIP := zip
 PIP = $(PYTHON) -m pip
 VERSION := $(shell $(PYTHON) setup.py --version)
 PYTHON_ARCH := $(shell $(PYTHON) -c "import sys; print('x86' if sys.maxsize <= 2**32 else 'x64')")
