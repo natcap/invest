@@ -209,7 +209,7 @@ _INTERMEDIATE_BASE_FILES = {
     'ws_factor_path': 'ws_factor.tif',
     'ws_inverse_path': 'ws_inverse.tif',
     'e_prime_path': 'e_prime.tif',
-    'weighted_avg_aspect_path': 'aspect_mfd_weighted_avg.tif'
+    'weighted_avg_aspect_path': 'weighted_avg_aspect.tif'
     }
 
 _TMP_BASE_FILES = {
@@ -413,17 +413,20 @@ def execute(args):
         dependent_task_list=[flow_dir_task],
         task_name='flow accumulation calculation')
 
-    ls_prime_factor_task = task_graph.add_task(
-        func=_calculate_ls_prime_factor,
+    ls_factor_task = task_graph.add_task(
+        func=_calculate_ls_factor,
         args=(
             f_reg['flow_accumulation_path'],
             f_reg['slope_path'],
+            f_reg['weighted_avg_aspect_path'],
             f_reg['ls_path']),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['ls_path']],
-        dependent_task_list=[flow_accumulation_task, slope_task],
-        task_name='ls-prime factor calculation')
+        dependent_task_list=[
+            flow_accumulation_task, slope_task,
+            weighted_avg_aspect_task],
+        task_name='ls factor calculation')
 
     stream_task = task_graph.add_task(
         func=pygeoprocessing.routing.extract_streams_mfd,
@@ -484,14 +487,12 @@ def execute(args):
             f_reg['aligned_erosivity_path'],
             f_reg['aligned_erodibility_path'],
             drainage_raster_path_task[0],
-            f_reg['weighted_avg_aspect_path'],
             f_reg['rkls_path']),
         hash_algorithm='md5',
         copy_duplicate_artifact=True,
         target_path_list=[f_reg['rkls_path']],
         dependent_task_list=[
-            align_task, ls_prime_factor_task, weighted_avg_aspect_task,
-            drainage_raster_path_task[1]],
+            align_task, drainage_raster_path_task[1]],
         task_name='calculate RKLS')
 
     usle_task = task_graph.add_task(
@@ -724,8 +725,9 @@ def execute(args):
     task_graph.join()
 
 
-def _calculate_ls_prime_factor(
-        flow_accumulation_path, slope_path, out_ls_prime_factor_path):
+def _calculate_ls_factor(
+        flow_accumulation_path, slope_path, avg_aspect_path,
+        out_ls_prime_factor_path):
     """Calculate LS' factor.
 
     LS factor as Equation 3 from "Extension and validation
@@ -734,15 +736,16 @@ def _calculate_ls_prime_factor(
     risk assessments in large watersheds"
 
     Note that to account for multiple possible flow directions, the LS factor
-    described above has been adapted, hence the name ``LS'``.  The aspect
-    term ``x`` has been removed from the LS calculations and will instead be
-    accounted for by a raster representing the weighted average of the flow
-    values from a pixel.  See ``sdr_core.calculate_average_aspect``.
+    described above has been adapted.  The aspect term ``x`` now represents the
+    weighted average of proportional flow from pixel ``i``.  Values for ``x``
+    are created by ``sdr_core.calculate_average_aspect``.
 
     Parameters:
         flow_accumulation_path (string): path to raster, pixel values are the
             contributing upstream area at that cell. Pixel size is square.
         slope_path (string): path to slope raster as a percent
+        avg_aspect_path (string): The path to to raster of the weighted average
+            of proportional flow.
         out_ls_prime_factor_path (string): path to output ls_prime_factor
             raster
 
@@ -751,6 +754,8 @@ def _calculate_ls_prime_factor(
 
     """
     slope_nodata = pygeoprocessing.get_raster_info(slope_path)['nodata'][0]
+    avg_aspect_nodata = pygeoprocessing.get_raster_info(
+        avg_aspect_path)['nodata'][0]
 
     flow_accumulation_info = pygeoprocessing.get_raster_info(
         flow_accumulation_path)
@@ -758,18 +763,20 @@ def _calculate_ls_prime_factor(
     cell_size = abs(flow_accumulation_info['pixel_size'][0])
     cell_area = cell_size ** 2
 
-    def ls_prime_factor_function(percent_slope, flow_accumulation):
+    def ls_factor_function(percent_slope, flow_accumulation, avg_aspect):
         """Calculate the LS' factor.
 
         Parameters:
             percent_slope (numpy.ndarray): slope in percent
             flow_accumulation (numpy.ndarray): upstream pixels
+            avg_aspect (numpy.ndarray): the average flow/aspect from MFD
 
         Returns:
             ls_factor
 
         """
         valid_mask = (
+            (~numpy.isclose(avg_aspect, avg_aspect_nodata)) &
             (percent_slope != slope_nodata) &
             (flow_accumulation != flow_accumulation_nodata))
         result = numpy.empty(valid_mask.shape, dtype=numpy.float32)
@@ -807,7 +814,8 @@ def _calculate_ls_prime_factor(
         ls_prime_factor = (
             ((contributing_area + cell_area)**(m_exp+1) -
              contributing_area ** (m_exp+1)) /
-            ((cell_size ** (m_exp + 2)) * (22.13**m_exp)))
+            ((cell_size ** (m_exp + 2)) * (avg_aspect[valid_mask]**m_exp) *
+             (22.13**m_exp)))
 
         # from McCool paper: "as a final check against excessively long slope
         # length calculations ... cap of 333m"
@@ -819,14 +827,14 @@ def _calculate_ls_prime_factor(
     # call vectorize datasets to calculate the ls_factor
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            slope_path, flow_accumulation_path]],
-        ls_prime_factor_function, out_ls_prime_factor_path, gdal.GDT_Float32,
+            slope_path, flow_accumulation_path, avg_aspect_path]],
+        ls_factor_function, out_ls_prime_factor_path, gdal.GDT_Float32,
         _TARGET_NODATA)
 
 
 def _calculate_rkls(
         ls_factor_path, erosivity_path, erodibility_path, stream_path,
-        avg_aspect_path, rkls_path):
+        rkls_path):
     """Calculate per-pixel potential soil loss using the RKLS.
 
     (revised universal soil loss equation with no C or P).
@@ -838,8 +846,6 @@ def _calculate_rkls(
         erodibility_path (string): path to erodibility raster
         stream_path (string): path to drainage raster
             (1 is drainage, 0 is not)
-        avg_aspect_path (string): The path to to raster of weighted MFD
-            flow values.
         rkls_path (string): path to RKLS raster
 
     Returns:
@@ -857,7 +863,7 @@ def _calculate_rkls(
         pygeoprocessing.get_raster_info(ls_factor_path)['pixel_size'][0])
     cell_area_ha = cell_size**2 / 10000.0
 
-    def rkls_function(ls_factor, erosivity, erodibility, stream, avg_aspect):
+    def rkls_function(ls_factor, erosivity, erodibility, stream):
         """Calculate the RKLS equation.
 
         Parameters:
@@ -866,7 +872,6 @@ def _calculate_rkls(
         erodibility (numpy.ndarray): related to the potential for soil to
             erode
         stream (numpy.ndarray): stream mask (1 stream, 0 no stream)
-        avg_aspect (numpy.ndarray): the average flow/aspect from MFD
 
         Returns:
             ls_factor * erosivity * erodibility * usle_c_p * avg_aspect or
@@ -886,7 +891,7 @@ def _calculate_rkls(
 
         rkls[valid_mask] = (
             ls_factor[valid_mask] * erosivity[valid_mask] *
-            erodibility[valid_mask] * avg_aspect[valid_mask] * cell_area_ha)
+            erodibility[valid_mask] * cell_area_ha)
 
         # rkls is 1 on the stream
         rkls[nodata_mask & (stream == 1)] = 1
@@ -896,8 +901,7 @@ def _calculate_rkls(
     # aligned with LULCs
     pygeoprocessing.raster_calculator(
         [(path, 1) for path in [
-            ls_factor_path, erosivity_path, erodibility_path, stream_path,
-            avg_aspect_path]],
+            ls_factor_path, erosivity_path, erodibility_path, stream_path]],
         rkls_function, rkls_path, gdal.GDT_Float32, _TARGET_NODATA)
 
 

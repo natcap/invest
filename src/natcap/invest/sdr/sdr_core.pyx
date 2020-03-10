@@ -696,7 +696,7 @@ def calculate_average_aspect(
                         # can only be 1 or sqrt(2).
                         with cython.cdivision(True):
                             flow_value_weighted_average += <float>(
-                                (1.0 / flow_length) * proportional_flow)
+                                flow_length * proportional_flow)
 
                 average_aspect_raster.set(
                     seed_col, seed_row, flow_value_weighted_average)
