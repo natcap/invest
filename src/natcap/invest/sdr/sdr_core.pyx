@@ -607,7 +607,6 @@ def calculate_average_aspect(
     cdef _ManagedRaster average_aspect_raster = _ManagedRaster(
         target_average_aspect_path, 1, True)
 
-    cdef int* neighbor_weights = [0, 0, 0, 0, 0, 0, 0, 0]
     cdef int seed_row = 0
     cdef int seed_col = 0
     cdef int n_pixels_visited = 0
