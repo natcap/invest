@@ -616,9 +616,12 @@ def calculate_average_aspect(
     cdef int flow_weight_in_direction
     cdef int weight_sum
     cdef int seed_flow_value
-    cdef float aspect_weighted_average
+    cdef float aspect_weighted_average, aspect_weighted_sum
     cdef float proportional_flow
     cdef float flow_length
+
+    # the flow_lengths array is the functional equivalent
+    # of calculating |sin(alpha)| + |cos(alpha)|.
     cdef float* flow_lengths = [
         1.0, <float>cmath.M_SQRT2,
         1.0, <float>cmath.M_SQRT2,
@@ -654,6 +657,7 @@ def calculate_average_aspect(
                     continue
 
                 weight_sum = 0
+                aspect_weighted_sum = 0
                 for neighbor_index in range(8):
                     # We only need to check the neighbors relative to the
                     # boundaries if we're in the first or last rows and
@@ -661,19 +665,20 @@ def calculate_average_aspect(
                     if seed_row == 0 or seed_row == n_rows:
                         neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
-                            neighbor_weights[neighbor_index] = 0
                             continue
 
                     if seed_col == 0 or seed_col == n_cols:
                         neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
-                            neighbor_weights[neighbor_index] = 0
                             continue
 
                     flow_weight_in_direction = (seed_flow_value >> (
                         neighbor_index * 4) & 0xF)
                     weight_sum += flow_weight_in_direction
-                    neighbor_weights[neighbor_index] = flow_weight_in_direction
+
+                    aspect_weighted_sum += (
+                        flow_lengths[neighbor_index] *
+                        flow_weight_in_direction)
 
                 # Weight sum should never be less than 0.
                 # Since it's an int, we can compare it directly against the
@@ -681,18 +686,11 @@ def calculate_average_aspect(
                 if weight_sum == 0:
                     aspect_weighted_average = average_aspect_nodata
                 else:
-                    aspect_weighted_average = 0.0
-                    for neighbor_index in range(8):
-                        # the flow_lengths array is the functional equivalent
-                        # of calculating |sin(alpha)| + |cos(alpha)|.
-                        aspect_weighted_average += (
-                            flow_lengths[neighbor_index] *
-                            neighbor_weights[neighbor_index])
-
                     # We already know that weight_sum will be > 0 because we
                     # check for it in the condition above.
                     with cython.cdivision(True):
-                        aspect_weighted_average = aspect_weighted_average / <float>weight_sum
+                        aspect_weighted_average = (
+                            aspect_weighted_sum / <float>weight_sum)
 
                 average_aspect_raster.set(
                     seed_col, seed_row, aspect_weighted_average)
