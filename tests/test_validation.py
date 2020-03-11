@@ -1,12 +1,12 @@
 import tempfile
 import unittest
+from unittest.mock import Mock
 import os
 import shutil
 import string
 
 from osgeo import gdal, osr, ogr
 import pandas
-import mock
 
 
 class SpatialOverlapTest(unittest.TestCase):
@@ -879,7 +879,7 @@ class TestValidationFromSpec(unittest.TestCase):
         try:
             # Patch in a new function that raises an exception into the
             # validation functions dictionary.
-            patched_function = mock.Mock(side_effect=ValueError('foo'))
+            patched_function = Mock(side_effect=ValueError('foo'))
             validation._VALIDATION_FUNCS['number'] = patched_function
 
             validation_warnings = validation.validate(args, spec)
