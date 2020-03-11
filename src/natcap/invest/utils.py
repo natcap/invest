@@ -459,10 +459,7 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    try:  # no unicode() in python 3
-        key_field = unicode(key_field)
-    except NameError:
-        pass
+    
     if to_lower:
         key_field = key_field.lower()
         header_row = [
