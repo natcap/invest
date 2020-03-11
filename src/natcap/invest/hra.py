@@ -18,11 +18,6 @@ import pygeoprocessing
 from . import utils
 from . import validation
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.hra')
 
@@ -1251,7 +1246,7 @@ def _create_rasters_from_geometries(
 
     for field_value, shapely_geoms_wkb in geom_sets_by_field.items():
         # Create file basename based on field value
-        if not isinstance(field_value, basestring):
+        if not isinstance(field_value, str):
             field_value = str(field_value)
 
         field_value = field_value
@@ -2588,7 +2583,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
 
     # Convert empty cells (those that are not in string or unicode format) to
     # None
-    criteria_df.index = [x if isinstance(x, basestring) else None
+    criteria_df.index = [x if isinstance(x, str) else None
                          for x in criteria_df.index]
 
     # Verify the values in the index column, and append to error message if
@@ -2605,7 +2600,7 @@ def _get_criteria_dataframe(base_criteria_table_path):
 
     # Validate the column header, which should have 'criteria type'
     criteria_df.columns = [
-        x if isinstance(x, basestring) else None for x in
+        x if isinstance(x, str) else None for x in
         criteria_df.loc[_HABITAT_NAME_HEADER].values]
     if _CRITERIA_TYPE_HEADER not in criteria_df.columns.values:
         raise ValueError('The Criteria table is missing the column header'
@@ -2739,7 +2734,7 @@ def _validate_rating(
 
     # Rating might be a string of path or a string of digit. Validate the value
     # when it's a digit
-    if isinstance(rating, basestring) and rating.isdigit():
+    if isinstance(rating, str) and rating.isdigit():
         rating = float(rating)
         # If rating is less than 1, ignore this criteria attribute
         if rating < 1:
@@ -2790,7 +2785,7 @@ def _validate_dq_weight(dq, weight, habitat, stressor=None):
         # The value might be NaN or a string of non-digit, therefore check for
         # both cases
         if (isinstance(value, (float, int)) and numpy.isnan(value)) or (
-                isinstance(value, basestring) and not value.isdigit()):
+                isinstance(value, str) and not value.isdigit()):
             error_message = (
                 'Values in the %s column for habitat "%s" ' % (key, habitat))
 
@@ -2943,7 +2938,7 @@ def _get_overlap_dataframe(criteria_df, habitat_names, stressor_attributes,
                     # both of them
                     _validate_dq_weight(dq, weight, habitat, stressor)
                     # Calculate cumulative numerator score if rating is a digit
-                    if (isinstance(rating, basestring) and rating.isdigit()) or (
+                    if (isinstance(rating, str) and rating.isdigit()) or (
                             isinstance(rating, (int, float))):
                         overlap_df.loc[(habitat, stressor),
                                        criteria_type + '_NUM'] += \
@@ -3051,7 +3046,7 @@ def _get_recovery_dataframe(criteria_df, habitat_names, resilience_attributes,
                     continue
 
                 # If rating is a number, calculate the numerator score
-                if (isinstance(rating, basestring) and rating.isdigit()) or (
+                if (isinstance(rating, str) and rating.isdigit()) or (
                         isinstance(rating, (int, float))):
                     recovery_df.loc[habitat, 'R_NUM'] += \
                         float(rating)/float(dq)/float(weight)

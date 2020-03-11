@@ -11,11 +11,6 @@ from .. import utils
 from osgeo import gdal
 from . import table_generator
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
 REPORTING_DATA = os.path.join(invest.local_dir(__file__), 'reporting_data/')
@@ -25,7 +20,7 @@ TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
 
 
 def u(string):
-    if type(string) is basestring:
+    if type(string) is str:
         try:
             return unicode(string, 'utf-8')
         except NameError:
@@ -244,7 +239,7 @@ def write_html(html_obj, out_uri):
 
         for element in sect_elements:
             # Add each element to the html string
-            if type(element) is basestring:
+            if type(element) is str:
                 element = u(element)
             html_str += element
 

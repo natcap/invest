@@ -1,11 +1,6 @@
 """A helper module for generating html tables that are represented as Strings"""
 import logging
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.reporting.table_generator')
 
@@ -61,7 +56,7 @@ def generate_table(table_dict, attributes=None):
     LOGGER.info('Generating HTML Table String')
 
     def u(string):
-        if type(string) is basestring:
+        if type(string) is str:
             try:
                 return unicode(string, 'utf-8')
             except NameError:
