@@ -1,8 +1,6 @@
 # coding=UTF-8
 """Input classes for the InVEST UI, a Qt-based UI abstraction layer."""
 
-from __future__ import absolute_import
-
 import functools
 import os
 import logging

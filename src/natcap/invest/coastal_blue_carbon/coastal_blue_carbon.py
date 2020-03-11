@@ -1,7 +1,5 @@
 # -*- coding: utf-8 -*-
 """Coastal Blue Carbon Model."""
-from __future__ import absolute_import
-
 import os
 import logging
 import math

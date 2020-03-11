@@ -1,6 +1,5 @@
 # coding=UTF-8
 """Carbon Storage and Sequestration."""
-from __future__ import absolute_import
 import codecs
 import logging
 import os

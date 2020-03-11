@@ -1,8 +1,6 @@
 # coding=UTF-8
 """Classes related to the InVEST Model class."""
 
-from __future__ import absolute_import
-
 import logging
 import os
 import pprint

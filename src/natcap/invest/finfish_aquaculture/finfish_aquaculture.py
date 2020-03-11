@@ -1,6 +1,4 @@
 """InVEST Finfish Aquaculture"""
-from __future__ import absolute_import
-
 import os
 import csv
 import logging

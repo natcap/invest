@@ -1,6 +1,4 @@
 """InVEST Seasonal Water Yield Model."""
-from __future__ import absolute_import
-
 import os
 import logging
 import re

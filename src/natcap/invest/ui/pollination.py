@@ -1,5 +1,4 @@
 #TODO: all the other UI modules have a # coding=UTF-8 here, does this one need it too?
-from __future__ import absolute_import
 import logging
 
 from . import inputs

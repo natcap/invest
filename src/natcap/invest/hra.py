@@ -1,6 +1,5 @@
 """Habitat risk assessment (HRA) model for InVEST."""
 # -*- coding: UTF-8 -*-
-from __future__ import absolute_import
 import os
 import logging
 import pickle
