@@ -90,6 +90,7 @@
     "react-test-renderer": "^16.12.0",
     "react-vega": "^7.2.1",
     "sinon": "^9.0.1",
+    "spectron": "^8.0.0",
     "tail": "^2.0.3",
     "vega": "^5.9.1",
     "vega-lite": "^4.4.0"
