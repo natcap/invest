@@ -10,18 +10,7 @@ import warnings
 import sys
 import atexit
 import itertools
-
-try:
-    import PyQt4
-except ImportError:
-    # Need to explicitly import PySide2 when on python3.  It's the only Qt
-    # binding I can seem to get to work under python3.
-    import PySide2
-
-try:
-    unicode
-except NameError:
-    unicode = str
+import PySide2
 
 import qtpy
 from qtpy import QtWidgets
@@ -763,7 +752,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(unicode(filename)))
+                                 os.path.dirname(str(filename)))
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
@@ -807,7 +796,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(unicode(filename)))
+                                 os.path.dirname(str(filename)))
         return filename
 
     def open_folder(self, title, start_dir=None):
@@ -1576,7 +1565,7 @@ class Text(GriddedInput):
 
             # If it isn't a unicode string, attempt to detect the source
             # encoding.
-            if not isinstance(value, unicode):
+            if not isinstance(value, str):
                 most_likely_encoding = chardet.detect(value)['encoding']
                 if most_likely_encoding is None:
                     # When string is empty, assume UTF-8
@@ -2522,7 +2511,7 @@ class Multi(Container):
         """
         self.value_changed.emit(self.value())
 
-    @QtCore.Slot(unicode)
+    @QtCore.Slot(str)
     def _add_templated_item(self, link_text):
         """A slot to add a templated item to the Multi.
 

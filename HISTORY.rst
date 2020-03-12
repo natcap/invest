@@ -26,6 +26,8 @@ Unreleased Changes
 * Makefile has been updated to fetch the version string from ``git`` rather
   than ``hg``.  A mercurial client is still needed in order to clone the
   InVEST User's Guide.
+* Removing Python 2 compatibility code such as ``future``, ``pyqt4``, 
+  ``basestring``, ``unicode``, etc...
 
 3.8.0 (2020-02-07)
 ------------------

@@ -17,17 +17,7 @@ import datetime
 import codecs
 import multiprocessing
 import threading
-
-try:
-    unicode
-except NameError:
-    unicode = str
-
-try:
-    import PyQt4
-except ImportError:
-    # PySide2 seems to be the only package that works with qtpy under python3.
-    import PySide2
+import PySide2
 
 from qtpy import QtWidgets
 from qtpy import QtCore
@@ -664,7 +654,7 @@ class WindowTitle(QtCore.QObject):
 
     # Signals must be defined as class attributes, and are transformed into
     # instance attributes on object initialization.
-    title_changed = QtCore.Signal(unicode)
+    title_changed = QtCore.Signal(str)
 
     def __init__(self, modelname='', filename='', modified=''):
         """Initialize the WindowTitle.
@@ -788,7 +778,7 @@ class DatastackOptionsDialog(OptionsDialog):
         self._container.add_input(self.save_parameters)
         self.ok_button.setEnabled(False)  # disabled until a value is entered
 
-        @QtCore.Slot(unicode)
+        @QtCore.Slot(str)
         def _optionally_disable(value):
             """A slot to optionally disable inputs based on datastack type.
 
@@ -1984,7 +1974,7 @@ class InVESTModel(QtWidgets.QMainWindow):
         """)
 
         with codecs.open(save_filepath, 'w', encoding='utf-8') as py_file:
-            cast_args = dict((unicode(key), value) for (key, value)
+            cast_args = dict((str(key), value) for (key, value)
                              in self.assemble_args().items())
             args = pprint.pformat(cast_args,
                                   indent=4)  # 4 spaces
