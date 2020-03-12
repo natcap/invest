@@ -12,6 +12,7 @@ try:
 except ImportError:
     from io import StringIO
 
+
 @contextlib.contextmanager
 def redirect_stdout():
     """Redirect stdout to a stream, which is then yielded."""
@@ -47,8 +48,8 @@ class CLIHeadlessTests(unittest.TestCase):
                 json.dumps(datastack_dict, indent=4, sort_keys=True))
 
         with unittest.mock.patch(
-            'natcap.invest.fisheries.fisheries.execute',
-            return_value=None) as patched_model:
+                'natcap.invest.fisheries.fisheries.execute',
+                return_value=None) as patched_model:
             cli.main([
                 'run',
                 'fisheries',  # uses an exact modelname
@@ -56,7 +57,6 @@ class CLIHeadlessTests(unittest.TestCase):
                 '--headless',
             ])
         patched_model.assert_called_once()
-
 
     def test_run_fisheries(self):
         """CLI: Run the fisheries model through the cli."""
@@ -66,8 +66,8 @@ class CLIHeadlessTests(unittest.TestCase):
             'fisheries', 'spiny_lobster_belize.invs.json')
 
         with unittest.mock.patch(
-            'natcap.invest.fisheries.fisheries.execute',
-            return_value=None) as patched_model:
+                'natcap.invest.fisheries.fisheries.execute',
+                return_value=None) as patched_model:
             cli.main([
                 'run',
                 'fisheries',  # uses an exact modelname

@@ -964,6 +964,7 @@ class CBCRefactorTest(unittest.TestCase):
 
         numpy.testing.assert_almost_equal(reclassified_array, expected_array)
 
+
 class CBCValidationTests(unittest.TestCase):
     """Tests for Coastal Blue Carbon Model ARGS_SPEC and validation."""
 

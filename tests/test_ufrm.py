@@ -109,7 +109,7 @@ class UFRMTests(unittest.TestCase):
             (args['soils_hydrological_group_raster_path'], 1), value_map,
             bad_soil_raster, gdal.GDT_Int16, -9)
         args['soils_hydrological_group_raster_path'] = bad_soil_raster
-        
+
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
             actual_message = str(cm.exception)

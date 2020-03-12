@@ -198,6 +198,7 @@ class ValidatorTest(unittest.TestCase):
         self.assertTrue('could not be interpreted as a number'
                         in validation_errors[0][1])
 
+
 class DirectoryValidation(unittest.TestCase):
     def setUp(self):
         """Create a new workspace to use for each test."""
@@ -247,7 +248,7 @@ class DirectoryValidation(unittest.TestCase):
 
         dirpath = 'foo'
         new_dir = os.path.join(self.workspace_dir, dirpath)
-        
+
         self.assertEqual(None, validation.check_directory(
             new_dir, exists=False, permissions='rwx'))
 
@@ -465,7 +466,7 @@ class FreestyleStringValidation(unittest.TestCase):
 
         error_msg = validation.check_freestyle_string(
             'foobar12', regexp={'pattern': '^[a-zA-Z]+$',
-                                'case_sensitive':True})
+                                'case_sensitive': True})
         self.assertTrue('did not match expected pattern' in error_msg)
 
 
@@ -517,7 +518,6 @@ class NumberValidation(unittest.TestCase):
         error_msg = validation.check_number(
             "35", 'int(value) < 0')
         self.assertTrue('does not meet condition' in error_msg)
-
 
 
 class BooleanValidation(unittest.TestCase):
