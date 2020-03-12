@@ -21,9 +21,10 @@ console.log(process.env.PYTHON);
 if (process.env.PYTHON) {  // if it was set, override
   PYTHON = process.env.PYTHON.trim();
 }
+console.log('MAIN.JS RUNNING')
 
 const createWindow = async () => {
-  
+  console.log('APP ON CALLBACK')
   // Creating the process here with await because sometimes,
   // but not always, the window loads and the first request
   // is made before the server is ready. Unfortunately, it's

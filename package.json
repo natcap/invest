@@ -80,7 +80,7 @@
     "@testing-library/react": "^9.4.0",
     "babel-eslint": "^10.0.3",
     "dotenv": "^8.2.0",
-    "electron": "^6.1.8",
+    "electron": "^8.1.1",
     "electron-devtools-installer": "^2.2.4",
     "eslint": "^3.19.0",
     "eslint-plugin-react": "^7.18.3",
@@ -90,7 +90,7 @@
     "react-test-renderer": "^16.12.0",
     "react-vega": "^7.2.1",
     "sinon": "^9.0.1",
-    "spectron": "^8.0.0",
+    "spectron": "^10.0.0",
     "tail": "^2.0.3",
     "vega": "^5.9.1",
     "vega-lite": "^4.4.0"
