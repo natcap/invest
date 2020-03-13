@@ -261,17 +261,6 @@ def execute(args):
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
 
-    # check that the required headers exist in the sensitivity table.
-    # Raise exception if they don't.
-    sens_header_list = list(sensitivity_dict.values())[0]
-    required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
-    missing_sens_header_list = [
-        h for h in required_sens_header_list if h not in sens_header_list]
-    if missing_sens_header_list:
-        raise ValueError(
-            'Column(s) %s are missing in the sensitivity table' %
-            (', '.join(missing_sens_header_list)))
-
     # check that the threat names in the threats table match with the threats
     # columns in the sensitivity table. Raise exception if they don't.
     for threat in threat_dict:
