@@ -1,3 +1,4 @@
+# coding=UTF-8
 """InVEST Habitat Quality model."""
 from __future__ import absolute_import
 import collections
@@ -8,15 +9,12 @@ import numpy
 from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
+import taskgraph
 
 from . import utils
 from . import validation
 
 LOGGER = logging.getLogger(__name__)
-
-_OUT_NODATA = -1.0
-_RARITY_NODATA = -64329.0
-_SCALING_PARAM = 2.5
 
 ARGS_SPEC = {
     "model_name": "Habitat Quality",
@@ -150,7 +148,7 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "about": (
-                "A CSV file of LULC types, whether or not the are considered "
+                "A CSV file of LULC types, whether or not they are considered "
                 "habitat, and, for LULC types that are habitat, their "
                 "specific sensitivity to each threat. Each row is a LULC "
                 "type with the following columns: LULC, HABITAT, "
@@ -162,7 +160,7 @@ ARGS_SPEC = {
                 "habitat. L_THREATN: Each L_THREATN should "
                 "match exactly with the threat names given in the threat "
                 "CSV file, where the THREATN is the name that matches.  This "
-                "is an floating point value between 0 and 1 that represents "
+                "is a floating point value between 0 and 1 that represents "
                 "the sensitivity of a habitat to a threat."
                 "Please see the users guide for more detailed information on "
                 "proper column values and column names for each threat."),
@@ -189,6 +187,10 @@ ARGS_SPEC = {
     }
 }
 
+_OUT_NODATA = -1.0
+_RARITY_NODATA = -64329.0
+_SCALING_PARAM = 2.5
+
 
 def execute(args):
     """Habitat Quality.
@@ -197,61 +199,58 @@ def execute(args):
     model.
 
     Parameters:
-        workspace_dir (string): a path to the directory that will write output
+        args['workspace_dir'] (string): a path to the directory that will write output
             and other temporary files (required)
-        lulc_cur_path (string): a path to an input land use/land cover raster
+        args['lulc_cur_path'] (string): a path to an input land use/land cover raster
             (required)
-        lulc_fut_path (string): a path to an input land use/land cover raster
+        args['lulc_fut_path'] (string): a path to an input land use/land cover raster
             (optional)
-        lulc_bas_path (string): a path to an input land use/land cover raster
+        args['lulc_bas_path'] (string): a path to an input land use/land cover raster
             (optional, but required for rarity calculations)
-        threat_raster_folder (string): a path to the directory that will
+        args['threat_raster_folder'] (string): a path to the directory that will
             contain all threat rasters (required)
-        threats_table_path (string): a path to an input CSV containing data
+        args['threats_table_path'] (string): a path to an input CSV containing data
             of all the considered threats. Each row is a degradation source
             and each column a different attribute of the source with the
             following names: 'THREAT','MAX_DIST','WEIGHT' (required).
-        access_vector_path (string): a path to an input polygon shapefile
+        args['access_vector_path'] (string): a path to an input polygon shapefile
             containing data on the relative protection against threats (optional)
-        sensitivity_table_path (string): a path to an input CSV file of LULC
+        args['sensitivity_table_path'] (string): a path to an input CSV file of LULC
             types, whether they are considered habitat, and their sensitivity
             to each threat (required)
-        half_saturation_constant (float): a python float that determines
+        args['half_saturation_constant'] (float): a python float that determines
             the spread and central tendency of habitat quality scores
             (required)
-        results_suffix (string): a python string that will be inserted into all
+        args['results_suffix'] (string): a python string that will be inserted into all
             raster path paths just before the file extension.
-
-    Example Args Dictionary::
-
-        {
-            'workspace_dir': 'path/to/workspace_dir',
-            'lulc_cur_path': 'path/to/lulc_cur_raster',
-            'lulc_fut_path': 'path/to/lulc_fut_raster',
-            'lulc_bas_path': 'path/to/lulc_bas_raster',
-            'threat_raster_folder': 'path/to/threat_rasters/',
-            'threats_table_path': 'path/to/threats_csv',
-            'access_vector_path': 'path/to/access_shapefile',
-            'sensitivity_table_path': 'path/to/sensitivity_csv',
-            'half_saturation_constant': 0.5,
-            'suffix': '_results',
-        }
+        args['n_workers'] (int): (optional) The number of worker processes to
+            use for processing this model.  If omitted, computation will take
+            place in the current process.   
 
     Returns:
         None
     """
-    workspace = args['workspace_dir']
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
     suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
-    inter_dir = os.path.join(workspace, 'intermediate')
-    out_dir = os.path.join(workspace, 'output')
-    kernel_dir = os.path.join(inter_dir, 'kernels')
-    utils.make_directories([inter_dir, out_dir, kernel_dir])
+    output_dir = args['workspace_dir']
+    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    kernel_dir = os.path.join(intermediate_dir, 'kernels')
+    utils.make_directories([intermediate_dir, output_dir, kernel_dir])
 
+    work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
+    try:
+        n_workers = int(args['n_workers'])
+    except (KeyError, ValueError, TypeError):
+        # KeyError when n_workers is not present in args
+        # ValueError when n_workers is an empty string.
+        # TypeError when n_workers is None.
+        n_workers = -1  # Synchronous mode.
+    graph = taskgraph.TaskGraph(work_token_dir, n_workers)
+    
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
@@ -312,7 +311,7 @@ def execute(args):
             lulc_and_threat_raster_list.append(lulc_path)
             aligned_raster_list.append(
                 os.path.join(
-                    inter_dir, os.path.basename(lulc_path).replace(
+                    intermediate_dir, os.path.basename(lulc_path).replace(
                         '.tif', '_aligned.tif')))
 
             # save unique codes to check if it's missing in sensitivity table
@@ -348,7 +347,7 @@ def execute(args):
                     lulc_and_threat_raster_list.append(threat_path)
                     aligned_raster_list.append(
                         os.path.join(
-                            inter_dir, os.path.basename(lulc_path).replace(
+                            intermediate_dir, os.path.basename(lulc_path).replace(
                                 '.tif', '_aligned.tif')))
     # check if there's any lucode from the LULC rasters missing in the
     # sensitivity table
@@ -370,7 +369,7 @@ def execute(args):
     lulc_bbox = lulc_raster_info['bounding_box']
 
     aligned_raster_list = [
-        os.path.join(inter_dir, os.path.basename(path).replace(
+        os.path.join(intermediate_dir, os.path.basename(path).replace(
             '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
 
     pygeoprocessing.align_and_resize_raster_stack(
@@ -383,13 +382,13 @@ def execute(args):
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
-            inter_dir, os.path.basename(lulc_path).replace(
+            intermediate_dir, os.path.basename(lulc_path).replace(
                 '.tif', '_aligned.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
-                    inter_dir, os.path.basename(threat_path).replace(
+                    intermediate_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_threat_path)
@@ -433,7 +432,7 @@ def execute(args):
     try:
         LOGGER.info('Handling Access Shape')
         access_raster_path = os.path.join(
-            inter_dir, 'access_layer%s.tif' % suffix)
+            intermediate_dir, 'access_layer%s.tif' % suffix)
         # create a new raster based on the raster info of current land cover
         pygeoprocessing.new_raster_from_base(
             cur_lulc_path, access_raster_path, gdal.GDT_Float32,
@@ -460,7 +459,7 @@ def execute(args):
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
-            inter_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
+            intermediate_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
         map_raster_to_dict_values(
             lulc_path, habitat_raster_path, sensitivity_dict, 'HABITAT',
             _OUT_NODATA, values_required=False)
@@ -525,7 +524,7 @@ def execute(args):
                     " %s." % (decay_type, threat))
 
             filtered_threat_raster_path = os.path.join(
-                inter_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
                 filtered_threat_raster_path,
@@ -533,7 +532,7 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                inter_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
             map_raster_to_dict_values(
                 lulc_path, sens_raster_path, sensitivity_dict, 'L_' + threat,
                 _OUT_NODATA, values_required=True)
@@ -596,7 +595,7 @@ def execute(args):
         deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
-            out_dir, 'deg_sum' + lulc_key + suffix + '.tif')
+            output_dir, 'deg_sum' + lulc_key + suffix + '.tif')
 
         LOGGER.info('Starting raster calculation on total_degradation')
 
@@ -632,7 +631,7 @@ def execute(args):
                      (degredataion_clamped**_SCALING_PARAM + ksq)))))
 
         quality_path = os.path.join(
-            out_dir, 'quality' + lulc_key + suffix + '.tif')
+            output_dir, 'quality' + lulc_key + suffix + '.tif')
 
         LOGGER.info('Starting raster calculation on quality_op')
 
@@ -695,7 +694,7 @@ def execute(args):
             LOGGER.info('Create new cover for %s', lulc_path)
 
             new_cover_path = os.path.join(
-                inter_dir, 'new_cover' + lulc_key + suffix + '.tif')
+                intermediate_dir, 'new_cover' + lulc_key + suffix + '.tif')
 
             LOGGER.info('Starting masking %s land cover to base land cover.'
                         % lulc_time)
@@ -729,7 +728,7 @@ def execute(args):
                     code_index[code] = 0.0
 
             rarity_path = os.path.join(
-                out_dir, 'rarity' + lulc_key + suffix + '.tif')
+                output_dir, 'rarity' + lulc_key + suffix + '.tif')
 
             pygeoprocessing.reclassify_raster(
                 (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
