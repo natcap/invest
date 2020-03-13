@@ -272,13 +272,6 @@ def execute(args):
                 'table. Possible columns: %s' %
                 (threat, missing_threat_header_list))
 
-    # get the half saturation constant
-    try:
-        half_saturation = float(args['half_saturation_constant'])
-    except ValueError:
-        raise ValueError('Half-saturation constant is not a numeric number.'
-                         'It is: %s' % args['half_saturation_constant'])
-
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
     lulc_path_dict = {}
