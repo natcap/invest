@@ -12,6 +12,8 @@ import time
 import threading
 import collections
 import logging
+import queue
+from io import StringIO
 
 import Pyro4
 import numpy
@@ -26,24 +28,6 @@ import shapely.prepared
 from ... import invest
 from natcap.invest.recreation import out_of_core_quadtree
 from . import recmodel_client
-
-try:
-    import queue
-except ImportError:
-    # python 2 uses capital Q
-    import Queue as queue
-
-try:
-    from io import StringIO
-except ImportError:
-    # python 2 packaging:
-    from StringIO import StringIO
-
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 
 BLOCKSIZE = 2 ** 21
@@ -610,7 +594,7 @@ def construct_userday_quadtree(
 
         while True:
             point_array = numpy_array_queue.get()
-            if (isinstance(point_array, basestring) and
+            if (isinstance(point_array, str) and
                     point_array == 'STOP'):  # count 'n cpu' STOPs
                 n_parse_processes -= 1
                 if n_parse_processes == 0:
