@@ -7,7 +7,10 @@
   "scripts": {
     "start": "cross-env FLASK_APP=src/server.py npx electron -r @babel/register .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
-    "test": "jest"
+    "test": "jest",
+    "package": "electron-forge package",
+    "make": "electron-forge make",
+    "publish": "electron-forge publish"
   },
   "jest": {
     "collectCoverage": true
@@ -17,19 +20,25 @@
   "license": "MIT",
   "config": {
     "forge": {
-      "make_targets": {
-        "win32": [
-          "squirrel"
-        ],
-        "darwin": [
-          "zip"
-        ],
-        "linux": [
-          "deb",
-          "rpm"
-        ]
-      },
-      "electronPackagerConfig": {
+      "makers": [
+        {
+          "name": "@electron-forge/maker-squirrel",
+          "config": {
+            "name": "my_new_app"
+          }
+        },
+        {
+          "name": "@electron-forge/maker-zip",
+          "platforms": [
+            "darwin"
+          ]
+        },
+        {
+          "name": "@electron-forge/maker-deb",
+          "config": {}
+        }
+      ],
+      "packagerConfig": {
         "packageManager": "npm"
       },
       "electronWinstallerConfig": {
@@ -74,6 +83,11 @@
     "@babel/preset-env": "^7.8.4",
     "@babel/preset-react": "^7.8.3",
     "@babel/register": "^7.8.3",
+    "@electron-forge/cli": "^6.0.0-beta.50",
+    "@electron-forge/maker-deb": "^6.0.0-beta.50",
+    "@electron-forge/maker-rpm": "^6.0.0-beta.50",
+    "@electron-forge/maker-squirrel": "^6.0.0-beta.50",
+    "@electron-forge/maker-zip": "^6.0.0-beta.50",
     "@jest-runner/electron": "^2.0.3",
     "@testing-library/dom": "^6.12.2",
     "@testing-library/jest-dom": "^5.1.1",
