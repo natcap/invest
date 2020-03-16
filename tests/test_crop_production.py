@@ -335,4 +335,3 @@ class CropValidationTests(unittest.TestCase):
             self.base_required_keys +
             ['fertilization_rate_table_path'])
         self.assertEqual(invalid_keys, expected_missing_keys)
-

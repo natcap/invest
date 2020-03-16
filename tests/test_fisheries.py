@@ -601,4 +601,3 @@ class FisheriesHSTTest(unittest.TestCase):
         expected_values_df = pandas.read_csv(
             os.path.join(TEST_DATA, 'hst_pop_params_sexsp_modified.csv'))
         pandas.testing.assert_frame_equal(actual_values_df, expected_values_df)
-
