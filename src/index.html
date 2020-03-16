@@ -33,6 +33,10 @@
 <body style="background-color: rgba(0,0,0,0); margin: 0; padding: 20px" >
   <div id="App"></div>
 </body>
-<script  type="text/javascript" src="./index.js"></script>
+<script>
+  require = require("esm")(module)
+  // why can't this load with relative path when esm's require is used?
+  require("file:///home/dmf/projects/invest-gui/src/index.js")
+</script>
 
 </html>

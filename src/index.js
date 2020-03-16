@@ -1,6 +1,6 @@
 "use strict";
 
-require("@babel/register");
+// require("@babel/register");
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
 

@@ -5,7 +5,7 @@
   "description": "My Electron application description",
   "main": "src/main.js",
   "scripts": {
-    "start": "cross-env FLASK_APP=src/server.py npx electron -r @babel/register .",
+    "start": "cross-env FLASK_APP=src/server.py npx electron .",
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest",
     "package": "electron-forge package",
@@ -24,7 +24,7 @@
         {
           "name": "@electron-forge/maker-squirrel",
           "config": {
-            "name": "my_new_app"
+            "name": "invest-gui"
           }
         },
         {
@@ -61,6 +61,7 @@
     "@turf/turf": "^5.1.6",
     "chroma-js": "^2.1.0",
     "cross-env": "^5.2.1",
+    "esm": "^3.2.25",
     "font-awesome": "^4.7.0",
     "google-palette": "^1.1.0",
     "leaflet": "^1.6.0",
@@ -82,7 +83,7 @@
     "@babel/plugin-transform-runtime": "^7.8.3",
     "@babel/preset-env": "^7.8.4",
     "@babel/preset-react": "^7.8.3",
-    "@babel/register": "^7.8.3",
+    "@babel/register": "^7.8.6",
     "@electron-forge/cli": "^6.0.0-beta.50",
     "@electron-forge/maker-deb": "^6.0.0-beta.50",
     "@electron-forge/maker-rpm": "^6.0.0-beta.50",
