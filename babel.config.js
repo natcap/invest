@@ -7,3 +7,5 @@ module.exports = {
 	  "@babel/plugin-transform-runtime"
   ]
 };
+
+console.log('babel!!')
