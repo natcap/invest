@@ -3,22 +3,24 @@ require = require('esm')(module)
 const spawn = require('child_process').spawn;
 const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
-const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
+// const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
 const shutdownPythonProcess = require('./server_requests').shutdownPythonProcess;
-const dotenv = require('dotenv');
 // import { spawn } from 'child_process';
 // import { app, BrowserWindow } from 'electron';
 // import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
 // import { enableLiveReload } from 'electron-compile';
 // import { shutdownPythonProcess } from './server_requests';
 // import dotenv from 'dotenv';
-dotenv.config();  // loads a '.env' file
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow;
 
 const isDevMode = process.execPath.match(/[\\/]electron/);
+if (isDevMode) {
+  const dotenv = require('dotenv');
+  dotenv.config();  // loads a '.env' file
+}
 
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
@@ -53,6 +55,7 @@ const createWindow = async () => {
 
   // Open the DevTools.
   if (isDevMode) {
+    const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
     await installExtension(REACT_DEVELOPER_TOOLS);
     mainWindow.webContents.openDevTools();
   }
