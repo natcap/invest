@@ -278,7 +278,6 @@ def execute(args):
     threat_path_dict = {}
     # also store land cover and threat rasters in a list
     lulc_and_threat_raster_list = []
-    aligned_raster_list = []
     # declare a set to store unique codes from lulc rasters
     raster_unique_lucodes = set()
 
@@ -290,11 +289,8 @@ def execute(args):
             lulc_path = args[lulc_args]
             lulc_path_dict[lulc_key] = lulc_path
             # save land cover paths in a list for alignment and resize
+            # TODO: This is assuming they are .tif files
             lulc_and_threat_raster_list.append(lulc_path)
-            aligned_raster_list.append(
-                os.path.join(
-                    intermediate_dir, os.path.basename(lulc_path).replace(
-                        '.tif', '_aligned.tif')))
 
             # save unique codes to check if it's missing in sensitivity table
             for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
@@ -327,10 +323,7 @@ def execute(args):
                 threat_path = threat_path_dict['threat' + lulc_key][threat]
                 if threat_path:
                     lulc_and_threat_raster_list.append(threat_path)
-                    aligned_raster_list.append(
-                        os.path.join(
-                            intermediate_dir, os.path.basename(lulc_path).replace(
-                                '.tif', '_aligned.tif')))
+    
     # check if there's any lucode from the LULC rasters missing in the
     # sensitivity table
     table_unique_lucodes = set(sensitivity_dict.keys())
