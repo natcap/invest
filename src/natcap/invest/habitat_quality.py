@@ -347,13 +347,21 @@ def execute(args):
         os.path.join(intermediate_dir, os.path.basename(path).replace(
             '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
 
-    pygeoprocessing.align_and_resize_raster_stack(
-        lulc_and_threat_raster_list, aligned_raster_list,
-        ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
-        lulc_bbox)
+    align_task = task_graph.add_task(
+        func=pygeoprocessing.align_and_resize_raster_stack,
+        args=(
+            lulc_and_threat_raster_list, aligned_raster_list, 
+            ['near']*len(lulc_and_threat_raster_list), lulc_pixel_size,
+            lulc_bbox),
+        hash_algorithm='md5',
+        copy_duplicate_artifact=True,
+        target_path_list=aligned_raster_list,
+        task_name='align_input_rasters')
 
     LOGGER.info('Finished aligning and resizing land cover and threat rasters')
 
+    # list of tracking updated threat pixel rasters
+    updated_threat_tasks = []
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
@@ -368,35 +376,13 @@ def execute(args):
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_threat_path)
 
-                # Iterate though the threat raster and update pixel values
-                # as needed so that:
-                #  * Nodata values are replaced with 0
-                #  * Anything other than 0 or nodata is replaced with 1
-                LOGGER.info('Preprocessing threat values for %s',
-                            aligned_threat_path)
-                threat_nodata = pygeoprocessing.get_raster_info(
-                    aligned_threat_path)['nodata'][0]
-                threat_raster = gdal.OpenEx(aligned_threat_path,
-                                            gdal.OF_RASTER | gdal.GA_Update)
-                threat_band = threat_raster.GetRasterBand(1)
-                for block_offset in pygeoprocessing.iterblocks(
-                        (aligned_threat_path, 1), offset_only=True):
-                    block = threat_band.ReadAsArray(**block_offset)
-
-                    # First check if we actually need to set anything.
-                    # No need to perform unnecessary writes!
-                    if set(numpy.unique(block)) == set([0, 1]):
-                        continue
-
-                    zero_threat = numpy.isclose(block, threat_nodata)
-                    block[zero_threat] = 0
-                    block[~numpy.isclose(block, 0)] = 1
-
-                    threat_band.WriteArray(
-                        block, yoff=block_offset['yoff'],
-                        xoff=block_offset['xoff'])
-                threat_band = None
-                threat_raster = None
+                update_threat_task = graph.add_task(
+                        _update_threat_pixels, args=(aligned_threat_path,),
+                        target_path_list=[aligned_threat_path], 
+                        dependent_task_list=[align_task],
+                        task_name=f'update_threat_{lulc_key}_{threat}',
+                        hash_algorithm='md5')
+                updated_threat_tasks.append(update_threat_task)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
 
@@ -408,14 +394,23 @@ def execute(args):
         LOGGER.info('Handling Access Shape')
         access_raster_path = os.path.join(
             intermediate_dir, 'access_layer%s.tif' % suffix)
-        # create a new raster based on the raster info of current land cover
-        pygeoprocessing.new_raster_from_base(
-            cur_lulc_path, access_raster_path, gdal.GDT_Float32,
-            [_OUT_NODATA], fill_value_list=[fill_value])
-        pygeoprocessing.rasterize(
-            args['access_vector_path'], access_raster_path, burn_values=None,
-            option_list=['ATTRIBUTE=ACCESS'])
 
+        # create a new raster based on the raster info of current land cover
+        access_base_task = graph.add_task(
+            pygeoprocessing.new_raster_from_base, 
+            args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
+                [_OUT_NODATA], fill_value_list=[fill_value]),
+            target_path_list=[access_raster_path], 
+            task_name=f'access_raster',
+            hash_algorithm='md5')
+        rasterize_access_task = graph.add_task( 
+            pygeoprocessing.rasterize, 
+            args=(args['access_vector_path'], access_raster_path, 
+                burn_values=None, option_list=['ATTRIBUTE=ACCESS']),                
+            target_path_list=[access_raster_path], 
+            dependent_taske_list=[access_base_task],
+            task_name=f'rasterize_access',
+            hash_algorithm='md5')
     except KeyError:
         LOGGER.info(
             'No Access Shape Provided, access raster filled with 1s.')
@@ -877,6 +872,38 @@ def make_linear_decay_kernel_path(max_distance, kernel_path):
             xoff=0, yoff=row_index, win_xsize=kernel_size, win_ysize=1)
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
+
+def _update_threat_pixels(aligned_threat_path):
+    """Iterate through the threat raster and pixel values."""
+    # Iterate though the threat raster and update pixel values
+    # as needed so that:
+    #  * Nodata values are replaced with 0
+    #  * Anything other than 0 or nodata is replaced with 1
+    LOGGER.info('Preprocessing threat values for %s',
+                aligned_threat_path)
+    threat_nodata = pygeoprocessing.get_raster_info(
+        aligned_threat_path)['nodata'][0]
+    threat_raster = gdal.OpenEx(aligned_threat_path,
+                                gdal.OF_RASTER | gdal.GA_Update)
+    threat_band = threat_raster.GetRasterBand(1)
+    for block_offset in pygeoprocessing.iterblocks(
+            (aligned_threat_path, 1), offset_only=True):
+        block = threat_band.ReadAsArray(**block_offset)
+
+        # First check if we actually need to set anything.
+        # No need to perform unnecessary writes!
+        if set(numpy.unique(block)) == set([0, 1]):
+            continue
+
+        zero_threat = numpy.isclose(block, threat_nodata)
+        block[zero_threat] = 0
+        block[~numpy.isclose(block, 0)] = 1
+
+        threat_band.WriteArray(
+            block, yoff=block_offset['yoff'],
+            xoff=block_offset['xoff'])
+    threat_band = None
+    threat_raster = None
 
 
 @validation.invest_validator
