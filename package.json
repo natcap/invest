@@ -9,9 +9,7 @@
     "lint": "eslint --cache --color --ext .jsx,.js src",
     "test": "jest",
     "transpile": "npx babel src/* -d build/",
-    "package": "electron-forge package",
-    "make": "electron-forge make",
-    "publish": "electron-forge publish"
+    "package": "electron-builder build --linux -c.extraMetadata.main=build/main.js --publish never"
   },
   "jest": {
     "collectCoverage": true
@@ -96,6 +94,7 @@
     "@testing-library/react": "^9.4.0",
     "dotenv": "^8.2.0",
     "electron": "^8.1.1",
+    "electron-builder": "^22.4.1",
     "electron-devtools-installer": "^2.2.4",
     "jest": "^24.8.0",
     "react": "^16.12.0",
