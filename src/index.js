@@ -1,6 +1,8 @@
 "use strict";
 
-// require("@babel/register");
+if (process.env.DEVMODE) {
+  require("@babel/register");
+}
 
 var _interopRequireDefault = require("@babel/runtime/helpers/interopRequireDefault");
 
