@@ -12,7 +12,7 @@ var _reactDom = _interopRequireDefault(require("react-dom"));
 
 var _reactHotLoader = require("react-hot-loader");
 
-var _app = _interopRequireDefault(require("./app.jsx")); // require won't find *.jsx without extension
+var _app = _interopRequireDefault(require("./app"));
 
 const { remote } = require('electron');
 const { Menu, MenuItem } = remote;
