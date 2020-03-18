@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
+  a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
   as well as a source distribution.
 * Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
