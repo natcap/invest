@@ -32,7 +32,6 @@ import warnings
 
 from osgeo import gdal
 from osgeo import ogr
-import six
 
 from . import utils
 try:
@@ -231,10 +230,10 @@ def format_args_dict(args_dict, model_name):
     if len(sorted_args) > 0:
         max_key_width = max(len(x[0]) for x in sorted_args)
 
-    format_str = u"%-" + six.text_type(str(max_key_width)) + u"s %s"
+    format_str = "%-" + str(max_key_width) + "s %s"
 
-    args_string = u'\n'.join([format_str % (arg) for arg in sorted_args])
-    args_string = u"Arguments for InVEST %s %s:\n%s\n" % (model_name,
+    args_string = '\n'.join([format_str % (arg) for arg in sorted_args])
+    args_string = "Arguments for InVEST %s %s:\n%s\n" % (model_name,
                                                           __version__,
                                                           args_string)
     return args_string
