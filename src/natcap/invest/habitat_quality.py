@@ -424,16 +424,21 @@ def execute(args):
     LOGGER.debug('lulc_path_dict : %s', lulc_path_dict)
 
     # for each land cover raster provided compute habitat quality
+    raster_to_dict_lookup = []
     for lulc_key, lulc_path in lulc_path_dict.items():
         LOGGER.info('Calculating habitat quality for landuse: %s', lulc_path)
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
             intermediate_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
-        map_raster_to_dict_values(
-            lulc_path, habitat_raster_path, sensitivity_dict, 'HABITAT',
-            _OUT_NODATA, values_required=False)
-
+        
+        map_raster_to_dict_task = graph.add_task(
+                _map_raster_to_dict_values, 
+                args=(lulc_path, habitat_raster_path, sensitivity_dict,
+                    'HABITAT', _OUT_NODATA, values_required=False),
+                task_name=f'map_raster_to_dict_{lulc_key}')
+        raster_to_dict_lookup.append(map_raster_to_dict_task)
+        
         # initialize a list that will store all the threat/threat rasters
         # after they have been adjusted for distance, weight, and access
         deg_raster_list = []
@@ -483,18 +488,24 @@ def execute(args):
             kernel_path = os.path.join(
                 kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
             if decay_type == 'linear':
-                make_linear_decay_kernel_path(max_dist_pixel, kernel_path)
+                decay_func = _make_linear_decay_kernel_path
             elif decay_type == 'exponential':
-                utils.exponential_decay_kernel_raster(
-                    max_dist_pixel, kernel_path)
+                decay_func = utils.exponential_decay_kernel_raster
             else:
                 raise ValueError(
                     "Unknown type of decay in biophysical table, should be "
                     "either 'linear' or 'exponential'. Input was %s for threat"
                     " %s." % (decay_type, threat))
 
+            decay_threat_task = graph.add_task(
+                decay_func, args=(max_dist_pixel, kernel_path),
+                target_path_list=[kernel_path],
+                dependent_task_list=[fill_this_list],
+                task_name=f'decay_kernel_{decay_type}_{lulc_key}_{threat}')
+
             filtered_threat_raster_path = os.path.join(
                 intermediate_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
+            convolve_task = graph.add_task(
             pygeoprocessing.convolve_2d(
                 (threat_raster_path, 1), (kernel_path, 1),
                 filtered_threat_raster_path,
