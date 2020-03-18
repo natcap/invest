@@ -562,7 +562,7 @@ def _generate_report(raster_file_set, model_args, file_registry):
         # Report input arguments
         report_doc.write('<table><tr><th>arg id</th><th>arg value</th></tr>')
         for key, value in model_args.items():
-            report_doc.write(u'<tr><td>%s</td><td>%s</td></tr>' % (key, value))
+            report_doc.write('<tr><td>%s</td><td>%s</td></tr>' % (key, value))
         report_doc.write('</table>')
 
         # Report aggregate results

@@ -1271,8 +1271,8 @@ class InVESTModel(QtWidgets.QMainWindow):
         self.suffix = inputs.Text(
             args_key=suffix_args_key,
             helptext=(
-                u'A string that will be added to the end of the output file '
-                u'paths.'),
+                'A string that will be added to the end of the output file '
+                'paths.'),
             label='Results suffix (optional)',
             validator=self.validator)
         self.suffix.textfield.setMaximumWidth(150)

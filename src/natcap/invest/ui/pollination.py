@@ -12,92 +12,92 @@ class Pollination(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'Crop Pollination',
+            label='Crop Pollination',
             target=pollination.execute,
             validator=pollination.validate,
-            localdoc=u'croppollination.html')
+            localdoc='croppollination.html')
 
         self.landcover_raster_path = inputs.File(
-            args_key=u'landcover_raster_path',
+            args_key='landcover_raster_path',
             helptext=(
-                u"This is the landcover map that's used to map "
-                u"biophyiscal properties about habitat and floral "
-                u"resources of landcover types to a spatial layout."),
-            label=u'Land Cover Map (Raster)',
+                "This is the landcover map that's used to map "
+                "biophyiscal properties about habitat and floral "
+                "resources of landcover types to a spatial layout."),
+            label='Land Cover Map (Raster)',
             validator=self.validator)
         self.add_input(self.landcover_raster_path)
         self.landcover_biophysical_table_path = inputs.File(
-            args_key=u'landcover_biophysical_table_path',
+            args_key='landcover_biophysical_table_path',
             helptext=(
-                u"A CSV table mapping landcover codes in the landcover "
-                u"raster to indexes of nesting availability for each "
-                u"nesting substrate referenced in guilds table as well "
-                u"as indexes of abundance of floral resources on that "
-                u"landcover type per season in the bee activity columns "
-                u"of the guild table.<br/>All indexes are in the range "
-                u"[0.0, 1.0].<br/>Columns in the table must be at "
-                u"least<br/>* 'lucode': representing all the unique "
-                u"landcover codes in the raster st "
-                u"`args['landcover_path']`<br/>* For every nesting "
-                u"matching _NESTING_SUITABILITY_PATTERN in the guild "
-                u"stable, a column matching the pattern in "
-                u"`_LANDCOVER_NESTING_INDEX_HEADER`.<br/>* For every "
-                u"season matching _FORAGING_ACTIVITY_PATTERN in the "
-                u"guilds table, a column matching the pattern in "
-                u"`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
-            label=u'Land Cover Biophysical Table (CSV)',
+                "A CSV table mapping landcover codes in the landcover "
+                "raster to indexes of nesting availability for each "
+                "nesting substrate referenced in guilds table as well "
+                "as indexes of abundance of floral resources on that "
+                "landcover type per season in the bee activity columns "
+                "of the guild table.<br/>All indexes are in the range "
+                "[0.0, 1.0].<br/>Columns in the table must be at "
+                "least<br/>* 'lucode': representing all the unique "
+                "landcover codes in the raster st "
+                "`args['landcover_path']`<br/>* For every nesting "
+                "matching _NESTING_SUITABILITY_PATTERN in the guild "
+                "stable, a column matching the pattern in "
+                "`_LANDCOVER_NESTING_INDEX_HEADER`.<br/>* For every "
+                "season matching _FORAGING_ACTIVITY_PATTERN in the "
+                "guilds table, a column matching the pattern in "
+                "`_LANDCOVER_FLORAL_RESOURCES_INDEX_HEADER`."),
+            label='Land Cover Biophysical Table (CSV)',
             validator=self.validator)
         self.add_input(self.landcover_biophysical_table_path)
         self.guild_table_path = inputs.File(
-            args_key=u'guild_table_path',
+            args_key='guild_table_path',
             helptext=(
-                u"A table indicating the bee species to analyze in "
-                u"this model run.  Table headers must include:<br/>* "
-                u"'species': a bee species whose column string names "
-                u"will be referred to in other tables and the model "
-                u"will output analyses per species.<br/> * any number "
-                u"of columns matching _NESTING_SUITABILITY_PATTERN with "
-                u"values in the range [0.0, 1.0] indicating the "
-                u"suitability of the given species to nest in a "
-                u"particular substrate.<br/>* any number of "
-                u"_FORAGING_ACTIVITY_PATTERN columns with values in the "
-                u"range [0.0, 1.0] indicating the relative level of "
-                u"foraging activity for that species during a "
-                u"particular season.<br/>* 'alpha': the sigma average "
-                u"flight distance of that bee species in meters.<br/>* "
-                u"'relative_abundance': a weight indicating the "
-                u"relative abundance of the particular species with "
-                u"respect to the sum of all relative abundance weights "
-                u"in the table."),
-            label=u'Guild Table (CSV)',
+                "A table indicating the bee species to analyze in "
+                "this model run.  Table headers must include:<br/>* "
+                "'species': a bee species whose column string names "
+                "will be referred to in other tables and the model "
+                "will output analyses per species.<br/> * any number "
+                "of columns matching _NESTING_SUITABILITY_PATTERN with "
+                "values in the range [0.0, 1.0] indicating the "
+                "suitability of the given species to nest in a "
+                "particular substrate.<br/>* any number of "
+                "_FORAGING_ACTIVITY_PATTERN columns with values in the "
+                "range [0.0, 1.0] indicating the relative level of "
+                "foraging activity for that species during a "
+                "particular season.<br/>* 'alpha': the sigma average "
+                "flight distance of that bee species in meters.<br/>* "
+                "'relative_abundance': a weight indicating the "
+                "relative abundance of the particular species with "
+                "respect to the sum of all relative abundance weights "
+                "in the table."),
+            label='Guild Table (CSV)',
             validator=self.validator)
         self.add_input(self.guild_table_path)
         self.farm_vector_path = inputs.File(
-            args_key=u'farm_vector_path',
+            args_key='farm_vector_path',
             helptext=(
-                u"This is a layer of polygons representing farm sites "
-                u"to be analyzed.  The shapefile must have at least the "
-                u"following fields:<br/><br/>* season (string): season "
-                u"in which the farm needs pollination.<br/>* half_sat "
-                u"(float): a real in the range [0.0, 1.0] representing "
-                u"the proportion of wild pollinators to achieve a 50% "
-                u"yield of that crop.<br/>* p_wild_dep (float): a "
-                u"number in the range [0.0, 1.0] representing the "
-                u"proportion of yield dependent on pollinators.<br/>* "
-                u"p_managed (float): proportion of pollinators that "
-                u"come from non-native/managed hives.<br/>* f_[season] "
-                u"(float): any number of fields that match this pattern "
-                u"such that `season` also matches the season headers in "
-                u"the biophysical and guild table.  Any areas that "
-                u"overlap the landcover map will replace seasonal "
-                u"floral resources with this value.  Ranges from "
-                u"0..1.<br/>* n_[substrate] (float): any number of "
-                u"fields that match this pattern such that `substrate` "
-                u"also matches the nesting substrate headers in the "
-                u"biophysical and guild table.  Any areas that overlap "
-                u"the landcover map will replace nesting substrate "
-                u"suitability with this value.  Ranges from 0..1."),
-            label=u'Farm Vector (Vector) (optional)',
+                "This is a layer of polygons representing farm sites "
+                "to be analyzed.  The shapefile must have at least the "
+                "following fields:<br/><br/>* season (string): season "
+                "in which the farm needs pollination.<br/>* half_sat "
+                "(float): a real in the range [0.0, 1.0] representing "
+                "the proportion of wild pollinators to achieve a 50% "
+                "yield of that crop.<br/>* p_wild_dep (float): a "
+                "number in the range [0.0, 1.0] representing the "
+                "proportion of yield dependent on pollinators.<br/>* "
+                "p_managed (float): proportion of pollinators that "
+                "come from non-native/managed hives.<br/>* f_[season] "
+                "(float): any number of fields that match this pattern "
+                "such that `season` also matches the season headers in "
+                "the biophysical and guild table.  Any areas that "
+                "overlap the landcover map will replace seasonal "
+                "floral resources with this value.  Ranges from "
+                "0..1.<br/>* n_[substrate] (float): any number of "
+                "fields that match this pattern such that `substrate` "
+                "also matches the nesting substrate headers in the "
+                "biophysical and guild table.  Any areas that overlap "
+                "the landcover map will replace nesting substrate "
+                "suitability with this value.  Ranges from 0..1."),
+            label='Farm Vector (Vector) (optional)',
             validator=self.validator)
         self.add_input(self.farm_vector_path)
 
