@@ -7,6 +7,8 @@ Unreleased Changes
   neighbors.  Note that for ease of debugging, this has been implemented as a
   separate raster and is now included in ``RKLS`` calculations instead of in
   the ``LS`` calculations.
+* Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
+  a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
   as well as a source distribution.
 * Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
