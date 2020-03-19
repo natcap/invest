@@ -11,6 +11,7 @@ import os
 import functools
 import logging
 import json
+import queue
 
 import Pyro4
 import pygeoprocessing
@@ -21,12 +22,6 @@ from osgeo import gdal
 import taskgraph
 
 from natcap.invest import utils
-
-try:
-    import queue
-except ImportError:
-    # python 2 uses capital Q
-    import Queue as queue
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
