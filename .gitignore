@@ -1,2 +1,8 @@
+build/
+coverage/
 node_modules/
+tmp/data-*
+src/__pycache__/
+cache/
+!cache/carbon_setup.json
 .env

@@ -5,12 +5,6 @@ const app = require('electron').app
 const BrowserWindow = require('electron').BrowserWindow
 // const { default: installExtension, REACT_DEVELOPER_TOOLS } = require('electron-devtools-installer');
 const shutdownPythonProcess = require('./server_requests').shutdownPythonProcess;
-// import { spawn } from 'child_process';
-// import { app, BrowserWindow } from 'electron';
-// import installExtension, { REACT_DEVELOPER_TOOLS } from 'electron-devtools-installer';
-// import { enableLiveReload } from 'electron-compile';
-// import { shutdownPythonProcess } from './server_requests';
-// import dotenv from 'dotenv';
 
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
@@ -25,14 +19,11 @@ if (isDevMode) {
 // if (isDevMode) enableLiveReload({ strategy: 'react-hmr' });
 
 let PYTHON = 'python';
-console.log(process.env.PYTHON);
 if (process.env.PYTHON) {  // if it was set, override
   PYTHON = process.env.PYTHON.trim();
 }
-console.log('MAIN.JS RUNNING')
 
 const createWindow = async () => {
-  console.log('APP ON CALLBACK')
   // Creating the process here with await because sometimes,
   // but not always, the window loads and the first request
   // is made before the server is ready. Unfortunately, it's
