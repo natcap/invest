@@ -1,13 +1,12 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import { Tail } from 'tail';
-import path from 'path';
 import os from 'os';
 
 import Row from 'react-bootstrap/Row';
 import Col from 'react-bootstrap/Col';
 import Container from 'react-bootstrap/Container';
 import Alert from 'react-bootstrap/Alert';
-import Button from 'react-bootstrap/Button';
 
 const logStyle = {
   whiteSpace: 'pre-line',
@@ -33,6 +32,10 @@ class LogDisplay extends React.Component {
       </Col>
       );
   }
+}
+
+LogDisplay.propTypes = {
+  logdata: PropTypes.string
 }
 
 export class LogTab extends React.Component {
@@ -84,4 +87,10 @@ export class LogTab extends React.Component {
       </Container>
     );
   }
+}
+
+LogTab.propTypes = {
+  jobStatus: PropTypes.string,
+  logfile: PropTypes.string,
+  logStdErr: PropTypes.string
 }

@@ -1,5 +1,6 @@
 import React from 'react';
 import Electron from 'electron';
+import PropTypes from 'prop-types';
 
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
@@ -39,6 +40,17 @@ export class SetupTab extends React.Component {
     // to render anything here.
     return(<div>No args to see here</div>)
   }
+}
+
+SetupTab.propTypes = {
+  args: PropTypes.object,
+  argsValid: PropTypes.bool,
+  modulename: PropTypes.string,
+  updateArg: PropTypes.func,
+  batchUpdateArgs: PropTypes.func,
+  investValidate: PropTypes.func,
+  argsValuesFromSpec: PropTypes.func,
+  investExecute: PropTypes.func
 }
 
 class ArgsForm extends React.Component {
@@ -232,6 +244,17 @@ class ArgsForm extends React.Component {
       </Form>
     );
   }
+}
+
+// These props all get passed through SetupTab's props,
+// so they are defined dynamically as such
+ArgsForm.propTypes = {
+  args: SetupTab.propTypes.args,
+  modulename: SetupTab.propTypes.modulename,
+  updateArg: SetupTab.propTypes.updateArg,
+  batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
+  investValidate: SetupTab.propTypes.investValidate,
+  argsValuesFromSpec: SetupTab.propTypes.argsValuesFromSpec
 }
 
 function dragover_handler(event) {

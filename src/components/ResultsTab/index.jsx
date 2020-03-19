@@ -1,4 +1,6 @@
 import React, { Suspense } from 'react';
+import PropTypes from 'prop-types';
+
 import VizErrorBoundary from './VizErrorBoundary';
 
 // The tab where this component renders is only enabled
@@ -34,4 +36,14 @@ export class ResultsTab extends React.Component {
       );
     }
   }
+}
+
+ResultsTab.propTypes = {
+  model: PropTypes.string,
+  workspace: PropTypes.shape({
+      directory: PropTypes.string,
+      suffix: PropTypes.string
+    }),
+  sessionID: PropTypes.string,
+  activeTab: PropTypes.string 
 }

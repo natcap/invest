@@ -1,18 +1,16 @@
-import path from 'path';
-import fs from 'fs';
 import React from 'react';
+import PropTypes from 'prop-types';
 import Electron from 'electron';
+import path from 'path';
 
 import Button from 'react-bootstrap/Button';
 import ButtonGroup from 'react-bootstrap/ButtonGroup';
 import CardGroup from 'react-bootstrap/CardGroup';
-import CardColumns from 'react-bootstrap/CardColumns';
 import Card from 'react-bootstrap/Card';
 import Spinner from 'react-bootstrap/Spinner';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
-const CACHE_DIR = 'cache' //  for storing state snapshot files
 const STATUS_COLOR_MAP = {
   running: 'warning',
   error: 'danger',
@@ -55,6 +53,14 @@ export class HomeTab extends React.Component {
       </Row>
     );
   }
+}
+
+HomeTab.propTypes = {
+  investList: PropTypes.object,
+  investGetSpec: PropTypes.func,
+  saveState: PropTypes.func,
+  loadState: PropTypes.func,
+  recentSessions: PropTypes.array
 }
 
 
@@ -144,4 +150,9 @@ class LoadStateForm extends React.Component {
       </React.Fragment>
     );
   }
+}
+
+LoadStateForm.propTypes = {
+  loadState: HomeTab.propTypes.loadState,
+  recentSessions: HomeTab.propTypes.recentSessions
 }

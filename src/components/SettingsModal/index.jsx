@@ -126,7 +126,7 @@ export class SettingsModal extends React.Component {
 }
 
 SettingsModal.propTypes = {
-  saveSettings: PropTypes.object,
+  saveSettings: PropTypes.func,
   investSettings: PropTypes.shape({
     nWorkers: PropTypes.string,
     loggingLevel: PropTypes.string,

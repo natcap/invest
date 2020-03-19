@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import Electron from 'electron';
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/'
@@ -70,4 +71,9 @@ export class ResourcesTab extends React.Component {
         </div>
       );
   }
+}
+
+ResourcesTab.propTypes = {
+  modelName: PropTypes.string,
+  docs: PropTypes.string
 }

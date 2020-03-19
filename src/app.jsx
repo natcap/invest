@@ -1,10 +1,9 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import { InvestJob } from './InvestJob';
 import { investList } from './server_requests';
 import { updateRecentSessions, loadRecentSessions } from './utils';
-
-const CACHE_DIR = 'cache' //  for storing state snapshot files
 
 export default class App extends React.Component {
 
@@ -63,6 +62,10 @@ export default class App extends React.Component {
       />
     );
   }
+}
+
+App.propTypes = {
+  appdata: PropTypes.string
 }
 
 function getInvestList() {

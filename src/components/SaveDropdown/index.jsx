@@ -1,5 +1,6 @@
 import React from 'react';
 import Electron from 'electron'
+import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
 import Form from 'react-bootstrap/Form';
@@ -75,6 +76,12 @@ export class SaveSessionButtonModal extends React.Component {
   }
 }
 
+SaveSessionButtonModal.propTypes = {
+  saveState: PropTypes.func,
+  sessionID: PropTypes.string,
+  setSessionID: PropTypes.func
+}
+
 
 export class SaveParametersButton extends React.Component {
 
@@ -103,6 +110,11 @@ export class SaveParametersButton extends React.Component {
   }
 }
 
+SaveParametersButton.propTypes = {
+  argsToJsonFile: PropTypes.func,
+  disabled: PropTypes.bool
+}
+
 export class SavePythonButton extends React.Component {
   
   constructor(props) {
@@ -128,4 +140,9 @@ export class SavePythonButton extends React.Component {
       </Button>
     );
   }
+}
+
+SavePythonButton.propTypes = {
+  savePythonScript: PropTypes.func,
+  disabled: PropTypes.bool
 }

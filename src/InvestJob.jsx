@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { spawn } from 'child_process';
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import TabPane from 'react-bootstrap/TabPane';
 import TabContent from 'react-bootstrap/TabContent';
@@ -19,8 +20,7 @@ import { ResourcesTab } from './components/ResourcesTab';
 import { SaveSessionButtonModal, SaveParametersButton,
          SavePythonButton } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
-import { getSpec, saveToPython, writeParametersToFile,
-         fetchValidation, fetchLogfilename } from './server_requests';
+import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
 import { findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
@@ -498,6 +498,15 @@ export class InvestJob extends React.Component {
       </TabContainer>
     );
   }
+}
+
+InvestJob.propTypes = {
+  investList: PropTypes.object,
+  investSettings: PropTypes.object,
+  recentSessions: PropTypes.array,
+  appdata: PropTypes.string,
+  updateRecentSessions: PropTypes.func,
+  saveSettings: PropTypes.func
 }
 
 function boolStringToBoolean(val) {
