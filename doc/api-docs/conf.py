@@ -312,7 +312,7 @@ autodoc_mock_imports = [
 
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-import mock
+from unitteset import mock
 class Mock(mock.Mock):
     def __getattr__(self, name):
         return Mock()
