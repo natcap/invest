@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
@@ -122,6 +123,14 @@ export class SettingsModal extends React.Component {
       </React.Fragment>
     )
   }
+}
+
+SettingsModal.propTypes = {
+  saveSettings: PropTypes.object,
+  investSettings: PropTypes.shape({
+    nWorkers: PropTypes.string,
+    loggingLevel: PropTypes.string,
+  })
 }
 
 function validateNWorkers(value) {
