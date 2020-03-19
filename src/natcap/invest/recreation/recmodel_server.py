@@ -471,11 +471,6 @@ def _parse_input_csv(
         # this pattern matches the above style of line and only parses valid
         # dates to handle some cases where there are weird dates in the input
         pattern = r"[^,]+,([^,]+),(19|20\d\d-(?:0[1-9]|1[012])-(?:0[1-9]|[12][0-9]|3[01])) [^,]+,([^,]+),([^,]+),[^\n]"  # pylint: disable=line-too-long
-        try:
-            chunk_string = unicode(chunk_string)
-        except NameError:
-            # Python 3, it's already unicode
-            pass
         result = numpy.fromregex(
             StringIO(chunk_string), pattern,
             [('user', 'S40'), ('date', 'datetime64[D]'), ('lat', 'f4'),
