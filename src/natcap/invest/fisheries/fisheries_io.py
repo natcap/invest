@@ -14,11 +14,6 @@ import pygeoprocessing.testing
 from .. import reporting
 from .. import utils
 
-try:
-    unicode
-except NameError:
-    # No unicode in Python 3
-    unicode = str
 
 LOGGER = logging.getLogger('natcap.invest.fisheries.io')
 

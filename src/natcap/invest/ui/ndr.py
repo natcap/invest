@@ -8,119 +8,119 @@ class Nutrient(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'Nutrient Delivery Ratio Model (NDR)',
+            label='Nutrient Delivery Ratio Model (NDR)',
             target=natcap.invest.ndr.ndr.execute,
             validator=natcap.invest.ndr.ndr.validate,
-            localdoc=u'waterpurification.html')
+            localdoc='waterpurification.html')
 
         self.dem_path = inputs.File(
-            args_key=u'dem_path',
+            args_key='dem_path',
             helptext=(
-                u"A GDAL-supported raster file containing elevation "
-                u"values for each cell.  Make sure the DEM is corrected "
-                u"by filling in sinks, and if necessary burning "
-                u"hydrographic features into the elevation model "
-                u"(recommended when unusual streams are observed.) See "
-                u"the Working with the DEM section of the InVEST User's "
-                u"Guide for more information."),
-            label=u'DEM (Raster)',
+                "A GDAL-supported raster file containing elevation "
+                "values for each cell.  Make sure the DEM is corrected "
+                "by filling in sinks, and if necessary burning "
+                "hydrographic features into the elevation model "
+                "(recommended when unusual streams are observed.) See "
+                "the Working with the DEM section of the InVEST User's "
+                "Guide for more information."),
+            label='DEM (Raster)',
             validator=self.validator)
         self.add_input(self.dem_path)
         self.land_use = inputs.File(
-            args_key=u'lulc_path',
+            args_key='lulc_path',
             helptext=(
-                u"A GDAL-supported raster file containing integer "
-                u"values representing the LULC code for each cell.  The "
-                u"LULC code should be an integer."),
-            label=u'Land Use (Raster)',
+                "A GDAL-supported raster file containing integer "
+                "values representing the LULC code for each cell.  The "
+                "LULC code should be an integer."),
+            label='Land Use (Raster)',
             validator=self.validator)
         self.add_input(self.land_use)
         self.runoff_proxy = inputs.File(
-            args_key=u'runoff_proxy_path',
+            args_key='runoff_proxy_path',
             helptext=(
-                u"Weighting factor to nutrient loads.  Internally this "
-                u"value is normalized by its average values so a "
-                u"variety of data can be used including precipitation "
-                u"or quickflow."),
-            label=u'Nutrient Runoff Proxy (Raster)',
+                "Weighting factor to nutrient loads.  Internally this "
+                "value is normalized by its average values so a "
+                "variety of data can be used including precipitation "
+                "or quickflow."),
+            label='Nutrient Runoff Proxy (Raster)',
             validator=self.validator)
         self.add_input(self.runoff_proxy)
         self.watersheds_path = inputs.File(
-            args_key=u'watersheds_path',
+            args_key='watersheds_path',
             helptext=(
-                u"An OGR-supported vector file containing watersheds "
-                u"such that each watershed contributes to a point of "
-                u"interest where water quality will be analyzed.  It "
-                u"must have the integer field 'ws_id' where the values "
-                u"uniquely identify each watershed."),
-            label=u'Watersheds (Vector)',
+                "An OGR-supported vector file containing watersheds "
+                "such that each watershed contributes to a point of "
+                "interest where water quality will be analyzed.  It "
+                "must have the integer field 'ws_id' where the values "
+                "uniquely identify each watershed."),
+            label='Watersheds (Vector)',
             validator=self.validator)
         self.add_input(self.watersheds_path)
         self.biophysical_table_path = inputs.File(
-            args_key=u'biophysical_table_path',
+            args_key='biophysical_table_path',
             helptext=(
-                u"A CSV table containing model information "
-                u"corresponding to each of the land use classes in the "
-                u"LULC raster input.  It must contain the fields "
-                u"'lucode', 'load_n' (or p), 'eff_n' (or p), and "
-                u"'crit_len_n' (or p) depending on which nutrients are "
-                u"selected."),
-            label=u'Biophysical Table (CSV)',
+                "A CSV table containing model information "
+                "corresponding to each of the land use classes in the "
+                "LULC raster input.  It must contain the fields "
+                "'lucode', 'load_n' (or p), 'eff_n' (or p), and "
+                "'crit_len_n' (or p) depending on which nutrients are "
+                "selected."),
+            label='Biophysical Table (CSV)',
             validator=self.validator)
         self.add_input(self.biophysical_table_path)
         self.calc_p = inputs.Checkbox(
-            args_key=u'calc_p',
-            helptext=u'Select to calculate phosphorous export.',
-            label=u'Calculate phosphorous retention')
+            args_key='calc_p',
+            helptext='Select to calculate phosphorous export.',
+            label='Calculate phosphorous retention')
         self.add_input(self.calc_p)
         self.calc_n = inputs.Checkbox(
-            args_key=u'calc_n',
-            helptext=u'Select to calcualte nitrogen export.',
-            label=u'Calculate Nitrogen Retention')
+            args_key='calc_n',
+            helptext='Select to calcualte nitrogen export.',
+            label='Calculate Nitrogen Retention')
         self.add_input(self.calc_n)
         self.threshold_flow_accumulation = inputs.Text(
-            args_key=u'threshold_flow_accumulation',
+            args_key='threshold_flow_accumulation',
             helptext=(
-                u"The number of upstream cells that must flow into a "
-                u"cell before it's considered part of a stream such "
-                u"that retention stops and the remaining export is "
-                u"exported to the stream.  Used to define streams from "
-                u"the DEM."),
-            label=u'Threshold Flow Accumluation',
+                "The number of upstream cells that must flow into a "
+                "cell before it's considered part of a stream such "
+                "that retention stops and the remaining export is "
+                "exported to the stream.  Used to define streams from "
+                "the DEM."),
+            label='Threshold Flow Accumluation',
             validator=self.validator)
         self.add_input(self.threshold_flow_accumulation)
         self.k_param = inputs.Text(
-            args_key=u'k_param',
-            helptext=u'Borselli k parameter.',
-            label=u'Borselli k Parameter',
+            args_key='k_param',
+            helptext='Borselli k parameter.',
+            label='Borselli k Parameter',
             validator=self.validator)
         self.add_input(self.k_param)
         self.subsurface_critical_length_n = inputs.Text(
-            args_key=u'subsurface_critical_length_n',
-            helptext=u'',
+            args_key='subsurface_critical_length_n',
+            helptext='',
             interactive=False,
-            label=u'Subsurface Critical Length (Nitrogen)',
+            label='Subsurface Critical Length (Nitrogen)',
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_n)
         self.subsurface_critical_length_p = inputs.Text(
-            args_key=u'subsurface_critical_length_p',
-            helptext=u'',
+            args_key='subsurface_critical_length_p',
+            helptext='',
             interactive=False,
-            label=u'Subsurface Critical Length (Phosphorous)',
+            label='Subsurface Critical Length (Phosphorous)',
             validator=self.validator)
         self.add_input(self.subsurface_critical_length_p)
         self.subsurface_eff_n = inputs.Text(
-            args_key=u'subsurface_eff_n',
-            helptext=u'',
+            args_key='subsurface_eff_n',
+            helptext='',
             interactive=False,
-            label=u'Subsurface Maximum Retention Efficiency (Nitrogen)',
+            label='Subsurface Maximum Retention Efficiency (Nitrogen)',
             validator=self.validator)
         self.add_input(self.subsurface_eff_n)
         self.subsurface_eff_p = inputs.Text(
-            args_key=u'subsurface_eff_p',
-            helptext=u'',
+            args_key='subsurface_eff_p',
+            helptext='',
             interactive=False,
-            label=u'Subsurface Maximum Retention Efficiency (Phosphorous)',
+            label='Subsurface Maximum Retention Efficiency (Phosphorous)',
             validator=self.validator)
         self.add_input(self.subsurface_eff_p)
 

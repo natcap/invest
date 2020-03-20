@@ -259,7 +259,6 @@ class NDRTests(unittest.TestCase):
         ]
         self.assertEqual(set(invalid_args), set(expected_missing_args))
 
-
     @staticmethod
     def _assert_regression_results_equal(
             workspace_dir, result_vector_path, agg_results_path):

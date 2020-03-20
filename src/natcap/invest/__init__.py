@@ -10,7 +10,7 @@ import pygeoprocessing
 
 LOGGER = logging.getLogger('natcap.invest')
 LOGGER.addHandler(logging.NullHandler())
-__all__ = ['local_dir',]
+__all__ = ['local_dir', ]
 
 try:
     __version__ = pkg_resources.get_distribution(__name__).version

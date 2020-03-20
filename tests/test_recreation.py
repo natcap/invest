@@ -11,6 +11,7 @@ import os
 import functools
 import logging
 import json
+import queue
 
 import Pyro4
 import pygeoprocessing
@@ -21,12 +22,6 @@ from osgeo import gdal
 import taskgraph
 
 from natcap.invest import utils
-
-try:
-    import queue
-except ImportError:
-    # python 2 uses capital Q
-    import Queue as queue
 
 Pyro4.config.SERIALIZER = 'marshal'  # allow null bytes in strings
 
@@ -312,7 +307,7 @@ class TestRecServer(unittest.TestCase):
             'start_year': '2005',
             'end_year': '2014',
             'grid_aoi': False,
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
         recmodel_client.execute(client_args)
@@ -493,7 +488,7 @@ class TestRecServer(unittest.TestCase):
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
@@ -552,7 +547,7 @@ class TestRecServer(unittest.TestCase):
                 SAMPLE_DATA, 'predictors_all.csv'),
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_all.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
             'hostname': server_args['hostname'],
             'port': server_args['port'],
@@ -609,7 +604,7 @@ class TestRecServer(unittest.TestCase):
             'start_year': '2014',
             'end_year': '2015',
             'grid_aoi': False,
-            'results_suffix': u'hello',
+            'results_suffix': 'hello',
             'workspace_dir': self.workspace_dir,
             'hostname': server_args['hostname'],
             'port': server_args['port'],
@@ -822,7 +817,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
@@ -880,7 +875,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'start_year': '2005',
             'end_year': '2014',
             'grid_aoi': False,
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
 
@@ -907,7 +902,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'cell_size': 20000,
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_id_too_long.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
 
@@ -1043,7 +1038,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
@@ -1064,7 +1059,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'end_year': '2014',
             'grid_aoi': True,
             'grid_type': 'circle',  # intentionally bad gridtype
-            'results_suffix': u'',
+            'results_suffix': '',
             'workspace_dir': self.workspace_dir,
         }
 
@@ -1085,7 +1080,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
@@ -1108,7 +1103,7 @@ class RecreationRegressionTests(unittest.TestCase):
             'grid_type': 'hexagon',
             'predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors.csv'),
-            'results_suffix': u'',
+            'results_suffix': '',
             'scenario_predictor_table_path': os.path.join(
                 SAMPLE_DATA, 'predictors_scenario.csv'),
             'workspace_dir': self.workspace_dir,
