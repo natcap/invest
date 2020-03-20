@@ -163,7 +163,7 @@ jobs:
                   conda init bash
 
                   # Force libwebp to install from the defaults channel.
-                  conda install -p ./env --yes --override-channels --channel defaults libwebp
+                  conda upgrade -p ./env --yes libwebp
 
             - name: Build binaries
               shell: bash
