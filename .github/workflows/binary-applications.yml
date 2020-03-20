@@ -8,9 +8,6 @@ jobs:
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
 
             - name: Set up python 3.7
               uses: actions/setup-python@v1
@@ -18,7 +15,7 @@ jobs:
                   python-version: 3.7
 
             - name: Set up environment
-              run: python -m pip install --upgrade pip setuptools setuptools_scm flake8
+              run: python -m pip install --upgrade pip flake8
 
             - name: Lint with flake8
               run: |
@@ -36,9 +33,7 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+            - run: git fetch --prune --unshallow
 
             - name: Restore pip cache
               uses: actions/cache@v1
@@ -141,9 +136,7 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-              with:
-                  # Fetch complete history for accurate versioning
-                  fetch-depth: 0
+            - run: git fetch --prune --unshallow
 
             - name: Install homebrew dependencies
               run: |
@@ -173,6 +166,9 @@ jobs:
                         requirements-gui.txt > requirements-all.yml
                   conda env create -p ./env --file requirements-all.yml
                   conda init bash
+
+                  # Force libwebp to install from the defaults channel.
+                  conda activate ./env && conda upgrade --yes --override-channels --channel defaults libwebp
 
             - name: Build binaries
               shell: bash
