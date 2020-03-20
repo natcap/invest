@@ -42,12 +42,30 @@ export async function updateRecentSessions(jobdata, jobDatabase) {
 }
 
 export function findMostRecentLogfile(directory) {
+  /**
+  * Given an invest workspace, find the most recently modified invest log.
+  *
+  * This function is used in order to associate a logfile with an active
+  * InVEST run, so the log can be tailed to a UI component.
+  * 
+  * @param {string} directory - the path to an invest workspace directory
+  * @return {Promise<string>} - the path to an invest logfile
+  */
   return new Promise(function(resolve, reject) {
+    const regex = /InVEST-[a-zA-Z-]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
     const files = glob.sync(path.join(directory, '*.txt'));
-    console.log(files);
-
+    let logfiles = [];
+    files.forEach(file => {
+      const match = file.match(regex)
+      if (match) {
+        logfiles.push(path.join(directory, match[0]))
+      }
+    })
+    if (logfiles.length === 1) {
+      resolve(logfiles[0])
+    }
     // reverse sort (b - a) based on last-modified time
-    const sortedFiles = files.sort(function(a, b) {
+    const sortedFiles = logfiles.sort(function(a, b) {
       return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
     });
     resolve(sortedFiles[0]);
