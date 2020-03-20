@@ -138,6 +138,11 @@ jobs:
             - uses: actions/checkout@v2
             - run: git fetch --prune --unshallow
 
+            - name: Install homebrew dependencies
+              run: |
+                  brew update
+                  brew install mercurial pandoc
+
             - name: Restore conda cache
               uses: actions/cache@v1
               with:
