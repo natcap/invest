@@ -315,7 +315,7 @@ def execute(args):
             for threat in threat_dict:
                 # it's okay to have no threat raster for baseline scenario
                 threat_path_dict['threat' + lulc_key][threat] = (
-                    resolve_ambiguous_raster_path(
+                    _resolve_ambiguous_raster_path(
                         os.path.join(threat_raster_dir, threat + lulc_key),
                         raise_error=(lulc_key != '_b')))
 
@@ -506,17 +506,24 @@ def execute(args):
             filtered_threat_raster_path = os.path.join(
                 intermediate_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             convolve_task = graph.add_task(
-            pygeoprocessing.convolve_2d(
-                (threat_raster_path, 1), (kernel_path, 1),
-                filtered_threat_raster_path,
-                ignore_nodata=True)
+                pygeoprocessing.convolve_2d,
+                args=((threat_raster_path, 1), (kernel_path, 1),
+                    filtered_threat_raster_path, ignore_nodata=True),
+                target_path_list=[filtered_threat_raster_path],
+                dependent_task_list=[fill_this_list],
+                task_name=f'convolve_{decay_type}_{lulc_key}_{threat}')
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
                 intermediate_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
-            map_raster_to_dict_values(
-                lulc_path, sens_raster_path, sensitivity_dict, 'L_' + threat,
-                _OUT_NODATA, values_required=True)
+
+            raster_to_dict_task = graph.add_task(
+                _map_raster_to_dict_values, 
+                args=(lulc_path, sens_raster_path, sensitivity_dict, 
+                    'L_' + threat, _OUT_NODATA, values_required=True),
+                target_path_list=[sens_raster_path],
+                dependent_task_list=[fill_this_list],
+                task_name=f'sens_raster_{decay_type}_{lulc_key}_{threat}')
 
             # get the normalized weight for each threat
             weight_avg = threat_data['WEIGHT'] / weight_sum
@@ -581,9 +588,14 @@ def execute(args):
         LOGGER.info('Starting raster calculation on total_degradation')
 
         deg_raster_band_list = [(path, 1) for path in deg_raster_list]
-        pygeoprocessing.raster_calculator(
-            deg_raster_band_list, total_degradation,
-            deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
+
+        total_degradation_task = graph.add_task(
+            pygeoprocessing.raster_calculator, 
+            args=(deg_raster_band_list, total_degradation,
+                deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA),
+            target_path_list=[deg_sum_raster_path],
+            dependent_task_list=[fill_this_list],
+            task_name=f'tot_degradation_{decay_type}_{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
 
@@ -624,6 +636,14 @@ def execute(args):
             deg_hab_raster_band_list, quality_op, quality_path,
             gdal.GDT_Float32, _OUT_NODATA)
 
+        hq_task = graph.add_task(
+            pygeoprocessing.raster_calculator, 
+            args=(deg_hab_raster_band_list, quality_op, quality_path,
+                gdal.GDT_Float32, _OUT_NODATA),
+            target_path_list=[quality_path],
+            dependent_task_list=[fill_this_list],
+            task_name=f'habitat_quality')
+
         LOGGER.info('Finished raster calculation on quality_op')
 
     # Compute Rarity if user supplied baseline raster
@@ -640,7 +660,7 @@ def execute(args):
         base_nodata = pygeoprocessing.get_raster_info(
             lulc_base_path)['nodata'][0]
 
-        lulc_code_count_b = raster_pixel_count(lulc_base_path)
+        lulc_code_count_b = _raster_pixel_count(lulc_base_path)
 
         # compute rarity for current landscape and future (if provided)
         for lulc_key in ['_c', '_f']:
@@ -680,9 +700,13 @@ def execute(args):
             LOGGER.info('Starting masking %s land cover to base land cover.'
                         % lulc_time)
 
-            pygeoprocessing.raster_calculator(
-                [(lulc_base_path, 1), (lulc_path, 1)], trim_op, new_cover_path,
-                gdal.GDT_Float32, _OUT_NODATA)
+            trim_base_task = graph.add_task(
+                pygeoprocessing.raster_calculator, 
+                args=([(lulc_base_path, 1), (lulc_path, 1)], trim_op, 
+                    new_cover_path, gdal.GDT_Float32, _OUT_NODATA),
+                target_path_list=[new_cover_path],
+                dependent_task_list=[fill_this_list],
+                task_name=f'base_trim_{lulc_key}')
 
             LOGGER.info('Finished masking %s land cover to base land cover.'
                         % lulc_time)
@@ -690,7 +714,7 @@ def execute(args):
             LOGGER.info('Starting rarity computation on %s land cover.'
                         % lulc_time)
 
-            lulc_code_count_x = raster_pixel_count(new_cover_path)
+            lulc_code_count_x = _raster_pixel_count(new_cover_path)
 
             # a dictionary to map LULC types to a number that depicts how
             # rare they are considered
@@ -711,16 +735,20 @@ def execute(args):
             rarity_path = os.path.join(
                 output_dir, 'rarity' + lulc_key + suffix + '.tif')
 
-            pygeoprocessing.reclassify_raster(
-                (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
-                _RARITY_NODATA)
+            rarity_task = graph.add_task(
+                pygeoprocessing.reclassify_raster, 
+                args=((new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
+                    _RARITY_NODATA),
+                target_path_list=[rarity_path],
+                dependent_task_list=[fill_this_list],
+                task_name=f'rarity_{lulc_key}')
 
             LOGGER.info('Finished rarity computation on %s land cover.'
                         % lulc_time)
     LOGGER.info('Finished habitat_quality biophysical calculations')
 
 
-def resolve_ambiguous_raster_path(path, raise_error=True):
+def _resolve_ambiguous_raster_path(path, raise_error=True):
     """Determine real path when we don't know true path extension.
 
     Parameters:
@@ -778,7 +806,7 @@ def resolve_ambiguous_raster_path(path, raise_error=True):
     return full_path
 
 
-def raster_pixel_count(raster_path):
+def _raster_pixel_count(raster_path):
     """Count unique pixel values in raster.
 
     Parameters:
@@ -798,7 +826,7 @@ def raster_pixel_count(raster_path):
     return counts
 
 
-def map_raster_to_dict_values(
+def _map_raster_to_dict_values(
         key_raster_path, out_path, attr_dict, field, out_nodata, values_required):
     """Creates a new raster from 'key_raster' where the pixel values from
        'key_raster' are the keys to a dictionary 'attr_dict'. The values
@@ -834,7 +862,7 @@ def map_raster_to_dict_values(
         out_nodata, values_required)
 
 
-def make_linear_decay_kernel_path(max_distance, kernel_path):
+def _make_linear_decay_kernel_path(max_distance, kernel_path):
     """Create a linear decay kernel as a raster.
 
     Pixels in raster are equal to d / max_distance where d is the distance to
