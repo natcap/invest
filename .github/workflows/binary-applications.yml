@@ -162,8 +162,8 @@ jobs:
                   conda env create -p ./env --file requirements-all.yml
                   conda init bash
 
-                  # Force libwebp to install from the defaults channel.
-                  conda install -p ./env --yes libwebp
+                  # Force libwebp to install from conda-forge.
+                  conda install -p ./env --yes --channel conda-forge libwebp
 
             - name: Build binaries
               shell: bash
