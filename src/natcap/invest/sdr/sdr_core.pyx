@@ -665,7 +665,7 @@ def calculate_average_aspect(
                             continue
 
                     if seed_col == 0 or seed_col == (n_cols - 1):
-                        neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
+                        neighbor_col = seed_col + COL_OFFSETS[neighbor_index]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
 
