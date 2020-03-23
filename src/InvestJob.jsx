@@ -17,8 +17,7 @@ import { SetupTab } from './components/SetupTab';
 import { LogTab } from './components/LogTab';
 import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
-import { SaveSessionButtonModal, SaveParametersButton,
-         SavePythonButton } from './components/SaveDropdown'
+import { SaveParametersButton, SavePythonButton } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
 import { argsValuesFromSpec, findMostRecentLogfile } from './utils';
