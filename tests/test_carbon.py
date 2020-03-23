@@ -91,7 +91,7 @@ class CarbonTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp(suffix=u'\U0001f60e')  # smiley
+        self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -102,14 +102,14 @@ class CarbonTests(unittest.TestCase):
         from natcap.invest import carbon
 
         args = {
-            u'workspace_dir': self.workspace_dir,
-            u'do_valuation': True,
-            u'price_per_metric_ton_of_c': 43.0,
-            u'rate_change': 2.8,
-            u'lulc_cur_year': 2016,
-            u'lulc_fut_year': 2030,
-            u'discount_rate': -7.1,
-            u'n_workers': -1,
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'discount_rate': -7.1,
+            'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
@@ -137,14 +137,14 @@ class CarbonTests(unittest.TestCase):
         from natcap.invest import carbon
 
         args = {
-            u'workspace_dir': self.workspace_dir,
-            u'do_valuation': True,
-            u'price_per_metric_ton_of_c': 43.0,
-            u'rate_change': 0.0,
-            u'lulc_cur_year': 2016,
-            u'lulc_fut_year': 2030,
-            u'discount_rate': 0.0,
-            u'n_workers': -1,
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 0.0,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'discount_rate': 0.0,
+            'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.
@@ -171,14 +171,14 @@ class CarbonTests(unittest.TestCase):
         """Carbon: regression testing future scenario."""
         from natcap.invest import carbon
         args = {
-            u'workspace_dir': self.workspace_dir,
-            u'do_valuation': True,
-            u'price_per_metric_ton_of_c': 43.0,
-            u'rate_change': 2.8,
-            u'lulc_cur_year': 2016,
-            u'lulc_fut_year': 2030,
-            u'discount_rate': -7.1,
-            u'n_workers': -1,
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'discount_rate': -7.1,
+            'n_workers': -1,
         }
 
         lulc_names = ['lulc_cur_path', 'lulc_fut_path']
@@ -201,9 +201,9 @@ class CarbonTests(unittest.TestCase):
         """Carbon: testing expected exception on missing LULC codes."""
         from natcap.invest import carbon
         args = {
-            u'workspace_dir': self.workspace_dir,
-            u'do_valuation': False,
-            u'n_workers': -1,
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': False,
+            'n_workers': -1,
         }
 
         lulc_names = ['lulc_cur_path', 'lulc_fut_path']
@@ -225,14 +225,14 @@ class CarbonTests(unittest.TestCase):
         from natcap.invest import carbon
 
         args = {
-            u'workspace_dir': self.workspace_dir,
-            u'do_valuation': True,
-            u'price_per_metric_ton_of_c': 43.0,
-            u'rate_change': 2.8,
-            u'lulc_cur_year': 2016,
-            u'lulc_fut_year': 2030,
-            u'discount_rate': -7.1,
-            u'n_workers': -1,
+            'workspace_dir': self.workspace_dir,
+            'do_valuation': True,
+            'price_per_metric_ton_of_c': 43.0,
+            'rate_change': 2.8,
+            'lulc_cur_year': 2016,
+            'lulc_fut_year': 2030,
+            'discount_rate': -7.1,
+            'n_workers': -1,
         }
 
         # Create LULC rasters and pools csv in workspace and add them to args.

@@ -257,7 +257,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'results_suffix': 'regression',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -307,7 +307,7 @@ class HabitatQualityTests(unittest.TestCase):
         args = {
             'half_saturation_constant': '0.5',
             'results_suffix': 'regression',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -421,7 +421,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -454,7 +454,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -487,7 +487,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],
@@ -520,7 +520,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -549,7 +549,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -580,7 +580,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['sensitivity_table_path'] = os.path.join(args['workspace_dir'],
@@ -613,7 +613,7 @@ class HabitatQualityTests(unittest.TestCase):
 
         args = {
             'half_saturation_constant': '0.5',
-            u'workspace_dir': self.workspace_dir,
+            'workspace_dir': self.workspace_dir,
         }
 
         args['access_vector_path'] = os.path.join(args['workspace_dir'],

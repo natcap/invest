@@ -1,5 +1,4 @@
 """GLOBIO InVEST Model."""
-from __future__ import absolute_import
 import os
 import logging
 import collections

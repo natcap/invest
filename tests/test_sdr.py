@@ -166,7 +166,7 @@ class SDRTests(unittest.TestCase):
             self.workspace_dir, 'watershed.shp')
         vector = vector_driver.CreateDataSource(test_watershed_path)
         srs = osr.SpatialReference()
-        srs.ImportFromEPSG(26910)  #NAD83 / UTM zone 11N
+        srs.ImportFromEPSG(26910)  # NAD83 / UTM zone 11N
         layer = vector.CreateLayer("watershed", srs, ogr.wkbPoint)
         # forget to add a 'ws_id' field
         layer.CreateField(ogr.FieldDefn("ws_id", ogr.OFTInteger))

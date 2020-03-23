@@ -7,8 +7,6 @@ The SDR method in this model is based on:
     large watersheds." Journal of Soil and Water Conservation 63.3 (2008):
     105-111.
 """
-from __future__ import absolute_import
-
 import os
 import logging
 

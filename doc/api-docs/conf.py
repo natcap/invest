@@ -305,23 +305,23 @@ autodoc_mock_imports = [
     'PyQt4.QtCore', 'geoprocessing_core', 'pygeoprocessing', 'pandas',
     'qtpy', 'qtpy.QtWidgets', 'qtpy.QtCore', 'pygeoprocessing.routing',
     'pygeoprocessing.testing', 'qtawesome', 'sip', 'taskgraph',
-    'natcap.invest.ndr.ndr_core',
+    'natcap.invest.ndr.ndr_core', 'natcap.invest.sdr.sdr_core',
     'natcap.invest.scenic_quality.viewshed',
     'natcap.invest.seasonal_water_yield.seasonal_water_yield_core',
 ]
 
 # Mock class with attribute handling.  As suggested by:
 # http://read-the-docs.readthedocs.io/en/latest/faq.html#i-get-import-errors-on-libraries-that-depend-on-c-modules
-import mock
-class Mock(mock.Mock):
-    def __getattr__(self, name):
-        return Mock()
+from unittest.mock import MagicMock
+class Mock(MagicMock):
+    @classmethod
+    def __getattr__(cls, name):
+        return MagicMock()
 
 # Any time we run a sphinx operation, also generate the API documentation.
 # This should work OK, so long as the required modules (above) are sufficiently
 # mocked up.
-for name in autodoc_mock_imports:
-    sys.modules[name] = Mock()
+sys.modules.update((mod_name, Mock()) for mod_name in autodoc_mock_imports)
 
 # mock the pygeoprocessing version to be whatever is in the natcap.invest
 # __init__ file.

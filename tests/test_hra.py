@@ -797,7 +797,7 @@ class HraRegressionTests(unittest.TestCase):
         """Generate args dict that is consistent across all regression tests."""
         args = {
             'workspace_dir': workspace_dir,
-            'results_suffix': u'',
+            'results_suffix': '',
             'info_table_path': os.path.join(workspace_dir, 'info.csv'),
             'criteria_table_path': os.path.join(workspace_dir, 'criteria.csv'),
             'max_rating': 3,
@@ -1005,7 +1005,7 @@ class HraRegressionTests(unittest.TestCase):
 
         args = {
             'workspace_dir': self.workspace_dir,
-            'results_suffix': u'',
+            'results_suffix': '',
             'info_table_path': os.path.join(
                 TEST_DATA, 'file_not_exist.csv'),  # invalid file path
             'criteria_table_path': os.path.join(
@@ -1036,7 +1036,7 @@ class HraRegressionTests(unittest.TestCase):
 
         args = {
             # missing workspace_dir
-            'results_suffix': u'',
+            'results_suffix': '',
             'info_table_path': os.path.join(
                 TEST_DATA, 'habitat_stressor_info.csv'),
             'criteria_table_path': os.path.join(

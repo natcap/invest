@@ -11,27 +11,12 @@ from .. import utils
 from osgeo import gdal
 from . import table_generator
 
-try:
-    from builtins import basestring
-except ImportError:
-    # Python3 doesn't have a basestring.
-    basestring = str
 
 LOGGER = logging.getLogger('natcap.invest.reporting')
 REPORTING_DATA = os.path.join(invest.local_dir(__file__), 'reporting_data/')
 JQUERY_URI = os.path.join(REPORTING_DATA, 'jquery-1.10.2.min.js')
 SORTTABLE_URI = os.path.join(REPORTING_DATA, 'sorttable.js')
 TOTALS_URI = os.path.join(REPORTING_DATA, 'total_functions.js')
-
-
-def u(string):
-    if type(string) is basestring:
-        try:
-            return unicode(string, 'utf-8')
-        except NameError:
-            # Python 3 has no unicode function
-            return string
-    return string
 
 
 def generate_report(args):
@@ -148,6 +133,7 @@ def generate_report(args):
                     (required)
 
         returns - nothing"""
+
     LOGGER.info('Creating HTML Report')
     # Since the dictionary being is mutated, make a copy to mutate on
     # while keeping the integrity of the original
@@ -230,7 +216,7 @@ def write_html(html_obj, out_uri):
     LOGGER.debug('Writing HTML page')
 
     # Start the string that will be written as the html file
-    html_str = u('<html>')
+    html_str = '<html>'
 
     for section in ['head', 'body']:
         # Ensure the browser interprets the html file as utf-8
@@ -238,14 +224,14 @@ def write_html(html_obj, out_uri):
             html_str += '<meta charset="UTF-8">'
 
         # Write the tag for the section
-        html_str += '<%s>' % u(section)
+        html_str += '<%s>' % section
         # Get the list of html string elements for this section
         sect_elements = html_obj[section]
 
         for element in sect_elements:
             # Add each element to the html string
-            if type(element) is basestring:
-                element = u(element)
+            if type(element) is str:
+                element = element
             html_str += element
 
         # Add the closing tag for the section
