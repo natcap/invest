@@ -27,7 +27,7 @@ def main(args=None):
     parsed_args = parser.parse_args(args)
 
     r = requests.post(
-        'https://api.github.com/repos/{parsed_args.repo}/git/refs/',
+        f'https://api.github.com/repos/{parsed_args.repo}/git/refs/',
         headers={
             'Authorization': f'token {parsed_args.oauthtoken}'
         },
