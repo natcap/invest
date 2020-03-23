@@ -254,6 +254,8 @@ def execute(args):
     # get a handle on the folder with the threat rasters
     threat_raster_dir = args['threat_raster_folder']
 
+    ### Threat raster and Sensitivity valuation check ###
+
     # Ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
@@ -281,15 +283,17 @@ def execute(args):
                 'table. Possible columns: %s' %
                 (threat, missing_threat_header_list))
 
+    ### --- ###
+
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
     lulc_path_dict = {}
     threat_path_dict = {}
     # store land cover and threat rasters in a list
     lulc_and_threat_raster_list = []
-    # declare a set to store unique codes from lulc rasters
-    raster_unique_lucodes = set()
-
+    # lookup for the unique lucode tasks
+    unique_lucode_lookup = []
+    LOGGER.debug("Collect and find Threat rasters")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
                                 ('_f', 'lulc_fut_path'),
@@ -302,18 +306,11 @@ def execute(args):
             lulc_and_threat_raster_list.append(lulc_path)
 
             # save unique codes to check if it's missing in sensitivity table
-            for _, lulc_block in pygeoprocessing.iterblocks((lulc_path, 1)):
-                raster_unique_lucodes.update(numpy.unique(lulc_block))
-
-            # Remove the nodata value from the set of landuser codes.
-            nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
-            try:
-                raster_unique_lucodes.remove(nodata)
-            except KeyError:
-                # KeyError when the nodata value was not encountered in the
-                # raster's pixel values.  Same result when nodata value is
-                # None.
-                pass
+            unique_lucode_task = graph.add_task(
+                    _collect_unique_lucodes,
+                    args=((lulc_path, 1)),
+                    task_name=f'unique_lucodes{lulc_key}')
+            unique_lucode_lookup.append(unique_lucode_task)
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -332,17 +329,17 @@ def execute(args):
                 threat_path = threat_path_dict['threat' + lulc_key][threat]
                 if threat_path:
                     lulc_and_threat_raster_list.append(threat_path)
-    
-    # check if there's any lucode from the LULC rasters missing in the
-    # sensitivity table
-    table_unique_lucodes = set(sensitivity_dict.keys())
-    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
-    if missing_lucodes:
-        raise ValueError(
-            'The following land cover codes were found in your landcover rasters '
-            'but not in your sensitivity table. Check your sensitivity table '
-            'to see if they are missing: %s. \n\n' %
-            ', '.join([str(x) for x in sorted(missing_lucodes)]))
+
+    LOGGER.debug("Checking LULC codes against Sensitivity table")
+
+    compare_lucodes_sens_task = graph.add_task(
+            _compare_lucodes_sensitivity,
+            args=(sensitivity_dict, unique_lucode_lookup),
+            dependent_task_list=[*unique_lucode_lookup],
+            task_name='lucode_sens_comparison')
+
+    # don't continue if the compare_lucodes_task throws error
+    compare_lucodes_sens_task.join()
 
     # Align and resize all the land cover and threat rasters,
     # and store them in the intermediate folder
@@ -353,6 +350,7 @@ def execute(args):
     lulc_bbox = lulc_raster_info['bounding_box']
 
     # Assuming .tif rasters here...
+    print("lulc and threat raster list: ", lulc_and_threat_raster_list)
     aligned_raster_list = [
         os.path.join(intermediate_output_dir, os.path.basename(path).replace(
             '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
@@ -388,7 +386,7 @@ def execute(args):
                     _update_threat_pixels, args=(aligned_threat_path, ),
                     target_path_list=[aligned_threat_path], 
                     dependent_task_list=[align_task],
-                    task_name=f'update_threat_{lulc_key}_{threat}')
+                    task_name=f'update_threat{lulc_key}_{threat}')
                 updated_threat_tasks.append(update_threat_task)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
@@ -413,6 +411,7 @@ def execute(args):
             target_path_list=[access_raster_path], 
             dependent_task_list=[align_task],
             task_name=f'access_raster')
+
         rasterize_access_task = graph.add_task( 
             pygeoprocessing.rasterize, 
             args=(args['access_vector_path'], access_raster_path),
@@ -458,7 +457,7 @@ def execute(args):
                     'values_required': False
                     },
                 dependent_task_list=[align_task],
-                task_name=f'habitat_raster_{lulc_key}')
+                task_name=f'habitat_raster{lulc_key}')
         habitat_raster_lookup[lulc_key].append(habitat_raster_task)
         
         # initialize a list that will store all the threat/threat rasters
@@ -488,41 +487,16 @@ def execute(args):
                 exit_landcover = True
                 break
 
-            # need the pixel size for the threat raster so we can create
-            # an appropriate kernel for convolution
-            threat_pixel_size = pygeoprocessing.get_raster_info(
-                threat_raster_path)['pixel_size']
-            # pixel size tuple could have negative value
-            mean_threat_pixel_size = (
-                abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
-
-            # convert max distance (given in KM) to meters
-            max_dist_m = threat_data['MAX_DIST'] * 1000.0
-
-            # convert max distance from meters to the number of pixels that
-            # represents on the raster
-            max_dist_pixel = max_dist_m / mean_threat_pixel_size
-            LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
-
-            # blur the threat raster based on the effect of the threat over
-            # distance
-            decay_type = threat_data['DECAY']
             kernel_path = os.path.join(
                 kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
-            if decay_type == 'linear':
-                decay_func = _make_linear_decay_kernel_path
-            elif decay_type == 'exponential':
-                decay_func = utils.exponential_decay_kernel_raster
-            else:
-                raise ValueError(
-                    "Unknown type of decay in biophysical table, should be "
-                    "either 'linear' or 'exponential'. Input was %s for threat"
-                    " %s." % (decay_type, threat))
+            decay_type = threat_data['DECAY']
 
             decay_threat_task = graph.add_task(
-                decay_func, args=(max_dist_pixel, kernel_path),
+                _decay_threat, 
+                args=(threat_raster_path, kernel_path, decay_type),
                 target_path_list=[kernel_path],
-                task_name=f'decay_kernel_{decay_type}_{lulc_key}_{threat}')
+                dependent_task_list=[*updated_threat_tasks]
+                task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
                 intermediate_output_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
@@ -535,7 +509,7 @@ def execute(args):
                     'ignore_nodata': True
                     },
                 target_path_list=[filtered_threat_raster_path],
-                dependent_task_list=[*updated_threat_tasks],
+                dependent_task_list=[*updated_threat_tasks, decay_threat_task],
                 task_name=f'convolve_{decay_type}_{lulc_key}_{threat}')
             threat_convolve_lookup[lulc_key].append(convolve_task)
 
@@ -625,14 +599,14 @@ def execute(args):
                 deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[*threat_convolve_lookup[lulc_key], 
-                *sensitivity_lookup[lulc_key]],
+                *sensitivity_lookup[lulc_key], access_task],
             task_name=f'tot_degradation_{decay_type}_{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
 
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
-        ksq = half_saturation**_SCALING_PARAM
+        ksq = float(args['half_saturation_constant'])**_SCALING_PARAM
 
         def quality_op(degradation, habitat):
             """Vectorized function that computes habitat quality given
@@ -681,100 +655,173 @@ def execute(args):
     else:
         lulc_base_path = lulc_path_dict['_b']
 
-        # get the area of a base pixel to use for computing rarity where the
-        # pixel sizes are different between base and cur/fut rasters
-        base_pixel_size = pygeoprocessing.get_raster_info(
-            lulc_base_path)['pixel_size']
-        base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
-        base_nodata = pygeoprocessing.get_raster_info(
-            lulc_base_path)['nodata'][0]
-
-        lulc_code_count_b = _raster_pixel_count(lulc_base_path)
-
         # compute rarity for current landscape and future (if provided)
         for lulc_key in ['_c', '_f']:
             if lulc_key not in lulc_path_dict:
                 continue
             lulc_path = lulc_path_dict[lulc_key]
             lulc_time = 'current' if lulc_key == '_c' else 'future'
-
-            # get the area of a cur/fut pixel
-            lulc_pixel_size = pygeoprocessing.get_raster_info(
-                lulc_path)['pixel_size']
-            lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
-            lulc_nodata = pygeoprocessing.get_raster_info(
-                lulc_path)['nodata'][0]
-
-            def trim_op(base, cover_x):
-                """Trim cover_x to the mask of base.
-
-                Parameters:
-                    base (numpy.ndarray): base raster from 'lulc_base'
-                    cover_x (numpy.ndarray): either future or current land
-                        cover raster from 'lulc_path' above
-
-                Returns:
-                    _OUT_NODATA where either array has nodata, otherwise
-                    cover_x.
-                """
-                return numpy.where(
-                    (base == base_nodata) | (cover_x == lulc_nodata),
-                    base_nodata, cover_x)
-
-            LOGGER.info('Create new cover for %s', lulc_path)
-
+        
             new_cover_path = os.path.join(
                 intermediate_output_dir, 'new_cover' + lulc_key + suffix + '.tif')
-
-            LOGGER.info('Starting masking %s land cover to base land cover.'
-                        % lulc_time)
-
-            trim_base_task = graph.add_task(
-                pygeoprocessing.raster_calculator, 
-                args=([(lulc_base_path, 1), (lulc_path, 1)], trim_op, 
-                    new_cover_path, gdal.GDT_Float32, _OUT_NODATA),
-                target_path_list=[new_cover_path],
-                dependent_task_list=[align_task],
-                task_name=f'base_trim_{lulc_key}')
-
-            LOGGER.info('Finished masking %s land cover to base land cover.'
-                        % lulc_time)
-
-            LOGGER.info('Starting rarity computation on %s land cover.'
-                        % lulc_time)
-
-            lulc_code_count_x = _raster_pixel_count(new_cover_path)
-
-            # a dictionary to map LULC types to a number that depicts how
-            # rare they are considered
-            code_index = {}
-
-            # compute rarity index for each lulc code
-            # define 0.0 if an lulc code is found in the cur/fut landcover
-            # but not the baseline
-            for code in lulc_code_count_x:
-                if code in lulc_code_count_b:
-                    numerator = lulc_code_count_x[code] * lulc_area
-                    denominator = lulc_code_count_b[code] * base_area
-                    ratio = 1.0 - (numerator / denominator)
-                    code_index[code] = ratio
-                else:
-                    code_index[code] = 0.0
 
             rarity_path = os.path.join(
                 output_dir, 'rarity' + lulc_key + suffix + '.tif')
 
             rarity_task = graph.add_task(
-                pygeoprocessing.reclassify_raster, 
-                args=((new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
-                    _RARITY_NODATA),
-                target_path_list=[rarity_path],
-                dependent_task_list=[trim_base_task],
-                task_name=f'rarity_{lulc_key}')
+                _compute_rarity_operation,
+                args=(lulc_base_path, lulc_path, new_cover_path, rarity_path),
+                dependent_task_list=[align_task], 
+                task_name=f'rarity{lulc_time}')
 
-            LOGGER.info('Finished rarity computation on %s land cover.'
-                        % lulc_time)
-    LOGGER.info('Finished habitat_quality biophysical calculations')
+        LOGGER.info('Finished habitat_quality biophysical calculations')
+
+
+def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, rarity_path):
+    """ """
+    # get the area of a base pixel to use for computing rarity where the
+    # pixel sizes are different between base and cur/fut rasters
+    base_pixel_size = pygeoprocessing.get_raster_info(
+        lulc_base_path)['pixel_size']
+    base_area = float(abs(base_pixel_size[0]) * abs(base_pixel_size[1]))
+    base_nodata = pygeoprocessing.get_raster_info(
+        lulc_base_path)['nodata'][0]
+
+    lulc_code_count_b = _raster_pixel_count(lulc_base_path)
+
+    # get the area of a cur/fut pixel
+    lulc_pixel_size = pygeoprocessing.get_raster_info(
+        lulc_path)['pixel_size']
+    lulc_area = float(abs(lulc_pixel_size[0]) * abs(lulc_pixel_size[1]))
+    lulc_nodata = pygeoprocessing.get_raster_info(
+        lulc_path)['nodata'][0]
+
+    def trim_op(base, cover_x):
+        """Trim cover_x to the mask of base.
+
+        Parameters:
+            base (numpy.ndarray): base raster from 'lulc_base'
+            cover_x (numpy.ndarray): either future or current land
+                cover raster from 'lulc_path' above
+
+        Returns:
+            _OUT_NODATA where either array has nodata, otherwise
+            cover_x.
+        """
+        return numpy.where(
+            (base == base_nodata) | (cover_x == lulc_nodata),
+            base_nodata, cover_x)
+
+    LOGGER.info('Create new cover for %s', lulc_path)
+
+    LOGGER.info('Starting masking %s land cover to base land cover.'
+                % lulc_time)
+
+    pygeoprocessing.raster_calculator(
+        [(lulc_base_path, 1), (lulc_path, 1)], trim_op, new_cover_path,
+        gdal.GDT_Float32, _OUT_NODATA)
+
+    LOGGER.info('Finished masking %s land cover to base land cover.'
+                % lulc_time)
+
+    LOGGER.info('Starting rarity computation on %s land cover.'
+                % lulc_time)
+
+    lulc_code_count_x = _raster_pixel_count(new_cover_path)
+
+    # a dictionary to map LULC types to a number that depicts how
+    # rare they are considered
+    code_index = {}
+
+    # compute rarity index for each lulc code
+    # define 0.0 if an lulc code is found in the cur/fut landcover
+    # but not the baseline
+    for code in lulc_code_count_x:
+        if code in lulc_code_count_b:
+            numerator = lulc_code_count_x[code] * lulc_area
+            denominator = lulc_code_count_b[code] * base_area
+            ratio = 1.0 - (numerator / denominator)
+            code_index[code] = ratio
+        else:
+            code_index[code] = 0.0
+
+    pygeoprocessing.reclassify_raster( 
+        (new_cover_path, 1), code_index, rarity_path, gdal.GDT_Float32,
+            _RARITY_NODATA)
+
+    LOGGER.info('Finished rarity computation on %s land cover.'
+                % lulc_time)
+
+
+def _decay_threat(threat_raster_path, kernel_path, decay_type):
+    """ """
+    # need the pixel size for the threat raster so we can create
+    # an appropriate kernel for convolution
+    threat_pixel_size = pygeoprocessing.get_raster_info(
+        threat_raster_path)['pixel_size']
+    # pixel size tuple could have negative value
+    mean_threat_pixel_size = (
+        abs(threat_pixel_size[0]) + abs(threat_pixel_size[1]))/2.0
+
+    # convert max distance (given in KM) to meters
+    max_dist_m = threat_data['MAX_DIST'] * 1000.0
+
+    # convert max distance from meters to the number of pixels that
+    # represents on the raster
+    max_dist_pixel = max_dist_m / mean_threat_pixel_size
+    LOGGER.debug('Max distance in pixels: %f', max_dist_pixel)
+
+    # blur the threat raster based on the effect of the threat over
+    # distance
+    if decay_type == 'linear':
+        decay_func = _make_linear_decay_kernel_path
+    elif decay_type == 'exponential':
+        decay_func = utils.exponential_decay_kernel_raster
+    else:
+        raise ValueError(
+            "Unknown type of decay in biophysical table, should be "
+            "either 'linear' or 'exponential'. Input was %s for threat"
+            " %s." % (decay_type, threat))
+
+    decay_func(max_dist_pixel, kernel_path)
+
+def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_tasks):
+    """ """
+    raster_unique_lucodes = set()
+    for lucode_task in unique_lucode_tasks:
+        raster_unique_lucodes.update(lucode_task.get())
+
+    # check if there's any lucode from the LULC rasters missing in the
+    # sensitivity table
+    table_unique_lucodes = set(sensitivity_dict.keys())
+    missing_lucodes = raster_unique_lucodes.difference(table_unique_lucodes)
+    if missing_lucodes:
+        raise ValueError(
+            'The following land cover codes were found in your landcover rasters '
+            'but not in your sensitivity table. Check your sensitivity table '
+            'to see if they are missing: %s. \n\n' %
+            ', '.join([str(x) for x in sorted(missing_lucodes)]))
+
+
+def _collect_unique_lucodes(raster_path_band_tuple):
+    """ """
+    # declare a set to store unique codes from lulc rasters
+    raster_unique_lucodes = set()
+    
+    for _, lulc_block in pygeoprocessing.iterblocks(raster_path_band_tuple):
+        raster_unique_lucodes.update(numpy.unique(lulc_block))
+
+    # Remove the nodata value from the set of landuser codes.
+    nodata = pygeoprocessing.get_raster_info(lulc_path)['nodata'][0]
+    try:
+        raster_unique_lucodes.remove(nodata)
+    except KeyError:
+        # KeyError when the nodata value was not encountered in the
+        # raster's pixel values.  Same result when nodata value is
+        # None.
+        pass
+
+    return raster_unique_lucodes
 
 
 def _resolve_ambiguous_raster_path(path, raise_error=True):
