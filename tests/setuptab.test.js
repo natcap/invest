@@ -4,6 +4,7 @@ import React from 'react';
 import { fireEvent, render,
          wait, waitForElement } from '@testing-library/react'
 import '@testing-library/jest-dom'
+
 import { InvestJob } from '../src/InvestJob';
 // import { SetupTab } from '../src/components/SetupTab';
 import { getSpec, fetchValidation } from '../src/server_requests';
@@ -36,7 +37,7 @@ function renderSetupFromSpec(spec) {
   return { getByText, getByLabelText, utils }
 }
 
-test('SetupTab: an input form for a directory', async () => {
+test('SetupTab: expect an input form for a directory', async () => {
   const spec = { args: { arg: { name: 'Workspace', type: 'directory' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -55,7 +56,7 @@ test('SetupTab: an input form for a directory', async () => {
   })
 })
 
-test('SetupTab: an input form for a csv', async () => {
+test('SetupTab: expect an input form for a csv', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'csv' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -74,7 +75,7 @@ test('SetupTab: an input form for a csv', async () => {
   })
 })
 
-test('SetupTab: an input form for a vector', async () => {
+test('SetupTab: expect an input form for a vector', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'vector' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -93,7 +94,7 @@ test('SetupTab: an input form for a vector', async () => {
   })
 })
 
-test('SetupTab: an input form for a raster', async () => {
+test('SetupTab: expect an input form for a raster', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'raster' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -112,7 +113,7 @@ test('SetupTab: an input form for a raster', async () => {
   })
 })
 
-test('SetupTab: an input form for a freestyle_string', async () => {
+test('SetupTab: expect an input form for a freestyle_string', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'freestyle_string' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
@@ -129,7 +130,7 @@ test('SetupTab: an input form for a freestyle_string', async () => {
   })
 })
 
-test('SetupTab: an input form for a number', async () => {
+test('SetupTab: expect an input form for a number', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'number' } } }
   fetchValidation.mockResolvedValue(
     [[Object.keys(spec.args), 'invalid because']])
@@ -147,7 +148,7 @@ test('SetupTab: an input form for a number', async () => {
   })
 })
 
-test('SetupTab: an input form for a boolean', async () => {
+test('SetupTab: expect an input form for a boolean', async () => {
   const spec = { args: { arg: { name: 'foo', type: 'boolean' } } }
   fetchValidation.mockResolvedValue([])
   const { getByText, getByLabelText, utils } = renderSetupFromSpec(spec)
@@ -160,7 +161,7 @@ test('SetupTab: an input form for a boolean', async () => {
   })
 })
 
-test('SetupTab: an input form for an option_string', async () => {
+test('SetupTab: expext an input form for an option_string', async () => {
   const spec = { args: { arg: { 
     name: 'foo', 
     type: 'option_string', 

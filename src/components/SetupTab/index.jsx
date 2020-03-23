@@ -12,6 +12,8 @@ import { fetchDatastackFromFile } from '../../server_requests';
 import { argsValuesFromSpec } from '../../utils';
 
 export class SetupTab extends React.Component {
+  /** Renders an Arguments form and an Execute button
+  */
 
   render () {
     // Only mount the ArgsForm when there are actually args
@@ -53,6 +55,12 @@ SetupTab.propTypes = {
 }
 
 class ArgsForm extends React.Component {
+  /** Renders an HTML input for each invest argument passed in props.args.
+  *
+  * Values of input fields inherit from parent components state.args, and so 
+  * change handlers for the inputs in this component update their values
+  * by calling parent component methods that call parent's setState.
+  */
 
   constructor(props) {
     super(props);
@@ -76,14 +84,14 @@ class ArgsForm extends React.Component {
   }
 
   handleChange(event) {
-    // Handle changes in form text inputs
+    /** Handle keystroke changes in text inputs */
     const value = event.target.value;
     const name = event.target.name;
     this.props.updateArg(name, value);
   }
 
   selectFile(event) {
-    // Handle clicks on form browse-button inputs
+    /** Handle clicks on browse-button inputs */
     const dialog = Electron.remote.dialog;
     const argtype = event.target.value;
     const argname = event.target.name;
@@ -97,7 +105,7 @@ class ArgsForm extends React.Component {
   }
 
   async onDragDrop(event) {
-    // Handle drag-drop of datastack JSON files and InVEST logfiles
+    /** Handle drag-drop of datastack JSON files and InVEST logfiles */
     event.preventDefault();
     
     const fileList = event.dataTransfer.files;

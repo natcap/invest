@@ -18,6 +18,8 @@ const STATUS_COLOR_MAP = {
 }
 
 export class HomeTab extends React.Component {
+  /** Renders a button for each invest model and for each cached invest job.
+  */
 
   constructor(props) {
     super(props);
@@ -46,7 +48,7 @@ export class HomeTab extends React.Component {
           </ButtonGroup>
         </Col>
         <Col md={6}>
-          <LoadStateForm
+          <RecentInvestJobs
             loadState={this.props.loadState}
             recentSessions={this.props.recentSessions}/>
         </Col>
@@ -64,26 +66,31 @@ HomeTab.propTypes = {
 }
 
 
-class LoadStateForm extends React.Component {
+class RecentInvestJobs extends React.Component {
+  /** Renders a button for each recent invest job. Also displays job metadata.
+  *
+  * Recent job metadata is passed here via props, originally loaded from
+  * a persistent file when the app is launched.
+  */
   
   constructor(props) {
     super(props);
-    this.selectFile = this.selectFile.bind(this);
+    // this.selectFile = this.selectFile.bind(this);
     this.handleClick = this.handleClick.bind(this);
   }
 
-  selectFile(event) {
-    const dialog = Electron.remote.dialog;
-    // TODO: could add more filters to only show .json
-    dialog.showOpenDialog({
-      properties: ['openFile']
-    }, (filepath) => {
-      if (filepath[0]) {
-        this.props.loadState(
-          path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
-      }
-    })
-  }
+  // selectFile(event) {
+  //   const dialog = Electron.remote.dialog;
+  //   // TODO: could add more filters to only show .json
+  //   dialog.showOpenDialog({
+  //     properties: ['openFile']
+  //   }, (filepath) => {
+  //     if (filepath[0]) {
+  //       this.props.loadState(
+  //         path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
+  //     }
+  //   })
+  // }
 
   handleClick(sessionFilename) {
     this.props.loadState(sessionFilename);
@@ -129,15 +136,15 @@ class LoadStateForm extends React.Component {
       );
     });
     // Also a button to browse to a cached state file if it's not in recent list
-    recentButtons.push(
-      <Button
-        key="browse"
-        type="submit"
-        variant="secondary"
-        onClick={this.selectFile}>
-        Browse for saved session
-      </Button>
-    );
+    // recentButtons.push(
+    //   <Button
+    //     key="browse"
+    //     type="submit"
+    //     variant="secondary"
+    //     onClick={this.selectFile}>
+    //     Browse for saved session
+    //   </Button>
+    // );
 
     return (
       <React.Fragment>
