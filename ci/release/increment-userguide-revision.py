@@ -1,3 +1,5 @@
+# encoding=UTF-8
+
 import shutil
 import os
 import pprint
