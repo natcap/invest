@@ -75,12 +75,12 @@ class RecentInvestJobs extends React.Component {
   
   constructor(props) {
     super(props);
-    this.handleClick = this.handleClick.bind(this);
+    // this.handleClick = this.handleClick.bind(this);
   }
 
-  handleClick(sessionFilename) {
-    this.props.loadState(sessionFilename);
-  }
+  // handleClick(sessionFilename) {
+  //   this.props.loadState(sessionFilename);
+  // }
 
   render() {
 
@@ -100,7 +100,7 @@ class RecentInvestJobs extends React.Component {
           as="button"
           key={name}
           // value={session[1]['statefile']} 
-          onClick={() => this.handleClick(session[1]['statefile'])}
+          onClick={() => this.props.loadState(session[1]['statefile'])}
           border={STATUS_COLOR_MAP[status] || 'dark'}>
           <Card.Body>
             <Card.Header>
