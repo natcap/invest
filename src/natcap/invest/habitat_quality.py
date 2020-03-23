@@ -237,9 +237,9 @@ def execute(args):
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
     output_dir = args['workspace_dir']
-    intermediate_dir = os.path.join(args['workspace_dir'], 'intermediate')
-    kernel_dir = os.path.join(intermediate_dir, 'kernels')
-    utils.make_directories([intermediate_dir, output_dir, kernel_dir])
+    intermediate_output_dir = os.path.join(args['workspace_dir'], 'intermediate')
+    kernel_dir = os.path.join(intermediate_output_dir, 'kernels')
+    utils.make_directories([intermediate_output_dir, output_dir, kernel_dir])
 
     work_token_dir = os.path.join(intermediate_output_dir, '_taskgraph_working_dir')
     try:
@@ -280,13 +280,6 @@ def execute(args):
                 'Threat "%s" does not match any column in the sensitivity '
                 'table. Possible columns: %s' %
                 (threat, missing_threat_header_list))
-
-    # get the half saturation constant
-    try:
-        half_saturation = float(args['half_saturation_constant'])
-    except ValueError:
-        raise ValueError('Half-saturation constant is not a numeric number.'
-                         'It is: %s' % args['half_saturation_constant'])
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -361,10 +354,10 @@ def execute(args):
 
     # Assuming .tif rasters here...
     aligned_raster_list = [
-        os.path.join(intermediate_dir, os.path.basename(path).replace(
+        os.path.join(intermediate_output_dir, os.path.basename(path).replace(
             '.tif', '_aligned.tif')) for path in lulc_and_threat_raster_list]
 
-    align_task = task_graph.add_task(
+    align_task = graph.add_task(
         func=pygeoprocessing.align_and_resize_raster_stack,
         args=(
             lulc_and_threat_raster_list, aligned_raster_list, 
@@ -380,22 +373,22 @@ def execute(args):
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
-            intermediate_dir, os.path.basename(lulc_path).replace(
+            intermediate_output_dir, os.path.basename(lulc_path).replace(
                 '.tif', '_aligned.tif'))
         for threat in threat_dict:
             threat_path = threat_path_dict['threat' + lulc_key][threat]
             if threat_path in lulc_and_threat_raster_list:
                 aligned_threat_path = os.path.join(
-                    intermediate_dir, os.path.basename(threat_path).replace(
+                    intermediate_output_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
                 threat_path_dict['threat' + lulc_key][threat] = (
                     aligned_threat_path)
-
+                print(aligned_threat_path)
                 update_threat_task = graph.add_task(
-                        _update_threat_pixels, args=(aligned_threat_path),
-                        target_path_list=[aligned_threat_path], 
-                        dependent_task_list=[align_task],
-                        task_name=f'update_threat_{lulc_key}_{threat}')
+                    _update_threat_pixels, args=(aligned_threat_path, ),
+                    target_path_list=[aligned_threat_path], 
+                    dependent_task_list=[align_task],
+                    task_name=f'update_threat_{lulc_key}_{threat}')
                 updated_threat_tasks.append(update_threat_task)
 
     LOGGER.info('Starting habitat_quality biophysical calculations')
@@ -407,20 +400,26 @@ def execute(args):
     try:
         LOGGER.info('Handling Access Shape')
         access_raster_path = os.path.join(
-            intermediate_dir, 'access_layer%s.tif' % suffix)
+            intermediate_output_dir, 'access_layer%s.tif' % suffix)
 
         # create a new raster based on the raster info of current land cover
         access_base_task = graph.add_task(
             pygeoprocessing.new_raster_from_base, 
             args=(cur_lulc_path, access_raster_path, gdal.GDT_Float32,
-                [_OUT_NODATA], fill_value_list=[fill_value]),
+                [_OUT_NODATA]),
+            kwargs={
+                'fill_value_list': [fill_value]
+                },
             target_path_list=[access_raster_path], 
             dependent_task_list=[align_task],
             task_name=f'access_raster')
         rasterize_access_task = graph.add_task( 
             pygeoprocessing.rasterize, 
-            args=(args['access_vector_path'], access_raster_path, 
-                burn_values=None, option_list=['ATTRIBUTE=ACCESS']),                
+            args=(args['access_vector_path'], access_raster_path),
+            kwargs={
+                'option_list': ['ATTRIBUTE=ACCESS'],
+                'burn_values': None
+                },
             target_path_list=[access_raster_path], 
             dependent_task_list=[access_base_task],
             task_name=f'rasterize_access')
@@ -449,12 +448,15 @@ def execute(args):
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
-            intermediate_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
+            intermediate_output_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
         
         habitat_raster_task = graph.add_task(
                 _map_raster_to_dict_values, 
                 args=(lulc_path, habitat_raster_path, sensitivity_dict,
-                    'HABITAT', _OUT_NODATA, values_required=False),
+                    'HABITAT', _OUT_NODATA),
+                kwargs={
+                    'values_required': False
+                    },
                 dependent_task_list=[align_task],
                 task_name=f'habitat_raster_{lulc_key}')
         habitat_raster_lookup[lulc_key].append(habitat_raster_task)
@@ -523,29 +525,35 @@ def execute(args):
                 task_name=f'decay_kernel_{decay_type}_{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
-                intermediate_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_output_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
             
             convolve_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
                 args=((threat_raster_path, 1), (kernel_path, 1),
-                    filtered_threat_raster_path, ignore_nodata=True),
+                    filtered_threat_raster_path),
+                kwargs={
+                    'ignore_nodata': True
+                    },
                 target_path_list=[filtered_threat_raster_path],
-                dependent_task_list=[update_threat_tasks],
+                dependent_task_list=[*updated_threat_tasks],
                 task_name=f'convolve_{decay_type}_{lulc_key}_{threat}')
             threat_convolve_lookup[lulc_key].append(convolve_task)
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                intermediate_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_output_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values, 
                 args=(lulc_path, sens_raster_path, sensitivity_dict, 
-                    'L_' + threat, _OUT_NODATA, values_required=True),
+                    'L_' + threat, _OUT_NODATA),
+                kwargs={
+                    'values_required': True
+                    },
                 target_path_list=[sens_raster_path],
                 dependent_task_list=[align_task],
                 task_name=f'sens_raster_{decay_type}_{lulc_key}_{threat}')
-            sensitivity_lookup[lulc_key].append(sense_threat_task)
+            sensitivity_lookup[lulc_key].append(sens_threat_task)
 
             # get the normalized weight for each threat
             weight_avg = threat_data['WEIGHT'] / weight_sum
@@ -616,8 +624,8 @@ def execute(args):
             args=(deg_raster_band_list, total_degradation,
                 deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             target_path_list=[deg_sum_raster_path],
-            dependent_task_list=[threat_convolve_lookup[lulc_key], 
-                sensitivity_lookup[lulc_key]],
+            dependent_task_list=[*threat_convolve_lookup[lulc_key], 
+                *sensitivity_lookup[lulc_key]],
             task_name=f'tot_degradation_{decay_type}_{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
@@ -661,7 +669,7 @@ def execute(args):
             args=(deg_hab_raster_band_list, quality_op, quality_path,
                 gdal.GDT_Float32, _OUT_NODATA),
             target_path_list=[quality_path],
-            dependent_task_list=[habitat_raster_lookup[lulc_key],
+            dependent_task_list=[*habitat_raster_lookup[lulc_key],
                 total_degradation_task],
             task_name=f'habitat_quality')
 
@@ -716,7 +724,7 @@ def execute(args):
             LOGGER.info('Create new cover for %s', lulc_path)
 
             new_cover_path = os.path.join(
-                intermediate_dir, 'new_cover' + lulc_key + suffix + '.tif')
+                intermediate_output_dir, 'new_cover' + lulc_key + suffix + '.tif')
 
             LOGGER.info('Starting masking %s land cover to base land cover.'
                         % lulc_time)
