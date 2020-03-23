@@ -9,6 +9,7 @@ import Row from 'react-bootstrap/Row';
 import InputGroup from 'react-bootstrap/InputGroup';
 
 import { fetchDatastackFromFile } from '../../server_requests';
+import { argsValuesFromSpec } from '../../utils';
 
 export class SetupTab extends React.Component {
 
@@ -25,7 +26,6 @@ export class SetupTab extends React.Component {
             updateArg={this.props.updateArg}
             batchUpdateArgs={this.props.batchUpdateArgs}
             investValidate={this.props.investValidate}
-            argsValuesFromSpec={this.props.argsValuesFromSpec}
           />
           <Button 
             variant="primary" 
@@ -49,7 +49,6 @@ SetupTab.propTypes = {
   updateArg: PropTypes.func,
   batchUpdateArgs: PropTypes.func,
   investValidate: PropTypes.func,
-  argsValuesFromSpec: PropTypes.func,
   investExecute: PropTypes.func
 }
 
@@ -73,7 +72,7 @@ class ArgsForm extends React.Component {
     // TODO: could call batchUpdateArgs here instead
     // to avoid passing investValidate to this component at all.
     // this.props.batchUpdateArgs(JSON.parse(args_dict_string));
-    this.props.investValidate(this.props.argsValuesFromSpec(this.props.args));
+    this.props.investValidate(argsValuesFromSpec(this.props.args));
   }
 
   handleChange(event) {
@@ -254,7 +253,6 @@ ArgsForm.propTypes = {
   updateArg: SetupTab.propTypes.updateArg,
   batchUpdateArgs: SetupTab.propTypes.batchUpdateArgs,
   investValidate: SetupTab.propTypes.investValidate,
-  argsValuesFromSpec: SetupTab.propTypes.argsValuesFromSpec
 }
 
 function dragover_handler(event) {

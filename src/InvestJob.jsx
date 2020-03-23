@@ -21,7 +21,7 @@ import { SaveSessionButtonModal, SaveParametersButton,
          SavePythonButton } from './components/SaveDropdown'
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
-import { findMostRecentLogfile } from './utils';
+import { argsValuesFromSpec, findMostRecentLogfile } from './utils';
 
 // TODO see issue #12
 import { createStore } from 'redux';
@@ -502,7 +502,6 @@ export class InvestJob extends React.Component {
               updateArg={this.updateArg}
               batchUpdateArgs={this.batchUpdateArgs}
               investValidate={this.investValidate}
-              argsValuesFromSpec={argsValuesFromSpec}
               investExecute={this.investExecute}
             />
           </TabPane>
@@ -543,36 +542,4 @@ InvestJob.propTypes = {
   saveSettings: PropTypes.func
 }
 
-function boolStringToBoolean(val) {
-  let valBoolean;
-  try {
-    const valString = val.toLowerCase()
-    valBoolean = (valString === 'true') ? true : false
-  }
-  catch(TypeError) {
-    valBoolean = val || ''
-  }
-  return valBoolean
-}
 
-// TODO: move this (and boolStringToBoolean) to a module for import instead of passing around in props?
-function argsValuesFromSpec(args) {
-  /* Given a complete InVEST ARGS_SPEC.args, return just the key:value pairs
-
-  Parameters: 
-    args: JSON representation of an InVEST model's ARGS_SPEC.args dictionary.
-
-  Returns:
-    JSON.stringify'd args dict
-
-  */
-  let args_dict = {};
-  for (const argname in args) {
-    if (args[argname]['type'] === 'boolean') {
-      args_dict[argname] = boolStringToBoolean(args[argname]['value'])
-    } else {
-      args_dict[argname] = args[argname]['value'] || ''
-    }
-  }
-  return(JSON.stringify(args_dict));
-}

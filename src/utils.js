@@ -89,3 +89,46 @@ export function findMostRecentLogfile(directory) {
     resolve(sortedFiles[0]);
   });
 }
+
+// don't need to export this, except for tests
+export function boolStringToBoolean(val) {
+  /** Convert a string representing a bool to an actual boolean. 
+
+  * HTML inputs in this app must send string values, but for invest args of
+  * type boolean, we want to convert that to a real boolean before passing
+  * args to invest validate or execute.
+  *
+  * @param {string} val - a value such as "true", "True", "false", "False"
+  * @returns {boolean} unless the input was not a string, then returns undefined
+  */
+  let valBoolean;
+  try {
+    const valString = val.toLowerCase()
+    valBoolean = (valString === 'true') ? true : false
+  }
+  catch(TypeError) {
+    valBoolean = undefined
+  }
+  return valBoolean
+}
+
+export function argsValuesFromSpec(args) {
+  /** Given a complete InVEST ARGS_SPEC.args, return just the key:value pairs
+  * This is often used to prepare the InvestJob.state.args object for passing
+  * to investValidate or other parts of the invest API.
+  *
+  * @param {object} args - object like an ARGS_SPEC.args dictionary,
+  *   but with values too
+  *
+  * @returns {object} - JSON.stringify'd arguments key: value pairs.
+  */
+  let args_dict = {};
+  for (const argname in args) {
+    if (args[argname]['type'] === 'boolean') {
+      args_dict[argname] = boolStringToBoolean(args[argname]['value']) || ''
+    } else {
+      args_dict[argname] = args[argname]['value'] || ''
+    }
+  }
+  return(JSON.stringify(args_dict));
+}

@@ -1,6 +1,8 @@
 import fs from 'fs';
 import path from 'path';
-import { findMostRecentLogfile, loadRecentSessions, updateRecentSessions } from '../src/utils';
+import { findMostRecentLogfile, loadRecentSessions,
+         updateRecentSessions, boolStringToBoolean,
+         argsValuesFromSpec } from '../src/utils';
 
 function setupDir() {
   return fs.mkdtempSync('tests/data/_');
@@ -118,4 +120,14 @@ test('Test updateRecentSessions: database is missing', async() => {
   expect(jobs[0][0]).toEqual('goose')
   expect(fs.existsSync(jobdbPath)).toBeTruthy()
   cleanupDir(dir)
+})
+
+test('Test boolStringToBoolean for expected values', () => {
+  expect(boolStringToBoolean('true')).toBe(true)
+  expect(boolStringToBoolean('True')).toBe(true)
+  expect(boolStringToBoolean('false')).toBe(false)
+  expect(boolStringToBoolean('False')).toBe(false)
+  expect(boolStringToBoolean('foo')).toBe(false)
+  expect(boolStringToBoolean(undefined)).toBe(undefined)
+  expect(boolStringToBoolean(1)).toBe(undefined)
 })
