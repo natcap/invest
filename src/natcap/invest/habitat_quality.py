@@ -308,7 +308,7 @@ def execute(args):
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = graph.add_task(
                     _collect_unique_lucodes,
-                    args=((lulc_path, 1)),
+                    args=((lulc_path, 1), ),
                     task_name=f'unique_lucodes{lulc_key}')
             unique_lucode_lookup.append(unique_lucode_task)
 
@@ -489,13 +489,14 @@ def execute(args):
 
             kernel_path = os.path.join(
                 kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
+    
             decay_type = threat_data['DECAY']
 
             decay_threat_task = graph.add_task(
                 _decay_threat, 
-                args=(threat_raster_path, kernel_path, decay_type),
+                args=(threat_raster_path, kernel_path, threat_data),
                 target_path_list=[kernel_path],
-                dependent_task_list=[*updated_threat_tasks]
+                dependent_task_list=[*updated_threat_tasks],
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
@@ -599,7 +600,7 @@ def execute(args):
                 deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA),
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[*threat_convolve_lookup[lulc_key], 
-                *sensitivity_lookup[lulc_key], access_task],
+                *sensitivity_lookup[lulc_key], access_base_task],
             task_name=f'tot_degradation_{decay_type}_{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
@@ -753,8 +754,10 @@ def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, rarity_
                 % lulc_time)
 
 
-def _decay_threat(threat_raster_path, kernel_path, decay_type):
+def _decay_threat(threat_raster_path, kernel_path, threat_data):
     """ """
+    decay_type = threat_data['DECAY']
+    
     # need the pixel size for the threat raster so we can create
     # an appropriate kernel for convolution
     threat_pixel_size = pygeoprocessing.get_raster_info(
@@ -805,6 +808,7 @@ def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_tasks):
 
 def _collect_unique_lucodes(raster_path_band_tuple):
     """ """
+    lulc_path = raster_path_band_tuple[0]
     # declare a set to store unique codes from lulc rasters
     raster_unique_lucodes = set()
     
