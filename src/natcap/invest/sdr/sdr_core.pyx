@@ -659,12 +659,12 @@ def calculate_average_aspect(
                     # We only need to check the neighbors relative to the
                     # boundaries if we're in the first or last rows and
                     # columns.
-                    if seed_row == 0 or seed_row == n_rows:
+                    if seed_row == 0 or seed_row == (n_rows - 1):
                         neighbor_row = seed_row + ROW_OFFSETS[neighbor_index]
                         if neighbor_row < 0 or neighbor_row >= n_rows:
                             continue
 
-                    if seed_col == 0 or seed_col == n_cols:
+                    if seed_col == 0 or seed_col == (n_cols - 1):
                         neighbor_col = seed_col + ROW_OFFSETS[neighbor_index]
                         if neighbor_col < 0 or neighbor_col >= n_cols:
                             continue
