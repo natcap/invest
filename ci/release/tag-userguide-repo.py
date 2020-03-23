@@ -6,28 +6,28 @@ import requests
 
 
 def main(args=None):
-    """Tag the User's Guide Repository.
+    """Tag a GitHub repository.
 
     Accepts command-line arguments and makes the HTTP request to the GitHub
-    API to tag the InVEST User's Guide.
+    API to tag the target repository.
 
     Returns:
         ``None``
 
     """
     parser = argparse.ArgumentParser(description=(
-        "Tag the GitHub-hosted InVEST User's Guide repository with the "
-        "correct revision"))
+        "Tag a GitHub-hosted repository with the provided tag string."))
 
     parser.add_argument('tag', help='The tag name to use.')
     parser.add_argument('sha', help='The SHA object to tag with the tagname.')
     parser.add_argument('oauthtoken', help='The GitHub OAuth2 token')
+    parser.add_argument('repo', help=(
+        'The GitHub username and repo to use.  Example: "natcap/invest"'))
 
     parsed_args = parser.parse_args(args)
 
     r = requests.post(
-        'https://api.github.com/repos/natcap/invest.users-guide/'
-        'git/refs/',
+        'https://api.github.com/repos/{parsed_args.repo}/git/refs/',
         headers={
             'Authorization': f'token {parsed_args.oauthtoken}'
         },
