@@ -8,6 +8,10 @@ import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 
 export class SettingsModal extends React.Component {
+  /** Renders a model dialog with a form where global invest settings
+  * can be adjusted. Values displayed in this form always inherit from
+  * those global settings, which are stored in the parent component's state.
+  */
 
   constructor(props) {
     super(props);
@@ -23,6 +27,9 @@ export class SettingsModal extends React.Component {
   }
 
   componentDidUpdate(prevProps) {
+    /** Any time the parent's state of investSettings changes, 
+    * this component should reflect that.
+    */
     if (this.props.investSettings !== prevProps.investSettings) {
       const globalSettings = Object.assign({}, this.props.investSettings)
       this.setState({localSettings: globalSettings})
@@ -30,7 +37,7 @@ export class SettingsModal extends React.Component {
   }
 
   handleClose() {
-    // reset the local settings from the app's state because we closed w/o save
+    /** reset the local settings from the app's state because we closed w/o save */
     const appSettings = Object.assign({}, this.props.investSettings)
     this.setState({
       show: false,
@@ -43,15 +50,19 @@ export class SettingsModal extends React.Component {
   }
 
   handleSubmit(event) {
+    /** Handle a click on the "Save" button, which updates the parent's state */
     event.preventDefault();
     this.props.saveSettings(this.state.localSettings);
     this.setState({show: false});
   }
 
   handleChange(event) {
+    /** Handle changes to inputs by reflecting them back immediately 
+    * via localSettings object. But do not update the values stored 
+    * in the parent's state.
+    */
     let newSettings = Object.assign({}, this.state.localSettings);
     newSettings[event.target.name] = event.target.value
-
     this.setState({
       localSettings: newSettings
     });
@@ -134,6 +145,7 @@ SettingsModal.propTypes = {
 }
 
 function validateNWorkers(value) {
+  /** Validate that n_wokers is an acceptable value for Taskgraph. */
   const nInt = parseInt(value)
   return Number.isInteger(nInt) && nInt >= -1
 }

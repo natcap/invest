@@ -9,6 +9,10 @@ import Modal from 'react-bootstrap/Modal';
 import Dropdown from 'react-bootstrap/Dropdown';
 
 
+// TODO: Is there are need for this feature?
+// We already automatically save a session when execute button is clicked
+// and when an invest job completes. Is there a need to save at other points?
+// It's also already possible to save/load parameters to a json before execute is enable. 
 export class SaveSessionButtonModal extends React.Component {
 
   constructor(props) {

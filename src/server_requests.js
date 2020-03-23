@@ -1,5 +1,9 @@
 import fetch from 'node-fetch';
 
+// TODO: elsewhere I've used async/await instead of 
+// .then chaining of callbacks. Consider refactoring
+// everything here with async/await.
+
 export function shutdownPythonProcess() {
   fetch('http://localhost:5000/shutdown', {
     method: 'get',
