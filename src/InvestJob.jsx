@@ -56,18 +56,18 @@ export class InvestJob extends React.Component {
     super(props);
 
     this.state = {
-      sessionID: null,
+      sessionID: null,                 // modelName + workspace.directory + workspace.suffix
       modelName: '',                   // as appearing in `invest list`
       modelSpec: {},                   // ARGS_SPEC dict with all keys except ARGS_SPEC.args
       args: null,                      // ARGS_SPEC.args, to hold values on user-interaction
       argsValid: false,                // set on investValidate exit
       workspace: { 
         directory: null, suffix: null
-      },                               // only set values when execute completes
-      logfile: null,
-      logStdErr: null,
-      sessionProgress: 'home',         // 'home', 'setup', 'log', 'results' (i.e. one of the tabs)
-      activeTab: 'home',
+      },                               // only set values when execute starts the subprocess
+      logfile: null,                   // path to the invest logfile associated with invest job
+      logStdErr: null,                 // stderr data from the invest subprocess
+      sessionProgress: 'home',         // 'home', 'setup', 'log', 'results', 'resources' (i.e. one of the tabs)
+      activeTab: 'home',               // controls which tab is currently visible
       jobStatus: null                  // 'running', 'error', 'success'
     };
     
@@ -85,18 +85,22 @@ export class InvestJob extends React.Component {
   }
 
   saveState() {
-    // Save a snapshot of this component's state to a JSON file.
-    const sessionID = this.state.sessionID;
+    /** Save the state of the application (1) and the current InVEST job (2).
+    * 1. Save the state object of this component to a JSON file .
+    * 2. Append metadata of the invest job to a persistent database/file.
+    * This triggers automatically when the invest subprocess starts and again
+    * when it exits.
+    */
+    const jobName = this.state.sessionID;
     const jsonContent = JSON.stringify(this.state, null, 2);
-    const filepath = path.join(CACHE_DIR, sessionID + '.json');
+    const filepath = path.join(CACHE_DIR, jobName + '.json');
     fs.writeFile(filepath, jsonContent, 'utf8', function (err) {
       if (err) {
         console.log("An error occured while writing JSON Object to File.");
         return console.log(err);
       }
-      console.log("saved: " + sessionID);
+      console.log("saved: " + jobName);
     });
-    const jobName = this.state.sessionID;
     let job = {};
     job[jobName] = {
       model: this.state.modelName,
@@ -110,6 +114,10 @@ export class InvestJob extends React.Component {
   }
 
   savePythonScript(filepath) {
+    /** Save the current invest arguments to a python script via datastack.py API.
+    *
+    * @params {string} filepath - desired path to the python script
+    */
     const args_dict_string = argsValuesFromSpec(this.state.args)
     const payload = { 
       filepath: filepath,
@@ -121,7 +129,8 @@ export class InvestJob extends React.Component {
   }
   
   setSessionID(event) {
-    // Handle keystroke events to store a name for current session
+    // TODO: this functionality might be deprecated - probably no need to set custom
+    // session names. But the same function could be repurposed for a job description.
     event.preventDefault();
     const value = event.target.value;
     this.setState(
@@ -129,8 +138,10 @@ export class InvestJob extends React.Component {
   }
 
   loadState(sessionFilename) {
-    // Set this component's state to the object parsed from a JSON file.
-    // sessionID (string) : the name, without extension, of a saved JSON.
+    /** Set this component's state to the object parsed from a JSON file.
+    *
+    * @params {string} sessionFilename - path to a JSON file.
+    */
 
     const filename = path.join(CACHE_DIR, sessionFilename);
     if (fs.existsSync(filename)) {
@@ -150,9 +161,12 @@ export class InvestJob extends React.Component {
   }
 
   async argsToJsonFile(datastackPath) {
-    // make simple args json for passing to invest cli
+    /** Write an invest args JSON file for passing to invest cli
+    *
+    * @params {string} datastackPath - path to a JSON file.
+    */
 
-    // parsing it just to make it easy to insert the n_workers value
+    // The n_workers value always needs to be inserted into args
     let args_dict = JSON.parse(argsValuesFromSpec(this.state.args));
     args_dict['n_workers'] = this.props.investSettings.nWorkers;
     const payload = {
@@ -165,12 +179,24 @@ export class InvestJob extends React.Component {
   }
 
   async investExecute() {
+    /** Spawn a child process to run an invest model via the invest CLI:
+    * `invest -vvv run <model> --headless -d <datastack path>`
+    *
+    * When the process starts (on first stdout callback), job metadata is saved
+    * and local state is updated to display the log.
 
+    * When the process exits, job metadata is saved again (overwriting previous)
+    * with the final status of the invest run.
+    */
+
+    // Write a temporary datastack json for passing as a command-line arg
     const temp_dir = fs.mkdtempSync(path.join(process.cwd(), TEMP_DIR, 'data-'))
     const datastackPath = path.join(temp_dir, 'datastack.json')
     const _ = await this.argsToJsonFile(datastackPath);
 
+    // Get verbosity level from the app's settings
     const verbosity = LOGLEVELMAP[this.props.investSettings.loggingLevel]
+    
     const cmdArgs = [verbosity, 'run', this.state.modelName, '--headless', '-d ' + datastackPath]
     const investRun = spawn(INVEST_EXE, cmdArgs, {
         cwd: process.cwd(),
@@ -182,6 +208,7 @@ export class InvestJob extends React.Component {
       directory: this.state.args.workspace_dir.value,
       suffix: this.state.args.results_suffix.value
     }
+    // model name, workspace, and suffix are suitable for a unique job identifier
     const sessionName = [
       this.state.modelName, workspace.directory, workspace.suffix].join('-')
     
@@ -193,7 +220,6 @@ export class InvestJob extends React.Component {
         logfilename = await findMostRecentLogfile(workspace.directory)
         this.setState(
           {
-            procID: investRun.pid,
             logfile: logfilename,
             sessionID: sessionName,
             sessionProgress: 'log',
@@ -207,6 +233,7 @@ export class InvestJob extends React.Component {
       }
     });
 
+    // Capture stderr to a string
     let stderr = Object.assign('', this.state.logStdErr);
     investRun.stderr.on('data', (data) => {
       stderr += `${data}`
@@ -215,33 +242,27 @@ export class InvestJob extends React.Component {
       });
     });
 
-    // Reset the procID when the process finishes because the OS
-    // can recycle the pid, and we don't want the kill Button killing
-    // another random process.
+    // Set some state when the invest process exits and update the app's
+    // persistent database by calling saveState.
     investRun.on('close', (code) => {
       const progress = (code === 0 ? 'results' : 'log')
       const status = (code === 0 ? 'success' : 'error')
       this.setState({
         sessionProgress: progress,
         jobStatus: status,
-        procID: null,  // see above comment
       }, () => {
         this.saveState();
       });
-      console.log(this.state)
     });
   }
 
   async investValidate(args_dict_string, limit_to) {
-    /*
-    Validate an arguments dictionary using the InVEST model's validate func.
-
-    Parameters:
-      args_dict_string (object) : a JSON.stringify'ed object of model argument
-        keys and values.
-      limit_to (string) : an argument key if validation should be limited only
-        to that argument.
-
+    /** Validate an arguments dictionary using the InVEST model's validate function.
+    *
+    * @param {object} args_dict_string - a JSON.stringify'ed object of model argument
+    *    keys and values.
+    * @param {string} limit_to - an argument key if validation should be limited only
+    *    to that argument.
     */
     let argsMeta = JSON.parse(JSON.stringify(this.state.args));
     let keyset = new Set(Object.keys(JSON.parse(args_dict_string)));
@@ -325,15 +346,20 @@ export class InvestJob extends React.Component {
   }
 
   async investGetSpec(event) {
+    /** Get an invest model's ARGS_SPEC when a model button is clicked.
+    * A side-effect is that much of this component's state is reset.
+    *
+    * @param {event} - 
+    */
+
     const modelName = event.target.value;
     const payload = { 
         model: modelName
     };
     const spec = await getSpec(payload);
     if (spec) {
-      // for clarity, state has a dedicated args property separte from spec
-      // const args = JSON.parse(JSON.stringify(spec.args));
-      // delete spec.args // bad idea to mutate var like this.
+      // This "destructuring" captures spec.args into args and leaves 
+      // the rest of spec in modelSpec.
       const {args, ...modelSpec} = spec;
 
       // This event represents a user selecting a model,
@@ -356,12 +382,16 @@ export class InvestJob extends React.Component {
   }
 
   batchUpdateArgs(args_dict) {
-    // Update this.state.args in response to batch argument loading events
+    /** Update this.state.args in response to batch argument loading events,
+    * and then validate the loaded args.
+    *
+    * @param {object} - the args dictionay object that comes from datastack.py
+    * after parsing args from logfile or datastack file.
+    */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     Object.keys(argsMeta).forEach(argkey => {
-      // Loop over argsMeta instead of the args_dict extracted from the input
-      // in order to:
+      // Loop over argsMeta in order to:
         // 1) clear values for args that are absent from the input
         // 2) skip over items from the input that have incorrect keys, otherwise
         //    investValidate will crash on them.
@@ -376,11 +406,12 @@ export class InvestJob extends React.Component {
   }
 
   updateArg(key, value) {
-    // Update this.state.args in response to change events on a single ArgsForm input
-
-    // Parameters:
-      // key (string)
-      // value (string or number)
+    /** Update this.state.args and validate the args. This is triggered
+    * by the event handler on the Arguments Form.
+    *
+    * @param {string} key - the invest argument key
+    * @param {string} value - the invest argument value
+    */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
     argsMeta[key]['value'] = value;
@@ -393,6 +424,9 @@ export class InvestJob extends React.Component {
   }
 
   switchTabs(key) {
+    /** Change the tab that is currently visible.
+    * @param {string} key - the value of one of the Nav.Link eventKey.
+    */
     this.setState(
       {activeTab: key}
     );
