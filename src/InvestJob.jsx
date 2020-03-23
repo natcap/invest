@@ -52,6 +52,12 @@ const LOGLEVELMAP = {
 }
 
 export class InvestJob extends React.Component {
+  /** This component and it's children render all the visible parts of the app.
+  *
+  * This component's state includes all the data needed to represent one invest
+  * job.
+  */
+
   constructor(props) {
     super(props);
 
