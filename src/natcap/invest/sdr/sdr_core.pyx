@@ -406,7 +406,7 @@ def calculate_sediment_deposition(
     cdef int flow_weight, neighbor_flow_weight
     cdef float flow_sum, neighbor_flow_sum
     cdef float downstream_sdr_weighted_sum, sdr_i, sdr_j
-    cdef float r_j, r_j_weighted_sum, p_j, p_val
+    cdef float p_j, p_val
 
     for offset_dict in pygeoprocessing.iterblocks(
             (mfd_flow_direction_path, 1), offset_only=True, largest_block=0):
@@ -573,10 +573,10 @@ def calculate_sediment_deposition(
 
 def calculate_average_aspect(
     mfd_flow_direction_path, target_average_aspect_path):
-    """Calculate the Average Proportional Flow from MFD.
+    """Calculate the Weighted Average Aspect Ratio from MFD.
 
-    Calculates the weighted average of proportional flow for every MFD flow
-    direction pixel provided.
+    Calculates the average aspect ratio weighted by proportional flow
+    direction.
 
     Parameters:
         mfd_flow_direction_path (string): The path to an MFD flow direction
@@ -616,8 +616,6 @@ def calculate_average_aspect(
     cdef int weight_sum
     cdef int seed_flow_value
     cdef float aspect_weighted_average, aspect_weighted_sum
-    cdef float proportional_flow
-    cdef float flow_length
 
     # the flow_lengths array is the functional equivalent
     # of calculating |sin(alpha)| + |cos(alpha)|.
