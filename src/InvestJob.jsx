@@ -474,10 +474,6 @@ export class InvestJob extends React.Component {
           </Nav>
           <Navbar.Brand>{this.state.modelSpec.model_name}</Navbar.Brand>
           <DropdownButton id="dropdown-basic-button" title="Save " className="mx-3">
-            <SaveSessionButtonModal 
-              saveState={this.saveState}
-              sessionID={this.state.sessionID}
-              setSessionID={this.setSessionID}/>
             <SaveParametersButton
               argsToJsonFile={this.argsToJsonFile}
               disabled={dropdownsDisabled}/>
