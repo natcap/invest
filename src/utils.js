@@ -3,8 +3,11 @@ import fs from 'fs';
 import glob from 'glob';
 
 export function loadRecentSessions(jobDatabase) {
-  /*
-  Returns: Array:
+  /** Load job data from a persistent file and return the jobs
+  * sorted by creation time. Right now the persistent file is a JSON.
+  * 
+  * @params {string} jobDatabase - path to a json file with jobs metadata.
+  * @return {Promise<array>} - 
     [ [ "job1",
       {
         "model": "carbon",
@@ -18,6 +21,9 @@ export function loadRecentSessions(jobDatabase) {
         { ... } ] ]
   */
   return new Promise(function(resolve, reject) {
+    if (!fs.existsSync(jobDatabase)) {
+      resolve([])
+    }
     const db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
     const sortedJobs = Object.entries(db).sort((a, b) => b[1]['systemTime'] - a[1]['systemTime'])
     resolve(sortedJobs)
@@ -25,11 +31,23 @@ export function loadRecentSessions(jobDatabase) {
 }
 
 export async function updateRecentSessions(jobdata, jobDatabase) {
-  let db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
-  Object.keys(jobdata).forEach(job => {
-    db[job] = jobdata[job]
-  })
-  const jsonContent = JSON.stringify(db, null, 2);
+  /** Append/overwrite an entry to the persistent jobs file and reload its data.
+  * If a job already exists with the same name is jobdata, it is overwritten.
+  * 
+  * @params {string} jobdata - object with job's metadata
+  * @params {string} jobDatabase - path to a json file with jobs metadata.
+  * @return {array} - see documentation for loadRecentSessions
+  */
+  let jsonContent;
+  if (fs.existsSync(jobDatabase)) {
+    let db = JSON.parse(fs.readFileSync(jobDatabase, 'utf8'));
+    Object.keys(jobdata).forEach(job => {
+      db[job] = jobdata[job]
+    })
+    jsonContent = JSON.stringify(db, null, 2);
+  } else {
+    jsonContent = JSON.stringify(jobdata, null, 2)
+  }
   fs.writeFileSync(jobDatabase, jsonContent, 'utf8', function (err) {
     if (err) {
       console.log("An error occured while writing JSON Object to File.");
