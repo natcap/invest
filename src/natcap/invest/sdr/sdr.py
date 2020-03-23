@@ -726,17 +726,14 @@ def execute(args):
 def _calculate_ls_factor(
         flow_accumulation_path, slope_path, avg_aspect_path,
         out_ls_prime_factor_path):
-    """Calculate LS' factor.
+    """Calculate LS factor.
 
-    LS factor as Equation 3 from "Extension and validation
-    of a geographic information system-based method for calculating the
-    Revised Universal Soil Loss Equation length-slope factor for erosion
-    risk assessments in large watersheds"
-
-    Note that to account for multiple possible flow directions, the LS factor
-    described above has been adapted.  The aspect term ``x`` now represents the
-    weighted average of proportional flow from pixel ``i``.  Values for ``x``
-    are created by ``sdr_core.calculate_average_aspect``.
+    Calculates a modified LS factor as Equation 3 from "Extension and
+    validation of a geographic information system-based method for calculating
+    the Revised Universal Soil Loss Equation length-slope factor for erosion
+    risk assessments in large watersheds" where the ``x`` term is the average
+    aspect ratio weighted by proportional flow to account for multiple flow
+    direction.
 
     Parameters:
         flow_accumulation_path (string): path to raster, pixel values are the
