@@ -75,22 +75,8 @@ class RecentInvestJobs extends React.Component {
   
   constructor(props) {
     super(props);
-    // this.selectFile = this.selectFile.bind(this);
     this.handleClick = this.handleClick.bind(this);
   }
-
-  // selectFile(event) {
-  //   const dialog = Electron.remote.dialog;
-  //   // TODO: could add more filters to only show .json
-  //   dialog.showOpenDialog({
-  //     properties: ['openFile']
-  //   }, (filepath) => {
-  //     if (filepath[0]) {
-  //       this.props.loadState(
-  //         path.parse(path.basename(filepath[0])).name); // 0 is safe since we only allow 1 selection
-  //     }
-  //   })
-  // }
 
   handleClick(sessionFilename) {
     this.props.loadState(sessionFilename);
@@ -135,16 +121,6 @@ class RecentInvestJobs extends React.Component {
         </Card>
       );
     });
-    // Also a button to browse to a cached state file if it's not in recent list
-    // recentButtons.push(
-    //   <Button
-    //     key="browse"
-    //     type="submit"
-    //     variant="secondary"
-    //     onClick={this.selectFile}>
-    //     Browse for saved session
-    //   </Button>
-    // );
 
     return (
       <React.Fragment>
@@ -159,7 +135,7 @@ class RecentInvestJobs extends React.Component {
   }
 }
 
-LoadStateForm.propTypes = {
+RecentInvestJobs.propTypes = {
   loadState: HomeTab.propTypes.loadState,
   recentSessions: HomeTab.propTypes.recentSessions
 }
