@@ -98,17 +98,6 @@ def get_invest_validate():
     LOGGER.debug(results)
     return json.dumps(results)
 
-@app.route('/get_invest_logfilename', methods=['POST'])
-def get_invest_logfilename():
-    payload = request.get_json()
-    LOGGER.debug(payload)
-    logfile = os.path.join(
-        payload['workspace'],
-        'InVEST-{modelname}-log-{timestamp}.txt'.format(
-            modelname='-'.join(payload['name'].replace(':', '').split(' ')),
-            timestamp=datetime.now().strftime("%Y-%m-%d--%H_%M_%S")))
-    return logfile
-
 
 @app.route('/post_datastack_file', methods=['POST'])
 def post_datastack_file():
