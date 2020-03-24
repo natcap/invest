@@ -14,11 +14,6 @@ from osgeo import gdal
 from osgeo import osr
 import pygeoprocessing
 
-# Python3 doesn't know about basestring, only str.
-try:
-    basestring
-except NameError:
-    basestring = str
 
 LOGGER = logging.getLogger(__name__)
 LOG_FMT = (
@@ -404,7 +399,7 @@ def build_file_registry(base_file_path_list, file_suffix):
                 duplicate_keys.add(file_key)
             else:
                 # handle the case whether it's a filename or a list of strings
-                if isinstance(file_payload, basestring):
+                if isinstance(file_payload, str):
                     full_path = _build_path(file_payload, path)
                     f_reg[file_key] = full_path
                 elif isinstance(file_payload, list):
@@ -464,14 +459,11 @@ def build_lookup_from_csv(
     table = pandas.read_csv(
         table_path, sep=None, engine='python', encoding=encoding)
     header_row = list(table)
-    try:  # no unicode() in python 3
-        key_field = unicode(key_field)
-    except NameError:
-        pass
+    
     if to_lower:
         key_field = key_field.lower()
         header_row = [
-            x if not isinstance(x, basestring) else x.lower()
+            x if not isinstance(x, str) else x.lower()
             for x in header_row]
 
     if key_field not in header_row:
@@ -487,7 +479,7 @@ def build_lookup_from_csv(
     for index, row in table.iterrows():
         if to_lower:
             row = pandas.Series([
-                x if not isinstance(x, basestring) else x.lower()
+                x if not isinstance(x, str) else x.lower()
                 for x in row])
         # check if every single element in the row is null
         if row.isnull().values.all():

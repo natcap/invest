@@ -1,6 +1,4 @@
 """InVEST Finfish Aquaculture"""
-from __future__ import absolute_import
-
 import os
 import csv
 import logging
@@ -102,10 +100,10 @@ ARGS_SPEC = {
         "num_monte_carlo_runs": {
             "name": "Number of Monte Carlo Simulation Runs",
             "about": (
-                u"Number of runs of the model to perform as part of a "
-                u"Monte Carlo simulation.  A larger number will tend to "
-                u"produce more consistent and reliable output, but will "
-                u"also take longer to run."),
+                "Number of runs of the model to perform as part of a "
+                "Monte Carlo simulation.  A larger number will tend to "
+                "produce more consistent and reliable output, but will "
+                "also take longer to run."),
             "type": "number",
             "required": "use_uncertainty",
         },
@@ -133,28 +131,28 @@ ARGS_SPEC = {
             "type": "csv",
             "required": True,
             "about": (
-                u"A table of general and farm-specific operations "
-                u"parameters.  Please refer to the sample data table "
-                u"for reference to ensure correct incorporation of data "
-                u"in the model. The values for 'farm operations' "
-                u"(applied to all farms) and 'add new farms' (beginning "
-                u"with row 32) may be modified according to the user's "
-                u"needs . However, the location of cells in this "
-                u"template must not be modified.  If for example, if "
-                u"the model is to run for three farms only, the farms "
-                u"should be listed in rows 10, 11 and 12 (farms 1, 2, "
-                u"and 3, respectively). Several default values that are "
-                u"applicable to Atlantic salmon farming in British "
-                u"Columbia are also included in the sample data table."),
+                "A table of general and farm-specific operations "
+                "parameters.  Please refer to the sample data table "
+                "for reference to ensure correct incorporation of data "
+                "in the model. The values for 'farm operations' "
+                "(applied to all farms) and 'add new farms' (beginning "
+                "with row 32) may be modified according to the user's "
+                "needs . However, the location of cells in this "
+                "template must not be modified.  If for example, if "
+                "the model is to run for three farms only, the farms "
+                "should be listed in rows 10, 11 and 12 (farms 1, 2, "
+                "and 3, respectively). Several default values that are "
+                "applicable to Atlantic salmon farming in British "
+                "Columbia are also included in the sample data table."),
         },
         "outplant_buffer": {
             "name": "Outplant Date Buffer",
             "type": "number",
             "required": True,
             "about": (
-                u"This value will allow the outplant start day to "
-                u"start plus or minus the number of days specified "
-                u"here."),
+                "This value will allow the outplant start day to "
+                "start plus or minus the number of days specified "
+                "here."),
         },
         "do_valuation": {
             "name": "Run valuation model",
@@ -184,8 +182,8 @@ ARGS_SPEC = {
         "discount": {
             "name": "Daily Market Discount Rate",
             "about": (
-                u"We use a 7% annual discount rate, adjusted to a "
-                u"daily rate of 0.000192 for 0.0192% (7%/365 days)."),
+                "We use a 7% annual discount rate, adjusted to a "
+                "daily rate of 0.000192 for 0.0192% (7%/365 days)."),
             "required": "do_valuation",
             "type": "number",
             "validation_options": {

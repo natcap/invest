@@ -2,6 +2,8 @@
 
 Unreleased Changes
 ------------------
+* Bumping the ``psutil`` dependency requirement to ``psutil>=5.6.6`` to address
+  a double-free vulnerability documented in CVE-2019-18874.
 * Adding a GitHub Actions workflow for building python wheels for Mac and Windows
   as well as a source distribution.
 * Updating links in ``setup.py``, ``README.rst`` and ``README_PYTHON.rst`` to
@@ -26,6 +28,10 @@ Unreleased Changes
 * Makefile has been updated to fetch the version string from ``git`` rather
   than ``hg``.  A mercurial client is still needed in order to clone the
   InVEST User's Guide.
+* Removing Python 2 compatibility code such as ``future``, ``pyqt4``, 
+  ``basestring``, ``unicode``, ``six``, unicode casting, etc...
+* Update api-docs conf file to mock sdr.sdr_core and to use updated unittest
+  mock
 
 3.8.0 (2020-02-07)
 ------------------

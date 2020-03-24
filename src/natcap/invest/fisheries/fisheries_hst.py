@@ -4,7 +4,6 @@ generating a new Population Parameters CSV File based on habitat area
 change and the dependencies that particular classes of the given species
 have on particular habitats.
 """
-from __future__ import absolute_import
 import logging
 import csv
 
