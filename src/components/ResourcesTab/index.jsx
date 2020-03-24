@@ -4,6 +4,7 @@ import Electron from 'electron';
 
 const UG_ROOT = 'http://releases.naturalcapitalproject.org/invest-userguide/latest/'
 const FORUM_ROOT = 'https://community.naturalcapitalproject.org/'
+
 // map model names to forum tags:
 const FORUM_TAGS = {
   sdr: 'sdr',
@@ -30,11 +31,18 @@ const FORUM_TAGS = {
 }
 
 function handleClick(event) {
+  /** Open the target href in the default web browser */
   event.preventDefault();
   Electron.shell.openExternal(event.target.href);
 }
 
 export class ResourcesTab extends React.Component {
+  /** Render model-relevant links to the User's Guide and Forum.
+  *
+  * This should be a link to the model's User's Guide chapter and
+  * and a link to list of topics with the model's tag on the forum,
+  * e.g. https://community.naturalcapitalproject.org/tag/carbon
+  */
 
   constructor(props) {
     super(props);
