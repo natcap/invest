@@ -3,7 +3,6 @@
 An implementation of the model described in 'Degradation in carbon stocks
 near tropical forest edges', by Chaplin-Kramer et. al (2015).
 """
-from __future__ import absolute_import
 import os
 import logging
 import time

@@ -1,6 +1,4 @@
 """RouteDEM for exposing the natcap.invest's routing package to UI."""
-from __future__ import absolute_import
-
 import os
 import logging
 

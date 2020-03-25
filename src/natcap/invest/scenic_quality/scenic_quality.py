@@ -156,9 +156,9 @@ ARGS_SPEC = {
                 "expression": "value > 0",
             },
             "about": (
-                u"Radius beyond which the valuation is set to zero. "
-                u"The valuation function 'f' cannot be negative at the "
-                u"radius 'r' (f(r)>=0)."),
+                "Radius beyond which the valuation is set to zero. "
+                "The valuation function 'f' cannot be negative at the "
+                "radius 'r' (f(r)>=0)."),
         },
     }
 }

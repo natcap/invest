@@ -17,7 +17,7 @@ class UFRMTests(unittest.TestCase):
         """Override setUp function to create temp workspace directory."""
         # this lets us delete the workspace after its done no matter the
         # the rest result
-        self.workspace_dir = tempfile.mkdtemp(suffix=u'\U0001f60e')  # smiley
+        self.workspace_dir = tempfile.mkdtemp(suffix='\U0001f60e')  # smiley
 
     def tearDown(self):
         """Override tearDown function to remove temporary directory."""
@@ -109,7 +109,7 @@ class UFRMTests(unittest.TestCase):
             (args['soils_hydrological_group_raster_path'], 1), value_map,
             bad_soil_raster, gdal.GDT_Int16, -9)
         args['soils_hydrological_group_raster_path'] = bad_soil_raster
-        
+
         with self.assertRaises(ValueError) as cm:
             urban_flood_risk_mitigation.execute(args)
             actual_message = str(cm.exception)

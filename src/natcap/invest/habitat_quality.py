@@ -1,6 +1,5 @@
 # coding=UTF-8
 """InVEST Habitat Quality model."""
-from __future__ import absolute_import
 import collections
 import os
 import logging

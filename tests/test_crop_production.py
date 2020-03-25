@@ -296,6 +296,7 @@ class CropProductionTests(unittest.TestCase):
         pandas.testing.assert_frame_equal(
             expected_result_table, result_table, check_dtype=False)
 
+
 class CropValidationTests(unittest.TestCase):
     """Tests for the Crop Productions' ARGS_SPEC and validation."""
 

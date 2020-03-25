@@ -1,8 +1,6 @@
 # coding=UTF-8
 """Input classes for the InVEST UI, a Qt-based UI abstraction layer."""
 
-from __future__ import absolute_import
-
 import functools
 import os
 import logging
@@ -12,24 +10,12 @@ import warnings
 import sys
 import atexit
 import itertools
-
-try:
-    import PyQt4
-except ImportError:
-    # Need to explicitly import PySide2 when on python3.  It's the only Qt
-    # binding I can seem to get to work under python3.
-    import PySide2
-
-try:
-    unicode
-except NameError:
-    unicode = str
+import PySide2
 
 import qtpy
 from qtpy import QtWidgets
 from qtpy import QtCore
 from qtpy import QtGui
-import six
 import qtawesome
 import chardet
 from .. import utils
@@ -259,7 +245,7 @@ class LogMessagePane(QtWidgets.QPlainTextEdit):
     QPlainTextEdit from different threads.
     """
 
-    message_received = QtCore.Signal(six.text_type)
+    message_received = QtCore.Signal(str)
 
     def __init__(self, parent):
         """Initialize the LogMessagePane instance.
@@ -466,7 +452,7 @@ class FileSystemRunDialog(QtWidgets.QDialog):
         if exception:
             self.messageArea.set_error(True)
             self.messageArea.setText(
-                (u'<b>%s</b> encountered: <em>%s</em> <br/>'
+                ('<b>%s</b> encountered: <em>%s</em> <br/>'
                  'See the log for details.') % (
                     exception.__class__.__name__,
                     exception))
@@ -765,7 +751,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(unicode(filename)))
+                                 os.path.dirname(str(filename)))
         return filename
 
     def open_file(self, title, start_dir=None, filters=()):
@@ -809,7 +795,7 @@ class FileDialog(object):
             filename = result
 
         INVEST_SETTINGS.setValue('last_dir',
-                                 os.path.dirname(unicode(filename)))
+                                 os.path.dirname(str(filename)))
         return filename
 
     def open_folder(self, title, start_dir=None):
@@ -831,7 +817,7 @@ class FileDialog(object):
 
         dirname = self.file_dialog.getExistingDirectory(
             self.file_dialog, dialog_title, start_dir)
-        dirname = six.text_type(dirname)
+        dirname = str(dirname)
         INVEST_SETTINGS.setValue('last_dir', dirname)
         return dirname
 
@@ -859,7 +845,7 @@ class AbstractFileSystemButton(QtWidgets.QPushButton):
             filters=())
     """
 
-    path_selected = QtCore.Signal(six.text_type)
+    path_selected = QtCore.Signal(str)
 
     def __init__(self, dialog_title):
         """Initialize the AbstractFileSystemButton.
@@ -1003,7 +989,7 @@ class InVESTModelInput(QtCore.QObject):
             slots indicates the new sufficiency.
     """
 
-    value_changed = QtCore.Signal(six.text_type)
+    value_changed = QtCore.Signal(str)
     interactivity_changed = QtCore.Signal(bool)
     sufficiency_changed = QtCore.Signal(bool)
 
@@ -1578,7 +1564,7 @@ class Text(GriddedInput):
 
             # If it isn't a unicode string, attempt to detect the source
             # encoding.
-            if not isinstance(value, unicode):
+            if not isinstance(value, str):
                 most_likely_encoding = chardet.detect(value)['encoding']
                 if most_likely_encoding is None:
                     # When string is empty, assume UTF-8
@@ -1683,8 +1669,8 @@ class _Path(Text):
                 # This is only needed on Qt<5.4.1.
                 # See bug report at https://bugreports.qt.io/browse/QTBUG-40449
                 command = (
-                    u"osascript -e 'get posix path of my posix file \""
-                    u"file://{fileid}\" -- kthx. bai'").format(
+                    "osascript -e 'get posix path of my posix file \""
+                    "file://{fileid}\" -- kthx. bai'").format(
                         fileid=path)
                 process = subprocess.Popen(
                     command, shell=True,
@@ -2076,11 +2062,8 @@ class Dropdown(GriddedInput):
         def _cast_value(value):
             if isinstance(value, (int, float)):
                 value = str(value)
-            try:
-                return six.text_type(value, 'utf-8')
-            except TypeError:
-                # It's already unicode, so can't decode further.
-                return value
+            # It's already unicode, so can't decode further.
+            return value
 
         # make sure all values in the return value map are text
         if return_value_map is not None:
@@ -2524,7 +2507,7 @@ class Multi(Container):
         """
         self.value_changed.emit(self.value())
 
-    @QtCore.Slot(unicode)
+    @QtCore.Slot(str)
     def _add_templated_item(self, link_text):
         """A slot to add a templated item to the Multi.
 

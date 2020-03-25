@@ -8,25 +8,25 @@ class Delineateit(model.InVESTModel):
     def __init__(self):
         model.InVESTModel.__init__(
             self,
-            label=u'DelineateIt: Watershed Delineation',
+            label='DelineateIt: Watershed Delineation',
             target=delineateit.execute,
             validator=delineateit.validate,
-            localdoc=u'delineateit.html')
+            localdoc='delineateit.html')
 
         self.dem_path = inputs.File(
             label='Digital Elevation Model (Raster)',
-            args_key=u'dem_path',
+            args_key='dem_path',
             helptext=(
-                u"A GDAL-supported raster file with an elevation value "
-                u"for each cell."),
+                "A GDAL-supported raster file with an elevation value "
+                "for each cell."),
             validator=self.validator)
         self.add_input(self.dem_path)
         self.outlet_vector_path = inputs.File(
-            args_key=u'outlet_vector_path',
+            args_key='outlet_vector_path',
             helptext=(
-                u"This is a layer of geometries representing watershed "
-                u"outlets such as municipal water intakes or lakes."),
-            label=u'Outlet Features (Vector)',
+                "This is a layer of geometries representing watershed "
+                "outlets such as municipal water intakes or lakes."),
+            label='Outlet Features (Vector)',
             validator=self.validator)
         self.add_input(self.outlet_vector_path)
         self.outlet_vector_path.value_changed.connect(
@@ -50,26 +50,26 @@ class Delineateit(model.InVESTModel):
             args_key='snap_points')
         self.add_input(self.snap_points_container)
         self.flow_threshold = inputs.Text(
-            args_key=u'flow_threshold',
+            args_key='flow_threshold',
             helptext=(
-                u"The number of upstream cells that must flow into a "
-                u"cell before it's considered part of a stream such "
-                u"that retention stops and the remaining export is "
-                u"exported to the stream.  Used to define streams from "
-                u"the DEM."),
-            label=u'Threshold Flow Accumulation',
+                "The number of upstream cells that must flow into a "
+                "cell before it's considered part of a stream such "
+                "that retention stops and the remaining export is "
+                "exported to the stream.  Used to define streams from "
+                "the DEM."),
+            label='Threshold Flow Accumulation',
             validator=self.validator)
         self.snap_points_container.add_input(self.flow_threshold)
         self.snap_distance = inputs.Text(
-            args_key=u'snap_distance',
-            label=u'Pixel Distance to Snap Outlet Points',
+            args_key='snap_distance',
+            label='Pixel Distance to Snap Outlet Points',
             helptext=(
-                u"If provided, the maximum search radius in pixels to look "
-                u"for stream pixels.  If a stream pixel is found within the "
-                u"snap distance, the outflow point will be snapped to the "
-                u"center of the nearest stream pixel.  Geometries that are "
-                u"not points (such as Lines and Polygons) will not be "
-                u"snapped.  MultiPoints will also not be snapped."),
+                "If provided, the maximum search radius in pixels to look "
+                "for stream pixels.  If a stream pixel is found within the "
+                "snap distance, the outflow point will be snapped to the "
+                "center of the nearest stream pixel.  Geometries that are "
+                "not points (such as Lines and Polygons) will not be "
+                "snapped.  MultiPoints will also not be snapped."),
             validator=self.validator)
         self.snap_points_container.add_input(self.snap_distance)
 
