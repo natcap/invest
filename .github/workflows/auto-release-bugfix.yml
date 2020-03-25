@@ -45,6 +45,8 @@ jobs:
                         $BUGFIX_VERSION
 
                     # Create a release object based on the text from HISTORY.
+                    # This requires that the tag already exists in the
+                    # repository on github.
                     python ci/release/create-github-release.py \
                         --tag=$BUGFIX_VERSION \
                         --oauthtoken=$GITHUB_TOKEN \

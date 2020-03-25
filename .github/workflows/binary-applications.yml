@@ -1,6 +1,6 @@
 name: Build InVEST App Binaries
 
-on: [push, pull_request, check_run]
+on: [push, pull_request, check_run, release]
 
 jobs:
     check-syntax-errors:
@@ -194,3 +194,56 @@ jobs:
               with:
                   name: InVEST Mac build artifacts
                   path: dist
+
+    build-single-sampledata-archive:
+        name: Build a single sampledata archive
+        needs: check-syntax-errors
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+            - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - run: make sampledata_single
+
+            - uses: actions/upload-artifact@v1
+              with:
+                  name: InVEST sample data
+                  path: dist
+
+    upload-binaries-to-release:
+        name: Upload binaries to the release
+        needs: [build-mac-binaries, build-windows-binaries]
+        runs-on: ubuntu-latest
+        if: github.event_name == 'release'
+        steps:
+            - uses: actions/checkout@v2
+            - run: git fetch origin +refs/tags/*:refs/tags/*
+
+            - uses: actions/download_artifact@v2
+              with:
+                  name: InVEST Windows build artifacts
+                  path: dist
+
+            - uses: actions/download_artifact@v2
+              with:
+                  name: InVEST Mac build artifacts
+                  path: dist
+
+            - uses: actions/download-artifact@v2
+              with:
+                  name: InVEST sample data
+                  path: dist
+
+            # Upload:
+            #   * mac binary
+            #   * windows binary
+            #   * userguide
+            #   * sampledata
+            #   * python wheels
+            - uses: actions/upload-release-asset@v1
+              env:
+                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              with:
+                  asset_path:
+                  asset_name:
+                  asset_content_type:
