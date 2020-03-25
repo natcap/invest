@@ -31,6 +31,12 @@ export class HomeTab extends React.Component {
 
   constructor(props) {
     super(props);
+    this.handleClick = this.handleClick.bind(this);
+  }
+
+  handleClick(event) {
+    const modelName = event.target.value;
+    this.props.investGetSpec(modelName);
   }
 
   render () {
@@ -41,7 +47,7 @@ export class HomeTab extends React.Component {
       investButtons.push(
         <Button key={model}
           value={investJSON[model]['internal_name']}
-          onClick={this.props.investGetSpec}
+          onClick={this.handleClick}
           variant="outline-success">
           {model}
         </Button>
@@ -106,7 +112,6 @@ class RecentInvestJobs extends React.Component {
       const headerStyle = {
         backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
       }
-      console.log(headerStyle)
 
       recentButtons.push(
         <Card className="text-left session-card border-0"

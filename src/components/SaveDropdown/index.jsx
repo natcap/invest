@@ -17,7 +17,7 @@ export class SaveParametersButton extends React.Component {
 
   constructor(props) {
     super(props);
-    this.browseFile = this.browseFile.bind(this);
+    this.browseSaveFile = this.browseSaveFile.bind(this);
   }
 
   browseSaveFile(event) {

@@ -18,6 +18,7 @@ import { LogTab } from './components/LogTab';
 import { ResultsTab } from './components/ResultsTab'
 import { ResourcesTab } from './components/ResourcesTab';
 import { SaveParametersButton, SavePythonButton } from './components/SaveDropdown'
+import { LoadButton } from './components/LoadButton';
 import { SettingsModal } from './components/SettingsModal';
 import { getSpec, saveToPython, writeParametersToFile, fetchValidation } from './server_requests';
 import { argsValuesFromSpec, findMostRecentLogfile } from './utils';
@@ -352,14 +353,14 @@ export class InvestJob extends React.Component {
     }
   }
 
-  async investGetSpec(event) {
+  async investGetSpec(modelName) {
     /** Get an invest model's ARGS_SPEC when a model button is clicked.
     * A side-effect is that much of this component's state is reset.
     *
-    * @param {event} - 
+    * @param {string} - 
     */
 
-    const modelName = event.target.value;
+    // const modelName = event.target.value;
     const payload = { 
         model: modelName
     };
@@ -382,10 +383,15 @@ export class InvestJob extends React.Component {
         logStdOut: '',
         sessionID: null,
         workspace: null,
-      }, () => this.switchTabs('setup'));
+      }, () => {
+        this.switchTabs('setup')
+        // return new Promise((resolve) => resolve(true))
+      });
     } else {
-      console.log('no spec returned');
+      console.log('no spec found')
+      return new Promise((resolve) => resolve(false))
     }
+    return new Promise((resolve) => resolve(true))
   }
 
   batchUpdateArgs(args_dict) {
@@ -397,6 +403,7 @@ export class InvestJob extends React.Component {
     */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
+    console.log(argsMeta)
     Object.keys(argsMeta).forEach(argkey => {
       // Loop over argsMeta in order to:
         // 1) clear values for args that are absent from the input
@@ -482,6 +489,10 @@ export class InvestJob extends React.Component {
               savePythonScript={this.savePythonScript}
               disabled={dropdownsDisabled}/>
           </DropdownButton>
+          <LoadButton
+            investGetSpec={this.investGetSpec}
+            batchUpdateArgs={this.batchUpdateArgs}
+          />
           <SettingsModal
             saveSettings={this.props.saveSettings}
             investSettings={this.props.investSettings}
