@@ -1046,28 +1046,6 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
         [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
         threat_datatype, threat_nodata)
 
-#    threat_raster = gdal.OpenEx(aligned_threat_path,
-#                                gdal.OF_RASTER | gdal.GA_Update)
-#    threat_band = threat_raster.GetRasterBand(1)
-#    for block_offset in pygeoprocessing.iterblocks(
-#            (aligned_threat_path, 1), offset_only=True):
-#        block = threat_band.ReadAsArray(**block_offset)
-#
-#        # First check if we actually need to set anything.
-#        # No need to perform unnecessary writes!
-#        if set(numpy.unique(block)) == set([0, 1]):
-#            continue
-#
-#        zero_threat = numpy.isclose(block, threat_nodata)
-#        block[zero_threat] = 0
-#        block[~numpy.isclose(block, 0)] = 1
-#
-#        threat_band.WriteArray(
-#            block, yoff=block_offset['yoff'],
-#            xoff=block_offset['xoff'])
-#    threat_band = None
-#    threat_raster = None
-
 
 @validation.invest_validator
 def validate(args, limit_to=None):
