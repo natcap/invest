@@ -11,10 +11,18 @@ import Spinner from 'react-bootstrap/Spinner';
 import Col from 'react-bootstrap/Col';
 import Row from 'react-bootstrap/Row';
 
+// these are bootstrap codes for colors
+// const STATUS_COLOR_MAP = {
+//   running: 'warning',
+//   error: 'danger',
+//   success: 'success'
+// }
+
+// These are the same colors as above
 const STATUS_COLOR_MAP = {
-  running: 'warning',
-  error: 'danger',
-  success: 'success'
+  running: 'rgba(23, 162, 184, 0.7)',
+  error: 'rgba(220, 53, 69, 0.7)',
+  success: 'rgba(40, 167, 69, 0.7)'
 }
 
 export class HomeTab extends React.Component {
@@ -95,16 +103,20 @@ class RecentInvestJobs extends React.Component {
       const description = session[1]['description'];
       const datetime = session[1]['humanTime'];
 
+      const headerStyle = {
+        backgroundColor: STATUS_COLOR_MAP[status] || 'rgba(23, 162, 184, 0.7)'
+      }
+      console.log(headerStyle)
+
       recentButtons.push(
-        <Card className="text-left session-card w-100"
+        <Card className="text-left session-card border-0"
           as="button"
           key={name}
           // value={session[1]['statefile']} 
-          onClick={() => this.props.loadState(session[1]['statefile'])}
-          border={STATUS_COLOR_MAP[status] || 'dark'}>
+          onClick={() => this.props.loadState(session[1]['statefile'])}>
           <Card.Body>
-            <Card.Header>
-              {model}  
+            <Card.Header as="h4" style={headerStyle}>
+              {model}
               {status === 'running' && 
                 <Spinner as='span' animation='border' size='sm' role='status' aria-hidden='true'/>
               }

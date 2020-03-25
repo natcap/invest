@@ -4,5 +4,27 @@
 
 .session-card-group {
 	flex-flow: column;
-	width: 100%;
+	width: 500px; /* explicit width seems key for children to behave*/
+}
+
+.session-card {
+	width: inherit;
+	margin-bottom: 10px;
+}
+
+.card-body {
+	width: inherit;
+	padding: 0;
+	/*margin-left: -7px;*/
+}
+
+.card-header {
+	padding-left: 1.25rem;
+}
+.card-title {
+	padding-top: 1rem;
+	padding-left: 1.25rem;
+}
+.card-text {
+	padding-left: 1.25rem;
 }
