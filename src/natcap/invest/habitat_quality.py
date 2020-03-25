@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import collections
 import os
 import logging
+import pickle
 
 import numpy
 from osgeo import gdal
@@ -293,6 +294,7 @@ def execute(args):
     lulc_and_threat_raster_list = []
     # lookup for the unique lucode tasks
     unique_lucode_lookup = []
+    unique_lucode_pickle_lookup = []
     LOGGER.debug("Collect and find Threat rasters")
     # compile all the threat rasters associated with the land cover
     for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
@@ -305,12 +307,15 @@ def execute(args):
             # TODO: This is assuming they are .tif files
             lulc_and_threat_raster_list.append(lulc_path)
 
+            unique_lucode_pickle_path = os.path.join(intermediate_output_dir, f'unique_lulc{lulc_key}.pickle')
             # save unique codes to check if it's missing in sensitivity table
             unique_lucode_task = graph.add_task(
                     _collect_unique_lucodes,
-                    args=((lulc_path, 1), ),
+                    args=((lulc_path, 1), unique_lucode_pickle_path),
+                    target_path_list=[unique_lucode_pickle_path],
                     task_name=f'unique_lucodes{lulc_key}')
             unique_lucode_lookup.append(unique_lucode_task)
+            unique_lucode_pickle_lookup.append(unique_lucode_pickle_path)
 
             # add a key to the threat dictionary that associates all threat
             # rasters with this land cover
@@ -334,7 +339,7 @@ def execute(args):
 
     compare_lucodes_sens_task = graph.add_task(
             _compare_lucodes_sensitivity,
-            args=(sensitivity_dict, unique_lucode_lookup),
+            args=(sensitivity_dict, unique_lucode_pickle_lookup),
             dependent_task_list=[*unique_lucode_lookup],
             task_name='lucode_sens_comparison')
 
@@ -368,6 +373,7 @@ def execute(args):
 
     # list of tracking updated threat pixel rasters
     updated_threat_tasks = []
+    threat_pixels_update_lookup = []
     # Modify paths in lulc_path_dict and threat_path_dict to be aligned rasters
     for lulc_key, lulc_path in lulc_path_dict.items():
         lulc_path_dict[lulc_key] = os.path.join(
@@ -379,12 +385,18 @@ def execute(args):
                 aligned_threat_path = os.path.join(
                     intermediate_output_dir, os.path.basename(threat_path).replace(
                         '.tif', '_aligned.tif'))
+                aligned_updated_threat_path = os.path.join(
+                    intermediate_output_dir, 
+                    os.path.basename(aligned_threat_path).replace(
+                        '.tif', '_updated.tif'))
+                # Use these updated threat raster paths in future calculations
                 threat_path_dict['threat' + lulc_key][threat] = (
-                    aligned_threat_path)
-                print(aligned_threat_path)
+                    aligned_updated_threat_path)
+                
                 update_threat_task = graph.add_task(
-                    _update_threat_pixels, args=(aligned_threat_path, ),
-                    target_path_list=[aligned_threat_path], 
+                    _update_threat_pixels, 
+                    args=(aligned_threat_path, aligned_updated_threat_path),
+                    target_path_list=[aligned_updated_threat_path], 
                     dependent_task_list=[align_task],
                     task_name=f'update_threat{lulc_key}_{threat}')
                 updated_threat_tasks.append(update_threat_task)
@@ -788,11 +800,13 @@ def _decay_threat(threat_raster_path, kernel_path, threat_data):
 
     decay_func(max_dist_pixel, kernel_path)
 
-def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_tasks):
+def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_pickle_lookup):
     """ """
     raster_unique_lucodes = set()
-    for lucode_task in unique_lucode_tasks:
-        raster_unique_lucodes.update(lucode_task.get())
+    for lucode_path in unique_lucode_pickle_lookup:
+        with open(lucode_path, 'rb') as fh:
+            lucode_dict = pickle.load(fh)
+        raster_unique_lucodes.update(lucode_dict['codes'])
 
     # check if there's any lucode from the LULC rasters missing in the
     # sensitivity table
@@ -806,13 +820,13 @@ def _compare_lucodes_sensitivity(sensitivity_dict, unique_lucode_tasks):
             ', '.join([str(x) for x in sorted(missing_lucodes)]))
 
 
-def _collect_unique_lucodes(raster_path_band_tuple):
+def _collect_unique_lucodes(raster_path_band, pickle_path):
     """ """
-    lulc_path = raster_path_band_tuple[0]
+    lulc_path = raster_path_band[0]
     # declare a set to store unique codes from lulc rasters
     raster_unique_lucodes = set()
     
-    for _, lulc_block in pygeoprocessing.iterblocks(raster_path_band_tuple):
+    for _, lulc_block in pygeoprocessing.iterblocks(raster_path_band):
         raster_unique_lucodes.update(numpy.unique(lulc_block))
 
     # Remove the nodata value from the set of landuser codes.
@@ -825,8 +839,9 @@ def _collect_unique_lucodes(raster_path_band_tuple):
         # None.
         pass
 
-    return raster_unique_lucodes
-
+    data = {'codes': raster_unique_lucodes}
+    with open(pickle_path, 'wb') as fh:
+        pickle.dump(data, fh, pickle.HIGHEST_PROTOCOL)
 
 def _resolve_ambiguous_raster_path(path, raise_error=True):
     """Determine real path when we don't know true path extension.
@@ -992,7 +1007,7 @@ def _make_linear_decay_kernel_path(max_distance, kernel_path):
         kernel_row /= integration
         kernel_band.WriteArray(kernel_row, 0, row_index)
 
-def _update_threat_pixels(aligned_threat_path):
+def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
     """Iterate through the threat raster and pixel values."""
     # Iterate though the threat raster and update pixel values
     # as needed so that:
@@ -1002,27 +1017,47 @@ def _update_threat_pixels(aligned_threat_path):
                 aligned_threat_path)
     threat_nodata = pygeoprocessing.get_raster_info(
         aligned_threat_path)['nodata'][0]
-    threat_raster = gdal.OpenEx(aligned_threat_path,
-                                gdal.OF_RASTER | gdal.GA_Update)
-    threat_band = threat_raster.GetRasterBand(1)
-    for block_offset in pygeoprocessing.iterblocks(
-            (aligned_threat_path, 1), offset_only=True):
-        block = threat_band.ReadAsArray(**block_offset)
+    threat_datatype = pygeoprocessing.get_raster_info(
+        aligned_threat_path)['datatype']
+
+    def _update_op(block):
 
         # First check if we actually need to set anything.
         # No need to perform unnecessary writes!
         if set(numpy.unique(block)) == set([0, 1]):
-            continue
+            return block 
 
         zero_threat = numpy.isclose(block, threat_nodata)
         block[zero_threat] = 0
         block[~numpy.isclose(block, 0)] = 1
 
-        threat_band.WriteArray(
-            block, yoff=block_offset['yoff'],
-            xoff=block_offset['xoff'])
-    threat_band = None
-    threat_raster = None
+        return block
+
+    pygeoprocessing.raster_calculator(
+        [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
+        threat_datatype, threat_nodata)
+    
+#    threat_raster = gdal.OpenEx(aligned_threat_path,
+#                                gdal.OF_RASTER | gdal.GA_Update)
+#    threat_band = threat_raster.GetRasterBand(1)
+#    for block_offset in pygeoprocessing.iterblocks(
+#            (aligned_threat_path, 1), offset_only=True):
+#        block = threat_band.ReadAsArray(**block_offset)
+#
+#        # First check if we actually need to set anything.
+#        # No need to perform unnecessary writes!
+#        if set(numpy.unique(block)) == set([0, 1]):
+#            continue
+#
+#        zero_threat = numpy.isclose(block, threat_nodata)
+#        block[zero_threat] = 0
+#        block[~numpy.isclose(block, 0)] = 1
+#
+#        threat_band.WriteArray(
+#            block, yoff=block_offset['yoff'],
+#            xoff=block_offset['xoff'])
+#    threat_band = None
+#    threat_raster = None
 
 
 @validation.invest_validator
