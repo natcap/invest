@@ -70,7 +70,7 @@ export function findMostRecentLogfile(directory) {
   * @return {Promise<string>} - the path to an invest logfile
   */
   return new Promise(function(resolve, reject) {
-    const regex = /InVEST-[a-zA-Z-]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
+    const regex = /InVEST-natcap.invest.[a-zA-Z.]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
     const files = glob.sync(path.join(directory, '*.txt'));
     let logfiles = [];
     files.forEach(file => {
@@ -81,12 +81,15 @@ export function findMostRecentLogfile(directory) {
     })
     if (logfiles.length === 1) {
       resolve(logfiles[0])
+    } else if (logfiles.length > 1) {
+      // reverse sort (b - a) based on last-modified time
+      const sortedFiles = logfiles.sort(function(a, b) {
+        return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
+      });
+      resolve(sortedFiles[0]);
     }
-    // reverse sort (b - a) based on last-modified time
-    const sortedFiles = logfiles.sort(function(a, b) {
-      return fs.statSync(b).mtimeMs - fs.statSync(a).mtimeMs
-    });
-    resolve(sortedFiles[0]);
+    console.log(`No invest logfile found in ${directory}`)
+    resolve(undefined)
   });
 }
 

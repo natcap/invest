@@ -223,6 +223,8 @@ export class InvestJob extends React.Component {
     investRun.stdout.on('data', async () => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
+        // TODO: handle case when logfilename is undefined? It would only
+        // happen if there's a bug in findMostRecentLogfile
         this.setState(
           {
             logfile: logfilename,

@@ -17,7 +17,7 @@ function cleanupDir(dir) {
 
 test('Test findMostRecentLogfile ignores files that are not invest logs', async () => {
   const dir = setupDir()
-  const a = path.join(dir, 'InVEST-some-model-log-9999-99-99--99_99_99.txt')
+  const a = path.join(dir, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt')
   const b = path.join(dir, 'foo.txt')
   fs.closeSync(fs.openSync(a, 'w'))
 
@@ -32,19 +32,19 @@ test('Test findMostRecentLogfile ignores files that are not invest logs', async 
 
 test('Test findMostRecentLogfile regex matcher', async () => {
   const dir = setupDir()
-  const a = path.join(dir, 'InVEST-model-log-9999-99-99--99_99_99.txt')
+  const a = path.join(dir, 'InVEST-natcap.invest.model-log-9999-99-99--99_99_99.txt')
   fs.closeSync(fs.openSync(a, 'w'))
   let recent = await findMostRecentLogfile(dir)
   expect(recent).toEqual(a)
 
   await new Promise(resolve => setTimeout(resolve, 100));
-  const b = path.join(dir, 'InVEST-some-model-log-9999-99-99--99_99_99.txt')
+  const b = path.join(dir, 'InVEST-natcap.invest.some.model-log-9999-99-99--99_99_99.txt')
   fs.closeSync(fs.openSync(b, 'w'))
   recent = await findMostRecentLogfile(dir)
   expect(recent).toEqual(b)
 
   await new Promise(resolve => setTimeout(resolve, 100));
-  const c = path.join(dir, 'InVEST-some-really-long-invest-model-name-log-9999-99-99--99_99_99.txt')
+  const c = path.join(dir, 'InVEST-natcap.invest.some.really.long.model.name-log-9999-99-99--99_99_99.txt')
   fs.closeSync(fs.openSync(c, 'w'))
   recent = await findMostRecentLogfile(dir)
   expect(recent).toEqual(c)
