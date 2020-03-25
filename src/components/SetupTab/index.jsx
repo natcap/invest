@@ -99,8 +99,8 @@ class ArgsForm extends React.Component {
     // TODO: could add more filters based on argType (e.g. only show .csv)
     dialog.showOpenDialog({
       properties: [prop]
-    }, (filepath) => {
-      this.props.updateArg(argname, filepath[0]); // 0 because we only allow 1 selection
+    }).then((data) => {
+      this.props.updateArg(argname, data.filePaths[0]); // 0 because we only allow 1 selection
     })
   }
 
