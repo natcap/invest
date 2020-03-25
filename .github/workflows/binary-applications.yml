@@ -33,7 +33,7 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch --prune --unshallow
+            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Restore pip cache
               uses: actions/cache@v1
@@ -136,7 +136,7 @@ jobs:
             PYTHON_ARCH: x86
         steps:
             - uses: actions/checkout@v2
-            - run: git fetch --prune --unshallow
+            - run: git fetch origin +refs/tags/*:refs/tags/*
 
             - name: Install homebrew dependencies
               run: |
