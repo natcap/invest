@@ -560,40 +560,6 @@ def execute(args):
         if exit_landcover:
             continue
 
-        def total_degradation(*raster):
-            """A vectorized function that computes the degradation value for
-                each pixel based on each threat and then sums them together
-
-                *rasters - a list of floats depicting the adjusted threat
-                    value per pixel based on distance and sensitivity.
-                    The values are in pairs so that the values for each threat
-                    can be tracked:
-                    [filtered_val_threat1, sens_val_threat1,
-                     filtered_val_threat2, sens_val_threat2, ...]
-                    There is an optional last value in the list which is the
-                    access_raster value, but it is only present if
-                    access_raster is not None.
-
-                returns - the total degradation score for the pixel"""
-
-            # we can not be certain how many threats the user will enter,
-            # so we handle each filtered threat and sensitivity raster
-            # in pairs
-            sum_degradation = numpy.zeros(raster[0].shape)
-            for index in range(len(raster) // 2):
-                step = index * 2
-                sum_degradation += (
-                    raster[step] * raster[step + 1] * weight_list[index])
-
-            nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
-            nodata_mask[:] = 0
-            for array in raster:
-                nodata_mask = nodata_mask | (array == _OUT_NODATA)
-
-            # the last element in raster is access
-            return numpy.where(
-                    nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
-
         # add the access_raster onto the end of the collected raster list. The
         # access_raster will be values from the shapefile if provided or a
         # raster filled with all 1's if not
@@ -604,16 +570,13 @@ def execute(args):
 
         LOGGER.info('Starting raster calculation on total_degradation')
 
-        deg_raster_band_list = [(path, 1) for path in deg_raster_list]
-
         total_degradation_task = graph.add_task(
-            pygeoprocessing.raster_calculator, 
-            args=(deg_raster_band_list, total_degradation,
-                deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA),
+            _calculate_total_degradation, 
+            args=(deg_raster_list, deg_sum_raster_path)
             target_path_list=[deg_sum_raster_path],
             dependent_task_list=[*threat_convolve_lookup[lulc_key], 
                 *sensitivity_lookup[lulc_key], access_base_task],
-            task_name=f'tot_degradation_{decay_type}_{lulc_key}_{threat}')
+            task_name=f'tot_degradation_{decay_type}{lulc_key}_{threat}')
 
         LOGGER.info('Finished raster calculation on total_degradation')
 
@@ -621,40 +584,16 @@ def execute(args):
         # ksq: a term used below to compute habitat quality
         ksq = float(args['half_saturation_constant'])**_SCALING_PARAM
 
-        def quality_op(degradation, habitat):
-            """Vectorized function that computes habitat quality given
-                a degradation and habitat value.
-
-                degradation - a float from the created degradation
-                    raster above.
-                habitat - a float indicating habitat suitability from
-                    from the habitat raster created above.
-
-                returns - a float representing the habitat quality
-                    score for a pixel
-            """
-            degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
-
-            return numpy.where(
-                    (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
-                    _OUT_NODATA,
-                    (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
-                     (degredataion_clamped**_SCALING_PARAM + ksq)))))
-
         quality_path = os.path.join(
             output_dir, 'quality' + lulc_key + suffix + '.tif')
 
         LOGGER.info('Starting raster calculation on quality_op')
 
         deg_hab_raster_list = [deg_sum_raster_path, habitat_raster_path]
-
-        deg_hab_raster_band_list = [
-            (path, 1) for path in deg_hab_raster_list]
-
+        
         hq_task = graph.add_task(
-            pygeoprocessing.raster_calculator, 
-            args=(deg_hab_raster_band_list, quality_op, quality_path,
-                gdal.GDT_Float32, _OUT_NODATA),
+            _caculate_habitat_quality, 
+            args=(deg_hab_raster_list, quality_path, ksq),
             target_path_list=[quality_path],
             dependent_task_list=[*habitat_raster_lookup[lulc_key],
                 total_degradation_task],
@@ -689,6 +628,78 @@ def execute(args):
 
         LOGGER.info('Finished habitat_quality biophysical calculations')
 
+    graph.join()
+
+
+def _calculate_habitat_quality(deg_hab_raster_list, quality_out_path, ksq):
+    """ """
+    def quality_op(degradation, habitat):
+        """Vectorized function that computes habitat quality given
+            a degradation and habitat value.
+
+            degradation - a float from the created degradation
+                raster above.
+            habitat - a float indicating habitat suitability from
+                from the habitat raster created above.
+
+            returns - a float representing the habitat quality
+                score for a pixel
+        """
+        degredataion_clamped = numpy.where(degradation < 0, 0, degradation)
+
+        return numpy.where(
+                (degradation == _OUT_NODATA) | (habitat == _OUT_NODATA),
+                _OUT_NODATA,
+                (habitat * (1.0 - ((degredataion_clamped**_SCALING_PARAM) /
+                 (degredataion_clamped**_SCALING_PARAM + ksq)))))
+
+    deg_hab_raster_band_list = [
+        (path, 1) for path in deg_hab_raster_list]
+    
+    pygeoprocessing.raster_calculator(deg_hab_raster_band_list, quality_op,
+        quality_out_path, gdal.GDT_Float32, _OUT_NODATA)
+
+
+def _calculate_total_degradation(deg_raster_list, deg_sum_raster_path):
+    """ """
+    def total_degradation(*raster):
+        """A vectorized function that computes the degradation value for
+            each pixel based on each threat and then sums them together
+
+            *rasters - a list of floats depicting the adjusted threat
+                value per pixel based on distance and sensitivity.
+                The values are in pairs so that the values for each threat
+                can be tracked:
+                [filtered_val_threat1, sens_val_threat1,
+                 filtered_val_threat2, sens_val_threat2, ...]
+                There is an optional last value in the list which is the
+                access_raster value, but it is only present if
+                access_raster is not None.
+
+            returns - the total degradation score for the pixel"""
+
+        # we can not be certain how many threats the user will enter,
+        # so we handle each filtered threat and sensitivity raster
+        # in pairs
+        sum_degradation = numpy.zeros(raster[0].shape)
+        for index in range(len(raster) // 2):
+            step = index * 2
+            sum_degradation += (
+                raster[step] * raster[step + 1] * weight_list[index])
+
+        nodata_mask = numpy.empty(raster[0].shape, dtype=numpy.int8)
+        nodata_mask[:] = 0
+        for array in raster:
+            nodata_mask = nodata_mask | (array == _OUT_NODATA)
+
+        # the last element in raster is access
+        return numpy.where(
+                nodata_mask, _OUT_NODATA, sum_degradation * raster[-1])
+
+    deg_raster_band_list = [(path, 1) for path in deg_raster_list]
+
+    pygeoprocessing.raster_calculator(deg_raster_band_list, total_degradation,
+            deg_sum_raster_path, gdal.GDT_Float32, _OUT_NODATA)
 
 def _compute_rarity_operation(lulc_base_path, lulc_path, new_cover_path, rarity_path):
     """ """
