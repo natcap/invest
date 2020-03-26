@@ -161,7 +161,7 @@ test('SetupTab: expect an input form for a boolean', async () => {
   })
 })
 
-test('SetupTab: expext an input form for an option_string', async () => {
+test('SetupTab: expect an input form for an option_string', async () => {
   const spec = { args: { arg: { 
     name: 'foo', 
     type: 'option_string', 

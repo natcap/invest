@@ -492,7 +492,7 @@ export class InvestJob extends React.Component {
             investGetSpec={this.investGetSpec}
             batchUpdateArgs={this.batchUpdateArgs}
           />
-          <SettingsModal
+          <SettingsModal className="mx-3"
             saveSettings={this.props.saveSettings}
             investSettings={this.props.investSettings}
           />

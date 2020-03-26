@@ -1,18 +1,16 @@
 import events from 'events';
-// import sinon from 'sinon';
 import React from 'react';
 import { fireEvent, render,
-         wait, waitForElement } from '@testing-library/react'
-import '@testing-library/jest-dom'
-// import child_process from 'child_process';
+         wait, waitForElement } from '@testing-library/react';
+import '@testing-library/jest-dom';
+import { remote } from 'electron';
 
 import { InvestJob } from '../src/InvestJob';
 import SAMPLE_SPEC from './data/carbon_args_spec.json';
 import { getSpec, saveToPython, writeParametersToFile,
-         fetchValidation } from '../src/server_requests';
+         fetchValidation, fetchDatastackFromFile } from '../src/server_requests';
 jest.mock('../src/server_requests');
-// import { findMostRecentLogfile } from '../src/utils';
-// jest.mock('../src/utils');
+
 
 const APP_DATA = './data/jobdb.json';
 const MOCK_VALIDATION_VALUE = [[['workspace_dir'], 'invalid because']]
@@ -27,10 +25,16 @@ const MOCK_RECENT_SESSIONS_VALUE =
         "systemTime": 1583259376573.759,
         "description": null } ] ]
 
+beforeEach(() => {
+  jest.resetAllMocks(); 
+  // Careful with reset because "resetting a spy results
+  // in a function with no return value". I had been using spies to observe
+  // function calls, but not to mock return values. For now I'm removing spies.
+})
+
 test('Clicking an invest button renders SetupTab', async () => {
   getSpec.mockResolvedValue(SAMPLE_SPEC);
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-  const spy = jest.spyOn(InvestJob.prototype, 'investGetSpec');
 
   const { getByText, debug } = render(
     <InvestJob 
@@ -50,13 +54,11 @@ test('Clicking an invest button renders SetupTab', async () => {
     expect(getByText('Setup').classList.contains('active')).toBeTruthy();
   });
   
-  expect(spy).toHaveBeenCalledTimes(1);  // the click handler
   expect(getSpec).toHaveBeenCalledTimes(1);  // the wrapper around fetch
 })
 
 test('Clicking a recent session renders SetupTab', async () => {
   fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
-  const spy = jest.spyOn(InvestJob.prototype, 'loadState');
 
   const { getByText, debug } = render(
     <InvestJob 
@@ -78,17 +80,78 @@ test('Clicking a recent session renders SetupTab', async () => {
     // TODO: toBeVisible doesn't work w/ the attributes on these nodes
     // expect(getByText('Setup')).toBeVisible();
     // expect(getByText('Resources')).not.toBeVisible();
-  });
-  
-  expect(spy).toHaveBeenCalledTimes(1);  // called by the click handler
+  }); 
 })
 
-// test('Browsing for recent session renders SetupTab', async () => {
-//   // TODO: This functionality might be dropped.
-// })
+test('LoadParameters: Dialog callback renders SetupTab', async () => {
+  const mockDialogData = {
+    filePaths: ['foo.json']
+  }
+  const mockDatastack = {
+    module_name: 'natcap.invest.carbon',
+    args: {
+      carbon_pools_path: "Carbon/carbon_pools_willamette.csv", 
+    }
+  }
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+  fetchDatastackFromFile.mockResolvedValue(mockDatastack)
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+  fetchValidation.mockResolvedValue(MOCK_VALIDATION_VALUE);
+
+  const { getByText, getByLabelText, debug } = render(
+    <InvestJob 
+      investList={{Carbon: {internal_name: 'carbon'}}}
+      investSettings={null}
+      recentSessions={[]}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+  const loadButton = getByText('Load Parameters');
+  fireEvent.click(loadButton);
+  await wait(() => {
+    // Expect a disabled Execute button and a visible SetupTab
+    const execute = getByText('Execute');
+    expect(execute).toBeDisabled();  // depends on the mocked fetchValidation
+    expect(getByText('Setup').classList.contains('active')).toBeTruthy();
+    expect(getByLabelText('Carbon Pools')).toHaveValue(
+        mockDatastack.args.carbon_pools_path)
+  });
+  // And now that we know setup has loaded, expect the values from the datastack
+  // TODO: expect some global validation errors
+})
+
+test('LoadParameters: Dialog callback does nothing when canceled', async () => {
+  // this resembles the callback data if the dialog is canceled instead of 
+  // a file selected.
+  const mockDialogData = {
+    filePaths: [] // if(array.length) is how we check if filePaths exist.
+  }
+  remote.dialog.showOpenDialog.mockResolvedValue(mockDialogData)
+
+  const { getByText, getByLabelText, debug } = render(
+    <InvestJob 
+      investList={{Carbon: {internal_name: 'carbon'}}}
+      investSettings={null}
+      recentSessions={[]}
+      updateRecentSessions={() => {}}
+      saveSettings={() => {}}
+    />);
+  const loadButton = getByText('Load Parameters');
+  fireEvent.click(loadButton);
+  await wait(() => {
+    // expect we're on the same tab we started on instead of switching to Setup
+    expect(getByText('Home').classList.contains('active')).toBeTruthy();
+  });
+  // These are the calls that would have triggered if a file was selected
+  expect(fetchDatastackFromFile).toHaveBeenCalledTimes(0)
+  expect(getSpec).toHaveBeenCalledTimes(0)
+  expect(fetchValidation).toHaveBeenCalledTimes(0)
+})
+
 
 test('Save Parameters/Python enable after model select ', async () => {
-
+  getSpec.mockResolvedValue(SAMPLE_SPEC);
+  fetchValidation.mockResolvedValue([]);
   const { getByText, debug } = render(
     <InvestJob 
       investList={{}}

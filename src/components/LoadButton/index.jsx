@@ -1,5 +1,5 @@
 import React from 'react';
-import Electron from 'electron'
+import { remote } from 'electron';
 import PropTypes from 'prop-types';
 
 import Row from 'react-bootstrap/Row';
@@ -22,21 +22,22 @@ export class LoadButton extends React.Component {
   }
 
   async browseFile(event) {
-    const data = await Electron.remote.dialog.showOpenDialog()
-    const payload = { 
-      datastack_path: data.filePaths[0]
+    const data = await remote.dialog.showOpenDialog()
+    if (data.filePaths.length) {
+      const payload = { 
+        datastack_path: data.filePaths[0]
+      }
+      const datastack = await fetchDatastackFromFile(payload)
+      const specLoaded = await this.props.investGetSpec(datastack.module_name.replace('natcap.invest.', ''))
+      if (specLoaded) { this.props.batchUpdateArgs(datastack['args']) }
+    } else {
+      console.log('load parameters canceled, no file selected')
     }
-    const datastack = await fetchDatastackFromFile(payload)
-    console.log(datastack)
-    const specLoaded = await this.props.investGetSpec(datastack.module_name.replace('natcap.invest.', ''))
-    console.log('after promised getspec, before batch update')
-    console.log(specLoaded)
-    if (specLoaded) { this.props.batchUpdateArgs(datastack['args']) }
   }
 
   render() {
     return(
-      <Button 
+      <Button className="mx-3"
         onClick={this.browseFile}
         variant="primary">
         Load Parameters
