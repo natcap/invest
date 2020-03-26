@@ -1035,21 +1035,27 @@ def _update_threat_pixels(aligned_threat_path, updated_pixel_threat_path):
         aligned_threat_path)['datatype']
 
     def _update_op(block):
-
+        """ """
         # First check if we actually need to set anything.
         # No need to perform unnecessary writes!
         if set(numpy.unique(block)) == set([0, 1]):
             return block
-
+        
         zero_threat = numpy.isclose(block, threat_nodata)
         block[zero_threat] = 0
         block[~numpy.isclose(block, 0)] = 1
 
         return block
-
-    pygeoprocessing.raster_calculator(
-        [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
-        threat_datatype, threat_nodata)
+    
+    try:
+        pygeoprocessing.raster_calculator(
+            [(aligned_threat_path, 1)], _update_op, updated_pixel_threat_path,
+            threat_datatype, threat_nodata)
+    except TypeError:
+        raise TypeError(
+            'Raster NODATA value for Threat path'
+            f' [ {os.path.basename(aligned_threat_path)} ] is UNDEFINED.'
+            ' Please make sure each threat raster has a defined NODATA value.')
 
 
 @validation.invest_validator
@@ -1076,7 +1082,8 @@ def validate(args, limit_to=None):
     invalid_keys = validation.get_invalid_keys(validation_warnings)
     
     if ("threats_table_path" not in invalid_keys and 
-            "sensitivity_table_path" not in invalid_keys):
+            "sensitivity_table_path" not in invalid_keys
+            and "threat_raster_folder" not in invalid_keys):
         # check that the threat names in the threats table match with the threats
         # columns in the sensitivity table. 
         
@@ -1101,5 +1108,43 @@ def validate(args, limit_to=None):
                  (missing_sens_header_list, sens_header_list))))
                 
             invalid_keys.add('sensitivity_table_path')
+   
+        bad_threat_paths = []
+        bad_threat_nodatas = []
+        for lulc_key, lulc_args in (('_c', 'lulc_cur_path'),
+                                    ('_f', 'lulc_fut_path'),
+                                    ('_b', 'lulc_bas_path')):
+            if lulc_args in args:
+                # for each threat given in the CSV file try opening the associated
+                # raster which should be found in threat_raster_folder
+                for threat in threat_dict:
+                    # it's okay to have no threat raster for baseline scenario
+                    threat_path = _resolve_ambiguous_raster_path(
+                        os.path.join(args['threat_raster_folder'], threat + lulc_key),
+                            raise_error=False))
+                    if lulc_key != '_b' and threat_path is None:
+                        bad_threat_paths.append(threat_path)
+                    # Check NODATA value of the threat raster
+                    threat_raster_info = pygeoprocessing.get_raster_info(threa_path)
+                    if threat_raster_info['nodata'][0] is None:
+                        bad_threat_nodatas.append(threat_path)
+                        
+        if bad_threat_paths:
+            validation_warnings.append((
+                ['threat_raster_folder'],
+                (f'A threat raster for threats: {bad_threat_paths}'
+                  ' was not found in the threat raster folder, or'
+                  ' it could not be opened by GDAL.'))
+
+            invalid_keys.add('threat_raster_folder')
+
+        if bad_threat_nodatas:
+            validation_warnings.append((
+                ['threat_raster_folder'],
+                (f'A threat raster for threats: {bad_threat_nodatas}'
+                  ' has an undefined NODATA value. Please define' 
+                  ' the NODATA value for all threat rasters.')
+            if not bad_threat_paths:
+                invalid_keys.add('threat_raster_folder')
 
     return validation_warnings
