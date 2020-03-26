@@ -19,7 +19,7 @@ LOGGER = logging.getLogger(__name__)
 ARGS_SPEC = {
     "model_name": "Habitat Quality",
     "module": __name__,
-    "userguide_html": "../documentation/habitat_quality.html",
+    "userguide_html": "habitat_quality.html",
     "args_with_spatial_overlap": {
         "spatial_keys": ["lulc_cur_path", "lulc_fut_path", "lulc_bas_path"],
     },
@@ -143,7 +143,7 @@ ARGS_SPEC = {
         },
         "sensitivity_table_path": {
             "validation_options": {
-                "required_fields": ["LULC", "HABITAT"],
+                "required_fields": ["LULC", "NAME", "HABITAT"],
             },
             "type": "csv",
             "required": True,
@@ -195,8 +195,10 @@ _SCALING_PARAM = 2.5
 def execute(args):
     """Habitat Quality.
 
-    Open files necessary for the portion of the habitat_quality
-    model.
+    This model calculates habitat degradation and quality for the current LULC
+    as described in the InVEST user's guide. Optionally execute calculates
+    habitat degradation and quality for a future LULC and habitat rarity for
+    current and future LULC.
 
     Parameters:
         args['workspace_dir'] (string): a path to the directory that will write output
@@ -232,7 +234,7 @@ def execute(args):
     """
 
     # Append a _ to the suffix if it's not empty and doesn't already have one
-    suffix = utils.make_suffix_string(args, 'results_suffix')
+    file_suffix = utils.make_suffix_string(args, 'results_suffix')
 
     # Check to see if each of the workspace folders exists.  If not, create the
     # folder in the filesystem.
@@ -251,20 +253,15 @@ def execute(args):
         n_workers = -1  # Synchronous mode.
     graph = taskgraph.TaskGraph(work_token_dir, n_workers)
 
-    # get a handle on the folder with the threat rasters
-    threat_raster_dir = args['threat_raster_folder']
-
-    ### Threat raster and Sensitivity valuation check ###
-
-    # Ensure the key is a string for threats.
+    # Get CSVs as dictionaries and ensure the key is a string for threats.
     threat_dict = {
         str(key): value for key, value in utils.build_lookup_from_csv(
             args['threats_table_path'], 'THREAT', to_lower=False).items()}
     sensitivity_dict = utils.build_lookup_from_csv(
         args['sensitivity_table_path'], 'LULC', to_lower=False)
-
-    # check that the threat names in the threats table match with the threats
-    # columns in the sensitivity table. Raise exception if they don't.
+    
+    # check that the required headers exist in the sensitivity table.
+    # Raise exception if they don't.
     sens_header_list = list(sensitivity_dict.values())[0]
     required_sens_header_list = ['LULC', 'NAME', 'HABITAT']
     missing_sens_header_list = [
@@ -272,18 +269,21 @@ def execute(args):
     if missing_sens_header_list:
         raise ValueError(
             'Column(s) %s are missing in the sensitivity table' %
-            (', '.join(missing_sens_header_list)))
-
+            (', '.join(missing_sens_header_list)))    
+    
+    # check that the threat names in the threats table match with the threats
+    # columns in the sensitivity table. 
+    missing_threat_header_list = [] 
     for threat in threat_dict:
         if 'L_' + threat not in sens_header_list:
-            missing_threat_header_list = (
-                set(sens_header_list) - set(required_sens_header_list))
-            raise ValueError(
-                'Threat "%s" does not match any column in the sensitivity '
-                'table. Possible columns: %s' %
-                (threat, missing_threat_header_list))
+            missing_threat_header_list.append(threat) 
 
-    ### --- ###
+    if missing_threat_header_list:
+        raise ValueError(
+            'Threats "%s" does not match any column in the sensitivity '
+            'table. Sensitivity columns: %s' % 
+            (missing_threat_header_list, sens_header_list))
+                
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -326,7 +326,7 @@ def execute(args):
                 # it's okay to have no threat raster for baseline scenario
                 threat_path_dict['threat' + lulc_key][threat] = (
                     _resolve_ambiguous_raster_path(
-                        os.path.join(threat_raster_dir, threat + lulc_key),
+                        os.path.join(args['threat_raster_folder'], threat + lulc_key),
                         raise_error=(lulc_key != '_b')))
 
                 # save threat paths in a list for alignment and resize
@@ -409,7 +409,7 @@ def execute(args):
     try:
         LOGGER.info('Handling Access Shape')
         access_raster_path = os.path.join(
-            intermediate_output_dir, 'access_layer%s.tif' % suffix)
+            intermediate_output_dir, 'access_layer%s.tif' % file_suffix)
 
         # create a new raster based on the raster info of current land cover
         access_base_task = graph.add_task(
@@ -458,7 +458,7 @@ def execute(args):
 
         # Create raster of habitat based on habitat field
         habitat_raster_path = os.path.join(
-            intermediate_output_dir, 'habitat%s%s.tif' % (lulc_key, suffix))
+            intermediate_output_dir, 'habitat%s%s.tif' % (lulc_key, file_suffix))
 
         habitat_raster_task = graph.add_task(
                 _map_raster_to_dict_values,
@@ -499,7 +499,7 @@ def execute(args):
                 break
 
             kernel_path = os.path.join(
-                kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, suffix))
+                kernel_dir, 'kernel_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             decay_type = threat_data['DECAY']
 
@@ -511,7 +511,7 @@ def execute(args):
                 task_name=f'decay_kernel_{decay_type}{lulc_key}_{threat}')
 
             filtered_threat_raster_path = os.path.join(
-                intermediate_output_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_output_dir, 'filtered_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             convolve_task = graph.add_task(
                 pygeoprocessing.convolve_2d,
@@ -527,7 +527,7 @@ def execute(args):
 
             # create sensitivity raster based on threat
             sens_raster_path = os.path.join(
-                intermediate_output_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, suffix))
+                intermediate_output_dir, 'sens_%s%s%s.tif' % (threat, lulc_key, file_suffix))
 
             sens_threat_task = graph.add_task(
                 _map_raster_to_dict_values,
@@ -565,7 +565,7 @@ def execute(args):
         deg_raster_list.append(access_raster_path)
 
         deg_sum_raster_path = os.path.join(
-            output_dir, 'deg_sum' + lulc_key + suffix + '.tif')
+            output_dir, 'deg_sum' + lulc_key + file_suffix + '.tif')
 
         LOGGER.info('Starting raster calculation on total_degradation')
 
@@ -584,7 +584,7 @@ def execute(args):
         ksq = float(args['half_saturation_constant'])**_SCALING_PARAM
 
         quality_path = os.path.join(
-            output_dir, 'quality' + lulc_key + suffix + '.tif')
+            output_dir, 'quality' + lulc_key + file_suffix + '.tif')
 
         LOGGER.info('Starting raster calculation on quality_op')
 
@@ -614,10 +614,10 @@ def execute(args):
             lulc_time = 'current' if lulc_key == '_c' else 'future'
 
             new_cover_path = os.path.join(
-                intermediate_output_dir, 'new_cover' + lulc_key + suffix + '.tif')
+                intermediate_output_dir, 'new_cover' + lulc_key + file_suffix + '.tif')
 
             rarity_path = os.path.join(
-                output_dir, 'rarity' + lulc_key + suffix + '.tif')
+                output_dir, 'rarity' + lulc_key + file_suffix + '.tif')
 
             rarity_task = graph.add_task(
                 _compute_rarity_operation,
@@ -1064,5 +1064,36 @@ def validate(args, limit_to=None):
             the error message in the second part of the tuple. This should
             be an empty list if validation succeeds.
     """
-    return validation.validate(
+    validation_warnings = validation.validate(
         args, ARGS_SPEC['args'], ARGS_SPEC['args_with_spatial_overlap'])
+
+    invalid_keys = validation.get_invalid_keys(validation_warnings)
+    
+    if ("threats_table_path" not in invalid_keys and 
+            "sensitivity_table_path" not in invalid_keys):
+        # check that the threat names in the threats table match with the threats
+        # columns in the sensitivity table. 
+        
+        # Get CSVs as dictionaries and ensure the key is a string for threats.
+        threat_dict = {
+            str(key): value for key, value in utils.build_lookup_from_csv(
+                args['threats_table_path'], 'THREAT', to_lower=False).items()}
+        sensitivity_dict = utils.build_lookup_from_csv(
+            args['sensitivity_table_path'], 'LULC', to_lower=False)
+
+        sens_header_list = list(sensitivity_dict.values())[0]
+        missing_sens_header_list = []
+        for threat in threat_dict:
+            if 'L_' + threat not in sens_header_list:
+                missing_sens_header_list.append(threat)
+        
+        if missing_sens_header_list:
+            validation_warnings.append((
+                ['sensitivity_table_path'],
+                ('Threats "%s" does not match any column in the sensitivity '
+                 'table. Sensitivity columns: %s' % 
+                 (missing_sens_header_list, sens_header_list))))
+                
+            invalid_keys.add('sensitivity_table_path')
+
+    return validation_warnings
