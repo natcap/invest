@@ -73,15 +73,7 @@ def get_invest_models():
 @app.route('/getspec', methods=['POST'])
 def get_invest_getspec():
     target_model = request.get_json()['model']
-    # Being flexible to allow use of module names or invest list names
-    # Because sometimes this is called with values originating from invest list
-    # And sometimes with values extracted from a datastack/logfile file.
-    LOGGER.debug(target_model)
-    if not target_model.startswith('natcap.invest'):
-        target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
-    else:
-        target_module = target_model
-    LOGGER.debug(target_module)
+    target_module = 'natcap.invest.' + MODEL_MODULE_MAP[target_model]
     model_module = importlib.import_module(name=target_module)
     spec = model_module.ARGS_SPEC
     return json.dumps(spec)

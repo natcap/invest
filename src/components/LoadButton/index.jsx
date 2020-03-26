@@ -28,7 +28,7 @@ export class LoadButton extends React.Component {
     }
     const datastack = await fetchDatastackFromFile(payload)
     console.log(datastack)
-    const specLoaded = await this.props.investGetSpec(datastack.module_name)
+    const specLoaded = await this.props.investGetSpec(datastack.module_name.replace('natcap.invest.', ''))
     console.log('after promised getspec, before batch update')
     console.log(specLoaded)
     if (specLoaded) { this.props.batchUpdateArgs(datastack['args']) }

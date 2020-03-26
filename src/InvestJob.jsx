@@ -224,8 +224,8 @@ export class InvestJob extends React.Component {
     investRun.stdout.on('data', async () => {
       if (!logfilename) {
         logfilename = await findMostRecentLogfile(workspace.directory)
-        // TODO: handle case when logfilename is undefined? It would only
-        // happen if there's a bug in findMostRecentLogfile
+        // TODO: handle case when logfilename is undefined? It seems like
+        // sometimes there is some stdout emitted before a logfile exists.
         this.setState(
           {
             logfile: logfilename,
@@ -403,7 +403,6 @@ export class InvestJob extends React.Component {
     */
 
     const argsMeta = JSON.parse(JSON.stringify(this.state.args));
-    console.log(argsMeta)
     Object.keys(argsMeta).forEach(argkey => {
       // Loop over argsMeta in order to:
         // 1) clear values for args that are absent from the input
