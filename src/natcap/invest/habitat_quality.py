@@ -284,6 +284,12 @@ def execute(args):
             'table. Sensitivity columns: %s' % 
             (missing_threat_header_list, sens_header_list))
                 
+    # get the half saturation constant
+    try:
+        half_saturation = float(args['half_saturation_constant'])
+    except ValueError:
+        raise ValueError('Half-saturation constant is not a numeric number.'
+                         'It is: %s' % args['half_saturation_constant'])
 
     # declare dictionaries to store the land cover and the threat rasters
     # pertaining to the different threats
@@ -581,7 +587,7 @@ def execute(args):
 
         # Compute habitat quality
         # ksq: a term used below to compute habitat quality
-        ksq = float(args['half_saturation_constant'])**_SCALING_PARAM
+        ksq = half_saturation_constant**_SCALING_PARAM
 
         quality_path = os.path.join(
             output_dir, 'quality' + lulc_key + file_suffix + '.tif')
