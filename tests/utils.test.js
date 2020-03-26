@@ -44,7 +44,7 @@ test('Test findMostRecentLogfile regex matcher', async () => {
   expect(recent).toEqual(b)
 
   await new Promise(resolve => setTimeout(resolve, 100));
-  const c = path.join(dir, 'InVEST-natcap.invest.some.really.long.model.name-log-9999-99-99--99_99_99.txt')
+  const c = path.join(dir, 'InVEST-natcap.invest.some.really_long_model.name-log-9999-99-99--99_99_99.txt')
   fs.closeSync(fs.openSync(c, 'w'))
   recent = await findMostRecentLogfile(dir)
   expect(recent).toEqual(c)

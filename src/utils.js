@@ -2,6 +2,8 @@ import path from 'path';
 import fs from 'fs';
 import glob from 'glob';
 
+const LOGFILE_REGEX = /InVEST-natcap\.invest\.[a-zA-Z\._]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
+
 export function loadRecentSessions(jobDatabase) {
   /** Load job data from a persistent file and return the jobs
   * sorted by creation time. Right now the persistent file is a JSON.
@@ -70,11 +72,10 @@ export function findMostRecentLogfile(directory) {
   * @return {Promise<string>} - the path to an invest logfile
   */
   return new Promise(function(resolve, reject) {
-    const regex = /InVEST-natcap.invest.[a-zA-Z.]+-log-[0-9]{4}-[0-9]{2}-[0-9]{2}--[0-9]{2}_[0-9]{2}_[0-9]{2}.txt/g
     const files = glob.sync(path.join(directory, '*.txt'));
     let logfiles = [];
     files.forEach(file => {
-      const match = file.match(regex)
+      const match = file.match(LOGFILE_REGEX)
       if (match) {
         logfiles.push(path.join(directory, match[0]))
       }
